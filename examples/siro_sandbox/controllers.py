@@ -19,11 +19,14 @@ from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.utils.common import flatten_dict
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (
+    apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
 from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.utils.common import get_action_space_info
+from habitat_baselines.utils.common import get_action_space_info, is_continuous_action_space, batch_obs
+from habitat_baselines.common.env_spec import EnvironmentSpec
+from habitat_baselines.rl.ppo.single_agent_access_mgr import SingleAgentAccessMgr
 
 
 class Controller(ABC):
@@ -68,157 +71,145 @@ class BaselinesController(Controller):
         gym_habitat_env,
         sample_random_baseline_base_vel=False,
     ):  
-        # controllers env refactoring
-        self._gym_habitat_env = gym_habitat_env
-        env = gym_habitat_env.unwrapped.habitat_env
-
         super().__init__(agent_idx, is_multi_agent)
         self._config = config
-        self._env_ac = env.action_space
-        env_obs = env.observation_space
+
+        self._gym_habitat_env = gym_habitat_env
+        self._habitat_env = gym_habitat_env.unwrapped.habitat_env
+        self._num_envs = 1
 
         agent_name = config.habitat.simulator.agents_order[self._agent_idx]
         if self._is_multi_agent:
             self._agent_k = f"agent_{self._agent_idx}_"
         else:
             self._agent_k = ""
-        if True:
-            self._env_ac = clean_dict(self._env_ac, self._agent_k)
-            env_obs = clean_dict(env_obs, self._agent_k)
 
-        self._gym_ac_space = gym_wrapper.create_action_space(self._env_ac)
-        self.obs_transforms = get_active_obs_transforms(config, agent_name)
-        env_obs = apply_obs_transforms_obs_space(env_obs, self.obs_transforms)
-        gym_obs_space = gym_wrapper.smash_observation_space(
-            env_obs, list(env_obs.keys())
-        )
-
-        policy_cls = baseline_registry.get_policy(
-            config.habitat_baselines.rl.policy[agent_name].name
-        )
-        self._actor_critic = policy_cls.from_config(
-            config,
-            gym_obs_space,
-            self._gym_ac_space,
-            orig_action_space=self._env_ac,
-            agent_name=agent_name,
-        )
-        if config.habitat_baselines.eval.should_load_ckpt:
-            checkpoint = torch.load(
-                config.habitat_baselines.eval_ckpt_path_dir, map_location="cpu"
-            )
-            self._actor_critic.load_state_dict(
-                checkpoint[self._agent_idx]["state_dict"]
-            )
         self.device = (
             torch.device("cuda", config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self._actor_critic.to(self.device)
-        self._actor_critic.eval()
 
-        policy_action_space = self._actor_critic.get_policy_action_space(
-            self._gym_ac_space
+        # define agent by reusing SIRo's agent:
+        # 1. create env spec
+        # here we udjust the observation and action space to be agent specific (remove other agents)
+        original_action_space = clean_dict(self._gym_habitat_env.original_action_space, self._agent_k)
+        observation_space = clean_dict(self._gym_habitat_env.observation_space, self._agent_k)
+        action_space = gym_wrapper.create_action_space(original_action_space)
+
+        self._env_spec = EnvironmentSpec(
+            observation_space=observation_space,
+            action_space=action_space,
+            orig_action_space=original_action_space,
         )
+
+        # 2. create observations transforms
+        self._obs_transforms = get_active_obs_transforms(self._config, agent_name)
+        self._env_spec.observation_space = apply_obs_transforms_obs_space(
+            self._env_spec.observation_space, self._obs_transforms
+        )
+
+        # create agent   
+        self._agent = SingleAgentAccessMgr(
+            agent_name=agent_name,
+            config=self._config,
+            env_spec=self._env_spec,
+            num_envs=self._num_envs,
+            is_distrib=False,
+            device=self.device,
+            percent_done_fn = lambda: 0,
+        )
+        if (
+            self._agent.actor_critic.should_load_agent_state
+            and self._config.habitat_baselines.eval.should_load_ckpt
+        ):  
+            checkpoint = torch.load(self._config.habitat_baselines.eval_ckpt_path_dir, map_location="cpu")
+            self._agent.load_state_dict(checkpoint[self._agent_idx])
+
         self._action_shape, self._discrete_actions = get_action_space_info(
-            policy_action_space
+            self._agent.policy_action_space
         )
 
-        self._step_i = 0
+        self._agent.eval()
+
         self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
 
-        if True:
-            # define agent bu reusing SIRo's agent
-            from habitat_baselines.common.env_spec import EnvironmentSpec
-            from habitat_baselines.rl.ppo.single_agent_access_mgr import SingleAgentAccessMgr
-            from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import MultiAgentAccessMgr
-
-            # create env spec
-            original_action_space = clean_dict(self._gym_habitat_env.original_action_space, self._agent_k)
-            observation_space = clean_dict(self._gym_habitat_env.observation_space, self._agent_k)
-
-            self._env_spec = EnvironmentSpec(
-                observation_space=observation_space,
-                action_space=self._gym_habitat_env.action_space,
-                orig_action_space=original_action_space,
-                # observation_space=self._gym_habitat_env.observation_space,
-            )
-
-            # create observations transforms
-            self.obs_transforms = get_active_obs_transforms(self._config, agent_name)
-            self._env_spec.observation_space = apply_obs_transforms_obs_space(
-                self._env_spec.observation_space, self.obs_transforms
-            )
-
-            # create agent   
-            self._agent = SingleAgentAccessMgr(
-                agent_name=agent_name,
-                config=self._config,
-                env_spec=self._env_spec,
-                num_envs=1,
-                is_distrib=False,
-                device=self.device,
-                percent_done_fn = lambda: 0,
-            )
-            # agent = MultiAgentAccessMgr(
-            #     config=self._config,
-            #     env_spec=self._env_spec,
-            #     num_envs=1,
-            #     is_distrib=False,
-            #     device=self.device,
-            # )
-
-
-    def act(self, obs, env):
-        masks = torch.ones(
+    def on_environment_reset(self):
+        self._test_recurrent_hidden_states = torch.zeros(
             (
-                1,
-                1,
+                self._num_envs,
+                *self._agent.hidden_state_shape,
+            ),
+            device=self.device,
+        )
+
+        self._prev_actions = torch.zeros(
+            self._num_envs,
+            *self._action_shape,
+            device=self.device,
+            dtype=torch.long if self._discrete_actions else torch.float,
+        )
+
+        self._not_done_masks = torch.zeros(
+            (
+                self._num_envs,
+                *self._agent.masks_shape,
             ),
             device=self.device,
             dtype=torch.bool,
         )
-        if self._step_i == 0:
-            masks = ~masks
-        self._step_i += 1
-        hxs = torch.ones(
-            (
-                1,
-                self._actor_critic.num_recurrent_layers,
-                self._config.habitat_baselines.rl.ppo.hidden_size,
-            ),
-            device=self.device,
-            dtype=torch.float32,
-        )
 
-        prev_ac = torch.ones(
-            (
-                1,
-                *self._action_shape,
-            ),
-            device=self.device,
-            dtype=torch.long if self._discrete_actions else torch.float,
-        )
-        obs = flatten_dict(obs)
-        obs = TensorDict(
-            {
-                k[
-                    len(self._agent_k) if k.startswith(self._agent_k) else 0 :
-                ]: torch.tensor(v)
-                .unsqueeze(0)
-                .to(self.device)
-                for k, v in obs.items()
-                if k.startswith(self._agent_k) or "agent_" not in k
-            }
-        )
+
+    def act(self, obs, env):
+        # remove other agents from obs
+        obs = {
+            k[len(self._agent_k) if k.startswith(self._agent_k) else 0:]: v
+            for k, v in obs.items()
+            if k.startswith(self._agent_k) or "agent_" not in k
+        }
+
+        batch = batch_obs([obs], device=self.device)
+        batch = apply_obs_transforms_batch(batch, self._obs_transforms)
+
         with torch.no_grad():
-            action_data = self._actor_critic.act(obs, hxs, prev_ac, masks)
+            action_data = self._agent.actor_critic.act(
+                batch, 
+                self._test_recurrent_hidden_states, 
+                self._prev_actions, 
+                self._not_done_masks,
+                deterministic=False
+            )
+            
+            if action_data.should_inserts is None:
+                self._test_recurrent_hidden_states = (
+                    action_data.rnn_hidden_states
+                )
+                self._prev_actions.copy_(action_data.actions)  # type: ignore
+            else:
+                self._agent.update_hidden_state(
+                    self._test_recurrent_hidden_states, self._prev_actions, action_data
+                )
+        
+        if is_continuous_action_space(self._env_spec.action_space):
+            # Clipping actions to the specified limits
+            step_data = [
+                np.clip(
+                    a.numpy(),
+                    self._env_spec.action_space.low,
+                    self._env_spec.action_space.high,
+                )
+                for a in action_data.env_actions.cpu()
+            ]
+        else:
+            step_data = [a.item() for a in action_data.env_actions.cpu()]
+
         action = gym_wrapper.continuous_vector_action_to_hab_dict(
-            self._env_ac, self._gym_ac_space, action_data.env_actions[0]
+            self._env_spec.orig_action_space,
+            self._env_spec.action_space,
+            step_data[0]
         )
 
-        # temp do random base actions
+        # temp: do random base actions
         if self._sample_random_baseline_base_vel:
             action["action_args"]["base_vel"] = torch.rand_like(
                 action["action_args"]["base_vel"]
@@ -232,13 +223,11 @@ class BaselinesController(Controller):
 
         action["action"] = [change_ac_name(k) for k in action["action"]]
         action["action_args"] = {
-            change_ac_name(k): v.cpu().numpy()
+            change_ac_name(k): v # v.cpu().numpy()
             for k, v in action["action_args"].items()
         }
-        return action, action_data.rnn_hidden_states
 
-    def on_environment_reset(self):
-        self._step_i = 0
+        return action, action_data.rnn_hidden_states
 
 
 class GuiRobotController(GuiController):

@@ -326,12 +326,13 @@ class SandboxDriver(GuiAppDriver):
             self._reset_episode_recorder()
 
     def _check_save_episode_data(self, session_ended):
-        assert self._save_filepath_base
         saved_keyframes, saved_episode_data = False, False
         if self._save_gfx_replay_keyframes and session_ended:
+            assert self._save_filepath_base
             self._save_recorded_keyframes_to_file()
             saved_keyframes = True
         if self._save_episode_record:
+            assert self._save_filepath_base
             self._save_episode_recorder_dict()
             saved_episode_data = True
 
