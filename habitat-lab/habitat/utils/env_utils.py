@@ -8,16 +8,15 @@ from typing import TYPE_CHECKING, Optional, Type, Union
 
 from habitat.core.dataset import Dataset
 from habitat.core.env import Env, RLEnv
-from habitat.datasets import make_dataset
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
 def make_env_fn(
-    config: "DictConfig", 
-    env_class: Union[Type[Env], Type[RLEnv]], 
-    dataset: Optional[Dataset] = None
+    config: "DictConfig",
+    env_class: Union[Type[Env], Type[RLEnv]],
+    dataset: Optional[Dataset] = None,
 ) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.

@@ -16,17 +16,20 @@ import habitat.gym.gym_wrapper as gym_wrapper
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
-from habitat.utils.common import flatten_dict
-from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.utils.common import get_action_space_info, is_continuous_action_space, batch_obs
-from habitat_baselines.common.env_spec import EnvironmentSpec
-from habitat_baselines.rl.ppo.single_agent_access_mgr import SingleAgentAccessMgr
+from habitat_baselines.rl.ppo.single_agent_access_mgr import (
+    SingleAgentAccessMgr,
+)
+from habitat_baselines.utils.common import (
+    batch_obs,
+    get_action_space_info,
+    is_continuous_action_space,
+)
 
 
 class Controller(ABC):
@@ -70,7 +73,7 @@ class BaselinesController(Controller):
         config,
         gym_habitat_env,
         sample_random_baseline_base_vel=False,
-    ):  
+    ):
         super().__init__(agent_idx, is_multi_agent)
         self._config = config
 
@@ -93,8 +96,12 @@ class BaselinesController(Controller):
         # define agent by reusing SIRo's agent:
         # 1. create env spec
         # here we udjust the observation and action space to be agent specific (remove other agents)
-        original_action_space = clean_dict(self._gym_habitat_env.original_action_space, self._agent_k)
-        observation_space = clean_dict(self._gym_habitat_env.observation_space, self._agent_k)
+        original_action_space = clean_dict(
+            self._gym_habitat_env.original_action_space, self._agent_k
+        )
+        observation_space = clean_dict(
+            self._gym_habitat_env.observation_space, self._agent_k
+        )
         action_space = gym_wrapper.create_action_space(original_action_space)
 
         self._env_spec = EnvironmentSpec(
@@ -104,12 +111,14 @@ class BaselinesController(Controller):
         )
 
         # 2. create observations transforms
-        self._obs_transforms = get_active_obs_transforms(self._config, agent_name)
+        self._obs_transforms = get_active_obs_transforms(
+            self._config, agent_name
+        )
         self._env_spec.observation_space = apply_obs_transforms_obs_space(
             self._env_spec.observation_space, self._obs_transforms
         )
 
-        # create agent   
+        # create agent
         self._agent = SingleAgentAccessMgr(
             agent_name=agent_name,
             config=self._config,
@@ -117,13 +126,16 @@ class BaselinesController(Controller):
             num_envs=self._num_envs,
             is_distrib=False,
             device=self.device,
-            percent_done_fn = lambda: 0,
+            percent_done_fn=lambda: 0,
         )
         if (
             self._agent.actor_critic.should_load_agent_state
             and self._config.habitat_baselines.eval.should_load_ckpt
-        ):  
-            checkpoint = torch.load(self._config.habitat_baselines.eval_ckpt_path_dir, map_location="cpu")
+        ):
+            checkpoint = torch.load(
+                self._config.habitat_baselines.eval_ckpt_path_dir,
+                map_location="cpu",
+            )
             self._agent.load_state_dict(checkpoint[self._agent_idx])
 
         self._action_shape, self._discrete_actions = get_action_space_info(
@@ -159,11 +171,10 @@ class BaselinesController(Controller):
             dtype=torch.bool,
         )
 
-
     def act(self, obs, env):
         # remove other agents from obs
         obs = {
-            k[len(self._agent_k) if k.startswith(self._agent_k) else 0:]: v
+            k[len(self._agent_k) if k.startswith(self._agent_k) else 0 :]: v
             for k, v in obs.items()
             if k.startswith(self._agent_k) or "agent_" not in k
         }
@@ -173,13 +184,13 @@ class BaselinesController(Controller):
 
         with torch.no_grad():
             action_data = self._agent.actor_critic.act(
-                batch, 
-                self._test_recurrent_hidden_states, 
-                self._prev_actions, 
+                batch,
+                self._test_recurrent_hidden_states,
+                self._prev_actions,
                 self._not_done_masks,
-                deterministic=False
+                deterministic=False,
             )
-            
+
             if action_data.should_inserts is None:
                 self._test_recurrent_hidden_states = (
                     action_data.rnn_hidden_states
@@ -187,9 +198,11 @@ class BaselinesController(Controller):
                 self._prev_actions.copy_(action_data.actions)  # type: ignore
             else:
                 self._agent.update_hidden_state(
-                    self._test_recurrent_hidden_states, self._prev_actions, action_data
+                    self._test_recurrent_hidden_states,
+                    self._prev_actions,
+                    action_data,
                 )
-        
+
         if is_continuous_action_space(self._env_spec.action_space):
             # Clipping actions to the specified limits
             step_data = [
@@ -206,7 +219,7 @@ class BaselinesController(Controller):
         action = gym_wrapper.continuous_vector_action_to_hab_dict(
             self._env_spec.orig_action_space,
             self._env_spec.action_space,
-            step_data[0]
+            step_data[0],
         )
 
         # temp: do random base actions
@@ -223,7 +236,7 @@ class BaselinesController(Controller):
 
         action["action"] = [change_ac_name(k) for k in action["action"]]
         action["action_args"] = {
-            change_ac_name(k): v # v.cpu().numpy()
+            change_ac_name(k): v  # v.cpu().numpy()
             for k, v in action["action_args"].items()
         }
 

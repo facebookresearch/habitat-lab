@@ -103,8 +103,7 @@ class SandboxDriver(GuiAppDriver):
         dataset = self._make_dataset(config=config)
         # controllers env refactoring
         self.gym_habitat_env = habitat.gym.make_gym_from_config(
-            config=config, 
-            dataset=dataset
+            config=config, dataset=dataset
         )
         self.habitat_env = self.gym_habitat_env.unwrapped.habitat_env
         # self.habitat_env = habitat.Env(config=config, dataset=dataset)
@@ -115,8 +114,13 @@ class SandboxDriver(GuiAppDriver):
                 args.gui_controlled_agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
-            if oracle_nav_sensor_key in self.habitat_env.task.sensor_suite.sensors:
-                del self.habitat_env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+            if (
+                oracle_nav_sensor_key
+                in self.habitat_env.task.sensor_suite.sensors
+            ):
+                del self.habitat_env.task.sensor_suite.sensors[
+                    oracle_nav_sensor_key
+                ]
 
         self._save_filepath_base = args.save_filepath_base
         self._save_episode_record = args.save_episode_record

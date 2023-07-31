@@ -19,7 +19,6 @@ from habitat.config.default_structured_configs import (
 from habitat.core.dataset import Dataset
 from habitat.core.environments import get_env_class
 from habitat.utils.env_utils import make_env_fn
-from habitat.datasets import make_dataset
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -49,7 +48,9 @@ def _get_env_name(cfg: "DictConfig") -> Optional[str]:
     return cfg["env_task"]
 
 
-def make_gym_from_config(config: "DictConfig", dataset: Optional[Dataset] = None) -> gym.Env:
+def make_gym_from_config(
+    config: "DictConfig", dataset: Optional[Dataset] = None
+) -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
@@ -61,7 +62,7 @@ def make_gym_from_config(config: "DictConfig", dataset: Optional[Dataset] = None
     assert (
         env_class is not None
     ), f"No environment class with name `{env_class_name}` was found, you need to specify a valid one with env_task"
-    
+
     return make_env_fn(env_class=env_class, config=config, dataset=dataset)
 
 
