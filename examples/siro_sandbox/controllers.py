@@ -22,6 +22,9 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
+from habitat_baselines.rl.multi_agent.utils import (
+    update_dict_with_agent_prefix,
+)
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
@@ -172,15 +175,9 @@ class BaselinesController(Controller):
         )
 
     def act(self, obs, env):
-        # remove other agents from obs
-        obs = {
-            k[len(self._agent_k) if k.startswith(self._agent_k) else 0 :]: v
-            for k, v in obs.items()
-            if k.startswith(self._agent_k) or "agent_" not in k
-        }
-
         batch = batch_obs([obs], device=self.device)
         batch = apply_obs_transforms_batch(batch, self._obs_transforms)
+        batch = update_dict_with_agent_prefix(batch, self._agent_idx)
 
         with torch.no_grad():
             action_data = self._agent.actor_critic.act(
@@ -190,7 +187,6 @@ class BaselinesController(Controller):
                 self._not_done_masks,
                 deterministic=False,
             )
-
             if action_data.should_inserts is None:
                 self._test_recurrent_hidden_states = (
                     action_data.rnn_hidden_states
