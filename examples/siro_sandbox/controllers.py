@@ -618,7 +618,6 @@ class GuiHumanoidController(GuiController):
 
 class ControllerHelper:
     def __init__(self, gym_habitat_env, config, args, gui_input, recorder):
-        # controllers env refactoring
         self._gym_habitat_env = gym_habitat_env
         self._env = gym_habitat_env.unwrapped.habitat_env
 

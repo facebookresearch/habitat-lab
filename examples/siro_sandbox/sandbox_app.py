@@ -101,12 +101,10 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.concur_render = False
 
         dataset = self._make_dataset(config=config)
-        # controllers env refactoring
         self.gym_habitat_env = habitat.gym.make_gym_from_config(
             config=config, dataset=dataset
         )
         self.habitat_env = self.gym_habitat_env.unwrapped.habitat_env
-        # self.habitat_env = habitat.Env(config=config, dataset=dataset)
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -1361,9 +1359,6 @@ if __name__ == "__main__":
         debug_third_person_width,
         debug_third_person_height,
     ) = _parse_debug_third_person(args, framebuffer_size)
-
-    # workaround to remove config measure
-    args.cfg_opts += ["~habitat.task.measurements.agent_blame_measure"]
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):

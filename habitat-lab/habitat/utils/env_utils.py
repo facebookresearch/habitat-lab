@@ -32,11 +32,6 @@ def make_env_fn(
     if "habitat" in config:
         config = config.habitat
 
-    # TODO: remove this if commenting this doesn't break anything
-    # since the dataset will me created in habitat.Env class
-    # if dataset is None:
-    #     dataset = make_dataset(config.dataset.type, config=config.dataset)
-
     env = env_class(config=config, dataset=dataset)
     env.seed(config.seed)
 
