@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from gym import spaces
 
@@ -11,12 +13,17 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
 from habitat.tasks.rearrange.utils import UsesArticulatedAgentInterface
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import quaternion_from_coeff
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 BASE_ACTION_NAME = "base_velocity"
 
@@ -104,17 +111,36 @@ class OracleNavigationActionSensor(Sensor):
 class NavToObjReward(RearrangeReward):
     cls_uuid: str = "nav_to_obj_reward"
 
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._dist_reward = config.dist_reward
+        self._should_reward_turn = config.should_reward_turn
+        self._turn_reward_dist = config.turn_reward_dist
+        self._angle_dist_reward = config.angle_dist_reward
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return NavToObjReward.cls_uuid
+
+    @property
+    def _dist_to_goal_cls_uuid(self):
+        return DistToGoal.cls_uuid
+
+    @property
+    def _nav_to_obj_succ_cls_uuid(self):
+        return NavToObjSuccess.cls_uuid
+
+    @property
+    def _rot_dist_to_goal_cls_uuid(self):
+        return RotDistToGoal.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
-                NavToObjSuccess.cls_uuid,
-                DistToGoal.cls_uuid,
-                RotDistToGoal.cls_uuid,
+                self._nav_to_obj_succ_cls_uuid,
+                self._dist_to_goal_cls_uuid,
+                self._rot_dist_to_goal_cls_uuid,
             ],
         )
         self._cur_angle_dist = -1.0
@@ -128,22 +154,28 @@ class NavToObjReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        reward = 0.0
-        cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+        reward = self._metric
+        cur_dist = task.measurements.measures[
+            self._dist_to_goal_cls_uuid
+        ].get_metric()
         if self._prev_dist < 0.0:
             dist_diff = 0.0
         else:
             dist_diff = self._prev_dist - cur_dist
 
-        reward += self._config.dist_reward * dist_diff
+        reward += self._dist_reward * dist_diff
         self._prev_dist = cur_dist
 
-        if (
-            self._config.should_reward_turn
-            and cur_dist < self._config.turn_reward_dist
-        ):
+        if self._should_reward_turn and cur_dist < self._turn_reward_dist:
             angle_dist = task.measurements.measures[
-                RotDistToGoal.cls_uuid
+                self._rot_dist_to_goal_cls_uuid
             ].get_metric()
 
             if self._cur_angle_dist < 0:
@@ -151,7 +183,7 @@ class NavToObjReward(RearrangeReward):
             else:
                 angle_diff = self._cur_angle_dist - angle_dist
 
-            reward += self._config.angle_dist_reward * angle_diff
+            reward += self._angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
 
         self._metric = reward
@@ -165,10 +197,11 @@ class DistToGoal(Measure):
         self._config = config
         self._sim = sim
         self._prev_dist = None
+        self._use_shortest_path_cache = config.use_shortest_path_cache
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._prev_dist = self._get_cur_geo_dist(task)
+        self._prev_dist = self._get_cur_geo_dist(task, episode)
         self.update_metric(
             *args,
             episode=episode,
@@ -177,18 +210,70 @@ class DistToGoal(Measure):
             **kwargs,
         )
 
-    def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
+    def _get_goals(self, task, episode):
+        if len(task.nav_goal_pos.shape) == 1:
+            goals = np.expand_dims(task.nav_goal_pos, axis=0)
+        else:
+            goals = task.nav_goal_pos
+        return goals
+
+    def _get_cur_geo_dist(self, task, episode):
+        goals = self._get_goals(task, episode)
+        distance_to_target = self._sim.geodesic_distance(
+            self._sim.articulated_agent.base_pos,
+            goals,
+            episode=episode if self._use_shortest_path_cache else None,
         )
+        if distance_to_target == np.inf:
+            distance_to_target = self._prev_dist
+        if distance_to_target is None:
+            distance_to_target = 30
+        return distance_to_target
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return DistToGoal.cls_uuid
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = self._get_cur_geo_dist(task)
+        self._metric = self._get_cur_geo_dist(task, episode)
+
+
+@registry.register_sensor(name="RobotStartGPSSensor")
+class RobotStartGPSSensor(EpisodicGPSSensor):
+    cls_uuid: str = "robot_start_gps"
+
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+
+    def get_agent_start_position(self, episode, task):
+        return task._robot_start_position
+
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(task._robot_start_rotation)
+
+    def get_agent_current_position(self, sim):
+        return sim.articulated_agent.sim_obj.translation
+
+
+@registry.register_sensor(name="RobotStartCompassSensor")
+class RobotStartCompassSensor(EpisodicCompassSensor):
+    cls_uuid: str = "robot_start_compass"
+
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(task._robot_start_rotation)
+
+    def get_agent_current_rotation(self, sim):
+        curr_quat = sim.articulated_agent.sim_obj.rotation
+        curr_rotation = [
+            curr_quat.vector.x,
+            curr_quat.vector.y,
+            curr_quat.vector.z,
+            curr_quat.scalar,
+        ]
+        return quaternion_from_coeff(curr_rotation)
 
 
 @registry.register_measure
@@ -209,8 +294,23 @@ class RotDistToGoal(Measure):
             **kwargs,
         )
 
+    def _get_targ(self, task, episode):
+        if len(task.nav_goal_pos.shape) == 2:
+            path = habitat_sim.MultiGoalShortestPath()
+            path.requested_start = self._sim.articulated_agent.base_pos
+            path.requested_ends = task.nav_goal_pos
+            self._sim.pathfinder.find_path(path)
+            assert (
+                path.closest_end_point_index != -1
+            ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
+            # RotDist to closest goal
+            targ = task.nav_goal_pos[path.closest_end_point_index]
+        else:
+            targ = task.nav_goal_pos
+        return targ
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        targ = task.nav_goal_pos
+        targ = self._get_targ(task, episode)
         # Get the agent
         robot = self._sim.articulated_agent
         # Get the base transformation
@@ -238,18 +338,25 @@ class NavToPosSucc(Measure):
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
+        self._success_distance = self._config.success_distance
         super().__init__(*args, config=config, **kwargs)
+
+    @property
+    def _dist_to_goal_cls_uuid(self):
+        return DistToGoal.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
-            [DistToGoal.cls_uuid],
+            [self._dist_to_goal_cls_uuid],
         )
         self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
-        self._metric = dist < self._config.success_distance
+        dist = task.measurements.measures[
+            self._dist_to_goal_cls_uuid
+        ].get_metric()
+        self._metric = dist < self._success_distance
 
 
 @registry.register_measure
@@ -263,35 +370,46 @@ class NavToObjSuccess(Measure):
     def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
-            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+            [self._nav_to_pos_succ_cls_uuid, self._rot_dist_to_goal_cls_uuid],
         )
         self.update_metric(*args, task=task, **kwargs)
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
+        self._must_look_at_targ = self._config.must_look_at_targ
+        self._success_angle_dist = self._config.success_angle_dist
+        self._must_call_stop = self._config.must_call_stop
         super().__init__(*args, config=config, **kwargs)
+
+    @property
+    def _nav_to_pos_succ_cls_uuid(self):
+        return NavToPosSucc.cls_uuid
+
+    @property
+    def _rot_dist_to_goal_cls_uuid(self):
+        return RotDistToGoal.cls_uuid
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
-            RotDistToGoal.cls_uuid
+            self._rot_dist_to_goal_cls_uuid
         ].get_metric()
 
         nav_pos_succ = task.measurements.measures[
-            NavToPosSucc.cls_uuid
+            self._nav_to_pos_succ_cls_uuid
         ].get_metric()
 
         called_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid
         ].get_metric()
 
-        if self._config.must_look_at_targ:
+        if self._must_look_at_targ:
             self._metric = (
-                nav_pos_succ and angle_dist < self._config.success_angle_dist
+                nav_pos_succ and angle_dist < self._success_angle_dist
             )
         else:
             self._metric = nav_pos_succ
 
-        if self._config.must_call_stop:
+        if self._must_call_stop:
             if called_stop:
                 task.should_end = True
             else:

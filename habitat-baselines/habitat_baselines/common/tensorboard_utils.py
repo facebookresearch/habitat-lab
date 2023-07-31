@@ -24,7 +24,7 @@ def get_writer(config, **kwargs):
             config.habitat_baselines.tensorboard_dir, **kwargs
         )
     elif config.habitat_baselines.writer_type == "wb":
-        return WeightsAndBiasesWriter(config)
+        return WeightsAndBiasesWriter(config, **kwargs)
     else:
         raise ValueError("Unrecongized writer")
 
@@ -128,6 +128,7 @@ class WeightsAndBiasesWriter:
             raise ValueError(
                 "Requested to log with wandb, but wandb is not installed."
             )
+
         if resume_run_id is not None:
             wb_kwargs["id"] = resume_run_id
             wb_kwargs["resume"] = "must"

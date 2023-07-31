@@ -16,6 +16,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.ovmm.ovmm_sim import OVMMSim
 from habitat.tasks.rearrange.rearrange_sim import (
     RearrangeSim,
     add_perf_timing_func,
@@ -71,10 +72,9 @@ class RearrangeTask(NavigationTask):
         **kwargs,
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
-        self._sim: RearrangeSim = sim
+        self._sim: Union[RearrangeSim, OVMMSim] = sim
         self._ignore_collisions: List[Any] = []
         self._desired_resting = np.array(self._config.desired_resting_position)
         self._sim_reset = True
@@ -82,6 +82,10 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
+        self._picked_object_idx = 0
+        self._in_manip_mode = False
+        self._is_navmesh_violated = False
+        self.is_stop_called = False
 
         # Get config options
         self._force_regenerate = self._config.force_regenerate
@@ -206,14 +210,18 @@ class RearrangeTask(NavigationTask):
             if self._should_place_articulated_agent:
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
+        self._in_manip_mode = False
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
-        self.should_end = False
+        self._should_end = False
         self._done = False
         self._cur_episode_step = 0
+        self._is_navmesh_violated = False
+        self._picked_object_idx = 0
+        self.is_stop_called = False
         if fetch_observations:
             self._sim.maybe_update_articulated_agent()
             return self._get_observations(episode)
@@ -256,11 +264,14 @@ class RearrangeTask(NavigationTask):
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
         action_args = action["action_args"]
         if self._enable_safe_drop and self._is_violating_safe_drop(
             action_args
         ):
             action_args["grip_action"] = None
+        self._is_navmesh_violated = False
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)

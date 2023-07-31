@@ -29,5 +29,3 @@ were used with 8 processes assigned to each GPU. We used python-3.8 and gcc-9.3 
 H2.0. We report average SPS over 10 runs and a 95% confidence-interval computed via standard error
 of the mean. Note that 8 processes do not fully utilize a 2080 Ti and thus multi-process multi-GPU
 performance may be better on machines with more CPU cores.
-
-TODO: add some example results on

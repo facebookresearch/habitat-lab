@@ -194,7 +194,7 @@ class PddlRobotState:
 
             # Place some distance away from the object.
             start_pos, start_rot, was_fail = get_robot_spawns(
-                target_position=targ_pos,
+                target_positions=np.expand_dims(targ_pos, axis=0),
                 rotation_perturbation_noise=self.get_base_angle_noise(
                     sim_info
                 ),

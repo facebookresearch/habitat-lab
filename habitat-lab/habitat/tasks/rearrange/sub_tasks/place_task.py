@@ -12,6 +12,15 @@ from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
 
 @registry.register_task(name="RearrangePlaceTask-v0")
 class RearrangePlaceTaskV1(RearrangePickTaskV1):
+    def __init__(self, *args, config, dataset=None, **kwargs):
+        self.is_nav_to_obj = False
+        super().__init__(
+            *args,
+            config=config,
+            dataset=dataset,
+            **kwargs,
+        )
+
     def _get_targ_pos(self, sim):
         return sim.get_targets()[1]
 
@@ -23,6 +32,9 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             and action_args["grip_action"] >= 0
         )
 
+    def _get_spawn_goals(self, episode):
+        return episode.candidate_goal_receps
+
     def reset(self, episode: Episode):
         sim = self._sim
         # Remove whatever the agent is currently holding.
@@ -31,6 +43,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         super().reset(episode, fetch_observations=False)
 
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
+        self._picked_object_idx = self.abs_targ_idx
 
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
 

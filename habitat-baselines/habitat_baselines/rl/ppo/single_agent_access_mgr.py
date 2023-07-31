@@ -193,14 +193,23 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 }
             )
         elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
+            if self._config.habitat_baselines.rl.policy.ovrl:
+                state_dict = {
+                    k.replace("module.", ""): v
+                    for k, v in pretrained_state["teacher"].items()
                 }
-            )
+                actor_critic.net.visual_encoder.load_state_dict(
+                    state_dict=state_dict, strict=False
+                )
+            else:
+                prefix = "actor_critic.net.visual_encoder."
+                actor_critic.net.visual_encoder.load_state_dict(
+                    {
+                        k[len(prefix) :]: v
+                        for k, v in pretrained_state["state_dict"].items()
+                        if k.startswith(prefix)
+                    }
+                )
         if self._is_static_encoder:
             for param in actor_critic.visual_encoder.parameters():
                 param.requires_grad_(False)

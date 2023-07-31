@@ -1,0 +1,88 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+    - base_velocity
+    - manipulation_mode
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - robot_collisions_terminate
+    - end_effector_to_rest_distance
+    - ovmm_ee_to_place_goal_distance
+    - ovmm_object_to_place_goal_distance
+    - obj_anywhere_on_goal
+    - object_at_rest
+    - ovmm_placement_stability
+    - ovmm_place_success
+    - ovmm_place_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - joint_velocity_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - goal_recep_segmentation_sensor
+    - relative_resting_pos_sensor
+    - goal_receptacle_sensor
+    - object_embedding_sensor
+  - _self_
+
+type: RearrangePlaceTask-v0
+base_angle_noise: 0.2618 # 15 degrees
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+reward_measure: ovmm_place_reward
+success_measure: ovmm_place_success
+success_reward: 10.0
+slack_reward: -0.005
+spawn_reference: view_points
+spawn_max_dist_to_obj: 0.0
+end_on_success: True
+desired_resting_position: [0.119, -0.383, 0.657]
+start_in_manip_mode: False
+camera_tilt: -0.5235
+actions:
+  arm_action:
+    type: "ArmAction"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
+    grip_controller: "MagicGraspAction"
+    arm_joint_mask: [1,0,0,0,1,1,1,1,0,0]
+    arm_joint_dimensionality: 5
+    grasp_thresh_dist: 0.15
+    disable_grip: False
+    max_delta_pos: 0.1
+    min_delta_pos: 0.02
+    ee_ctrl_lim: 0.015
+    grasp_threshold: -0.8
+  base_velocity:
+    type: "BaseWaypointTeleportAction"
+    navmesh_offset: [[0.0, 0.0]]
+    constraint_base_in_manip_mode: True
+measurements:
+  force_terminate:
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0
+  ovmm_place_success:
+    check_stability: True
+    ee_resting_success_threshold: 100.0
+  ovmm_place_reward:
+    sparse_reward: True
+    ee_resting_success_threshold: 100.0
+    navmesh_violate_pen: 0.0
+    drop_pen: 1.0
+    stability_reward: 1.0
+    wrong_drop_should_end: False
+    max_steps_to_reach_surface: 20
+    robot_collisions_pen: 1.0
+    robot_collisions_end_pen: 5.0
+  robot_collisions_terminate:
+    max_num_collisions: 0
+lab_sensors:
+  joint_sensor:
+    dimensionality: 10
+  joint_velocity_sensor:
+    dimensionality: 10

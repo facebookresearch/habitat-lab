@@ -393,7 +393,7 @@ class PddlDomain:
             predicates=self.predicates,
             num_spawn_attempts=self._num_spawn_attempts,
             physics_stability_steps=self._physics_stability_steps,
-            receptacles=sim.receptacles,
+            receptacles=sim.episode_receptacles_bounds,
             recep_place_shrink_factor=self._recep_place_shrink_factor,
         )
         # Ensure that all objects are accounted for.

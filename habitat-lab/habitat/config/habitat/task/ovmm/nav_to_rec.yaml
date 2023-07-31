@@ -1,0 +1,67 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - ovmm_rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    - does_want_terminate
+    - target_iou_coverage
+    - ovmm_nav_to_obj_success
+    - bad_called_terminate
+    - robot_collisions_terminate
+    - ovmm_nav_to_obj_reward
+    - num_steps
+    - navmesh_collision
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - joint_velocity_sensor
+    - goal_receptacle_sensor
+    - ovmm_nav_goal_segmentation_sensor
+    - receptacle_segmentation_sensor
+    - robot_start_gps_sensor
+    - robot_start_compass_sensor
+  - _self_
+
+type: OVMMNavToObjTask-v0
+reward_measure: ovmm_nav_to_obj_reward
+success_measure: ovmm_nav_to_obj_success
+success_reward: 10.0
+slack_reward: -0.005
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+object_in_hand_sample_prob: 1.0
+min_start_distance: 1.5
+camera_tilt: -0.5236
+receptacle_categories_file: data/objects/hssd-receptacles.csv
+measurements:
+  force_terminate:
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0
+  ovmm_nav_to_obj_reward:
+    navmesh_violate_pen: 0.3
+    turn_reward_dist: 3.0
+    angle_dist_reward: 1.0
+    dist_reward: 1.0
+  nav_to_pos_succ:
+    success_distance: 0.1
+lab_sensors:
+  joint_sensor:
+    dimensionality: 10
+  joint_velocity_sensor:
+    dimensionality: 10
+  ovmm_nav_goal_segmentation_sensor:
+    blank_out_prob: 0.5
+  receptacle_segmentation_sensor:
+    blank_out_prob: 0.5

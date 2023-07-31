@@ -16,13 +16,16 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleTracker,
+    TriangleMeshReceptacle,
     find_receptacles,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+from habitat.tasks.rearrange.utils import get_aabb
 
 
 class ObjectSampler:
@@ -34,10 +37,12 @@ class ObjectSampler:
         self,
         object_set: List[str],
         allowed_recep_set_names: List[str],
-        num_objects: Tuple[int, int] = (1, 1),
+        sampler_range_type: str,
+        num_objects: Optional[Tuple[int, int]] = None,
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
+        object_set_sample_probs: Optional[Dict[str, float]] = None,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
         translation_up_offset: float = 0.08,
         constrain_to_largest_nav_island: bool = False,
@@ -55,7 +60,9 @@ class ObjectSampler:
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
+        self._object_set_sample_probs = object_set_sample_probs
         self._recep_set_sample_probs = recep_set_sample_probs
+        self._sampler_range_type = sampler_range_type
         self._translation_up_offset = translation_up_offset
         self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
@@ -67,8 +74,21 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
-        self.num_objects = num_objects  # tuple of [min,max] objects to sample
-        assert self.num_objects[1] >= self.num_objects[0]
+        # type of sampler range: dynamic, fixed.
+        # - dynamic sets number of objects to sample based on total receptacle area
+        # - fixed sets number of objects to sample to the given range
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        elif self._sampler_range_type == "fixed":
+            self.num_objects = (
+                num_objects  # tuple of [min,max] objects to sample
+            )
+            assert self.num_objects[1] >= self.num_objects[0]
+            self.set_num_samples()
+        else:
+            raise ValueError(
+                f"Sampler range type {self._sampler_range_type} not recognized."
+            )
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
@@ -76,7 +96,6 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
-        self.set_num_samples()
         self.largest_island_id = -1
         # More possible parameters of note:
         # - surface vs volume
@@ -90,8 +109,24 @@ class ObjectSampler:
         self.receptacle_instances = None
         self.receptacle_candidates = None
         # number of objects in the range should be reset each time
-        self.set_num_samples()
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        else:
+            self.set_num_samples()
         self.largest_island_id = -1
+
+    def set_receptacle_instances(self, receptacles: List[Receptacle]) -> None:
+        """
+        Set the receptacle instances to sample from.
+        """
+        self.receptacle_instances = receptacles
+        if self._sampler_range_type == "dynamic":
+            total_receptacle_area = sum(rec.total_area for rec in receptacles)
+            self.num_objects = (
+                int(np.floor(total_receptacle_area * 1.5)),
+                int(np.floor(total_receptacle_area * 2)),
+            )
+            self.set_num_samples()
 
     def sample_receptacle(
         self,
@@ -219,7 +254,13 @@ class ObjectSampler:
         """
         Sample an object handle from the object_set and return it.
         """
-        return self.object_set[random.randrange(0, len(self.object_set))]
+        if self._object_set_sample_probs is not None:
+            sample_weights = [
+                self._object_set_sample_probs[k] for k in self.object_set
+            ]
+            return random.choices(self.object_set, weights=sample_weights)[0]
+        else:
+            return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
         self,
@@ -277,6 +318,17 @@ class ObjectSampler:
                     object_handle
                 )
 
+                # fail early if it's impossible to place the object
+                cumulative_bb = new_object.root_scene_node.cumulative_bb
+                new_object_base_area = (
+                    cumulative_bb.size_x() * cumulative_bb.size_z()
+                )
+                if new_object_base_area > receptacle.total_area:
+                    logger.info(
+                        f"Failed to sample placement. {object_handle} was too large to place on {receptacle.name}"
+                    )
+                    return None
+
             # try to place the object
             new_object.translation = target_object_position
             if self.orientation_sample is not None:
@@ -291,6 +343,10 @@ class ObjectSampler:
                     new_object.rotation = (
                         habitat_sim.utils.common.random_quaternion()
                     )
+            if isinstance(receptacle, TriangleMeshReceptacle):
+                new_object.translation = new_object.translation + mn.Vector3(
+                    0, 0.05, 0
+                )
 
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
@@ -327,7 +383,31 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
-                    if not self._is_accessible(sim, new_object):
+                    if not is_accessible(
+                        sim, new_object.translation, self.nav_to_min_distance
+                    ):
+                        logger.warning(
+                            f"Failed to navigate to {object_handle} on {receptacle.name} in {num_placement_tries} tries."
+                        )
+                        continue
+                    object_aabb = get_aabb(
+                        new_object.object_id, sim, transformed=True
+                    )
+                    object_corners = [
+                        object_aabb.back_bottom_left,
+                        object_aabb.back_bottom_right,
+                        object_aabb.front_bottom_left,
+                        object_aabb.front_bottom_right,
+                    ]
+                    if not all(
+                        receptacle.check_if_point_on_surface(
+                            sim, corner, threshold=0.1
+                        )
+                        for corner in object_corners
+                    ):
+                        logger.warning(
+                            f"Failed to place {object_handle} within bounds of {receptacle.name} in {num_placement_tries} tries."
+                        )
                         continue
                     return new_object
 
@@ -335,7 +415,9 @@ class ObjectSampler:
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
-                if not self._is_accessible(sim, new_object):
+                if not is_accessible(
+                    sim, new_object.translation, self.nav_to_min_distance
+                ):
                     continue
                 return new_object
 

@@ -14,11 +14,15 @@ from habitat.datasets.rearrange import _try_register_rearrangedatasetv0
 from habitat.datasets.vln import _try_register_r2r_vln_dataset
 
 
-def make_dataset(id_dataset, **kwargs):
-    logger.info("Initializing dataset {}".format(id_dataset))
+def get_dataset_type(id_dataset):
     _dataset = registry.get_dataset(id_dataset)
     assert _dataset is not None, "Could not find dataset {}".format(id_dataset)
+    return _dataset
 
+
+def make_dataset(id_dataset, **kwargs):
+    logger.info("Initializing dataset {}".format(id_dataset))
+    _dataset = get_dataset_type(id_dataset)
     return _dataset(**kwargs)  # type: ignore
 
 

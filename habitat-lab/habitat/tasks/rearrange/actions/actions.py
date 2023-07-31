@@ -11,6 +11,10 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.robots.stretch_robot import (
+    StretchJointStates,
+    StretchRobot,
+)
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -124,7 +128,8 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
 
     @property
     def action_space(self):
@@ -138,7 +143,8 @@ class ArmRelPosAction(ArticulatedAgentAction):
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
 
         # The actual joint positions
         self._sim: RearrangeSim
@@ -156,7 +162,8 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
         self._arm_joint_mask = self._config.arm_joint_mask
 
     @property
@@ -171,7 +178,8 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
 
         mask_delta_pos = np.zeros(len(self._arm_joint_mask))
         src_idx = 0
@@ -207,7 +215,8 @@ class ArmRelPosKinematicAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
         self._should_clip = self._config.get("should_clip", True)
 
     @property
@@ -223,7 +232,8 @@ class ArmRelPosKinematicAction(ArticulatedAgentAction):
         if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
         self._sim: RearrangeSim
 
         set_arm_pos = delta_pos + self.cur_articulated_agent.arm_joint_pos
@@ -287,7 +297,8 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.last_arm_action = None
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
         self._should_clip = self._config.get("should_clip", True)
         self._arm_joint_mask = self._config.arm_joint_mask
 
@@ -309,7 +320,8 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
         self._sim: RearrangeSim
 
         # Expand delta_pos based on mask
@@ -319,7 +331,6 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         for mask in self._arm_joint_mask:
             if mask == 0:
                 tgt_idx += 1
-                src_idx += 1
                 continue
             expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
             tgt_idx += 1
@@ -344,6 +355,10 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
 
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            self.cur_grasp_mgr.update_object_to_grasp()
 
 
 @registry.register_task_action
@@ -691,6 +706,244 @@ class ArmEEAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
+class ManipulationModeAction(ArticulatedAgentAction):
+    """
+    The robot joints and base is changed for performing manipulation. In the case of Stretch, the head is turned to face the arm and the base is rotated left by 90 degrees
+    """
+
+    def __init__(self, *args, config, **kwargs):
+        self._threshold = config.threshold
+        super().__init__(self, *args, config=config, **kwargs)
+
+    def step(self, task, *args, **kwargs):
+        manip_mode = kwargs.get("manipulation_mode", [-1.0])
+        if manip_mode[0] > self._threshold and not task._in_manip_mode:
+            if isinstance(self._sim.articulated_agent, StretchRobot):
+                # Turn the head to face the arm
+                task._in_manip_mode = True
+                self._sim.articulated_agent.arm_motor_pos = (
+                    StretchJointStates.PRE_GRASP
+                )
+                self._sim.articulated_agent.arm_joint_pos = (
+                    StretchJointStates.PRE_GRASP
+                )
+                # now turn the robot's base left by 90 degrees
+                obj_trans = self.cur_articulated_agent.sim_obj.transformation
+                turn_angle = np.pi / 2  # Turn left by 90 degrees
+                rot_quat = mn.Quaternion(
+                    mn.Vector3(0, np.sin(turn_angle / 2), 0),
+                    np.cos(turn_angle / 2),
+                )
+                # Get the target rotation
+                target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
+                target_trans = mn.Matrix4.from_(
+                    target_rot,
+                    obj_trans.translation,
+                )
+                self.cur_articulated_agent.sim_obj.transformation = (
+                    target_trans
+                )
+                if self.cur_grasp_mgr.snap_idx is not None:
+                    # Holding onto an object, also kinematically update the object.
+                    self.cur_grasp_mgr.update_object_to_grasp()
+
+
+@registry.register_task_action
+class BaseWaypointTeleportAction(ArticulatedAgentAction):
+    """
+    The robot is teleported to the target waypoints while being constrained to the navmesh. In one step, The robot can only move forward or turn.
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self._allow_back = config.allow_back
+        self._collision_threshold = config.collision_threshold
+        self._navmesh_offset = config.navmesh_offset
+        self._min_displacement = (
+            config.min_displacement
+        )  # minimum displacement
+        self._max_displacement_along_axis = config.max_displacement_along_axis
+        self._max_turn_radians = (
+            config.max_turn_degrees * np.pi / 180
+        )  # maximum turn waypoint
+        self._min_turn_radians = (
+            config.min_turn_degrees * np.pi / 180
+        )  # minimum turn waypoint
+        self._allow_lateral_movement = config.allow_lateral_movement
+        self._allow_simultaneous_turn = config.allow_simultaneous_turn
+        self._discrete_movement = config.discrete_movement
+        self._constraint_base_in_manip_mode = (
+            config.constraint_base_in_manip_mode
+        )
+
+    def collision_check(self, trans, target_trans):
+        """
+        trans: the transformation of the current location of the robot
+        target_trans: the transformation of the target location of the robot given the center original Navmesh
+        """
+        # Get the offset positions
+        num_check_cylinder = len(self._navmesh_offset)
+        nav_pos_3d = [
+            np.array([xz[0], xz[1], 0.0]) for xz in self._navmesh_offset
+        ]
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        goal_pos = [target_trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+        # For step filter of offset positions
+        end_pos = []
+        # Planar move distance clamped by NavMesh
+        move = []
+        for i in range(num_check_cylinder):
+            pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            # Ignore any height differences that may pop up
+            pos[1] = 0.0
+            cur_pos[i][1] = 0.0
+            goal_pos[i][1] = 0.0
+            end_pos.append(pos)
+            move.append((end_pos[i] - goal_pos[i]).length())
+
+        # There is a collision if the distance between the clamped navmesh position and target position is greater than the self._collision_threshold.
+        diff = len([v for v in move if v > self._collision_threshold])
+
+        if diff > 0:
+            return True, trans
+        else:
+            return False, target_trans
+
+    @property
+    def action_space(self):
+        lim = 1
+        action_space_shape = 2  # for turning and moving forward
+        if self._allow_lateral_movement:
+            action_space_shape += 1  # for lateral movement
+        if not self._allow_simultaneous_turn:
+            action_space_shape += (
+                1  # for determining whether to turn or move forward
+            )
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "base_vel": spaces.Box(
+                    shape=(action_space_shape,),
+                    low=-lim,
+                    high=lim,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def _capture_robot_state(self):
+        return {
+            "forces": self.cur_articulated_agent.sim_obj.joint_forces,
+            "vel": self.cur_articulated_agent.sim_obj.joint_velocities,
+            "pos": self.cur_articulated_agent.sim_obj.joint_positions,
+        }
+
+    def _set_robot_state(self, set_dat):
+        """
+        Keep track of robot's basic info
+        """
+        self.cur_articulated_agent.sim_obj.joint_positions = set_dat["forces"]
+        self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
+        self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
+
+    def update_base(self, target_rigid_state):
+        """
+        Update the robot base
+        """
+
+        trans = self.cur_articulated_agent.sim_obj.transformation
+
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
+        # Check if there is a collision
+        navmesh_violation, new_target_trans = self.collision_check(
+            trans, target_trans
+        )
+        # Update the base
+        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            self.cur_grasp_mgr.update_object_to_grasp()
+        return navmesh_violation
+
+    def step(self, *args, task, **kwargs):
+        base_action = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_pos_x = base_action[0]
+        turn_offset = 1
+        lin_pos_z = 0.0
+        if self._allow_lateral_movement:
+            lin_pos_z = base_action[1]
+            turn_offset += 1
+        turn = base_action[turn_offset]
+        if not self._allow_simultaneous_turn:
+            # Select between translation and turn
+            sel = base_action[-1]
+            if sel > 0:
+                turn = 0
+            else:
+                lin_pos_x = 0
+                lin_pos_z = 0
+
+        if self._discrete_movement:
+            # Either move/rotate in one direction by fixed amount or do not move at all
+            lin_pos_x = np.sign(lin_pos_x) if lin_pos_x != 0 else 0
+            lin_pos_z = np.sign(lin_pos_z) if lin_pos_z != 0 else 0
+            turn = np.sign(turn) if turn != 0 else 0
+
+        lin_pos_x = (
+            np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis
+        )
+        lin_pos_z = (
+            np.clip(lin_pos_z, -1, 1) * self._max_displacement_along_axis
+        )
+        ang_pos = np.clip(turn, -1, 1) * self._max_turn_radians
+
+        # Do not allow small movements
+        if np.abs(ang_pos) < self._min_turn_radians:
+            ang_pos = 0
+        if np.linalg.norm([lin_pos_x, lin_pos_z]) < self._min_displacement:
+            lin_pos_x = 0
+            lin_pos_z = 0
+
+        if not self._allow_back:
+            lin_pos_x = np.maximum(lin_pos_x, 0)
+
+        # Get the transformation of the robot
+        base_trans = self._sim.articulated_agent.base_transformation
+        obj_trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the global pos from the local target waypoints
+        target_pos = base_trans.transform_point(
+            mn.Vector3([lin_pos_x, lin_pos_z, 0])
+        )
+        target_rot = obj_trans.rotation()
+        rot_quat = mn.Quaternion(
+            mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
+        )
+        # Get the target rotation
+        target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
+
+        # combine target translation and rotation to get target rigid state
+        target_rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(target_rot), target_pos
+        )
+
+        if self._constraint_base_in_manip_mode and task._in_manip_mode:
+            lin_pos_x = 0.0
+            lin_pos_z = 0.0
+            ang_pos = 0.0
+
+        if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
+            task._is_navmesh_violated = self.update_base(target_rigid_state)
+        else:
+            # no violation if no movement was required in the first place
+            task._is_navmesh_violated = False
+
+
 class HumanoidJointAction(ArticulatedAgentAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)

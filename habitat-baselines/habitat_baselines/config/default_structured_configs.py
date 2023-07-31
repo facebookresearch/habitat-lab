@@ -121,7 +121,7 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
         "depth",
         "semantic",
     )
-    semantic_key: str = "semantic"
+    semantic_keys: Tuple[str, ...] = ("semantic",)
 
 
 cs.store(
@@ -187,7 +187,7 @@ cs.store(
 @dataclass
 class AddVirtualKeysConfig(ObsTransformConfig):
     type: str = "AddVirtualKeys"
-    virtual_keys: Dict[str, int] = field(default_factory=dict)
+    virtual_keys: Dict[str, int] = field(default_factory=lambda: dict())
 
 
 cs.store(
@@ -281,6 +281,10 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicyConfig = MISSING
+    ovrl: bool = False
+    no_downscaling: bool = False
+    use_augmentations: bool = False
+    deterministic_actions: bool = False
 
 
 @dataclass

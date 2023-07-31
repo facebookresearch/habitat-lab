@@ -20,6 +20,7 @@ from omegaconf import OmegaConf
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
+from habitat.gym.gym_definitions import make_gym_from_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -136,7 +137,12 @@ class PPOTrainer(BaseRLTrainer):
             **kwargs,
         )
 
-    def _init_envs(self, config=None, is_eval: bool = False):
+    def _init_envs(
+        self,
+        config=None,
+        is_eval: bool = False,
+        make_env_fn=make_gym_from_config,
+    ):
         if config is None:
             config = self.config
 
@@ -147,6 +153,7 @@ class PPOTrainer(BaseRLTrainer):
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
+            make_env_fn=make_env_fn,
             is_first_rank=(
                 not torch.distributed.is_initialized()
                 or torch.distributed.get_rank() == 0
@@ -368,6 +375,7 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                deterministic=self.config.habitat_baselines.rl.policy.deterministic_actions,
             )
 
         profiling_wrapper.range_pop()  # compute actions
@@ -1092,6 +1100,18 @@ class PPOTrainer(BaseRLTrainer):
 
                         # Since the starting frame of the next episode is the final frame.
                         rgb_frames[i] = rgb_frames[i][-1:]
+
+                    if len(stats_episodes) % 50 == 0:
+                        save_dir = (
+                            self.config.habitat_baselines.checkpoint_folder
+                        )
+                        os.makedirs(save_dir, exist_ok=True)
+                        if os.path.isfile(save_dir):
+                            save_dir = os.path.dirname(save_dir)
+                        np.save(
+                            os.path.join(save_dir, "all_episode_stats.npy"),
+                            np.array(stats_episodes),
+                        )
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":

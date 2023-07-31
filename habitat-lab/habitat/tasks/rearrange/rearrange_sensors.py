@@ -4,8 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 from collections import defaultdict, deque
+from typing import Any, Optional
 
 import numpy as np
 from gym import spaces
@@ -879,6 +879,59 @@ class ForceTerminate(Measure):
 
 
 @registry.register_measure
+class RobotCollisionsTerminate(Measure):
+    """
+    If the accumulated force throughout this episode exceeds the limit.
+    """
+
+    cls_uuid: str = "robot_collisions_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_num_collisions = self._config.max_num_collisions
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RobotCollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        total_collisions = robot_collisions["total_collisions"]
+        if (
+            self._max_num_collisions >= 0
+            and total_collisions > self._max_num_collisions
+        ):
+            rearrange_logger.debug(
+                f"Collisions count={self._max_num_collisions} exceeded {self._max_num_collisions}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
+@registry.register_measure
 class DidViolateHoldConstraintMeasure(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "did_violate_hold_constraint"
 
@@ -918,6 +971,12 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         self._task = task
         self._force_pen = self._config.force_pen
         self._max_force_pen = self._config.max_force_pen
+        self._constraint_violate_pen = self._config.constraint_violate_pen
+        self._force_end_pen = self._config.force_end_pen
+        self._navmesh_violate_pen = self._config.navmesh_violate_pen
+        self._robot_collisions_pen = self._config.robot_collisions_pen
+        self._robot_collisions_end_pen = self._config.robot_collisions_end_pen
+        self._prev_num_collisions = 0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -926,8 +985,11 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             [
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                RobotCollisions.cls_uuid,
+                RobotCollisionsTerminate.cls_uuid,
             ],
         )
+        self._prev_num_collisions = 0
 
         self.update_metric(
             *args,
@@ -945,14 +1007,32 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         if self._sim.get_agent_data(
             self.agent_id
         ).grasp_mgr.is_violating_hold_constraint():
-            reward -= self._config.constraint_violate_pen
+            reward -= self._constraint_violate_pen
 
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
+        collisions_terminate = task.measurements.measures[
+            RobotCollisionsTerminate.cls_uuid
+        ].get_metric()
         if force_terminate:
-            reward -= self._config.force_end_pen
+            reward -= self._force_end_pen
+        if collisions_terminate:
+            reward -= self._robot_collisions_end_pen
+        if (
+            "base_velocity" in task.actions or "move_forward" in task.actions
+        ) and task._is_navmesh_violated:
+            reward -= self._navmesh_violate_pen
 
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        collisions_added_in_step = (
+            robot_collisions["total_collisions"] - self._prev_num_collisions
+        )
+        if collisions_added_in_step > 0:
+            reward -= self._robot_collisions_pen
+        self._prev_num_collisions = robot_collisions["total_collisions"]
         self._metric = reward
 
     def _get_coll_reward(self):
@@ -987,7 +1067,10 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
+        if "stop" in task.actions:
+            self._metric = task.is_stop_called
+        else:
+            self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure
@@ -1025,6 +1108,71 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_sensor
+class CameraPoseSensor(Sensor):
+    cls_uuid: str = "camera_pose"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        task,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=(4, 4),
+            dtype=np.float32,
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+        return self._sim._sensors[
+            "head_rgb"
+        ]._sensor_object.node.transformation
+
+
+@registry.register_measure
+class NavmeshCollision(Measure):
+    """
+    Returns 1 if the agent has called the stop action and 0 otherwise.
+    """
+
+    cls_uuid: str = "navmesh_collision"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NavmeshCollision.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        if (
+            "base_velocity" in task.actions or "move_forward" in task.actions
+        ) and task._is_navmesh_violated:
+            self._metric += 1
 
 
 @registry.register_measure

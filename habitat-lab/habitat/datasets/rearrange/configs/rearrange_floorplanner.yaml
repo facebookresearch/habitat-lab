@@ -1,0 +1,581 @@
+---
+dataset_path: "data/fpss/fphab/fphab.scene_dataset_config.json"
+additional_object_paths:
+- data/objects/amazon_berkeley/configs/
+- data/objects/google_object_dataset/configs/
+correct_unstable_results: True
+scene_sets:
+  -
+    name: "microtrain"
+    included_substrings:
+      - "106365897_174225972."
+    excluded_substrings:
+      - "NONE"
+  -
+    name: "minitrain"
+    included_substrings:
+      - "107734119_175999932."
+      - "104862660_172226844."
+      - "106365897_174225972."
+      - "108736722_177263382."
+      - "108294558_176710095."
+      - "103997460_171030507."
+      - "107733912_175999623."
+      - "106879023_174887148."
+      - "108294897_176710602."
+      - "104348133_171513054."
+      - "108736635_177263256."
+      - "103997460_171030507."
+      - "107734188_176000034."
+      - "104862513_172226580."
+      - "104862621_172226772."
+      - "103997970_171031287."
+      - "102344193."
+      - "108294870_176710551."
+      - "105515211_173104179."
+      - "108294870_176710551."
+    excluded_substrings:
+      - "NONE"
+  -
+    name: "minival"
+    included_substrings:
+      - "105515211_173104185."
+      - "106878915_174887025."
+      - "107734176_176000019."
+      - "102816216."
+      - "106879005_174887124."
+      - "107734338_176000244."
+      - "108736779_177263484."
+      - "106878867_174886977."
+    excluded_substrings:
+      - "NONE"
+
+object_sets:
+- name: seen_action_figure
+  included_substrings:
+  - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Raphael
+  - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Michelangelo
+  - Dino_3
+  - Nintendo_Yoshi_Action_Figure
+  - SpiderMan_Titan_Hero_12Inch_Action_Figure_oo1qph4wwiW
+  - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Leonardo
+  - Teenage_Mutant_Ninja_Turtles_Rahzar_Action_Figure
+  excluded_substrings: []
+- name: seen_basket
+  included_substrings:
+  - Spritz_Easter_Basket_Plastic_Teal
+  excluded_substrings: []
+- name: seen_book
+  included_substrings:
+  - Eat_to_Live_The_Amazing_NutrientRich_Program_for_Fast_and_Sustained_Weight_Loss_Revised_Edition_Book
+  - B01DN8TB5U
+  excluded_substrings: []
+- name: seen_bowl
+  included_substrings:
+  - Bradshaw_International_11642_7_Qt_MP_Plastic_Bowl
+  - Footed_Bowl_Sand
+  - Now_Designs_Bowl_Akita_Black
+  - Threshold_Bead_Cereal_Bowl_White
+  - Neat_Solutions_Character_Bib_2_pack
+  - B075HWTX4Z
+  excluded_substrings: []
+- name: seen_candle_holder
+  included_substrings:
+  - B075HR7LD2
+  - B075HX7JB2
+  excluded_substrings: []
+- name: seen_canister
+  included_substrings:
+  - B07MBFDKYY
+  - B07M6PK8QN
+  excluded_substrings: []
+- name: seen_cup
+  included_substrings:
+  - Ecoforms_Cup_B4_SAN
+  excluded_substrings: []
+- name: seen_dishtowel
+  included_substrings:
+  - Tag_Dishtowel_Waffle_Gray_Checks_18_x_26
+  - Tag_Dishtowel_Basket_Weave_Red_18_x_26
+  - Cole_Hardware_Dishtowel_BlueWhite
+  - Tag_Dishtowel_Green
+  - Cole_Hardware_Dishtowel_Blue
+  - Tag_Dishtowel_Dobby_Stripe_Blue_18_x_26
+  excluded_substrings: []
+- name: seen_hat
+  included_substrings:
+  - DPC_Handmade_Hat_Brown
+  - Object_REmvBDJStub
+  excluded_substrings: []
+- name: seen_medicine_bottle
+  included_substrings:
+  - AllergenFree_JarroDophilus
+  - Sleep_Optimizer
+  - Organic_Whey_Protein_Unflavored
+  - PhosphOmega
+  - Organic_Whey_Protein_Vanilla
+  - QHPomegranate
+  - 5_HTP
+  - Blackcurrant_Lutein
+  - Bifidus_Balance_FOS
+  - NattoMax
+  - QAbsorb_CoQ10
+  excluded_substrings:
+  - QAbsorb_CoQ10_53iUqjWjW3O
+- name: seen_mouse_pad
+  included_substrings:
+  - B06X6H2WF7
+  - B06X3W3YQD
+  excluded_substrings: []
+- name: seen_pencil_case
+  included_substrings:
+  - Big_Dot_Aqua_Pencil_Case
+  - Olive_Kids_Butterfly_Garden_Pencil_Case
+  - Pinwheel_Pencil_Case
+  excluded_substrings: []
+- name: seen_plate
+  included_substrings:
+  - Threshold_Bistro_Ceramic_Dinner_Plate_Ruby_Ring
+  excluded_substrings: []
+- name: seen_shoe
+  included_substrings:
+  - Crazy_8
+  - 11pro_SL_TRX_FG
+  - ASICS_GELBlur33_20_GS_BlackWhiteSafety_Orange
+  - TOP_TEN_HI
+  - FYW_ALTERNATION
+  - California_Navy_Tieks_Italian_Leather_Ballet_Flats
+  - PureFlow_2_Color_RylPurHibiscusBlkSlvrWht_Size_50
+  - TERREX_FAST_X_GTX
+  - PureConnect_2_Color_FernNightlifeSilverBlack_Size_70_5w0BYsiogeV
+  - ASICS_GELBlur33_20_GS_Flash_YellowHot_PunchSilver
+  - Chelsea_lo_fl_rdheel_zAQrnhlEfw8
+  - Sperry_TopSider_tNB9t6YBUf3
+  - TZX_Runner
+  - Crazy_Shadow_2
+  - Sienna_Brown_Croc_Tieks_Patent_Leather_Crocodile_Print_Ballet_Flats
+  - AMBERLIGHT_UP_W
+  - TERREX_FAST_R
+  - F10_TRX_TF_rH7tmKCdUJq
+  - D_ROSE_773_II_hvInJwJ5HUD
+  - Predator_LZ_TRX_FG
+  - ASICS_GELChallenger_9_Royal_BlueWhiteBlack
+  - ASICS_GELLinksmaster_WhiteSilverCarolina_Blue
+  - ASICS_GELResolution_5_Flash_YellowBlackSilver
+  - Santa_Cruz_Mens_umxTczr1Ygg
+  - F5_TRX_FG
+  - CLIMACOOL_BOAT_BREEZE_IE6CyqSaDwN
+  - Cream_Tieks_Italian_Leather_Ballet_Flats
+  - D_ROSE_773_II_Kqclsph05pE
+  - Santa_Cruz_Mens_G7kQXK7cIky
+  - REEF_ZENFUN
+  - ClimaCool_Aerate_2_W_Wide
+  - Starstruck_Tieks_Glittery_Gold_Italian_Leather_Ballet_Flats
+  - ASICS_GELDirt_Dog_4_SunFlameBlack
+  - Adrenaline_GTS_13_Color_WhtObsdianBlckOlmpcSlvr_Size_70
+  excluded_substrings:
+  - TOP_TEN_HI_60KlbRbdoJA
+  - Crazy_Shadow_2_oW4Jd10HFFr
+- name: seen_soap_dish
+  included_substrings:
+  - Threshold_Bamboo_Ceramic_Soap_Dish
+  excluded_substrings: []
+- name: seen_sponge
+  included_substrings:
+  - Big_O_Sponges_Assorted_Cellulose_12_pack
+  excluded_substrings: []
+- name: seen_stuffed_toy
+  included_substrings:
+  - Ortho_Forward_Facing_QCaor9ImJ2G
+  - Sootheze_Toasty_Orca
+  - Animal_Planet_Foam_2Headed_Dragon
+  - Elephant
+  - Ortho_Forward_Facing_3Q6J2oKJD92
+  excluded_substrings:
+  - Sootheze_Cold_Therapy_Elephant
+- name: seen_sushi_mat
+  included_substrings:
+  - Sushi_Mat
+  excluded_substrings: []
+- name: seen_tape
+  included_substrings:
+  - 3M_Vinyl_Tape_Green_1_x_36_yd
+  - Cole_Hardware_Antislip_Surfacing_Material_White
+  - Cole_Hardware_Antislip_Surfacing_White_2_x_60
+  - Shurtape_Gaffers_Tape_Silver_2_x_60_yd
+  excluded_substrings: []
+- name: seen_vase
+  included_substrings:
+  - B07JM1K8VH
+  - B07B8W8FBV
+  - B07HSJVP5C
+  - B075HR7DM7
+  - B078JJDPR2
+  - B075HR7KY9
+  - B07B8NVHX1
+  - B07HSLG6WR
+  - B075HXPFTG
+  - B07B8PXTSY
+  - B07JLBDT51
+  - B075HR4ZDB
+  excluded_substrings: []
+- name: test_unseen_action_figure
+  included_substrings:
+  - Nintendo_Mario_Action_Figure
+  - Dino_4
+  - Dino_5
+  - Playmates_Industrial_CoSplinter_Teenage_Mutant_Ninja_Turtle_Action_Figure
+  - Playmates_nickelodeon_teenage_mutant_ninja_turtles_shredder
+  - SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP
+  excluded_substrings: []
+- name: test_unseen_basket
+  included_substrings:
+  - RJ_Rabbit_Easter_Basket_Blue
+  excluded_substrings: []
+- name: test_unseen_book
+  included_substrings:
+  - B078GTTCCF
+  excluded_substrings: []
+- name: test_unseen_bowl
+  included_substrings:
+  - Cole_Hardware_Bowl_Scirocco_YellowBlue
+  - B075HWDSDK
+  - Sea_to_Summit_Xl_Bowl
+  - Threshold_Porcelain_Serving_Bowl_Coupe_White
+  - Calphalon_Kitchen_Essentials_12_Cast_Iron_Fry_Pan_Black
+  excluded_substrings: []
+- name: test_unseen_can
+  included_substrings:
+  - Don_Franciscos_Gourmet_Coffee_Medium_Decaf_100_Colombian_12_oz_340_g
+  excluded_substrings: []
+- name: test_unseen_can_opener
+  included_substrings:
+  - OXO_Soft_Works_Can_Opener_SnapLock
+  excluded_substrings: []
+- name: test_unseen_candle_holder
+  included_substrings:
+  - B075HXHKTZ
+  excluded_substrings: []
+- name: test_unseen_canister
+  included_substrings:
+  - B07MF1SFKD
+  - B07M6PJ66Q
+  excluded_substrings: []
+- name: test_unseen_dishtowel
+  included_substrings:
+  - Tag_Dishtowel_18_x_26
+  - Cole_Hardware_Dishtowel_Red
+  - Cole_Hardware_Dishtowel_Multicolors
+  - Cole_Hardware_Dishtowel_Stripe
+  - Envision_Home_Dish_Drying_Mat_Red_6_x_18
+  excluded_substrings: []
+- name: test_unseen_hat
+  included_substrings:
+  - DPC_tropical_Trends_Hat
+  excluded_substrings: []
+- name: test_unseen_medicine_bottle
+  included_substrings:
+  - QAbsorb_CoQ10_53iUqjWjW3O
+  - Folic_Acid
+  - CoQ10_wSSVoxVppVD
+  - Borage_GLA240Gamma_Tocopherol
+  - Quercetin_500
+  - Prostate_Optimizer
+  - Theanine
+  - Pet_Dophilus_powder
+  - Perricone_MD_Health_Weight_Management_Supplements
+  - Beta_Glucan
+  excluded_substrings: []
+- name: test_unseen_mouse_pad
+  included_substrings:
+  - B003QTD4Y6
+  excluded_substrings: []
+- name: test_unseen_pencil_case
+  included_substrings:
+  - Big_Dot_Pink_Pencil_Case
+  - Olive_Kids_Robots_Pencil_Case
+  - Olive_Kids_Paisley_Pencil_Case
+  excluded_substrings: []
+- name: test_unseen_plate
+  included_substrings:
+  - Threshold_Dinner_Plate_Square_Rim_White_Porcelain
+  excluded_substrings: []
+- name: test_unseen_scissors
+  included_substrings:
+  - Diamond_Visions_Scissors_Red
+  excluded_substrings: []
+- name: test_unseen_screwdriver
+  included_substrings:
+  - Craftsman_Grip_Screwdriver_Phillips_Cushion
+  excluded_substrings: []
+- name: test_unseen_shoe
+  included_substrings:
+  - TOP_TEN_HI_60KlbRbdoJA
+  - Sperry_TopSider_pSUFPWQXPp3
+  - Santa_Cruz_Mens_YmsMDkFf11Z
+  - D_ROSE_45
+  - PHEEHAN_RUN
+  - PureConnect_2_Color_AnthrcteKnckoutPnkGrnGecko_Size_50
+  - F10_TRX_FG_ssscuo9tGxb
+  - ASICS_GELTour_Lyte_WhiteOrchidSilver
+  - ASICS_GELAce_Pro_Pearl_WhitePink
+  - Santa_Cruz_Mens_vnbiTDDt5xH
+  - Copperhead_Snake_Tieks_Brown_Snake_Print_Ballet_Flats
+  - REEF_BRAIDED_CUSHION
+  - ASICS_GEL1140V_WhiteBlackSilver
+  - Ravenna_4_Color_WhtOlyBluBlkShkOrngSlvRdO_Size_70
+  - ASICS_GEL1140V_WhiteRoyalSilver
+  - REEF_BANTU
+  - Cascadia_8_Color_AquariusHibscsBearingSeaBlk_Size_50
+  - PureCadence_2_Color_HiRskRedNghtlfeSlvrBlckWht_Size_70
+  - ASICS_HyperRocketgirl_SP_5_WhiteMalibu_BlueBlack
+  - ENFR_MID_ENFORCER
+  - PureCadence_2_Color_TleBluLmePnchSlvMoodIndgWh_Size_50_EEzAfcBfHHO
+  - FYW_DIVISION
+  - Azure_Snake_Tieks_Leather_Snake_Print_Ballet_Flats
+  - Colton_Wntr_Chukka_y4jO0I8JQFW
+  - Crazy_Shadow_2_oW4Jd10HFFr
+  - ASICS_GELLinksmaster_WhiteRasberryGunmetal
+  - Adrenaline_GTS_13_Color_DrkDenimWhtBachlorBttnSlvr_Size_50_yfK40TNjq0V
+  - PureConnect_2_Color_BlckBrllntBluNghtlfeAnthrct_Size_70
+  - TROCHILUS_BOOST
+  - Chelsea_BlkHeelPMP_DwxLtZNxLZZ
+  - ASICS_GELLinksmaster_WhiteCoffeeSand
+  - D_ROSE_ENGLEWOOD_II
+  - Court_Attitude
+  excluded_substrings: []
+- name: test_unseen_spatula
+  included_substrings:
+  - OXO_Cookie_Spatula
+  excluded_substrings: []
+- name: test_unseen_stuffed_toy
+  included_substrings:
+  - Shark
+  - Sootheze_Cold_Therapy_Elephant
+  - Racoon
+  - Squirrel
+  - Ortho_Forward_Facing
+  excluded_substrings:
+  - Ortho_Forward_Facing_3Q6J2oKJD92
+  - Ortho_Forward_Facing_CkAW6rL25xH
+  - Ortho_Forward_Facing_QCaor9ImJ2G
+- name: test_unseen_tape
+  included_substrings:
+  - 3M_Antislip_Surfacing_Light_Duty_White
+  - Shurtape_Tape_Purple_CP28
+  - Shurtape_30_Day_Removal_UV_Delct_15
+  excluded_substrings: []
+- name: test_unseen_vase
+  included_substrings:
+  - B07B8NZQ68
+  - B078JMJC49
+  - B078JGHZT3
+  - B075HXJPW6
+  - B078JMJC46
+  - B075HWX46K
+  - B075HXLWT5
+  - B07JM6GHC8
+  - B078JGYJTG
+  - B07HSMVFMP
+  - B075HWMC6S
+  - B07B8VJBCL
+  excluded_substrings: []
+receptacle_sets:
+  -
+    name: "hab2"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: subset
+  params:
+    scene_sets:
+      - "microtrain"
+      - "minitrain"
+      - "minival"
+object_samplers:
+- name: train_set
+  type: category_balanced
+  sampler_range: dynamic
+  params:
+    object_sets:
+    - seen_action_figure
+    - seen_basket
+    - seen_book
+    - seen_bowl
+    - seen_candle_holder
+    - seen_canister
+    - seen_cup
+    - seen_dishtowel
+    - seen_hat
+    - seen_medicine_bottle
+    - seen_mouse_pad
+    - seen_pencil_case
+    - seen_plate
+    - seen_shoe
+    - seen_soap_dish
+    - seen_sponge
+    - seen_stuffed_toy
+    - seen_sushi_mat
+    - seen_tape
+    - seen_vase
+    receptacle_sets:
+    - hab2
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+# TODO (Arun): Add way from CLI to switch between train and val object sets
+# - name: val_set_clutter
+#   type: category_balanced
+#   sampler_range: dynamic
+#   params:
+#     object_sets:
+#     - test_unseen_action_figure
+#     - test_unseen_basket
+#     - test_unseen_book
+#     - test_unseen_bowl
+#     - test_unseen_can
+#     - test_unseen_can_opener
+#     - test_unseen_candle_holder
+#     - test_unseen_canister
+#     - test_unseen_dishtowel
+#     - test_unseen_hat
+#     - test_unseen_medicine_bottle
+#     - test_unseen_mouse_pad
+#     - test_unseen_pencil_case
+#     - test_unseen_plate
+#     - test_unseen_scissors
+#     - test_unseen_screwdriver
+#     - test_unseen_shoe
+#     - test_unseen_spatula
+#     - test_unseen_stuffed_toy
+#     - test_unseen_tape
+#     - test_unseen_vase
+#     - seen_action_figure
+#     - seen_basket
+#     - seen_book
+#     - seen_bowl
+#     - seen_candle_holder
+#     - seen_canister
+#     - seen_cup
+#     - seen_dishtowel
+#     - seen_hat
+#     - seen_medicine_bottle
+#     - seen_mouse_pad
+#     - seen_pencil_case
+#     - seen_plate
+#     - seen_shoe
+#     - seen_soap_dish
+#     - seen_sponge
+#     - seen_stuffed_toy
+#     - seen_sushi_mat
+#     - seen_tape
+#     - seen_vase
+#     receptacle_sets:
+#     - hab2
+#     orientation_sampling: up
+#     nav_to_min_distance: 1.5
+# - name: val_set_targets
+#   type: category_balanced
+#   sampler_range: fixed
+#   params:
+#     object_sets:
+#     - test_unseen_action_figure
+#     - test_unseen_basket
+#     - test_unseen_book
+#     - test_unseen_bowl
+#     - test_unseen_can
+#     - test_unseen_can_opener
+#     - test_unseen_candle_holder
+#     - test_unseen_canister
+#     - test_unseen_dishtowel
+#     - test_unseen_hat
+#     - test_unseen_medicine_bottle
+#     - test_unseen_mouse_pad
+#     - test_unseen_pencil_case
+#     - test_unseen_plate
+#     - test_unseen_scissors
+#     - test_unseen_screwdriver
+#     - test_unseen_shoe
+#     - test_unseen_spatula
+#     - test_unseen_stuffed_toy
+#     - test_unseen_tape
+#     - test_unseen_vase
+#     receptacle_sets:
+#     - hab2
+#     num_samples:
+#     - 1
+#     - 1
+#     orientation_sampling: up
+#     nav_to_min_distance: 1.5
+#- name: test_set
+#  type: category_balanced
+#  params:
+#    object_sets:
+#    - test_unseen_action_figure
+#    - test_unseen_basket
+#    - test_unseen_book
+#    - test_unseen_bowl
+#    - test_unseen_can
+#    - test_unseen_can_opener
+#    - test_unseen_candle_holder
+#    - test_unseen_canister
+#    - test_unseen_dishtowel
+#    - test_unseen_hat
+#    - test_unseen_medicine_bottle
+#    - test_unseen_mouse_pad
+#    - test_unseen_pencil_case
+#    - test_unseen_plate
+#    - test_unseen_scissors
+#    - test_unseen_screwdriver
+#    - test_unseen_shoe
+#    - test_unseen_spatula
+#    - test_unseen_stuffed_toy
+#    - test_unseen_tape
+#    - test_unseen_vase
+#    - seen_action_figure
+#    - seen_basket
+#    - seen_book
+#    - seen_bowl
+#    - seen_candle_holder
+#    - seen_canister
+#    - seen_cup
+#    - seen_dishtowel
+#    - seen_hat
+#    - seen_medicine_bottle
+#    - seen_mouse_pad
+#    - seen_pencil_case
+#    - seen_plate
+#    - seen_shoe
+#    - seen_soap_dish
+#    - seen_sponge
+#    - seen_stuffed_toy
+#    - seen_sushi_mat
+#    - seen_tape
+#    - seen_vase
+#    receptacle_sets:
+#    - hab2
+#    num_samples:
+#    - 20
+#    - 20
+#    orientation_sampling: up
+#    nav_to_min_distance: 1.5
+object_target_samplers:
+- name: hab2
+  type: uniform
+  sampler_range: fixed
+  params:
+    object_samplers:
+    - train_set
+    # - val_set_clutter
+    # - val_set_targets
+    receptacle_sets:
+    - hab2
+    num_samples:
+    - 1
+    - 1
+    orientation_sampling: up
+    nav_to_min_distance: 1.5

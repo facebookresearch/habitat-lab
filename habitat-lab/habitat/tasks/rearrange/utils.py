@@ -19,6 +19,8 @@ import quaternion
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
@@ -165,6 +167,29 @@ def rearrange_collision(
             robot_scene_colls=min(robot_scene_colls, 1),
         )
     return coll_details.total_collisions > 0, coll_details
+
+
+def get_camera_transform(sim):
+    if isinstance(sim.articulated_agent, SpotRobot):
+        cam_info = sim.articulated_agent.params.cameras[
+            "articulated_agent_arm_depth"
+        ]
+    elif isinstance(sim.articulated_agent, StretchRobot):
+        cam_info = sim.articulated_agent.params.cameras["head"]
+    else:
+        raise NotImplementedError(
+            "Camera transform not implemented for this function."
+        )
+
+    # Get the camera's attached link
+    link_trans = sim.articulated_agent.sim_obj.get_link_scene_node(
+        cam_info.attached_link_id
+    ).transformation
+    # Get the camera offset transformation
+    offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+    cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+
+    return cam_trans
 
 
 def convert_legacy_cfg(obj_list):
@@ -390,12 +415,14 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 
 
 def get_robot_spawns(
-    target_position: np.ndarray,
+    target_positions: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
+    orient_positions: Optional[np.ndarray] = None,
+    sample_probs: Optional[np.ndarray] = None,
     agent: Optional[MobileManipulator] = None,
 ) -> Tuple[np.ndarray, float, bool]:
     """
@@ -410,10 +437,23 @@ def get_robot_spawns(
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
+    :param orient_positions: The positions to orient the robot towards. If None, the target position is used.
+    :param sample_probs: The probability of sampling each target position. If None, uniform sampling is used.
     :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
 
     :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
     """
+    tolerance = 1e-4
+    state = sim.capture_state()
+    if orient_positions is None:
+        orient_positions = target_positions
+
+    orient_positions_filtered = orient_positions.copy()
+    target_positions_filtered = target_positions.copy()
+    sample_probs_filtered = None
+    if sample_probs is not None:
+        sample_probs_filtered = sample_probs.copy()
+
     if agent is None:
         agent = sim.articulated_agent
     start_rotation = agent.base_rot
@@ -425,21 +465,42 @@ def get_robot_spawns(
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
 
-        if distance_threshold == -1.0:
+        # Randomly sample an index of target positions.
+        target_index = np.random.choice(
+            target_positions_filtered.shape[0], p=sample_probs_filtered
+        )
+
+        target_position = target_positions_filtered[target_index]
+        orient_position = orient_positions_filtered[target_index]
+        if distance_threshold == -1:
             # Place as close to the object as possible.
             if not sim.is_point_within_bounds(target_position):
                 rearrange_logger.error(
                     f"Object {target_position} is out of bounds but trying to set robot position"
                 )
-
             start_position = sim.safe_snap_point(target_position)
-        else:
-            # Place within `distance_threshold` of the object.
-            start_position = sim.pathfinder.get_random_navigable_point_near(
-                target_position, distance_threshold
+        elif distance_threshold == 0:
+            start_position = sim.pathfinder.snap_point(
+                target_position,
+                island_index=sim.navmesh_classification_results[
+                    "active_island"
+                ],
             )
+        else:
+            start_position = sim.pathfinder.get_random_navigable_point_near(
+                target_position,
+                distance_threshold,
+                island_index=sim.navmesh_classification_results[
+                    "active_island"
+                ],
+            )
+
+        island_idx = sim.pathfinder.get_island(start_position)
+        if island_idx != sim.largest_island_idx:
+            continue
+
         # Face the robot towards the object.
-        relative_target = target_position - start_position
+        relative_target = orient_position - start_position
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
         start_rotation = angle_to_object + rotation_noise
@@ -451,13 +512,45 @@ def get_robot_spawns(
         if island_idx != sim.largest_island_idx:
             continue
 
+        is_navigable = sim.pathfinder.is_navigable(start_position)
+        invalid_target_position = (
+            not is_navigable
+            if distance_threshold == 0
+            else np.isnan(start_position).any()
+        )
+
+        if invalid_target_position:
+            # navmesh is hard to sample from around the selected target position
+            # do not sample this target position again
+            target_positions_filtered = np.delete(
+                target_positions_filtered, target_index, axis=0
+            )
+            orient_positions_filtered = np.delete(
+                orient_positions_filtered, target_index, axis=0
+            )
+            if sample_probs_filtered is not None:
+                sample_probs_filtered = np.delete(
+                    sample_probs_filtered, target_index, axis=0
+                )
+                sample_probs_filtered = sample_probs_filtered / np.sum(
+                    sample_probs_filtered
+                )
+            if len(target_positions_filtered) == 0:
+                # reset the target positions and start over again
+                target_positions_filtered = target_positions.copy()
+                orient_positions_filtered = orient_positions.copy()
+                if sample_probs_filtered is not None:
+                    sample_probs_filtered = sample_probs.copy()
+            continue
+
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
-        is_navigable = sim.pathfinder.is_navigable(start_position)
-
-        if target_distance > distance_threshold or not is_navigable:
+        if (
+            target_distance > max(distance_threshold, tolerance)
+            or not is_navigable
+        ):
             continue
 
         agent.base_pos = start_position
@@ -470,7 +563,7 @@ def get_robot_spawns(
             _, details = rearrange_collision(
                 sim,
                 False,
-                ignore_base=False,
+                ignore_base=True,
             )
 
             # Only care about collisions between the robot and scene.

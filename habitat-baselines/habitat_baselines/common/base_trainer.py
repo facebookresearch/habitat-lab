@@ -87,8 +87,10 @@ class BaseTrainer:
                 resume_state["config"]
             )
             prev_ckpt_ind = resume_state["prev_ckpt_ind"]
+            resume_run_id = resume_state["run_id"]
         else:
             prev_ckpt_ind = -1
+            resume_run_id = None
 
         self.device = (
             torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
@@ -108,7 +110,11 @@ class BaseTrainer:
                 len(self.config.habitat_baselines.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"
 
-        with get_writer(self.config, flush_secs=self.flush_secs) as writer:
+        with get_writer(
+            self.config,
+            resume_run_id=resume_run_id,
+            flush_secs=self.flush_secs,
+        ) as writer:
             if (
                 os.path.isfile(
                     self.config.habitat_baselines.eval_ckpt_path_dir
@@ -151,7 +157,6 @@ class BaseTrainer:
                         writer=writer,
                         checkpoint_index=prev_ckpt_ind,
                     )
-
                     # We save a resume state during evaluation so that
                     # we can resume evaluating incase the job gets
                     # preempted.
@@ -159,6 +164,7 @@ class BaseTrainer:
                         {
                             "config": self.config,
                             "prev_ckpt_ind": prev_ckpt_ind,
+                            "run_id": writer.get_run_id(),
                         },
                         self.config,
                         filename_key="eval",

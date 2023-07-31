@@ -382,12 +382,18 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_observation(
-        self, observations, episode, *args: Any, **kwargs: Any
-    ):
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(episode.start_rotation)
+
+    def get_agent_current_rotation(self, sim):
         agent_state = self._sim.get_agent_state()
-        rotation_world_agent = agent_state.rotation
-        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
+        return agent_state.rotation
+
+    def get_observation(
+        self, observations, episode, task, *args: Any, **kwargs: Any
+    ):
+        rotation_world_start = self.get_agent_start_rotation(episode, task)
+        rotation_world_agent = self.get_agent_current_rotation(self._sim)
 
         if isinstance(rotation_world_agent, quaternion.quaternion):
             return self._quat_to_xy_heading(
@@ -434,25 +440,36 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_observation(
-        self, observations, episode, *args: Any, **kwargs: Any
-    ):
+    def get_agent_start_position(self, episode, task):
+        return episode.start_position
+
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(episode.start_rotation)
+
+    def get_agent_current_position(self, sim):
         agent_state = self._sim.get_agent_state()
+        return agent_state.position
 
-        origin = np.array(episode.start_position, dtype=np.float32)
-        rotation_world_start = quaternion_from_coeff(episode.start_rotation)
+    def get_observation(
+        self, observations, episode, task, *args: Any, **kwargs: Any
+    ):
+        start_position = self.get_agent_start_position(episode, task)
+        rotation_world_start = self.get_agent_start_rotation(episode, task)
 
-        agent_position = agent_state.position
+        origin = np.array(start_position, dtype=np.float32)
 
-        agent_position = quaternion_rotate_vector(
+        agent_position = self.get_agent_current_position(self._sim)
+
+        relative_agent_position = quaternion_rotate_vector(
             rotation_world_start.inverse(), agent_position - origin
         )
         if self._dimensionality == 2:
             return np.array(
-                [-agent_position[2], agent_position[0]], dtype=np.float32
+                [-relative_agent_position[2], relative_agent_position[0]],
+                dtype=np.float32,
             )
         else:
-            return agent_position.astype(np.float32)
+            return relative_agent_position.astype(np.float32)
 
 
 @registry.register_sensor
@@ -953,18 +970,27 @@ class DistanceToGoal(Measure):
             List[Tuple[float, float, float]]
         ] = None
         self._distance_to = self._config.distance_to
+        self._distance_from = self._config.distance_from
+        self._goals_attr = self._config.goals_attr
 
         super().__init__(**kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
+    def get_base_position(self):
+        return self._sim.get_agent_state().position
+
+    def get_end_effector_position(self):
+        raise NotImplementedError
+
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
+        self._metric = None
         if self._distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
-                for goal in episode.goals
+                for goal in getattr(episode, self._goals_attr)
                 for view_point in goal.view_points
             ]
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
@@ -972,15 +998,32 @@ class DistanceToGoal(Measure):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        current_position = self._sim.get_agent_state().position
+        if self._distance_from == "END_EFFECTOR":
+            current_position = self.get_end_effector_position()
+        else:
+            current_position = self.get_base_position()
 
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position, atol=1e-4
         ):
-            if self._distance_to == "POINT":
+            if self._distance_to == "EUCLIDEAN_POINT":
+                distance_to_target = min(
+                    [
+                        np.linalg.norm(
+                            np.array(goal.position) - current_position,
+                            ord=2,
+                            axis=-1,
+                        )
+                        for goal in getattr(episode, self._goals_attr)
+                    ]
+                )
+            elif self._distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
-                    [goal.position for goal in episode.goals],
+                    [
+                        goal.position
+                        for goal in getattr(episode, self._goals_attr)
+                    ],
                     episode,
                 )
             elif self._distance_to == "VIEW_POINTS":
@@ -991,7 +1034,6 @@ class DistanceToGoal(Measure):
                 logger.error(
                     f"Non valid distance_to parameter was provided: {self._distance_to }"
                 )
-
             self._previous_position = (
                 current_position[0],
                 current_position[1],
@@ -1018,15 +1060,19 @@ class DistanceToGoalReward(Measure):
         self._previous_distance: Optional[float] = None
         super().__init__()
 
+    @property
+    def distance_to_goal_cls(self):
+        return DistanceToGoal
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
-            self.uuid, [DistanceToGoal.cls_uuid]
+            self.uuid, [self.distance_to_goal_cls.cls_uuid]
         )
         self._previous_distance = task.measurements.measures[
-            DistanceToGoal.cls_uuid
+            self.distance_to_goal_cls.cls_uuid
         ].get_metric()
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
@@ -1034,7 +1080,7 @@ class DistanceToGoalReward(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
-            DistanceToGoal.cls_uuid
+            self.distance_to_goal_cls.cls_uuid
         ].get_metric()
         self._metric = -(distance_to_target - self._previous_distance)
         self._previous_distance = distance_to_target
@@ -1062,28 +1108,69 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
 class MoveForwardAction(SimulatorTaskAction):
     name: str = "move_forward"
 
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, task, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
+        if type(self._sim) == RearrangeSim:
+            actuation = (
+                self._sim.config.agents[0].action_space[1].actuation.amount
+            )
+            trans = self._sim.articulated_agent.base_transformation
+            local_pos = np.array([actuation, 0, 0])
+            global_pos = trans.transform_point(local_pos)
+            snapped_global_pos = self._sim.step_filter(
+                trans.translation, global_pos
+            )
+            if snapped_global_pos == global_pos:
+                self._sim.articulated_agent.base_pos = snapped_global_pos
+                task._is_navmesh_violated = False
+            else:
+                task._is_navmesh_violated = True
         return self._sim.step(HabitatSimActions.move_forward)
+
+
+def rotate_action(sim, task: EmbodiedTask, direction: str):
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
+    assert direction in ["left", "right"]
+
+    if type(sim) == RearrangeSim:
+        # TODO: move this code to rearrange file, also ava
+        actuation = sim.config.agents[0].action_space[2].actuation.amount
+        if "robot_start_angle" not in dir(sim):
+            sim.articulated_agent_start_angle = (
+                task._nav_to_info.robot_start_angle  # type: ignore
+            )
+            sim.current_angle = sim.articulated_agent_start_angle
+
+        if direction == "right":
+            actuation = -1 * actuation
+
+        sim.updated_angle = sim.current_angle + actuation * np.pi / 180
+        sim.articulated_agent.base_rot = sim.updated_angle
+        sim.current_angle = sim.updated_angle
 
 
 @registry.register_task_action
 class TurnLeftAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        rotate_action(self._sim, task, direction="left")
         return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
 class TurnRightAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        rotate_action(self._sim, task, direction="right")
 
         return self._sim.step(HabitatSimActions.turn_right)
 
@@ -1100,6 +1187,8 @@ class StopAction(SimulatorTaskAction):
         ``step``.
         """
         task.is_stop_called = True  # type: ignore
+        task._is_navmesh_violated = False  # type: ignore
+        return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action

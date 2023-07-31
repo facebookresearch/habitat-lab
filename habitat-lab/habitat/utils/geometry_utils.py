@@ -118,6 +118,14 @@ def agent_state_target2ref(
     return (rotation_in_ref_coordinate, position_in_ref_coordinate)
 
 
+def cosine(v1, v2):
+    return np.clip(np.dot(v1, v2), -1.0, 1.0)
+
+
+def angle_between(v1, v2):
+    return np.arccos(cosine(v1, v2))
+
+
 def random_triangle_point(
     v0: np.ndarray, v1: np.ndarray, v2: np.ndarray
 ) -> np.ndarray:

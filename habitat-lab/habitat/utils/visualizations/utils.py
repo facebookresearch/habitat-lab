@@ -221,11 +221,36 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):
                 obs_k = obs_k.cpu().numpy()
-            if obs_k.dtype != np.uint8:
+            if "ovmm_nav_goal_segmentation" in sensor_name:
+                if obs_k.shape[2] == 1:
+                    obs_k = obs_k * 255.0
+                    obs_k = obs_k.astype(np.uint8)
+                elif obs_k.shape[2] == 2:
+                    obs_k = np.clip(
+                        obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1
+                    )[..., None]
+                else:
+                    raise Exception(
+                        "OVMM Nav Goal Segmentation Sensor can have max 2 channels"
+                    )
+
+            if obs_k.dtype != np.uint8 or sensor_name in [
+                "goal_recep_segmentation",
+                "object_segmentation",
+                "object_segmentation_resized",
+                "object_segmentation_resized",
+            ]:
                 obs_k = obs_k * 255.0
                 obs_k = obs_k.astype(np.uint8)
             if obs_k.shape[2] == 1:
                 obs_k = np.concatenate([obs_k for _ in range(3)], axis=2)
+            if "third" not in sensor_name:
+                # Mark the 3x3 square at the center of the frame with red pixels
+                height, width = obs_k.shape[:2]
+                obs_k[
+                    height // 2 - 3 : height // 2 + 3,
+                    width // 2 - 3 : width // 2 + 3,
+                ] = [[255, 0, 0]]
             render_obs_images.append(obs_k)
 
     assert (

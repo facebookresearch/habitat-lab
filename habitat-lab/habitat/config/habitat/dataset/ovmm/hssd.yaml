@@ -1,0 +1,12 @@
+# @package habitat.dataset
+
+defaults:
+  - /habitat/dataset: ovmm_dataset_config_schema
+  - _self_
+
+type: OVMMDataset-v0
+split: train
+data_path: data/datasets/ovmm/{split}/episodes.json.gz
+scenes_dir: data/hssd-hab/
+viewpoints_matrix_path: data/datasets/ovmm/{split}/viewpoints.npy
+transformations_matrix_path: data/datasets/ovmm/{split}/transformations.npy

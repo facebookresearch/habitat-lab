@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
+import pickle
 import time
 from collections import defaultdict
 from typing import (
@@ -30,6 +32,9 @@ from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.navmesh_utils import (
+    compute_navmesh_island_classifications,
+)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
@@ -98,9 +103,9 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
         # The receptacle information cached between all scenes.
-        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        self._receptacle_bounds_cache: Dict[str, Dict[str, mn.Range3D]] = {}
         # The per episode receptacle information.
-        self._receptacles: Dict[str, mn.Range3D] = {}
+        self._episode_receptacle_bounds: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
@@ -114,6 +119,7 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
+        self._obj_orig_motion_types: Dict[str, MotionType] = {}
         # Setup config options.
         self._debug_render_articulated_agent = (
             self.habitat_config.debug_render_articulated_agent
@@ -136,13 +142,14 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
-
+        self._sleep_dist = self.habitat_config.sleep_dist
         self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
         self._perf_logging_enabled = False
         self.cur_runtime_perf_scope: List[str] = []
         self._should_setup_semantic_ids = (
             self.habitat_config.should_setup_semantic_ids
         )
+        self._object_ids_start = self.habitat_config.object_ids_start
 
     def enable_perf_logging(self):
         """
@@ -151,8 +158,8 @@ class RearrangeSim(HabitatSim):
         self._perf_logging_enabled = True
 
     @property
-    def receptacles(self) -> Dict[str, AABBReceptacle]:
-        return self._receptacles
+    def episode_receptacle_bounds(self) -> Dict[str, AABBReceptacle]:
+        return self._episode_receptacle_bounds
 
     @property
     def handle_to_object_id(self) -> Dict[str, int]:
@@ -220,6 +227,22 @@ class RearrangeSim(HabitatSim):
     def _try_acquire_context(self):
         if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
+
+    def _auto_sleep_far_objects(self):
+        all_robo_pos = [
+            agent.base_pos for agent in self.agents_mgr.articulated_agents_iter
+        ]
+        rom = self.get_rigid_object_manager()
+        for handle, ro in rom.get_objects_by_handle_substring().items():
+            is_far = all(
+                (robo_pos - ro.translation).length() > self._sleep_dist
+                for robo_pos in all_robo_pos
+            )
+            if is_far and ro.motion_type != MotionType.STATIC:
+                self._obj_orig_motion_types[handle] = ro.motion_type
+                ro.motion_type = habitat_sim.physics.MotionType.STATIC
+            elif not is_far:
+                ro.motion_type = self._obj_orig_motion_types[handle]
 
     @add_perf_timing_func()
     def _sleep_all_objects(self):
@@ -334,7 +357,8 @@ class RearrangeSim(HabitatSim):
 
         if new_scene:
             self._load_navmesh(ep_info)
-
+            receptacles = find_receptacles(self)
+            self.receptacles = {r.name: r for r in receptacles}
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
@@ -371,9 +395,7 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = (
-                    obj.object_id + self.habitat_config.object_ids_start
-                )
+                node.semantic_id = obj.object_id + self._object_ids_start
 
     def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
@@ -397,7 +419,11 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ]
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -411,7 +437,7 @@ class RearrangeSim(HabitatSim):
             articulated_agent.base_rot = start_rot
             self.perform_discrete_collision_detection()
             did_collide, _ = rearrange_collision(
-                self, True, ignore_base=False, agent_idx=agent_idx
+                self, True, ignore_base=True, agent_idx=agent_idx
             )
             if not did_collide:
                 break
@@ -431,10 +457,33 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+        base_dir = osp.dirname(osp.dirname(ep_info.scene_id))
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            self.navmesh_settings = NavMeshSettings()
+            self.navmesh_settings.set_defaults()
+            agent_config = self.get_agent(0).agent_config
+            self.navmesh_settings.agent_radius = agent_config.radius
+            self.navmesh_settings.agent_height = agent_config.height
+            self.navmesh_settings.agent_max_climb = 0.01
+            self.navmesh_settings.include_static_objects = True
+            self.recompute_navmesh(self.pathfinder, self.navmesh_settings)
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.pathfinder.save_nav_mesh(navmesh_path)
+
+        island_classes_path = osp.join(
+            base_dir, "navmeshes", scene_name + ".pkl"
+        )
+        if osp.exists(island_classes_path):
+            with open(island_classes_path, "rb") as f:
+                self.navmesh_classification_results = pickle.load(f)
+        else:
+            compute_navmesh_island_classifications(self)
+            with open(island_classes_path, "wb") as f:
+                pickle.dump(self.navmesh_classification_results, f)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
@@ -509,24 +558,28 @@ class RearrangeSim(HabitatSim):
         """
         snap_point can return nan which produces hard to catch errors.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
+        new_pos = self.pathfinder.snap_point(
+            pos,
+            island_index=self.navmesh_classification_results["active_island"],
+        )
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
+        if np.isnan(new_pos[0]):
+            # The point is not valid. Find a different point nearby that is valid.
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+                pos,
+                1.5,
+                1000,
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ],
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
+        if np.isnan(new_pos[0]):
             # This is a last resort, take a navmesh vertex that is closest
             use_verts = [
                 x
                 for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
+                if s == self.navmesh_classification_results["active_island"]
             ]
             distances = np.linalg.norm(
                 np.array(pos).reshape(1, 3) - use_verts, axis=-1
@@ -564,6 +617,9 @@ class RearrangeSim(HabitatSim):
                 ), f"Could not find config file for object {obj_handle}"
 
                 ro = rom.add_object_by_template_handle(template)
+                assert (
+                    ro is not None
+                ), f"Could not get rigid object from {template}"
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
             self.add_perf_timing("create_asset", t_start)
@@ -609,7 +665,7 @@ class RearrangeSim(HabitatSim):
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, mn.Range3D]:
-        if scene_id not in self._receptacles_cache:
+        if scene_id not in self._receptacle_bounds_cache:
             receps = {}
             all_receps = find_receptacles(
                 self,
@@ -631,8 +687,8 @@ class RearrangeSim(HabitatSim):
                 receps[recep.name] = mn.Range3D(
                     np.min(bounds, axis=0), np.max(bounds, axis=0)
                 )
-            self._receptacles_cache[scene_id] = receps
-        return self._receptacles_cache[scene_id]
+            self._receptacle_bounds_cache[scene_id] = receps
+        return self._receptacle_bounds_cache[scene_id]
 
     def _create_obj_viz(self):
         """
@@ -828,6 +884,12 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_articulated_agent()
+        if (
+            self.habitat_config.sleep_dist > 0.0
+            and self.habitat_config.habitat_sim_v0.enable_physics
+            and not self.habitat_config.kinematic_mode
+        ):
+            self._auto_sleep_far_objects()
 
         if self._batch_render:
             for _ in range(self.ac_freq_ratio):

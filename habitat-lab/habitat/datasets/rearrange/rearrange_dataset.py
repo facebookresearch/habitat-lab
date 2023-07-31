@@ -77,7 +77,6 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
-
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)

@@ -77,7 +77,7 @@ class ResizeShortestEdge(ObservationTransformer):
         size: int,
         channels_last: bool = True,
         trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
-        semantic_key: str = "semantic",
+        semantic_keys: Tuple[str] = ("semantic",),
     ):
         """Args:
         size: The size you want to resize the shortest edge to
@@ -87,7 +87,7 @@ class ResizeShortestEdge(ObservationTransformer):
         self._size: int = size
         self.channels_last: bool = channels_last
         self.trans_keys: Tuple[str, ...] = trans_keys
-        self.semantic_key = semantic_key
+        self.semantic_keys = semantic_keys
 
     def transform_observation_space(
         self,
@@ -135,7 +135,7 @@ class ResizeShortestEdge(ObservationTransformer):
             for sensor in self.trans_keys:
                 if sensor in observations:
                     interpolation_mode = "area"
-                    if self.semantic_key in sensor:
+                    if sensor in self.semantic_keys:
                         interpolation_mode = "nearest"
                     observations[sensor] = self._transform_obs(
                         observations[sensor], interpolation_mode
@@ -148,7 +148,7 @@ class ResizeShortestEdge(ObservationTransformer):
             config.size,
             config.channels_last,
             config.trans_keys,
-            config.semantic_key,
+            config.semantic_keys,
         )
 
 
