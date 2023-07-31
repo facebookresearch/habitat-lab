@@ -884,6 +884,9 @@ class RearrangeEpisodeGenerator:
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
+            if self.sim.config.sim_cfg.scene_id != scene_name:
+                print("CLOSED THE SIM BETWEEN EPS.")
+                self.sim.close(destroy=True)
             if self.sim.config.sim_cfg.scene_id == scene_name:
                 # we need to force a reset, so reload the NONE scene
                 # TODO: we should fix this to provide an appropriate reset method
