@@ -897,6 +897,7 @@ class RearrangeEpisodeGenerator:
                 # TODO: we should fix this to provide an appropriate reset method
                 proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
                 proxy_backend_cfg.scene_id = "NONE"
+                proxy_backend_cfg.gpu_device_id = gpu_device_id
                 proxy_hab_cfg = habitat_sim.Configuration(
                     proxy_backend_cfg, [agent_cfg]
                 )
