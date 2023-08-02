@@ -111,11 +111,10 @@ class MoveObjectsReward(RearrangeReward):
 
         # Get the target object's absolute index
         self.abs_targ_obj_idx = self._sim.scene_obj_ids[targ_obj_idx]
-        self.targ_obj_idx = str(targ_obj_idx)
 
     def get_distance(self, task, distance):
         return task.measurements.measures[distance.cls_uuid].get_metric()[
-            self.targ_obj_idx
+            str(self._cur_rearrange_stage)
         ]
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -164,6 +163,9 @@ class MoveObjectsReward(RearrangeReward):
         if place_success and not is_holding_obj:
             self._metric += self._config.single_rearrange_reward
             self._cur_rearrange_stage += 1
+            self._cur_rearrange_stage = (
+                self._cur_rearrange_stage % self.num_targets
+            )
             if self._cur_rearrange_stage < self.num_targets:
                 self.update_target_object()
 

@@ -50,9 +50,7 @@ class RearrangeGraspManager:
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
 
     def reconfigure(self) -> None:
-        """Removes any existing constraints managed by this structure.
-        Called from _sim.reconfigure().
-        """
+        """Removes any existing constraints managed by this structure."""
         self._snap_constraints.clear()
 
     def reset(self) -> None:

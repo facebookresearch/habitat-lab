@@ -32,6 +32,10 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = None
         self.force_set_idx = None
+        self._base_angle_noise = self._config.base_angle_noise
+        self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
+        self._num_spawn_attempts = self._config.num_spawn_attempts
+        self._physics_stability_steps = self._config.physics_stability_steps
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -56,11 +60,11 @@ class RearrangePickTaskV1(RearrangeTask):
 
         start_pos, angle_to_obj, was_fail = get_robot_spawns(
             targ_pos,
-            self._config.base_angle_noise,
-            self._config.spawn_max_dist_to_obj,
+            self._base_angle_noise,
+            self._spawn_max_dist_to_obj,
             sim,
-            self._config.num_spawn_attempts,
-            self._config.physics_stability_steps,
+            self._num_spawn_attempts,
+            self._physics_stability_steps,
         )
 
         if was_fail:

@@ -80,8 +80,7 @@ def _worker_fn(
         2,
         obs_space,
         action_space,
-        ppo_cfg.hidden_size,
-        num_recurrent_layers=actor_critic.net.num_recurrent_layers,
+        actor_critic,
         is_double_buffered=False,
     )
     rollouts.to(device)

@@ -67,17 +67,17 @@ stage_goals:
       - at(obj2_target|2,TARGET_obj2_target|2)
 
 solution:
-  - nav(obj0_target|0, robot_0)
+  - nav_to_obj(obj0_target|0, robot_0)
   - pick(obj0_target|0, robot_0)
-  - nav(TARGET_obj0_target|0, robot_0)
+  - nav_to_goal(TARGET_obj0_target|0, robot_0)
   - place(obj0_target|0,TARGET_obj0_target|0, robot_0)
 
-  - nav(obj1_target|1, robot_0)
+  - nav_to_obj(obj1_target|1, robot_0)
   - pick(obj1_target|1, robot_0)
-  - nav(TARGET_obj1_target|1, robot_0)
+  - nav_to_goal(TARGET_obj1_target|1, robot_0)
   - place(obj1_target|1,TARGET_obj1_target|1, robot_0)
 
-  - nav(obj2_target|2, robot_0)
+  - nav_to_obj(obj2_target|2, robot_0)
   - pick(obj2_target|2, robot_0)
-  - nav(TARGET_obj2_target|2, robot_0)
+  - nav_to_goal(TARGET_obj2_target|2, robot_0)
   - place(obj2_target|2,TARGET_obj2_target|2, robot_0)

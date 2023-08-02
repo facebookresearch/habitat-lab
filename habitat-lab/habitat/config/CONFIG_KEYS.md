@@ -36,6 +36,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | Key | Description |
 | --- | --- |
 |habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`.
+|habitat.task.physics_target_sps |  The size of each simulator physics update will be 1 / physics_target_sps. |
 |habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
@@ -84,8 +85,8 @@ defaults:
 | habitat.task.actions.move_forward |     In Navigation tasks only, this discrete action will move the robot forward by a fixed amount determined by the `habitat.simulator.forward_step_size` amount. |
 | habitat.task.actions.turn_left |     In Navigation tasks only, this discrete action will rotate the robot to the left  by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
 | habitat.task.actions.turn_right |     In Navigation tasks only, this discrete action will rotate the robot to the right by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
-| habitat.task.actions.look_up |      In Navigation tasks only, this discrete action will rotate the robot's camera up by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
-| habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
+| habitat.task.actions.look_up |      In Navigation tasks only, this discrete action will rotate the robot's camera up by a fixed amount determined by the `tilt_angle` amount of the look_up action. |
+| habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `tilt_angle` amount  of the look_down action. |
 
 ## Navigation Measures
 A measure is a way to collect data about the environment at each step that is not sensor information. Measures can contain privileged information for the user (like a top down map) or for training (like rewards).
