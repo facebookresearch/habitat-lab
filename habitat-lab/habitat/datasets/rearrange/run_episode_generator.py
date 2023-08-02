@@ -159,6 +159,9 @@ class RearrangeEpisodeGeneratorConfig:
     # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
     # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
     # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
+    # NOTE: "orientation_sampling" options: "none", "up", "all"
+    # NOTE: (optional) "constrain_to_largest_nav_island" (default False): if True, valid placements must snap to the largest navmesh island
+    # NOTE: (optional) "nav_to_min_distance" (default -1): if not -1, valid placements must snap to the navmesh with horizontal distance less than this value
     # {
     #     "name": "any_one_target",
     #     "type": "uniform",

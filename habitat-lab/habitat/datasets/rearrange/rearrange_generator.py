@@ -214,21 +214,29 @@ class RearrangeEpisodeGenerator:
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
-                    object_handles,
-                    obj_sampler_info["params"]["receptacle_sets"],
-                    (
+                    object_set=object_handles,
+                    allowed_recep_set_names=obj_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    num_objects=(
                         obj_sampler_info["params"]["num_samples"][0],
                         obj_sampler_info["params"]["num_samples"][1],
                     ),
-                    obj_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(obj_sampler_info),
-                    obj_sampler_info["params"].get(
+                    orientation_sample=obj_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        obj_sampler_info
+                    ),
+                    nav_to_min_distance=obj_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
-                    obj_sampler_info["params"].get("sample_probs", None),
-                    obj_sampler_info["params"].get(
-                        "constrain_to_largest_nav_island", False
+                    recep_set_sample_probs=obj_sampler_info["params"].get(
+                        "sample_probs", None
                     ),
+                    constrain_to_largest_nav_island=obj_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
@@ -256,17 +264,29 @@ class RearrangeEpisodeGenerator:
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
                     # Add object set later
-                    [],
-                    target_sampler_info["params"]["receptacle_sets"],
-                    (
+                    object_instance_set=[],
+                    allowed_recep_set_names=target_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    num_objects=(
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
                     ),
-                    target_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(target_sampler_info),
-                    target_sampler_info["params"].get(
+                    orientation_sample=target_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        target_sampler_info
+                    ),
+                    nav_to_min_distance=target_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
+                    recep_set_sample_probs=target_sampler_info["params"].get(
+                        "sample_probs", None
+                    ),
+                    constrain_to_largest_nav_island=target_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
