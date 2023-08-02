@@ -77,10 +77,6 @@ class PPOTrainer(BaseRLTrainer):
 
     def __init__(self, config=None):
         super().__init__(config)
-        self._evaluator = hydra.utils.instantiate(
-            config.habitat_baselines.evaluator
-        )
-        assert isinstance(self._evaluator, Evaluator)
 
         self._agent = None
         self.envs = None
@@ -855,7 +851,9 @@ class PPOTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
-        self._evaluator.evaluate_agent(
+        evaluator = hydra.utils.instantiate(config.habitat_baselines.evaluator)
+        assert isinstance(evaluator, Evaluator)
+        evaluator.evaluate_agent(
             self._agent,
             self.envs,
             self.config,
