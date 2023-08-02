@@ -16,6 +16,7 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -240,15 +241,11 @@ class ObjectSampler:
         num_placement_tries = 0
         new_object = None
 
-        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
+        # Note: we cache the largest indoor island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
         if self.largest_island_id == -1:
-            island_areas = list(
-                map(
-                    sim.pathfinder.island_area,
-                    range(sim.pathfinder.num_islands),
-                )
+            self.largest_island_id = get_largest_island_index(
+                sim.pathfinder, sim, allow_outdoor=False
             )
-            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
