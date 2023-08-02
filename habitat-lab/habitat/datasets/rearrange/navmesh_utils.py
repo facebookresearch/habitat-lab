@@ -318,9 +318,12 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
     based on Euclidean distance. The nearest navigable point may be
     separated from the object by an obstacle.
     """
+    largest_island_id = get_largest_island_index(
+        sim.pathfinder, sim, allow_outdoor=False
+    )
     if nav_to_min_distance == -1:
         return True
-    snapped = sim.pathfinder.snap_point(point)
+    snapped = sim.pathfinder.snap_point(point, island_index=largest_island_id)
 
     dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
     return dist < nav_to_min_distance

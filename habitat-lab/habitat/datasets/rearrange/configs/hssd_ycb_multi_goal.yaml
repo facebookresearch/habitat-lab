@@ -35,13 +35,13 @@
           - "108736851_177263586"
           - "108736872_177263607"
           - "102344457"
-          #- "106879044_174887172"  #not sure why failure
-          #- "104862669_172226853" #not sure why failure
-          #- "106366353_174226695" #largest navmesh island is an outdoor patio
-          #- "102344022" #largest navmesh island is an outdoor yard
-          #- "102344403" #largest navmesh island is an outdoor yard
-          #- "102815859" #largest navmesh island is an outdoor yard
-          #- "102816009" #largest navmesh island is an outdoor drive
+          - "106879044_174887172"
+          - "104862669_172226853"
+          - "106366353_174226695"
+          - "102344022"
+          - "102344403"
+          - "102815859"
+          - "102816009"
         excluded_substrings:
           - "NONE"
           - "102815859_169535055"
@@ -71,9 +71,9 @@
           - "106366233_174226506"
           - "102817161"
           - "102816201"
-          #- "106879104_174887235" #largest navmesh island is an outdoor patio
+          - "106879104_174887235"
           - "105515523_173104614"
-          #- "104862609_172226751" #largest navmesh island is an outdoor yard/pool
+          - "104862609_172226751"
           - "104862474_172226496"
           - "102815859_169535055"
         excluded_substrings:
