@@ -284,6 +284,7 @@ class RearrangeSim(HabitatSim):
         # Only remove and re-add objects if we have a new set of objects.
         ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
         obj_names = [x[0] for x in ep_info.rigid_objs]
+        # Only remove and re-add objects if we have a new set of objects.
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 

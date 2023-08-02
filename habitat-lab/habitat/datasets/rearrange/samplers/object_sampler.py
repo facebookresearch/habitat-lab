@@ -39,7 +39,8 @@ class ObjectSampler:
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
-        translation_up_offset=0.08,
+        translation_up_offset: float = 0.08,
+        constrain_to_largest_nav_island: bool = False,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -50,11 +51,13 @@ class ObjectSampler:
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
+        :param check_if_in_largest_island_id: Optionally check if the snapped point is in the largest island id
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
+        self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -74,6 +77,7 @@ class ObjectSampler:
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
         self.set_num_samples()
+        self.largest_island_id = -1
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -87,6 +91,7 @@ class ObjectSampler:
         self.receptacle_candidates = None
         # number of objects in the range should be reset each time
         self.set_num_samples()
+        self.largest_island_id = -1
 
     def sample_receptacle(
         self,
@@ -237,13 +242,20 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
-        navmesh_vertices = np.stack(
-            sim.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        self.largest_island_size = max(
-            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
-        )
+
+        # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
+        # This assumption limits sampling to the largest navigable component of any scene.
+        if (
+            self._constrain_to_largest_nav_island
+            and self.largest_island_id == -1
+        ):
+            island_areas = list(
+                map(
+                    sim.pathfinder.island_area,
+                    range(sim.pathfinder.num_islands),
+                )
+            )
+            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -343,25 +355,26 @@ class ObjectSampler:
         obj: habitat_sim.physics.ManagedRigidObject,
     ) -> bool:
         """
-        Return if the object is within a threshold distance of the nearest
-        navigable point and that the nearest navigable point is on the same
-        navigation mesh.
+        Return if the object is within a threshold horizontal distance of the nearest
+        navigable point, in which the nearest navigable point is on the same
+        navigation mesh of the object.
 
-        Note that this might not catch all edge cases since the distance is
-        based on Euclidean distance. The nearest navigable point may be
-        separated from the object by an obstacle.
+        Note that this might not catch all edge cases since the heuristic is
+        horizontal Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle on a stairway, etc...
         """
         if self.nav_to_min_distance == -1:
             return True
-        snapped = sim.pathfinder.snap_point(obj.translation)
-        island_radius: float = sim.pathfinder.island_radius(snapped)
-        dist = float(
+
+        # If the sanp_point fails, the sanpped point is NaN and the distance
+        # check returns False. So it works out.
+        snapped = sim.pathfinder.snap_point(
+            obj.translation, self.largest_island_id
+        )
+        horizontal_dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
-        return (
-            dist < self.nav_to_min_distance
-            and island_radius == self.largest_island_size
-        )
+        return horizontal_dist < self.nav_to_min_distance
 
     def single_sample(
         self,

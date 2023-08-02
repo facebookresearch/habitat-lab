@@ -17,7 +17,6 @@ from habitat.datasets import make_dataset
 from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
 from habitat.tasks.nav.nav import MoveForwardAction
 
-CFG_TEST = "test/config/habitat/habitat_mp3d_object_nav_test.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -41,12 +40,18 @@ def check_json_serialization(dataset: habitat.Dataset):
     ), "JSON dataset encoding/decoding isn't consistent"
 
 
-def test_mp3d_object_nav_dataset():
-    dataset_config = get_config(CFG_TEST).habitat.dataset
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        "test/config/habitat/habitat_mp3d_object_nav_test.yaml",
+        "test/config/habitat/habitat_hssd-hab_object_nav_test.yaml",
+        "test/config/habitat/habitat_procthor-hab_object_nav_test.yaml",
+    ],
+)
+def test_object_nav_dataset(config_file):
+    dataset_config = get_config(config_file).habitat.dataset
     if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
-        pytest.skip(
-            "Please download Matterport3D ObjectNav Dataset to data folder."
-        )
+        pytest.skip("Please download ObjectNav dataset to data folder.")
 
     dataset = habitat.make_dataset(
         id_dataset=dataset_config.type, config=dataset_config
@@ -61,9 +66,17 @@ def test_mp3d_object_nav_dataset():
     check_json_serialization(dataset)
 
 
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        "test/config/habitat/habitat_mp3d_object_nav_test.yaml",
+        "test/config/habitat/habitat_hssd-hab_object_nav_test.yaml",
+        "test/config/habitat/habitat_procthor-hab_object_nav_test.yaml",
+    ],
+)
 @pytest.mark.parametrize("split", ["train", "val"])
-def test_dataset_splitting(split):
-    dataset_config = get_config(CFG_TEST).habitat.dataset
+def test_dataset_splitting(config_file, split):
+    dataset_config = get_config(config_file).habitat.dataset
     with habitat.config.read_write(dataset_config):
         dataset_config.split = split
 
@@ -109,12 +122,20 @@ def test_dataset_splitting(split):
         ), "Intersection of split datasets is not the empty set"
 
 
-def test_object_nav_task():
-    config = get_config(CFG_TEST)
+@pytest.mark.parametrize(
+    "config_file",
+    [
+        "test/config/habitat/habitat_mp3d_object_nav_test.yaml",
+        "test/config/habitat/habitat_hssd-hab_object_nav_test.yaml",
+        "test/config/habitat/habitat_procthor-hab_object_nav_test.yaml",
+    ],
+)
+def test_object_nav_task(config_file):
+    config = get_config(config_file)
 
     if not ObjectNavDatasetV1.check_config_paths_exist(config.habitat.dataset):
         pytest.skip(
-            "Please download Matterport3D scene and ObjectNav Datasets to data folder."
+            "Please download scene and ObjectNav dataset to data folder."
         )
 
     dataset = make_dataset(
