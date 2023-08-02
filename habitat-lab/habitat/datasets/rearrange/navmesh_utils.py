@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -105,14 +105,11 @@ def is_navigable_given_robot_navmesh(
         "Checking robot navigability between target object start and goal:"
     )
 
-    # get the largest island id for pathfinding
-    island_areas = list(
-        map(
-            sim.pathfinder.island_area,
-            range(sim.pathfinder.num_islands),
-        )
+    # TODO: for now computation is repeated here, but should be provided from earlier
+    largest_island_id = get_largest_island_index(
+        sim.pathfinder, sim, allow_outdoor=False
     )
-    largest_island_id = island_areas.index(max(island_areas))
+
     snapped_start_pos = sim.pathfinder.snap_point(start_pos, largest_island_id)
     snapped_goal_pos = sim.pathfinder.snap_point(goal_pos, largest_island_id)
 
@@ -327,3 +324,101 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
 
     dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
     return dist < nav_to_min_distance
+
+
+def is_outdoor(
+    pathfinder: habitat_sim.nav.PathFinder,
+    sim: habitat_sim.Simulator,
+    island_ix: int,
+    num_samples: int = 100,
+    indoor_ratio_threshold: float = 0.95,
+    min_sample_dist: Optional[float] = None,
+    max_sample_attempts: int = 200,
+) -> bool:
+    """
+    Heuristic to check if the specified NavMesh island is outdoor or indoor.
+
+    :param pathfinder: The NavMesh to check.
+    :param sim: The Simulator instance.
+    :param island_ix: The index of the island to check. -1 for all islands.
+    :param num_samples: The number of samples to take.
+    :param indoor_ratio_threshold: The percentage of samples classified as indoor necessary to pass the test.
+    :param min_sample_dist: (optional) The minimum distance between samples. Default is no minimum distance.
+    :param max_sample_attempts: The maximum number of sample to attempt to satisfy minimum distance.
+
+    Assumptions:
+     1. The scene must have ceiling collision geometry covering all indoor areas.
+     2. Indoor and outdoor spaces are separate navmeshes. Mixed interior/exterior navmeshes may be classified incorrectly and non-deterministically as the heuristic is based on sampling and thresholding.
+    """
+
+    assert pathfinder.is_loaded, "PathFinder is not loaded."
+
+    # 1. Sample the navmesh (pathfinder) island (island_ix) until num_samples achieved with with pairwise min_sample_dist or max_sample_attempts.
+    num_tries = 0
+    nav_samples: List[np.ndarray] = []
+    while len(nav_samples) < num_samples and num_tries < max_sample_attempts:
+        nav_sample = pathfinder.get_random_navigable_point(
+            island_index=island_ix
+        )
+        if np.any(np.isnan(nav_sample)):
+            continue
+        if min_sample_dist is not None:
+            too_close = False
+            for existing_sample in nav_samples:
+                sample_distance = np.linalg.norm(nav_sample - existing_sample)
+                if sample_distance < min_sample_dist:
+                    too_close = True
+                    break
+            if too_close:
+                continue
+        nav_samples.append(nav_sample)
+
+    # 2. For each sample, raycast in +Y direction.
+    #    - Any hit points classify the sample as indoor, otherwise outdoor.
+    up = mn.Vector3(0, 1.0, 0)
+    ray_results = [
+        sim.cast_ray(habitat_sim.geo.Ray(nav_sample, up))
+        for nav_sample in nav_samples
+    ]
+    num_indoor_samples = sum([results.has_hits() for results in ray_results])
+
+    # 3. Compute percentage of indoor samples and compare against indoor_ratio_threshold
+    indoor_ratio = float(num_indoor_samples) / len(nav_samples)
+    return indoor_ratio <= indoor_ratio_threshold
+
+
+def get_largest_island_index(
+    pathfinder: habitat_sim.nav.PathFinder,
+    sim: habitat_sim.Simulator,
+    allow_outdoor: bool = True,
+) -> int:
+    """
+    Get the index of the largest NavMesh island.
+    Optionally exclude outdoor islands.
+
+    NOTE: outdoor heuristic may need to be tuned, but parameters are default here.
+    """
+
+    assert pathfinder.is_loaded, "PathFinder is not loaded."
+
+    # get list of (island_index,area) tuples
+    island_areas = [
+        (island_ix, pathfinder.island_area(island_index=island_ix))
+        for island_ix in range(pathfinder.num_islands)
+    ]
+    # sort by area, descending
+    island_areas.sort(reverse=True, key=lambda x: x[1])
+
+    if not allow_outdoor:
+        # classify indoor vs outdoor
+        island_outdoor_classifications = [
+            is_outdoor(pathfinder, sim, island_info[0])
+            for island_info in island_areas
+        ]
+        # select the largest outdoor island
+        largest_indoor_island = island_areas[
+            island_outdoor_classifications.index(False)
+        ][0]
+        return largest_indoor_island
+
+    return island_areas[0][0]
