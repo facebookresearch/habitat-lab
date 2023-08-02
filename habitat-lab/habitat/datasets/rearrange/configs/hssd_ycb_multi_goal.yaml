@@ -154,3 +154,5 @@
     angular_velocity: 1.0
     distance_threshold: 0.25
     linear_velocity: 1.0
+
+    gpu_device_id: 0
