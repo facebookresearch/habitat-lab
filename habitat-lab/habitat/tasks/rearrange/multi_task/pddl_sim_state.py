@@ -333,12 +333,16 @@ class PddlSimState:
 
         # Check object states.
         for entity, target in self._obj_states.items():
-            if not _is_obj_state_true(entity, target, sim_info):
-                return False
+            return all(
+                _is_obj_state_true(entity, target, sim_info)
+                for entity, target in self._obj_states.items()
+            )
 
         for art_entity, set_art in self._art_states.items():
-            if not _is_art_state_true(art_entity, set_art, sim_info):
-                return False
+            return all(
+                _is_art_state_true(art_entity, set_art, sim_info)
+                for art_entity, set_art in self._art_states.items()
+            )
 
         return all(
             robot_state.is_true(sim_info, robot_entity)

@@ -6,14 +6,11 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import torch
-from numpy import ndarray
-from torch import Tensor
 
 from habitat import logger
-from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,

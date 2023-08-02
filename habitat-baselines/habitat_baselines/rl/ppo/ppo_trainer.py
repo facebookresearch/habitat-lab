@@ -9,22 +9,17 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 import hydra
 import numpy as np
 import torch
-import tqdm
 from omegaconf import OmegaConf
 
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
 from habitat.utils import profiling_wrapper
-from habitat.utils.visualizations.utils import (
-    observations_to_image,
-    overlay_frame,
-)
 from habitat_baselines.common import VectorEnvFactory
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -57,14 +52,11 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (  # noqa: F401.
 )
 from habitat_baselines.utils.common import (
     batch_obs,
-    generate_video,
-    get_action_space_info,
     inference_mode,
     is_continuous_action_space,
 )
 from habitat_baselines.utils.info_dict import (
     NON_SCALAR_METRICS,
-    extract_scalars_from_info,
     extract_scalars_from_infos,
 )
 from habitat_baselines.utils.timing import g_timer

@@ -43,6 +43,7 @@ from habitat_baselines.config.default_structured_configs import (
     Cube2EqConfig,
     Cube2FishConfig,
 )
+from habitat_baselines.rl.ppo.evaluator import pause_envs
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -376,7 +377,7 @@ def __do_pause_test(num_envs, envs_to_pause):
         prev_actions,
         batch,
         rgb_frames,
-    ) = BaseRLTrainer._pause_envs(
+    ) = pause_envs(
         envs_to_pause,
         envs,
         test_recurrent_hidden_states,

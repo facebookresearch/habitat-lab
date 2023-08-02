@@ -9,7 +9,6 @@ from habitat import VectorEnv
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import ObservationTransformer
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ppo.habitat_evaluator import Evaluator, pause_envs
 from habitat_baselines.rl.ppo.policy import Policy
 
 if TYPE_CHECKING:
@@ -36,7 +35,19 @@ class Evaluator(abc.ABC):
         env_spec: EnvironmentSpec,
         rank0_keys: Set[str],
     ) -> None:
-        pass
+        """
+        :param agent: Loaded policy to evaluate.
+        :param envs: Vectorized environments to evaluate in.
+        :param checkpoint_index: ID of the checkpoint (for logging).
+        :param step_id: Training step of checkpoint (for logging)
+        :param writer: Logger for recording metrics of evaluation.
+        :param device: PyTorch device to use for evaluation
+        :param obs_transforms: Observation transformations for the policy.
+        :param env_spec: Environment action/observation spaces.
+        :param rank0_keys: Info dictionary keys that should only be recorded on the 0th worker.
+
+        Returns nothing. Evaluated metrics should be recorded via the `writer`.
+        """
 
 
 def pause_envs(

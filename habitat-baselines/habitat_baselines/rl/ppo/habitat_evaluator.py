@@ -1,30 +1,22 @@
 import os
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
 import tqdm
-from numpy import ndarray
-from torch import Tensor
 
-from habitat import VectorEnv, logger
+from habitat import logger
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
 )
-from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
-    ObservationTransformer,
     apply_obs_transforms_batch,
-    apply_obs_transforms_obs_space,
-    get_active_obs_transforms,
 )
-from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ppo.habitat_evaluator import Evaluator, pause_envs
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.evaluator import Evaluator, pause_envs
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
@@ -33,9 +25,6 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat_baselines.utils.info_dict import extract_scalars_from_info
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
 
 
 class HabitatEvaluator(Evaluator):
