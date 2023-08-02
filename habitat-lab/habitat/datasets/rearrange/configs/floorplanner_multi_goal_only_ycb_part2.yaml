@@ -1,0 +1,266 @@
+---
+    dataset_path: "data/fpss/fphab/fphab-uncluttered.scene_dataset_config.json"
+    additional_object_paths:
+    - data/objects/ycb/configs/
+    scene_sets:
+      -
+        name: "any"
+        included_substrings:
+          # - "104862660_172226844" # small
+          # - "102344193" # small (demo)
+          # - "104862639_172226823" # small
+          #- "102817200" # medium
+          # - "108736824_177263559" # large
+          # - "102816216" # new scene
+          # - "108736872_177263607" # new scene
+          # 40 scene for mini train
+          # - "107734176_176000019"
+          # - "107733960_175999701"
+          # - "106878915_174887025"
+          # - "106366410_174226806"
+          # - "106366386_174226770"
+          # - "105515211_173104179"
+          # - "104862681_172226874"
+          # - "104348463_171513588"
+          # - "102344250"
+          # - "102344193"
+          # - "106366173_174226431"
+          # - "105515448_173104512"
+          # - "105515430_173104494"
+          # - "105515337_173104347"
+          # - "104862669_172226853"
+          # - "104862660_172226844"
+          # - "104862639_172226823"
+          # - "104862621_172226772"
+          # - "103997460_171030507"
+          # - "103997445_171030492"
+          # - "103997424_171030444"
+          # - "103997403_171030405"
+          # - "102817200"
+          # - "102817053"
+          # - "102816852"
+          # - "102816786"
+          # - "102816627"
+          # - "102344280"
+          # - "108736872_177263607"
+          # - "108736851_177263586"
+          # - "108736824_177263559"
+          # - "107734479_176000442"
+          # - "107734449_176000403"
+          # - "107734080_175999881"
+          # - "106879044_174887172"
+          # - "106878945_174887058"
+          # - "106366353_174226695"
+          # - "104862501_172226556"
+          # - "104348328_171513363"
+          # - "103997895_171031182"
+          # 11 scene for mini test
+          # - "103997586_171030669"
+          # - "102817140"
+          # - "102816756"
+          # - "102816615"
+          # - "102816216"
+          # - "102816009"
+          # - "102815859"
+          # - "102344457"
+          # - "102344403"
+          # - "102344022"
+          # - "104348361_171513414"
+          # - "102344115"
+          # - "108294558_176710095"
+          # - "105515211_173104179"
+          # - "108294897_176710602"
+          # - "102344307"
+          # - "102815859"
+
+          # train set May 26
+          # 33 userful scenes
+          # - "102344049"
+          # - "102344193"
+          # - "102344250"
+          # - "102344280"
+          # - "102816216"
+          # - "102817200"
+          # - "103997424_171030444"
+          # - "103997460_171030507"
+          # - "103997643_171030747"
+          # - "103997919_171031233"
+          # - "104348082_171512994"
+          # - "104348394_171513453"
+          # - "104348463_171513588"
+          # - "104862621_172226772"
+          # - "104862639_172226823"
+          # - "104862660_172226844"
+          # - "104862669_172226853"
+          # - "104862681_172226874"
+          # - "105515211_173104179"
+          # - "105515448_173104512"
+          # - "106366173_174226431"
+          # - "106366353_174226695"
+          # - "106878945_174887058"
+          # - "106879044_174887172"
+          # - "107734449_176000403"
+          # - "107734479_176000442"
+          # - "108294573_176710113"
+          # - "108294870_176710551"
+          # - "108294897_176710602"
+          # - "108736635_177263256"
+          # - "108736737_177263406"
+          # - "108736824_177263559"
+          # - "108736872_177263607"
+
+          # Target subset scene
+          # - "104862660_172226844" # 0 use for demo
+          # - "102344193"           # 0 use for demo
+          # - "102817200"           # 0 use for demo
+          # - "108736824_177263559" # 0 use for demo
+          # - "104862639_172226823" # 1
+          # - "102344250"           # 1
+          # - "102344280"           # 1
+          - "102816216"           # 2
+          - "103997424_171030444" # 2
+          - "103997460_171030507" # 2
+          # - "103997919_171031233" # 3
+          # - "104348463_171513588" # 3
+          # - "104862621_172226772" # 3
+          # - "106366173_174226431" # 3
+          # - "106878945_174887058" # 4
+          # - "107734479_176000442" # 4
+          # - "108736851_177263586" # 4
+          # - "108736872_177263607" # 4
+
+          # - "102344049"
+          # - "102344193"
+          # - "102344250"
+          # - "102344280"
+          # - "102816216"
+          # - "102817200"
+          # - "103997424_171030444"
+          # - "103997460_171030507"
+          # - "103997643_171030747" x
+          # - "103997919_171031233"
+          # - "104348082_171512994" -
+          # - "104348463_171513588"
+          # - "104862621_172226772"
+          # - "104862639_172226823"
+          # - "104862660_172226844"
+          # - "104862669_172226853" x
+          # - "104862681_172226874" x
+          # - "105515211_173104179" x
+          # - "105515448_173104512" -
+          # - "106366173_174226431"
+          # - "106366353_174226695" x
+          # - "106878945_174887058"
+          # - "106879044_174887172" x
+          # - "107734449_176000403" -
+          # - "107734479_176000442"
+          # - "108294573_176710113" -
+          # - "108294870_176710551" -
+          # - "108294897_176710602" x
+          # - "108736635_177263256" x
+          # - "108736737_177263406" x
+          # - "108736824_177263559"
+          # - "108736851_177263586"
+          # - "108736872_177263607"
+          # - "102344022" x
+          # - "102344403" x
+          # - "102344457" x
+          # - "102815859" x
+          # - "102816009" x
+
+        excluded_substrings:
+          - "NONE"
+
+    object_sets:
+    - name: "hab2"
+      included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "011_banana.object_config.json"
+      - "012_strawberry.object_config.json"
+      - "013_apple.object_config.json"
+      - "014_lemon.object_config.json"
+      - "015_peach.object_config.json"
+      - "016_pear.object_config.json"
+      - "017_orange.object_config.json"
+      - "018_plum.object_config.json"
+      - "021_bleach_cleanser.object_config.json"
+      - "024_bowl.object_config.json"
+      - "025_mug.object_config.json"
+      - "026_sponge.object_config.json"
+      excluded_substrings: []
+
+    receptacle_sets:
+      -
+        name: "hab2"
+        included_object_substrings:
+          - ""
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+
+    scene_sampler:
+      type: subset
+      params:
+        scene_sets:
+        - any
+    object_samplers:
+    - name: train_set
+      type: uniform
+      params:
+        object_sets:
+        - hab2
+        receptacle_sets:
+        - hab2
+        num_samples:
+        - 2
+        - 5
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+    object_target_samplers:
+    - name: any_targets
+      type: uniform
+      params:
+        object_samplers:
+        - train_set
+        receptacle_sets:
+        - hab2
+        num_samples:
+        - 2
+        - 2
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+
+    correct_unstable_results: True
+
+    # If we want to regenerate the navmesh or not
+    regenerate_new_mesh: True
+    # The agent radius for Spot
+    agent_radius: 0.25
+    # The agent height for Spot with the consideration
+    # of the arm
+    agent_height: 1.8
+    agent_max_climb: 0.01
+    agent_max_slope: 45
+
+    # Check if the robot can navigate from grasping to goal locations
+    check_navigable: False
+    navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
+    # If the collision rate of the navigation path is larger
+    # than the threshold, we reject that sample
+    max_collision_rate_for_navigable: 0.75
+    # Velocity control parameter for the robot
+    angle_threshold: 10.4 #0.26
+    linear_velocity: 40.0
+    angular_velocity: 40.0
+    # This the parameter used to determine the placement of the robot
+    distance_threshold: 0.9
+    # This parameter is to check if the object placement is stable or not
+    enable_check_obj_stability: True
