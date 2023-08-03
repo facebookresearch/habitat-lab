@@ -22,7 +22,7 @@ def is_collision(
         np.array([xz[0], trans.translation[1], xz[2]]) for xz in cur_pos
     ]
 
-    for pos in cur_pos:  # noqa: SIM110
+    for pos in cur_pos:
         # Return True if the point is not navigable on the configured largest island
         # TODO: pathfinder.is_navigable does not support island specification, so duplicating functionality for now
         largest_island_snap_point = sim.pathfinder.snap_point(
