@@ -42,7 +42,6 @@ import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     HumanoidJointActionConfig,
-    PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
@@ -223,8 +222,14 @@ class SandboxDriver(GuiAppDriver):
         return dataset
 
     def _env_step(self, action):
-        self._obs = self.habitat_env.step(action)
-        self._metrics = self.habitat_env.get_metrics()
+        # self._obs = self.habitat_env.step(action)
+        # self._metrics = self.habitat_env.get_metrics()
+        (
+            self._obs,
+            reward,
+            done,
+            self._metrics,
+        ) = self.gym_habitat_env.direct_hab_step(action)
 
     def _next_episode_exists(self):
         return self._num_episodes_done < self._num_iter_episodes - 1
@@ -291,8 +296,10 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
-        self._obs = self.habitat_env.reset()
-        self._metrics = self.habitat_env.get_metrics()
+        # self._obs = self.habitat_env.reset()
+        # self._metrics = self.habitat_env.get_metrics()
+        self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
+
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -549,7 +556,7 @@ class SandboxDriver(GuiAppDriver):
         agents_mgr = sim.agents_mgr
 
         grasped_objects_idxs = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index():
                 continue
             grasp_mgr = agents_mgr._all_agent_data[agent_idx].grasp_mgr
@@ -950,7 +957,7 @@ class SandboxDriver(GuiAppDriver):
 
     def _record_task_state(self):
         agent_states = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             art_obj = (
                 self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
             )
@@ -1366,10 +1373,7 @@ if __name__ == "__main__":
         env_config = habitat_config.environment
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
-        task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
-        # task_config.actions[
-        #     "agent_1_oracle_nav_action"
-        # ] = OracleNavActionConfig(agent_index=1)
+        gym_obs_keys = habitat_config.gym.obs_keys
 
         agent_config = get_agent_config(sim_config=sim_config)
 
@@ -1384,7 +1388,9 @@ if __name__ == "__main__":
                 }
             )
             agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
-            args.debug_images.append(f"{agent_key}third_rgb")
+            agent_sensor_name = f"{agent_key}third_rgb"
+            args.debug_images.append(agent_sensor_name)
+            gym_obs_keys.append(agent_sensor_name)
 
         # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
@@ -1432,6 +1438,17 @@ if __name__ == "__main__":
                 sim_config, agent_id=args.gui_controlled_agent_index
             )
             gui_controlled_agent_config.sim_sensors.clear()
+
+            for sensor_name in [
+                "head_depth",
+                "head_rgb",
+                "has_finished_oracle_nav",
+            ]:
+                agent_sensor_name = (
+                    f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
+                )
+                if agent_sensor_name in gym_obs_keys:
+                    gym_obs_keys.remove(agent_sensor_name)
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[

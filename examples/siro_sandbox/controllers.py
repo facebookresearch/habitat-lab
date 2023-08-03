@@ -22,6 +22,9 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
+from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import (
+    MultiAgentAccessMgr,
+)
 from habitat_baselines.rl.multi_agent.utils import (
     update_dict_with_agent_prefix,
 )
@@ -36,8 +39,7 @@ from habitat_baselines.utils.common import (
 
 
 class Controller(ABC):
-    def __init__(self, agent_idx, is_multi_agent):
-        self._agent_idx = agent_idx
+    def __init__(self, is_multi_agent):
         self._is_multi_agent = is_multi_agent
 
     @abstractmethod
@@ -50,7 +52,8 @@ class Controller(ABC):
 
 class GuiController(Controller):
     def __init__(self, agent_idx, is_multi_agent, gui_input):
-        super().__init__(agent_idx, is_multi_agent)
+        super().__init__(is_multi_agent)
+        self._agent_idx = agent_idx
         self._gui_input = gui_input
 
 
@@ -71,24 +74,19 @@ def clean_dict(d, remove_prefix):
 class BaselinesController(Controller):
     def __init__(
         self,
-        agent_idx,
         is_multi_agent,
         config,
         gym_habitat_env,
         sample_random_baseline_base_vel=False,
     ):
-        super().__init__(agent_idx, is_multi_agent)
+        super().__init__(is_multi_agent)
+        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
+
         self._config = config
 
         self._gym_habitat_env = gym_habitat_env
         self._habitat_env = gym_habitat_env.unwrapped.habitat_env
         self._num_envs = 1
-
-        agent_name = config.habitat.simulator.agents_order[self._agent_idx]
-        if self._is_multi_agent:
-            self._agent_k = f"agent_{self._agent_idx}_"
-        else:
-            self._agent_k = ""
 
         self.device = (
             torch.device("cuda", config.habitat_baselines.torch_gpu_id)
@@ -96,50 +94,24 @@ class BaselinesController(Controller):
             else torch.device("cpu")
         )
 
-        # define agent by reusing SIRo's agent:
-        # 1. create env spec
-        # here we udjust the observation and action space to be agent specific (remove other agents)
-        original_action_space = clean_dict(
-            self._gym_habitat_env.original_action_space, self._agent_k
-        )
-        observation_space = clean_dict(
-            self._gym_habitat_env.observation_space, self._agent_k
-        )
-        action_space = gym_wrapper.create_action_space(original_action_space)
+        # create env spec
+        self._env_spec = self._create_env_spec()
 
-        self._env_spec = EnvironmentSpec(
-            observation_space=observation_space,
-            action_space=action_space,
-            orig_action_space=original_action_space,
-        )
+        # create observations transforms
+        self._obs_transforms = self._get_active_obs_transforms()
 
-        # 2. create observations transforms
-        self._obs_transforms = get_active_obs_transforms(
-            self._config, agent_name
-        )
+        # apply observations transforms
         self._env_spec.observation_space = apply_obs_transforms_obs_space(
             self._env_spec.observation_space, self._obs_transforms
         )
 
         # create agent
-        self._agent = SingleAgentAccessMgr(
-            agent_name=agent_name,
-            config=self._config,
-            env_spec=self._env_spec,
-            num_envs=self._num_envs,
-            is_distrib=False,
-            device=self.device,
-            percent_done_fn=lambda: 0,
-        )
+        self._agent = self._create_agent()
         if (
             self._agent.actor_critic.should_load_agent_state
             and self._config.habitat_baselines.eval.should_load_ckpt
         ):
-            checkpoint = torch.load(
-                self._config.habitat_baselines.eval_ckpt_path_dir,
-                map_location="cpu",
-            )
-            self._agent.load_state_dict(checkpoint[self._agent_idx])
+            self._load_agent_checkpoint()
 
         self._action_shape, self._discrete_actions = get_action_space_info(
             self._agent.policy_action_space
@@ -147,7 +119,45 @@ class BaselinesController(Controller):
 
         self._agent.eval()
 
-        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
+        hidden_state_lens = self._agent.hidden_state_shape_lens
+        action_space_lens = self._agent.policy_action_space_shape_lens
+
+        self._space_lengths = {}
+        n_agents = len(self._config.habitat.simulator.agents)
+        if n_agents > 1:
+            self._space_lengths = {
+                "index_len_recurrent_hidden_states": hidden_state_lens,
+                "index_len_prev_actions": action_space_lens,
+            }
+
+    @abstractmethod
+    def _create_env_spec(self):
+        pass
+
+    @abstractmethod
+    def _get_active_obs_transforms(self):
+        pass
+
+    @abstractmethod
+    def _create_agent(self):
+        pass
+
+    @abstractmethod
+    def _load_agent_state_dict(self, checkpoint):
+        pass
+
+    def _load_agent_checkpoint(self):
+        checkpoint = torch.load(
+            self._config.habitat_baselines.eval_ckpt_path_dir,
+            map_location="cpu",
+        )
+        self._load_agent_state_dict(checkpoint)
+
+    def _batch_and_apply_transforms(self, obs):
+        batch = batch_obs(obs, device=self.device)
+        batch = apply_obs_transforms_batch(batch, self._obs_transforms)
+
+        return batch
 
     def on_environment_reset(self):
         self._test_recurrent_hidden_states = torch.zeros(
@@ -175,9 +185,7 @@ class BaselinesController(Controller):
         )
 
     def act(self, obs, env):
-        batch = batch_obs([obs], device=self.device)
-        batch = apply_obs_transforms_batch(batch, self._obs_transforms)
-        batch = update_dict_with_agent_prefix(batch, self._agent_idx)
+        batch = self._batch_and_apply_transforms([obs])
 
         with torch.no_grad():
             action_data = self._agent.actor_critic.act(
@@ -186,6 +194,7 @@ class BaselinesController(Controller):
                 self._prev_actions,
                 self._not_done_masks,
                 deterministic=False,
+                **self._space_lengths,
             )
             if action_data.should_inserts is None:
                 self._test_recurrent_hidden_states = (
@@ -224,19 +233,122 @@ class BaselinesController(Controller):
                 action["action_args"]["base_vel"]
             )
 
+        return action
+
+
+class SingleAgentBaselinesController(BaselinesController):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        config,
+        gym_habitat_env,
+        sample_random_baseline_base_vel=False,
+    ):
+        self._agent_idx = agent_idx
+        self._agent_name = config.habitat.simulator.agents_order[
+            self._agent_idx
+        ]
+        if is_multi_agent:
+            self._agent_k = f"agent_{self._agent_idx}_"
+        else:
+            self._agent_k = ""
+
+        super().__init__(
+            is_multi_agent,
+            config,
+            gym_habitat_env,
+            sample_random_baseline_base_vel,
+        )
+
+    def _create_env_spec(self):
+        # udjust the observation and action space to be agent specific (remove other agents)
+        original_action_space = clean_dict(
+            self._gym_habitat_env.original_action_space, self._agent_k
+        )
+        observation_space = clean_dict(
+            self._gym_habitat_env.observation_space, self._agent_k
+        )
+        action_space = gym_wrapper.create_action_space(original_action_space)
+
+        env_spec = EnvironmentSpec(
+            observation_space=observation_space,
+            action_space=action_space,
+            orig_action_space=original_action_space,
+        )
+
+        return env_spec
+
+    def _get_active_obs_transforms(self):
+        return get_active_obs_transforms(self._config, self._agent_name)
+
+    def _create_agent(self):
+        agent = SingleAgentAccessMgr(
+            agent_name=self._agent_name,
+            config=self._config,
+            env_spec=self._env_spec,
+            num_envs=self._num_envs,
+            is_distrib=False,
+            device=self.device,
+            percent_done_fn=lambda: 0,
+        )
+
+        return agent
+
+    def _load_agent_state_dict(self, checkpoint):
+        self._agent.load_state_dict(checkpoint[self._agent_idx])
+
+    def _batch_and_apply_transforms(self, obs):
+        batch = super()._batch_and_apply_transforms(obs)
+        batch = update_dict_with_agent_prefix(batch, self._agent_idx)
+
+        return batch
+
+    def act(self, obs, env):
+        action = super().act(obs, env)
+
         def change_ac_name(k):
-            if "pddl" in k:
-                return k
-            else:
-                return self._agent_k + k
+            return self._agent_k + k
 
         action["action"] = [change_ac_name(k) for k in action["action"]]
         action["action_args"] = {
-            change_ac_name(k): v  # v.cpu().numpy()
-            for k, v in action["action_args"].items()
+            change_ac_name(k): v for k, v in action["action_args"].items()
         }
 
-        return action, action_data.rnn_hidden_states
+        return action
+
+
+class MultiAgentBaselinesController(BaselinesController):
+    def _create_env_spec(self):
+        observation_space = self._gym_habitat_env.observation_space
+        action_space = self._gym_habitat_env.action_space
+        original_action_space = self._gym_habitat_env.original_action_space
+
+        env_spec = EnvironmentSpec(
+            observation_space=observation_space,
+            action_space=action_space,
+            orig_action_space=original_action_space,
+        )
+
+        return env_spec
+
+    def _get_active_obs_transforms(self):
+        return get_active_obs_transforms(self._config)
+
+    def _create_agent(self):
+        agent = MultiAgentAccessMgr(
+            config=self._config,
+            env_spec=self._env_spec,
+            num_envs=self._num_envs,
+            is_distrib=False,
+            device=self.device,
+            percent_done_fn=lambda: 0,
+        )
+
+        return agent
+
+    def _load_agent_state_dict(self, checkpoint):
+        self._agent.load_state_dict(checkpoint)
 
 
 class GuiRobotController(GuiController):
@@ -388,7 +500,7 @@ class GuiRobotController(GuiController):
         if len(action_names) == 0:
             raise ValueError("No active actions for human controller.")
 
-        return ({"action": action_names, "action_args": action_args}, {})
+        return {"action": action_names, "action_args": action_args}
 
 
 class GuiHumanoidController(GuiController):
@@ -609,30 +721,44 @@ class GuiHumanoidController(GuiController):
                 }
             )
 
-        return ({"action": action_names, "action_args": action_args}, {})
+        return {"action": action_names, "action_args": action_args}
 
 
 class ControllerHelper:
     def __init__(self, gym_habitat_env, config, args, gui_input, recorder):
         self._gym_habitat_env = gym_habitat_env
         self._env = gym_habitat_env.unwrapped.habitat_env
-
-        self.n_robots = len(self._env._sim.agents_mgr)
-        is_multi_agent = self.n_robots > 1
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
-        self.controllers: List[Controller] = [
-            BaselinesController(
-                agent_index,
-                is_multi_agent,
-                # "rearrange/rl_hierarchical.yaml",
-                config,
-                self._gym_habitat_env,
-                sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
+        self.n_agents = len(self._env._sim.agents_mgr)
+        self.n_user_controlled_agents = (
+            0 if self._gui_controlled_agent_index is None else 1
+        )
+        self.n_policy_controlled_agents = (
+            self.n_agents - self.n_user_controlled_agents
+        )
+        is_multi_agent = self.n_agents > 1
+
+        self.controllers: List[Controller] = []
+        if self.n_agents == self.n_policy_controlled_agents:
+            self.controllers.append(
+                MultiAgentBaselinesController(
+                    is_multi_agent,
+                    config,
+                    self._gym_habitat_env,
+                    sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
+                )
             )
-            for agent_index in range(self.n_robots)
-            if agent_index != self._gui_controlled_agent_index
-        ]
+        else:
+            self.controllers.append(
+                SingleAgentBaselinesController(
+                    0,
+                    is_multi_agent,
+                    config,
+                    self._gym_habitat_env,
+                    sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
+                )
+            )
 
         if self._gui_controlled_agent_index is not None:
             agent_name = self._env.sim.habitat_config.agents_order[
@@ -662,7 +788,6 @@ class ControllerHelper:
                 self._gui_controlled_agent_index, gui_agent_controller
             )
 
-        self.all_hxs = [None for _ in range(self.n_robots)]
         self.active_controllers = list(
             range(len(self.controllers))
         )  # assuming all controllers are active
@@ -680,15 +805,11 @@ class ControllerHelper:
         all_names = []
         all_args = {}
         for i in self.active_controllers:
-            (
-                ctrl_action,
-                self.all_hxs[i],
-            ) = self.controllers[
-                i
-            ].act(obs, self._env)
+            ctrl_action = self.controllers[i].act(obs, self._env)
             all_names.extend(ctrl_action["action"])
             all_args.update(ctrl_action["action_args"])
         action = {"action": tuple(all_names), "action_args": all_args}
+
         return action
 
     def on_environment_reset(self):
