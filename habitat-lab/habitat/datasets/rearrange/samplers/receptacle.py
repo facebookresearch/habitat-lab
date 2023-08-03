@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional, Union
 import corrade as cr
 import magnum as mn
 import numpy as np
-import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -76,6 +75,13 @@ class Receptacle(ABC):
         Convenience query for articulated vs. rigid object check.
         """
         return self.parent_link is not None
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return mn.Range3D()
 
     @abstractmethod
     def sample_uniform_local(
@@ -199,8 +205,15 @@ class AABBReceptacle(Receptacle):
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
-        self.bounds = bounds
+        self._bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return self._bounds
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -375,13 +388,17 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-        self.trimesh = trimesh.Trimesh(
-            **trimesh.triangles.to_kwargs(triangles)
-        )
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
 
     @property
     def bounds(self) -> mn.Range3D:
-        return mn.Range3D(self.trimesh.bounds)
+        return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
@@ -959,13 +976,6 @@ def get_navigable_receptacles(
         ):
             logger.info(
                 f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
-            )
-            continue
-
-        bounds = receptacle.bounds  # type: ignore
-        if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
-            logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
             )
             continue
 

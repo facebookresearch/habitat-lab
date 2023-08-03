@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -675,7 +674,6 @@ class RearrangeSim(HabitatSim):
                 ignore_handles=ignore_handles,
             )
             for recep in all_receps:
-                recep = cast(AABBReceptacle, recep)
                 local_bounds = recep.bounds
                 global_T = recep.get_global_transform(self)
                 # Some coordinates may be flipped by the global transformation,
