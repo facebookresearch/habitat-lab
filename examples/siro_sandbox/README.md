@@ -8,7 +8,7 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 # Known Issues
 * The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See Snapshots section below for best results.
 * The skinned humanoid doesn't render correctly; see workaround below.
-* When using Floorplanner scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
+* When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
 
 # Snapshots with examples of running the tool
 See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
@@ -16,7 +16,7 @@ See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKu
 # Example commands
 ### GUI-controlled humanoid and learned-policy-controlled Spot
 
-* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, in Floorplanner run:
+* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, in HSSD run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
