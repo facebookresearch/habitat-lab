@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
 import os.path as osp
 import random
 import time
@@ -506,18 +505,6 @@ class RearrangeEpisodeGenerator:
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
 
-        scene_name = ep_scene_handle.split(".")[0]
-        if "fphab" in scene_base_dir:
-            navmesh_path = osp.join(
-                scene_base_dir,
-                "navmeshes",
-                scene_name.split("/")[-1] + ".navmesh",
-            )
-        else:
-            navmesh_path = osp.join(
-                scene_base_dir, "navmeshes", scene_name + ".navmesh"
-            )
-
         # Load navmesh
         if not self.cfg.regenerate_new_mesh:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
@@ -533,8 +520,6 @@ class RearrangeEpisodeGenerator:
                 self.sim.pathfinder,
                 navmesh_settings,
             )
-            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
-            self.sim.pathfinder.save_nav_mesh(navmesh_path)
 
         # prepare target samplers
         self._get_object_target_samplers()
