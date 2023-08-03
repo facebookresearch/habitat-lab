@@ -4,15 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
-# try:
-#     sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
-# except Exception:
-#     print("not in sys.path")
-# sys.path.append("/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-lab")
-# sys.path.append(
-#     "/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-baselines"
-# )
 import os
 
 os.environ["MAGNUM_LOG"] = "quiet"

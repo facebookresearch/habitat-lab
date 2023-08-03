@@ -501,6 +501,7 @@ class ObjectSampler:
                 ):
                     # used up receptacle, need to recompute the sampler's receptacle_candidates
                     self.receptacle_candidates = None
+
             if new_object is not None:
                 # when an object placement is successful, reset the try counter.
                 logger.info(
@@ -509,6 +510,7 @@ class ObjectSampler:
                 num_pairing_tries = 0
                 pairing_start_time = time.time()
                 new_objects.append((new_object, receptacle))
+
         logger.info(
             f"    Sampling process completed in ({time.time()-sampling_start_time}sec)."
         )

@@ -16,12 +16,10 @@ import corrade as cr
 import magnum as mn
 import numpy as np
 import trimesh
-from tqdm import tqdm
 
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
-from habitat.datasets.rearrange.viewpoints import generate_viewpoints
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat.utils.geometry_utils import random_triangle_point
@@ -938,29 +936,6 @@ def get_obj_manager_for_receptacle(
     else:
         obj_mgr = sim.get_rigid_object_manager()
     return obj_mgr
-
-
-def get_receptacle_viewpoints(
-    sim: habitat_sim.Simulator,
-    receptacles: List[Receptacle],
-    debug_viz: bool = False,
-):
-    viewpoints = {}
-    viewable_receptacles = []
-    logger.info("Getting receptacle viewpoints...")
-    for receptacle in tqdm(receptacles):
-        handle = receptacle.parent_object_handle
-        if handle in viewpoints:
-            continue
-        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
-        receptacle_obj = obj_mgr.get_object_by_handle(handle)
-        receptacle_viewpoints = generate_viewpoints(
-            sim, receptacle_obj, debug_viz=debug_viz
-        )
-        if len(receptacle_viewpoints) > 0:
-            viewpoints[handle] = receptacle_viewpoints
-            viewable_receptacles.append(receptacle)
-    return viewpoints, viewable_receptacles
 
 
 def get_navigable_receptacles(

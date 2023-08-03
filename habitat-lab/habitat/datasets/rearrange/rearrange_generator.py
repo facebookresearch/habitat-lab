@@ -30,7 +30,7 @@ from habitat.datasets.rearrange.navmesh_utils import (
     is_navigable_given_robot_navmesh,
 )
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.datasets.rearrange.samplers.receptacle import (  # get_receptacle_viewpoints,
+from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleSet,
@@ -581,7 +581,6 @@ class RearrangeEpisodeGenerator:
                 new_receptacle = get_navigable_receptacles(
                     self.sim, [new_receptacle]
                 )  # type: ignore
-                # _, new_receptacle = get_receptacle_viewpoints(self.sim, new_receptacle)
                 if len(new_receptacle) != 0:  # type: ignore
                     new_target_receptacles.append(new_receptacle[0])  # type: ignore
 
@@ -913,7 +912,6 @@ class RearrangeEpisodeGenerator:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
             if self.sim.config.sim_cfg.scene_id != scene_name:
-                print("CLOSED THE SIM BETWEEN EPS.")
                 self.sim.close(destroy=True)
             if self.sim.config.sim_cfg.scene_id == scene_name:
                 # we need to force a reset, so reload the NONE scene
@@ -1054,7 +1052,9 @@ class RearrangeEpisodeGenerator:
             for obj_name in unstable_placements
             if obj_name in target_object_names
         ]
-        print(f"{len(unstable_target_objects)} target objects are unstable.")
+        logger.info(
+            f"{len(unstable_target_objects)} target objects are unstable."
+        )
 
         # optionally salvage the episode by removing unstable objects
         if (

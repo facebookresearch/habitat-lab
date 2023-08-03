@@ -23,26 +23,6 @@ COLOR_PALETTE = {
 }
 
 
-def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx):
-    rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
-    sem_obs = (obs["semantic"] == obj_semantic_id).astype(np.uint8) * 255
-    contours, _ = cv2.findContours(
-        sem_obs, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
-    )
-    x = "0"
-    z = "0"
-    rgb_obs = cv2.drawContours(rgb_obs, contours, -1, (0, 255, 0), 4)
-    img_dir = "data/images/objnav_dataset_gen"
-    os.makedirs(img_dir, exist_ok=True)
-    imageio.imsave(
-        os.path.join(
-            img_dir,
-            f"{obj_handle}_{obj_semantic_id}_{x}_{z}_{act_idx}.png",
-        ),
-        rgb_obs,
-    )
-
-
 def save_topdown_map(
     sim,
     view_locations,
