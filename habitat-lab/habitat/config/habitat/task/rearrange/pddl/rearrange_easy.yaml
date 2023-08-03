@@ -23,7 +23,7 @@ stage_goals:
       - at(goal0|0,TARGET_goal0|0)
 
 solution:
-  - nav_to_goal(goal0|0, robot_0)
+  - nav_to_obj(goal0|0, robot_0)
   - pick(goal0|0, robot_0)
-  - nav_to_obj(TARGET_goal0|0, robot_0)
+  - nav_to_goal(TARGET_goal0|0, robot_0)
   - place(goal0|0, TARGET_goal0|0, robot_0)

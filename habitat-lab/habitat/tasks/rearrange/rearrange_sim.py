@@ -38,6 +38,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
 )
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.articulated_agent_manager import (
+    ArticulatedAgentData,
     ArticulatedAgentManager,
 )
 from habitat.tasks.rearrange.marker_info import MarkerInfo
@@ -45,6 +46,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import (
+    add_perf_timing_func,
     get_aabb,
     make_render_only,
     rearrange_collision,
@@ -96,6 +98,9 @@ class RearrangeSim(HabitatSim):
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
+        # The receptacle information cached between all scenes.
+        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        # The per episode receptacle information.
         self._receptacles: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
@@ -110,12 +115,14 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
+        # Setup config options.
         self._debug_render_articulated_agent = (
             self.habitat_config.debug_render_articulated_agent
         )
         self._debug_render_goal = self.habitat_config.debug_render_goal
         self._debug_render = self.habitat_config.debug_render
         self._concur_render = self.habitat_config.concur_render
+        self._batch_render = config.renderer.enable_batch_renderer
         self._enable_gfx_replay_save = (
             self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
         )
@@ -124,15 +131,25 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
+        self._auto_sleep = self.habitat_config.auto_sleep
+        self._load_objs = self.habitat_config.load_objs
         self._additional_object_paths = (
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
         self._force_soft_reset = self.habitat_config.force_soft_reset
-        self._backend_runtime_perf_stat_names = (
-            # super().get_runtime_perf_stat_names()
+        self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
+        self._perf_logging_enabled = False
+        self.cur_runtime_perf_scope: List[str] = []
+        self._should_setup_semantic_ids = (
+            self.habitat_config.should_setup_semantic_ids
         )
-        self._extra_runtime_perf_stats: Dict[str, Any] = {}
+
+    def enable_perf_logging(self):
+        """
+        Will turn on the performance logging (by default this is off).
+        """
+        self._perf_logging_enabled = True
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -200,10 +217,12 @@ class RearrangeSim(HabitatSim):
             target_trans.append((targ_idx, trans))
         return target_trans
 
+    @add_perf_timing_func()
     def _try_acquire_context(self):
-        if self._concur_render:
+        if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
+    @add_perf_timing_func()
     def _sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
@@ -247,15 +266,15 @@ class RearrangeSim(HabitatSim):
         for m in self._markers.values():
             m.update()
 
+    @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
         return None
 
+    @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
-        t_start = time.time()
-
         self.ep_info = ep_info
         new_scene = self.prev_scene_id != ep_info.scene_id
         if new_scene:
@@ -295,19 +314,24 @@ class RearrangeSim(HabitatSim):
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
+        # Only remove and re-add objects if we have a new set of objects.
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
+        self.agents_mgr.pre_obj_clear()
         self._clear_objects(should_add_objects, new_scene)
 
         is_hard_reset = new_scene or should_add_objects
+
         if is_hard_reset:
             with read_write(config):
                 config["scene"] = ep_info.scene_id
+            t_start = time.time()
             super().reconfigure(config, should_close_on_new_scene=False)
+            self.add_perf_timing("super_reconfigure", t_start)
 
-        self._try_acquire_context()
-        self.agents_mgr.reconfigure(new_scene)
+        if new_scene:
+            self.agents_mgr.on_new_scene()
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -324,14 +348,14 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
-        if self.habitat_config.load_objs:
+        if self._load_objs:
             self._add_objs(ep_info, should_add_objects, new_scene)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self.habitat_config.auto_sleep:
+        if self._auto_sleep:
             self._sleep_all_objects()
 
         rom = self.get_rigid_object_manager()
@@ -368,6 +392,11 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
+        if self._should_setup_semantic_ids:
+            self._setup_semantic_ids()
+
+    @add_perf_timing_func()
+    def _setup_semantic_ids(self):
         # Add the rigid object id for the semantic map
         rom = self.get_rigid_object_manager()
         for i, handle in enumerate(rom.get_object_handles()):
@@ -376,9 +405,8 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
-        self.add_perf_timing("reconfigure", t_start)
 
-    def get_agent_data(self, agent_idx: Optional[int]):
+    def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
             return self.agents_mgr[0]
         else:
@@ -433,7 +461,10 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    def _load_navmesh(self, ep_info, new_scene):
+    @add_perf_timing_func()
+    def _load_navmesh(self, ep_info, new_scene: bool) -> None:
+        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
+        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
         if new_scene:
             scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
 
@@ -478,13 +509,18 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.island_radius(p) for p in self._navmesh_vertices
         ]
         self._max_island_size = max(self._island_sizes)
-        largest_size_vertex = self._navmesh_vertices[
-            np.argmax(self._island_sizes)
-        ]
         self._largest_island_idx = self.pathfinder.get_island(
-            largest_size_vertex
+            self._navmesh_vertices[np.argmax(self._island_sizes)]
         )
 
+    @property
+    def largest_island_idx(self) -> int:
+        """
+        The path finder index of the island that has the largest area.
+        """
+        return self._largest_island_idx
+
+    @add_perf_timing_func()
     def _clear_objects(
         self, should_add_objects: bool, new_scene: bool
     ) -> None:
@@ -515,6 +551,7 @@ class RearrangeSim(HabitatSim):
             # managed by the underlying sim.
             self.art_objs = []
 
+    @add_perf_timing_func()
     def _set_ao_states_from_ep(self, ep_info: RearrangeEpisode) -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
@@ -564,6 +601,7 @@ class RearrangeSim(HabitatSim):
         ), "The snap position is NaN. Something failed sampling a snap point."
         return new_pos
 
+    @add_perf_timing_func()
     def _add_objs(
         self,
         ep_info: RearrangeEpisode,
@@ -575,11 +613,11 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
-        self._receptacles = {}
         if should_add_objects:
             self._scene_obj_ids = []
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
+            t_start = time.time()
             if should_add_objects:
                 template = None
                 for obj_path in self._additional_object_paths:
@@ -593,6 +631,7 @@ class RearrangeSim(HabitatSim):
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
+            self.add_perf_timing("create_asset", t_start)
 
             # The saved matrices need to be flipped when reloading.
             ro.transformation = mn.Matrix4(
@@ -620,29 +659,45 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
         if new_scene:
-            all_receps = find_receptacles(self)
+            self._receptacles = self._create_recep_info(
+                ep_info.scene_id, list(self._handle_to_object_id.keys())
+            )
+
+            ao_mgr = self.get_articulated_object_manager()
+            # Make all articulated objects (including the robots) kinematic
+            for aoi_handle in ao_mgr.get_object_handles():
+                ao = ao_mgr.get_object_by_handle(aoi_handle)
+                if self._kinematic_mode:
+                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                self.art_objs.append(ao)
+
+    def _create_recep_info(
+        self, scene_id: str, ignore_handles: List[str]
+    ) -> Dict[str, mn.Range3D]:
+        if scene_id not in self._receptacles_cache:
+            receps = {}
+            all_receps = find_receptacles(
+                self,
+                ignore_handles=ignore_handles,
+            )
             for recep in all_receps:
                 recep = cast(AABBReceptacle, recep)
                 local_bounds = recep.bounds
                 global_T = recep.get_global_transform(self)
-                self._receptacles[recep.name] = mn.Range3D(
-                    global_T.transform_point(local_bounds.min),
-                    global_T.transform_point(local_bounds.max),
+                # Some coordinates may be flipped by the global transformation,
+                # mixing the minimum and maximum bound coordinates.
+                bounds = np.stack(
+                    [
+                        global_T.transform_point(local_bounds.min),
+                        global_T.transform_point(local_bounds.max),
+                    ],
+                    axis=0,
                 )
-
-            ao_mgr = self.get_articulated_object_manager()
-            articulated_agent_art_handles = [
-                articulated_agent.sim_obj.handle
-                for articulated_agent in self.agents_mgr.articulated_agents_iter
-            ]
-            for aoi_handle in ao_mgr.get_object_handles():
-                ao = ao_mgr.get_object_by_handle(aoi_handle)
-                if (
-                    self._kinematic_mode
-                    and ao.handle not in articulated_agent_art_handles
-                ):
-                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                self.art_objs.append(ao)
+                receps[recep.name] = mn.Range3D(
+                    np.min(bounds, axis=0), np.max(bounds, axis=0)
+                )
+            self._receptacles_cache[scene_id] = receps
+        return self._receptacles_cache[scene_id]
 
     def _create_obj_viz(self):
         """
@@ -805,6 +860,7 @@ class RearrangeSim(HabitatSim):
             quat_from_magnum(articulated_agent.sim_obj.rotation * rot_offset),
         )
 
+    @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
@@ -838,30 +894,35 @@ class RearrangeSim(HabitatSim):
 
         self.maybe_update_articulated_agent()
 
-        if self._concur_render:
-            self._prev_sim_obs = self.start_async_render()
+        if self._batch_render:
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1, update_articulated_agent=False)
+
+            obs = self.get_sensor_observations()
+            self.add_keyframe_to_observations(obs)
+        elif self._concur_render:
+            self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
             t_start = time.time()
-            self._prev_sim_obs = self.get_sensor_observations_async_finish()
-            self.add_perf_timing(
-                "get_sensor_observations_async_finish", t_start
+            obs = self._sensor_suite.get_observations(
+                self.get_sensor_observations_async_finish()
             )
-
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+            self.add_perf_timing("get_sensor_observations", t_start)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
             t_start = time.time()
-            self._prev_sim_obs = self.get_sensor_observations()
+            obs = self._sensor_suite.get_observations(
+                self.get_sensor_observations()
+            )
             self.add_perf_timing("get_sensor_observations", t_start)
 
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
-
-        if self._enable_gfx_replay_save:
+        # TODO: Support recording while batch rendering
+        if self._enable_gfx_replay_save and not self._batch_render:
             self.gfx_replay_manager.save_keyframe()
 
         if self._needs_markers:
@@ -926,20 +987,19 @@ class RearrangeSim(HabitatSim):
         viz_obj.translation = mn.Vector3(*position)
         return viz_obj.object_id
 
+    @add_perf_timing_func()
     def internal_step(
         self, dt: Union[int, float], update_articulated_agent: bool = True
     ) -> None:
         """Step the world and update the articulated_agent.
 
-        :param dt: Timestep by which to advance the world. Multiple physics substeps can be excecuted within a single timestep. -1 indicates a single physics substep.
+        :param dt: Timestep by which to advance the world. Multiple physics substeps can be executed within a single timestep. -1 indicates a single physics substep.
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
         # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
-            t_start = time.time()
             self.step_world(dt)
-            self.add_perf_timing("step_world", t_start)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
@@ -977,17 +1037,25 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-    def add_perf_timing(self, desc, t_start):
-        self._extra_runtime_perf_stats[desc] = time.time() - t_start
+    def add_perf_timing(self, desc: str, t_start: float) -> None:
+        """
+        Records a duration since `t_start` into the perf stats. Note that this
+        is additive, so times between successive calls accumulate, not reset.
+        Also note that this will only log if `self._perf_logging_enabled=True`.
+        """
+        if not self._perf_logging_enabled:
+            return
 
-    def get_runtime_perf_stats(self):
-        names = self._backend_runtime_perf_stat_names
-        values = super().get_runtime_perf_stat_values()
-        stats_dict = dict(zip(names, values))
+        name = ".".join(self.cur_runtime_perf_scope)
+        if desc != "":
+            name += "." + desc
+        self._extra_runtime_perf_stats[name] += time.time() - t_start
 
+    def get_runtime_perf_stats(self) -> Dict[str, float]:
+        stats_dict = {}
         for name, value in self._extra_runtime_perf_stats.items():
             stats_dict[name] = value
         # clear this dict so we don't accidentally collect these twice
-        self._extra_runtime_perf_stats = {}
+        self._extra_runtime_perf_stats = defaultdict(float)
 
         return stats_dict

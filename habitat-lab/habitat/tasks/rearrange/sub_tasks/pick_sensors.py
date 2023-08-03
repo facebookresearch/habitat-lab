@@ -94,7 +94,7 @@ class RearrangePickReward(RearrangeReward):
         if cur_picked:
             dist_to_goal = ee_to_rest_distance
         else:
-            dist_to_goal = ee_to_object_distance[str(task.abs_targ_idx)]
+            dist_to_goal = ee_to_object_distance[str(task.targ_idx)]
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 

@@ -26,7 +26,6 @@ defaults:
     - num_agents_collide
     - composite_stage_goals
     - cooperate_subgoal_reward
-    - runtime_perf_stats
     - agent_blame_measure
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor

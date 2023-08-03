@@ -75,12 +75,16 @@ class VERTrainer(PPOTrainer):
             is_distrib=self._is_distributed,
             device=self.device,
             resume_state=resume_state,
-            num_envs=len(self.environment_workers),
+            num_envs=self.config.habitat_baselines.num_environments,
             percent_done_fn=self.percent_done,
             **kwargs,
         )
 
     def _init_train(self, resume_state):
+        assert (
+            not self.config.habitat.simulator.renderer.enable_batch_renderer
+        ), "VER trainer does not support batch rendering."
+
         if self._is_distributed:
             local_rank, world_rank, _ = get_distrib_size()
 
@@ -238,8 +242,7 @@ class VERTrainer(PPOTrainer):
             "numsteps": ppo_cfg.num_steps,
             "num_envs": len(self.environment_workers),
             "action_space": self._env_spec.action_space,
-            "recurrent_hidden_state_size": ppo_cfg.hidden_size,
-            "num_recurrent_layers": self._agent.actor_critic.net.num_recurrent_layers,
+            "actor_critic": self._agent.actor_critic,
             "observation_space": rollouts_obs_space,
         }
 
@@ -302,7 +305,7 @@ class VERTrainer(PPOTrainer):
             self.queues,
             self._iw_sync,
             self._transfer_buffers,
-            self.config.habitat_baselines.rl.policy.name,
+            self.config.habitat_baselines.rl.policy.main_agent.name,
             (
                 self.config,
                 self._env_spec.observation_space,

@@ -14,6 +14,7 @@ import pytest
 
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
+from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
 from habitat_baselines.run import execute_exp
 
 try:
@@ -38,7 +39,9 @@ except ImportError:
 
 def setup_function(test_trainers):
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
@@ -98,10 +101,39 @@ def setup_function(test_trainers):
             3,
             [],
         ),
+        (
+            "objectnav/ddppo_objectnav_hssd-hab.yaml",
+            3,
+            [],
+        ),
+        (
+            "objectnav/ddppo_objectnav_procthor-hab.yaml",
+            3,
+            [],
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
-def test_trainers(config_path, num_updates, overrides, trainer_name):
+@pytest.mark.parametrize("use_batch_renderer", [False, True])
+def test_trainers(
+    config_path: str,
+    num_updates: int,
+    overrides: str,
+    trainer_name: str,
+    use_batch_renderer: bool,
+):
+    if use_batch_renderer:
+        if config_path in [
+            "imagenav/ddppo_imagenav_example.yaml",
+            "objectnav/ddppo_objectnav_hssd-hab.yaml",
+            "objectnav/ddppo_objectnav_procthor-hab.yaml",
+        ]:
+            pytest.skip(
+                "Batch renderer incompatible with this config due to usage of multiple sensors."
+            )
+        if trainer_name == "ver":
+            pytest.skip("Batch renderer incompatible with VER trainer.")
+
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
@@ -116,11 +148,29 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
             *overrides,
         ],
     )
+
+    if config_path in [
+        "objectnav/ddppo_objectnav_hssd-hab.yaml",
+        "objectnav/ddppo_objectnav_procthor-hab.yaml",
+    ] and not ObjectNavDatasetV1.check_config_paths_exist(
+        config.habitat.dataset
+    ):
+        pytest.skip("Test skipped as dataset files are missing.")
+
     with read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
         # Changing the visual observation size for speed
         for sim_sensor_config in agent_config.sim_sensors.values():
             sim_sensor_config.update({"height": 64, "width": 64})
+        # Set config for batch renderer
+        if use_batch_renderer:
+            config.habitat.simulator.renderer.enable_batch_renderer = True
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True
+            )
+            config.habitat.simulator.create_renderer = False
+            config.habitat.simulator.concur_render = False
+
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
     torch.manual_seed(config.habitat.seed)
@@ -178,7 +228,11 @@ def test_hrl(config_path, policy_type, skill_type, mode):
 
     if policy_type == "hl_neural" and skill_type == "nn_skills":
         return
+    if policy_type == "hl_neural" and mode == "eval":
+        # We don't have skill checkpoints to load right now.
+        return
     if policy_type == "hl_fixed" and mode == "train":
+        # Cannot train with a fixed policy
         return
     if skill_type == "oracle_skills" and "oracle" not in config_path:
         return
@@ -199,8 +253,8 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             f"habitat_baselines.log_file={TRAIN_LOG_FILE}",
-            f"habitat_baselines/rl/policy={policy_type}",
-            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
+            f"habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent={policy_type}",
+            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills={skill_type}",
         ],
     )
     with read_write(config):

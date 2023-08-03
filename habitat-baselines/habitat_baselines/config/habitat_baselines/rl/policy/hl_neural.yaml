@@ -21,6 +21,7 @@ hierarchical_policy:
     rnn_type: 'LSTM'
     backbone: resnet18
     normalize_visual_inputs: False
+    termination_obs_name: null
     num_rnn_layers: 2
     policy_input_keys:
       - "head_depth"

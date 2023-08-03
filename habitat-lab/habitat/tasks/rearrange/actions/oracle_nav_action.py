@@ -10,7 +10,6 @@ from gym import spaces
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     BaseVelNonCylinderAction,
@@ -185,10 +184,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
             self._poss_entities
         ):
-            if is_last_action:
-                return self._sim.step(HabitatSimActions.base_velocity)
-            else:
-                return {}
+            return None
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
 
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
@@ -451,10 +447,9 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
             self._poss_entities
         ):
-            if is_last_action:
-                return self._sim.step(HabitatSimActions.base_velocity)
-            else:
-                return {}
+            return BaseVelNonCylinderAction.step(
+                *args, is_last_action=is_last_action, **kwargs
+            )
 
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(

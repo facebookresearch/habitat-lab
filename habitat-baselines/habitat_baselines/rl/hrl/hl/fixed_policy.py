@@ -9,35 +9,37 @@ import torch
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class FixedHighLevelPolicy(HighLevelPolicy):
     """
     Executes a fixed sequence of high-level actions as specified by the
     `solution` field of the PDDL problem file.
-    :property _solution_actions: List of tuples were first tuple element is the
-        action name and the second is the action arguments.
+    :property _solution_actions: List of tuples where the first tuple element
+        is the action name and the second is the action arguments. Stores a plan
+        for each environment.
     """
 
-    _solution_actions: List[Tuple[str, List[str]]]
+    _solution_actions: List[List[Tuple[str, List[str]]]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._solution_actions = self._parse_solution_actions(
-            self._pddl_prob.solution
-        )
+        self._solution_actions = [
+            self._parse_solution_actions() for _ in range(self._num_envs)
+        ]
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
-    def filter_envs(self, curr_envs_to_keep_active):
+    def _parse_solution_actions(self) -> List[Tuple[str, List[str]]]:
         """
-        Cleans up stateful variables of the policy so that
-        they match with the active environments
+        Returns the sequence of actions to execute as a list of:
+        - The action name.
+        - A list of the action arguments.
         """
-        self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
+        solution = self._pddl_prob.solution
 
-    def _parse_solution_actions(self, solution):
         solution_actions = []
         for i, hl_action in enumerate(solution):
             sol_action = (
@@ -78,12 +80,14 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         Returns:
             The next index to be used from the list of solution actions.
         """
-        if self._next_sol_idxs[batch_idx] >= len(self._solution_actions):
+        if self._next_sol_idxs[batch_idx] >= len(
+            self._solution_actions[batch_idx]
+        ):
             baselines_logger.info(
                 f"Calling for immediate end with {self._next_sol_idxs[batch_idx]}"
             )
             immediate_end[batch_idx] = True
-            return len(self._solution_actions) - 1
+            return len(self._solution_actions[batch_idx]) - 1
         else:
             return self._next_sol_idxs[batch_idx].item()
 
@@ -112,7 +116,9 @@ class FixedHighLevelPolicy(HighLevelPolicy):
             if should_plan == 1.0:
                 use_idx = self._get_next_sol_idx(batch_idx, immediate_end)
 
-                skill_name, skill_args = self._solution_actions[use_idx]
+                skill_name, skill_args = self._solution_actions[batch_idx][
+                    use_idx
+                ]
                 baselines_logger.info(
                     f"Got next element of the plan with {skill_name}, {skill_args}"
                 )
@@ -125,4 +131,5 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 skill_args_data[batch_idx] = skill_args  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
-        return next_skill, skill_args_data, immediate_end, {}
+
+        return next_skill, skill_args_data, immediate_end, PolicyActionData()

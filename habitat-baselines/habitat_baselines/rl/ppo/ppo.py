@@ -24,6 +24,7 @@ from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
     inference_mode,
 )
+from habitat_baselines.utils.timing import g_timer
 
 EPS_PPO = 1e-5
 
@@ -34,20 +35,21 @@ class PPO(nn.Module, Updater):
 
     @classmethod
     def from_config(cls, actor_critic: NetPolicy, config):
-        config = {k.lower(): v for k, v in config.items()}
-        param_dict = dict(actor_critic=actor_critic)
-        sig = inspect.signature(cls.__init__)
-        for p in sig.parameters.values():
-            if p.name == "self" or p.name in param_dict:
-                continue
-
-            assert p.name in config, "{} parameter '{}' not in config".format(
-                cls.__name__, p.name
-            )
-
-            param_dict[p.name] = config[p.name]
-
-        return cls(**param_dict)
+        return cls(
+            actor_critic=actor_critic,
+            clip_param=config.clip_param,
+            ppo_epoch=config.ppo_epoch,
+            num_mini_batch=config.num_mini_batch,
+            value_loss_coef=config.value_loss_coef,
+            entropy_coef=config.entropy_coef,
+            lr=config.lr,
+            eps=config.eps,
+            max_grad_norm=config.max_grad_norm,
+            use_clipped_value_loss=config.use_clipped_value_loss,
+            use_normalized_advantage=config.use_normalized_advantage,
+            entropy_target_factor=config.entropy_target_factor,
+            use_adaptive_entropy_pen=config.use_adaptive_entropy_pen,
+        )
 
     def __init__(
         self,
@@ -98,9 +100,16 @@ class PPO(nn.Module, Updater):
             ).to(device=self.device)
 
         self.use_normalized_advantage = use_normalized_advantage
+        self.optimizer = self._create_optimizer(lr, eps)
 
+        self.non_ac_params = [
+            p
+            for name, p in self.named_parameters()
+            if not name.startswith("actor_critic.")
+        ]
+
+    def _create_optimizer(self, lr, eps):
         params = list(filter(lambda p: p.requires_grad, self.parameters()))
-
         if len(params) > 0:
             optim_cls = optim.Adam
             optim_kwargs = dict(
@@ -119,15 +128,9 @@ class PPO(nn.Module, Updater):
                 else:
                     optim_cls = torch.optim._multi_tensor.Adam
 
-            self.optimizer = optim_cls(**optim_kwargs)
+            return optim_cls(**optim_kwargs)
         else:
-            self.optimizer = None
-
-        self.non_ac_params = [
-            p
-            for name, p in self.named_parameters()
-            if not name.startswith("actor_critic.")
-        ]
+            return None
 
     def forward(self, *x):
         raise NotImplementedError
@@ -157,6 +160,7 @@ class PPO(nn.Module, Updater):
             for p in pg["params"]:
                 p.grad = None
 
+    @g_timer.avg_time("ppo.update_from_batch", level=1)
     def _update_from_batch(self, batch, epoch, rollouts, learner_metrics):
         """
         Performs a gradient update from the minibatch.
@@ -184,7 +188,7 @@ class PPO(nn.Module, Updater):
             batch["prev_actions"],
             batch["masks"],
             batch["actions"],
-            batch["rnn_build_seq_info"],
+            batch.get("rnn_build_seq_info", None),
         )
 
         ratio = torch.exp(action_log_probs - batch["action_log_probs"])
@@ -326,6 +330,7 @@ class PPO(nn.Module, Updater):
                 for k, vs in learner_metrics.items()
             }
 
+    @g_timer.avg_time("ppo.eval_actions", level=1)
     def _evaluate_actions(self, *args, **kwargs):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
         that directly so that that call can be overrided with inheritance
@@ -367,3 +372,15 @@ class PPO(nn.Module, Updater):
     def after_step(self) -> None:
         if isinstance(self.entropy_coef, LagrangeInequalityCoefficient):
             self.entropy_coef.project_into_bounds()
+
+    def after_update(self):
+        pass
+
+    def get_resume_state(self):
+        return {
+            "optim_state": self.optimizer.state_dict(),
+        }
+
+    def load_state_dict(self, state):
+        if "optim_state" in state:
+            self.optimizer.load_state_dict(state["optim_state"])

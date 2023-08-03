@@ -7,6 +7,7 @@ r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
+import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
@@ -164,9 +165,12 @@ class Measurements:
         for measure in self.measures.values():
             measure.reset_metric(*args, **kwargs)
 
-    def update_measures(self, *args: Any, **kwargs: Any) -> None:
+    def update_measures(self, *args: Any, task, **kwargs: Any) -> None:
         for measure in self.measures.values():
-            measure.update_metric(*args, **kwargs)
+            t_start = time.time()
+            measure.update_metric(*args, task=task, **kwargs)
+            measure_name = measure._get_uuid(*args, task=task, **kwargs)
+            task.add_perf_timing(f"measures.{measure_name}", t_start)
 
     def get_metrics(self) -> Metrics:
         r"""Collects measurement from all :ref:`Measure`\ s and returns it
@@ -237,6 +241,10 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+        self._physics_target_sps = config.physics_target_sps
+        assert (
+            self._physics_target_sps > 0
+        ), "physics_target_sps must be positive"
 
         self.measurements = Measurements(
             self._init_entities(
@@ -260,6 +268,10 @@ class EmbodiedTask:
 
         self._is_episode_active = False
 
+    def add_perf_timing(self, *args, **kwargs):
+        if hasattr(self._sim, "add_perf_timing"):
+            self._sim.add_perf_timing(*args, **kwargs)
+
     def _init_entities(self, entities_configs, register_func) -> OrderedDict:
         entities = OrderedDict()
         for entity_name, entity_cfg in entities_configs.items():
@@ -282,7 +294,10 @@ class EmbodiedTask:
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations, episode=episode, task=self
+                observations=observations,
+                episode=episode,
+                task=self,
+                should_time=True,
             )
         )
 
@@ -295,11 +310,10 @@ class EmbodiedTask:
 
     def _step_single_action(
         self,
-        observations: Any,
         action_name: Any,
         action: Dict[str, Any],
         episode: Episode,
-        is_last_action=True,
+        is_last_action: bool = True,
     ):
         if isinstance(action_name, (int, np.integer)):
             action_name = self.get_action_name(action_name)
@@ -307,32 +321,34 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
-        observations.update(
-            task_action.step(
-                **action["action_args"],
-                task=self,
-                is_last_action=is_last_action,
-            )
+        return task_action.step(
+            **action["action_args"],
+            task=self,
+            is_last_action=is_last_action,
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_name = action["action"]
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
-        observations: Any = {}
+        observations: Optional[Any] = None
         if isinstance(action_name, tuple):  # there are multiple actions
             for i, a_name in enumerate(action_name):
-                self._step_single_action(
-                    observations,
+                observations = self._step_single_action(
                     a_name,
                     action,
                     episode,
-                    i == len(action_name) - 1,
+                    is_last_action=(i == len(action_name) - 1),
                 )
         else:
-            self._step_single_action(
-                observations, action_name, action, episode
+            observations = self._step_single_action(
+                action_name, action, episode
             )
+
+        self._sim.step_physics(1.0 / self._physics_target_sps)  # type:ignore
+
+        if observations is None:
+            observations = self._sim.step(None)
 
         observations.update(
             self.sensor_suite.get_observations(
@@ -340,6 +356,7 @@ class EmbodiedTask:
                 episode=episode,
                 action=action,
                 task=self,
+                should_time=True,
             )
         )
         self._is_episode_active = self._check_episode_is_active(

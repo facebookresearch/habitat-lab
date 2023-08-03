@@ -23,4 +23,5 @@ hierarchical_policy:
     backbone: resnet18
     normalize_visual_inputs: False
     num_rnn_layers: 2
+    termination_obs_name: null
   defined_skills: {}

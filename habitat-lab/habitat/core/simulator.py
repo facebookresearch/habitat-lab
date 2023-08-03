@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
+import time
 from collections import OrderedDict
 from enum import Enum
 from typing import (
@@ -112,18 +113,25 @@ class Observations(Dict[str, Any]):
     r"""Dictionary containing sensor observations"""
 
     def __init__(
-        self, sensors: Dict[str, Sensor], *args: Any, **kwargs: Any
+        self,
+        sensors: Dict[str, Sensor],
+        *args: Any,
+        should_time: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Constructor
 
         :param sensors: list of sensors whose observations are fetched and
             packaged.
         """
+        data = []
+        for uuid, sensor in sensors.items():
+            t_start = time.time()
+            data.append((uuid, sensor.get_observation(*args, **kwargs)))
 
-        data = [
-            (uuid, sensor.get_observation(*args, **kwargs))
-            for uuid, sensor in sensors.items()
-        ]
+            if should_time:
+                kwargs["task"].add_perf_timing(f"sensors.{uuid}", t_start)
+
         super().__init__(data)
 
 

@@ -10,7 +10,6 @@ import math
 import os
 import random
 from copy import deepcopy
-from glob import glob
 
 import pytest
 
@@ -49,7 +48,9 @@ from habitat_baselines.config.default_structured_configs import (
 @pytest.fixture(scope="module", autouse=True)
 def download_data():
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
@@ -59,25 +60,12 @@ def download_data():
     "test_cfg_path,gpu2gpu,observation_transforms_overrides,mode",
     list(
         itertools.product(
-            glob("habitat-baselines/habitat_baselines/config/test/*"),
-            [False],
-            [
-                [],
-                [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
-                ],
-            ],
-            ["train", "eval"],
-        )
-    )
-    + list(
-        itertools.product(
             ["test/config/habitat_baselines/ppo_pointnav_test.yaml"],
-            [True],
+            [True, False],
             [
                 [],
                 [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                    "+habitat_baselines/rl/policy/main_agent/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
                 ],
             ],
             ["train", "eval"],
@@ -153,7 +141,7 @@ def test_ver_trainer(
                 "habitat_baselines.trainer_name=ver",
                 f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
                 f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
-                "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                "+habitat_baselines/rl/policy/main_agent/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
                 "habitat_baselines.num_updates=2",
                 "habitat_baselines.total_num_steps=-1",
                 "habitat_baselines.rl.preemption.save_state_batch_only=True",
@@ -411,7 +399,7 @@ def __do_pause_test(num_envs, envs_to_pause):
     assert prev_actions[:, 0].numpy().tolist() == expected
     assert [v[0] for v in rgb_frames] == expected
 
-    for _, v in batch.items():
+    for v in batch.values():
         assert list(v.size()) == [len(expected), 3, 256, 256]
         assert v[:, 0, 0, 0].numpy().tolist() == expected
 
