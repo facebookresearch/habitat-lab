@@ -86,11 +86,9 @@ class ObjectTargetSampler(ObjectSampler):
                 new_object,
                 use_recep,
             )
-
         # Did we successfully place all the objects?
         if len(new_target_objects) == self.target_objects_number:
             return new_target_objects
-
         # we didn't find all placements, so remove all new objects and return
         logger.info(
             f"Failed to sample all target placements in {self.max_sample_attempts} tries."
