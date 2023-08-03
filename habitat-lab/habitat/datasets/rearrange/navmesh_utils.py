@@ -9,7 +9,9 @@ from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
 
-def is_collision(sim, trans, navmesh_offset) -> bool:
+def is_collision(
+    sim: habitat_sim.Simulator, trans, navmesh_offset, largest_island_idx: int
+) -> bool:
     """
     The function checks if the agent collides with the object
     given the navmesh
@@ -21,8 +23,18 @@ def is_collision(sim, trans, navmesh_offset) -> bool:
     ]
 
     for pos in cur_pos:  # noqa: SIM110
-        # Return true if the pathfinder says it is not navigable
-        if not sim.pathfinder.is_navigable(pos):
+        # Return True if the point is not navigable on the configured largest island
+        # TODO: pathfinder.is_navigable does not support island specification, so duplicating functionality for now
+        largest_island_snap_point = sim.pathfinder.snap_point(
+            pos, island_index=largest_island_idx
+        )
+        vertical_dist = abs(largest_island_snap_point[1] - pos[1])
+        if vertical_dist > 0.5:
+            return True
+        horizontal_dist = np.linalg.norm(
+            np.array(largest_island_snap_point)[[0, 2]] - pos[[0, 2]]
+        )
+        if horizontal_dist > 0.01:
             return True
 
     return False
@@ -217,7 +229,9 @@ def is_navigable_given_robot_navmesh(
                 vel = [0, 0]
             trans = vc.act(trans, vel)
             robot_pos = trans.translation
-            collision.append(is_collision(sim, trans, navmesh_offset))
+            collision.append(
+                is_collision(sim, trans, navmesh_offset, largest_island_id)
+            )
             if (
                 render_debug_video
                 and time_since_debug_frame > 1.0 / debug_framerate
