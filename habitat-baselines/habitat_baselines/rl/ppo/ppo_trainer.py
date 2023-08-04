@@ -763,7 +763,6 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_push("train update")
 
                 self._agent.pre_rollout()
-
                 if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
                         count_checkpoints=count_checkpoints,
@@ -775,13 +774,12 @@ class PPOTrainer(BaseRLTrainer):
                         window_episode_stats=dict(self.window_episode_stats),
                         run_id=writer.get_run_id(),
                     )
-
+                    agent_resume_state = self._agent.get_resume_state()
+                    agent_resume_state.update(
+                        {"config": self.config, "requeue_stats": requeue_stats}
+                    )
                     save_resume_state(
-                        dict(
-                            **self._agent.get_resume_state(),
-                            config=self.config,
-                            requeue_stats=requeue_stats,
-                        ),
+                        agent_resume_state,
                         self.config,
                     )
 

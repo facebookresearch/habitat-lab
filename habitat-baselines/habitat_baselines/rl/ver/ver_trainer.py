@@ -478,11 +478,10 @@ class VERTrainer(PPOTrainer):
                     _last_checkpoint_percent=self._last_checkpoint_percent,
                     report_worker_state=self.report_worker.state_dict(),
                 )
-                resume_state = {
-                    **self._agent.get_resume_state(),
-                    "config": self.config,
-                    "requeue_stats": requeue_stats,
-                }
+                resume_state = self._agent.get_resume_state()
+                resume_state.update(
+                    {"config": self.config, "requeue_stats": requeue_stats}
+                )
 
                 save_resume_state(
                     resume_state,
