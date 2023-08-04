@@ -730,26 +730,33 @@ class ControllerHelper:
         )
         is_multi_agent = self.n_agents > 1
 
+        if self.n_agents > 2:
+            raise ValueError("ControllerHelper only supports 1 or 2 agents.")
+
         self.controllers: List[Controller] = []
         if self.n_agents == self.n_policy_controlled_agents:
-            self.controllers.append(
-                MultiAgentBaselinesController(
-                    is_multi_agent,
-                    config,
-                    self._gym_habitat_env,
+            # all agents are policy controlled
+            if not is_multi_agent:
+                # single agent case
+                self.controllers.append(
+                    SingleAgentBaselinesController(
+                        0,
+                        is_multi_agent,
+                        config,
+                        self._gym_habitat_env,
+                    )
                 )
-            )
+            else:
+                # multi agent case (2 agents)
+                self.controllers.append(
+                    MultiAgentBaselinesController(
+                        is_multi_agent,
+                        config,
+                        self._gym_habitat_env,
+                    )
+                )
         else:
-            self.controllers.append(
-                SingleAgentBaselinesController(
-                    self._gui_controlled_agent_index,
-                    is_multi_agent,
-                    config,
-                    self._gym_habitat_env,
-                )
-            )
-
-        if self._gui_controlled_agent_index is not None:
+            # one agent is gui controlled and the rest (if any) are policy controlled
             agent_name = self._env.sim.habitat_config.agents_order[
                 self._gui_controlled_agent_index
             ]
@@ -773,9 +780,17 @@ class ControllerHelper:
                     is_multi_agent=is_multi_agent,
                     gui_input=gui_input,
                 )
-            self.controllers.insert(
-                self._gui_controlled_agent_index, gui_agent_controller
-            )
+            self.controllers.append(gui_agent_controller)
+
+            if is_multi_agent:
+                self.controllers.append(
+                    SingleAgentBaselinesController(
+                        0 if self._gui_controlled_agent_index == 1 else 1,
+                        is_multi_agent,
+                        config,
+                        self._gym_habitat_env,
+                    )
+                )
 
         self.active_controllers = list(
             range(len(self.controllers))
@@ -785,7 +800,7 @@ class ControllerHelper:
         if self._gui_controlled_agent_index is None:
             return None
 
-        return self.controllers[self._gui_controlled_agent_index]
+        return self.controllers[0]
 
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index
