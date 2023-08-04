@@ -124,6 +124,76 @@ class SimpleVelocityControlEnv:
         return target_trans
 
 
+def record_robot_nav_debug_image(
+    curr_path_points: List[mn.Vector3],
+    robot_transformation: mn.Matrix4,
+    robot_navmesh_offsets: List[Tuple[float, float]],
+    robot_navmesh_radius: float,
+    in_collision: bool,
+    vdb: DebugVisualizer,
+    obs_cache: List[Any],
+) -> None:
+    """
+    Render a single frame 3rd person view of the robot embodiement approximation following a path with DebugVizualizer and cache it in obs_cache.
+
+    :param curr_path_points: List of current path points.
+    :param robot_transformation: Current transformation of the robot.
+    :param robot_navmesh_offsets: Robot embodiement approximation. List of 2D points XZ in robot local space.
+    :param robot_navmesh_radius: The radius of each point approximating the robot embodiement.
+    :param in_collision: Whether or not the robot is in collision with the environment. If so, embodiement is rendered red.
+    :param vdb: The DebugVisualizer instance.
+    :param obs_cache: The observation cache for later video rendering.
+    """
+
+    # render the provided path
+    path_point_render_lines = []
+    for i in range(len(curr_path_points)):
+        if i > 0:
+            path_point_render_lines.append(
+                (
+                    [curr_path_points[i - 1], curr_path_points[i]],
+                    mn.Color4.cyan(),
+                )
+            )
+    vdb.render_debug_lines(debug_lines=path_point_render_lines)
+
+    # draw the local coordinate axis ofthe robot
+    vdb.render_debug_frame(
+        axis_length=0.3, transformation=robot_transformation
+    )
+
+    # render the robot embodiement
+    nav_pos_3d = [
+        np.array([xz[0], 0.0, xz[1]]) for xz in robot_navmesh_offsets
+    ]
+    cur_pos = [robot_transformation.transform_point(xyz) for xyz in nav_pos_3d]
+    cur_pos = [
+        np.array([xz[0], robot_transformation.translation[1], xz[2]])
+        for xz in cur_pos
+    ]
+    vdb.render_debug_circles(
+        [
+            (
+                pos,
+                robot_navmesh_radius,
+                mn.Vector3(0, 1.0, 0),
+                mn.Color4.red() if in_collision else mn.Color4.magenta(),
+            )
+            for pos in cur_pos
+        ]
+    )
+
+    # render 3rd person viewer into the observation cache
+    robot_position = robot_transformation.translation
+    vdb.get_observation(
+        look_at=robot_position,
+        # 3rd person viewpoint from behind and above the robot
+        look_from=robot_position
+        + robot_transformation.transform_vector(mn.Vector3(0, 1.5, 1.5)),
+        obs_cache=obs_cache,
+    )
+
+
 def path_is_navigable_given_robot(
     sim: habitat_sim.Simulator,
     start_pos: mn.Vector3,
@@ -177,6 +247,7 @@ def path_is_navigable_given_robot(
     # Create a new pathfinder with slightly stricter radius to provide nav buffer from collision
     pf = habitat_sim.nav.PathFinder()
     modified_settings = sim.pathfinder.nav_mesh_settings
+    robot_navmesh_radius = modified_settings.agent_radius
     modified_settings.agent_radius += 0.05
     assert sim.recompute_navmesh(
         pf, modified_settings
@@ -276,72 +347,13 @@ def path_is_navigable_given_robot(
             and time_since_debug_frame > 1.0 / debug_framerate
         ):
             time_since_debug_frame = 0
-            # render the shortest path
-            path_point_render_lines = []
-            for i in range(len(curr_path_points)):
-                if i > 0:
-                    path_point_render_lines.append(
-                        (
-                            [curr_path_points[i - 1], curr_path_points[i]],
-                            mn.Color4.cyan(),
-                        )
-                    )
-            # render a local axis for the robot
-            debug_lines = [
-                (
-                    [
-                        robot_pos,
-                        robot_pos
-                        + trans.transform_vector(mn.Vector3(0.3, 0, 0)),
-                    ],
-                    mn.Color4.red(),
-                ),
-                (
-                    [
-                        robot_pos,
-                        robot_pos
-                        + trans.transform_vector(mn.Vector3(0, 0.3, 0)),
-                    ],
-                    mn.Color4.green(),
-                ),
-                (
-                    [
-                        robot_pos,
-                        robot_pos
-                        + trans.transform_vector(mn.Vector3(0, 0, 0.3)),
-                    ],
-                    mn.Color4.blue(),
-                ),
-            ]
-            debug_lines.extend(path_point_render_lines)
-            vdb.render_debug_lines(debug_lines)
-            nav_pos_3d = [
-                np.array([xz[0], 0.0, xz[1]]) for xz in robot_navmesh_offsets
-            ]
-            cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-            cur_pos = [
-                np.array([xz[0], trans.translation[1], xz[2]])
-                for xz in cur_pos
-            ]
-            vdb.render_debug_circles(
-                [
-                    (
-                        pos,
-                        0.25,
-                        mn.Vector3(0, 1.0, 0),
-                        mn.Color4.red()
-                        if collision[-1]
-                        else mn.Color4.magenta(),
-                    )
-                    for pos in cur_pos
-                ]
-            )
-            # render into the frames buffer
-            vdb.get_observation(
-                look_at=robot_pos,
-                # from should be behind and above the robot
-                look_from=robot_pos
-                + trans.transform_vector(mn.Vector3(0, 1.5, 1.5)),
+            record_robot_nav_debug_image(
+                curr_path_points=curr_path_points,
+                robot_transformation=trans,
+                robot_navmesh_offsets=robot_navmesh_offsets,
+                robot_navmesh_radius=robot_navmesh_radius,
+                in_collision=collision[-1],
+                vdb=vdb,
                 obs_cache=debug_video_frames,
             )
         time_since_debug_frame += 1.0 / vc._integration_frequency
