@@ -124,25 +124,29 @@ class SimpleVelocityControlEnv:
         return target_trans
 
 
-def is_navigable_given_robot_navmesh(
+def path_is_navigable_given_robot(
     sim: habitat_sim.Simulator,
     start_pos: mn.Vector3,
     goal_pos: mn.Vector3,
-    navmesh_offset: List[Tuple[float, float]],
+    robot_navmesh_offsets: List[Tuple[float, float]],
+    collision_rate_threshold: float,
+    selected_island: int = -1,
     angle_threshold: float = 0.05,
     angular_speed: float = 1.0,
     distance_threshold: float = 0.25,
     linear_speed: float = 1.0,
     vdb: Optional[DebugVisualizer] = None,
     render_debug_video: bool = False,
-):
+) -> bool:
     """
-    Return the ratio of time-steps for which there were collisions detected while the robot navigated from start_pos to goal_pos given the configuration of the sim navmesh.
+    Compute the ratio of time-steps for which there were collisions detected while the robot navigated from start_pos to goal_pos given the configuration of the sim navmesh.
 
     :param sim: Habitat Simulaton instance.
     :param start_pos: Initial translation of the robot's transform. The start of the navigation path.
     :param goal_pos: Target translation of the robot's transform. The end of the navigation path.
-    :param navmesh_offset: The list of 2D points XZ in robot local space which will be used represent the robot's shape. Used to query the navmesh for navigability as a collision heuristic.
+    :param robot_navmesh_offsets: The list of 2D points XZ in robot local space which will be used represent the robot's shape. Used to query the navmesh for navigability as a collision heuristic.
+    :param collision_rate_threshold: The acceptable ratio of colliding to non-colliding steps in the navigation path. Collision is computed with a heuristic, so should be non-zero.
+    :param selected_island: The navmesh island to which queries should be constrained. -1 denotes the full navmesh.
     :param angle_threshold: The error threshold in radians over which the robot should turn before moving straight.
     :param angular_speed: The constant angular speed for turning (radians/sec)
     :param distance_threshold: The euclidean distance between the robot and the target within which navigation is considered successful and the function returns.
@@ -150,19 +154,14 @@ def is_navigable_given_robot_navmesh(
     :param vdb: An optional DebugVisualizer if rendering and video export are desired.
     :param render_debug_video: Whether or not to render and export a visualization of the navigation. If True, requires a DebugVisualizer instance.
 
-    :return: The ratio of time-steps where collisions were detected.
+    :return: Whether or not the ratio of time-steps where collisions were detected is within the provided threshold.
     """
     logger.info(
         "Checking robot navigability between target object start and goal:"
     )
 
-    # TODO: for now computation is repeated here, but should be provided from earlier
-    largest_island_id = get_largest_island_index(
-        sim.pathfinder, sim, allow_outdoor=False
-    )
-
-    snapped_start_pos = sim.pathfinder.snap_point(start_pos, largest_island_id)
-    snapped_goal_pos = sim.pathfinder.snap_point(goal_pos, largest_island_id)
+    snapped_start_pos = sim.pathfinder.snap_point(start_pos, selected_island)
+    snapped_goal_pos = sim.pathfinder.snap_point(goal_pos, selected_island)
 
     logger.info(
         f"     - start_pos to snapped_start_pos distance = {(snapped_start_pos-start_pos).length()}"
@@ -179,7 +178,6 @@ def is_navigable_given_robot_navmesh(
     pf = habitat_sim.nav.PathFinder()
     modified_settings = sim.pathfinder.nav_mesh_settings
     modified_settings.agent_radius += 0.05
-    assert sim.pathfinder.nav_mesh_settings != modified_settings
     assert sim.recompute_navmesh(
         pf, modified_settings
     ), "failed to recompute navmesh"
@@ -189,10 +187,13 @@ def is_navigable_given_robot_navmesh(
     path.requested_start = snapped_start_pos
     path.requested_end = snapped_goal_pos
     # Find the path
-    pf.find_path(path)
+    found_path = pf.find_path(path)
+    if not found_path:
+        logger.info(
+            f"     - cannot find path between start_pos({start_pos}) and goal_pos({goal_pos})."
+        )
+        return False
     curr_path_points = path.points
-    if len(curr_path_points) <= 2:
-        return 1.0
     # Set the initial position
     p0 = mn.Vector3(curr_path_points[0])
     p1 = mn.Vector3(curr_path_points[1])
@@ -217,136 +218,133 @@ def is_navigable_given_robot_navmesh(
     debug_framerate = 30
     time_since_debug_frame = 9999.0
 
-    try:
-        while not at_goal:
-            # Find the path
-            path.requested_start = robot_pos
-            path.requested_end = snapped_goal_pos
-            pf.find_path(path)
-            curr_path_points = path.points
-            cur_nav_targ = curr_path_points[1]
-            robot_forward = np.array(trans.transform_vector(forward))
-            # Compute relative target
+    while not at_goal:
+        # Find the path
+        path.requested_start = robot_pos
+        path.requested_end = snapped_goal_pos
+        pf.find_path(path)
+        curr_path_points = path.points
+        cur_nav_targ = curr_path_points[1]
+        robot_forward = np.array(trans.transform_vector(forward))
+        # Compute relative target
+        rel_targ = cur_nav_targ - robot_pos
+        rel_targ = rel_targ[[0, 2]]
+
+        if np.linalg.norm(rel_targ) < 0.01 and len(curr_path_points) > 2:
+            # skip silly turning very close to nav points
+            cur_nav_targ = curr_path_points[2]
             rel_targ = cur_nav_targ - robot_pos
             rel_targ = rel_targ[[0, 2]]
 
-            if np.linalg.norm(rel_targ) < 0.01 and len(curr_path_points) > 2:
-                # skip silly turning very close to nav points
-                cur_nav_targ = curr_path_points[2]
-                rel_targ = cur_nav_targ - robot_pos
-                rel_targ = rel_targ[[0, 2]]
+        # Compute heading angle (2D calculation)
+        robot_forward = robot_forward[[0, 2]]
+        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+        # Get the angles
+        angle_to_target = get_angle(robot_forward, rel_targ)
+        angle_to_obj = get_angle(robot_forward, rel_pos)
+        # Compute the distance
+        dist_to_final_nav_targ = np.linalg.norm(
+            (final_nav_targ - robot_pos)[[0, 2]]
+        )
+        at_goal = bool(
+            dist_to_final_nav_targ < distance_threshold
+            and angle_to_obj < angle_threshold
+        )
 
-            # Compute heading angle (2D calculation)
-            robot_forward = robot_forward[[0, 2]]
-            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-            # Get the angles
-            angle_to_target = get_angle(robot_forward, rel_targ)
-            angle_to_obj = get_angle(robot_forward, rel_pos)
-            # Compute the distance
-            dist_to_final_nav_targ = np.linalg.norm(
-                (final_nav_targ - robot_pos)[[0, 2]]
-            )
-            at_goal = bool(
-                dist_to_final_nav_targ < distance_threshold
-                and angle_to_obj < angle_threshold
-            )
-
-            if not at_goal:
-                if dist_to_final_nav_targ < distance_threshold:
-                    # Do not want to look at the object to reduce collision
-                    vel = [0.0, 0.0]
-                    at_goal = True
-                elif angle_to_target < angle_threshold:
-                    # Move towards the target
-                    vel = [linear_speed, 0.0]
-                else:
-                    # Look at the target waypoint.
-                    vel = compute_turn(rel_targ, angular_speed, robot_forward)
-            else:
+        if not at_goal:
+            if dist_to_final_nav_targ < distance_threshold:
+                # Do not want to look at the object to reduce collision
                 vel = [0.0, 0.0]
-            trans = vc.act(trans, vel)
-            robot_pos = trans.translation
-            collision.append(
-                is_collision(
-                    sim.pathfinder, trans, navmesh_offset, largest_island_id
-                )
+                at_goal = True
+            elif angle_to_target < angle_threshold:
+                # Move towards the target
+                vel = [linear_speed, 0.0]
+            else:
+                # Look at the target waypoint.
+                vel = compute_turn(rel_targ, angular_speed, robot_forward)
+        else:
+            vel = [0.0, 0.0]
+        trans = vc.act(trans, vel)
+        robot_pos = trans.translation
+        collision.append(
+            is_collision(
+                sim.pathfinder, trans, robot_navmesh_offsets, selected_island
             )
-            if (
-                render_debug_video
-                and time_since_debug_frame > 1.0 / debug_framerate
-            ):
-                time_since_debug_frame = 0
-                # render the shortest path
-                path_point_render_lines = []
-                for i in range(len(curr_path_points)):
-                    if i > 0:
-                        path_point_render_lines.append(
-                            (
-                                [curr_path_points[i - 1], curr_path_points[i]],
-                                mn.Color4.cyan(),
-                            )
-                        )
-                # render a local axis for the robot
-                debug_lines = [
-                    (
-                        [
-                            robot_pos,
-                            robot_pos
-                            + trans.transform_vector(mn.Vector3(0.3, 0, 0)),
-                        ],
-                        mn.Color4.red(),
-                    ),
-                    (
-                        [
-                            robot_pos,
-                            robot_pos
-                            + trans.transform_vector(mn.Vector3(0, 0.3, 0)),
-                        ],
-                        mn.Color4.green(),
-                    ),
-                    (
-                        [
-                            robot_pos,
-                            robot_pos
-                            + trans.transform_vector(mn.Vector3(0, 0, 0.3)),
-                        ],
-                        mn.Color4.blue(),
-                    ),
-                ]
-                debug_lines.extend(path_point_render_lines)
-                vdb.render_debug_lines(debug_lines)
-                nav_pos_3d = [
-                    np.array([xz[0], 0.0, xz[1]]) for xz in navmesh_offset
-                ]
-                cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-                cur_pos = [
-                    np.array([xz[0], trans.translation[1], xz[2]])
-                    for xz in cur_pos
-                ]
-                vdb.render_debug_circles(
-                    [
+        )
+        if (
+            render_debug_video
+            and time_since_debug_frame > 1.0 / debug_framerate
+        ):
+            time_since_debug_frame = 0
+            # render the shortest path
+            path_point_render_lines = []
+            for i in range(len(curr_path_points)):
+                if i > 0:
+                    path_point_render_lines.append(
                         (
-                            pos,
-                            0.25,
-                            mn.Vector3(0, 1.0, 0),
-                            mn.Color4.red()
-                            if collision[-1]
-                            else mn.Color4.magenta(),
+                            [curr_path_points[i - 1], curr_path_points[i]],
+                            mn.Color4.cyan(),
                         )
-                        for pos in cur_pos
-                    ]
-                )
-                # render into the frames buffer
-                vdb.get_observation(
-                    look_at=robot_pos,
-                    # from should be behind and above the robot
-                    look_from=robot_pos
-                    + trans.transform_vector(mn.Vector3(0, 1.5, 1.5)),
-                    obs_cache=debug_video_frames,
-                )
-            time_since_debug_frame += 1.0 / vc._integration_frequency
-    except Exception:
-        return 1.0
+                    )
+            # render a local axis for the robot
+            debug_lines = [
+                (
+                    [
+                        robot_pos,
+                        robot_pos
+                        + trans.transform_vector(mn.Vector3(0.3, 0, 0)),
+                    ],
+                    mn.Color4.red(),
+                ),
+                (
+                    [
+                        robot_pos,
+                        robot_pos
+                        + trans.transform_vector(mn.Vector3(0, 0.3, 0)),
+                    ],
+                    mn.Color4.green(),
+                ),
+                (
+                    [
+                        robot_pos,
+                        robot_pos
+                        + trans.transform_vector(mn.Vector3(0, 0, 0.3)),
+                    ],
+                    mn.Color4.blue(),
+                ),
+            ]
+            debug_lines.extend(path_point_render_lines)
+            vdb.render_debug_lines(debug_lines)
+            nav_pos_3d = [
+                np.array([xz[0], 0.0, xz[1]]) for xz in robot_navmesh_offsets
+            ]
+            cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+            cur_pos = [
+                np.array([xz[0], trans.translation[1], xz[2]])
+                for xz in cur_pos
+            ]
+            vdb.render_debug_circles(
+                [
+                    (
+                        pos,
+                        0.25,
+                        mn.Vector3(0, 1.0, 0),
+                        mn.Color4.red()
+                        if collision[-1]
+                        else mn.Color4.magenta(),
+                    )
+                    for pos in cur_pos
+                ]
+            )
+            # render into the frames buffer
+            vdb.get_observation(
+                look_at=robot_pos,
+                # from should be behind and above the robot
+                look_from=robot_pos
+                + trans.transform_vector(mn.Vector3(0, 1.5, 1.5)),
+                obs_cache=debug_video_frames,
+            )
+        time_since_debug_frame += 1.0 / vc._integration_frequency
 
     collision_rate = np.average(collision)
 
@@ -358,7 +356,10 @@ def is_navigable_given_robot_navmesh(
             obs_cache=debug_video_frames,
         )
 
-    return collision_rate
+    logger.info(f"  collision rate {collision_rate}")
+    if collision_rate > collision_rate_threshold:
+        return False
+    return True
 
 
 def is_accessible(

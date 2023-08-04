@@ -26,7 +26,8 @@ import habitat_sim
 from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import (
-    is_navigable_given_robot_navmesh,
+    get_largest_island_index,
+    path_is_navigable_given_robot,
 )
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
@@ -706,6 +707,11 @@ class RearrangeEpisodeGenerator:
 
         target_refs: Dict[str, str] = {}
 
+        # get the largest indoor island to constrain target navigability check
+        largest_indoor_island_id = get_largest_island_index(
+            self.sim.pathfinder, self.sim, allow_outdoor=False
+        )
+
         # sample goal positions for target objects after all other clutter is placed and validated
         handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
         for sampler_name, target_sampler in self._target_samplers.items():
@@ -738,23 +744,21 @@ class RearrangeEpisodeGenerator:
                 # Add check for checking if the robot can navigate from start to goal
                 # given the navmesh of the robot
                 if self.cfg.check_navigable:
-                    collision_rate = is_navigable_given_robot_navmesh(
-                        self.sim,
-                        match_obj.translation,
-                        new_target_obj.translation,
-                        self.cfg.navmesh_offset,
-                        self.cfg.angle_threshold,
-                        self.cfg.angular_velocity,
-                        self.cfg.distance_threshold,
-                        self.cfg.linear_velocity,
-                        self.vdb,
+                    is_navigable = path_is_navigable_given_robot(
+                        sim=self.sim,
+                        start_pos=match_obj.translation,
+                        goal_pos=new_target_obj.translation,
+                        robot_navmesh_offsets=self.cfg.navmesh_offset,
+                        collision_rate_threshold=self.cfg.max_collision_rate_for_navigable,
+                        selected_island=largest_indoor_island_id,
+                        angle_threshold=self.cfg.angle_threshold,
+                        angular_speed=self.cfg.angular_velocity,
+                        distance_threshold=self.cfg.distance_threshold,
+                        linear_speed=self.cfg.linear_velocity,
+                        vdb=self.vdb,
                         render_debug_video=False,
                     )
-                    logger.info(f"  collision rate {collision_rate}")
-                    if (
-                        collision_rate
-                        > self.cfg.max_collision_rate_for_navigable
-                    ):
+                    if not is_navigable:
                         logger.info(
                             f"Collision rate greater than {self.cfg.max_collision_rate_for_navigable}, discarding episode."
                         )
