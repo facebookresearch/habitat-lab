@@ -1,20 +1,28 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
 
 def is_collision(
-    sim: habitat_sim.Simulator, trans, navmesh_offset, largest_island_idx: int
+    pathfinder: habitat_sim.nav.PathFinder,
+    trans: mn.Matrix4,
+    navmesh_offset: List[Tuple[float, float]],
+    island_idx: int,
 ) -> bool:
     """
-    The function checks if the agent collides with the object
-    given the navmesh
+    Checks the given transform and navmesh offset points for navigability on the provided navmesh island. Returns True if any point is non-navigable.
+
+    :param pathfinder: The PathFinder instance defining the NavMesh.
+    :param trans: The current agent transformation matrix.
+    :param navmesh_offset: A list of 2D navmesh offset points to check.
+    :param largest_island_idx: The index of the island to query. -1 is the entire navmesh.
     """
     nav_pos_3d = [np.array([xz[0], 0.0, xz[1]]) for xz in navmesh_offset]
     cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
@@ -23,10 +31,10 @@ def is_collision(
     ]
 
     for pos in cur_pos:
-        # Return True if the point is not navigable on the configured largest island
+        # Return True if the point is not navigable on the configured island
         # TODO: pathfinder.is_navigable does not support island specification, so duplicating functionality for now
-        largest_island_snap_point = sim.pathfinder.snap_point(
-            pos, island_index=largest_island_idx
+        largest_island_snap_point = pathfinder.snap_point(
+            pos, island_index=island_idx
         )
         vertical_dist = abs(largest_island_snap_point[1] - pos[1])
         if vertical_dist > 0.5:
@@ -40,33 +48,52 @@ def is_collision(
     return False
 
 
-def compute_turn(rel, turn_vel, robot_forward):
+def compute_turn(
+    target: np.ndarray, turn_speed: float, robot_forward: np.ndarray
+) -> List[float]:
     """
-    Computing the turnning velocity given the relative position
+    Computes the constant speed angular velocity about the Y axis to turn the 2D robot_forward vector toward the provided 2D target direction in global coordinates.
+
+    :param target: The 2D global target vector in XZ.
+    :param turn_speed: The desired constant turn speed.
+    :param robot_forward: The global 2D robot forward vector in XZ.
     """
-    is_left = np.cross(robot_forward, rel) > 0
+    is_left = np.cross(robot_forward, target) > 0
     if is_left:
-        vel = [0, -turn_vel]
+        vel = [0, -turn_speed]
     else:
-        vel = [0, turn_vel]
+        vel = [0, turn_speed]
     return vel
 
 
 class SimpleVelocityControlEnv:
     """
-    A simple environment to control the velocity of the robot
+    A simple environment to control the velocity of the robot.
     """
 
-    def __init__(self, sim_freq=60.0):
+    def __init__(self, integration_frequency: float = 60.0):
+        """
+        Initialize the internal VelocityControl object.
+
+        :param integration_frequency: The frequency of integration. Number of integration steps in a second. Integration step size = 1.0/integration_frequency.
+        """
         # the velocity control
         self.vel_control = VelocityControl()
         self.vel_control.controlling_lin_vel = True
         self.vel_control.controlling_ang_vel = True
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
-        self._sim_freq = sim_freq
+        self._integration_frequency = integration_frequency
 
-    def act(self, trans, vel):
+    def act(self, trans: mn.Matrix4, vel: List[float]) -> mn.Matrix4:
+        """
+        Integrate the current linear and angular velocity and return the new transform.
+
+        :param trans: The current agent transformation matrix.
+        :param vel: 2D list of linear (forward) and angular (about Y) velocity.
+
+        :return: The updated agent transformation matrix.
+        """
         linear_velocity = vel[0]
         angular_velocity = vel[1]
         # Map velocity actions
@@ -82,7 +109,7 @@ class SimpleVelocityControlEnv:
         )
         # Get the target rigid state based on the simulation frequency
         target_rigid_state = self.vel_control.integrate_transform(
-            1 / self._sim_freq, rigid_state
+            1.0 / self._integration_frequency, rigid_state
         )
         # Get the ending pos of the agent
         end_pos = target_rigid_state.translation
@@ -98,20 +125,32 @@ class SimpleVelocityControlEnv:
 
 
 def is_navigable_given_robot_navmesh(
-    sim,
-    start_pos,
-    goal_pos,
-    navmesh_offset=([0, 0], [0, 0.15], [0, -0.15]),
-    angle_threshold=0.05,
-    angular_velocity=1.0,
-    distance_threshold=0.25,
-    linear_velocity=1.0,
-    vdb=None,
-    render_debug_video=False,
+    sim: habitat_sim.Simulator,
+    start_pos: mn.Vector3,
+    goal_pos: mn.Vector3,
+    navmesh_offset: List[Tuple[float, float]],
+    angle_threshold: float = 0.05,
+    angular_speed: float = 1.0,
+    distance_threshold: float = 0.25,
+    linear_speed: float = 1.0,
+    vdb: Optional[DebugVisualizer] = None,
+    render_debug_video: bool = False,
 ):
     """
-    Return True if the robot can navigate from point A
-    to point B given the configuration of the navmesh.
+    Return the ratio of time-steps for which there were collisions detected while the robot navigated from start_pos to goal_pos given the configuration of the sim navmesh.
+
+    :param sim: Habitat Simulaton instance.
+    :param start_pos: Initial translation of the robot's transform. The start of the navigation path.
+    :param goal_pos: Target translation of the robot's transform. The end of the navigation path.
+    :param navmesh_offset: The list of 2D points XZ in robot local space which will be used represent the robot's shape. Used to query the navmesh for navigability as a collision heuristic.
+    :param angle_threshold: The error threshold in radians over which the robot should turn before moving straight.
+    :param angular_speed: The constant angular speed for turning (radians/sec)
+    :param distance_threshold: The euclidean distance between the robot and the target within which navigation is considered successful and the function returns.
+    :param linear_speed: The constant linear speed for translation (meters/sec).
+    :param vdb: An optional DebugVisualizer if rendering and video export are desired.
+    :param render_debug_video: Whether or not to render and export a visualization of the navigation. If True, requires a DebugVisualizer instance.
+
+    :return: The ratio of time-steps where collisions were detected.
     """
     logger.info(
         "Checking robot navigability between target object start and goal:"
@@ -207,7 +246,7 @@ def is_navigable_given_robot_navmesh(
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
-            at_goal = (
+            at_goal = bool(
                 dist_to_final_nav_targ < distance_threshold
                 and angle_to_obj < angle_threshold
             )
@@ -215,22 +254,22 @@ def is_navigable_given_robot_navmesh(
             if not at_goal:
                 if dist_to_final_nav_targ < distance_threshold:
                     # Do not want to look at the object to reduce collision
-                    vel = [0, 0]
+                    vel = [0.0, 0.0]
                     at_goal = True
                 elif angle_to_target < angle_threshold:
                     # Move towards the target
-                    vel = [linear_velocity, 0]
+                    vel = [linear_speed, 0.0]
                 else:
                     # Look at the target waypoint.
-                    vel = compute_turn(
-                        rel_targ, angular_velocity, robot_forward
-                    )
+                    vel = compute_turn(rel_targ, angular_speed, robot_forward)
             else:
-                vel = [0, 0]
+                vel = [0.0, 0.0]
             trans = vc.act(trans, vel)
             robot_pos = trans.translation
             collision.append(
-                is_collision(sim, trans, navmesh_offset, largest_island_id)
+                is_collision(
+                    sim.pathfinder, trans, navmesh_offset, largest_island_id
+                )
             )
             if (
                 render_debug_video
@@ -305,7 +344,7 @@ def is_navigable_given_robot_navmesh(
                     + trans.transform_vector(mn.Vector3(0, 1.5, 1.5)),
                     obs_cache=debug_video_frames,
                 )
-            time_since_debug_frame += 1.0 / vc._sim_freq
+            time_since_debug_frame += 1.0 / vc._integration_frequency
     except Exception:
         return 1.0
 
@@ -322,21 +361,23 @@ def is_navigable_given_robot_navmesh(
     return collision_rate
 
 
-def is_accessible(sim, point, nav_to_min_distance) -> bool:
+def is_accessible(
+    sim: habitat_sim.Simulator, point: mn.Vector3, nav_to_min_distance: float
+) -> bool:
     """
-    Return True if the point is within a threshold distance of the nearest
-    navigable point and that the nearest navigable point is on the same
-    navigation mesh.
+    Return True if the point is within a threshold distance (in XZ plane) of the nearest navigable point on the largest indoor island.
 
-    Note that this might not catch all edge cases since the distance is
-    based on Euclidean distance. The nearest navigable point may be
-    separated from the object by an obstacle.
+    :param sim: Habitat Simulaton instance.
+    :param point: The query point.
+    :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
+
+    Note that this might not catch all edge cases since the nearest navigable point may be separated from the point by an obstacle.
     """
+    if nav_to_min_distance == -1:
+        return True
     largest_island_id = get_largest_island_index(
         sim.pathfinder, sim, allow_outdoor=False
     )
-    if nav_to_min_distance == -1:
-        return True
     snapped = sim.pathfinder.snap_point(point, island_index=largest_island_id)
 
     dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
