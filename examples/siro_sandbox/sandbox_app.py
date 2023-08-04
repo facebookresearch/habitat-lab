@@ -20,7 +20,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import argparse
 from datetime import datetime
 from functools import wraps
-from typing import Any, Dict, List, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple
 
 import magnum as mn
 import numpy as np
@@ -49,6 +49,9 @@ from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from habitat.gui.text_drawer import TextOnScreenAlignment
 from habitat_baselines.config.default import get_config as get_baselines_config
+
+if TYPE_CHECKING:
+    from habitat.core.environments import GymHabitatEnv
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
@@ -100,10 +103,12 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.concur_render = False
 
         dataset = self._make_dataset(config=config)
-        self.gym_habitat_env = habitat.gym.make_gym_from_config(
-            config=config, dataset=dataset
+        self.gym_habitat_env: "GymHabitatEnv" = (
+            habitat.gym.make_gym_from_config(config=config, dataset=dataset)
         )
-        self.habitat_env = self.gym_habitat_env.unwrapped.habitat_env
+        self.habitat_env: habitat.Env = (
+            self.gym_habitat_env.unwrapped.habitat_env
+        )
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator

@@ -5,13 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import magnum as mn
 import numpy as np
 import torch
 
+import habitat
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
@@ -36,6 +37,15 @@ from habitat_baselines.utils.common import (
     get_action_space_info,
     is_continuous_action_space,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
+    from habitat.core.environments import GymHabitatEnv
+    from habitat_baselines.common.obs_transformers import (
+        ObservationTransformer,
+    )
+    from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 
 
 class Controller(ABC):
@@ -74,28 +84,30 @@ def clean_dict(d, remove_prefix):
 class BaselinesController(Controller):
     def __init__(
         self,
-        is_multi_agent,
-        config,
-        gym_habitat_env,
+        is_multi_agent: bool,
+        config: "DictConfig",
+        gym_habitat_env: "GymHabitatEnv",
     ):
         super().__init__(is_multi_agent)
-        self._config = config
+        self._config: DictConfig = config
 
-        self._gym_habitat_env = gym_habitat_env
-        self._habitat_env = gym_habitat_env.unwrapped.habitat_env
-        self._num_envs = 1
+        self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
+        self._habitat_env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
+        self._num_envs: int = 1
 
-        self.device = (
+        self.device: torch.device = (
             torch.device("cuda", config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
 
         # create env spec
-        self._env_spec = self._create_env_spec()
+        self._env_spec: EnvironmentSpec = self._create_env_spec()
 
         # create observations transforms
-        self._obs_transforms = self._get_active_obs_transforms()
+        self._obs_transforms: List[
+            "ObservationTransformer"
+        ] = self._get_active_obs_transforms()
 
         # apply observations transforms
         self._env_spec.observation_space = apply_obs_transforms_obs_space(
@@ -103,23 +115,25 @@ class BaselinesController(Controller):
         )
 
         # create agent
-        self._agent = self._create_agent()
+        self._agent: "AgentAccessMgr" = self._create_agent()
         if (
             self._agent.actor_critic.should_load_agent_state
             and self._config.habitat_baselines.eval.should_load_ckpt
         ):
             self._load_agent_checkpoint()
 
+        self._agent.eval()
+
+        self._action_shape: Tuple[int]
+        self._discrete_actions: bool
         self._action_shape, self._discrete_actions = get_action_space_info(
             self._agent.policy_action_space
         )
 
-        self._agent.eval()
-
         hidden_state_lens = self._agent.hidden_state_shape_lens
         action_space_lens = self._agent.policy_action_space_shape_lens
 
-        self._space_lengths = {}
+        self._space_lengths: Dict = {}
         n_agents = len(self._config.habitat.simulator.agents)
         if n_agents > 1:
             self._space_lengths = {
@@ -232,15 +246,17 @@ class BaselinesController(Controller):
 class SingleAgentBaselinesController(BaselinesController):
     def __init__(
         self,
-        agent_idx,
-        is_multi_agent,
-        config,
-        gym_habitat_env,
+        agent_idx: int,
+        is_multi_agent: bool,
+        config: "DictConfig",
+        gym_habitat_env: "GymHabitatEnv",
     ):
-        self._agent_idx = agent_idx
-        self._agent_name = config.habitat.simulator.agents_order[
+        self._agent_idx: int = agent_idx
+        self._agent_name: str = config.habitat.simulator.agents_order[
             self._agent_idx
         ]
+
+        self._agent_k: str
         if is_multi_agent:
             self._agent_k = f"agent_{self._agent_idx}_"
         else:
@@ -716,19 +732,26 @@ class GuiHumanoidController(GuiController):
 
 
 class ControllerHelper:
-    def __init__(self, gym_habitat_env, config, args, gui_input, recorder):
-        self._gym_habitat_env = gym_habitat_env
-        self._env = gym_habitat_env.unwrapped.habitat_env
+    def __init__(
+        self,
+        gym_habitat_env: "GymHabitatEnv",
+        config: "DictConfig",
+        args,
+        gui_input,
+        recorder,
+    ):
+        self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
+        self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
-        self.n_agents = len(self._env._sim.agents_mgr)
-        self.n_user_controlled_agents = (
+        self.n_agents: int = len(self._env._sim.agents_mgr)
+        self.n_user_controlled_agents: int = (
             0 if self._gui_controlled_agent_index is None else 1
         )
-        self.n_policy_controlled_agents = (
+        self.n_policy_controlled_agents: int = (
             self.n_agents - self.n_user_controlled_agents
         )
-        is_multi_agent = self.n_agents > 1
+        is_multi_agent: bool = self.n_agents > 1
 
         if self.n_agents > 2:
             raise ValueError("ControllerHelper only supports 1 or 2 agents.")
@@ -757,10 +780,10 @@ class ControllerHelper:
                 )
         else:
             # one agent is gui controlled and the rest (if any) are policy controlled
-            agent_name = self._env.sim.habitat_config.agents_order[
+            agent_name: str = self._env.sim.habitat_config.agents_order[
                 self._gui_controlled_agent_index
             ]
-            articulated_agent_type = self._env.sim.habitat_config.agents[
+            articulated_agent_type: str = self._env.sim.habitat_config.agents[
                 agent_name
             ].articulated_agent_type
 
@@ -792,10 +815,6 @@ class ControllerHelper:
                     )
                 )
 
-        self.active_controllers = list(
-            range(len(self.controllers))
-        )  # assuming all controllers are active
-
     def get_gui_agent_controller(self) -> Optional[Controller]:
         if self._gui_controlled_agent_index is None:
             return None
@@ -808,8 +827,8 @@ class ControllerHelper:
     def update(self, obs):
         all_names = []
         all_args = {}
-        for i in self.active_controllers:
-            ctrl_action = self.controllers[i].act(obs, self._env)
+        for controller in self.controllers:
+            ctrl_action = controller.act(obs, self._env)
             all_names.extend(ctrl_action["action"])
             all_args.update(ctrl_action["action_args"])
         action = {"action": tuple(all_names), "action_args": all_args}
@@ -817,5 +836,5 @@ class ControllerHelper:
         return action
 
     def on_environment_reset(self):
-        for i in self.active_controllers:
-            self.controllers[i].on_environment_reset()
+        for controller in self.controllers:
+            controller.on_environment_reset()
