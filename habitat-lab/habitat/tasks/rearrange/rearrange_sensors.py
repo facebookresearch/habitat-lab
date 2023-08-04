@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from collections import defaultdict, deque
+
 import numpy as np
 from gym import spaces
 
@@ -520,7 +522,7 @@ class ObjectToGoalDistance(Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
@@ -629,11 +631,11 @@ class EndEffectorToGoalDistance(UsesArticulatedAgentInterface, Measure):
             .translation
         )
 
-        idxs, goals = self._sim.get_targets()
+        goals = self._sim.get_targets()[1]
 
         distances = np.linalg.norm(goals - ee_pos, ord=2, axis=-1)
 
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
@@ -669,7 +671,7 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
@@ -1145,3 +1147,32 @@ class ContactTestStats(Measure):
         )
         self._contact_flag.append(flag)
         self._metric = np.average(self._contact_flag)
+
+
+@registry.register_measure
+class RuntimePerfStats(Measure):
+    cls_uuid: str = "habitat_perf"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RuntimePerfStats.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._sim.enable_perf_logging()
+        self._disable_logging = config.disable_logging
+        super().__init__()
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric_queue = defaultdict(deque)
+        self._metric = {}
+
+    def update_metric(self, *args, task, **kwargs):
+        for k, v in self._sim.get_runtime_perf_stats().items():
+            self._metric_queue[k].append(v)
+        if self._disable_logging:
+            self._metric = {}
+        else:
+            self._metric = {
+                k: np.mean(v) for k, v in self._metric_queue.items()
+            }

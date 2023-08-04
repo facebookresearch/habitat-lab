@@ -99,6 +99,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 self._updater.optimizer.load_state_dict(
                     resume_state["optim_state"]
                 )
+
         self._policy_action_space = self._actor_critic.get_policy_action_space(
             self._env_spec.action_space
         )
@@ -107,10 +108,40 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def nbuffers(self):
         return self._nbuffers
 
+    def _create_storage(
+        self,
+        num_envs: int,
+        env_spec: EnvironmentSpec,
+        actor_critic: Policy,
+        policy_action_space: spaces.Space,
+        config: "DictConfig",
+        device,
+    ) -> Storage:
+        """
+        Default behavior for setting up and initializing the rollout storage.
+        """
+
+        obs_space = get_rollout_obs_space(
+            env_spec.observation_space, actor_critic, config
+        )
+        ppo_cfg = config.habitat_baselines.rl.ppo
+        rollouts = baseline_registry.get_storage(
+            config.habitat_baselines.rollout_storage_name
+        )(
+            numsteps=ppo_cfg.num_steps,
+            num_envs=num_envs,
+            observation_space=obs_space,
+            action_space=policy_action_space,
+            actor_critic=actor_critic,
+            is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+        )
+        rollouts.to(device)
+        return rollouts
+
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         # Create the rollouts storage.
         if create_rollouts_fn is None:
-            create_rollouts_fn = default_create_rollouts
+            create_rollouts_fn = self._create_storage
 
         policy_action_space = self._actor_critic.get_policy_action_space(
             self._env_spec.action_space
@@ -201,7 +232,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 }
             )
         if self._is_static_encoder:
-            for param in actor_critic.net.visual_encoder.parameters():
+            for param in actor_critic.visual_encoder.parameters():
                 param.requires_grad_(False)
 
         if self._config.habitat_baselines.rl.ddppo.reset_critic:
@@ -228,7 +259,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             return {"state_dict": {}, "optim_state": {}}
         ret = {
             "state_dict": self._actor_critic.state_dict(),
-            "optim_state": self._updater.optimizer.state_dict(),
+            **self._updater.get_resume_state(),
         }
         if self._lr_scheduler is not None:
             ret["lr_sched_state"] = self._lr_scheduler.state_dict()
@@ -275,6 +306,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             and self._lr_scheduler is not None
         ):
             self._lr_scheduler.step()  # type: ignore
+        self._updater.after_update()
 
     def pre_rollout(self):
         if self._ppo_cfg.use_linear_clip_decay:
@@ -301,7 +333,7 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
     """
 
     if not config.habitat_baselines.rl.ddppo.train_encoder:
-        encoder = actor_critic.net.visual_encoder
+        encoder = actor_critic.visual_encoder
         obs_space = spaces.Dict(
             {
                 PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
@@ -314,37 +346,6 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
             }
         )
     return obs_space
-
-
-def default_create_rollouts(
-    num_envs: int,
-    env_spec: EnvironmentSpec,
-    actor_critic: NetPolicy,
-    policy_action_space: spaces.Space,
-    config: "DictConfig",
-    device,
-) -> Storage:
-    """
-    Default behavior for setting up and initializing the rollout storage.
-    """
-
-    obs_space = get_rollout_obs_space(
-        env_spec.observation_space, actor_critic, config
-    )
-    ppo_cfg = config.habitat_baselines.rl.ppo
-    rollouts = baseline_registry.get_storage(
-        config.habitat_baselines.rollout_storage_name
-    )(
-        ppo_cfg.num_steps,
-        num_envs,
-        obs_space,
-        policy_action_space,
-        ppo_cfg.hidden_size,
-        num_recurrent_layers=actor_critic.num_recurrent_layers,
-        is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-    )
-    rollouts.to(device)
-    return rollouts
 
 
 def linear_lr_schedule(percent_done: float) -> float:

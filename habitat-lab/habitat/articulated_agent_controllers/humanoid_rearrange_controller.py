@@ -117,7 +117,8 @@ class HumanoidRearrangeController:
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
         self.draw_fps = self.walk_motion.fps / frames_per_step
-        rotate_amount = ang_speed
+        rotate_amount = ang_speed * seconds_per_step
+        rotate_amount = rotate_amount * 180.0 / np.pi
         self.turning_step_amount = rotate_amount
         self.threshold_rotate_not_move = rotate_amount
 
@@ -255,8 +256,11 @@ class HumanoidRearrangeController:
         )
 
         # Remove the forward component, and orient according to forward_V
-        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
-        obj_transform = add_rot @ obj_transform
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(1.0, 0, 0))
+        add_rot2 = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(0, 0, 1.0)
+        )
+        obj_transform = add_rot @ add_rot2 @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
         # This is the rotation and translation caused by the current motion pose

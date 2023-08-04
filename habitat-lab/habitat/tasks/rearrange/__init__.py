@@ -6,7 +6,6 @@
 
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def _try_register_rearrange_task():
@@ -28,26 +27,3 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.sub_tasks.place_task
     import habitat.tasks.rearrange.sub_tasks.reach_sensors
     import habitat.tasks.rearrange.sub_tasks.reach_task
-
-    if not HabitatSimActions.has_action("arm_action"):
-        HabitatSimActions.extend_action_space("arm_action")
-    if not HabitatSimActions.has_action("arm_vel"):
-        HabitatSimActions.extend_action_space("arm_vel")
-    if not HabitatSimActions.has_action("arm_abs_pos"):
-        HabitatSimActions.extend_action_space("arm_abs_pos")
-    if not HabitatSimActions.has_action("arm_abs_pos_kinematic"):
-        HabitatSimActions.extend_action_space("arm_abs_pos_kinematic")
-    if not HabitatSimActions.has_action("suction_grasp"):
-        HabitatSimActions.extend_action_space("suction_grasp")
-    if not HabitatSimActions.has_action("magic_grasp"):
-        HabitatSimActions.extend_action_space("magic_grasp")
-    if not HabitatSimActions.has_action("base_velocity"):
-        HabitatSimActions.extend_action_space("base_velocity")
-    if not HabitatSimActions.has_action("arm_ee"):
-        HabitatSimActions.extend_action_space("arm_ee")
-    if not HabitatSimActions.has_action("empty"):
-        HabitatSimActions.extend_action_space("empty")
-    if not HabitatSimActions.has_action("rearrange_stop"):
-        HabitatSimActions.extend_action_space("rearrange_stop")
-    if not HabitatSimActions.has_action("humanoidjoint_action"):
-        HabitatSimActions.extend_action_space("humanoidjoint_action")

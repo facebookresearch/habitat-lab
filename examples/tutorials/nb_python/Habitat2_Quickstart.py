@@ -435,7 +435,6 @@ habitat:
     additional_object_paths:
       - "data/objects/ycb/configs/"
     debug_render: False
-    action_space_config: v0
     concur_render: False
     auto_sleep: False
     agents:
@@ -456,7 +455,6 @@ habitat:
     # ARM_REST: [0.6, 0.0, 0.9]
     ctrl_freq: 120.0
     ac_freq_ratio: 4
-    forward_step_size: 0.25
 
     # Grasping
     hold_thresh: 0.09

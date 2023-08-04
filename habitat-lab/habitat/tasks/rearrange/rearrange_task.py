@@ -16,7 +16,10 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.rearrange_sim import (
+    RearrangeSim,
+    add_perf_timing_func,
+)
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
     CollisionDetails,
@@ -99,6 +102,19 @@ class RearrangeTask(NavigationTask):
         habitat_config = self._sim.habitat_config
         if "overfit" in habitat_config and habitat_config["overfit"]:
             self._fixed_starting_position = True
+
+        # Get config options
+        self._force_regenerate = self._config.force_regenerate
+        self._should_save_to_cache = self._config.should_save_to_cache
+        self._obj_succ_thresh = self._config.obj_succ_thresh
+        self._enable_safe_drop = self._config.enable_safe_drop
+        self._constraint_violation_ends_episode = (
+            self._config.constraint_violation_ends_episode
+        )
+        self._constraint_violation_drops_object = (
+            self._config.constraint_violation_drops_object
+        )
+        self._count_obj_collisions = self._config.count_obj_collisions
 
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
@@ -222,6 +238,7 @@ class RearrangeTask(NavigationTask):
         articulated_agent.base_pos = articulated_agent_pos
         articulated_agent.base_rot = articulated_agent_rot
 
+    @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
@@ -253,14 +270,25 @@ class RearrangeTask(NavigationTask):
         else:
             return None
 
+    @add_perf_timing_func()
     def _get_observations(self, episode):
+        # Fetch the simulator observations, all visual sensors.
         obs = self._sim.get_sensor_observations()
-        obs = self._sim._sensor_suite.get_observations(obs)
 
-        task_obs = self.sensor_suite.get_observations(
-            observations=obs, episode=episode, task=self
+        if not self._sim.sim_config.enable_batch_renderer:
+            # Post-process visual sensor observations
+            obs = self._sim._sensor_suite.get_observations(obs)
+        else:
+            # Keyframes are added so that the simulator state can be reconstituted when batch rendering.
+            # The post-processing step above is done after batch rendering.
+            self._sim.add_keyframe_to_observations(obs)
+
+        # Task sensors (all non-visual sensors)
+        obs.update(
+            self.sensor_suite.get_observations(
+                observations=obs, episode=episode, task=self, should_time=True
+            )
         )
-        obs.update(task_obs)
         return obs
 
     def _is_violating_safe_drop(self, action_args):

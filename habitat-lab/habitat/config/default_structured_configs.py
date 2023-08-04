@@ -81,7 +81,7 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
-    # DEBUG MEASURES
+    # PROFILING MEASURES
     "RuntimePerfStatsMeasurementConfig",
 ]
 
@@ -148,8 +148,15 @@ class EmptyActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # NAVIGATION actions
 # -----------------------------------------------------------------------------
+
+
 @dataclass
-class MoveForwardActionConfig(ActionConfig):
+class DiscreteNavigationActionConfig(ActionConfig):
+    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
+
+
+@dataclass
+class MoveForwardActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
@@ -158,7 +165,7 @@ class MoveForwardActionConfig(ActionConfig):
 
 
 @dataclass
-class TurnLeftActionConfig(ActionConfig):
+class TurnLeftActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -167,7 +174,7 @@ class TurnLeftActionConfig(ActionConfig):
 
 
 @dataclass
-class TurnRightActionConfig(ActionConfig):
+class TurnRightActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -176,7 +183,7 @@ class TurnRightActionConfig(ActionConfig):
 
 
 @dataclass
-class LookUpActionConfig(ActionConfig):
+class LookUpActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera up
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
@@ -185,7 +192,7 @@ class LookUpActionConfig(ActionConfig):
 
 
 @dataclass
-class LookDownActionConfig(ActionConfig):
+class LookDownActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera down
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
@@ -762,7 +769,15 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
+    """
+    If added to the measurements, this will time various sections of code in
+    the simulator and task logic. If using with a multi-environment trainer
+    (like DD-PPO) it is recommended to only log this stat for one environment
+    since this metric can include many numbers.
+    """
+
     type: str = "RuntimePerfStats"
+    disable_logging: bool = False
 
 
 @dataclass
@@ -1130,6 +1145,11 @@ class DidAgentsCollideConfig(MeasurementConfig):
 
 
 @dataclass
+class NumAgentsCollideConfig(MeasurementConfig):
+    type: str = "NumAgentsCollide"
+
+
+@dataclass
 class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
     type: str = "CooperateSubgoalReward"
     stage_sparse_reward: float = 1.0
@@ -1193,6 +1213,7 @@ class TaskConfig(HabitatBaseConfig):
     The definition of the task in Habitat.
 
     :property type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :property physics_target_sps: The size of each simulator physics update will be 1 / physics_target_sps.
     :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
@@ -1219,6 +1240,7 @@ class TaskConfig(HabitatBaseConfig):
     -   Rearrangement reach : `RearrangeReachTask-v0`
     -   Rearrangement composite tasks : `RearrangeCompositeTask-v0`
     """
+    physics_target_sps: float = 60.0
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
@@ -1229,6 +1251,13 @@ class TaskConfig(HabitatBaseConfig):
     # Temporary structure for sensors
     lab_sensors: Dict[str, LabSensorConfig] = field(default_factory=dict)
     measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
+    # Measures to only construct in the first environment of the first rank for
+    # vectorized environments.
+    rank0_env0_measure_names: List[str] = field(
+        default_factory=lambda: ["habitat_perf"]
+    )
+    # Measures to only record in the first rank for vectorized environments.
+    rank0_measure_names: List[str] = field(default_factory=list)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True
@@ -1443,6 +1472,8 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
+    # Hard-code the robot joint start. `joint_start_noise` still applies.
+    joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     articulated_agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
@@ -1489,9 +1520,8 @@ class HabitatSimV0Config(HabitatBaseConfig):
 @dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
-    action_space_config: str = "v0"
-    action_space_config_arguments: Dict[str, Any] = field(default_factory=dict)
     forward_step_size: float = 0.25  # in metres
+    turn_angle: int = 10  # angle to rotate left or right in degrees
     create_renderer: bool = False
     requires_textures: bool = True
     # Sleep options
@@ -1513,13 +1543,15 @@ class SimulatorConfig(HabitatBaseConfig):
     # otherwise it leads to circular references:
     #
     seed: int = II("habitat.seed")
-    turn_angle: int = 10  # angle to rotate left or right in degrees
-    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
     default_agent_id: int = 0
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
     force_soft_reset: bool = False
+    # If False, will skip setting the semantic IDs of objects in
+    # `rearrange_sim.py` (there is overhead to this operation so skip if not
+    # using semantic information).
+    should_setup_semantic_ids: bool = True
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
@@ -1540,6 +1572,12 @@ class SimulatorConfig(HabitatBaseConfig):
     # If the number of agents is greater than one,
     # then agents_order has to be set explicitly.
     agents_order: List[str] = MISSING
+
+    # Simulator should use default navmesh settings from agent config
+    default_agent_navmesh: bool = True
+    # if default navmesh is used, should it include static objects
+    navmesh_include_static_objects: bool = False
+
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
@@ -2284,6 +2322,12 @@ cs.store(
     node=DidAgentsCollideConfig,
 )
 cs.store(
+    package="habitat.task.measurements.num_agents_collide",
+    group="habitat/task/measurements",
+    name="num_agents_collide",
+    node=NumAgentsCollideConfig,
+)
+cs.store(
     package="habitat.task.measurements.composite_success",
     group="habitat/task/measurements",
     name="composite_success",
@@ -2380,11 +2424,12 @@ cs.store(
     node=RearrangeReachSuccessMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.runtime_perf_stats",
+    package="habitat.task.measurements.habitat_perf",
     group="habitat/task/measurements",
-    name="runtime_perf_stats",
+    name="habitat_perf",
     node=RuntimePerfStatsMeasurementConfig,
 )
+
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins

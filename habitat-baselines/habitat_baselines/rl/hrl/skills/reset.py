@@ -53,6 +53,10 @@ class ResetArmSkill(SkillPolicy):
     def _parse_skill_arg(self, skill_arg: str):
         return None
 
+    @property
+    def required_obs_keys(self) -> List[str]:
+        return super().required_obs_keys + ["joint"]
+
     def _is_skill_done(
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ):
@@ -65,10 +69,6 @@ class ResetArmSkill(SkillPolicy):
             )
             < 5e-2
         )
-
-    @property
-    def required_obs_keys(self) -> List[str]:
-        return ["joint", "is_holding"]
 
     def _internal_act(
         self,

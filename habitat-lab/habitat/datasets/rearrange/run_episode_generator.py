@@ -43,6 +43,7 @@ class SceneSamplerConfig:
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5
+    gpu_device_id: int = 0
     # ----- import/initialization parameters ------
     # the scene dataset from which scenes and objects are sampled
     dataset_path: str = "data/replica_cad/replicaCAD.scene_dataset_config.json"
@@ -120,8 +121,10 @@ class RearrangeEpisodeGeneratorConfig:
     # Define the object sampling configuration
     object_samplers: List[Any] = field(default_factory=list)
     # {"name":str, "type:str", "params":{})
-    # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+    # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str, "nav_to_min_distance":float, "constrain_to_largest_nav_island":bool)
     # NOTE: "orientation_sampling" options: "none", "up", "all"
+    # NOTE: (optional) "constrain_to_largest_nav_island" (default False): if True, valid placements must snap to the largest navmesh island
+    # NOTE: (optional) "nav_to_min_distance" (default -1): if not -1, valid placements must snap to the navmesh with horizontal distance less than this value
     # TODO: convert some special examples to yaml:
     # (
     #     "fridge_middle",

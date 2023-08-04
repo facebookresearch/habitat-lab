@@ -69,7 +69,9 @@ class NnSkillPolicy(SkillPolicy):
 
     @property
     def required_obs_keys(self):
-        return list(self._filtered_obs_space.spaces.keys())
+        return super().required_obs_keys + list(
+            self._filtered_obs_space.spaces.keys()
+        )
 
     def parameters(self):
         if self._wrap_policy is not None:
@@ -102,7 +104,7 @@ class NnSkillPolicy(SkillPolicy):
         rnn_hidden_states,
         prev_actions,
     ):
-        super().on_enter(
+        ret = super().on_enter(
             skill_arg,
             batch_idxs,
             observations,
@@ -110,6 +112,7 @@ class NnSkillPolicy(SkillPolicy):
             prev_actions,
         )
         self._did_want_done *= 0.0
+        return ret
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         return TensorDict(
@@ -173,7 +176,7 @@ class NnSkillPolicy(SkillPolicy):
                 )
             except FileNotFoundError as e:
                 raise FileNotFoundError(
-                    "Could not load neural network weights for skill."
+                    f"Could not load neural network weights for skill from ckpt {config.load_ckpt_file}"
                 ) from e
 
             policy_cfg = ckpt_dict["config"]
@@ -222,12 +225,7 @@ class NnSkillPolicy(SkillPolicy):
         )
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(
-                    {  # type: ignore
-                        k[len("actor_critic.") :]: v
-                        for k, v in ckpt_dict["state_dict"].items()
-                    }
-                )
+                actor_critic.load_state_dict(ckpt_dict["state_dict"])
 
             except Exception as e:
                 raise ValueError(

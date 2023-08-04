@@ -46,5 +46,5 @@ measurements:
     marker_dist_reward: 1.0
     constraint_violate_pen: 1.0
   force_terminate:
-    max_accum_force: 20_000.0
+    max_accum_force: -1.0
     max_instant_force: 10_000.0

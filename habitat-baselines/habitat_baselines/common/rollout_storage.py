@@ -18,6 +18,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_build_seq_info,
 )
 from habitat_baselines.utils.common import get_action_space_info
+from habitat_baselines.utils.timing import g_timer
 
 
 @baseline_registry.register_storage
@@ -30,8 +31,7 @@ class RolloutStorage(Storage):
         num_envs,
         observation_space,
         action_space,
-        recurrent_hidden_state_size,
-        num_recurrent_layers=1,
+        actor_critic,
         is_double_buffered: bool = False,
     ):
         action_shape, discrete_actions = get_action_space_info(action_space)
@@ -54,8 +54,8 @@ class RolloutStorage(Storage):
         self.buffers["recurrent_hidden_states"] = torch.zeros(
             numsteps + 1,
             num_envs,
-            num_recurrent_layers,
-            recurrent_hidden_state_size,
+            actor_critic.num_recurrent_layers,
+            actor_critic.recurrent_hidden_size,
         )
 
         self.buffers["rewards"] = torch.zeros(numsteps + 1, num_envs, 1)
@@ -109,6 +109,7 @@ class RolloutStorage(Storage):
         self.buffers.map_in_place(lambda v: v.to(device))
         self.device = device
 
+    @g_timer.avg_time("rollout_storage.insert", level=1)
     def insert(
         self,
         next_observations=None,
@@ -170,6 +171,7 @@ class RolloutStorage(Storage):
             0 for _ in self.current_rollout_step_idxs
         ]
 
+    @g_timer.avg_time("rollout_storage.compute_returns", level=1)
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
             assert isinstance(self.buffers["value_preds"], torch.Tensor)

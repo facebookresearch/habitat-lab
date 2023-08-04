@@ -35,7 +35,7 @@ nav_to_obj:
   load_ckpt_file: "data/models/nav.pth"
   max_skill_steps: 300
   obs_skill_input_dim: 2
-  pddl_action_names: ["nav", "nav_to_receptacle"]
+  pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
 
 reset_arm:
   skill_name: "ResetArmSkill"

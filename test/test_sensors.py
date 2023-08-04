@@ -37,15 +37,8 @@ from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
 )
-from habitat.utils.geometry_utils import (
-    angle_between_quaternions,
-    quaternion_rotate_vector,
-)
+from habitat.utils.geometry_utils import quaternion_rotate_vector
 from habitat.utils.test_utils import sample_non_stop_action
-from habitat.utils.visualizations.utils import (
-    images_to_video,
-    observations_to_image,
-)
 
 
 def get_test_config():
@@ -535,8 +528,7 @@ def test_smoke_pinhole_sensors(sensor, cuda):
 
 
 def test_noise_models_rgbd():
-    DEMO_MODE = False
-    N_STEPS = 100
+    N_STEPS = 1
 
     config = get_test_config()
     with habitat.config.read_write(config):
@@ -591,14 +583,6 @@ def test_noise_models_rgbd():
             "RedwoodDepthNoiseModel"
         )
 
-        config.habitat.simulator.action_space_config = "pyrobotnoisy"
-        config.habitat.simulator.action_space_config_arguments = {
-            "noise_model": {
-                "robot": "LoCoBot",
-                "controller": "Proportional",
-                "noise_multiplier": 0.5,
-            }
-        }
     with habitat.Env(config=config, dataset=None) as env:
         env.episode_iterator = iter([test_episode])
 
@@ -616,44 +600,3 @@ def test_noise_models_rgbd():
         ) > 1.5e-2 * np.linalg.norm(
             no_noise_obs[0]["depth"].astype(np.float32)
         ), "No Depth noise detected."
-
-        images = []
-        state = env.sim.get_agent_state()
-        angle_diffs = []
-        pos_diffs = []
-        for action in actions:
-            prev_state = state
-            obs = env.step(action)
-            state = env.sim.get_agent_state()
-            position_change = np.linalg.norm(
-                np.array(state.position) - np.array(prev_state.position), ord=2
-            )
-
-            if action["action"][:5] == "turn_":
-                angle_diff = abs(
-                    angle_between_quaternions(
-                        state.rotation, prev_state.rotation
-                    )
-                    - np.deg2rad(config.habitat.simulator.turn_angle)
-                )
-                angle_diffs.append(angle_diff)
-            else:
-                pos_diffs.append(
-                    abs(
-                        position_change
-                        - config.habitat.simulator.forward_step_size
-                    )
-                )
-
-            if DEMO_MODE:
-                images.append(observations_to_image(obs, {}))
-
-        if DEMO_MODE:
-            images_to_video(images, "data/video/test_noise", "test_noise")
-
-        assert (
-            np.mean(angle_diffs) > 0.025
-        ), "No turn action actuation noise detected."
-        assert (
-            np.mean(pos_diffs) > 0.025
-        ), "No forward action actuation noise detected."

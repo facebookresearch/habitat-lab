@@ -18,10 +18,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import (
-    place_agent_at_dist_from_pos,
-    rearrange_logger,
-)
+from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
@@ -59,20 +56,40 @@ class PddlRobotState:
 
     :property place_at_pos_dist: If -1.0, this will place the robot as close
         as possible to the entity. Otherwise, it will place the robot within X
-        meters of the entity.
+        meters of the entity. If unset, sets to task default.
     :property base_angle_noise: How much noise to add to the robot base angle
-        when setting the robot base position.
+        when setting the robot base position. If not set, sets to task default.
     :property place_at_angle_thresh: The required maximum angle to the target
         entity in the robot's local frame. Specified in radains. If not specified,
         no angle is considered.
+    :property physics_stability_steps: Number of physics checks for placing the
+        robot. If not set, sets to task default.
     """
 
     holding: Optional[PddlEntity] = None
     should_drop: bool = False
     pos: Optional[Any] = None
-    place_at_pos_dist: float = -1.0
+    place_at_pos_dist: Optional[float] = None
     place_at_angle_thresh: Optional[float] = None
-    base_angle_noise: float = 0.0
+    base_angle_noise: Optional[float] = None
+    physics_stability_steps: Optional[int] = None
+
+    def get_place_at_pos_dist(self, sim_info) -> float:
+        if self.place_at_pos_dist is None:
+            return sim_info.robot_at_thresh
+        else:
+            return self.place_at_pos_dist
+
+    def get_base_angle_noise(self, sim_info) -> float:
+        if self.base_angle_noise is None:
+            return 0.0
+        return self.base_angle_noise
+
+    def get_physics_stability_steps(self, sim_info) -> Optional[int]:
+        if self.physics_stability_steps is None:
+            return sim_info.physics_stability_steps
+        else:
+            return self.physics_stability_steps
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -80,6 +97,14 @@ class PddlRobotState:
         self.holding = sub_dict.get(self.holding, self.holding)
         self.pos = sub_dict.get(self.pos, self.pos)
         return self
+
+    def sub_in_clone(
+        self, sub_dict: Dict[PddlEntity, PddlEntity]
+    ) -> "PddlRobotState":
+        other = replace(self)
+        other.holding = sub_dict.get(self.holding, self.holding)
+        other.pos = sub_dict.get(self.pos, self.pos)
+        return other
 
     def clone(self) -> "PddlRobotState":
         """
@@ -117,9 +142,9 @@ class PddlRobotState:
             # Do transformation
             pos = T.inverted().transform_point(targ_pos)
             # Compute distance
-            dist = np.linalg.norm(pos)
             # Project to 2D plane (x,y,z=0)
             pos[2] = 0.0
+            dist = np.linalg.norm(pos)
             # Unit vector of the pos
             pos = pos.normalized()
             # Define the coordinate of the robot
@@ -127,13 +152,8 @@ class PddlRobotState:
             # Get the angle
             angle = np.arccos(np.dot(pos, pos_robot))
 
-            if self.place_at_pos_dist == -1.0:
-                use_thresh = sim_info.robot_at_thresh
-            else:
-                use_thresh = self.place_at_pos_dist
-
             # Check the distance threshold.
-            if dist > use_thresh:
+            if dist > self.get_place_at_pos_dist(sim_info):
                 return False
 
             # Check for the angle threshold
@@ -156,41 +176,43 @@ class PddlRobotState:
             sim_info.search_for_entity(robot_entity),
         )
         sim = sim_info.sim
-        grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
+        agent_data = sim.get_agent_data(robot_id)
         # Set the snapped object information
-        if self.should_drop and grasp_mgr.is_grasped:
-            grasp_mgr.desnap(True)
+        if self.should_drop and agent_data.grasp_mgr.is_grasped:
+            agent_data.grasp_mgr.desnap(True)
         elif self.holding is not None:
             # Swap objects to the desired object.
             obj_idx = cast(int, sim_info.search_for_entity(self.holding))
-            grasp_mgr.desnap(True)
+            agent_data.grasp_mgr.desnap(True)
             sim.internal_step(-1)
-            grasp_mgr.snap_to_obj(sim.scene_obj_ids[obj_idx])
+            agent_data.grasp_mgr.snap_to_obj(sim.scene_obj_ids[obj_idx])
             sim.internal_step(-1)
 
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
-            agent = sim.get_agent_data(robot_id).articulated_agent
 
-            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
-                targ_pos,
-                self.base_angle_noise,
-                self.place_at_pos_dist,
-                sim,
-                sim_info.num_spawn_attempts,
-                sim_info.physics_stability_steps,
-                agent=agent,
+            # Place some distance away from the object.
+            start_pos, start_rot, was_fail = get_robot_spawns(
+                target_position=targ_pos,
+                rotation_perturbation_noise=self.get_base_angle_noise(
+                    sim_info
+                ),
+                distance_threshold=self.get_place_at_pos_dist(sim_info),
+                sim=sim,
+                num_spawn_attempts=sim_info.num_spawn_attempts,
+                physics_stability_steps=self.get_physics_stability_steps(
+                    sim_info
+                ),
+                agent=agent_data.articulated_agent,
             )
-
-            agent.base_pos = start_pos
-            agent.base_rot = start_rot
+            agent_data.articulated_agent.base_pos = start_pos
+            agent_data.articulated_agent.base_rot = start_rot
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
-            grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
-            grasp_mgr.update_object_to_grasp()
+            agent_data.grasp_mgr.update_object_to_grasp()
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
@@ -229,6 +251,21 @@ class PddlSimState:
             self._art_states,
             self._obj_states,
             {k: v.clone() for k, v in self._robot_states.items()},
+        )
+
+    def sub_in_clone(
+        self, sub_dict: Dict[PddlEntity, PddlEntity]
+    ) -> "PddlSimState":
+        return PddlSimState(
+            {sub_dict.get(k, k): v for k, v in self._art_states.items()},
+            {
+                sub_dict.get(k, k): sub_dict.get(v, v)
+                for k, v in self._obj_states.items()
+            },
+            {
+                sub_dict.get(k, k): robot_state.sub_in_clone(sub_dict)
+                for k, robot_state in self._robot_states.items()
+            },
         )
 
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "PddlSimState":

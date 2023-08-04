@@ -17,6 +17,7 @@ from habitat.core.batch_rendering.env_batch_renderer_constants import (
 )
 from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
+from habitat.tasks.rearrange.rearrange_sim import add_perf_timing_func
 from habitat.utils.visualizations.utils import observations_to_image
 
 if TYPE_CHECKING:
@@ -239,7 +240,10 @@ class HabGymWrapper(gym.Wrapper):
             self.observation_space = spaces.Dict(dict_space)
 
         self._screen: Optional[pygame.surface.Surface] = None
+        # Store so we can profile functions on this class.
+        self._sim = self.env._env._sim
 
+    @add_perf_timing_func()
     def step(
         self, action: Union[np.ndarray, int]
     ) -> Tuple[HabGymWrapperObsType, float, bool, dict]:
