@@ -12,7 +12,7 @@ defaults:
 
 hydra:
   job:
-    name: 'pop_play_humanoid_spot_fp'
+    name: 'planner_play_humanoid_spot_fp'
 
 
 habitat:
