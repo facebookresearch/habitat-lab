@@ -233,6 +233,8 @@ class BaselinesController(Controller):
                 action["action_args"]["base_vel"]
             )
 
+        self._not_done_masks.fill_(True)
+
         return action
 
 
