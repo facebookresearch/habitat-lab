@@ -227,8 +227,6 @@ class SandboxDriver(GuiAppDriver):
         return dataset
 
     def _env_step(self, action):
-        # self._obs = self.habitat_env.step(action)
-        # self._metrics = self.habitat_env.get_metrics()
         (
             self._obs,
             reward,
@@ -301,8 +299,6 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
-        # self._obs = self.habitat_env.reset()
-        # self._metrics = self.habitat_env.get_metrics()
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
         self.ctrl_helper.on_environment_reset()
