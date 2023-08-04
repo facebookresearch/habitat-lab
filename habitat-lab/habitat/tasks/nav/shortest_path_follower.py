@@ -12,7 +12,8 @@ import numpy as np
 import habitat_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+import magnum as mn
 
 def action_to_one_hot(action: int) -> np.ndarray:
     one_hot = np.zeros(len(HabitatSimActions), dtype=np.float32)
@@ -75,7 +76,15 @@ class ShortestPathFollower:
         self._build_follower()
         assert self._follower is not None
         try:
-            next_action = self._follower.next_action_along(goal_pos)
+            curr_pos, curr_rot = None, None
+            if isinstance(self._sim, RearrangeSim):
+                ang_pos = float(self._sim.robot.base_rot) - np.pi / 2
+                curr_rot = mn.Quaternion(
+                    mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
+                )
+                curr_pos = self._sim.robot.base_pos
+            # Get the target rotation
+            next_action = self._follower.next_action_along(goal_pos, curr_rot=curr_rot, curr_pos=curr_pos)
         except habitat_sim.errors.GreedyFollowerError as e:
             if self._stop_on_error:
                 next_action = HabitatSimActions.stop
