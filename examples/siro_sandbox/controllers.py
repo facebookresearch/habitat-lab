@@ -77,11 +77,8 @@ class BaselinesController(Controller):
         is_multi_agent,
         config,
         gym_habitat_env,
-        sample_random_baseline_base_vel=False,
     ):
         super().__init__(is_multi_agent)
-        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
-
         self._config = config
 
         self._gym_habitat_env = gym_habitat_env
@@ -227,12 +224,6 @@ class BaselinesController(Controller):
             step_data[0],
         )
 
-        # temp: do random base actions
-        if self._sample_random_baseline_base_vel:
-            action["action_args"]["base_vel"] = torch.rand_like(
-                action["action_args"]["base_vel"]
-            )
-
         self._not_done_masks.fill_(True)
 
         return action
@@ -245,7 +236,6 @@ class SingleAgentBaselinesController(BaselinesController):
         is_multi_agent,
         config,
         gym_habitat_env,
-        sample_random_baseline_base_vel=False,
     ):
         self._agent_idx = agent_idx
         self._agent_name = config.habitat.simulator.agents_order[
@@ -260,7 +250,6 @@ class SingleAgentBaselinesController(BaselinesController):
             is_multi_agent,
             config,
             gym_habitat_env,
-            sample_random_baseline_base_vel,
         )
 
     def _create_env_spec(self):
@@ -748,17 +737,15 @@ class ControllerHelper:
                     is_multi_agent,
                     config,
                     self._gym_habitat_env,
-                    sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
                 )
             )
         else:
             self.controllers.append(
                 SingleAgentBaselinesController(
-                    0,
+                    self._gui_controlled_agent_index,
                     is_multi_agent,
                     config,
                     self._gym_habitat_env,
-                    sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
                 )
             )
 

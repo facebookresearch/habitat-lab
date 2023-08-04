@@ -1306,15 +1306,6 @@ if __name__ == "__main__":
             "colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range."
         ),
     )
-    # temp argument:
-    # allowed to switch between oracle baseline nav
-    # and random base vel action
-    parser.add_argument(
-        "--sample-random-baseline-base-vel",
-        action="store_true",
-        default=False,
-        help="Sample random BaselinesController base vel",
-    )
     parser.add_argument(
         "--show-tutorial",
         action="store_true",
