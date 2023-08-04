@@ -5,13 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-
-os.environ["MAGNUM_LOG"] = "quiet"
-os.environ["HABITAT_SIM_LOG"] = "quiet"
-os.environ["HABITAT_ENV_DEBUG"] = "0"
-os.environ["HYDRA_FULL_ERROR"] = "1"
-
-import os
 import os.path as osp
 import random
 from dataclasses import dataclass, field

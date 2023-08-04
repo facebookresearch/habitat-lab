@@ -454,13 +454,12 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            # try:
-            self._scene_sampler.set_cur_episode(len(generated_episodes))
-            new_episode = self.generate_single_episode()
-            # except:
-            #     new_episode = None
-            #     print("Generation failed with exception...")
-            #     exit()
+            try:
+                self._scene_sampler.set_cur_episode(len(generated_episodes))
+                new_episode = self.generate_single_episode()
+            except Exception:
+                new_episode = None
+                print("Generation failed with exception...")
             if new_episode is None:
                 failed_episodes += 1
                 continue
@@ -579,8 +578,13 @@ class RearrangeEpisodeGenerator:
             self._target_samplers.values(), target_numbers.items()
         ):
             new_goal_receptacles = []  # type: ignore
-            # for _ in range(num_targets):
-            while len(new_goal_receptacles) < num_targets:
+            num_iterations = 0
+            max_iterations = num_targets * 100
+            while (
+                len(new_goal_receptacles) < num_targets
+                and num_iterations < max_iterations
+            ):
+                num_iterations += 1
                 new_receptacle = sampler.sample_receptacle(
                     self.sim,
                     recep_tracker,
@@ -596,7 +600,9 @@ class RearrangeEpisodeGenerator:
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_goal_receptacles.append(new_receptacle[0])  # type: ignore
-
+            assert (
+                len(new_goal_receptacles) == num_targets
+            ), "Unable to sample goal Receptacles for all requested targets."
             goal_receptacles[sampler_name] = new_goal_receptacles
             all_goal_receptacles.extend(new_goal_receptacles)
 
