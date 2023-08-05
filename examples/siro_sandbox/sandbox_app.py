@@ -24,7 +24,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple
 
 import magnum as mn
 import numpy as np
-from controllers import ControllerHelper, GuiHumanoidController
+from controllers.controller_helper import ControllerHelper
+from controllers.gui_controller import GuiHumanoidController
 from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
 from serialize_utils import (
