@@ -326,7 +326,9 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not self._is_accessible(sim, new_object):
-                        logger.info("But not accessible.")
+                        logger.info(
+                            "   - object is not accessible from navmesh, rejecting placement."
+                        )
                         continue
                     return new_object
 
