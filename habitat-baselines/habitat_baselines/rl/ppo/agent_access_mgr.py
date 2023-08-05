@@ -51,6 +51,14 @@ class AgentAccessMgr(ABC):
 
     @property
     @abstractmethod
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
     def nbuffers(self) -> int:
         """
         Number of storage buffers.
