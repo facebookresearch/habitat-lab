@@ -34,6 +34,7 @@ habitat:
     max_episode_steps: 1250
   simulator:
     turn_angle: 30
+    forward_step_size: 0.25
     type: OVMMSim-v0
     additional_object_paths:
       - data/objects/train_val/amazon_berkeley/configs/
