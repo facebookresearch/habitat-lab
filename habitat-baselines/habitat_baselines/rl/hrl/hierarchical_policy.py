@@ -310,6 +310,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             # Update the HL hidden state.
             hl_rnn_hidden_states = hl_info.rnn_hidden_states
 
+        if hl_info.policy_info is not None:
+            # Merge the infos.
+            for env_i, info in enumerate(hl_info.policy_info):
+                log_info[env_i].update(info)
+
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
             sel_dat={

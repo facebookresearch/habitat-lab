@@ -86,8 +86,6 @@ class PolicyActionData:
 
 
 class Policy(abc.ABC):
-    action_distribution: nn.Module
-
     def __init__(self):
         pass
 
@@ -171,6 +169,7 @@ class Policy(abc.ABC):
 
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
+    action_distribution: nn.Module
 
     def __init__(
         self, net, action_space, policy_config=None, aux_loss_config=None

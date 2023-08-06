@@ -170,6 +170,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         policy = baseline_registry.get_policy(
             self._config.habitat_baselines.rl.policy.name
         )
+        if policy is None:
+            raise ValueError(
+                f"Couldn't find policy {self._config.habitat_baselines.rl.policy.name}"
+            )
         actor_critic = policy.from_config(
             self._config,
             self._env_spec.observation_space,

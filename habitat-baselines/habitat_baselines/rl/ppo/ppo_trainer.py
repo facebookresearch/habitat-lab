@@ -9,7 +9,7 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 import hydra
 import numpy as np
@@ -44,6 +44,10 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.evaluator import Evaluator
@@ -239,13 +243,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        if torch.cuda.is_available():
-            self.device = torch.device(
-                "cuda", self.config.habitat_baselines.torch_gpu_id
-            )
-            torch.cuda.set_device(self.device)
-        else:
-            self.device = torch.device("cpu")
+        self.device = get_device(self.config)
 
         if rank0_only() and not os.path.isdir(
             self.config.habitat_baselines.checkpoint_folder
@@ -867,3 +865,12 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         self.envs.close()
+
+
+def get_device(config: "DictConfig") -> torch.device:
+    if torch.cuda.is_available():
+        device = torch.device("cuda", config.habitat_baselines.torch_gpu_id)
+        torch.cuda.set_device(device)
+        return device
+    else:
+        return torch.device("cpu")

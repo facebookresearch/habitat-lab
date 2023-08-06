@@ -26,15 +26,19 @@ class FixedHighLevelPolicy(HighLevelPolicy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._solution_actions = [
-            self._parse_solution_actions() for _ in range(self._num_envs)
-        ]
+        self._update_solution_actions(
+            [self._parse_solution_actions() for _ in range(self._num_envs)]
+        )
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
     def _update_solution_actions(
         self, solution_actions: List[List[Tuple[str, List[str]]]]
     ) -> None:
+        if len(solution_actions) == 0:
+            raise ValueError(
+                "Solution actions must be non-empty (if want to execute no actions, just include a no-op)"
+            )
         self._solution_actions = solution_actions
 
     def _parse_solution_actions(self) -> List[Tuple[str, List[str]]]:
@@ -88,6 +92,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 f"Calling for immediate end with {self._next_sol_idxs[batch_idx]}"
             )
             immediate_end[batch_idx] = True
+            # Just repeat the last action.
             return len(self._solution_actions[batch_idx]) - 1
         else:
             return self._next_sol_idxs[batch_idx].item()

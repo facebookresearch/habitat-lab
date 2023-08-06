@@ -9,7 +9,7 @@ from habitat import VectorEnv
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import ObservationTransformer
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -24,7 +24,7 @@ class Evaluator(abc.ABC):
     @abc.abstractmethod
     def evaluate_agent(
         self,
-        agent: Policy,
+        agent: AgentAccessMgr,
         envs: VectorEnv,
         config: "DictConfig",
         checkpoint_index: int,
