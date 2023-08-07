@@ -335,6 +335,11 @@ class OracleNavActionConfig(ActionConfig):
 
 
 @dataclass
+class OracleNavObstacleAction(OracleNavActionConfig):
+    type: str = "OracleNavObstacleAction"
+
+
+@dataclass
 class OracleNavWithBackingUpActionConfig(ActionConfig):
     """
     Rearrangement Only, Oracle navigation action with backing-up motion.
