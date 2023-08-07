@@ -42,6 +42,7 @@ habitat:
     obs_keys:
       # Wanted
       - agent_0_head_depth
+      - agent_0_localization_sensor
       - agent_0_other_agent_gps
       # Unnecessary
 #      - agent_0_articulated_agent_arm_depth
