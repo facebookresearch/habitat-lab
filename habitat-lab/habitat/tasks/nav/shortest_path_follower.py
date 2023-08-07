@@ -15,10 +15,15 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 if TYPE_CHECKING:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 import magnum as mn
-from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
+
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
+
 
 def action_to_one_hot(action: int) -> np.ndarray:
     one_hot = np.zeros(len(HabitatSimActions), dtype=np.float32)
@@ -33,6 +38,7 @@ def _quat_to_xy_heading(quat):
 
     phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
     return np.array([phi], dtype=np.float32)
+
 
 class ShortestPathFollower:
     r"""Utility class for extracting the action on the shortest path to the
@@ -98,13 +104,9 @@ class ShortestPathFollower:
                     curr_quat.vector.z,
                     curr_quat.scalar,
                 ]
-                curr_quat = quaternion_from_coeff(
-                   curr_rotation
-                )
+                curr_quat = quaternion_from_coeff(curr_rotation)
                 # get heading angle
-                rot = _quat_to_xy_heading(
-                    curr_quat.inverse()
-                )
+                rot = _quat_to_xy_heading(curr_quat.inverse())
                 rot = rot - np.pi / 2
                 # convert back to quaternion
                 ang_pos = rot[0]
@@ -114,7 +116,9 @@ class ShortestPathFollower:
                 curr_pos = self._sim.robot.base_pos
 
             # Get the target rotation
-            next_action = self._follower.next_action_along(goal_pos, curr_rot=curr_rot, curr_pos=curr_pos)
+            next_action = self._follower.next_action_along(
+                goal_pos, curr_rot=curr_rot, curr_pos=curr_pos
+            )
         except habitat_sim.errors.GreedyFollowerError as e:
             if self._stop_on_error:
                 next_action = HabitatSimActions.stop
