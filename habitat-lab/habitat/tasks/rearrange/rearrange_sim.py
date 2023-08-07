@@ -52,6 +52,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
@@ -480,6 +481,7 @@ class RearrangeSim(HabitatSim):
             # If we cannot load the navmesh, try generarting navmesh on the fly.
             if osp.exists(navmesh_path):
                 self.pathfinder.load_nav_mesh(navmesh_path)
+                print(f"Loaded navmesh from {navmesh_path}")
             else:
                 navmesh_settings = NavMeshSettings()
                 navmesh_settings.set_defaults()
@@ -589,9 +591,14 @@ class RearrangeSim(HabitatSim):
             )
             regen_i += 1
 
+        # if np.isnan(new_pos[0]):
+        #     logger.info("new position", new_pos, "original position", pos)
+        #     logger.info("scene_id", self.ep_info.scene_id)
+
         assert not np.isnan(
             new_pos[0]
-        ), "The snap position is NaN. Something failed sampling a snap point."
+        ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
+
         return new_pos
 
     @add_perf_timing_func()
