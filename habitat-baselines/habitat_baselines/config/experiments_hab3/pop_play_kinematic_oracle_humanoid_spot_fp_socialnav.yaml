@@ -84,13 +84,16 @@ habitat_baselines:
           high_level_policy:
             add_arm_rest: False
             policy_input_keys:
-              - "articulated_agent_arm_depth"
-              - "is_holding"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
+              # Wanted
+              - "head_depth"
               - "other_agent_gps"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
+              # Unnecessary
+#              - "articulated_agent_arm_depth"
+#              - "is_holding"
+#              - "obj_start_gps_compass"
+#              - "obj_goal_gps_compass"
+#              - "obj_start_sensor"
+#              - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
