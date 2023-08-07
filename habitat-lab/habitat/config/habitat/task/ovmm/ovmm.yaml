@@ -72,7 +72,7 @@ episode_init: True
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosReducedActionStretch"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
     arm_joint_dimensionality: 7

@@ -13,7 +13,7 @@ habitat:
     obs_keys:
       - head_depth
       - head_rgb
-      - robot_third_rgb
+      - third_rgb
       - start_receptacle
       - goal_receptacle
       - robot_start_gps
