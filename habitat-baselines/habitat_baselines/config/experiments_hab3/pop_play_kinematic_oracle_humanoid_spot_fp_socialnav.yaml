@@ -40,18 +40,21 @@ habitat:
         agent_index: 1
   gym:
     obs_keys:
-      - agent_0_articulated_agent_arm_depth
-      - agent_0_relative_resting_position
-      - agent_0_obj_start_sensor
-      - agent_0_obj_goal_sensor
-      - agent_0_obj_start_gps_compass
-      - agent_0_obj_goal_gps_compass
-      - agent_0_is_holding
-      - agent_0_ee_pos
-      - agent_0_localization_sensor
-      - agent_0_has_finished_oracle_nav
+      # Wanted
+      - agent_0_head_depth
       - agent_0_other_agent_gps
-      - agent_0_should_replan
+      # Unnecessary
+#      - agent_0_articulated_agent_arm_depth
+#      - agent_0_relative_resting_position
+#      - agent_0_obj_start_sensor
+#      - agent_0_obj_goal_sensor
+#      - agent_0_obj_start_gps_compass
+#      - agent_0_obj_goal_gps_compass
+#      - agent_0_is_holding
+#      - agent_0_ee_pos
+#      - agent_0_localization_sensor
+#      - agent_0_has_finished_oracle_nav
+#      - agent_0_should_replan
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -109,7 +112,7 @@ habitat_baselines:
         hierarchical_policy:
           high_level_policy:
             add_arm_rest: False
-            policy_input_keys:
+            policy_input_keys:  # This seems to have no effect
               # Wanted
               - "head_depth"
               - "other_agent_gps"
