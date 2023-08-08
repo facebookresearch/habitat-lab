@@ -9,10 +9,10 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
+  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/lab_sensors:
@@ -22,7 +22,7 @@ defaults:
 
 hydra:
   job:
-    name: 'siro_pop_play_humanoid_spot_fp'
+    name: 'pop_play_humanoid_spot_fp'
 
 habitat_baselines:
   verbose: False
@@ -40,20 +40,14 @@ habitat_baselines:
   num_updates: -1
   total_num_steps: 1e8
   log_interval: 1
-  num_checkpoints: 50
+  num_checkpoints: 10
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
-
-  wb:
-    project_name: 'hab3'
-    entity: 'andrew-colab'
-    run_name: ${hydra:job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}/${hydra:job.num}
-
+  # writer_type: 'wb'
 
   eval:
     should_load_ckpt: False
