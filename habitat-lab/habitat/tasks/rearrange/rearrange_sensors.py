@@ -985,7 +985,10 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
+        if not "rearrange_stop" in task.actions:
+            self._metric = task.actions["agent_0_rearrange_stop"].does_want_terminate
+        else: 
+            self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure

@@ -147,7 +147,6 @@ def continuous_vector_action_to_hab_dict(
         "action": root_action_names,
         "action_args": action_args,
     }
-
     return action_dict
 
 

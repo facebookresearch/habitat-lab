@@ -61,7 +61,10 @@ class RearrangeStopAction(SimulatorTaskAction):
         self.does_want_terminate = False
 
     def step(self, task, *args, is_last_action, **kwargs):
-        should_stop = kwargs.get("rearrange_stop", [1.0])
+        # Check the rearrange_stop atrribute of the corresponding agent
+        agent_idx = self._config["agent_index"]
+        should_stop = kwargs.get(f"agent_{agent_idx}_rearrange_stop", [1.0])
+
         if should_stop[0] > 0.0:
             rearrange_logger.debug(
                 "Rearrange stop action requesting episode stop."

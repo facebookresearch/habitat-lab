@@ -108,9 +108,9 @@ class SuctionGraspAction(MagicGraspAction):
         ee_index = 0
         index_grasp_manager = 0
 
-        robot_id = self._sim.articulated_agent.sim_obj.object_id
+        robot_id = self.cur_articulated_agent.sim_obj.object_id
         all_gripper_links = list(
-            self._sim.articulated_agent.params.gripper_joints
+            self.cur_articulated_agent.params.gripper_joints
         )
         robot_contacts = [
             c

@@ -327,6 +327,8 @@ class RearrangeTask(NavigationTask):
 
     @should_end.setter
     def should_end(self, new_val: bool):
+        if new_val:
+            breakpoint()
         self._should_end = new_val
         ##
         # NB: _check_episode_is_active is called after step() but
