@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -31,6 +30,7 @@ from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
@@ -52,6 +52,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
@@ -480,43 +481,36 @@ class RearrangeSim(HabitatSim):
             # If we cannot load the navmesh, try generarting navmesh on the fly.
             if osp.exists(navmesh_path):
                 self.pathfinder.load_nav_mesh(navmesh_path)
+                print(f"Loaded navmesh from {navmesh_path}")
             else:
                 navmesh_settings = NavMeshSettings()
                 navmesh_settings.set_defaults()
 
+                agent_config = None
                 if hasattr(self.habitat_config.agents, "agent_0"):
-                    radius = self.habitat_config.agents.agent_0.radius
-                    height = self.habitat_config.agents.agent_0.height
-                    max_climb = self.habitat_config.agents.agent_0.max_climb
+                    agent_config = self.habitat_config.agents.agent_0
                 elif hasattr(self.habitat_config.agents, "main_agent"):
-                    radius = self.habitat_config.agents.main_agent.radius
-                    height = self.habitat_config.agents.main_agent.height
-                    max_climb = self.habitat_config.agents.main_agent.max_climb
+                    agent_config = self.habitat_config.agents.main_agent
                 else:
                     raise ValueError(f"Cannot find agent parameters.")
-                navmesh_settings.agent_radius = radius
-                navmesh_settings.agent_height = height
-                navmesh_settings.agent_max_climb = max_climb
+                navmesh_settings.agent_radius = agent_config.radius
+                navmesh_settings.agent_height = agent_config.height
+                navmesh_settings.agent_max_climb = agent_config.max_climb
+                navmesh_settings.agent_max_slope = agent_config.max_slope
                 navmesh_settings.include_static_objects = True
                 self.recompute_navmesh(self.pathfinder, navmesh_settings)
                 os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
                 self.pathfinder.save_nav_mesh(navmesh_path)
 
-        self._navmesh_vertices = np.stack(
-            self.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        self._island_sizes = [
-            self.pathfinder.island_radius(p) for p in self._navmesh_vertices
-        ]
-        self._max_island_size = max(self._island_sizes)
-        self._largest_island_idx = self.pathfinder.get_island(
-            self._navmesh_vertices[np.argmax(self._island_sizes)]
+        # NOTE: allowing indoor islands only
+        self._largest_island_idx = get_largest_island_index(
+            self.pathfinder, self.sim, allow_outdoor=False
         )
 
     @property
     def largest_island_idx(self) -> int:
         """
-        The path finder index of the island that has the largest area.
+        The path finder index of the indoor island that has the largest area.
         """
         return self._largest_island_idx
 
@@ -568,6 +562,7 @@ class RearrangeSim(HabitatSim):
             ao.joint_positions = ao_pose
 
     def is_point_within_bounds(self, pos):
+        # NOTE: This check is loose: really we want the island bounds, not the full navmesh
         lower_bound, upper_bound = self.pathfinder.get_bounds()
         return all(lower_bound <= pos) and all(upper_bound >= pos)
 
@@ -596,9 +591,14 @@ class RearrangeSim(HabitatSim):
             )
             regen_i += 1
 
+        # if np.isnan(new_pos[0]):
+        #     logger.info("new position", new_pos, "original position", pos)
+        #     logger.info("scene_id", self.ep_info.scene_id)
+
         assert not np.isnan(
             new_pos[0]
-        ), "The snap position is NaN. Something failed sampling a snap point."
+        ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
+
         return new_pos
 
     @add_perf_timing_func()
@@ -681,7 +681,6 @@ class RearrangeSim(HabitatSim):
                 ignore_handles=ignore_handles,
             )
             for recep in all_receps:
-                recep = cast(AABBReceptacle, recep)
                 local_bounds = recep.bounds
                 global_T = recep.get_global_transform(self)
                 # Some coordinates may be flipped by the global transformation,
