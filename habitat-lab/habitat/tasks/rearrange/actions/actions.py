@@ -769,8 +769,9 @@ class HumanoidJointAction(ArticulatedAgentAction):
 @registry.register_task_action
 class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
     def __init__(self, *args, task, config, sim: RearrangeSim, **kwargs):
-        BaseVelAction.__init__(*args, config=config, sim=sim, **kwargs)
-        HumanoidJointAction.__init__(self, *args, **kwargs)
+        BaseVelAction.__init__(self, *args, config=config, sim=sim, **kwargs)
+        kwargs["config"] = config
+        HumanoidJointAction.__init__(self, *args, sim=sim, **kwargs)
         self.humanoid_controller = self.lazy_inst_humanoid_controller(task)
     
     def lazy_inst_humanoid_controller(self, task):
@@ -826,12 +827,20 @@ class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
 
         
         # Compute the target base transfrom
-        new_base_T = habitat_sim.RigidState(
+        rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(base_T.rotation()), base_T.translation
         )
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / self._sim.ctrl_freq, rigid_state
+        )
 
-        target_position = new_base_T.translation
-        self.calculate_walk_pose(target_position)
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(), target_rigid_state.translation
+        )
+        # This assumes that we only rotate or move forward
+        target_position = target_trans.transform_vector(mn.Vector3(1,0,0))
+
+        self.humanoid_controller.calculate_walk_pose(target_position)
         self._update_controller_to_navmesh()
             
     
@@ -839,8 +848,8 @@ class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
-        if not self._allow_back:
-            lin_vel = np.maximum(lin_vel, 0)
+        
+        lin_vel = np.maximum(lin_vel, 0)
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)

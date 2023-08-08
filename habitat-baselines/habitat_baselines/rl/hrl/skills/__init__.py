@@ -12,6 +12,7 @@ from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
 from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.hrl.skills.turn import (
+    HumanoidMoveSkillPolicy,
     MoveSkillPolicy,
     TurnSkillPolicy,
 )
@@ -30,4 +31,5 @@ __all__ = [
     "NoopSkillPolicy",
     "TurnSkillPolicy",
     "MoveSkillPolicy",
+    "HumanoidMoveSkillPolicy",
 ]

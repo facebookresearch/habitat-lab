@@ -114,6 +114,22 @@ actions:
     precondition: null
     postcondition: []
 
+  - name: humanoid_move_forward
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+
+  - name: humanoid_turn_left
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+
   - name: nav_to_goal
     parameters:
       - name: obj
