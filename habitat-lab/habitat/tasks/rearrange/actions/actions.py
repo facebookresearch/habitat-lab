@@ -12,6 +12,7 @@ from gym import spaces
 
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
+from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
@@ -455,6 +456,7 @@ class BaseVelAction(ArticulatedAgentAction):
             self.update_base()
 
 
+
 @registry.register_task_action
 class BaseVelNonCylinderAction(ArticulatedAgentAction):
     """
@@ -763,3 +765,95 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+@registry.register_task_action
+class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
+    def __init__(self, *args, task, config, sim: RearrangeSim, **kwargs):
+        BaseVelAction.__init__(*args, config=config, sim=sim, **kwargs)
+        HumanoidJointAction.__init__(self, *args, **kwargs)
+        self.humanoid_controller = self.lazy_inst_humanoid_controller(task)
+    
+    def lazy_inst_humanoid_controller(self, task):
+        # Lazy instantiation of humanoid controller
+        # We assign the task with the humanoid controller, so that multiple actions can
+        # use it.
+
+        if (
+            not hasattr(task, "humanoid_controller")
+            or task.humanoid_controller is None
+        ):
+            # Initialize humanoid controller
+            agent_name = self._sim.habitat_config.agents_order[
+                self._agent_index
+            ]
+            walk_pose_path = self._sim.habitat_config.agents[
+                agent_name
+            ].motion_data_path
+
+            humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+            humanoid_controller.set_framerate_for_linspeed(
+                self._lin_speed, self._ang_speed, self._sim.ctrl_freq
+            )
+            task.humanoid_controller = humanoid_controller
+        return task.humanoid_controller
+    
+    def _update_controller_to_navmesh(self):
+        # Make sure that the new agent position falls in the navmesh
+        base_offset = self.cur_articulated_agent.params.base_offset
+        prev_query_pos = self.cur_articulated_agent.base_pos
+        target_query_pos = (
+            self.humanoid_controller.obj_transform_base.translation
+            + base_offset
+        )
+
+        filtered_query_pos = self._sim.step_filter(
+            prev_query_pos, target_query_pos
+        )
+        fixup = filtered_query_pos - target_query_pos
+        self.humanoid_controller.obj_transform_base.translation += fixup
+        
+    def update_base(self):
+        # Here we don't need to integrate velocity, it is already hadnled by the
+        # agent controller
+        base_T = self.cur_articulated_agent.base_transformation
+        self.humanoid_controller.obj_transform_base = base_T
+        
+        self.humanoid_controller.set_framerate_for_linspeed(
+            self.base_vel_ctrl.linear_velocity[0], 
+            self.base_vel_ctrl.angular_velocity[1], 
+            self._sim.ctrl_freq
+        )
+
+        
+        # Compute the target base transfrom
+        new_base_T = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(base_T.rotation()), base_T.translation
+        )
+
+        target_position = new_base_T.translation
+        self.calculate_walk_pose(target_position)
+        self._update_controller_to_navmesh()
+            
+    
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base()
+        else:
+            self.humanoid_controller.calculate_stop_pose()
+
+        base_action = self.humanoid_controller.get_pose()
+        kwargs[
+            f"{self._action_arg_prefix}human_joints_trans"
+        ] = base_action
+        HumanoidJointAction.step(
+            self, *args, **kwargs
+        )
