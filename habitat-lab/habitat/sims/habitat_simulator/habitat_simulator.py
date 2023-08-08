@@ -348,6 +348,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "grasp_managers",
                 "rest_pose_data_path",
                 "max_climb",
+                "max_slope",
+                "joint_start_override",
             },
         )
 

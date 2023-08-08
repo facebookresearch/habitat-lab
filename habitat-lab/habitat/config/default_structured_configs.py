@@ -1442,6 +1442,7 @@ class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
     max_climb: float = 0.01
+    max_slope: float = 45.0
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False

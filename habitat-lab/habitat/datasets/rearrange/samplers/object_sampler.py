@@ -16,6 +16,7 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -74,6 +75,7 @@ class ObjectSampler:
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
+        self.largest_island_id = -1
 
     def reset(self) -> None:
         """
@@ -234,13 +236,16 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
-        navmesh_vertices = np.stack(
-            sim.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        self.largest_island_size = max(
-            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
-        )
+
+        # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
+        # This assumption limits sampling to the largest navigable component of any scene.
+        if (
+            self._constrain_to_largest_nav_island
+            and self.largest_island_id == -1
+        ):
+            self.largest_island_id = get_largest_island_index(
+                sim.pathfinder, sim, allow_outdoor=False
+            )
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -310,6 +315,9 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not self._is_accessible(sim, new_object):
+                        logger.info(
+                            "   - object is not accessible from navmesh, rejecting placement."
+                        )
                         continue
                     return new_object
 
@@ -320,7 +328,6 @@ class ObjectSampler:
                 if not self._is_accessible(sim, new_object):
                     continue
                 return new_object
-
         # if num_placement_tries > self.max_placement_attempts:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
@@ -345,6 +352,7 @@ class ObjectSampler:
         based on Euclidean distance. The nearest navigable point may be
         separated from the object by an obstacle.
         """
+
         if self.nav_to_min_distance == -1:
             return True
         snapped = sim.pathfinder.snap_point(obj.translation)
@@ -442,6 +450,7 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
+
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(

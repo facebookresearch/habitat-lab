@@ -520,7 +520,7 @@ def get_robot_spawns(
         necessarily on the navmesh.
     :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
     :param distance_threshold: The maximum distance from the target.
-    :param sim: The simulator instance.
+    :param sim: The RearrangeSim instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check.
     :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
