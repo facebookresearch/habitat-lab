@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Set, Tuple
 
 import magnum as mn
 import numpy as np
-from controllers import ControllerHelper, GuiHumanoidController
+from controllers import ControllerHelper, GuiHumanoidController, CurrentState
 from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
 from serialize_utils import (
@@ -34,7 +34,7 @@ from serialize_utils import (
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
-
+import math
 import habitat
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
@@ -90,6 +90,7 @@ class SandboxDriver(GuiAppDriver):
         self._end_on_success = config.habitat.task.end_on_success
         self._success_measure_name = config.habitat.task.success_measure
         self._num_recorded_episodes = 0
+        self._prepare_throw = False
         self._args = args
 
         with habitat.config.read_write(config):
@@ -126,6 +127,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
+        self.state_machine_agent_ctrl = self.ctrl_helper.get_state_machine_agent_controller()
 
         self.cam_transform = None
         self.cam_zoom_dist = 1.0
@@ -414,14 +416,14 @@ class SandboxDriver(GuiAppDriver):
 
         drop_pos = None
         grasp_object_id = None
-
+        will_throw = False
         if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             goal_position = self._goal_positions[self._held_target_obj_idx]
             self._debug_line_render.draw_circle(
                 goal_position, end_radius, color, 24
             )
-
+            
             self._draw_nav_hint_from_agent(
                 mn.Vector3(goal_position), end_radius, color
             )
@@ -436,17 +438,36 @@ class SandboxDriver(GuiAppDriver):
             )
 
             if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                self._prepare_throw = True
                 translation = self._get_agent_translation()
                 dist_to_obj = np.linalg.norm(goal_position - translation)
                 if dist_to_obj < self._can_grasp_place_threshold:
                     self._held_target_obj_idx = None
                     drop_pos = goal_position
+            
+            if self.gui_input.get_key_up(GuiInput.KeyNS.SPACE):       
+                if self._prepare_throw:
+                    will_throw = True
+                    throw_obj_id = self.gui_agent_ctrl._get_grasp_mgr().snap_idx
+                    self.state_machine_agent_ctrl.object_interest_id = throw_obj_id
+                    sim = self.get_sim()
+                    self.state_machine_agent_ctrl.rigid_obj_interest = sim.get_rigid_object_manager().get_object_by_id(
+                        throw_obj_id
+                    )
+                    self._held_target_obj_idx = None
+                        
+                self._prepare_throw = False
+                
+                
+                
+                
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
                 assert not self.gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                    self._prepare_throw = False
                     translation = self._get_agent_translation()
 
                     min_dist = self._can_grasp_place_threshold
@@ -469,16 +490,30 @@ class SandboxDriver(GuiAppDriver):
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
+        walk_dir = None
+        if not self._prepare_throw and not will_throw:
+            walk_dir = (
+                self._viz_and_get_humanoid_walk_dir()
+                if not self._first_person_mode
+                else None
+            )
+            self.gui_agent_ctrl.set_act_hints(
+                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
+            )
+        else:
+            computed_speed = self._viz_and_get_humanoid_throw()
+            drop_speed = None
+            
+            if will_throw:
+                drop_speed = computed_speed
+                self.gui_agent_ctrl.set_act_hints(
+                    walk_dir, None, drop_pos, self.lookat_offset_yaw, drop_speed=drop_speed
+                )
+            if will_throw:
+                # pass    
+                self.state_machine_agent_ctrl.current_state = CurrentState.PICK
 
-        walk_dir = (
-            self._viz_and_get_humanoid_walk_dir()
-            if not self._first_person_mode
-            else None
-        )
-
-        self.gui_agent_ctrl.set_act_hints(
-            walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
-        )
+            will_throw = False
 
         return drop_pos
 
@@ -564,6 +599,78 @@ class SandboxDriver(GuiAppDriver):
         agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]
 
+
+    def compute_velocity_throw(self, start_point, end_point, gravity=-9.8):
+        displacement = end_point - start_point
+        dx, dy, dz = displacement
+        time_of_flight = math.sqrt((2 * dy) / gravity)
+        horizontal_distance = math.sqrt(dx**2 + dz**2)
+        vx = dx / time_of_flight
+        vz = dz / time_of_flight
+        
+        vy = (end_point[1] - start_point[1] - 0.5 * gravity * time_of_flight**2) / time_of_flight
+        vel = mn.Vector3(vx, vy, vz)
+        
+        times = np.linspace(0, time_of_flight, 10)        
+        x_pos = start_point[0] + vel[0] * times     
+        z_pos = start_point[2] + vel[2] * times
+        y_pos = start_point[1] + vel[1] * times + 0.5 * gravity * (times ** 2)
+        path_points = []
+        for i in range(10):
+            path_points.append(mn.Vector3(x_pos[i], y_pos[i], z_pos[i]))
+    
+        return vel, path_points
+
+    def _viz_and_get_humanoid_throw(self):
+        path_color = mn.Color3(153 / 255, 0, 255 / 255)
+        path_endpoint_radius = 0.12
+
+        ray = self.gui_input.mouse_ray
+
+        floor_y = 0.15  # hardcoded to ReplicaCAD
+
+        if not ray or ray.direction.y >= 0 or ray.origin.y <= floor_y:
+            return None
+
+        dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
+        target_on_floor = ray.origin + ray.direction * dist_to_floor_y
+
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        robot_root = art_obj.transformation.translation
+        path_points = [robot_root, target_on_floor]
+        vel_vector, path_points = self.compute_velocity_throw(robot_root, target_on_floor)
+
+        # pathfinder = self.get_sim().pathfinder
+        # snapped_pos = pathfinder.snap_point(target_on_floor)
+        # snapped_start_pos = robot_root.translation
+        # snapped_start_pos.y = snapped_pos.y
+
+        # path = habitat_sim.ShortestPath()
+        # path.requested_start = snapped_start_pos
+        # path.requested_end = snapped_pos
+        # found_path = pathfinder.find_path(path)
+
+        # if not found_path or len(path.points) < 2:
+        #     return None
+
+        # path_points = []
+        # for path_i in range(0, len(path.points)):
+        #     adjusted_point = mn.Vector3(path.points[path_i])
+        #     # first point in path is at wrong height
+        #     if path_i == 0:
+        #         adjusted_point.y = mn.Vector3(path.points[path_i + 1]).y
+        #     path_points.append(adjusted_point)
+
+        self._debug_line_render.draw_path_with_endpoint_circles(
+            path_points, path_endpoint_radius, path_color
+        )
+
+
+        return vel_vector    
+    
     def _viz_and_get_humanoid_walk_dir(self):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12

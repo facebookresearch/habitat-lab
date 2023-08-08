@@ -81,7 +81,16 @@ class KinematicHumanoid(MobileManipulator):
         # to simulate different gaits
         self.sim = sim
         self.offset_transform = mn.Matrix4()
+        
         self.offset_rot = -np.pi / 2
+        add_rot = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
+        )
+        perm = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
+        )
+        self.offset_transform_base = perm @ add_rot
+
         self.rest_joints = None
         self.rest_matrix = mn.Matrix4()
 
@@ -104,8 +113,7 @@ class KinematicHumanoid(MobileManipulator):
 
     @property
     def base_transformation(self):
-        angle_rot = self.offset_rot
-        add_rot = mn.Matrix4.rotation(mn.Rad(angle_rot), mn.Vector3(0, 1.0, 0))
+        add_rot = self.offset_transform_base
         return (
             self.sim_obj.transformation
             @ self.inverse_offset_transform
@@ -239,9 +247,8 @@ class KinematicHumanoid(MobileManipulator):
         """Sets the joints, base and offset transform of the humanoid"""
         self.sim_obj.joint_positions = joint_list
         self.offset_transform = offset_transform
-        add_rot = mn.Matrix4.rotation(
-            mn.Rad(-self.offset_rot), mn.Vector3(0, 1.0, 0)
-        )
+
+        add_rot = self.offset_transform_base.inverted()
         final_transform = (base_transform @ add_rot) @ offset_transform
 
         self.sim_obj.transformation = final_transform

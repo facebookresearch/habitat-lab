@@ -11,7 +11,7 @@ import gym.spaces as spaces
 import magnum as mn
 import numpy as np
 import torch
-
+from enum import Enum
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
@@ -24,6 +24,14 @@ from habitat_baselines.common.obs_transformers import (
 )
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.utils.common import get_action_space_info
+from habitat_sim.physics import MotionType
+from habitat_sim.physics import (
+    CollisionGroupHelper,
+    CollisionGroups,
+    ManagedRigidObject,
+    RigidConstraintSettings,
+    RigidConstraintType,
+)
 
 
 class Controller(ABC):
@@ -57,6 +65,13 @@ def clean_dict(d, remove_prefix):
         elif not k.startswith("agent"):
             ret_d[k] = v
     return spaces.Dict(ret_d)
+
+
+class CurrentState(Enum):
+    WAIT = 1
+    PICK = 2
+    BRING = 3
+
 
 
 class BaselinesController(Controller):
@@ -188,11 +203,74 @@ class BaselinesController(Controller):
             change_ac_name(k): v.cpu().numpy()
             for k, v in action["action_args"].items()
         }
+        action["action_args"]["agent_0_oracle_nav_action"] *= 0
         return action, action_data.rnn_hidden_states
 
     def on_environment_reset(self):
         self._step_i = 0
 
+class StateMachineController(BaselinesController):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        config,
+        env,
+        sample_random_baseline_base_vel=False,
+    ):
+        self.current_state = CurrentState.WAIT
+        self.object_interest_id = None
+        self.rigid_object_interest = None
+        self._env = env
+        
+        super().__init__(agent_idx, is_multi_agent, config, env, sample_random_baseline_base_vel)
+        
+    def _get_grasp_mgr(self):
+        agents_mgr = self._env._sim.agents_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
+        return grasp_mgr
+    
+    def act(self, obs, env):
+        human_trans = self._env._sim.agents_mgr[1 - self._agent_idx].articulated_agent.base_transformation.translation    
+        finish_oracle_nav = obs["agent_0_has_finished_oracle_nav"]
+        print(finish_oracle_nav)
+        if self.current_state == CurrentState.WAIT:
+            action_names = []
+            action_args = {}
+            
+        elif self.current_state == CurrentState.PICK:
+            obj_trans = self.rigid_obj_interest.translation
+            action_names, action_args = [], {}
+            if not finish_oracle_nav:
+                if obj_trans[1] < 0.1:
+                    action_names.append("agent_0_oracle_nav_action")
+                    action_args["agent_0_oracle_nav_coord"] = np.array(obj_trans)
+            else:
+                self._env.task.actions["agent_0_oracle_nav_action"].skill_done = False
+                self._get_grasp_mgr().snap_to_obj(self.object_interest_id)
+                self.current_state = CurrentState.BRING
+        
+        elif self.current_state == CurrentState.BRING:
+            
+            action_names, action_args = [], {}
+            if not finish_oracle_nav:
+                action_names.append("agent_0_oracle_nav_action")
+                action_args["agent_0_oracle_nav_coord"] = np.array(human_trans)
+            else:
+                self._get_grasp_mgr().desnap()
+                self._env.task.actions["agent_0_oracle_nav_action"].skill_done = False
+                self.current_state = CurrentState.WAIT
+        
+        
+        def change_ac_name(k):
+            if "pddl" in k:
+                return k
+            else:
+                return self._agent_k + k
+        return ({"action": action_names, "action_args": action_args}, {})
+
+    def on_environment_reset(self):
+        self._step_i = 0
 
 class GuiRobotController(GuiController):
     def act(self, obs, env):
@@ -362,6 +440,7 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_drop_speed = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
@@ -376,7 +455,11 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_drop_speed = None
         self._cam_yaw = 0
+        CollisionGroupHelper.set_mask_for_group(
+            CollisionGroups.UserGroup7, ~CollisionGroups.Robot
+        )
         assert not self.is_grasped
 
     def get_random_joint_action(self):
@@ -419,12 +502,13 @@ class GuiHumanoidController(GuiController):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
+    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None, drop_speed=None):
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
-
+        self._hint_drop_speed = drop_speed
+        
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
         grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
@@ -434,7 +518,7 @@ class GuiHumanoidController(GuiController):
     def is_grasped(self):
         return self._get_grasp_mgr().is_grasped
 
-    def _update_grasp(self, grasp_object_id, drop_pos):
+    def _update_grasp(self, grasp_object_id, drop_pos, speed):
         if grasp_object_id is not None:
             assert not self.is_grasped
 
@@ -463,12 +547,24 @@ class GuiHumanoidController(GuiController):
             self._saved_object_rotation = None
 
             self._recorder.record("drop_pos", drop_pos)
-
+        elif speed is not None:
+            grasp_object_id = self._get_grasp_mgr().snap_idx
+            self._get_grasp_mgr().desnap()
+            sim = self._env.task._sim
+            rigid_obj = sim.get_rigid_object_manager().get_object_by_id(
+                grasp_object_id
+            )
+            rigid_obj.motion_type = MotionType.DYNAMIC
+            rigid_obj.collidable = True
+            rigid_obj.override_collision_group(CollisionGroups.UserGroup7)
+            rigid_obj.linear_velocity = speed
+            
     def act(self, obs, env):
-        self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
+        self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos, self._hint_drop_speed)
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
-
+        self._hint_drop_speed = None
+        
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
         else:
@@ -575,7 +671,7 @@ class ControllerHelper:
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
         self.controllers: List[Controller] = [
-            BaselinesController(
+            StateMachineController(
                 agent_index,
                 is_multi_agent,
                 # "rearrange/rl_hierarchical.yaml",
@@ -625,6 +721,13 @@ class ControllerHelper:
             return None
 
         return self.controllers[self._gui_controlled_agent_index]
+    
+    def get_state_machine_agent_controller(self) -> Optional[Controller]:
+        if self._gui_controlled_agent_index is None:
+            return None
+
+        # This is pretty hacky
+        return self.controllers[1 - self._gui_controlled_agent_index]
 
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index

@@ -21,6 +21,8 @@ from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
 
+
+
 @registry.register_task_action
 class OracleNavAction(BaseVelAction, HumanoidJointAction):
     """
@@ -193,6 +195,152 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
+        )
+        base_T = self.cur_articulated_agent.base_transformation
+        curr_path_points = self._path_to_point(final_nav_targ)
+        robot_pos = np.array(self.cur_articulated_agent.base_pos)
+
+        if curr_path_points is None:
+            raise Exception
+        else:
+            # Compute distance and angle to target
+            if len(curr_path_points) == 1:
+                curr_path_points += curr_path_points
+            cur_nav_targ = curr_path_points[1]
+            forward = np.array([1.0, 0, 0])
+            robot_forward = np.array(base_T.transform_vector(forward))
+
+            # Compute relative target.
+            rel_targ = cur_nav_targ - robot_pos
+
+            # Compute heading angle (2D calculation)
+            robot_forward = robot_forward[[0, 2]]
+            rel_targ = rel_targ[[0, 2]]
+            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+
+            angle_to_target = get_angle(robot_forward, rel_targ)
+            angle_to_obj = get_angle(robot_forward, rel_pos)
+
+            dist_to_final_nav_targ = np.linalg.norm(
+                (final_nav_targ - robot_pos)[[0, 2]]
+            )
+            at_goal = (
+                dist_to_final_nav_targ < self._dist_thresh
+                and angle_to_obj < self._turn_thresh
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
+
+            if self.motion_type == "base_velocity":
+                if not at_goal:
+                    if dist_to_final_nav_targ < self._dist_thresh:
+                        # Look at the object
+                        vel = OracleNavAction._compute_turn(
+                            rel_pos, self._turn_velocity, robot_forward
+                        )
+                    elif angle_to_target < self._turn_thresh:
+                        # Move towards the target
+                        vel = [self._forward_velocity, 0]
+                    else:
+                        # Look at the target waypoint.
+                        vel = OracleNavAction._compute_turn(
+                            rel_targ, self._turn_velocity, robot_forward
+                        )
+                else:
+                    vel = [0, 0]
+                    self.skill_done = True
+                kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
+                return BaseVelAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )
+
+            elif self.motion_type == "human_joints":
+                # Update the humanoid base
+                self.humanoid_controller.obj_transform_base = base_T
+                if not at_goal:
+                    if dist_to_final_nav_targ < self._dist_thresh:
+                        # Look at the object
+                        self.humanoid_controller.calculate_turn_pose(
+                            mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
+                        )
+                    else:
+                        # Move towards the target
+                        self.humanoid_controller.calculate_walk_pose(
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                        )
+                else:
+                    self.humanoid_controller.calculate_stop_pose()
+                    self.skill_done = True
+                self._update_controller_to_navmesh()
+                base_action = self.humanoid_controller.get_pose()
+                kwargs[
+                    f"{self._action_arg_prefix}human_joints_trans"
+                ] = base_action
+
+                return HumanoidJointAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )
+            else:
+                raise ValueError(
+                    "Unrecognized motion type for oracle nav action"
+                )
+
+@registry.register_task_action
+class OracleNavCoordAction(OracleNavAction):
+    """
+    An action that will convert the index of an entity (in the sense of
+    `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
+    robot to the closest navigable position to that entity. The entity index is
+    the index into the list of all available entities in the current scene. The
+    config flag motion_type indicates whether the low level action will be a base_velocity or
+    a joint control.
+    """
+
+    def __init__(self, *args, task, **kwargs):
+        super().__init__(*args,  task=task, **kwargs)
+
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "oracle_nav_coord_action": spaces.Box(
+                    shape=(3,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def _get_target_for_coord(self, obj_pos):
+        pos_hash = tuple(np.around(obj_pos, decimals=1))
+        if pos_hash not in self._targets:
+            start_pos, _, _ = place_agent_at_dist_from_pos(
+                np.array(obj_pos),
+                0.0,
+                self._spawn_max_dist_to_obj,
+                self._sim,
+                self._num_spawn_attempts,
+                1,
+                self.cur_articulated_agent,
+            )
+            self._targets[pos_hash] = start_pos
+        else:
+            start_pos = self._targets[pos_hash]
+        if self.motion_type == "human_joints":
+            self.humanoid_controller.reset(
+                self.cur_articulated_agent.base_transformation
+            )
+        return  (start_pos, np.array(obj_pos))
+    
+    def step(self, *args, is_last_action, **kwargs):
+        self.skill_done = False
+        nav_to_target_coord = kwargs[
+            self._action_arg_prefix + "oracle_nav_coord"
+        ]
+        
+        final_nav_targ, obj_targ_pos = self._get_target_for_coord(
+            nav_to_target_coord
         )
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
