@@ -917,7 +917,8 @@ class PPOTrainer(BaseRLTrainer):
         test_recurrent_hidden_states = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,
-                *self._agent.hidden_state_shape,
+                self._agent.actor_critic.num_recurrent_layers,
+                self._agent.actor_critic.recurrent_hidden_size,
             ),
             device=self.device,
         )
