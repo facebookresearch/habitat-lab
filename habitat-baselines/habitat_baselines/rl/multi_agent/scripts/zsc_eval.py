@@ -15,9 +15,12 @@ def zsc_eval(args, add_opts):
         if args.debug:
             break
 
+    if args.debug:
+        return
+
     learned_agents = args.learned_agents.split(",")
     for learned_agent in learned_agents:
-        run_cmd = f"python habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts} habitat_baselines.wb.group={rnd_id}"
+        run_cmd = f'python habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts} habitat_baselines.wb.group={rnd_id} habitat_baselines.rl.agent.num_pool_agents_per_type="[1,1]" habitat_baselines.evaluate=True'
         print(f"RUNNING {run_cmd}")
         os.system(run_cmd)
 
