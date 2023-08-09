@@ -787,11 +787,13 @@ class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
             agent_name = self._sim.habitat_config.agents_order[
                 self._agent_index
             ]
-            walk_pose_path = self._sim.habitat_config.agents[
+            agent_config = self._sim.habitat_config.agents[
                 agent_name
-            ].motion_data_path
+            ]
+            walk_pose_path = agent_config.motion_data_path
 
-            humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+            humanoid_controller = HumanoidRearrangeController(
+                walk_pose_path, update_joints=agent_config.update_joints)
             humanoid_controller.set_framerate_for_linspeed(
                 self._lin_speed, self._ang_speed, self._sim.ctrl_freq
             )
