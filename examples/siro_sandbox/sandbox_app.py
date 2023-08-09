@@ -233,7 +233,7 @@ class SandboxDriver(GuiAppDriver):
             reward,
             done,
             self._metrics,
-        ) = self.gym_habitat_env.direct_hab_step(action)
+        ) = self.gym_habitat_env.step(action)
 
     def _next_episode_exists(self):
         return self._num_episodes_done < self._num_iter_episodes - 1

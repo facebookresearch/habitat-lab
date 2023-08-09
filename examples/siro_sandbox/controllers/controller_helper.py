@@ -6,6 +6,8 @@
 
 from typing import TYPE_CHECKING, List, Optional
 
+import numpy as np
+
 from .baselines_controller import (
     MultiAgentBaselinesController,
     SingleAgentBaselinesController,
@@ -116,13 +118,27 @@ class ControllerHelper:
         return self._gui_controlled_agent_index
 
     def update(self, obs):
-        all_names = []
-        all_args = {}
+        actions = []
+
         for controller in self.controllers:
-            ctrl_action = controller.act(obs, self._env)
-            all_names.extend(ctrl_action["action"])
-            all_args.update(ctrl_action["action_args"])
-        action = {"action": tuple(all_names), "action_args": all_args}
+            controller_action = controller.act(obs, self._env)
+            actions.append(controller_action)
+
+        if len(self.controllers) == 1:
+            action = actions.pop()
+        elif len(self.controllers) == 2:
+            # controllers don't necessarily act in the same order as the their agent index
+            # so we need to sort the actions by agent index
+            controlled_agent_idxs = [controller._agent_idx for controller in self.controllers]  # type: ignore[attr-defined]
+            actions = [
+                action
+                for _, action in sorted(zip(controlled_agent_idxs, actions))
+            ]
+            action = np.concatenate(actions, dtype=np.float32)
+        else:
+            raise ValueError(
+                "ControllerHelper only supports up to 2 controllers."
+            )
 
         return action
 

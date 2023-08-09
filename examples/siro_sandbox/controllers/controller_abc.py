@@ -11,7 +11,6 @@ import numpy as np
 import torch
 
 import habitat
-import habitat.gym.gym_wrapper as gym_wrapper
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
@@ -215,12 +214,10 @@ class BaselinesController(Controller):
         else:
             step_data = [a.item() for a in action_data.env_actions.cpu()]
 
-        action = gym_wrapper.continuous_vector_action_to_hab_dict(
-            self._env_spec.orig_action_space,
-            self._env_spec.action_space,
-            step_data[0],
-        )
+        action = step_data[0]
 
+        # _not_done_masks serves as en indicator of whether the episode is done
+        # it is reset to False in on_environment_reset
         self._not_done_masks.fill_(True)  # type: ignore [attr-defined]
 
         return action
