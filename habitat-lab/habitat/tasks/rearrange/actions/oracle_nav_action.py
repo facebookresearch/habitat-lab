@@ -88,7 +88,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             walk_pose_path = agent_config.motion_data_path
 
             humanoid_controller = HumanoidRearrangeController(
-                walk_pose_path, update_joints=agent_config.update_joints)
+                walk_pose_path
+            )
             humanoid_controller.set_framerate_for_linspeed(
                 config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq
             )

@@ -71,8 +71,7 @@ class HumanoidRearrangeController:
     def __init__(
         self,
         walk_pose_path,
-        base_offset=(0, 0.9, 0),
-        update_joints=True,
+        base_offset=(0, 0.9, 0)
     ):
         self.draw_fps = DEFAULT_DRAW_FPS
         self.min_angle_turn = MIN_ANGLE_TURN
@@ -112,7 +111,6 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
-        self.compute_joints_and_offset = update_joints
         self.step_size =  int(self.walk_motion.fps / self.draw_fps)
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
@@ -138,8 +136,7 @@ class HumanoidRearrangeController:
         Calculates a stop, standing pose
         """
         # the object transform does not change
-        if self.compute_joints_and_offset:
-            self.joint_pose = self.stop_pose.joints
+        self.joint_pose = self.stop_pose.joints
 
     def calculate_turn_pose(self, target_position: mn.Vector3):
         """
@@ -263,20 +260,17 @@ class HumanoidRearrangeController:
             mn.Rad(-np.pi / 2), mn.Vector3(0, 0, 1.0)
         )
 
-        if self.compute_joints_and_offset:
-            new_pose = self.walk_motion.poses[self.walk_mocap_frame]
-            joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
+        new_pose = self.walk_motion.poses[self.walk_mocap_frame]
+        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
-            obj_transform = add_rot @ add_rot2 @ obj_transform
-            obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+        obj_transform = add_rot @ add_rot2 @ obj_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
-            # This is the rotation and translation caused by the current motion pose
-            #  we still need to apply the base_transform to obtain the full transform
-            self.obj_transform_offset = obj_transform
-            self.joint_pose = joint_pose
-        else:
-            self.obj_transform_offset = add_rot2
-            self.joint_pose = self.stop_pose.joints
+        # This is the rotation and translation caused by the current motion pose
+        #  we still need to apply the base_transform to obtain the full transform
+        self.obj_transform_offset = obj_transform
+        self.joint_pose = joint_pose
+
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T

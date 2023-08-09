@@ -1490,7 +1490,6 @@ class AgentConfig(HabitatBaseConfig):
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
     rest_pose_data_path: str = ""
-    update_joints: bool = True
 
 
 @dataclass

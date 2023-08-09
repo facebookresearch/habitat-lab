@@ -113,7 +113,6 @@ habitat:
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
         motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
-        update_joints: True
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
