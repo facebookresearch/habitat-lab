@@ -14,10 +14,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch import Tensor
 
+from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.rl.ppo.updater import Updater
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import (
@@ -34,7 +35,7 @@ class PPO(nn.Module, Updater):
     entropy_coef: Union[float, LagrangeInequalityCoefficient]
 
     @classmethod
-    def from_config(cls, actor_critic: NetPolicy, config):
+    def from_config(cls, actor_critic: Policy, config):
         return cls(
             actor_critic=actor_critic,
             clip_param=config.clip_param,
@@ -53,7 +54,7 @@ class PPO(nn.Module, Updater):
 
     def __init__(
         self,
-        actor_critic: NetPolicy,
+        actor_critic: Policy,
         clip_param: float,
         ppo_epoch: int,
         num_mini_batch: int,
@@ -110,6 +111,9 @@ class PPO(nn.Module, Updater):
 
     def _create_optimizer(self, lr, eps):
         params = list(filter(lambda p: p.requires_grad, self.parameters()))
+        logger.info(
+            f"Number of params to train: {sum(param.numel() for param in params)}"
+        )
         if len(params) > 0:
             optim_cls = optim.Adam
             optim_kwargs = dict(
@@ -131,9 +135,6 @@ class PPO(nn.Module, Updater):
             return optim_cls(**optim_kwargs)
         else:
             return None
-
-    def forward(self, *x):
-        raise NotImplementedError
 
     def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
         advantages = (

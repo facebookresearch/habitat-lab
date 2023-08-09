@@ -5,7 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 import abc
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import torch
 from gym import spaces
@@ -29,6 +38,8 @@ from habitat_baselines.utils.common import (
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+from torch import Tensor
 
 from habitat_baselines.utils.timing import g_timer
 
@@ -101,13 +112,11 @@ class Policy(abc.ABC):
     def recurrent_hidden_size(self) -> int:
         return 0
 
-    def forward(self, *x):
-        raise NotImplementedError
-
     @property
     def visual_encoder(self) -> Optional[nn.Module]:
         """
-        Gets the visual encoder for the policy.
+        Gets the visual encoder for the policy. Only necessary to implement if
+        you want to do RL with a frozen visual encoder.
         """
 
     def get_policy_action_space(
@@ -119,6 +128,11 @@ class Policy(abc.ABC):
         return []
 
     def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
+        """
+        Gets parameters of auxiliary modules, not directly used in the policy,
+        but used for auxiliary training objectives. Only necessary if using
+        auxiliary losses.
+        """
         return {}
 
     def policy_parameters(self) -> Iterable[torch.Tensor]:
@@ -151,6 +165,25 @@ class Policy(abc.ABC):
         else:
             return action_data.policy_info
 
+    def evaluate_actions(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        action,
+        rnn_build_seq_info: Dict[str, torch.Tensor],
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Tensor]]:
+        """
+        Only necessary to implement if performing RL training with the policy.
+
+        :returns: Tuple containing
+            - The
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def act(
         self,
         observations,

@@ -21,12 +21,16 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-from habitat_baselines.rl.ppo.policy import NetPolicy, Policy
+from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.rl.ppo.ppo import PPO
 from habitat_baselines.rl.ppo.updater import Updater
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+
+def linear_lr_schedule(percent_done: float) -> float:
+    return 1 - percent_done
 
 
 @baseline_registry.register_agent_access_mgr
@@ -152,7 +156,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         updater = updater_cls.from_config(actor_critic, self._ppo_cfg)
         logger.info(
-            "agent number of parameters: {}".format(
+            "Agent number of parameters: {}".format(
                 sum(param.numel() for param in updater.parameters())
             )
         )
@@ -162,7 +166,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def policy_action_space(self):
         return self._policy_action_space
 
-    def _create_policy(self) -> NetPolicy:
+    def _create_policy(self) -> Policy:
         """
         Creates and initializes the policy. This should also load any model weights from checkpoints.
         """
@@ -292,7 +296,3 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
             }
         )
     return obs_space
-
-
-def linear_lr_schedule(percent_done: float) -> float:
-    return 1 - percent_done
