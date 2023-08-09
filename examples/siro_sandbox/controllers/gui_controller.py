@@ -295,99 +295,73 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
 
-        if self._is_multi_agent:
-            agent_k = f"agent_{self._agent_idx}_"
-        else:
-            agent_k = ""
-        humanoidjoint_name = f"{agent_k}humanoidjoint_action"
-        ac_spaces = env.action_space.spaces
-
-        do_humanoidjoint_action = humanoidjoint_name in ac_spaces
-
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        if do_humanoidjoint_action:
-            humancontroller_base_user_input = np.zeros(3)
-            # temp keyboard controls to test humanoid controller
-            if gui_input.get_key(KeyNS.W):
-                # walk forward in the camera yaw direction
-                humancontroller_base_user_input[0] += 1
-            if gui_input.get_key(KeyNS.S):
-                # walk forward in the opposite to camera yaw direction
-                humancontroller_base_user_input[0] -= 1
+        humancontroller_base_user_input = np.zeros(3)
+        # temp keyboard controls to test humanoid controller
+        if gui_input.get_key(KeyNS.W):
+            # walk forward in the camera yaw direction
+            humancontroller_base_user_input[0] += 1
+        if gui_input.get_key(KeyNS.S):
+            # walk forward in the opposite to camera yaw direction
+            humancontroller_base_user_input[0] -= 1
 
-            if self._hint_walk_dir:
-                humancontroller_base_user_input[0] += self._hint_walk_dir.x
-                humancontroller_base_user_input[2] += self._hint_walk_dir.z
+        if self._hint_walk_dir:
+            humancontroller_base_user_input[0] += self._hint_walk_dir.x
+            humancontroller_base_user_input[2] += self._hint_walk_dir.z
 
-                self._recorder.record("hint_walk_dir", self._hint_walk_dir)
+            self._recorder.record("hint_walk_dir", self._hint_walk_dir)
 
-            else:
-                self._recorder.record("cam_yaw", self._cam_yaw)
-                self._recorder.record(
-                    "walk_forward_back", humancontroller_base_user_input[0]
-                )
-
-                rot_y_rad = -self._cam_yaw + np.pi
-                rot_y_matrix = np.array(
-                    [
-                        [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
-                        [0, 1, 0],
-                        [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
-                    ]
-                )
-                humancontroller_base_user_input = (
-                    rot_y_matrix @ humancontroller_base_user_input
-                )
-
+        else:
+            self._recorder.record("cam_yaw", self._cam_yaw)
             self._recorder.record(
-                "base_user_input", humancontroller_base_user_input
+                "walk_forward_back", humancontroller_base_user_input[0]
             )
 
-        action_names = []
-        action_args = {}
-        if do_humanoidjoint_action:
-            if True:
-                relative_pos = mn.Vector3(humancontroller_base_user_input)
-
-                base_offset = self.get_articulated_agent().params.base_offset
-                # base_offset is basically the offset from the humanoid's root (often
-                # located near its pelvis) to the humanoid's feet (where it should
-                # snap to the navmesh), for example (0, -0.9, 0).
-                prev_query_pos = (
-                    self._humanoid_controller.obj_transform_base.translation
-                    + base_offset
-                )
-
-                self._humanoid_controller.calculate_walk_pose(relative_pos)
-
-                # calculate_walk_pose has updated obj_transform_base.translation with
-                # desired motion, but this should be filtered (restricted to navmesh).
-                target_query_pos = (
-                    self._humanoid_controller.obj_transform_base.translation
-                    + base_offset
-                )
-                filtered_query_pos = self._env._sim.step_filter(
-                    prev_query_pos, target_query_pos
-                )
-                # fixup is the difference between the movement allowed by step_filter
-                # and the requested base movement.
-                fixup = filtered_query_pos - target_query_pos
-                self._humanoid_controller.obj_transform_base.translation += (
-                    fixup
-                )
-
-                humanoidjoint_action = self._humanoid_controller.get_pose()
-            else:
-                pass
-                # reference code
-                # humanoidjoint_action = self.get_random_joint_action()
-            action_names.append(humanoidjoint_name)
-            action_args.update(
-                {
-                    f"{agent_k}human_joints_trans": humanoidjoint_action,
-                }
+            rot_y_rad = -self._cam_yaw + np.pi
+            rot_y_matrix = np.array(
+                [
+                    [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
+                    [0, 1, 0],
+                    [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
+                ]
+            )
+            humancontroller_base_user_input = (
+                rot_y_matrix @ humancontroller_base_user_input
             )
 
-        return {"action": action_names, "action_args": action_args}
+        self._recorder.record(
+            "base_user_input", humancontroller_base_user_input
+        )
+
+        relative_pos = mn.Vector3(humancontroller_base_user_input)
+
+        base_offset = self.get_articulated_agent().params.base_offset
+        # base_offset is basically the offset from the humanoid's root (often
+        # located near its pelvis) to the humanoid's feet (where it should
+        # snap to the navmesh), for example (0, -0.9, 0).
+        prev_query_pos = (
+            self._humanoid_controller.obj_transform_base.translation
+            + base_offset
+        )
+
+        self._humanoid_controller.calculate_walk_pose(relative_pos)
+
+        # calculate_walk_pose has updated obj_transform_base.translation with
+        # desired motion, but this should be filtered (restricted to navmesh).
+        target_query_pos = (
+            self._humanoid_controller.obj_transform_base.translation
+            + base_offset
+        )
+        filtered_query_pos = self._env._sim.step_filter(
+            prev_query_pos, target_query_pos
+        )
+        # fixup is the difference between the movement allowed by step_filter
+        # and the requested base movement.
+        fixup = filtered_query_pos - target_query_pos
+        self._humanoid_controller.obj_transform_base.translation += fixup
+
+        humanoidjoint_action = np.array(self._humanoid_controller.get_pose())
+
+        return humanoidjoint_action

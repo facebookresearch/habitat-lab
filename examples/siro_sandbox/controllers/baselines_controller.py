@@ -113,19 +113,6 @@ class SingleAgentBaselinesController(BaselinesController):
 
         return batch
 
-    def act(self, obs, env):
-        action = super().act(obs, env)
-
-        def change_ac_name(k):
-            return self._agent_k + k
-
-        action["action"] = [change_ac_name(k) for k in action["action"]]
-        action["action_args"] = {
-            change_ac_name(k): v for k, v in action["action_args"].items()
-        }
-
-        return action
-
 
 class MultiAgentBaselinesController(BaselinesController):
     """Controller for multiple baseline agents."""
