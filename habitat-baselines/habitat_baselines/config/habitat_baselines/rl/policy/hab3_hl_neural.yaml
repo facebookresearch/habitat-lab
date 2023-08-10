@@ -5,7 +5,8 @@ obs_transforms:
       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
-    name: "NeuralHighLevelPolicy"
+    name: 
+      _target_: "habitat_baselines.rl.multi_agent.policies.NeuralHighLevelPolicy"
     allowed_actions:
       - nav_to_goal
       - nav_to_obj

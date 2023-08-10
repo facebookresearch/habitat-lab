@@ -73,7 +73,8 @@ habitat_baselines:
       agent_0:
         hierarchical_policy:
           high_level_policy:
-            name: "FixedHighLevelPolicy"
+            name: 
+              _target_: "habitat_baselines.rl.multi_agent.policies.FixedHighLevelPolicy"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
@@ -84,7 +85,8 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
-            name: "FixedHighLevelPolicy"
+            name: 
+              _target_: "habitat_baselines.rl.multi_agent.policies.FixedHighLevelPolicy"
             add_arm_rest: False
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
