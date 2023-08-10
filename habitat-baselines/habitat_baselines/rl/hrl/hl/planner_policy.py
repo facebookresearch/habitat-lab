@@ -13,6 +13,7 @@ import torch
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 @dataclass
@@ -292,5 +293,5 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             next_skill,
             skill_args_data,
             immediate_end,
-            {"actions": next_skill},
+            PolicyActionData(actions=next_skill),
         )
