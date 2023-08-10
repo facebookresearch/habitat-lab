@@ -101,7 +101,7 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         self._high_level_policy: HighLevelPolicy = hydra.utils.instantiate(
             config.hierarchical_policy.high_level_policy.name,
-            config=config.hierarchical_policy.high_level_policy,
+            cfg=config.hierarchical_policy.high_level_policy,
             pddl_problem=self._pddl,
             num_envs=num_envs,
             skill_name_to_idx=self._name_to_idx,

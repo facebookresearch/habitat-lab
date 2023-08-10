@@ -16,7 +16,7 @@ class HighLevelPolicy(nn.Module):
 
     def __init__(
         self,
-        config,
+        cfg,
         pddl_problem: PddlProblem,
         num_envs: int,
         skill_name_to_idx: Dict[str, int],
@@ -26,7 +26,7 @@ class HighLevelPolicy(nn.Module):
         agent_name: Optional[str] = None,
     ):
         super().__init__()
-        self._config = config
+        self._config = cfg
         self._pddl_prob = pddl_problem
         self._num_envs = num_envs
         self._skill_name_to_idx = skill_name_to_idx
