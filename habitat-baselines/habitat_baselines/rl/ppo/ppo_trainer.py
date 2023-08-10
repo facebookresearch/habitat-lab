@@ -1039,6 +1039,7 @@ class PPOTrainer(BaseRLTrainer):
                     self._agent.update_hidden_state(
                         test_recurrent_hidden_states, prev_actions, action_data
                     )
+
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
