@@ -923,9 +923,6 @@ class PPOTrainer(BaseRLTrainer):
         )
         hidden_state_lens = self._agent.hidden_state_shape_lens
         action_space_lens = self._agent.policy_action_space_shape_lens
-        should_update_recurrent_hidden_states = (
-            np.prod(test_recurrent_hidden_states.shape) != 0
-        )
         prev_actions = torch.zeros(
             self.config.habitat_baselines.num_environments,
             *action_shape,
@@ -1016,16 +1013,10 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
-                    for i, should_insert in enumerate(
-                        action_data.should_inserts
-                    ):
-                        if not should_insert.item():
-                            continue
-                        if should_update_recurrent_hidden_states:
-                            test_recurrent_hidden_states[
-                                i
-                            ] = action_data.rnn_hidden_states[i]
-                        prev_actions[i].copy_(action_data.actions[i])  # type: ignore
+                    self._agent.update_hidden_state(
+                        test_recurrent_hidden_states, prev_actions, action_data
+                    )
+
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
