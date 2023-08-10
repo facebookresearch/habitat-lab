@@ -320,15 +320,14 @@ class GuiHumanoidController(GuiController):
             )
 
             rot_y_rad = -self._cam_yaw + np.pi
-            rot_y_matrix = np.array(
-                [
-                    [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
-                    [0, 1, 0],
-                    [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
-                ]
+            rotation = mn.Quaternion.rotation(
+                mn.Rad(rot_y_rad),
+                mn.Vector3(0, 1, 0),
             )
-            humancontroller_base_user_input = (
-                rot_y_matrix @ humancontroller_base_user_input
+            humancontroller_base_user_input = np.array(
+                rotation.transform_vector(
+                    mn.Vector3(humancontroller_base_user_input)
+                )
             )
 
         self._recorder.record(

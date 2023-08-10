@@ -201,20 +201,16 @@ class BaselinesController(Controller):
                     action_data,
                 )
 
+        assert len(action_data.env_actions) == 1
         if is_continuous_action_space(self._env_spec.action_space):
             # Clipping actions to the specified limits
-            step_data = [
-                np.clip(
-                    a.numpy(),
-                    self._env_spec.action_space.low,
-                    self._env_spec.action_space.high,
-                )
-                for a in action_data.env_actions.cpu()
-            ]
+            action = np.clip(
+                action_data.env_actions[0].cpu().numpy(),
+                self._env_spec.action_space.low,
+                self._env_spec.action_space.high,
+            )
         else:
-            step_data = [a.item() for a in action_data.env_actions.cpu()]
-
-        action = step_data[0]
+            action = action_data.env_actions[0].cpu().item()
 
         # _not_done_masks serves as en indicator of whether the episode is done
         # it is reset to False in on_environment_reset
