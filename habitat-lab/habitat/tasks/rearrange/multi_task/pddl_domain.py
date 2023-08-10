@@ -93,7 +93,7 @@ class PddlDomain:
                 parent_dir, "domain_configs", domain_file_path
             )
 
-        if "." not in domain_file_path:
+        if "." not in domain_file_path.split("/")[-1]:
             domain_file_path += ".yaml"
 
         with open(get_full_habitat_config_path(domain_file_path), "r") as f:
@@ -216,6 +216,8 @@ class PddlDomain:
         """
 
         self._constants: Dict[str, PddlEntity] = {}
+        if domain_def["constants"] is None:
+            return
         for c in domain_def["constants"]:
             self._constants[c["name"]] = PddlEntity(
                 c["name"],

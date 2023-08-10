@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
@@ -18,9 +18,11 @@ class HighLevelPolicy(nn.Module):
         config,
         pddl_problem: PddlProblem,
         num_envs: int,
-        skill_name_to_idx: Dict[int, str],
+        skill_name_to_idx: Dict[str, int],
         observation_space: spaces.Space,
         action_space: spaces.Space,
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
         self._config = config
@@ -43,6 +45,9 @@ class HighLevelPolicy(nn.Module):
         If we need to load the state dict of the high-level policy.
         """
         return False
+
+    def on_envs_pause(self, envs_to_pause: List[int]) -> None:
+        pass
 
     def evaluate_actions(
         self,

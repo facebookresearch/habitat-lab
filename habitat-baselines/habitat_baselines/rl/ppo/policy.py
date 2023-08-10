@@ -194,6 +194,14 @@ class Policy(abc.ABC):
     ) -> PolicyActionData:
         raise NotImplementedError
 
+    def on_envs_pause(self, envs_to_pause: List[int]) -> None:
+        """
+        Clean up data when envs are finished. Makes sure that relevant variables
+        of a policy are updated as environments pause. This is needed when
+        evaluating policies with multiple environments, where some environments
+        will run out of episodes to evaluate and will be closing.
+        """
+
     @classmethod
     @abc.abstractmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
@@ -237,17 +245,9 @@ class NetPolicy(nn.Module, Policy):
 
         self.critic = CriticHead(self.net.output_size)
 
-        self.aux_loss_modules = nn.ModuleDict()
-        if aux_loss_config is None:
-            return
-        for aux_loss_name, cfg in aux_loss_config.items():
-            aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
-
-            self.aux_loss_modules[aux_loss_name] = aux_loss(
-                action_space,
-                self.net,
-                **cfg,
-            )
+        self.aux_loss_modules = get_aux_modules(
+            aux_loss_config, action_space, self.net
+        )
 
     @property
     def recurrent_hidden_size(self) -> int:
@@ -534,3 +534,22 @@ class PointNavBaselineNet(Net):
         aux_loss_state["rnn_output"] = x_out
 
         return x_out, rnn_hidden_states, aux_loss_state
+
+
+def get_aux_modules(
+    aux_loss_config: "DictConfig",
+    action_space: spaces.Space,
+    net,
+) -> nn.ModuleDict:
+    aux_loss_modules = nn.ModuleDict()
+    if aux_loss_config is None:
+        return aux_loss_modules
+    for aux_loss_name, cfg in aux_loss_config.items():
+        aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
+
+        aux_loss_modules[aux_loss_name] = aux_loss(
+            action_space,
+            net,
+            **cfg,
+        )
+    return aux_loss_modules

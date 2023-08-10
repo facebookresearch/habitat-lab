@@ -48,6 +48,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
+        aux_loss_config,
+        agent_name: Optional[str],
     ):
         super().__init__()
 
@@ -94,14 +96,20 @@ class HierarchicalPolicy(nn.Module, Policy):
             (self._num_envs,), dtype=torch.bool
         )
 
+        self._active_envs: torch.BoolTensor = torch.ones(
+            (self._num_envs,), dtype=torch.bool
+        )
+
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.hierarchical_policy.high_level_policy,
-            self._pddl,
-            num_envs,
-            self._name_to_idx,
-            observation_space,
-            action_space,
+            config=config.hierarchical_policy.high_level_policy,
+            pddl_problem=self._pddl,
+            num_envs=num_envs,
+            skill_name_to_idx=self._name_to_idx,
+            observation_space=observation_space,
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
+            agent_name=agent_name,
         )
         first_idx: Optional[int] = None
 
@@ -278,13 +286,14 @@ class HierarchicalPolicy(nn.Module, Policy):
         masks,
         deterministic=False,
     ):
+        batch_size = masks.shape[0]
         masks_cpu = masks.cpu()
-        log_info: List[Dict[str, Any]] = [{} for _ in range(self._num_envs)]
+        log_info: List[Dict[str, Any]] = [{} for _ in range(batch_size)]
         self._high_level_policy.apply_mask(masks_cpu)  # type: ignore[attr-defined]
 
         # Initialize empty action set based on the overall action space.
         actions = torch.zeros(
-            (self._num_envs, get_num_actions(self._action_space)),
+            (batch_size, get_num_actions(self._action_space)),
             device=masks.device,
         )
         hl_rnn_hidden_states, ll_rnn_hidden_states = self._split_hidden_states(
@@ -336,6 +345,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             # Update the LL hidden state.
             ll_rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
+        # Skills should not be responsible for terminating the overall episode.
         actions[:, self._stop_action_idx] = 0.0
 
         (
@@ -435,7 +445,8 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
-        hl_terminate_episode = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = masks.shape[0]
+        hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,
@@ -532,8 +543,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         )
 
         # Check if skills should terminate.
+        batch_size = masks.shape[0]
         bad_should_terminate: torch.BoolTensor = torch.zeros(
-            (self._num_envs,), dtype=torch.bool
+            (batch_size,), dtype=torch.bool
         )
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -595,6 +607,29 @@ class HierarchicalPolicy(nn.Module, Policy):
             rnn_build_seq_info,
         )
 
+    def on_envs_pause(self, envs_to_pause):
+        """
+        Cleans up stateful variables of the policy so that they match with the
+        active environments
+        """
+
+        if len(envs_to_pause) == 0:
+            return
+        # One hot of envs to pause
+        all_envs_to_keep_active = self._active_envs.clone()
+        all_envs_to_keep_active[envs_to_pause] = False
+
+        # Filtering the new envs that we need to keep active
+        curr_envs_to_keep_active = all_envs_to_keep_active[self._active_envs]
+
+        self._cur_call_high_level = self._cur_call_high_level[
+            curr_envs_to_keep_active
+        ]
+        self._cur_skills = self._cur_skills[curr_envs_to_keep_active]
+
+        self._active_envs = all_envs_to_keep_active
+        self._high_level_policy.filter_envs(curr_envs_to_keep_active)
+
     @classmethod
     def from_config(
         cls,
@@ -602,14 +637,24 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space,
         action_space,
         orig_action_space,
+        agent_name=None,
         **kwargs,
     ):
+        if agent_name is None:
+            if len(config.habitat.simulator.agents_order) > 1:
+                raise ValueError(
+                    "If there is more than an agent, you need to specify the agent name"
+                )
+            else:
+                agent_name = config.habitat.simulator.agents_order[0]
         return cls(
             config=config.habitat_baselines.rl.policy,
             full_config=config,
             observation_space=observation_space,
             action_space=orig_action_space,
             num_envs=config.habitat_baselines.num_environments,
+            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
+            agent_name=agent_name,
         )
 
 
