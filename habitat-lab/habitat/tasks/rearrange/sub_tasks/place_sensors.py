@@ -76,16 +76,16 @@ class PlaceReward(RearrangeReward):
         ].get_metric()
         obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[str(task.abs_targ_idx)]
+        ].get_metric()[str(task.targ_idx)]
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
             if self._config.use_ee_dist:
-                dist_to_goal = ee_to_goal_dist[str(task.abs_targ_idx)]
+                dist_to_goal = ee_to_goal_dist[str(task.targ_idx)]
             else:
-                dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
+                dist_to_goal = obj_to_goal_dist[str(task.targ_idx)]
             min_dist = self._config.min_dist_to_goal
         else:
             dist_to_goal = ee_to_rest_distance
@@ -158,7 +158,7 @@ class PlaceSuccess(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         is_obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
-        ].get_metric()[str(task.abs_targ_idx)]
+        ].get_metric()[str(task.targ_idx)]
         is_holding = self._sim.grasp_mgr.is_grasped
 
         ee_to_rest_distance = task.measurements.measures[

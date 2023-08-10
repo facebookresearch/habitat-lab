@@ -6,6 +6,7 @@ import torch.nn as nn
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class HighLevelPolicy(nn.Module):
@@ -33,16 +34,19 @@ class HighLevelPolicy(nn.Module):
         self._device = None
         self._agent_name = agent_name
 
-    @property
-    def should_load_agent_state(self):
-        return False
-
     def to(self, device):
         self._device = device
         return super().to(device)
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         raise NotImplementedError()
+
+    @property
+    def should_load_agent_state(self) -> bool:
+        """
+        If we need to load the state dict of the high-level policy.
+        """
+        return False
 
     def evaluate_actions(
         self,
@@ -83,7 +87,7 @@ class HighLevelPolicy(nn.Module):
         plan_masks: torch.Tensor,
         deterministic: bool,
         log_info: List[Dict[str, Any]],
-    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor, Dict[str, Any]]:
+    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor, PolicyActionData]:
         """
         Get the next skill to be executed.
 
@@ -101,12 +105,9 @@ class HighLevelPolicy(nn.Module):
             - skill_args_data: Arguments for the next skill.
             - immediate_end: Binary masks indicating which environment(s) should
                 end immediately.
-            - Information for PolicyActionData
+            - PolicyActionData information for learning.
         """
         raise NotImplementedError()
-
-    def create_hl_info(self) -> Dict[str, Any]:
-        return {}
 
     def apply_mask(self, mask: torch.Tensor) -> None:
         """

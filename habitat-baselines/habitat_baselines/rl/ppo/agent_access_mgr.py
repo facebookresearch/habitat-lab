@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import gym.spaces as spaces
 
@@ -46,6 +46,14 @@ class AgentAccessMgr(ABC):
         """
         Update the hidden state of the policies in the population. Writes to the
         data in place.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
         """
         raise NotImplementedError()
 
@@ -136,14 +144,6 @@ class AgentAccessMgr(ABC):
 
     @abstractmethod
     def load_state_dict(self, state: Dict) -> None:
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def hidden_state_shape(self) -> Tuple[int]:
-        """
-        The shape of the tensor to track the hidden state, such as the RNN hidden state.
-        """
         raise NotImplementedError()
 
     @property

@@ -4,15 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import ctypes
 import json
 import os.path as osp
-import sys
 import time
 from glob import glob
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import magnum as mn
 import numpy as np
@@ -98,7 +93,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
             "habitat_baselines.eval.split=val",
         ],
     )
-    for _, agent_config in config.habitat.simulator.agents.items():
+    for agent_config in config.habitat.simulator.agents.values():
         if (
             agent_config.articulated_agent_type == "KinematicHumanoid"
             and not osp.exists(agent_config.motion_data_path)

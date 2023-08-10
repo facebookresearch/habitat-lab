@@ -119,7 +119,7 @@ predicates:
             obj: at_entity
 
 actions:
-  - name: nav_to_goal
+  - name: nav_to_obj
     parameters:
       - name: obj
         expr_type: movable_entity_type
@@ -139,7 +139,7 @@ actions:
         task.force_regenerate: True
         task.should_save_to_cache: False
 
-  - name: nav_to_obj
+  - name: nav_to_goal
     parameters:
       - name: obj
         expr_type: goal_entity_type

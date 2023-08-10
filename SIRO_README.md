@@ -17,44 +17,46 @@ Project-specific README for SIRo.
     * Manually download `humanoids_skinned.zip` from [this link](https://drive.google.com/file/d/19gUvwaxJpd-Z6Djq8kmCpYotduwZvOfZ/view?usp=sharing) and uncompress to `data`
 1. Download other required datasets:
     * `python -m habitat_sim.utils.datasets_download --uids ycb hab_fetch hab_spot_arm replica_cad_dataset rearrange_pick_dataset_v0 rearrange_dataset_v1 --data-path data/`
-1. Optional: install the Floorplanner Dataset below.
+1. Optional: install the HSSD Dataset below.
 
-# Floorplanner Dataset
+# HSSD Dataset
 
-FP is actually four distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, and (4) Floorplanner episodes. (YCB objects should have been already downloaded as part of the earlier SIRo install steps)
+HSSD is actually four distinct pieces: (1) HSSD scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, and (4) HSSD compatible episodes. (YCB objects should have been already downloaded as part of the earlier SIRo install steps)
 
-1. Download Floorplanner Scenes:
+(2) and (3) are not used in current episodes and do not need to be downloaded.
+
+1. Download HSSD Scenes:
 ```
 # 1. Go to the habitat data directory
 cd habitat-lab/data
 # 2. Install Git LFS from https://git-lfs.com/ (if not installed yet)
 # 3. Set up Git LFS for your user account (if not set up yet)
 git lfs install
-# 4. Clone Floorplanner dataset (it will take a while to finish)
+# 4. Clone HSSD dataset (it will take a while to finish)
 git clone https://huggingface.co/datasets/fpss/fphab
-# 5. Checkout the '6fb800903' commit. Other versions do not work with SIRo.
-git checkout 6fb800903
-# 6. Create a link to Floorplanner in the data folder
+# 5. Checkout the 'f141a8192de29e4d92fe61577c62e0058fc7a9c3' commit. Other versions do not work with SIRo.
+git checkout f141a8192de29e4d92fe61577c62e0058fc7a9c3
+# 6. Create a link to HSSD in the data folder
 ln -s /path/to/fphab data/fpss
-# 7. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
+# 7. Sanity check for one of the scenes (this should open HSSD scene in the habitat viewer)
 # ./build/viewer if compiling locally
-habitat-viewer --enable-physics --dataset /path/to/data/fpss/fphab/fphab.scene_dataset_config.json -- 108294897_176710602.scene_instance.json
+habitat-viewer --enable-physics --dataset /path/to/data/fpss/hssd-hab-uncluttered.scene_dataset_config.json -- 108294897_176710602
 ```
-2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
-3. Extract these two object datasets into `habitat-lab/data` as follows:
+2. (skip) Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
+3. (skip) Extract these two object datasets into `habitat-lab/data` as follows:
 ```
 cd objects
 tar -xvf ~/Downloads/google_object_dataset.tar.gz
 tar -xvf ~/Downloads/amazon_berkeley.tar.gz
 ```
-4. Download FP episodes:
+4. Download HSSD episodes:
 ```
 # Go to the habitat datasets directory
 cd habitat-lab/data/datasets
 # Clone dataset
 git clone https://github.com/jimmytyyang/floorplanner.git
 ```
-5. Now you should be able to use FP. For more detail (e.g., stats, train-test split), please read [here](https://docs.google.com/document/d/11m66SUawGPFxWYHN2E8rDw3g679dpiBf8Es-o3PRl5I/edit?usp=sharing).
+5. Now you should be able to use HSSD. For more detail (e.g., stats, train-test split), please read [here](https://docs.google.com/document/d/11m66SUawGPFxWYHN2E8rDw3g679dpiBf8Es-o3PRl5I/edit?usp=sharing).
 
 # Sandbox Tool
 
@@ -138,7 +140,7 @@ For evaluating against the training population, for PBT training set `habitat_ba
 
 To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the following instruction
 
-1. Download Floorplanner Dataset (see above).
+1. Download HSSD Dataset (see above).
 1. From `habitat-lab` directory:
 ```bash
 srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 \

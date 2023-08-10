@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import os
 import random
 from abc import ABC, abstractmethod
@@ -14,11 +15,12 @@ from typing import Any, Dict, List, Optional, Union
 import corrade as cr
 import magnum as mn
 import numpy as np
-import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.tasks.rearrange.utils import get_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 
 # global module singleton for mesh importing instantiated upon first import
@@ -58,12 +60,28 @@ class Receptacle(ABC):
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
 
+        # The unique name of this Receptacle instance in the current scene.
+        # This name is a combination of the object instance name and Receptacle name.
+        self.unique_name = ""
+        if self.parent_object_handle is None:
+            # this is a stage receptacle
+            self.unique_name = "stage|" + self.name
+        else:
+            self.unique_name = self.parent_object_handle + "|" + self.name
+
     @property
     def is_parent_object_articulated(self):
         """
         Convenience query for articulated vs. rigid object check.
         """
         return self.parent_link is not None
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return mn.Range3D()
 
     @abstractmethod
     def sample_uniform_local(
@@ -187,8 +205,15 @@ class AABBReceptacle(Receptacle):
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
-        self.bounds = bounds
+        self._bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return self._bounds
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -363,15 +388,17 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-
-        # Init the trimesh
-        self.trimesh = trimesh.Trimesh(
-            **trimesh.triangles.to_kwargs(triangles)
-        )
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
 
     @property
     def bounds(self) -> mn.Range3D:
-        return mn.Range3D(self.trimesh.bounds)
+        return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
@@ -690,14 +717,9 @@ def parse_receptacles_from_user_config(
                 )
             elif mesh_receptacle_id_string in sub_config_key:
                 mesh_file = os.path.join(
-                    parent_template_directory, sub_config.get("mesh_filepath")
+                    parent_template_directory,
+                    sub_config.get("mesh_filepath"),
                 )
-                # Support for multiple meshes directory
-                if not os.path.exists(mesh_file):
-                    mesh_file = os.path.join(
-                        parent_template_directory,
-                        sub_config.get("mesh_filepath").split("/")[-1],
-                    )
                 assert os.path.exists(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
@@ -726,7 +748,7 @@ def parse_receptacles_from_user_config(
 
 
 def find_receptacles(
-    sim: habitat_sim.Simulator,
+    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
@@ -736,6 +758,8 @@ def find_receptacles(
 
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
+    if ignore_handles is None:
+        ignore_handles = []
 
     receptacles: List[
         Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]
@@ -754,6 +778,8 @@ def find_receptacles(
 
     # rigid object receptacles
     for obj_handle in obj_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = obj_mgr.get_object_by_handle(obj_handle)
         source_template_file = obj.creation_attributes.file_directory
         user_attr = obj.user_attributes
@@ -767,6 +793,8 @@ def find_receptacles(
 
     # articulated object receptacles
     for obj_handle in ao_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = ao_mgr.get_object_by_handle(obj_handle)
         # TODO: no way to get filepath from AO currently. Add this API.
         source_template_file = ""
@@ -783,6 +811,14 @@ def find_receptacles(
                 ao_uniform_scaling=obj.global_scale,
             )
         )
+
+    # check for non-unique naming mistakes in user dataset
+    for rec_ix in range(len(receptacles)):
+        rec1_unique_name = receptacles[rec_ix].unique_name
+        for rec_ix2 in range(rec_ix + 1, len(receptacles)):
+            assert (
+                rec1_unique_name != receptacles[rec_ix2].unique_name
+            ), "Two Receptacles found with the same unique name '{rec1_unique_name}'. Likely indicates multiple receptacle entries with the same name in the same config."
 
     return receptacles
 
@@ -805,7 +841,7 @@ class ReceptacleTracker:
         receptacle_sets: Dict[str, ReceptacleSet],
     ):
         """
-        :param max_objects_per_receptacle: A Dict mapping receptacle names to the remaining number of objects allowed in the receptacle.
+        :param max_objects_per_receptacle: A Dict mapping receptacle unique names to the remaining number of objects allowed in the receptacle.
         :param receptacle_sets: Dict mapping ReceptacleSet name to its dataclass.
         """
         self._receptacle_counts: Dict[str, int] = max_objects_per_receptacle
@@ -818,10 +854,53 @@ class ReceptacleTracker:
     def recep_sets(self) -> Dict[str, ReceptacleSet]:
         return self._receptacle_sets
 
+    def init_scene_filters(
+        self, mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
+    ) -> None:
+        """
+        Initialize the scene specific filter strings from metadata.
+        Looks for a filter file defined for the scene, loads filtered strings and adds them to the exclude list of all ReceptacleSets.
+
+        :param mm: The active MetadataMediator instance from which to load the filter data.
+        :param scene_handle: The handle of the currently instantiated scene.
+        """
+        scene_user_defined = mm.get_scene_user_defined(scene_handle)
+        filtered_unique_names = []
+        if scene_user_defined is not None and scene_user_defined.has_value(
+            "scene_filter_file"
+        ):
+            scene_filter_file = scene_user_defined.get("scene_filter_file")
+            # construct the dataset level path for the filter data file
+            scene_filter_file = os.path.join(
+                os.path.dirname(mm.active_dataset), scene_filter_file
+            )
+            with open(scene_filter_file, "r") as f:
+                filter_json = json.load(f)
+                for filter_type in [
+                    "manually_filtered",
+                    "access_filtered",
+                    "stability_filtered",
+                    "height_filtered",
+                ]:
+                    for filtered_unique_name in filter_json[filter_type]:
+                        filtered_unique_names.append(filtered_unique_name)
+            # add exclusion filters to all receptacles sets
+            for r_set in self._receptacle_sets.values():
+                r_set.excluded_receptacle_substrings.extend(
+                    filtered_unique_names
+                )
+            logger.info(
+                f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
+            )
+        else:
+            logger.info(
+                f"Loaded receptacle filter data for scene '{scene_handle}' does not have configured filter file."
+            )
+
     def inc_count(self, recep_name: str) -> None:
         """
         Increment allowed objects for a Receptacle.
-        :param recep_name: The name of the Receptacle.
+        :param recep_name: The unique name of the Receptacle.
         """
         if recep_name in self._receptacle_counts:
             self._receptacle_counts[recep_name] += 1
@@ -836,7 +915,7 @@ class ReceptacleTracker:
 
         :return: Whether or not the Receptacle has run out of remaining allocations.
         """
-        recep_name = allocated_receptacle.name
+        recep_name = allocated_receptacle.unique_name
         if recep_name not in self._receptacle_counts:
             return False
         # decrement remaining allocations
@@ -864,3 +943,70 @@ class ReceptacleTracker:
                     ]
             return True
         return False
+
+
+def get_obj_manager_for_receptacle(
+    sim: habitat_sim.Simulator, receptacle: Receptacle
+):
+    if receptacle.is_parent_object_articulated:
+        obj_mgr = sim.get_articulated_object_manager()
+    else:
+        obj_mgr = sim.get_rigid_object_manager()
+    return obj_mgr
+
+
+def get_navigable_receptacles(
+    sim: habitat_sim.Simulator,
+    receptacles: List[Receptacle],
+) -> List[Receptacle]:
+    """Given a list of receptacles, return the ones that are navigable from the given navmesh island"""
+    navigable_receptacles: List[Receptacle] = []
+    for receptacle in receptacles:
+        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
+        receptacle_obj = obj_mgr.get_object_by_handle(
+            receptacle.parent_object_handle
+        )
+        receptacle_bb = get_aabb(
+            receptacle_obj.object_id, sim, transformed=True
+        )
+
+        if (
+            receptacle_bb.size_y()
+            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        ):
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+            )
+            continue
+
+        recep_points = [
+            receptacle_bb.back_bottom_left,
+            receptacle_bb.back_bottom_right,
+            receptacle_bb.front_bottom_left,
+            receptacle_bb.front_bottom_right,
+        ]
+        # At least 2 corners should be accessible
+        corners_accessible = True
+        corners_accessible = (
+            sum(
+                is_accessible(sim, point, nav_to_min_distance=1.5)
+                for point in recep_points
+            )
+            >= 2
+        )
+
+        if not corners_accessible:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible."
+            )
+            continue
+        else:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is accessible."
+            )
+            navigable_receptacles.append(receptacle)
+
+    logger.info(
+        f"Found {len(navigable_receptacles)}/{len(receptacles)} accessible receptacles."
+    )
+    return navigable_receptacles

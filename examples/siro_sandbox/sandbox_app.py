@@ -45,6 +45,7 @@ from habitat.config.default_structured_configs import (
     HumanoidJointActionConfig,
     ThirdRGBSensorConfig,
 )
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
@@ -308,6 +309,12 @@ class SandboxDriver(GuiAppDriver):
         self._num_busy_objects = None  # currently held by non-gui agents
 
         sim = self.get_sim()
+
+        # recompute the largest indoor island id whenever the sim backend may have changed
+        self._largest_island_idx = get_largest_island_index(
+            sim.sim.pathfinder, sim.sim, allow_outdoor=False
+        )
+
         temp_ids, goal_positions_np = sim.get_targets()
         self._target_obj_ids = [
             sim._scene_obj_ids[temp_id] for temp_id in temp_ids
@@ -604,7 +611,10 @@ class SandboxDriver(GuiAppDriver):
         robot_root = art_obj.transformation
 
         pathfinder = self.get_sim().pathfinder
-        snapped_pos = pathfinder.snap_point(target_on_floor)
+        # snap target to the selected island
+        snapped_pos = pathfinder.snap_point(
+            target_on_floor, island_index=self._largest_island_idx
+        )
         snapped_start_pos = robot_root.translation
         snapped_start_pos.y = snapped_pos.y
 

@@ -1,11 +1,7 @@
 import abc
-from typing import TYPE_CHECKING, Dict
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
+from typing import Any, Dict
 
 from habitat_baselines.common.storage import Storage
-from habitat_baselines.rl.ppo.policy import NetPolicy
 
 
 class Updater(abc.ABC):
@@ -19,11 +15,21 @@ class Updater(abc.ABC):
         Perform an update from data in the storage objet.
         """
 
-    @classmethod
-    @abc.abstractmethod
-    def from_config(
-        cls, actor_critic: NetPolicy, config: "DictConfig"
-    ) -> "Updater":
+    @property
+    def lr_scheduler(self):
+        return None
+
+    def after_update(self) -> None:
         """
-        Instantiate the Updater object from the actor_critic to update and the config.
+        Called after the policy update.
+        """
+
+    def get_resume_state(self) -> Dict[str, Any]:
+        """
+        Gets the optimizer resume state.
+        """
+
+    def load_state_dict(self, state: Dict[str, Any]) -> None:
+        """
+        Loads an optimizer state.
         """

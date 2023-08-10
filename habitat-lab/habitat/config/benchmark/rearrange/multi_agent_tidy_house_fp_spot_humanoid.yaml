@@ -26,7 +26,6 @@ defaults:
     - num_agents_collide
     - composite_stage_goals
     - cooperate_subgoal_reward
-    - runtime_perf_stats
     - agent_blame_measure
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
@@ -169,7 +168,7 @@ habitat:
     agents:
       agent_0:
         radius: 0.25
-        height: 1.8
+        height: 1.41
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:

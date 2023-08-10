@@ -291,9 +291,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
-        self.sim_config.enable_batch_renderer = (
-            config.renderer.enable_batch_renderer
-        )
         super().__init__(self.sim_config)
         # load additional object paths specified by the dataset
         # TODO: Should this be moved elsewhere?
@@ -348,14 +345,20 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "grasp_managers",
                 "rest_pose_data_path",
                 "max_climb",
+                "max_slope",
+                "joint_start_override",
             },
         )
 
         # configure default navmesh parameters to match the configured agent
-        sim_config.navmesh_settings = habitat_sim.nav.NavMeshSettings()
-        sim_config.navmesh_settings.set_defaults()
-        sim_config.navmesh_settings.agent_radius = agent_config.radius
-        sim_config.navmesh_settings.agent_height = agent_config.height
+        if self.habitat_config.default_agent_navmesh:
+            sim_config.navmesh_settings = habitat_sim.nav.NavMeshSettings()
+            sim_config.navmesh_settings.set_defaults()
+            sim_config.navmesh_settings.agent_radius = agent_config.radius
+            sim_config.navmesh_settings.agent_height = agent_config.height
+            sim_config.navmesh_settings.include_static_objects = (
+                self.habitat_config.navmesh_include_static_objects
+            )
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
@@ -392,11 +395,34 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
-        agent_config.action_space = registry.get_action_space_configuration(
-            self.habitat_config.action_space_config
-        )(self.habitat_config).get()
 
-        return habitat_sim.Configuration(sim_config, [agent_config])
+        agent_config.action_space = {
+            0: habitat_sim.ActionSpec("stop"),
+            1: habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.forward_step_size
+                ),
+            ),
+            2: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+            3: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+        }
+
+        output = habitat_sim.Configuration(sim_config, [agent_config])
+        output.enable_batch_renderer = (
+            self.habitat_config.renderer.enable_batch_renderer
+        )
+        return output
 
     @property
     def sensor_suite(self) -> SensorSuite:
@@ -434,8 +460,13 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         else:
             return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: Union[str, np.ndarray, int]) -> Observations:
-        sim_obs = super().step(action)
+    def step(
+        self, action: Optional[Union[str, np.ndarray, int]]
+    ) -> Observations:
+        if action is None:
+            sim_obs = self.get_sensor_observations()
+        else:
+            sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         if self.config.enable_batch_renderer:
             self.add_keyframe_to_observations(sim_obs)

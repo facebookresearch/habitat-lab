@@ -119,9 +119,8 @@ habitat:
       step_repetition_range: 0.2
   simulator:
     type: Sim-v0
-    action_space_config: v0
-    action_space_config_arguments: {}
     forward_step_size: 0.25
+    turn_angle: 10
     create_renderer: false
     requires_textures: true
     lag_observations: 0
@@ -134,8 +133,6 @@ habitat:
     scene_dataset: default
     additional_object_paths: []
     seed: ${habitat.seed}
-    turn_angle: 10
-    tilt_angle: 15
     default_agent_id: 0
     debug_render: false
     debug_render_robot: false
@@ -273,8 +270,10 @@ habitat:
         type: MoveForwardAction
       turn_left:
         type: TurnLeftAction
+        turn_angle: 10
       turn_right:
         type: TurnRightAction
+        turn_angle: 10
   dataset:
     type: PointNav-v1
     split: train

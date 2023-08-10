@@ -14,7 +14,11 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import CriticHead, get_aux_modules
+from habitat_baselines.rl.ppo.policy import (
+    CriticHead,
+    PolicyActionData,
+    get_aux_modules,
+)
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -49,6 +53,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         )
         self._all_actions = self._setup_actions()
         self._n_actions = len(self._all_actions)
+        self._termination_obs_name = self._config.termination_obs_name
 
         use_obs_space = spaces.Dict(
             {
@@ -122,7 +127,16 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         cur_skills,
         log_info,
     ):
-        return (observations["should_replan"] > 0.0).view(-1).cpu()
+        if self._termination_obs_name is None:
+            return super().get_termination(
+                observations,
+                rnn_hidden_states,
+                prev_actions,
+                masks,
+                cur_skills,
+                log_info,
+            )
+        return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
 
     def create_hl_info(self):
         return {"actions": None}
@@ -178,7 +192,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         action,
         rnn_build_seq_info,
     ):
-        features, rnn_hxs = self.forward(
+        features, rnn_hidden_states = self.forward(
             observations, rnn_hidden_states, masks, rnn_build_seq_info
         )
         distribution = self._policy(features)
@@ -240,10 +254,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             next_skill,
             skill_args_data,
             immediate_end,
-            {
-                "action_log_probs": action_log_probs,
-                "values": values,
-                "actions": skill_sel,
-                "rnn_hidden_states": rnn_hidden_states,
-            },
+            PolicyActionData(
+                action_log_probs=action_log_probs,
+                values=values,
+                actions=skill_sel,
+                rnn_hidden_states=rnn_hidden_states,
+            ),
         )

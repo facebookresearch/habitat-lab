@@ -25,6 +25,7 @@ def make_env_fn(
         config: root exp config that has core env config node as well as
             env-specific config node.
         env_class: class type of the env to be created.
+        dataset: If specified, load the environment using this dataset.
 
     Returns:
         env object created according to specification.

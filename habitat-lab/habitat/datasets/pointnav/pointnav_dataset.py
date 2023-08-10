@@ -7,7 +7,6 @@
 import gzip
 import json
 import os
-import pickle
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from habitat.config import read_write
@@ -93,16 +92,11 @@ class PointNavDatasetV1(Dataset):
 
     def _load_from_file(self, fname: str, scenes_dir: str) -> None:
         """
-        Load the data from a file into `self.episodes`. This can load `.pickle`
-        or `.json.gz` file formats.
+        Load the data from a file into `self.episodes`.
         """
 
-        if fname.endswith(".pickle"):
-            with open(fname, "rb") as f:
-                self.from_binary(pickle.load(f), scenes_dir=scenes_dir)
-        else:
-            with gzip.open(fname, "rt") as f:
-                self.from_json(f.read(), scenes_dir=scenes_dir)
+        with gzip.open(fname, "rt") as f:
+            self.from_json(f.read(), scenes_dir=scenes_dir)
 
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []

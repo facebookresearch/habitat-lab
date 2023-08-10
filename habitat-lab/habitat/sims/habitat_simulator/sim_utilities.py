@@ -151,13 +151,13 @@ def bb_ray_prescreen(
         support_obj_ids = [-1]
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
-    highest_support_impact: mn.Vector3 = None
+    highest_support_impact: Optional[mn.Vector3] = None
     highest_support_impact_height = None
-    highest_support_impact_with_stage = False
+    highest_support_impact_id = None
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj.collision_shape_aabb)
+    bb_corners = get_bb_corners(obj.root_scene_node.cumulative_bb)
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
@@ -181,7 +181,7 @@ def bb_ray_prescreen(
                 if hit.object_id == obj.object_id:
                     continue
                 elif hit.object_id in support_obj_ids:
-                    hit_point = ray.origin + ray.direction * hit.ray_distance
+                    hit_point = hit.point
                     support_impacts[ix] = hit_point
                     support_impact_height = mn.math.dot(
                         hit_point, -gravity_dir
@@ -194,10 +194,11 @@ def bb_ray_prescreen(
                     ):
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
-                        highest_support_impact_with_stage = hit.object_id == -1
+                        highest_support_impact_id = hit.object_id
 
                 # terminates at the first non-self ray hit
                 break
+
     # compute the relative base height of the object from its lowest bb corner and COM
     base_rel_height = (
         lowest_key_point_height
@@ -206,16 +207,16 @@ def bb_ray_prescreen(
 
     # account for the affects of stage mesh margin
     # Warning: Bullet raycast on stage triangle mesh does NOT consider the margin, so explicitly consider this here.
-    margin_offset = (
-        0
-        if not highest_support_impact_with_stage
-        else sim.get_stage_initialization_template().margin
-    )
+    margin_offset = 0
+    if highest_support_impact_id is None:
+        pass
+    elif highest_support_impact_id == -1:
+        margin_offset = sim.get_stage_initialization_template().margin
 
     surface_snap_point = (
         None
         if 0 not in support_impacts
-        else support_impacts[0]
+        else highest_support_impact
         + gravity_dir * (base_rel_height - margin_offset)
     )
 
@@ -254,7 +255,9 @@ def snap_down(
         # set default support surface to stage/ground mesh
         support_obj_ids = [-1]
 
-    bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj_ids)
+    bb_ray_prescreen_results = bb_ray_prescreen(
+        sim, obj, support_obj_ids, check_all_corners=False
+    )
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:
         # no support under this object, return failure
@@ -273,7 +276,7 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.01)
+                (cp.contact_distance < -0.05)
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids

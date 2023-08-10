@@ -294,14 +294,22 @@ def test_rl_vectorized_envs(gpu2gpu):
 
 
 @pytest.mark.parametrize("classic_replay_renderer", [False, True])
+@pytest.mark.parametrize("sensor_uuid", ["rgb_sensor", "depth_sensor"])
 @pytest.mark.parametrize("gpu2gpu", [False])
 def test_rl_vectorized_envs_batch_renderer(
-    gpu2gpu: bool, classic_replay_renderer: bool
+    gpu2gpu: bool, sensor_uuid: str, classic_replay_renderer: bool
 ):
     import habitat_sim
 
     if gpu2gpu and not habitat_sim.cuda_enabled:
         pytest.skip("GPU-GPU requires CUDA")
+
+    if sensor_uuid == "rgb_sensor":
+        obs_key = "rgb"
+    elif sensor_uuid == "depth_sensor":
+        obs_key = "depth"
+    else:
+        pytest.fail("Unknown sensor uuid: " + sensor_uuid)
 
     configs, datasets = _load_test_data()
     for config in configs:
@@ -316,9 +324,9 @@ def test_rl_vectorized_envs_batch_renderer(
             config.habitat.simulator.create_renderer = False
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
             agent_config = get_agent_config(config.habitat.simulator)
-            # Only keep the rgb_sensor
+            ## Only keep one sensor
             agent_config.sim_sensors = {
-                "rgb_sensor": agent_config.sim_sensors["rgb_sensor"]
+                sensor_uuid: agent_config.sim_sensors[sensor_uuid]
             }
 
     num_envs = len(configs)
@@ -338,16 +346,21 @@ def test_rl_vectorized_envs_batch_renderer(
         assert len(observations) == num_envs
 
         # TODO: Add screenshot tests. Image stats are compared until then.
-        reset_image_mean: List[float] = [126.23, 126.84, 126.62, 125.63]
-        reset_image_std_dev: List[float] = [26.54, 26.16, 25.80, 26.56]
-        tiled_img = envs.render(mode="rgb_array")
+        threshold: float = 0.01
+        if sensor_uuid == "rgb_sensor":
+            baseline_mean = [126.23, 126.84, 126.62, 125.63]
+            baseline_std_dev = [26.54, 26.16, 25.80, 26.56]
+        elif sensor_uuid == "depth_sensor":
+            baseline_mean = [0.4852, 0.4886, 0.4920, 0.4956]
+            baseline_std_dev = [0.0107, 0.0112, 0.0117, 0.0122]
         for env_idx in range(num_envs):
-            mean = float(np.mean(tiled_img[env_idx]))
-            std_dev = float(np.std(tiled_img[env_idx]))
-            assert abs(reset_image_mean[env_idx] - mean) < 0.01
-            assert abs(reset_image_std_dev[env_idx] - std_dev) < 0.01
+            env_obs = observations[env_idx][obs_key]
+            mean = float(np.mean(env_obs[env_idx]))
+            std_dev = float(np.std(env_obs[env_idx]))
+            assert abs(baseline_mean[env_idx] - mean) < threshold
+            assert abs(baseline_std_dev[env_idx] - std_dev) < threshold
 
-        for i in range(2 * configs[0].habitat.environment.max_episode_steps):
+        for _ in range(2 * configs[0].habitat.environment.max_episode_steps):
             outputs = envs.step(
                 sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
             )
@@ -368,20 +381,18 @@ def test_rl_vectorized_envs_batch_renderer(
             assert len(dones) == num_envs
             assert len(infos) == num_envs
 
+            # Note: Uncomment this line to visualize:
+            # envs.render(mode="human")
+
             tiled_img = envs.render(mode="rgb_array")
             new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
             new_width = int(np.ceil(float(NUM_ENVS) / new_height))
-            h, w, c = observations[0]["rgb"].shape
+            h, w, _ = observations[0][obs_key].shape
             assert tiled_img.shape == (
                 h * new_height,
                 w * new_width,
-                c,
+                3,
             ), "vector env render is broken"
-
-            if (i + 1) % configs[0].habitat.environment.max_episode_steps == 0:
-                assert all(
-                    dones
-                ), "dones should be true after max_episode steps"
 
 
 @pytest.mark.parametrize("gpu2gpu", [False, True])
