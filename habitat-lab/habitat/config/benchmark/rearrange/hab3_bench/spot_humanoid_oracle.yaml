@@ -2,19 +2,7 @@
 
 defaults:
   - /benchmark/rearrange: multi_agent_tidy_house
-  - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - /habitat_baselines/rl/agent: pop_play
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
-    - add_virtual_keys_base
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
-    - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
-  - /habitat/task/measurements:
-    - composite_subgoal_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -26,7 +14,6 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - humanoid_joint_sensor
-    - other_agent_gps
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
@@ -80,6 +67,8 @@ habitat:
       - agent_0_other_agent_gps
       - agent_0_has_finished_oracle_nav
       - agent_1_head_depth
+      - agent_1_does_want_terminate
+      - agent_0_does_want_terminate
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
       - agent_1_obj_goal_sensor
@@ -134,7 +123,7 @@ habitat_baselines:
   num_updates: -1
   total_num_steps: 1.0e10
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['composite_success']
+  eval_keys_to_include_in_name: []
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 

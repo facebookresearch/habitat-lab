@@ -1023,12 +1023,17 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
-class DoesWantTerminate(Measure):
+class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
     """
     Returns 1 if the agent has called the stop action and 0 otherwise.
     """
 
     cls_uuid: str = "does_want_terminate"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1038,7 +1043,14 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_rearrange_stop"
+        else:
+            use_k = "rearrange_stop"
+        
+        # TODO: this is a hack, self.agent_id should be set somewhere
+        use_k = "rearrange_stop"
+        self._metric = task.actions[use_k].does_want_terminate
 
 
 @registry.register_measure
