@@ -21,7 +21,7 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.ppo import PPO
 from habitat_baselines.rl.ppo.updater import Updater
 
@@ -101,7 +101,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         self,
         num_envs: int,
         env_spec: EnvironmentSpec,
-        actor_critic: Policy,
+        actor_critic: NetPolicy,
         policy_action_space: spaces.Space,
         config: "DictConfig",
         device,
@@ -166,7 +166,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def policy_action_space(self):
         return self._policy_action_space
 
-    def _create_policy(self) -> Policy:
+    def _create_policy(self) -> NetPolicy:
         """
         Creates and initializes the policy. This should also load any model weights from checkpoints.
         """
@@ -225,7 +225,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._rollouts
 
     @property
-    def actor_critic(self) -> Policy:
+    def actor_critic(self) -> NetPolicy:
         return self._actor_critic
 
     @property

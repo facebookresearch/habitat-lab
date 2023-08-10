@@ -545,7 +545,7 @@ def get_aux_modules(
     if aux_loss_config is None:
         return aux_loss_modules
     for aux_loss_name, cfg in aux_loss_config.items():
-        aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
+        aux_loss = baseline_registry.get_auxiliary_loss(str(aux_loss_name))
 
         aux_loss_modules[aux_loss_name] = aux_loss(
             action_space,

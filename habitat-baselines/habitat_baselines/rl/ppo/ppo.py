@@ -18,7 +18,7 @@ from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.updater import Updater
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import (
@@ -35,7 +35,7 @@ class PPO(nn.Module, Updater):
     entropy_coef: Union[float, LagrangeInequalityCoefficient]
 
     @classmethod
-    def from_config(cls, actor_critic: Policy, config):
+    def from_config(cls, actor_critic: NetPolicy, config):
         return cls(
             actor_critic=actor_critic,
             clip_param=config.clip_param,
@@ -54,7 +54,7 @@ class PPO(nn.Module, Updater):
 
     def __init__(
         self,
-        actor_critic: Policy,
+        actor_critic: NetPolicy,
         clip_param: float,
         ppo_epoch: int,
         num_mini_batch: int,
