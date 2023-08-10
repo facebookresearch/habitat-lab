@@ -822,27 +822,27 @@ class BaseVelHumanoidAction(BaseVelAction, HumanoidJointAction):
         base_T = self.cur_articulated_agent.base_transformation
         self.humanoid_controller.obj_transform_base = base_T
         
-        self.humanoid_controller.set_framerate_for_linspeed(
-            self.base_vel_ctrl.linear_velocity[0], 
-            self.base_vel_ctrl.angular_velocity[1], 
-            self._sim.ctrl_freq
-        )
+        # self.humanoid_controller.set_framerate_for_linspeed(
+        #     self.base_vel_ctrl.linear_velocity[0], 
+        #     self.base_vel_ctrl.angular_velocity[1], 
+        #     self._sim.ctrl_freq
+        # )
 
         
         # Compute the target base transfrom
-        rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(base_T.rotation()), base_T.translation
-        )
-        target_rigid_state = self.base_vel_ctrl.integrate_transform(
-            1 / self._sim.ctrl_freq, rigid_state
-        )
+        # rigid_state = habitat_sim.RigidState(
+        #     mn.Quaternion.from_matrix(base_T.rotation()), base_T.translation
+        # ) 
+        # target_rigid_state = self.base_vel_ctrl.integrate_transform(
+        #     1 / self._sim.ctrl_freq, rigid_state
+        # )
 
-        target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), target_rigid_state.translation
-        )
+        # A very hacky velocity computation
         # This assumes that we only rotate or move forward
-        target_position = target_trans.transform_vector(mn.Vector3(1,0,0))
-
+        if self.base_vel_ctrl.linear_velocity[0] > 0:
+            target_position = base_T.transform_vector(mn.Vector3(0,np.sign( self.base_vel_ctrl.angular_velocity[1]),0))
+        else:
+            target_position = base_T.transform_vector(mn.Vector3(1,0,0))
         self.humanoid_controller.calculate_walk_pose(target_position)
         self._update_controller_to_navmesh()
             
