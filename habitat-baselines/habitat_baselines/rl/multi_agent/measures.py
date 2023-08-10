@@ -177,3 +177,39 @@ class AgentBlameMeasure(Measure):
             else:
                 raise ValueError()
         return ret
+
+
+@registry.register_measure
+class SocialNavReward(Measure):
+    """
+    Reward that gives a continuous reward on the social navigation task.
+    """
+
+    cls_uuid: str = "social_nav_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavReward.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        # self._stage_reward = config.stage_sparse_reward
+
+    def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+        position_human = kwargs["observations"]["agent_1_localization_sensor"][
+            :3
+        ]
+        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
+            :3
+        ]
+
+        distance = np.linalg.norm(position_human - position_robot)
+        self._metric = -distance
