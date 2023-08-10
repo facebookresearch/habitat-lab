@@ -41,10 +41,15 @@ class KinematicHumanoid(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.7),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.5),
+                    cam_look_at_pos=mn.Vector3(1, 0, 0.75),
                     attached_link_id=-2,
                 ),
+                # "third": ArticulatedAgentCameraParams(
+                #     cam_offset_pos=mn.Vector3(-0.7, -0.7, 1.4),
+                #     cam_look_at_pos=mn.Vector3(1, 0.75, 0),
+                #     attached_link_id=-2,
+                # ),
             },
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
@@ -86,6 +91,7 @@ class KinematicHumanoid(MobileManipulator):
         add_rot = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
         )
+
         perm = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
         )
@@ -124,9 +130,8 @@ class KinematicHumanoid(MobileManipulator):
         """Get the humanoid base ground position"""
         # via configured local offset from origin
         base_transform = self.base_transformation
-        return base_transform.translation + base_transform.transform_vector(
-            self.params.base_offset
-        )
+        return base_transform.translation + self.params.base_offset
+        
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
@@ -137,12 +142,10 @@ class KinematicHumanoid(MobileManipulator):
         if len(position) != 3:
             raise ValueError("Base position needs to be three dimensions")
         base_transform = self.base_transformation
-        base_pos = position - base_transform.transform_vector(
-            self.params.base_offset
-        )
+        base_pos = position - self.params.base_offset
         base_transform.translation = base_pos
-        final_transform = base_transform @ self.offset_transform
-
+        add_rot = self.offset_transform_base.inverted()
+        final_transform = base_transform @ add_rot @ self.offset_transform
         self.sim_obj.transformation = final_transform
 
     @property
@@ -196,7 +199,8 @@ class KinematicHumanoid(MobileManipulator):
                     if cam_info.attached_link_id == -1:
                         link_trans = self.sim_obj.transformation
                     elif cam_info.attached_link_id == -2:
-                        link_trans = self.base_transformation
+                        rot_offset = self.offset_transform_base.inverted()
+                        link_trans = self.base_transformation @ rot_offset
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
                             cam_info.attached_link_id
@@ -249,9 +253,9 @@ class KinematicHumanoid(MobileManipulator):
 
         add_rot = self.offset_transform_base.inverted()
         final_transform = (base_transform @ add_rot) @ offset_transform
-
+        
         self.sim_obj.transformation = final_transform
-
+        
     def get_joint_transform(self):
         """Returns the joints and base transform of the humanoid"""
         # TODO: should this go into articulated agent?
