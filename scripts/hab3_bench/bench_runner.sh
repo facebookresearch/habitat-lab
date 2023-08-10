@@ -28,15 +28,22 @@ do
     #TODO: different configs for different agent pairs. Can we make a single high-level config
 
     #Single agent robot
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_and_spot_$i"
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_and_spot_$i"
 
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml --n-steps 1 --n-procs 1 --out-name test
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg hab3_bench/spot_humanoid_oracle.yaml --n-steps 1 --n-procs 1 --out-name test
     #multi-agent robots
+
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_vel.yaml --n-steps 30 --n-procs 1 --out-name test  
 
     #multi-agent robot, human (no skinning)
 
     #multi-agent robot, human (+skinning)
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 1 --n-procs 1 --out-name test --render
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 300 --n-procs 1 --out-name test 
 
     #multi-agent robot, human (+skinning) + path actions
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_oracle.yaml --n-steps 300 --n-procs 1 --out-name test
 
     #stretch features:
     #HSSD vs ReplicaCAD

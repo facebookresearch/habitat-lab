@@ -58,12 +58,6 @@ class HabDemoRunner:
 
     def step_env(self, action):
         start = time.time()
-        print("action")
-        print(action)
-        print("---")
-        print("action[0]")
-        print(action[0])
-        print("---")
         obs = self.envs.step(action[0])  # type: ignore[has-type]
         step_time = time.time() - start
         return obs, step_time
@@ -94,9 +88,12 @@ class HabDemoRunner:
             from habitat_sim.utils import viz_utils as vut
 
             # TODO: setup an optional 3rd person render camera for debugging
+            sensor_to_use = "agent_1_head_depth"
+            if "agent_1_head_depth" not in final_vid[0]:
+                sensor_to_use = "agent_1_third_rgb"
             vut.make_video(
                 final_vid,
-                "agent_1_third_rgb",
+                sensor_to_use,
                 "color",
                 "data/profile/benchmark_render_output",
                 open_vid=True,

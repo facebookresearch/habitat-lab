@@ -13,12 +13,9 @@ defaults:
   # - /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
 
   - /habitat/task/measurements:
-    - does_want_terminate
     - composite_success
     - num_steps
-    # - did_agents_collide
-    # - composite_stage_goals
-    # - cooperate_subgoal_reward
+
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -29,7 +26,6 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
-    # - other_agent_gps
   - _self_
 
 type: RearrangeCompositeTask-v0
