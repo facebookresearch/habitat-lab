@@ -312,7 +312,7 @@ class SandboxDriver(GuiAppDriver):
 
         # recompute the largest indoor island id whenever the sim backend may have changed
         self._largest_island_idx = get_largest_island_index(
-            sim.sim.pathfinder, sim.sim, allow_outdoor=False
+            sim.pathfinder, sim, allow_outdoor=False
         )
 
         temp_ids, goal_positions_np = sim.get_targets()
