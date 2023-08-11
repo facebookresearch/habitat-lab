@@ -20,11 +20,12 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import argparse
 from datetime import datetime
 from functools import wraps
-from typing import Any, Dict, List, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple
 
 import magnum as mn
 import numpy as np
-from controllers import ControllerHelper, GuiHumanoidController
+from controllers.controller_helper import ControllerHelper
+from controllers.gui_controller import GuiHumanoidController
 from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
 from serialize_utils import (
@@ -36,12 +37,12 @@ from serialize_utils import (
 )
 
 import habitat
+import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     HumanoidJointActionConfig,
-    PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
@@ -50,6 +51,9 @@ from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from habitat.gui.text_drawer import TextOnScreenAlignment
 from habitat_baselines.config.default import get_config as get_baselines_config
+
+if TYPE_CHECKING:
+    from habitat.core.environments import GymHabitatEnv
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
@@ -101,7 +105,12 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.concur_render = False
 
         dataset = self._make_dataset(config=config)
-        self.env = habitat.Env(config=config, dataset=dataset)
+        self.gym_habitat_env: "GymHabitatEnv" = (
+            habitat.gym.make_gym_from_config(config=config, dataset=dataset)
+        )
+        self.habitat_env: habitat.Env = (
+            self.gym_habitat_env.unwrapped.habitat_env
+        )
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -109,8 +118,13 @@ class SandboxDriver(GuiAppDriver):
                 args.gui_controlled_agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
-            if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
-                del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+            if (
+                oracle_nav_sensor_key
+                in self.habitat_env.task.sensor_suite.sensors
+            ):
+                del self.habitat_env.task.sensor_suite.sensors[
+                    oracle_nav_sensor_key
+                ]
 
         self._save_filepath_base = args.save_filepath_base
         self._save_episode_record = args.save_episode_record
@@ -123,7 +137,7 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.env, config, args, gui_input, self._step_recorder
+            self.gym_habitat_env, config, args, gui_input, self._step_recorder
         )
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
@@ -173,7 +187,7 @@ class SandboxDriver(GuiAppDriver):
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
-        self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
+        self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
         self._reset_environment()
 
@@ -215,8 +229,12 @@ class SandboxDriver(GuiAppDriver):
         return dataset
 
     def _env_step(self, action):
-        self._obs = self.env.step(action)
-        self._metrics = self.env.get_metrics()
+        (
+            self._obs,
+            reward,
+            done,
+            self._metrics,
+        ) = self.gym_habitat_env.step(action)
 
     def _next_episode_exists(self):
         return self._num_episodes_done < self._num_iter_episodes - 1
@@ -224,10 +242,10 @@ class SandboxDriver(GuiAppDriver):
     def _env_episode_active(self) -> bool:
         """
         Returns True if current episode is active:
-        1) not self.env.episode_over - none of the constraints is violated, or
+        1) not self.habitat_env.episode_over - none of the constraints is violated, or
         2) not self._env_task_complete - success measure value is not True
         """
-        return not (self.env.episode_over or self._env_task_complete)
+        return not (self.habitat_env.episode_over or self._env_task_complete)
 
     def _check_compute_action_and_step_env(self):
         # step env if episode is active
@@ -241,7 +259,7 @@ class SandboxDriver(GuiAppDriver):
         if self._save_episode_record:
             self._record_action(action)
             self._record_task_state()
-            self._record_metrics(self.env.get_metrics())
+            self._record_metrics(self.habitat_env.get_metrics())
             self._step_recorder.finish_step()
 
     def _find_episode_save_filepath_base(self):
@@ -267,8 +285,8 @@ class SandboxDriver(GuiAppDriver):
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
         ep_dict["dataset"] = self._dataset_config
-        ep_dict["scene_id"] = self.env.current_episode.scene_id
-        ep_dict["episode_id"] = self.env.current_episode.episode_id
+        ep_dict["scene_id"] = self.habitat_env.current_episode.scene_id
+        ep_dict["episode_id"] = self.habitat_env.current_episode.episode_id
 
         ep_dict["target_obj_ids"] = self._target_obj_ids
         ep_dict[
@@ -283,8 +301,8 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
-        self._obs = self.env.reset()
-        self._metrics = self.env.get_metrics()
+        self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
+
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -294,7 +312,7 @@ class SandboxDriver(GuiAppDriver):
 
         # recompute the largest indoor island id whenever the sim backend may have changed
         self._largest_island_idx = get_largest_island_index(
-            sim.sim.pathfinder, sim.sim, allow_outdoor=False
+            sim.pathfinder, sim, allow_outdoor=False
         )
 
         temp_ids, goal_positions_np = sim.get_targets()
@@ -326,12 +344,13 @@ class SandboxDriver(GuiAppDriver):
             self._reset_episode_recorder()
 
     def _check_save_episode_data(self, session_ended):
-        assert self._save_filepath_base
         saved_keyframes, saved_episode_data = False, False
         if self._save_gfx_replay_keyframes and session_ended:
+            assert self._save_filepath_base
             self._save_recorded_keyframes_to_file()
             saved_keyframes = True
         if self._save_episode_record:
+            assert self._save_filepath_base
             self._save_episode_recorder_dict()
             saved_episode_data = True
 
@@ -371,7 +390,7 @@ class SandboxDriver(GuiAppDriver):
 
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
-        return self.env.task._sim
+        return self.habitat_env.task._sim
 
     def _draw_nav_hint_from_agent(self, end_pos, end_radius, color):
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
@@ -417,7 +436,7 @@ class SandboxDriver(GuiAppDriver):
         if self.is_free_camera_mode():
             return None
 
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
 
         drop_pos = None
         grasp_object_id = None
@@ -491,13 +510,13 @@ class SandboxDriver(GuiAppDriver):
 
     def _is_target_object_at_goal_position(self, target_obj_idx):
         this_target_pos = self._get_target_object_position(target_obj_idx)
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
         return (
             this_target_pos - self._goal_positions[target_obj_idx]
         ).length() < end_radius
 
     def _update_task(self):
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
 
         grasped_objects_idxs = self._get_grasped_objects_idxs()
         self._num_remaining_objects = 0
@@ -546,7 +565,7 @@ class SandboxDriver(GuiAppDriver):
         agents_mgr = sim.agents_mgr
 
         grasped_objects_idxs = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index():
                 continue
             grasp_mgr = agents_mgr._all_agent_data[agent_idx].grasp_mgr
@@ -950,7 +969,7 @@ class SandboxDriver(GuiAppDriver):
 
     def _record_task_state(self):
         agent_states = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             art_obj = (
                 self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
             )
@@ -1077,8 +1096,8 @@ class SandboxDriver(GuiAppDriver):
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
         if self.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.env._sim.navmesh_visualization = (  # type: ignore
-                not self.env._sim.navmesh_visualization  # type: ignore
+            self.habitat_env._sim.navmesh_visualization = (  # type: ignore
+                not self.habitat_env._sim.navmesh_visualization  # type: ignore
             )
 
         if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
@@ -1299,15 +1318,6 @@ if __name__ == "__main__":
             "colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range."
         ),
     )
-    # temp argument:
-    # allowed to switch between oracle baseline nav
-    # and random base vel action
-    parser.add_argument(
-        "--sample-random-baseline-base-vel",
-        action="store_true",
-        default=False,
-        help="Sample random BaselinesController base vel",
-    )
     parser.add_argument(
         "--show-tutorial",
         action="store_true",
@@ -1361,16 +1371,12 @@ if __name__ == "__main__":
     ) = _parse_debug_third_person(args, framebuffer_size)
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
-    # config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
         habitat_config = config.habitat
         env_config = habitat_config.environment
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
-        task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
-        # task_config.actions[
-        #     "agent_1_oracle_nav_action"
-        # ] = OracleNavActionConfig(agent_index=1)
+        gym_obs_keys = habitat_config.gym.obs_keys
 
         agent_config = get_agent_config(sim_config=sim_config)
 
@@ -1385,7 +1391,9 @@ if __name__ == "__main__":
                 }
             )
             agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
-            args.debug_images.append(f"{agent_key}third_rgb")
+            agent_sensor_name = f"{agent_key}third_rgb"
+            args.debug_images.append(agent_sensor_name)
+            gym_obs_keys.append(agent_sensor_name)
 
         # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
@@ -1433,6 +1441,17 @@ if __name__ == "__main__":
                 sim_config, agent_id=args.gui_controlled_agent_index
             )
             gui_controlled_agent_config.sim_sensors.clear()
+
+            for sensor_name in [
+                "head_depth",
+                "head_rgb",
+                "has_finished_oracle_nav",
+            ]:
+                agent_sensor_name = (
+                    f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
+                )
+                if agent_sensor_name in gym_obs_keys:
+                    gym_obs_keys.remove(agent_sensor_name)
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[
