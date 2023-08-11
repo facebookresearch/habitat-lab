@@ -44,9 +44,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
-        resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done_fn: Callable[[], float],
+        resume_state: Optional[Dict[str, Any]] = None,
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
         self._agents = []
@@ -222,15 +222,15 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         agent_name,
     ):
         return SingleAgentAccessMgr(
-            config,
-            agent_env_spec,
-            is_distrib,
-            device,
-            use_resume_state,
-            num_envs,
-            percent_done_fn,
-            lr_schedule_fn,
-            agent_name,
+            config=config,
+            env_spec=agent_env_spec,
+            is_distrib=is_distrib,
+            device=device,
+            num_envs=num_envs,
+            percent_done_fn=percent_done_fn,
+            resume_state=use_resume_state,
+            lr_schedule_fn=lr_schedule_fn,
+            agent_name=agent_name,
         )
 
     @property
