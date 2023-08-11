@@ -5,6 +5,7 @@
 import argparse
 import multiprocessing
 import os
+import random
 import time
 from collections import defaultdict
 from sys import platform
@@ -12,8 +13,8 @@ from sys import platform
 import numpy as np
 
 import habitat
-import random
 from habitat.core.spaces import ActionSpace
+
 
 def create_env(args, proc_i):
     procs_per_gpu = args.n_procs // args.n_gpus
@@ -32,10 +33,11 @@ def create_env(args, proc_i):
 
 _barrier = None
 
+
 class ActionSpaceWrapper(ActionSpace):
     def sample(self):
         # custom action sampler, this is because the default
-        # sampler only samples one action at a time. Here we want to 
+        # sampler only samples one action at a time. Here we want to
         # sample actions from both agents
         all_actions = []
         all_action_args = {}
@@ -43,14 +45,14 @@ class ActionSpaceWrapper(ActionSpace):
             all_actions.append(action_name)
             for action_arg_name, action_arg in action_args.items():
                 if "oracle_nav" not in action_arg_name:
-                    action_arg_value  = action_arg.sample()
+                    action_arg_value = action_arg.sample()
                 else:
-                    action_arg_value = np.array([random.randint(0, self.num_items_nav)]) + 1
+                    action_arg_value = (
+                        np.array([random.randint(0, self.num_items_nav)]) + 1
+                    )
                 all_action_args[action_arg_name] = action_arg_value
-        return {
-            "action": tuple(all_actions),
-            "action_args": all_action_args
-        }
+        return {"action": tuple(all_actions), "action_args": all_action_args}
+
 
 class HabDemoRunner:
     def __init__(self, args):
@@ -72,7 +74,7 @@ class HabDemoRunner:
         profile_sums = defaultdict(lambda: 0)  # type: ignore[var-annotated]
 
         for step_idx in range(self.args.n_steps):
-            print(f"step_idx = {step_idx}")
+            # print(f"step_idx = {step_idx}")
             actions = self.get_actions(step_idx)  # type: ignore[has-type]
 
             obs, step_time = self.step_env(actions)
@@ -114,8 +116,6 @@ class HabDemoRunner:
 
         return profile_sums
 
-
-
     def init_common(self, proc_idx):
         if self.args.n_gpus == 8:
             cores_per_proc = 8
@@ -148,7 +148,9 @@ class HabDemoRunner:
             print("HERE2")
             ac_space = self.envs.action_spaces[0]
         ac_space = ActionSpaceWrapper(ac_space.spaces)
-        ac_space.num_items_nav = len(self.envs.task.pddl_problem.get_ordered_entities_list())
+        ac_space.num_items_nav = len(
+            self.envs.task.pddl_problem.get_ordered_entities_list()
+        )
         if self.args.load_actions is not None:
             with open(self.args.load_actions, "rb") as f:
                 use_actions = np.load(f)
@@ -172,6 +174,7 @@ class HabDemoRunner:
             self.get_actions = lambda i: np.array(
                 [ac_space.sample() for _ in range(self.args.n_procs)]
             )
+
     def benchmark(self):
         if self.args.n_procs == 1:  # or self.args.vector_env:
             return self._bench_target()
@@ -257,9 +260,9 @@ if __name__ == "__main__":
 
         print(save_str)
         scene_id = args.cfg.split("/")[-1].split(".")[0]
-        save_dir = "data/profile"
+        save_dir = "data/profile/hab3"
         os.makedirs(save_dir, exist_ok=True)
-        fname = f"{save_dir}/{args.n_procs}_{args.n_steps}_{args.reset_interval}_{scene_id}_{args.out_name}.txt"
+        fname = f"{save_dir}/{args.n_procs}_{args.n_steps}_{args.reset_interval}_{args.out_name}.txt"
         with open(fname, "w") as f:
             f.write(save_str)
 
