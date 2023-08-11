@@ -29,7 +29,7 @@ class AgentAccessMgr(ABC):
         device,
         resume_state: Optional[Dict[str, Any]],
         num_envs: int,
-        percent_done_fn: Callable[[], float],
+        percent_done_fn: Optional[Callable[[], float]],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
         pass
