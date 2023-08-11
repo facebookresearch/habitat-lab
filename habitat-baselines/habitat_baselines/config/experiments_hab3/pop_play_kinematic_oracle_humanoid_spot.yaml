@@ -13,9 +13,11 @@ defaults:
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+
+
+
   - /habitat/task/measurements:
     - composite_subgoal_reward
-    - runtime_perf_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -30,6 +32,15 @@ defaults:
     - other_agent_gps
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
@@ -47,6 +58,7 @@ habitat:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
       agent_1_oracle_nav_action:
+        type: OracleNavAction
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
   environment:
