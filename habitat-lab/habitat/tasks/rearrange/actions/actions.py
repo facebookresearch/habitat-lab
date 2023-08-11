@@ -714,10 +714,10 @@ class HumanoidJointAction(ArticulatedAgentAction):
         # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
         return spaces.Dict(
             {
-                "human_joints_trans": spaces.Box(
+                f"{self._action_arg_prefix}human_joints_trans": spaces.Box(
                     shape=(4 * num_joints + num_dim_transform * 2,),
-                    low=-1,
-                    high=1,
+                    low=-np.inf,
+                    high=np.inf,
                     dtype=np.float32,
                 )
             }

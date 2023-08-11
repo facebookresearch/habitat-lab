@@ -258,7 +258,7 @@ class HabGymWrapper(gym.Wrapper):
             )
         else:
             hab_action = {"action": action}
-        return self._direct_hab_step(hab_action)
+        return self.direct_hab_step(hab_action)
 
     @property
     def number_of_episodes(self) -> int:
@@ -267,7 +267,7 @@ class HabGymWrapper(gym.Wrapper):
     def current_episode(self, all_info: bool = False) -> "BaseEpisode":
         return self.env.current_episode(all_info)
 
-    def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
+    def direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
         obs, reward, done, info = self.env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
