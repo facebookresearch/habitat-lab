@@ -716,9 +716,11 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
-        static_T = [
-            rom.get_object_by_id(i).transformation for i in self._scene_obj_ids
-        ]
+        static_T, static_vel = [], []
+        for i in self.scene_obj_ids:
+            static_obj = rom.get_object_by_id(i) 
+            static_T.append(static_obj.transformation)
+            static_vel.append((static_obj.linear_velocity, static_obj.angular_velocity))
         art_pos = [ao.joint_positions for ao in self.art_objs]
 
         articulated_agent_js = [
@@ -730,6 +732,7 @@ class RearrangeSim(HabitatSim):
             "articulated_agent_T": articulated_agent_T,
             "art_T": art_T,
             "static_T": static_T,
+            "static_vel": static_vel,
             "art_pos": art_pos,
             "obj_hold": [
                 grasp_mgr.snap_idx for grasp_mgr in self.agents_mgr.grasp_iter
@@ -770,12 +773,12 @@ class RearrangeSim(HabitatSim):
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
 
-        for T, i in zip(state["static_T"], self._scene_obj_ids):
+        for T, vel, i in zip(state["static_T"], state["static_vel"], self._scene_obj_ids):
             # reset object transform
             obj = rom.get_object_by_id(i)
             obj.transformation = T
-            obj.linear_velocity = mn.Vector3()
-            obj.angular_velocity = mn.Vector3()
+            obj.linear_velocity = vel[0]
+            obj.angular_velocity = vel[1]
 
         for p, ao in zip(state["art_pos"], self.art_objs):
             ao.joint_positions = p

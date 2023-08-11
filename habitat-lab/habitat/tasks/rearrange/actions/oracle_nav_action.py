@@ -342,10 +342,10 @@ class OracleNavCoordAction(OracleNavAction):
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
             nav_to_target_coord
         )
+        
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
-
         if curr_path_points is None:
             raise Exception
         else:

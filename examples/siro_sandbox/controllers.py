@@ -242,9 +242,9 @@ class StateMachineController(BaselinesController):
             obj_trans = self.rigid_obj_interest.translation
             action_names, action_args = [], {}
             if not finish_oracle_nav:
-                if obj_trans[1] < 0.1:
-                    action_names.append("agent_0_oracle_nav_action")
-                    action_args["agent_0_oracle_nav_coord"] = np.array(obj_trans)
+                # if obj_trans[1] < 0.1:
+                action_names.append("agent_0_oracle_nav_action")
+                action_args["agent_0_oracle_nav_coord"] = np.array(obj_trans)
             else:
                 self._env.task.actions["agent_0_oracle_nav_action"].skill_done = False
                 self._get_grasp_mgr().snap_to_obj(self.object_interest_id)
