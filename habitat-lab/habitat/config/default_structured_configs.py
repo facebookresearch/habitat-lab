@@ -47,6 +47,7 @@ __all__ = [
     "EmptyActionConfig",
     "ArmActionConfig",
     "BaseVelocityActionConfig",
+    "BaseVelocityHumanoidActionConfig",
     "HumanoidJointActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
@@ -257,6 +258,14 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+
+@dataclass
+class BaseVelocityHumanoidActionConfig(BaseVelocityActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelHumanoidAction"
+    num_joints: int = 54
 
 
 @dataclass
@@ -1782,6 +1791,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity_humanoid",
+    group="habitat/task/actions",
+    name="base_velocity_humanoid",
+    node=BaseVelocityHumanoidActionConfig,
 )
 cs.store(
     package="habitat.task.actions.base_velocity_non_cylinder",

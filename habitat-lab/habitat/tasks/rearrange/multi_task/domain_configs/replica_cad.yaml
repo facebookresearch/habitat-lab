@@ -449,3 +449,32 @@ actions:
       config_args:
         task.base_angle_noise: 0.0
         task.spawn_region_scale: 0.0
+
+
+  - name: move_forward
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: move_backward
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: turn_left
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: turn_right
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []

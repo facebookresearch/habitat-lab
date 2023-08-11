@@ -85,7 +85,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             walk_pose_path = self._sim.habitat_config.agents[
                 agent_name
             ].motion_data_path
-
+            
             humanoid_controller = HumanoidRearrangeController(walk_pose_path)
             humanoid_controller.set_framerate_for_linspeed(
                 config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq

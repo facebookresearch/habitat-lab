@@ -99,7 +99,7 @@ class HumanoidRearrangeController:
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
         self.dist_per_step_size = (
-            self.walk_motion.displacement[-1] / self.walk_motion.num_poses
+            self.walk_motion.displacement[-1] / self.walk_emotion.num_poses
         )
 
         # These two matrices store the global transformation of the base
@@ -111,12 +111,13 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+        self.step_size =  int(self.walk_motion.fps / self.draw_fps)
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
         seconds_per_step = 1.0 / ctrl_freq
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
-        self.draw_fps = self.walk_motion.fps / frames_per_step
+        self.step_size = int(frames_per_step)
         rotate_amount = ang_speed * seconds_per_step
         rotate_amount = rotate_amount * 180.0 / np.pi
         self.turning_step_amount = rotate_amount
@@ -194,7 +195,7 @@ class HumanoidRearrangeController:
         self.prev_orientation = forward_V
 
         # Step size according to the FPS
-        step_size = int(self.walk_motion.fps / self.draw_fps)
+        step_size = self.step_size
 
         if did_rotate:
             # When we rotate, we allow some movement
@@ -242,9 +243,10 @@ class HumanoidRearrangeController:
         )
         dist_diff = min(distance_to_walk, distance_covered)
 
+
         new_pose = self.walk_motion.poses[self.walk_mocap_frame]
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
-
+        
         # We correct the object transform
         forward_V_norm = mn.Vector3(
             [forward_V[2], forward_V[1], -forward_V[0]]
@@ -256,16 +258,18 @@ class HumanoidRearrangeController:
         )
 
         # Remove the forward component, and orient according to forward_V
-        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(1.0, 0, 0))
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
         add_rot2 = mn.Matrix4.rotation(
             mn.Rad(-np.pi / 2), mn.Vector3(0, 0, 1.0)
         )
-        obj_transform = add_rot @ add_rot2 @ obj_transform
+
+        obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
         # This is the rotation and translation caused by the current motion pose
         #  we still need to apply the base_transform to obtain the full transform
         self.obj_transform_offset = obj_transform
+        self.joint_pose = joint_pose
 
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
@@ -273,8 +277,10 @@ class HumanoidRearrangeController:
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
-        self.obj_transform_base = obj_transform_base
-        self.joint_pose = joint_pose
+        rot_offset = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base = obj_transform_base @ rot_offset
 
     def get_pose(self):
         """

@@ -15,10 +15,7 @@ defaults:
   - /habitat/task/measurements:
     - composite_success
     - num_steps
-    - did_agents_collide
-    - composite_stage_goals
-    - cooperate_subgoal_reward
-    - runtime_perf_stats
+
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -29,7 +26,6 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
-    - other_agent_gps
   - _self_
 
 type: RearrangeCompositeTask-v0
@@ -41,10 +37,10 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 task_spec: multi_agent_tidy_house
-measurements:
-  composite_success:
-    must_call_stop: False
-  cooperate_subgoal_reward:
-    stage_sparse_reward: 1.0
-    end_on_collide: True
-    collide_penalty: 0.5
+# measurements:
+#   composite_success:
+#     must_call_stop: False
+#   cooperate_subgoal_reward:
+#     stage_sparse_reward: 1.0
+#     end_on_collide: True
+#     collide_penalty: 0.5
