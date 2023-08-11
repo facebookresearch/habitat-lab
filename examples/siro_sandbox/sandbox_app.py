@@ -331,18 +331,22 @@ class SandboxDriver(GuiAppDriver):
         save_as_gzip(json_content.encode("utf-8"), filepath)
 
     def _record_action(self, action):
-        action_args = action["action_args"]
+        if not isinstance(action, np.ndarray):
+            action_args = action["action_args"]
 
-        # These are large arrays and they massively bloat the record file size, so
-        # let's exclude them.
-        keys_to_clear = [
-            "human_joints_trans",
-            "agent_0_human_joints_trans",
-            "agent_1_human_joints_trans",
-        ]
-        for key in keys_to_clear:
-            if key in action_args:
-                action_args[key] = None
+            # These are large arrays and they massively bloat the record file size, so
+            # let's exclude them.
+            keys_to_clear = [
+                "human_joints_trans",
+                "agent_0_human_joints_trans",
+                "agent_1_human_joints_trans",
+            ]
+            for key in keys_to_clear:
+                if key in action_args:
+                    action_args[key] = None
+        else:
+            # no easy way to remove the joints from the action ndarray
+            pass
 
         self._step_recorder.record("action", action)
 
