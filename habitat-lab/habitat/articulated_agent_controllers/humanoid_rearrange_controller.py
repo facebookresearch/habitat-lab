@@ -71,7 +71,7 @@ class HumanoidRearrangeController:
     def __init__(
         self,
         walk_pose_path,
-        base_offset=(0, 0.9, 0)
+        base_offset=(0, 0.9, 0),
     ):
         self.draw_fps = DEFAULT_DRAW_FPS
         self.min_angle_turn = MIN_ANGLE_TURN
@@ -99,13 +99,13 @@ class HumanoidRearrangeController:
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
         self.dist_per_step_size = (
-            self.walk_motion.displacement[-1] / self.walk_motion.num_poses
+            self.walk_motion.displacement[-1] / self.walk_emotion.num_poses
         )
 
         # These two matrices store the global transformation of the base
         # as well as the transformation caused by the walking gait
         # We initialize them to identity
-        self.obj_transform_offset = mn.Matrix4.from_(mn.Matrix3.identity_init(), mn.Vector3())
+        self.obj_transform_offset = mn.Matrix4()
         self.obj_transform_base = mn.Matrix4()
         self.joint_pose = []
 
@@ -243,6 +243,9 @@ class HumanoidRearrangeController:
         )
         dist_diff = min(distance_to_walk, distance_covered)
 
+
+        new_pose = self.walk_motion.poses[self.walk_mocap_frame]
+        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
         
         # We correct the object transform
         forward_V_norm = mn.Vector3(
@@ -259,9 +262,6 @@ class HumanoidRearrangeController:
         add_rot2 = mn.Matrix4.rotation(
             mn.Rad(-np.pi / 2), mn.Vector3(0, 0, 1.0)
         )
-
-        new_pose = self.walk_motion.poses[self.walk_mocap_frame]
-        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()

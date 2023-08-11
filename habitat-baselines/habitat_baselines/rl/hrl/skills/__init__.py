@@ -1,4 +1,4 @@
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+git diff# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -12,7 +12,6 @@ from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
 from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.hrl.skills.turn import (
-    HumanoidMoveSkillPolicy,
     MoveSkillPolicy,
     TurnSkillPolicy,
 )
@@ -31,5 +30,4 @@ __all__ = [
     "NoopSkillPolicy",
     "TurnSkillPolicy",
     "MoveSkillPolicy",
-    "HumanoidMoveSkillPolicy",
 ]

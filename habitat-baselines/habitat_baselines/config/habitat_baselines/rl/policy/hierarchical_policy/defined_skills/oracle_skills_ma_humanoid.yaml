@@ -70,20 +70,3 @@ reset_arm:
   max_skill_steps: 1
   ignore_grip: True
   force_end_on_timeout: False
-
-humanoid_move_forward:
-  skill_name: "HumanoidMoveSkillPolicy"
-  max_skill_steps: 1
-  ignore_grip: True
-  turn_power_x: 1
-  turn_power_y: 0
-  force_end_on_timeout: False
-
-
-humanoid_turn_left:
-  skill_name: "HumanoidMoveSkillPolicy"
-  max_skill_steps: 1
-  ignore_grip: True
-  force_end_on_timeout: False
-  turn_power_x: 0
-  turn_power_y: 1

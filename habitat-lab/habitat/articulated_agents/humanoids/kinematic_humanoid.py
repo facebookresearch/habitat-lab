@@ -41,8 +41,8 @@ class KinematicHumanoid(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.5),
-                    cam_look_at_pos=mn.Vector3(1, 0, 0.75),
+                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.7),
+                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-2,
                 ),
                 # "third": ArticulatedAgentCameraParams(
@@ -91,7 +91,6 @@ class KinematicHumanoid(MobileManipulator):
         add_rot = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
         )
-
         perm = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
         )
@@ -253,9 +252,9 @@ class KinematicHumanoid(MobileManipulator):
 
         add_rot = self.offset_transform_base.inverted()
         final_transform = (base_transform @ add_rot) @ offset_transform
-        
+
         self.sim_obj.transformation = final_transform
-        
+
     def get_joint_transform(self):
         """Returns the joints and base transform of the humanoid"""
         # TODO: should this go into articulated agent?
