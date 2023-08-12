@@ -7,21 +7,27 @@
 from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
+from enum import Enum
 
+from habitat.core.spaces import ActionSpace
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import get_active_obs_transforms
 from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import (
     MultiAgentAccessMgr,
 )
+from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.utils.common import get_num_actions
 from habitat_baselines.rl.multi_agent.utils import (
     update_dict_with_agent_prefix,
 )
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
-
+import numpy as np
 from .controller_abc import BaselinesController
+
+
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -147,3 +153,64 @@ class MultiAgentBaselinesController(BaselinesController):
 
     def _load_agent_state_dict(self, checkpoint):
         self._agent.load_state_dict(checkpoint)
+
+
+
+class CurrentFetchState(Enum):
+    WAIT = 1
+    PICK = 2
+    BRING = 3
+
+class FetchBaselinesController(SingleAgentBaselinesController):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        config,
+        env,
+    ):
+        self.current_state = CurrentFetchState.WAIT
+        self.object_interest_id = None
+        self.rigid_object_interest = None
+        self._env = env
+
+        super().__init__(agent_idx, is_multi_agent, config, env)
+
+    def _get_grasp_mgr(self):
+        agents_mgr = self._env.env._sim.agents_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
+        return grasp_mgr
+
+    def act(self, obs, env):
+        human_trans = self._env.env._sim.agents_mgr[1 - self._agent_idx].articulated_agent.base_transformation.translation    
+        finish_oracle_nav = obs["agent_0_has_finished_oracle_nav"]
+        act_space = ActionSpace(
+            {action_name: space for action_name, space in env.action_space.items() 
+            if "agent_0" in action_name}
+        )
+        action_array = np.zeros(get_num_actions(act_space))
+        action_ind_nav = find_action_range(act_space, "agent_0_oracle_nav_action")
+
+        if self.current_state == CurrentFetchState.PICK:
+            obj_trans = self.rigid_obj_interest.translation
+            if not finish_oracle_nav:
+                action_array[action_ind_nav[0]:action_ind_nav[1]] = obj_trans
+                
+            else:
+                self._get_grasp_mgr().snap_to_obj(self.object_interest_id)
+                
+                self.current_state = CurrentFetchState.BRING
+
+        elif self.current_state == CurrentFetchState.BRING:
+            if not finish_oracle_nav:
+                # Keep gripper closed
+                action_array[action_ind_nav[0]:action_ind_nav[1]] = human_trans
+            else:
+                # Open gripper
+                self._get_grasp_mgr().desnap()
+                
+                self.current_state = CurrentFetchState.WAIT
+        return action_array
+
+    def on_environment_reset(self):
+        self._step_i = 0
