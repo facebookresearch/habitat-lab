@@ -12,6 +12,11 @@ import numpy as np
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
+from habitat_sim.physics import (
+    CollisionGroupHelper,
+    CollisionGroups,
+    MotionType,
+)
 
 from .controller_abc import GuiController
 
@@ -188,6 +193,7 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_drop_speed = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
@@ -203,6 +209,10 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        self._hint_drop_speed = None
+        CollisionGroupHelper.set_mask_for_group(
+            CollisionGroups.UserGroup7, ~CollisionGroups.Robot
+        )
         assert not self.is_grasped
 
     def get_random_joint_action(self):
@@ -245,11 +255,14 @@ class GuiHumanoidController(GuiController):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
+    def set_act_hints(
+        self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None, drop_speed=None
+    ):
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
+        self._hint_drop_speed = drop_speed
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -260,7 +273,7 @@ class GuiHumanoidController(GuiController):
     def is_grasped(self):
         return self._get_grasp_mgr().is_grasped
 
-    def _update_grasp(self, grasp_object_id, drop_pos):
+    def _update_grasp(self, grasp_object_id, drop_pos, speed):
         if grasp_object_id is not None:
             assert not self.is_grasped
 
@@ -290,10 +303,27 @@ class GuiHumanoidController(GuiController):
 
             self._recorder.record("drop_pos", drop_pos)
 
+        elif speed is not None:
+            grasp_object_id = self._get_grasp_mgr().snap_idx
+            self._get_grasp_mgr().desnap()
+            sim = self._env.task._sim
+            rigid_obj = sim.get_rigid_object_manager().get_object_by_id(
+                grasp_object_id
+            )
+            rigid_obj.motion_type = MotionType.DYNAMIC
+            rigid_obj.collidable = True
+            rigid_obj.override_collision_group(CollisionGroups.UserGroup7)
+            rigid_obj.linear_velocity = speed
+
     def act(self, obs, env):
-        self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
+        self._update_grasp(
+            self._hint_grasp_obj_idx,
+            self._hint_drop_pos,
+            self._hint_drop_speed,
+        )
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_drop_speed = None
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
