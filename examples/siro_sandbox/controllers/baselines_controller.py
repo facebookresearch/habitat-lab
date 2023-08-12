@@ -7,6 +7,7 @@
 from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
+from enum import Enum
 
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat_baselines.common.env_spec import EnvironmentSpec
@@ -147,3 +148,73 @@ class MultiAgentBaselinesController(BaselinesController):
 
     def _load_agent_state_dict(self, checkpoint):
         self._agent.load_state_dict(checkpoint)
+
+
+
+class CurrentFetchState(Enum):
+    WAIT = 1
+    PICK = 2
+    BRING = 3
+
+class FetchBaselinesController(BaselinesController):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        config,
+        env,
+        sample_random_baseline_base_vel=False,
+    ):
+        self.current_state = CurrentFetchState.WAIT
+        self.object_interest_id = None
+        self.rigid_object_interest = None
+        self._env = env
+
+        super().__init__(agent_idx, is_multi_agent, config, env, sample_random_baseline_base_vel)
+
+    def _get_grasp_mgr(self):
+        agents_mgr = self._env._sim.agents_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
+        return grasp_mgr
+
+    def act(self, obs, env):
+        human_trans = self._env._sim.agents_mgr[1 - self._agent_idx].articulated_agent.base_transformation.translation    
+        finish_oracle_nav = obs["agent_0_has_finished_oracle_nav"]
+        print(finish_oracle_nav)
+        if self.current_state == CurrentFetchState.WAIT:
+            action_names = []
+            action_args = {}
+
+        elif self.current_state == CurrentFetchState.PICK:
+            obj_trans = self.rigid_obj_interest.translation
+            action_names, action_args = [], {}
+            if not finish_oracle_nav:
+                # if obj_trans[1] < 0.1:
+                action_names.append("agent_0_oracle_nav_action")
+                action_args["agent_0_oracle_nav_coord"] = np.array(obj_trans)
+            else:
+                self._env.task.actions["agent_0_oracle_nav_action"].skill_done = False
+                self._get_grasp_mgr().snap_to_obj(self.object_interest_id)
+                self.current_state = CurrentFetchState.BRING
+
+        elif self.current_state == CurrentFetchState.BRING:
+
+            action_names, action_args = [], {}
+            if not finish_oracle_nav:
+                action_names.append("agent_0_oracle_nav_action")
+                action_args["agent_0_oracle_nav_coord"] = np.array(human_trans)
+            else:
+                self._get_grasp_mgr().desnap()
+                self._env.task.actions["agent_0_oracle_nav_action"].skill_done = False
+                self.current_state = CurrentFetchState.WAIT
+
+
+        def change_ac_name(k):
+            if "pddl" in k:
+                return k
+            else:
+                return self._agent_k + k
+        return ({"action": action_names, "action_args": action_args}, {})
+
+    def on_environment_reset(self):
+        self._step_i = 0

@@ -166,9 +166,11 @@ class SandboxDriver(GuiAppDriver):
         )
 
         if args.app_state == "fetch":
+
             self._app_state_fetch = AppStateFetch(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
+                self.ctrl_helper.get_state_machine_agent_controller()
             )
             self._app_state = self._app_state_fetch
         elif args.app_state == "rearrange":

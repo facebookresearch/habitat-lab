@@ -113,7 +113,14 @@ class ControllerHelper:
             return None
 
         return self.controllers[0]
+    
+    def get_state_machine_agent_controller(self) -> Optional[Controller]:
+        if self._gui_controlled_agent_index is None:
+            return None
 
+        # This is pretty hacky
+        return self.controllers[1 - self._gui_controlled_agent_index]
+    
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index
 
