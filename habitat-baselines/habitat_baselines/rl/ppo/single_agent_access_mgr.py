@@ -230,7 +230,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             **self._updater.get_resume_state(),
         }
         if self._lr_scheduler is not None:
-            #ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
+            # ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
             ret["lr_sched_state"] = self._lr_scheduler.state_dict()
         return ret
 
@@ -253,7 +253,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.load_state_dict(state)
             if "lr_sched_state" in state:
                 try:
-                    self._lr_scheduler.load_state_dict(state["lr_sched_state"][0])
+                    self._lr_scheduler.load_state_dict(
+                        state["lr_sched_state"][0]
+                    )
                 except Exception:
                     self._lr_scheduler.load_state_dict(state["lr_sched_state"])
 

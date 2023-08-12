@@ -957,7 +957,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
-    enable_vel_penality  : float = -1.0
+    enable_vel_penality: float = -1.0
 
 
 @dataclass
