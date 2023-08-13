@@ -52,6 +52,7 @@ __all__ = [
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
+    "RelativeRestingJointSensorConfig",
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
@@ -62,6 +63,7 @@ __all__ = [
     "TargetGoalGpsCompassSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
+    "JointToRestDistanceMeasurementConfig",
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
@@ -73,8 +75,10 @@ __all__ = [
     "NavToPosSuccMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
+    "RearrangePickSuccessJointMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
     "PlaceSuccessMeasurementConfig",
+    "PlaceSuccessJointMeasurementConfig",
     "PlaceRewardMeasurementConfig",
     "ArtObjSuccessMeasurementConfig",
     "ArtObjRewardMeasurementConfig",
@@ -479,6 +483,17 @@ class RelativeRestingPositionSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class RelativeRestingJointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Sensor for the relative position of the joint's resting position, relative to the joint's current position.
+    The values correspond to the cartesian coordinates of the resting position in the frame of reference of the joint.
+    The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.
+    """
+
+    type: str = "RelativeRestingJointSensor"
+
+
+@dataclass
 class JointVelocitySensorConfig(LabSensorConfig):
     type: str = "JointVelocitySensor"
     dimensionality: int = 7
@@ -750,6 +765,17 @@ class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class JointToRestDistanceMeasurementConfig(MeasurementConfig):
+    """
+    Rearrangement only. Distance between current joint angle
+    and the resting position (initial) of the joint. Requires that the
+    RelativeRestingJointSensor is attached to the agent.
+    """
+
+    type: str = "JointToRestDistance"
+
+
+@dataclass
 class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToGoalDistance"
 
@@ -970,6 +996,15 @@ class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class RearrangePickSuccessJointMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+    """
+    type: str = "RearrangePickSuccessJoint"
+    joint_resting_success_threshold: float = 0.40
+
+
+@dataclass
 class ObjAtGoalMeasurementConfig(MeasurementConfig):
     r"""
     The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.
@@ -1014,6 +1049,15 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     """
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
+
+
+@dataclass
+class PlaceSuccessJointMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the joint_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its joint within joint_resting_success_threshold of its resting position.
+    """
+    type: str = "PlaceSuccessJoint"
+    joint_resting_success_threshold: float = 0.40
 
 
 @dataclass
@@ -1907,6 +1951,12 @@ cs.store(
     node=RelativeRestingPositionSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.relative_resting_joint",
+    group="habitat/task/lab_sensors",
+    name="relative_resting_joint",
+    node=RelativeRestingJointSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.instruction_sensor",
     group="habitat/task/lab_sensors",
     name="instruction_sensor",
@@ -2024,6 +2074,12 @@ cs.store(
     node=EndEffectorToRestDistanceMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.joint_to_rest_distance",
+    group="habitat/task/measurements",
+    name="joint_to_rest_distance",
+    node=JointToRestDistanceMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.end_effector_to_goal_distance",
     group="habitat/task/measurements",
     name="end_effector_to_goal_distance",
@@ -2052,6 +2108,12 @@ cs.store(
     group="habitat/task/measurements",
     name="pick_success",
     node=RearrangePickSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_success_joint",
+    group="habitat/task/measurements",
+    name="pick_success_joint",
+    node=RearrangePickSuccessJointMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.answer_accuracy",
@@ -2094,6 +2156,12 @@ cs.store(
     group="habitat/task/measurements",
     name="place_success",
     node=PlaceSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.place_success_joint",
+    group="habitat/task/measurements",
+    name="place_success_joint",
+    node=PlaceSuccessJointMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.place_reward",
