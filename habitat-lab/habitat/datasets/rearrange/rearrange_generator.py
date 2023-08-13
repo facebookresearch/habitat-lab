@@ -861,7 +861,7 @@ class RearrangeEpisodeGenerator:
             },
         }
         if self._render_debug_obs:
-            sensors["rgb"] = {
+            sensors["color"] = {
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": [640, 480],
                 "position": [0, 0, 0],
@@ -932,7 +932,7 @@ class RearrangeEpisodeGenerator:
             if self.vdb is None
             else self.vdb.output_path
         )
-        self.vdb = DebugVisualizer(self.sim, output_path=output_path)
+        self.vdb = DebugVisualizer(self.sim, output_path=output_path, default_sensor_uuid="color")
 
     def settle_sim(
         self,
