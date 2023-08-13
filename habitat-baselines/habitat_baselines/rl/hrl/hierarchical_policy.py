@@ -83,9 +83,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._max_skill_rnn_layers = max(
             skill.num_recurrent_layers for skill in self._skills.values()
         )
-        self._any_ll_hidden_state = any(
-            skill.has_hidden_state for skill in self._skills.values()
-        )
 
         self._cur_skills: np.ndarray = np.full(
             (self._num_envs,), -1, dtype=np.int32
@@ -122,9 +119,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                 else:
                     self._skill_redirects[skill_i] = first_idx
 
-        self._hl_needs_recurrent_state = (
-            self._high_level_policy.num_recurrent_layers
-        ) > 0
         self._recurrent_hidden_size = (
             full_config.habitat_baselines.rl.ppo.hidden_size
         )
@@ -186,7 +180,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         Fetches the policy action space for learning. If we are learning the HL
         policy, it will return its custom action space for learning.
         """
-        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
+        if self._has_ll_hidden_state or not self._has_hl_hidden_state:
             # The LL skill will take priority for the prev action.
             return env_action_space
         else:
@@ -315,7 +309,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             deterministic,
         )
         did_choose_new_skill = self._cur_call_high_level.clone()
-        if hl_info.rnn_hidden_states is not None:
+        if hl_info.rnn_hidden_states is not None and self._has_hl_hidden_state:
             # Update the HL hidden state.
             hl_rnn_hidden_states = hl_info.rnn_hidden_states
 
@@ -342,8 +336,10 @@ class HierarchicalPolicy(nn.Module, Policy):
                 cur_batch_idx=batch_ids,
             )
             actions[batch_ids] += action_data.actions
-            # Update the LL hidden state.
-            ll_rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+
+            if self._has_ll_hidden_state:
+                # Update the LL hidden state.
+                ll_rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         # Skills should not be responsible for terminating the overall episode.
         actions[:, self._stop_action_idx] = 0.0
@@ -373,7 +369,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         )
 
         # This will update the prev action
-        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
+        if (not self._has_hl_hidden_state) or self._has_ll_hidden_state:
             # The LL skill will take priority for the prev action
             use_action = actions
         else:
@@ -389,15 +385,22 @@ class HierarchicalPolicy(nn.Module, Policy):
             rnn_hidden_states=rnn_hidden_states,
         )
 
+    @property
+    def _has_hl_hidden_state(self) -> bool:
+        return self._high_level_policy.num_recurrent_layers != 0
+
+    @property
+    def _has_ll_hidden_state(self) -> bool:
+        return self._max_skill_rnn_layers != 0
+
     def _split_hidden_states(
         self, rnn_hidden_states: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        hl_num_layers = self._high_level_policy.num_recurrent_layers
-
-        if hl_num_layers == 0 or self._max_skill_rnn_layers == 0:
+        if (not self._has_hl_hidden_state) or (not self._has_ll_hidden_state):
             # No need to split hidden states if both aren't being used.
             return rnn_hidden_states, rnn_hidden_states
         else:
+            hl_num_layers = self._high_level_policy.num_recurrent_layers
             # Split the hidden state for HL and LL policies
             hl_rnn_hidden_states = rnn_hidden_states[:, :hl_num_layers]
             ll_rnn_hidden_states = rnn_hidden_states[:, hl_num_layers:]
@@ -408,9 +411,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         hl_rnn_hidden_states: torch.Tensor,
         ll_rnn_hidden_states: torch.Tensor,
     ) -> torch.Tensor:
-        if not self._hl_needs_recurrent_state:
+        if not self._has_hl_hidden_state:
             return ll_rnn_hidden_states
-        elif self._max_skill_rnn_layers == 0:
+        elif not self._has_ll_hidden_state:
             return hl_rnn_hidden_states
         else:
             # Stack the LL and HL hidden states.
@@ -482,16 +485,20 @@ class HierarchicalPolicy(nn.Module, Policy):
                     prev_actions,
                 )
 
-                _write_tensor_batched(
-                    ll_rnn_hidden_states,
-                    ll_rnn_hidden_states_batched,
-                    batch_ids,
-                )
+                if self._has_ll_hidden_state:
+                    _write_tensor_batched(
+                        ll_rnn_hidden_states,
+                        ll_rnn_hidden_states_batched,
+                        batch_ids,
+                    )
                 _write_tensor_batched(
                     prev_actions, prev_actions_batched, batch_ids
                 )
 
-                if hl_info.rnn_hidden_states is not None:
+                if (
+                    hl_info.rnn_hidden_states is not None
+                    and self._has_hl_hidden_state
+                ):
                     # Only update the RNN hidden state for NEW skills.
                     hl_rnn_hidden_states = _update_tensor_batched(
                         hl_rnn_hidden_states,

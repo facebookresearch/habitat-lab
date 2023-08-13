@@ -86,14 +86,6 @@ class SkillPolicy(Policy):
         """
         return [self._cur_skill_args[i] for i in batch_idx]
 
-    @property
-    def has_hidden_state(self):
-        """
-        Returns if the skill requires a hidden state.
-        """
-
-        return False
-
     def _keep_holding_state(
         self, action_data: PolicyActionData, observations
     ) -> PolicyActionData:

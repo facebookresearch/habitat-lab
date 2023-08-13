@@ -178,7 +178,11 @@ class Policy(abc.ABC):
         Only necessary to implement if performing RL training with the policy.
 
         :returns: Tuple containing
-            - The
+            - Predicted value.
+            - Log probabilities of actions.
+            - Action distribution entropy.
+            - RNN hidden states.
+            - Auxiliary module losses.
         """
 
         raise NotImplementedError
