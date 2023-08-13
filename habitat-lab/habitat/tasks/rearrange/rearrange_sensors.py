@@ -38,7 +38,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         # For using policy for replica_cad to FP
-        n_targets = 1
+        # n_targets = 1
         return spaces.Box(
             shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
@@ -195,6 +195,12 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
+        # For using replica_cad policy in FP
+        if self._task.force_set_idx is not None:
+            idxs = self._sim.get_targets()[0]
+            sel_idx = self._task.force_set_idx
+            sel_idx = list(idxs).index(sel_idx)
+            pos = pos[[sel_idx], :]
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
