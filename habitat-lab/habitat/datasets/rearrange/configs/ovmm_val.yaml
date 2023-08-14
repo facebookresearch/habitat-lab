@@ -1,0 +1,1102 @@
+---
+dataset_path: "data/hssd-hab/hssd-hab-uncluttered.scene_dataset_config.json"
+additional_object_paths:
+- data/objects/train_val/amazon_berkeley/configs/
+- data/objects/train_val/google_scanned/configs/
+- data/objects/train_val/ai2thorhab/configs/objects/
+- data/objects/train_val/hssd/configs/objects/
+correct_unstable_results: True
+scene_sets:
+    name: "val"
+    included_substrings:
+      - "/102816756."
+      - "/102817140."
+      - "/103997586_171030669."
+      - "/103997895_171031182."
+      - "/104348328_171513363."
+      - "/104348361_171513414."
+      - "/105515211_173104185."
+      - "/106366386_174226770."
+      - "/106366410_174226806."
+      - "/106878915_174887025."
+      - "/107733960_175999701."
+      - "/107734176_176000019."
+    excluded_substrings:
+      - "NONE"
+
+object_sets:
+  - name: val_seen_watch
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_dumbbell
+    included_substrings:
+    - B074DZ6NJB.
+    - B074DZ65J3.
+    - B074DYLY5V.
+    - B074DZFKH6.
+    excluded_substrings: []
+  - name: val_seen_cushion
+    included_substrings:
+    - pillow_22.
+    - 3fccbec42b3a3cb497b92c358f691979a749ea18.
+    - B07M6PK8QS.
+    - d42845fcb849d16bf4f04e8d35e84a32702d1896.
+    - B07JKJP7Q9.
+    - 9f4f8778f18e2b974c4aabaff4c764638970d833.
+    - 1e684bcd6ffaf8ab123142e069255946f8fb5c44.
+    - 6cc2aa738dbb65c20d4903f87507f396aaa1ff32.
+    - 1e6b68dc8831a63460efa424102b1667aa42c660.
+    - b1b236b2de1db421b4aa8aaf016710a289d99cc0.
+    - 6f075cdb9c4eaed117ee1577d4443921ad7a0e29.
+    - 7a590a8f0f30182dd62af488b48e7cdbce77fd24.
+    - c1743b163655e588dfc1eb0f90192390963aa6b4.
+    - 5b5ba978e6c39a1c150e60b94c9c269e286dc032.
+    - 103afe7f442ec957e4332dba280f9e959dbc0135.
+    - f83e14742826646382bb8a1968bbf2a70bb74735.
+    - 1fe0ad12b91fc822c6f3ae0e342edf919e176ce7.
+    - 58dd717bbbfec92e8e9a2109c95c3ea5bc483f80.
+    - xxxx641b858bxbf86x48f2x8c92xfb97accf0c5a.
+    - 834fba99f603d2fc2f3a54911bfaa5a2b94f710e.
+    - 5d90816b989e5feb621127c12f2fff49c09aaf81.
+    - d8673ba5057fefbbfada111b70920c3e47bd5f05.
+    - c19b88319a5dd032f9617eb183159e79759c86bb.
+    - 7ef0d819a193b395f60d35131c6f8a400036f045.
+    - 60e00410f446ce98b18ef4dfc016813cb9e0e7ce.
+    - 51b13ef4f079bf8b5c4ddb0b04ae4bcdfef07723.
+    - 2849b8484bf8828dcd11afaed86f4041ed768f73.
+    - f219023b86de82c9e1e6bc946168ab9ccfe42bb2.
+    - xxxx5cfa0e5fx12eax4154x8364xb9ec35e7c46c.
+    - B07JM1QSLX.
+    - 487d492a2e295dd72aad0046716f05431fef69ce.
+    - B07JL5PYZH.
+    - 8241d58b0bdfb9875336369308acca26c625cad3.
+    - 1164c1fad4da7dbb523901f0af2023081dc660ee.
+    - 7399f8521ca7ef2a8d294e50b5a8063ad5bc02d9.
+    - 7127895e8862c9e3a3065f7fe3d341473ab13b8f.
+    - B07JKJKDKM.
+    - 45fd4164912ff9886db54cf0623d105c4e8518cb.
+    - B07JLSP8VB.
+    - c216a606cf8f829e40fa348550eee4bc66945ef5.
+    - 1fb6e91fef300fcc6e68ba6d52c1e00ee71fbd9b.
+    - 071d7e49a3865750863d8086f18b2dd650d2287a.
+    - B07JQ47NHZ.
+    - pillow_2.
+    - 0dd7391dc42fbe31115b794b9ee9ce98fb99a4a4.
+    - 007ac3dc7a89e1e403c1340a4fd61fdc75ca053d.
+    - 4e6a40cc57049080332dbedd32e1ed28aca7d75b.
+    - 133256eaeef2d1a9171d042fae0a98ae70a7c389.
+    - 60694c8715acc814e456629b6a2861b840ae5ffb.
+    - 12f85f3edd869f916937ff99ed5b7f5b6f82a2ca.
+    - 0cbf07876393d9f9920917a5d8802f2811b4fc0c.
+    - dcd6c945759d4cee6a53f4cd00452a52d94336d2.
+    - c6e1fe068f7ce33aaf1d0b95d736be1488e3c278.
+    - B07JLZC571.
+    - 038c64ffa00f7c5dbe4e62342996e78a79510c9d.
+    - d5a43db547983557d4796ef21587ff986fc38094.
+    - xxxx8fde19a1xa0bbx4e00x8173x780eab436d1c.
+    - 3871178248ab55647c39e89ce75ffdf1aac3759d.
+    - B07JL5Q1Z6.
+    - 70ec402f39ccead0ebaabd8ceb8627877310f18f.
+    - 907396ecbf690ddb58c065191b124a1890b731d9.
+    - B07JKJSKMF.
+    - 2d5f072f915783acff3a313dc57979f49a5ca5f0.
+    - d4821a551dee276c2134d915c5e7a95736c58048.
+    - B07JKJSTVJ.
+    - B07JLSP8TR.
+    - B07JKJSTL1.
+    - B07JLSP8VB.
+    - 7dbdff0fbea2f8f81e12aa4910263c759a406285.
+    - B07JL5PLPD.
+    - 90985e208bb85b15efb2bbab8a171e283cf95e39.
+    - B07JKJKDKD.
+    - dd73800592c4d623013ccbd7f4a18c247320579c.
+    - 7df02e29f6441b2c70a28a386d50c7c231ca2498.
+    - 04bf1ad9da0aaddcf0d94a3ebba8866c8a4a3e86.
+    - 2c1a84f264508808de1bbe44b235936d636cd129.
+    - B07JKJSTWH.
+    - 9014bad63afdf027b0fd358bdf2ab6178c0a9f8b.
+    - f365569f79dbb2461c8d7232dfc33bd988d75e77.
+    - 308c9ceeadde62eaffa17bbbb6e28043bed98626.
+    - e21b96872a1480311934cf1a5b3cc021eb0db386.
+    - B07JLGC56Z.
+    - 831bfc38f44f5f9a4632fe55c88eb47a646204da.
+    - b8dd488ebf1dc78c595b9462f42792ee815b04d3.
+    - B07JKJP5N5.
+    - pillow_16.
+    - 44331d0bed3b7acd2ebdd6126230fead1058ffd0.
+    - 2d4d37e58767d11df641a3091ab9a88b323b5316.
+    - ce3c93331de8937c264e3796f37e2603fe716a72.
+    - d643b51ebcf17bafc51085f3b015e43db0a3c013.
+    - pillow_10.
+    - 15053460b8d21ffdfdcdb83428f695982aecf01e.
+    - 23ef36ffd2de137954a8e41677d493ad906bf5d0.
+    - 6f7a7d7fb97265c42e9153c06fcb9802555c624d.
+    - xxxx5fcc53a2xd71fx424ex8671x08cd2495a3f8.
+    - db0f0f6634045144058b3432657510f0ca905352.
+    - 32bb8ad82188d4324043abd65b1594d63d64c681.
+    - pillow_13.
+    - d74f356b4fead16544e302afc480d660ab559571.
+    - B07MBFDX67.
+    - B07JLGC7Y8.
+    - dc3604c09d05617ae728b2934f3538f92ff8f4d7.
+    - xxxxb95c14b5xd0cdx4852xb563x706a0dd828fb.
+    - f2dca3e352383bc8cf85d235666558ded4543cc9.
+    - fb06fb4559ecea7881e280af95b4b92e58270ff2.
+    - c1c13a7e6edbac6d3a96b6ebc266cbe6637beca2.
+    - 0a94ff593269059be09cda3efc946bd655feba61.
+    - e7457d3d95ae6b48b8c5324d2cd78ad31a89553d.
+    - b521edba01053a1c2d28d20b35d5ce535cfd0303.
+    - B07JKJSHMT.
+    - B07JLGBYXF.
+    - 91b7726ce732e831cec23ac51c506fa07bc91d04.
+    excluded_substrings: []
+  - name: val_seen_apple
+    included_substrings:
+    - Apple_14.
+    - Apple_6.
+    - Apple_25.
+    - Apple_22.
+    - Apple_13.
+    excluded_substrings: []
+  - name: val_seen_jug
+    included_substrings:
+    - 2f8ce20db01f6f9cff0d3170271f45ef139276ed.
+    - ad87281ca93b236560306a08f0953ba340e85c3c.
+    excluded_substrings: []
+  - name: val_seen_pen
+    included_substrings:
+    - Pen_2.
+    excluded_substrings: []
+  - name: val_seen_bottle
+    included_substrings:
+    - xxxxe3f9a974xfd88x433bx92c8x5f4d72d43be3.
+    - Pet_Dophilus_powder.
+    - d5a5480ce6fc74aa5cb74f6b16c2dea8cb90544e.
+    - 6361984802efa59ed8b1b2bafc2ca9aa91d4fe8e.
+    - AllergenFree_JarroDophilus.
+    - 4b4f5834c4163706bcc3029862f8f0ec73d92684.
+    - Beta_Glucan.
+    - 3a4f40e2d346ca8cebe6edf88cec493bb89737b7.
+    - Blackcurrant_Lutein.
+    excluded_substrings: []
+  - name: val_seen_candle
+    included_substrings:
+    - xxxx575beb73xadbex4b2axbc06x2273ca72ce73.
+    - Candle_3.
+    - ea21d1fc5ed78e1a0c2ec72acdecbf7ca7983ffe.
+    - 95c68d8838c86a3f597fac1a72dcad7951f044fe.
+    excluded_substrings: []
+  - name: val_seen_bread
+    included_substrings:
+    - Bread_10.
+    - Bread_23.
+    - Bread_20.
+    - Bread_3.
+    - Bread_27.
+    excluded_substrings: []
+  - name: val_seen_picture_frame
+    included_substrings:
+    - ab9cfa493bdee58a1b3af3894507354badfdb6cb.
+    - f8a9c7497f063378e4cef9d413f2012f3fa1d344.
+    - 7b4ca77d236d65ef61572a5cad361c33a6976021.
+    - b1512215bb6f7a6dd58347b8c1f4779bcd725e07.
+    - 95b16ed9f169c4ae4f5ccbd53b4bd0161a5cc648.
+    - b197329530721482bd16661dff686e879cd3da27.
+    - 555d1a5037fb58d845a78b04a3c1d84f49bf234e.
+    - d516aeceef849a09918f3b92e3fb422b7b29e64c.
+    - 7251c7d128ec42f88c4ac07568ecfe9fac7e86d7.
+    - 5b370f537fda5e97a00b491d7469b0761e2570bc.
+    - e224baea26e7b0fd89874acd6fa7b133e1237980.
+    - 01edac706c8e5f84fbfe967d135a85e316577079.
+    - c8d16af73e07db7b9ff1aea7bc583f22f9166d72.
+    - 3bfcfba0a45e2072466f4b9adb6efb1bc4344b75.
+    - 3dd23dc556fc4cfddb51b24987f1758ca0db4f2c.
+    - 0a5a4f2e2d6efa832a9ed38f8cd7525e14918229.
+    excluded_substrings: []
+  - name: val_seen_file_sorter
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_spray_bottle
+    included_substrings:
+    - Spray_Bottle_2.
+    excluded_substrings: []
+  - name: val_seen_potato
+    included_substrings:
+    - Potato_18.
+    - Potato_10.
+    - Potato_26.
+    - Potato_5.
+    - Potato_6.
+    excluded_substrings: []
+  - name: val_seen_teapot
+    included_substrings:
+    - 514bcfa03c15eae74fc4ee090c9e3186100ecede.
+    - 4db7a1a5377cf18b8a14ab335a2970724ec43f2c.
+    excluded_substrings: []
+  - name: val_seen_candy_bar
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_tape
+    included_substrings:
+    - Shurtape_Tape_Purple_CP28.
+    excluded_substrings: []
+  - name: val_seen_spatula
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_clock
+    included_substrings:
+    - 450399b5e12af02ee45e094a7a95580432d82f86.
+    - c1a07c25aef6562d3459a2d1bfbbc4e3265b0fab.
+    - Alarm_Clock_16.
+    - 32c235017beb57dcbcc87e87871acbf68cd189ae.
+    - Crosley_Alarm_Clock_Vintage_Metal.
+    - 2328222911172bbc4db868cde599bfd5c5c39b21.
+    - a00e967032039917564448e356da345ac5a9e8ab.
+    - Alarm_Clock_22.
+    - 0bf0dd465bd2a3232e11377c0303eae65433aef9.
+    - Alarm_Clock_26.
+    - 6c1af528c8424b3c09a8284f27f4dfd96c4a8a56.
+    - 3b21020881a85d6316b9473259c0d77514c12876.
+    excluded_substrings: []
+  - name: val_seen_multiport_hub
+    included_substrings:
+    - B076YL2CTT.
+    - B076YRSWGW.
+    - B076YRSWH3.
+    excluded_substrings: []
+  - name: val_seen_cup
+    included_substrings:
+    - Cup_3.
+    - ACE_Coffee_Mug_Kristen_16_oz_cup.
+    - b85e6b68f338ea552d9b34da780589aa0c2ab6ad.
+    - 3d779b56904aafa1c8f2412e4f5e4c4460098bb0.
+    - xxxx6c3b8f4ax07a5x4c9exbf89x4cce25209c87.
+    - 87a34af23efddf90b6267768647fbedcbf846827.
+    - d09e802e1433f67df014386783a93db85eedef8e.
+    - Mug_2.
+    - 8f219c41f9dee18f531ead442c29cb1f5615cd7d.
+    - dcdb1e2d961f1a6648e45d5058fe93c2ef2f7791.
+    - Cup_1.
+    - 9c02c6496d1e3c5cc62b01afc47de32ac9818ed0.
+    - ed95f32cc00075ceed5bd4b593d2a06a444c0eec.
+    - 438c5d36069bba7af2248c42349e99c1a69547ff.
+    - Cup_29.
+    excluded_substrings: []
+  - name: val_seen_action_figure
+    included_substrings:
+    - Nintendo_Mario_Action_Figure.
+    - SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP.
+    excluded_substrings: []
+  - name: val_seen_board_game
+    included_substrings:
+    - FRACTION_FUN_n4h4qte23QR.
+    excluded_substrings: []
+  - name: val_seen_casserole
+    included_substrings:
+    - e1c1bad84e5f13ad43ee5c702656ac412df0d088.
+    - 214f1f476b131b11636fd17e6f8e8d8ec86e2c59.
+    - Corningware_CW_by_Corningware_3qt_Oblong_Casserole_Dish_Blue.
+    excluded_substrings: []
+  - name: val_seen_tray
+    included_substrings:
+    - 5354c1790fcf9fc23c5bae280e0cea6c3a0f326b.
+    - 050514a8a7fea2363cd924b7085dfc4207e6cbfd.
+    - 31f4052e890beb8bebedcaac4ee02b625f0d1859.
+    - df6b8690a51f7979a5f533e31ffb69ad4fe41923.
+    - ef4f8b0de2a7d05d42dac602baf0b2dc93f81bd9.
+    - 3017f3e89e8d40f76e1ef5d10a6c9787ba63e743.
+    excluded_substrings: []
+  - name: val_seen_candle_holder
+    included_substrings:
+    - B075HR7LD2.
+    excluded_substrings: []
+  - name: val_seen_spicemill
+    included_substrings:
+    - b0e85675655f936f71c6b47f6bf0bcd09e4e09cb.
+    excluded_substrings: []
+  - name: val_seen_electric_kettle
+    included_substrings:
+    - 577ab6846773c22e68a1ead745bba0ac6e60d8b2.
+    excluded_substrings: []
+  - name: val_seen_credit_card
+    included_substrings:
+    - CreditCard_2.
+    excluded_substrings: []
+  - name: val_seen_bath_towel
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_laptop
+    included_substrings:
+    - Laptop_13.
+    - Laptop_15.
+    - Laptop_17.
+    - Laptop_19.
+    - Laptop_5.
+    excluded_substrings: []
+  - name: val_seen_hat
+    included_substrings:
+    - DPC_Handmade_Hat_Brown.
+    excluded_substrings: []
+  - name: val_seen_box
+    included_substrings:
+    - Nestle_Nesquik_Chocolate_Powder_Flavored_Milk_Additive_109_Oz_Canister.
+    - Office_Depot_HP_71_Remanufactured_Ink_Cartridge_Black.
+    - Office_Depot_Dell_Series_1_Remanufactured_Ink_Cartridge_TriColor.
+    - cf301753050d527b32f8cbfa9f3e2c3410f205a8.
+    - 8c8df98aa3b25617201f5c40ae09bd20648ee8d7.
+    - Box_8.
+    - B073PB3FXD.
+    - Office_Depot_Dell_Series_11_Remanufactured_Ink_Cartridge_TriColor.
+    - Crayola_Model_Magic_Modeling_Material_White_3_oz.
+    - Office_Depot_HP_564XL_Ink_Cartridge_Black_CN684WN.
+    - Nintendo_Wii_Party_U_with_Controller_Wii_U_Game.
+    - Perricone_MD_Best_of_Perricone_7Piece_Collection_MEGsO6GIsyL.
+    - Blue_Jasmine_Includes_Digital_Copy_UltraViolet_DVD.
+    - Box_1.
+    - Epson_273XL_Ink_Cartridge_Magenta.
+    - Final_Fantasy_XIV_A_Realm_Reborn_60Day_Subscription.
+    - Canon_Pixma_Chromalife_100_Magenta_8.
+    - Office_Depot_Dell_Series_1_Remanufactured_Ink_Cartridge_Black.
+    - Epson_LabelWorks_LC5WBN9_Tape_reel_labels_071_x_295_Roll_Black_on_White.
+    - Philips_EcoVantage_43_W_Light_Bulbs_Natural_Light_2_pack.
+    - Office_Depot_HP_2_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count.
+    - Office_Depot_Dell_Series_9_Ink_Cartridge_Black_MK992.
+    - Sony_Acid_Music_Studio.
+    - Epson_DURABrite_Ultra_786_Black_Ink_Cartridge_T786120S.
+    - Nescafe_16Count_Dolce_Gusto_Cappuccino_Capsules.
+    - New_Super_Mario_BrosWii_Wii_Game.
+    - Crayola_Crayons_24_count.
+    - Office_Depot_HP_96_Remanufactured_Ink_Cartridge_Black.
+    - Office_Depot_HP_932XL_Ink_Cartridge_Black_CN053A.
+    - Epson_Ink_Cartridge_Black_200.
+    - Deskstar_Desk_Top_Hard_Drive_1_TB.
+    - Box_18.
+    - Arm_Hammer_Diaper_Pail_Refills_12_Pack_MFWkmoweejt.
+    - Canon_Pixma_Ink_Cartridge_8.
+    - Canon_Pixma_Ink_Cartridge_8_Red.
+    excluded_substrings: []
+  - name: val_seen_hand_towel
+    included_substrings:
+    - Tag_Dishtowel_18_x_26.
+    - Tag_Dishtowel_Waffle_Gray_Checks_18_x_26.
+    excluded_substrings: []
+  - name: val_seen_pan
+    included_substrings:
+    - Pan_19.
+    - Pan_16.
+    - Pan_17.
+    - Pan_13.
+    - Pan_15.
+    - Pan_2.
+    excluded_substrings: []
+  - name: val_seen_egg
+    included_substrings:
+    - Egg_23.
+    - Egg_5.
+    - Egg_25.
+    - Egg_11.
+    - Egg_10.
+    excluded_substrings: []
+  - name: val_seen_soap_dispenser
+    included_substrings:
+    - Soap_Bottle_17.
+    - Soap_Bottle_8.
+    - Soap_Bottle_23.
+    - Soap_Bottle_19.
+    - Soap_Bottle_11.
+    excluded_substrings: []
+  - name: val_seen_lunch_box
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_book
+    included_substrings:
+    - 387d604356db232de6468dc6a4c66230c8cd0fac.
+    - Book_12.
+    - dbcd7791f12e9e9ae40e8ea77a8203bf66cb50a1.
+    - 188c1fa84ac72c9d9f17430052459e4cfebc0f81.
+    - 10aad7e8b95a3bc4bf9cc81d416016befad8e737.
+    - Book_30.
+    - 917651b88d2d95bdb9d186328a36a94b1a1f3222.
+    - Book_18.
+    - Book_6.
+    - 6c012b2a87c94cc8b26d014ba8601b4eadf0c17d.
+    - Book_27.
+    - 9e0b08eceb97e1b79cb728ec31891e71ac97570a.
+    - 21e5c7cabc2047f82439c63c8e5e785d58a67bfc.
+    - Book_25.
+    excluded_substrings: []
+  - name: val_seen_gaming_console
+    included_substrings:
+    - BlackBlack_Nintendo_3DSXL.
+    excluded_substrings: []
+  - name: val_seen_toy_animal
+    included_substrings:
+    - Schleich_Bald_Eagle.
+    - BUNNY_RACER.
+    excluded_substrings: []
+  - name: val_seen_toy_fire_truck
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_statue
+    included_substrings:
+    - Dog_Statue_Master.
+    - Hand_Statue_Master.
+    - Towel_Statue_1.
+    - Waving_Statue_2.
+    excluded_substrings: []
+  - name: val_seen_laptop_stand
+    included_substrings:
+    - B00WRDRRWW.
+    excluded_substrings: []
+  - name: val_seen_laptop_cover
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_toy_vehicle
+    included_substrings:
+    - Thomas_Friends_Wooden_Railway_Porter_5JzRhMm3a9o.
+    excluded_substrings: []
+  - name: val_seen_glass
+    included_substrings:
+    - xxxx04ce6371xf141x45dcx8d79xf7c193d2a1b6.
+    - 1d8c68e142a88354b3f2122f55b0d0531a692822.
+    - 5eeb81b42abaf26678aca7a68b9c3837521de5c9.
+    - 952ee2c654a116614574c4407d8182a3d2af656a.
+    - a4654ee5e9322c13bf2c85cb8e2c988c7c4365db.
+    - 7fad97a0f7c563828f974d210b9e02ccd5a7dfda.
+    - 6a16a8ab35222e408cc16e76ceb32d2b6daf3bd9.
+    - afc1f45e551314e36262c8c9caa341fec805e22f.
+    - 5987a90f46b36e79028cc46a90fa39bc0b9cb2a3.
+    - xxxx82261fccxf2d8x4aacxbf4axb3a0a222dbad.
+    - cb99e067e7b29c10b0dd4af17b50969a94e1796c.
+    - 991bae3b8af2a9a110e32138d6a63ae1f038c0bc.
+    excluded_substrings: []
+  - name: val_seen_tennis_racquet
+    included_substrings:
+    - Tennis_Racquet_4.
+    excluded_substrings: []
+  - name: val_seen_kettle
+    included_substrings:
+    - 6d3e6501fd91b94bedb34344757d43b8c5f8facf.
+    excluded_substrings: []
+  - name: val_seen_shoe
+    included_substrings:
+    - ASICS_HyperRocketgirl_SP_5_WhiteMalibu_BlueBlack.
+    - ASICS_GELLinksmaster_WhiteRasberryGunmetal.
+    - REEF_BANTU.
+    - California_Navy_Tieks_Italian_Leather_Ballet_Flats.
+    - ASICS_GELDirt_Dog_4_SunFlameBlack.
+    - Santa_Cruz_Mens_vnbiTDDt5xH.
+    - Sperry_TopSider_pSUFPWQXPp3.
+    - ASICS_GELLinksmaster_WhiteCoffeeSand.
+    - TOP_TEN_HI.
+    - F10_TRX_TF_rH7tmKCdUJq.
+    - CLIMACOOL_BOAT_BREEZE_IE6CyqSaDwN.
+    excluded_substrings: []
+  - name: val_seen_mouse_pad
+    included_substrings:
+    - B06X3W3YQD.
+    excluded_substrings: []
+  - name: val_seen_keychain
+    included_substrings:
+    - Keychain_1.
+    excluded_substrings: []
+  - name: val_seen_spectacles
+    included_substrings:
+    - 74719799dd6db4311fb6cb0a62f9e2892006e2b7.
+    excluded_substrings: []
+  - name: val_seen_ladle
+    included_substrings:
+    - Ladle_2.
+    excluded_substrings: []
+  - name: val_seen_cellphone
+    included_substrings:
+    - Cellphone_8.
+    excluded_substrings: []
+  - name: val_seen_monitor_stand
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_ramekin
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_baseballbat
+    included_substrings:
+    - BaseballBat_2.
+    excluded_substrings: []
+  - name: val_seen_bowl
+    included_substrings:
+    - Bowl_22.
+    - 115e795ad1493bd23ae7974184818cd51b937001.
+    - 91b325c9cc01f9cee08f3cb14ff3a779a241293a.
+    - Bowl_6.
+    - Bowl_13.
+    - 0443db4d501a2ef4f89301f47f4be51a6be97d5f.
+    - 391972f73810b6eab26e322652d88a61aea7a739.
+    - Bowl_7.
+    - Bowl_19.
+    - 3c27194087623f99e782a195b0dc6e29dd070e9e.
+    - ed14e770fd67e162579a13fc83a47646527f1625.
+    - 4df6a26c581ab5ed73699c38c45f990270b75533.
+    - e6457ccaac67b796ef057aec87c6b72adfcedc95.
+    excluded_substrings: []
+  - name: val_seen_handbag
+    included_substrings: []
+    excluded_substrings: []
+  - name: val_seen_lamp
+    included_substrings:
+    - B07HK3PNSK.
+    excluded_substrings: []
+  - name: val_seen_plant_container
+    included_substrings:
+    - Ecoforms_Plant_Pot_GP9AAvocado.
+    - Central_Garden_Flower_Pot_Goo_425.
+    excluded_substrings: []
+  - name: val_seen_tomato
+    included_substrings:
+    - Tomato_19.
+    - Tomato_23.
+    - Tomato_7.
+    - Tomato_28.
+    - Tomato_3.
+    excluded_substrings: []
+  - name: val_seen_knife
+    included_substrings:
+    - Knife_1.
+    excluded_substrings: []
+  - name: val_seen_stuffed_toy
+    included_substrings:
+    - 70bf9f997babb17d77bafb5cc9cfc30e32a02403.
+    - Elephant.
+    - 42df49592ce3c646bf92368203f520035f62a28f.
+    - a8e2f442d0f6e5d86d27aa23aac71392f332addf.
+    - b4ba58ab622b84b76b98a8d4f907116425d68f3b.
+    - cccc049db3ef5417dc934e267c4fbe40d6eb3691.
+    excluded_substrings: []
+  - name: val_unseen_battery_charger
+    included_substrings:
+    - B00TS18AEA.
+    excluded_substrings: []
+  - name: val_unseen_canister
+    included_substrings:
+    - B07M6PJ66Q.
+    - B07M6PK8QN.
+    - B07MBFDKYY.
+    - B07MF1SFKD.
+    - B07MF1NJ7Q.
+    excluded_substrings: []
+  - name: val_unseen_phone_stand
+    included_substrings:
+    - B01IJ5A0PC.
+    - B01IJ5A2UA.
+    excluded_substrings: []
+  - name: val_unseen_vase
+    included_substrings:
+    - B075HR4ZDB.
+    - B075HR7DM7.
+    - B075HR7KY9.
+    - B075HWMC6S.
+    - B075HWX46K.
+    - B075HXJPW6.
+    - B075HXLWT5.
+    - B075HXPFTG.
+    - B078JGHZT3.
+    - B078JGYJTG.
+    - B078JJDPR2.
+    - B078JMJC46.
+    - B078JMJC49.
+    - B07B8NVHX1.
+    - B07B8NZQ68.
+    - B07B8PXTSY.
+    - B07B8VJBCL.
+    - B07B8W8FBV.
+    - B07HSJVP5C.
+    - B07HSLG6WR.
+    - B07HSMVFMP.
+    - B07JLBDT51.
+    - B07JM1K8VH.
+    - B07JM6GHC8.
+    - Vase_Decorative_1.
+    - Vase_Flat_1.
+    - Vase_Flat_2.
+    - Vase_Flat_3.
+    - Vase_Flat_4.
+    - Vase_Flat_5.
+    - Vase_Medium_1.
+    - Vase_Medium_2.
+    - Vase_Medium_3.
+    - Vase_Medium_4.
+    - Vase_Medium_5.
+    - Vase_Open_1.
+    - Vase_Open_2.
+    - Vase_Open_3.
+    - Vase_Tall_1.
+    - Vase_Tall_2.
+    - Vase_Tall_3.
+    - Vase_Tall_4.
+    - Vase_Tall_5.
+    - 51b55165bde866a2c8d74b46843d2f549135b889.
+    - 55cc6c146898e7fb1c2ea66ac86b04d6566ad1a5.
+    - 77fb3131da84c90973accb42a2ce5d594e5b4987.
+    - 94a5de038faeea77c286fbe0af7469d2a2f7792b.
+    - d8e3ee46b61694958a24ae70fc740f9197aef41e.
+    - 00386b5179df69aec660a71fb9c65b344857d016.
+    - 01f076bf712f7a14ceed10f92a72948c05925858.
+    - 04f409f17d79445a3afd109c557c6a2702e15cd8.
+    - 0561c92e2635eaaa0ad753cabfb427cfde565ec0.
+    - 0875307f7666e4fce7e217849c10c29972d142a7.
+    - 0ae9ee903346b3fd69b34228a3340662a173b791.
+    - 0aebf7979e3510654f3c16418145ab973c22a381.
+    - 0b0df80543773a698cd4ddcf76a7c5acfc4a803d.
+    - 0c48040ad6f64c0103c2f1b3133e2760ed8392b7.
+    - 0d61b723728d6d5ac05ac53e07372bcc7ff676ce.
+    - 1125b9ca061f6deee5d7e8a31cbe46eee10e535d.
+    - 1182b246f9dc763f898cf5a47feb003f8905d289.
+    - 13fe6d40a8869913ca6623bc6ed25dbcffb7da0d.
+    - 1404f8d65e562307f0fead3fd0d408c34f0af26a.
+    - 14b8b72a08380f9f7f13fbb0eef83344a2c11c33.
+    - 14e43de7e803f8d42e974f35cef746dcb7b57ed9.
+    - 1520472dfd763a8cb0f1b2a447bce437827b8776.
+    - 15fbefb684c5f988e5ff754bbded98aa80d3542f.
+    - 18a2fab4d1fe71c969e654740028d422d18ad9b6.
+    - 1ad21d8bf5749da64c01c01848f571e38819c316.
+    - 1b4711c1a5a9978cc2e7c57008f3d085c355d145.
+    - 1bd20c0904b0a85598a32a2de70c3a2facdf8e4d.
+    - 1d6275b17496af0183fe2c158332a8b8d3eea5b7.
+    - 1e736736c9417babd8baa34f83b526eac426e842.
+    - 20b562393eb8b161d1bfb7b1e9c5c65d277cfe6f.
+    - 2252ee7e50a8ff3608007253e73d1137358d125d.
+    - 243bad4f4c1bdda1dddf46ac7e54c567289fd38d.
+    - 2470231ef2743a97f8159f356337527eef366763.
+    - 247538767e1fde11b53e2b41edcf5b066cf0126c.
+    - 25daa32e8ec122ad22c8662a137bf444fb8da745.
+    - 263cce6bd107ce2e9f259120e38cd27f5dac0bcc.
+    - 2b6a6f943bdaf73ef2018a02ceb1720ab04b5b2d.
+    - 2b93011397cebb7664a934bb1876f126b70313d0.
+    - 2bc5fe4f4fc48aec41c67e34ebe603bbb53b1d01.
+    - 2c66d9495affb0273810b7bacd4c87a4b0f90852.
+    - 2c9b708ce46c0fa262c9c97f58e4856a792dba5e.
+    - 2d686cdf1b2da2c4b61c629bdefdb4a5c6678168.
+    - 2fd36b341e66b948ec0cd87264036f7881cedb4b.
+    - 310fe43cec6ff66fc0f99cca8443c5cdeca818ad.
+    - 334e738f9a75aa50fdc33f0776b43bdea1fccdfe.
+    - 3448a0f2142df518fd92e165207bf1d58dd05fa0.
+    - 356b8426ceec3110080b71163f586c8a0f15acfb.
+    - 371efb7286ca8324dea0d9642b3824783a11aa73.
+    - 379ad1f30cbdee03b3ce2a68d11b6b855e746fb7.
+    - 3bd1652a8ee18e0dc0985011fef96125f46b1ac4.
+    - 40bf81e852fd34c4d390fa68f71d2cafcb91f2f4.
+    - 4551602f795cf1b62cea365613c31f56dfe3999c.
+    - 463db7d43c592863e0deb15b198bf5747faae86f.
+    - 4b67581ca492a2028ccf3064b2824dcc8d104fb0.
+    - 4d264b0fb9851427c3bfcc8a92f12d33b30fe5d5.
+    - 4d40134bdb82e6e53b72cd912f99835c486e8759.
+    - 4fc6a72c3c780fd8c70c0bdd23aa877b0c4f4a7b.
+    - 535fa87debd90c5fedc585161bf019aea7ceda68.
+    - 539a80debf42cd0b6b3c3d1d67d9488efa95af45.
+    - 56a3cb5686d12e4bad648c325ae998def645c997.
+    - 5c111a7314a6d708375b5fc1a0d6560d306da7b1.
+    - 5d21ea3e7e66c57b22608a848317d807dbde3c3a.
+    - 5fd9d34de9562a5891fe0657010d6c7777438db8.
+    - 6152354f6498a5bea31b40f720f2cbff10634608.
+    - 634a9acb28154794523f83c0ae981b8537ab6d07.
+    - 6441c18aab2884608788795c231b96924c6e5523.
+    - 64e73ca852efff52e03768163453a7a41e117f43.
+    - 6654629c2b0e6e4769e3c911947605375033bde5.
+    - 66d17b302cff7b3baffdccbb52f16325ff35c623.
+    - 67b71a4ad2610e060ea018855d108362a4d6fbae.
+    - 6dd9e51b58072dbd08fbbdf95ce568aacc47ec59.
+    - 6f9e025e59a4a4c1991bb6dc7e73ccb985d07c57.
+    - 71b30944a9c6ca8077d2ab8903e586a4dd2a3917.
+    - 736eebbb72e7ee9ef01d76ae3b0075e55f05ceb5.
+    - 7b497caf99a943b669087b3dd4e77be63b3dbc0a.
+    - 7d38434695df81af30390db76c89bcc04529b406.
+    - 7ec42d263b2ee8d9b0cd09651f32c2ce46982351.
+    - 80794dc5fde2b3276714ff40107bce7b909e45c7.
+    - 85a26b27d39fe3c8317df4342d0ae32203739b8e.
+    - 877384ee8dc4577ccc2dc5b37ee505d2d4af3d0e.
+    - 882802e4ffc1f87c16e16d1322c651a849f7743d.
+    - 8aa978beb04d130c9d587f9c2858522cbf559703.
+    - 8ffc1468a4c10a3badb8b36062d58f5553c02d21.
+    - 9150be2ad622edb189333575dd7ecf229f28c490.
+    - 91cb2a92d739d4d71c46a12cb744415b90b17047.
+    - 96dec181c78bf169dbe3bb8c0215c383ce30bd3e.
+    - 99de5eb0d3e87db48cc5c2c558880d7aa1ec2c2d.
+    - 9c09a8ddc8047cdecc332f1368332a2e62a6c784.
+    - 9ec28866f43e42093f181e656ef1c89923945808.
+    - a043589070ad2a710483ac68aeb242f00ae1e994.
+    - a17f03892b9f71801e057be9db2de908464d1fba.
+    - a1a955a6d0706fa3634c9baea186632791ade20c.
+    - a21f46139ac72eca15b4240cf8055b984d593af1.
+    - aad0bda6fe5e168eaa4dbf1292878b18c54f249b.
+    - acce2a11f70af73275e053fe644a8f608089893c.
+    - adf37dc162377502fc26a64433466f01d182ebf9.
+    - aea09725b176eae21cb59fa852a55174189c11ee.
+    - af357e69163c47f0d376340314809ae12ee0c609.
+    - af753234600031dd1619673de2827b3fb2ae5b72.
+    - b0365152ce8404708c65752b9de332604bdf6063.
+    - b084a1e5e80ece7227672011515ee3b5b33a01d9.
+    - b4c970f1a8fa29e0934f4e8ccd1cb67ad92b0d51.
+    - b5a2e303c9a5cfa54fb5b257cd82926b194e1e26.
+    - b6439d60ffdbd1c1a71ba76e706dcbfc87f2c6df.
+    - b728f6c0506deaea1e8231b629d1e20b0a5fa0f8.
+    - b9b836b51c44ad76b7966ae565ae4910e89c2de6.
+    - bbe510f23f2488ae618cd8c6601f1df4e4edacc8.
+    - c27ffe33c37fb0d58bd76b949f85b4896545e0ed.
+    - c3a6db9251980820f1e2ddcabebf8d21f059e0a4.
+    - c3c8a9a0e1f2037d9e82d2286748cb576b1fd738.
+    - c4776ee9f31d7ab3177be970e35e3f76c44e0f8c.
+    - c4a76da68c72eec12f07b0f047a21a130872a0ba.
+    - c8626f2d3bbeb2f1601a2af656c4610cd99e56fa.
+    - c8af5b98558601d1ea284a89c3578eb39e061c00.
+    - c94029096657382ebca374164eef6746d80bd99e.
+    - cc5281d4600eb70647018d02c92032abf391535f.
+    - d3d2da9dd341d78c1536200b130180b40971bab8.
+    - d6b5822b17434f97ff007e0854cd9385dc79a150.
+    - dd62a6aafabe4bcc5dc49e61a5d5c87019e1b4c3.
+    - dfcbfd3a7de15b9689dc0580c38f2f0896b6647d.
+    - e05af79080f048e261865dc1f9cf0a80d47deea4.
+    - e60a5e30bb3384125c02cbda6b8aeaffc900b78a.
+    - f161fe4fd2234d49ab5e452f7b4d869ae276330e.
+    - f427ee2c7b7482af6c00918245cad73df5241a94.
+    - f51fd63c6cd12ee673b94946d1450c6afc8713be.
+    - fa5c8c836453388913b0017c4a2e33304373bc31.
+    - fbf828b972d59baba95d1a54e1f95442d7ea0b46.
+    - fc2d461dfe96f499d7c38306747b8000e111b13f.
+    - fead0a77067515bd384f322f81592d868093c8ce.
+    - ff10cb92d3dbd50abc4b4aac608055945bdb31e7.
+    - xxxx0d0ff402xe09fx4188xb9a6xcf5d7e13475e.
+    - xxxx3a4d8840x65eax4986x98f8xb64e2fba5da6.
+    - xxxx3df1391bx35d8x4752xad8exde9f3cf64b31.
+    - xxxx59b79f40x2b52x4d5axb58bx2c8d239b9a1e.
+    - xxxx609fb6c8x44a7x4239xb341xb9880ac81843.
+    - xxxx630c96dfx08d3x4691xbee6x6a40dfda78dc.
+    - xxxx962ed056x74e2x4f30x98ffx26eea6a2adad.
+    - xxxxaab02551x8cf4x48ecxb45fxbc8207ba0eca.
+    - xxxxc5720538x33bbx460cx820cxd375445ef773.
+    - xxxxccb30c58x6dc6x4d15x9e92x1583d4c2562f.
+    excluded_substrings: []
+  - name: val_unseen_android_figure
+    included_substrings:
+    - Android_Figure_Chrome.
+    - Android_Figure_Orange.
+    - Android_Figure_Panda.
+    - Android_Lego.
+    excluded_substrings: []
+  - name: val_unseen_backpack
+    included_substrings:
+    - Olive_Kids_Dinosaur_Land_Lunch_Box.
+    excluded_substrings: []
+  - name: val_unseen_basket
+    included_substrings:
+    - RJ_Rabbit_Easter_Basket_Blue.
+    - Spritz_Easter_Basket_Plastic_Teal.
+    - 87ed6d0c785b3245207bb217eb3ee3fc079f8633.
+    excluded_substrings: []
+  - name: val_unseen_can
+    included_substrings:
+    - Don_Franciscos_Gourmet_Coffee_Medium_Decaf_100_Colombian_12_oz_340_g.
+    - Nescafe_Tasters_Choice_Instant_Coffee_Decaf_House_Blend_Light_7_oz.
+    - Polar_Herring_Fillets_Smoked_Peppered_705_oz_total.
+    excluded_substrings: []
+  - name: val_unseen_can_opener
+    included_substrings:
+    - OXO_Soft_Works_Can_Opener_SnapLock.
+    excluded_substrings: []
+  - name: val_unseen_doll
+    included_substrings:
+    - 3D_Dollhouse_Happy_Brother.
+    excluded_substrings: []
+  - name: val_unseen_electronic_cable
+    included_substrings:
+    - Shaxon_100_Molded_Category_6_RJ45RJ45_Shielded_Patch_Cord_White.
+    excluded_substrings: []
+  - name: val_unseen_hard_drive
+    included_substrings:
+    - Seagate_1TB_Backup_Plus_portable_drive_Blue.
+    - Seagate_1TB_Backup_Plus_portable_drive_Silver.
+    - Seagate_1TB_Backup_Plus_portable_drive_for_Mac.
+    - Seagate_1TB_Wireless_Plus_mobile_device_storage.
+    - Seagate_Archive_HDD_8_TB_Internal_hard_drive_SATA_6Gbs_35_ST8000AS0002.
+    - Seagate_3TB_Central_shared_storage.
+    excluded_substrings: []
+  - name: val_unseen_helmet
+    included_substrings:
+    - Ortho_Forward_Facing_CkAW6rL25xH.
+    excluded_substrings: []
+  - name: val_unseen_squeezer
+    included_substrings:
+    - Focus_8643_Lime_Squeezer_10x35x188_Enamelled_Aluminum_Light.
+    excluded_substrings: []
+  - name: val_unseen_pencil_case
+    included_substrings:
+    - Pinwheel_Pencil_Case.
+    - Olive_Kids_Butterfly_Garden_Pencil_Case.
+    - Olive_Kids_Paisley_Pencil_Case.
+    - Olive_Kids_Robots_Pencil_Case.
+    - Big_Dot_Aqua_Pencil_Case.
+    - Big_Dot_Pink_Pencil_Case.
+    excluded_substrings: []
+  - name: val_unseen_plant_saucer
+    included_substrings:
+    - Ecoforms_Plant_Container_S14Turquoise.
+    - Ecoforms_Plant_Container_S24NATURAL.
+    - Ecoforms_Plant_Container_S24Turquoise.
+    - Cole_Hardware_Plant_Saucer_Brown_125.
+    - Cole_Hardware_Plant_Saucer_Glazed_9.
+    - Cole_Hardware_Saucer_Electric.
+    - Cole_Hardware_Saucer_Glazed_6.
+    - Ecoforms_Plant_Plate_S11Turquoise.
+    - Ecoforms_Plant_Saucer_S14MOCHA.
+    - Ecoforms_Plant_Saucer_S14NATURAL.
+    - Ecoforms_Plant_Saucer_S17MOCHA.
+    - Ecoforms_Plant_Saucer_SQ1HARVEST.
+    - Ecoforms_Quadra_Saucer_SQ1_Avocado.
+    excluded_substrings: []
+  - name: val_unseen_plate
+    included_substrings:
+    - Threshold_Bistro_Ceramic_Dinner_Plate_Ruby_Ring.
+    - Threshold_Dinner_Plate_Square_Rim_White_Porcelain.
+    - Plate_1.
+    - Plate_10.
+    - Plate_11.
+    - Plate_12.
+    - Plate_13.
+    - Plate_14.
+    - Plate_15.
+    - Plate_16.
+    - Plate_17.
+    - Plate_18.
+    - Plate_19.
+    - Plate_2.
+    - Plate_20.
+    - Plate_21.
+    - Plate_22.
+    - Plate_23.
+    - Plate_24.
+    - Plate_25.
+    - Plate_26.
+    - Plate_27.
+    - Plate_28.
+    - Plate_29.
+    - Plate_3.
+    - Plate_30.
+    - Plate_4.
+    - Plate_5.
+    - Plate_6.
+    - Plate_7.
+    - Plate_8.
+    - Plate_9.
+    - 91bfe2681a0d397e267e93e125924c872e6a2159.
+    - 21551881391c2b21c2e1358effa7d6b69cbd435f.
+    - 32bc37b3c83ce4c3d61f8e64e62934e1cfe82f94.
+    - 3b519761173617ee47ca61e25681279ae9fdaba9.
+    - 4087db7d03a368aeb48956f358eeee58e0edd7b3.
+    - 41753aebe629e7e2fbc8c576ce5865056b824ff7.
+    - 46d69ab16b7cd068d424c383955b91e756184130.
+    - 5a0ac54dc91ce3d40e4351a0dcfb6b9ffa08fdc2.
+    - 624150e8832d1acf256bdf52050ac6226d5c6a5f.
+    - 761c161d57068a6f504e8fd35cad5a04663b62f1.
+    - 7e067cafd8b96fae4671c0032317763fd9549b80.
+    - 7f5e4621caaeae9e3f4fbca6fc84779fa4b9c64f.
+    - 878dc86bcc60dec276240e2c7551b73094903127.
+    - 8cd9b448815a904b8b3b5817c742620729fe4a7c.
+    - b3879123202b611e2287fb8ef66089bcb13e9d69.
+    - b599eb548442db2690265de15d2bf8aa549acd02.
+    - bdd5e488098e1e64921b53aacfc8df260e2f898c.
+    - c717fbe8f10ad354c83f9cfc7ce154ae2fcdf96c.
+    - cc9929ee326793bba8cc58e9120ef2262f087ca4.
+    - db5318d5db53a15c19b290628b82f08a27f5639a.
+    - fed3e9529785079e938d85b35e53c34735cc05c0.
+    excluded_substrings: []
+  - name: val_unseen_sponge
+    included_substrings:
+    - Big_O_Sponges_Assorted_Cellulose_12_pack.
+    - Dish_Sponge_1.
+    excluded_substrings: []
+  - name: val_unseen_toy_bee
+    included_substrings:
+    - Fisher_price_Classic_Toys_Buzzy_Bee.
+    excluded_substrings: []
+  - name: val_unseen_toy_fruits
+    included_substrings:
+    - Fruity_Friends.
+    excluded_substrings: []
+  - name: val_unseen_toy_airplane
+    included_substrings:
+    - Air_Hogs_Wind_Flyers_Set_Airplane_Red.
+    - TURBOPROP_AIRPLANE_WITH_PILOT.
+    excluded_substrings: []
+  - name: val_unseen_toy_construction_set
+    included_substrings:
+    - CREATIVE_BLOCKS_35_MM.
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "hab2"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: subset
+  params:
+    scene_sets:
+      - "val"
+object_samplers:
+- name: val_set_clutter
+  type: category_balanced
+  sampler_range: dynamic
+  params:
+    object_sets:
+    - val_seen_watch
+    - val_seen_dumbbell
+    - val_seen_cushion
+    - val_seen_apple
+    - val_seen_jug
+    - val_seen_pen
+    - val_seen_bottle
+    - val_seen_candle
+    - val_seen_bread
+    - val_seen_picture_frame
+    - val_seen_file_sorter
+    - val_seen_spray_bottle
+    - val_seen_potato
+    - val_seen_teapot
+    - val_seen_candy_bar
+    - val_seen_tape
+    - val_seen_spatula
+    - val_seen_clock
+    - val_seen_multiport_hub
+    - val_seen_cup
+    - val_seen_action_figure
+    - val_seen_board_game
+    - val_seen_casserole
+    - val_seen_tray
+    - val_seen_candle_holder
+    - val_seen_spicemill
+    - val_seen_electric_kettle
+    - val_seen_credit_card
+    - val_seen_bath_towel
+    - val_seen_laptop
+    - val_seen_hat
+    - val_seen_box
+    - val_seen_hand_towel
+    - val_seen_pan
+    - val_seen_egg
+    - val_seen_soap_dispenser
+    - val_seen_lunch_box
+    - val_seen_book
+    - val_seen_gaming_console
+    - val_seen_toy_animal
+    - val_seen_toy_fire_truck
+    - val_seen_statue
+    - val_seen_laptop_stand
+    - val_seen_laptop_cover
+    - val_seen_toy_vehicle
+    - val_seen_glass
+    - val_seen_tennis_racquet
+    - val_seen_kettle
+    - val_seen_shoe
+    - val_seen_mouse_pad
+    - val_seen_keychain
+    - val_seen_spectacles
+    - val_seen_ladle
+    - val_seen_cellphone
+    - val_seen_monitor_stand
+    - val_seen_ramekin
+    - val_seen_baseballbat
+    - val_seen_bowl
+    - val_seen_handbag
+    - val_seen_lamp
+    - val_seen_plant_container
+    - val_seen_tomato
+    - val_seen_knife
+    - val_seen_stuffed_toy
+    - val_unseen_battery_charger
+    - val_unseen_canister
+    - val_unseen_phone_stand
+    - val_unseen_vase
+    - val_unseen_android_figure
+    - val_unseen_backpack
+    - val_unseen_basket
+    - val_unseen_can
+    - val_unseen_can_opener
+    - val_unseen_doll
+    - val_unseen_electronic_cable
+    - val_unseen_hard_drive
+    - val_unseen_helmet
+    - val_unseen_squeezer
+    - val_unseen_pencil_case
+    - val_unseen_plant_saucer
+    - val_unseen_plate
+    - val_unseen_sponge
+    - val_unseen_toy_bee
+    - val_unseen_toy_fruits
+    - val_unseen_toy_airplane
+    - val_unseen_toy_construction_set
+    receptacle_sets:
+    - hab2
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+- name: val_set_targets
+  type: category_balanced
+  sampler_range: fixed
+  params:
+    object_sets:
+      - val_unseen_battery_charger
+      - val_unseen_canister
+      - val_unseen_phone_stand
+      - val_unseen_vase
+      - val_unseen_android_figure
+      - val_unseen_backpack
+      - val_unseen_basket
+      - val_unseen_can
+      - val_unseen_can_opener
+      - val_unseen_doll
+      - val_unseen_electronic_cable
+      - val_unseen_hard_drive
+      - val_unseen_helmet
+      - val_unseen_squeezer
+      - val_unseen_pencil_case
+      - val_unseen_plant_saucer
+      - val_unseen_plate
+      - val_unseen_sponge
+      - val_unseen_toy_bee
+      - val_unseen_toy_fruits
+      - val_unseen_toy_airplane
+      - val_unseen_toy_construction_set
+    receptacle_sets:
+    - hab2
+    num_samples:
+    - 1
+    - 1
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+object_target_samplers:
+- name: hab2
+  type: uniform
+  sampler_range: fixed
+  params:
+    object_samplers:
+    - val_set_clutter
+    - val_set_targets
+    receptacle_sets:
+    - hab2
+    num_samples:
+    - 1
+    - 1
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+
+agent:
+  camera:
+    height: 1.31
+    hfov: 42
+    tilt_degrees: -30
+    resolution: [160, 120]
+  radius: 0.25
+  height: 1.41
+  max_climb: 0.01
