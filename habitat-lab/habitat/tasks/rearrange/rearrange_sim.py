@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import time
 from collections import defaultdict
@@ -30,6 +31,7 @@ from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
@@ -332,8 +334,7 @@ class RearrangeSim(HabitatSim):
             for handle, ro in rom.get_objects_by_handle_substring().items()
         }
 
-        if new_scene:
-            self._load_navmesh(ep_info)
+        self._load_navmesh(ep_info, new_scene)
 
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
@@ -429,22 +430,49 @@ class RearrangeSim(HabitatSim):
             )
 
     @add_perf_timing_func()
-    def _load_navmesh(self, ep_info):
+    def _load_navmesh(self, ep_info, new_scene=True):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+        if new_scene:
+            scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
 
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+            if "fpss" in ep_info.scene_id.split("/"):
+                # For FP scenes, we use different path structure than for other scenes.
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
+            else:
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
-        self._navmesh_vertices = np.stack(
-            self.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        self._island_sizes = [
-            self.pathfinder.island_radius(p) for p in self._navmesh_vertices
-        ]
-        self._max_island_size = max(self._island_sizes)
-        self._largest_island_idx = self.pathfinder.get_island(
-            self._navmesh_vertices[np.argmax(self._island_sizes)]
+            navmesh_path = osp.join(
+                base_dir, "navmeshes", scene_name + ".navmesh"
+            )
+            # If we cannot load the navmesh, try generarting navmesh on the fly.
+            if osp.exists(navmesh_path):
+                self.pathfinder.load_nav_mesh(navmesh_path)
+                print(f"Loaded navmesh from {navmesh_path}")
+            else:
+                print(f"recompute navmesh")
+                navmesh_settings = NavMeshSettings()
+                navmesh_settings.set_defaults()
+
+                agent_config = None
+                if hasattr(self.habitat_config.agents, "agent_0"):
+                    agent_config = self.habitat_config.agents.agent_0
+                elif hasattr(self.habitat_config.agents, "main_agent"):
+                    agent_config = self.habitat_config.agents.main_agent
+                else:
+                    raise ValueError(f"Cannot find agent parameters.")
+                navmesh_settings.agent_radius = agent_config.radius
+                navmesh_settings.agent_height = agent_config.height
+                # navmesh_settings.agent_max_climb = agent_config.max_climb
+                # navmesh_settings.agent_max_slope = agent_config.max_slope
+                navmesh_settings.include_static_objects = True
+                self.recompute_navmesh(self.pathfinder, navmesh_settings)
+                os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+                self.pathfinder.save_nav_mesh(navmesh_path)
+
+        # NOTE: allowing indoor islands only
+        self._largest_island_idx = get_largest_island_index(
+            self.pathfinder, self, allow_outdoor=False
         )
 
     @property

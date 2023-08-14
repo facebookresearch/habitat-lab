@@ -38,7 +38,7 @@ class MultiObjSensor(PointGoalSensor):
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
         # For using policy for replica_cad to FP
-        # n_targets = 1
+        n_targets = 1
         return spaces.Box(
             shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
