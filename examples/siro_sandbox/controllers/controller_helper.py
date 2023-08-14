@@ -11,6 +11,7 @@ import numpy as np
 from .baselines_controller import (
     MultiAgentBaselinesController,
     SingleAgentBaselinesController,
+    FetchBaselinesController
 )
 from .controller_abc import Controller
 from .gui_controller import GuiHumanoidController, GuiRobotController
@@ -97,16 +98,25 @@ class ControllerHelper:
                     gui_input=gui_input,
                 )
             self.controllers.append(gui_agent_controller)
-
             if is_multi_agent:
-                self.controllers.append(
-                    SingleAgentBaselinesController(
-                        0 if self._gui_controlled_agent_index == 1 else 1,
-                        is_multi_agent,
-                        config,
-                        self._gym_habitat_env,
+                if args.app_state == "fetch":
+                    self.controllers.append(
+                        FetchBaselinesController(
+                            0 if self._gui_controlled_agent_index == 1 else 1,
+                            is_multi_agent,
+                            config,
+                            self._gym_habitat_env,
+                        )
                     )
-                )
+                else:
+                    self.controllers.append(
+                        SingleAgentBaselinesController(
+                            0 if self._gui_controlled_agent_index == 1 else 1,
+                            is_multi_agent,
+                            config,
+                            self._gym_habitat_env,
+                        )
+                    )
 
     def get_gui_agent_controller(self) -> Optional[Controller]:
         if self._gui_controlled_agent_index is None:
@@ -119,7 +129,7 @@ class ControllerHelper:
             return None
 
         # This is pretty hacky
-        return self.controllers[1 - self._gui_controlled_agent_index]
+        return self.controllers[1]
     
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index
@@ -146,7 +156,7 @@ class ControllerHelper:
             raise ValueError(
                 "ControllerHelper only supports up to 2 controllers."
             )
-
+        
         return action
 
     def on_environment_reset(self):
