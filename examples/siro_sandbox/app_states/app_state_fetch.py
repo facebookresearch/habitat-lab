@@ -8,11 +8,11 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
+from controllers.baselines_controller import CurrentFetchState
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
+from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-
-from controllers.baselines_controller import FetchBaselinesController, CurrentFetchState
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
 from habitat.gui.gui_input import GuiInput
@@ -20,12 +20,7 @@ from habitat.gui.text_drawer import TextOnScreenAlignment
 
 
 class AppStateFetch(AppState):
-    def __init__(
-        self,
-        sandbox_service,
-        gui_agent_ctrl,
-        robot_agent_ctrl
-    ):
+    def __init__(self, sandbox_service, gui_agent_ctrl, robot_agent_ctrl):
         self._sandbox_service = sandbox_service
         self.gui_agent_ctrl = gui_agent_ctrl
         self.state_machine_agent_ctrl = robot_agent_ctrl
@@ -51,6 +46,9 @@ class AppStateFetch(AppState):
         self._throw_helper = GuiThrowHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
         )
+        self._pick_helper = GuiPickHelper(
+            self._sandbox_service, self.get_gui_controlled_agent_index()
+        )
         self._prepare_throw = False
 
     def on_environment_reset(self, episode_recorder_dict):
@@ -63,6 +61,8 @@ class AppStateFetch(AppState):
         ]
 
         self._nav_helper.on_environment_reset()
+        self._pick_helper.on_environment_reset()
+        self._pick_helper.agent_feet_height = self._get_agent_feet_height()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
@@ -86,14 +86,22 @@ class AppStateFetch(AppState):
                 # )
                 # drop_pos.y = 0.0
                 # self._held_target_obj_idx = None
-            elif self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.SPACE):
+            elif self._sandbox_service.gui_input.get_key_up(
+                GuiInput.KeyNS.SPACE
+            ):
                 if self._prepare_throw:
                     will_throw = True
-                    throw_obj_id = self.gui_agent_ctrl._get_grasp_mgr().snap_idx
-                    self.state_machine_agent_ctrl.object_interest_id = throw_obj_id
-                    sim = self.get_sim()
-                    self.state_machine_agent_ctrl.rigid_obj_interest = sim.get_rigid_object_manager().get_object_by_id(
+                    throw_obj_id = (
+                        self.gui_agent_ctrl._get_grasp_mgr().snap_idx
+                    )
+                    self.state_machine_agent_ctrl.object_interest_id = (
                         throw_obj_id
+                    )
+                    sim = self.get_sim()
+                    self.state_machine_agent_ctrl.rigid_obj_interest = (
+                        sim.get_rigid_object_manager().get_object_by_id(
+                            throw_obj_id
+                        )
                     )
                     self._held_target_obj_idx = None
                 self._prepare_throw = False
@@ -108,24 +116,25 @@ class AppStateFetch(AppState):
                     GuiInput.KeyNS.SPACE
                 ):
                     translation = self._get_agent_translation()
+                    obj_pick = self._pick_helper.viz_and_get_pick_object()
 
-                    min_dist = self._can_grasp_place_threshold
-                    min_i = None
-                    for i in range(len(self._target_obj_ids)):
+                    if obj_pick is not None:
+                        # We will use obj0 as our object of interest
+                        self._target_obj_ids[0] = obj_pick
+                        min_dist = self._can_grasp_place_threshold
+
+                        i = 0
                         this_target_pos = self._get_target_object_position(i)
+
                         # compute distance in xz plane
                         offset = this_target_pos - translation
                         offset.y = 0
                         dist_xz = offset.length()
                         if dist_xz < min_dist:
-                            min_dist = dist_xz
-                            min_i = i
-
-                    if min_i is not None:
-                        self._held_target_obj_idx = min_i
-                        grasp_object_id = self._target_obj_ids[
-                            self._held_target_obj_idx
-                        ]
+                            self._held_target_obj_idx = 0
+                            grasp_object_id = self._target_obj_ids[
+                                self._held_target_obj_idx
+                            ]
 
         walk_dir = None
         if not self._prepare_throw and not will_throw:
@@ -135,14 +144,16 @@ class AppStateFetch(AppState):
                     if not self._first_person_mode
                     else None
                 )
+                obj_pick = self._pick_helper.viz_and_get_pick_object()
+
                 if self._sandbox_service.gui_input.get_mouse_button(
                     GuiInput.MouseNS.RIGHT
                 ):
                     walk_dir = candidate_walk_dir
             self.gui_agent_ctrl.set_act_hints(
-                walk_dir, 
-                grasp_object_id, 
-                drop_pos, 
+                walk_dir,
+                grasp_object_id,
+                drop_pos,
                 self._camera_helper.lookat_offset_yaw,
             )
         else:
@@ -152,16 +163,18 @@ class AppStateFetch(AppState):
             if will_throw:
                 drop_speed = computed_speed
                 self.gui_agent_ctrl.set_act_hints(
-                    walk_dir, 
-                    None, 
-                    drop_pos, 
+                    walk_dir,
+                    None,
+                    drop_pos,
                     self._camera_helper.lookat_offset_yaw,
-                    drop_speed=drop_speed
+                    drop_speed=drop_speed,
                 )
             if will_throw:
-                # pass    
-                self.state_machine_agent_ctrl.current_state = CurrentFetchState.PICK
-            
+                # pass
+                self.state_machine_agent_ctrl.current_state = (
+                    CurrentFetchState.PICK
+                )
+
             will_throw = False
         return drop_pos
 
@@ -308,7 +321,7 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
             self._sandbox_service.end_episode(do_reset=True)
 
-        self._viz_objects()
+        # self._viz_objects()
         self._update_grasping_and_set_act_hints()
         self._sandbox_service.compute_action_and_step_env()
 

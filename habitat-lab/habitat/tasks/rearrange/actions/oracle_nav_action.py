@@ -184,7 +184,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
             self._poss_entities
         ):
-            return None
+            return
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
 
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
@@ -277,6 +277,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                     "Unrecognized motion type for oracle nav action"
                 )
 
+
 @registry.register_task_action
 class OracleNavCoordAction(OracleNavAction):
     """
@@ -289,8 +290,7 @@ class OracleNavCoordAction(OracleNavAction):
     """
 
     def __init__(self, *args, task, **kwargs):
-        super().__init__(*args,  task=task, **kwargs)
-
+        super().__init__(*args, task=task, **kwargs)
 
     @property
     def action_space(self):
@@ -307,7 +307,9 @@ class OracleNavCoordAction(OracleNavAction):
         )
 
     def _get_target_for_coord(self, obj_pos):
-        pos_hash = tuple(np.around(obj_pos, decimals=0))
+        precision = 0.25
+        pos_hash = np.around(obj_pos / precision, decimals=0) * precision
+        pos_hash = tuple(pos_hash)
         if pos_hash not in self._targets:
             start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
@@ -325,7 +327,7 @@ class OracleNavCoordAction(OracleNavAction):
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
             )
-        return  (start_pos, np.array(obj_pos))
+        return (start_pos, np.array(obj_pos))
 
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
