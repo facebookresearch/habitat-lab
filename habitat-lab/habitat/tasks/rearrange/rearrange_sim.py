@@ -706,7 +706,6 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
-        
 
         rigid_T, rigid_V = [], []
         for i in self._scene_obj_ids:
@@ -766,7 +765,9 @@ class RearrangeSim(HabitatSim):
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
 
-        for T, V, i in zip(state["rigid_T"], state["rigid_V"], self._scene_obj_ids):
+        for T, V, i in zip(
+            state["rigid_T"], state["rigid_V"], self._scene_obj_ids
+        ):
             # reset object transform
             obj = rom.get_object_by_id(i)
             obj.transformation = T
