@@ -41,15 +41,10 @@ class KinematicHumanoid(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.5),
-                    cam_look_at_pos=mn.Vector3(1, 0, 0.75),
+                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.7),
+                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-2,
                 ),
-                # "third": ArticulatedAgentCameraParams(
-                #     cam_offset_pos=mn.Vector3(-0.7, -0.7, 1.4),
-                #     cam_look_at_pos=mn.Vector3(1, 0.75, 0),
-                #     attached_link_id=-2,
-                # ),
             },
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
@@ -91,7 +86,6 @@ class KinematicHumanoid(MobileManipulator):
         add_rot = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
         )
-
         perm = mn.Matrix4.rotation(
             mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
         )
