@@ -23,13 +23,13 @@ class AppStateFetch(AppState):
         gui_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
-        self.gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = gui_agent_ctrl
 
         self._can_grasp_place_threshold = (
             self._sandbox_service.args.can_grasp_place_threshold
         )
 
-        self.cam_transform = None
+        self._cam_transform = None
 
         self._held_target_obj_idx = None
 
@@ -80,7 +80,7 @@ class AppStateFetch(AppState):
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
-                assert not self.gui_agent_ctrl.is_grasped
+                assert not self._gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self._sandbox_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
@@ -115,14 +115,12 @@ class AppStateFetch(AppState):
             ):
                 walk_dir = candidate_walk_dir
 
-        self.gui_agent_ctrl.set_act_hints(
+        self._gui_agent_ctrl.set_act_hints(
             walk_dir,
             grasp_object_id,
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
         )
-
-        return drop_pos
 
     def _get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
@@ -176,18 +174,18 @@ class AppStateFetch(AppState):
             )
 
     def get_gui_controlled_agent_index(self):
-        return self.gui_agent_ctrl._agent_idx
+        return self._gui_agent_ctrl._agent_idx
 
     def _get_agent_translation(self):
-        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         return (
-            self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
         )
 
     def _get_agent_feet_height(self):
-        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
-            self.gui_agent_ctrl.get_articulated_agent().params.base_offset
+            self._gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
         agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]
@@ -273,7 +271,7 @@ class AppStateFetch(AppState):
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
-        self.cam_transform = self._camera_helper.get_cam_transform()
-        post_sim_update_dict["cam_transform"] = self.cam_transform
+        self._cam_transform = self._camera_helper.get_cam_transform()
+        post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()

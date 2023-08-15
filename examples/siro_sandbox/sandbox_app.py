@@ -82,6 +82,7 @@ class SandboxDriver(GuiAppDriver):
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
         self._args = args
+        self._gui_input = gui_input
 
         line_render.set_line_width(3)
 
@@ -99,6 +100,7 @@ class SandboxDriver(GuiAppDriver):
         self.habitat_env: habitat.Env = (  # type: ignore
             self.gym_habitat_env.unwrapped.habitat_env
         )
+        self._sim = self.habitat_env.task._sim
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -157,7 +159,7 @@ class SandboxDriver(GuiAppDriver):
             text_drawer,
             lambda: self._viz_anim_fraction,
             self.habitat_env,
-            self.get_sim(),
+            self._sim,
             lambda: self._compute_action_and_step_env(),
             self._step_recorder,
             lambda: self._get_recent_metrics(),
@@ -166,19 +168,19 @@ class SandboxDriver(GuiAppDriver):
         )
 
         if args.app_state == "fetch":
-            self._app_state_fetch = AppStateFetch(
+            self._app_state = AppStateFetch(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
             )
-            self._app_state = self._app_state_fetch
         elif args.app_state == "rearrange":
-            self._app_state_rearrange = AppStateRearrange(
+            self._app_state = AppStateRearrange(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
             )
-            self._app_state = self._app_state_rearrange
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
+        # Note that we expect SandboxDriver to create multiple AppStates in some
+        # situations and manage the transition between them, e.g. tutorial -> rearrange.
 
         self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
@@ -308,10 +310,6 @@ class SandboxDriver(GuiAppDriver):
         if do_reset and self._next_episode_exists():
             self._reset_environment()
 
-    # trying to get around mypy complaints about missing sim attributes
-    def get_sim(self) -> Any:
-        return self.habitat_env.task._sim
-
     def _save_recorded_keyframes_to_file(self):
         if not self._recording_keyframes:
             return
@@ -373,9 +371,9 @@ class SandboxDriver(GuiAppDriver):
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self._sandbox_service.sim.navmesh_visualization = (  # type: ignore
-                not self._sandbox_service.sim.navmesh_visualization  # type: ignore
+        if self._gui_input.get_key_down(GuiInput.KeyNS.N):
+            self._sim.navmesh_visualization = (  # type: ignore
+                not self._sim.navmesh_visualization  # type: ignore
             )
 
         self._app_state.sim_update(dt, post_sim_update_dict)
@@ -387,7 +385,7 @@ class SandboxDriver(GuiAppDriver):
             self._pending_cursor_style = None
 
         keyframes = (
-            self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
+            self._sim.gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
         if self._save_gfx_replay_keyframes:
