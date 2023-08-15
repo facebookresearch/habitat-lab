@@ -100,6 +100,7 @@ class SingleAgentBaselinesController(BaselinesController):
             is_distrib=False,
             device=self.device,
             percent_done_fn=lambda: 0,
+            resume_state=None,
         )
 
         return agent

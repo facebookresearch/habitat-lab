@@ -8,7 +8,8 @@ import magnum as mn
 from hablab_utils import get_agent_art_obj_transform
 
 import habitat_sim
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+
+# from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 
 
 class GuiNavigationHelper:
@@ -47,11 +48,12 @@ class GuiNavigationHelper:
         )
 
     def on_environment_reset(self):
-        sim = self._get_sim()
+        # sim = self._get_sim()
         # recompute the largest indoor island id whenever the sim backend may have changed
-        self._largest_island_idx = get_largest_island_index(
-            sim.pathfinder, sim, allow_outdoor=False
-        )
+        # self._largest_island_idx = get_largest_island_index(
+        #     sim.pathfinder, sim, allow_outdoor=False
+        # )
+        self._largest_island_idx = 0
 
     def viz_and_get_humanoid_walk_dir(self):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)

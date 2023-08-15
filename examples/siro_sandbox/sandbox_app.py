@@ -94,9 +94,12 @@ class SandboxDriver(GuiAppDriver):
             )
             config.habitat.simulator.concur_render = False
 
-        dataset = self._make_dataset(config=config)
+        # dataset = self._make_dataset(config=config)
+        # self.gym_habitat_env: "GymHabitatEnv" = (
+        #     habitat.gym.make_gym_from_config(config=config, dataset=dataset)
+        # )
         self.gym_habitat_env: "GymHabitatEnv" = (
-            habitat.gym.make_gym_from_config(config=config, dataset=dataset)
+            habitat.gym.make_gym_from_config(config=config)
         )
         self.habitat_env: habitat.Env = (  # type: ignore
             self.gym_habitat_env.unwrapped.habitat_env
