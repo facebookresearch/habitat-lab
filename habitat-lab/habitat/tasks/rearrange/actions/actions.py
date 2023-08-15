@@ -420,6 +420,7 @@ class BaseVelAction(ArticulatedAgentAction):
         self._lin_speed = self._config.lin_speed
         self._ang_speed = self._config.ang_speed
         self._allow_back = self._config.allow_back
+        self._correct_height_spot = 0.601232  # for Spot
 
     @property
     def action_space(self):
@@ -464,6 +465,9 @@ class BaseVelAction(ArticulatedAgentAction):
 
         # Offset the base
         end_pos -= self.cur_articulated_agent.params.base_offset
+
+        if end_pos[1] > 0.8:
+            end_pos[1] = self._correct_height_spot
 
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
