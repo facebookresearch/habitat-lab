@@ -728,6 +728,9 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._accum_coll_info = CollisionDetails()
+        self._prev_scene_colls = None
+        self._cur_scene_colls = None
+        self._add_scene_colls = None
         self.update_metric(
             *args,
             episode=episode,
@@ -736,9 +739,25 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
             **kwargs,
         )
 
+    @property
+    def add_scene_colls(self):
+        return self._add_scene_colls
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
         cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
         self._accum_coll_info += cur_coll_info
+
+        self._cur_scene_colls = self._accum_coll_info.robot_scene_colls
+
+        if self._prev_scene_colls is not None:
+            self._add_scene_colls = (
+                self._cur_scene_colls - self._prev_scene_colls
+            )
+            self._prev_scene_colls = self._cur_scene_colls
+        else:
+            self._prev_scene_colls = self._cur_scene_colls
+            self._add_scene_colls = 0.0
+
         self._metric = {
             "total_collisions": self._accum_coll_info.total_collisions,
             "robot_obj_colls": self._accum_coll_info.robot_obj_colls,

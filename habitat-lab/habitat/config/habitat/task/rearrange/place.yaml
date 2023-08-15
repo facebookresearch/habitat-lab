@@ -7,6 +7,7 @@ defaults:
     - articulated_agent_force
     - force_terminate
     - articulated_agent_colls
+    - collisions_terminate
     - end_effector_to_rest_distance
     - end_effector_to_goal_distance
     - object_to_goal_distance

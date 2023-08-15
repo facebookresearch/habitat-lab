@@ -10,7 +10,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - head_depth
+      - arm_depth
       - obj_goal_sensor
       - joint
       - is_holding
