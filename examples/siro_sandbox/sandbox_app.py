@@ -54,6 +54,7 @@ if TYPE_CHECKING:
 
 from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_rearrange import AppStateRearrange
+from app_states.app_state_socialnav import AppStateSocialNav
 from sandbox_service import SandboxService
 
 # Please reach out to the paper authors to obtain this file
@@ -173,6 +174,11 @@ class SandboxDriver(GuiAppDriver):
             )
         elif args.app_state == "rearrange":
             self._app_state = AppStateRearrange(
+                self._sandbox_service,
+                self.ctrl_helper.get_gui_agent_controller(),
+            )
+        elif args.app_state == "socialnav":
+            self._app_state = AppStateSocialNav(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
             )
