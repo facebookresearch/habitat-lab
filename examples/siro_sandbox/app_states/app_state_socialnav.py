@@ -1,6 +1,7 @@
 from typing import List, Set
 
 import magnum as mn
+import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
@@ -32,7 +33,7 @@ class AppStateSocialNav(AppState):
         # task-specific parameters:
         self._num_iter_episodes: int = len(self._sandbox_service.env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
-        self._object_found_radius: float = 1.2
+        self._object_found_radius: float = 1.2  # TODO: make this a parameter
         self._episode_found_obj_ids: Set = (
             None  # will be set in on_environment_reset
         )
@@ -56,6 +57,9 @@ class AppStateSocialNav(AppState):
             episode_recorder_dict[
                 "target_obj_ids"
             ] = self._episode_target_obj_ids
+            episode_recorder_dict[
+                "target_object_positions"
+            ] = self._get_target_object_positions()
 
         self._num_episodes_done += 1
 
@@ -80,7 +84,23 @@ class AppStateSocialNav(AppState):
         self._update_help_text()
 
     def record_state(self):
-        pass
+        agent_states = []
+        for agent_idx in range(self.get_num_agents()):
+            agent_root = get_agent_art_obj_transform(self.get_sim(), agent_idx)
+            rotation_quat = mn.Quaternion.from_matrix(agent_root.rotation())
+            rotation_list = list(rotation_quat.vector) + [rotation_quat.scalar]
+            pos = agent_root.translation
+
+            agent_states.append(
+                {
+                    "position": pos,
+                    "rotation_xyzw": rotation_list,
+                }
+            )
+
+        self._sandbox_service.step_recorder.record(
+            "agent_states", agent_states
+        )
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -194,6 +214,16 @@ class AppStateSocialNav(AppState):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
         return rom.get_object_by_id(target_obj_id).translation
+
+    def _get_target_object_positions(self):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        return np.array(
+            [
+                rom.get_object_by_id(obj_id).translation
+                for obj_id in self._target_obj_ids
+            ]
+        )
 
     def _update_help_text(self):
         controls_str = self._get_controls_text()
