@@ -195,7 +195,7 @@ class BaselinesController(Controller):
                 )
                 self._prev_actions.copy_(action_data.actions)  # type: ignore
             else:
-                self._agent.update_hidden_state(
+                self._agent.actor_critic.update_hidden_state(
                     self._test_recurrent_hidden_states,
                     self._prev_actions,
                     action_data,

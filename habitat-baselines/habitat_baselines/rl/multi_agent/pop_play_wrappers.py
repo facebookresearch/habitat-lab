@@ -37,6 +37,26 @@ class MultiPolicy(Policy):
         for policy in self._active_policies:
             policy.pause_envs(envs_to_pause)
 
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        # TODO: will not work with hidden states with different number of layers
+        n_agents = len(self._active_policies)
+        hxs_dim = rnn_hxs.shape[-1] // n_agents
+        ac_dim = prev_actions.shape[-1] // n_agents
+        # Not very efficient, but update each policies's hidden state individually.
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            for policy_i, agent_should_insert in enumerate(should_insert):
+                if not agent_should_insert.item():
+                    continue
+                rnn_sel = slice(policy_i * hxs_dim, (policy_i + 1) * hxs_dim)
+                rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
+                    env_i, :, rnn_sel
+                ]
+
+                ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
+                prev_actions[env_i, ac_sel].copy_(
+                    action_data.actions[env_i, ac_sel]
+                )
+
     def act(
         self,
         observations,
