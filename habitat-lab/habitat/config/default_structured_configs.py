@@ -65,6 +65,7 @@ __all__ = [
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
+    "CollisionsTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
@@ -718,6 +719,19 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
     type: str = "ForceTerminate"
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
+
+
+@dataclass
+class CollisionsTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+
+    :property max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :property max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
+    type: str = "CollisionsTerminate"
+    max_scene_colls: float = -1.0
 
 
 @dataclass
@@ -2010,6 +2024,12 @@ cs.store(
     group="habitat/task/measurements",
     name="force_terminate",
     node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.collisions_terminate",
+    group="habitat/task/measurements",
+    name="collisions_terminate",
+    node=CollisionsTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",

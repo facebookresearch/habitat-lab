@@ -748,6 +748,56 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
+class CollisionsTerminate(UsesArticulatedAgentInterface, Measure):
+    """
+    Collision_ termination based on the number of collision
+    """
+
+    cls_uuid: str = "collision_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_scene_colls = self._config.max_scene_colls
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        collisions_info = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        scene_colls = collisions_info["robot_scene_colls"]
+        if self._max_scene_colls > 0 and scene_colls > self._max_scene_colls:
+            rearrange_logger.debug(
+                f"Scene collision threshold={self._max_scene_colls} exceeded with {scene_colls}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
+@registry.register_measure
 class RobotForce(UsesArticulatedAgentInterface, Measure):
     """
     The amount of force in newton's accumulatively applied by the robot.
@@ -940,6 +990,8 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             [
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                RobotCollisions.cls_uuid,
+                CollisionsTerminate.cls_uuid,
             ],
         )
 
@@ -964,7 +1016,12 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
-        if force_terminate:
+
+        collisions_terminate = task.measurements.measures[
+            CollisionsTerminate.cls_uuid
+        ].get_metric()
+
+        if force_terminate or collisions_terminate:
             reward -= self._config.force_end_pen
 
         self._metric = reward
@@ -973,12 +1030,16 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         reward = 0
 
         force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
+        collisions_metric = self._task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ]
         # Penalize the force that was added to the accumulated force at the
         # last time step.
         reward -= max(
             0,  # This penalty is always positive
             min(
                 self._force_pen * force_metric.add_force,
+                self._force_pen * collisions_metric.add_scene_colls,
                 self._max_force_pen,
             ),
         )
