@@ -1095,7 +1095,6 @@ class TaskConfig(HabitatBaseConfig):
     start_in_manip_mode: bool = False
     pick_init: bool = False
     place_init: bool = False
-    episode_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
 

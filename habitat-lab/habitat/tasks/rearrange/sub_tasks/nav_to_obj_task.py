@@ -58,7 +58,6 @@ class DynNavRLEnv(RearrangeTask):
         self._min_start_distance = self._config.min_start_distance
         self._pick_init = config.pick_init
         self._place_init = config.place_init
-        self._episode_init = config.episode_init
         assert not (
             self._pick_init and self._place_init
         ), "Can init near either pick or place."
@@ -174,15 +173,7 @@ class DynNavRLEnv(RearrangeTask):
         self._nav_to_info = self._generate_nav_start_goal(
             episode, nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
         )
-        if self._episode_init:
-            self._sim.robot.base_pos = np.array(episode.start_position)
-            start_quat = quaternion_from_coeff(
-                episode.start_rotation
-            )
-            direction_vector = np.array([0, 0, -1])
-            heading_vector = quaternion_rotate_vector(start_quat, direction_vector)
-            self._sim.robot.base_rot = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        elif self._pick_init or self._place_init:
+        if self._pick_init or self._place_init:
             if self._pick_init:
                 spawn_goals = episode.candidate_objects
             else:
@@ -228,6 +219,14 @@ class DynNavRLEnv(RearrangeTask):
                 joints[-1] = self._camera_tilt
                 sim.robot.arm_motor_pos = joints
                 sim.robot.arm_joint_pos = joints
+        elif np.sum(episode.start_position) != 0:
+            self._sim.robot.base_pos = np.array(episode.start_position)
+            start_quat = quaternion_from_coeff(
+                episode.start_rotation
+            )
+            direction_vector = np.array([0, 0, -1])
+            heading_vector = quaternion_rotate_vector(start_quat, direction_vector)
+            self._sim.robot.base_rot = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
 
         else:
             sim.robot.base_pos = self._nav_to_info.robot_start_pos
