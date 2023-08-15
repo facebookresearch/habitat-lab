@@ -173,19 +173,11 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
         return updater
 
-    @property
-    def policy_action_space(self):
-        return self._policy_action_space
-
     def init_distributed(self, find_unused_params: bool = True) -> None:
         if len(list(self._updater.parameters())) > 0:
             self._updater.init_distributed(
                 find_unused_params=find_unused_params
             )
-
-    @property
-    def policy_action_space_shape_lens(self):
-        return [self._policy_action_space]
 
     @property
     def masks_shape(self):
@@ -288,17 +280,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.load_state_dict(state_dict)
             if "lr_sched_state" in state:
                 self._lr_scheduler.load_state_dict(state["lr_sched_state"])
-
-    @property
-    def hidden_state_shape(self):
-        return (
-            self.actor_critic.num_recurrent_layers,
-            self._ppo_cfg.hidden_size,
-        )
-
-    @property
-    def hidden_state_shape_lens(self):
-        return [self._ppo_cfg.hidden_size]
 
     def after_update(self):
         if (

@@ -163,6 +163,39 @@ class Policy(abc.ABC):
         return 0
 
     @property
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape is only supported in neural network policies"
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape_lens is only supported in neural network policies"
+        )
+
+    @property
+    def policy_action_space(self) -> spaces.Space:
+        """
+        The action space the policy acts in. This can be different from the
+        environment action space for hierarchical policies.
+        """
+        raise NotImplementedError()
+
+    @property
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
+        """
+        raise NotImplementedError()
+
+    @property
     def recurrent_hidden_size(self) -> int:
         return 0
 
@@ -276,6 +309,7 @@ class NetPolicy(nn.Module, Policy):
         self.net = net
         self.dim_actions = get_num_actions(action_space)
         self.action_distribution: Union[CategoricalNet, GaussianNet]
+        self._action_space = action_space
 
         if policy_config is None:
             self.action_distribution_type = "categorical"
@@ -305,6 +339,25 @@ class NetPolicy(nn.Module, Policy):
         self.aux_loss_modules = get_aux_modules(
             aux_loss_config, action_space, None, net
         )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self._action_space]
+
+    @property
+    def policy_action_space(self):
+        return self._action_space
+
+    @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
 
     @property
     def recurrent_hidden_size(self) -> int:

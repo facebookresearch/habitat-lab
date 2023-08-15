@@ -150,6 +150,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     def num_recurrent_layers(self):
         return self._state_encoder.num_recurrent_layers
 
+    @property
+    def recurrent_hidden_size(self):
+        return self._hidden_size
+
     def parameters(self):
         return chain(
             self._visual_encoder.parameters(),
