@@ -13,6 +13,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToGoalDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
+    JointToRestDistance,
     ObjAtGoal,
     ObjectToGoalDistance,
     RearrangeReward,
@@ -208,4 +209,51 @@ class PlaceSuccess(Measure):
             not is_holding
             and is_obj_at_goal
             and ee_to_rest_distance < self._config.ee_resting_success_threshold
+        )
+
+
+@registry.register_measure
+class PlaceSuccessJoint(Measure):
+    cls_uuid: str = "place_success_joint"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PlaceSuccessJoint.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                ObjAtGoal.cls_uuid,
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        is_obj_at_goal = task.measurements.measures[
+            ObjAtGoal.cls_uuid
+        ].get_metric()[str(task.targ_idx)]
+        is_holding = self._sim.grasp_mgr.is_grasped
+
+        joint_to_rest_distance = task.measurements.measures[
+            JointToRestDistance.cls_uuid
+        ].get_metric()
+
+        self._metric = (
+            not is_holding
+            and is_obj_at_goal
+            and joint_to_rest_distance
+            < self._config.joint_resting_success_threshold
         )

@@ -370,6 +370,43 @@ class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class RelativeRestingJointSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "relative_resting_joint"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeRestingJointSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(7,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        cur_arm_pos = np.array(
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.arm_joint_pos
+        )
+        tar_arm_pos = np.array(
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.params.arm_init_params
+        )
+        relative_desired_resting = tar_arm_pos - cur_arm_pos
+        return np.array(relative_desired_resting, dtype=np.float32)
+
+
+@registry.register_sensor
 class RestingPositionSensor(Sensor):
     """
     Desired resting position in the articulated_agent coordinate frame.
@@ -659,6 +696,33 @@ class EndEffectorToRestDistance(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
+        rest_dist = np.linalg.norm(to_resting)
+
+        self._metric = rest_dist
+
+
+@registry.register_measure
+class JointToRestDistance(Measure):
+    """
+    Distance between current arm joint position and position where joint rests within the robot body.
+    """
+
+    cls_uuid: str = "joint_to_rest_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return JointToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[RelativeRestingJointSensor.cls_uuid]
         rest_dist = np.linalg.norm(to_resting)
 
         self._metric = rest_dist

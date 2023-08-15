@@ -13,6 +13,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
+    JointToRestDistance,
     RearrangeReward,
     RobotForce,
 )
@@ -224,3 +225,46 @@ class RearrangePickSuccess(Measure):
         )
 
         self._prev_ee_pos = observations["ee_pos"]
+
+
+@registry.register_measure
+class RearrangePickSuccessJoint(Measure):
+    cls_uuid: str = "pick_success_joint"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangePickSuccessJoint.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        joint_to_rest_distance = task.measurements.measures[
+            JointToRestDistance.cls_uuid
+        ].get_metric()
+
+        # Is the agent holding the object and it's at the start?
+        abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+
+        # Check that we are holding the right object and the object is actually
+        # being held.
+        self._metric = (
+            abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
+            and not self._sim.grasp_mgr.is_violating_hold_constraint()
+            and joint_to_rest_distance
+            < self._config.joint_resting_success_threshold
+        )

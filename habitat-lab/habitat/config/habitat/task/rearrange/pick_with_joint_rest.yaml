@@ -1,0 +1,42 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/rearrange/agents: spot
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - end_effector_to_rest_distance # For distance between EE and target resting location
+    - joint_to_rest_distance # For distance between arm joints and target resting location
+    - end_effector_to_object_distance
+    - did_pick_object
+    - pick_success
+    - pick_success_joint # For measuring the success based on the location of the resting arm joint
+    - pick_reward
+    - did_violate_hold_constraint
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - target_start_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+    - relative_resting_joint
+  - _self_
+
+type: RearrangePickTask-v0
+base_angle_noise: 0.523599
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+desired_resting_position: [0.45, 0.0, 0.43]
+reward_measure: "pick_reward"
+success_measure: "pick_success_joint"
+success_reward: 10.0
+slack_reward: -0.005
+end_on_success: True
+measurements:
+  force_terminate:
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0
+  pick_reward:
+    enable_vel_penality: -1.0
