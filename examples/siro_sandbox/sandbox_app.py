@@ -100,7 +100,6 @@ class SandboxDriver(GuiAppDriver):
         self.habitat_env: habitat.Env = (  # type: ignore
             self.gym_habitat_env.unwrapped.habitat_env
         )
-        self._sim = self.habitat_env.task._sim
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -159,7 +158,7 @@ class SandboxDriver(GuiAppDriver):
             text_drawer,
             lambda: self._viz_anim_fraction,
             self.habitat_env,
-            self._sim,
+            self.get_sim(),
             lambda: self._compute_action_and_step_env(),
             self._step_recorder,
             lambda: self._get_recent_metrics(),
@@ -303,6 +302,10 @@ class SandboxDriver(GuiAppDriver):
         if saved_keyframes or saved_episode_data:
             self._num_recorded_episodes += 1
 
+    # trying to get around mypy complaints about missing sim attributes
+    def get_sim(self) -> Any:
+        return self.habitat_env.task._sim
+
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
         self._num_episodes_done += 1
@@ -372,8 +375,8 @@ class SandboxDriver(GuiAppDriver):
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
         if self._gui_input.get_key_down(GuiInput.KeyNS.N):
-            self._sim.navmesh_visualization = (  # type: ignore
-                not self._sim.navmesh_visualization  # type: ignore
+            self.get_sim().navmesh_visualization = (  # type: ignore
+                not self.get_sim().navmesh_visualization  # type: ignore
             )
 
         self._app_state.sim_update(dt, post_sim_update_dict)
@@ -385,7 +388,7 @@ class SandboxDriver(GuiAppDriver):
             self._pending_cursor_style = None
 
         keyframes = (
-            self._sim.gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
+            self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
         if self._save_gfx_replay_keyframes:
