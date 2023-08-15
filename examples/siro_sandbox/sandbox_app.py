@@ -83,6 +83,7 @@ class SandboxDriver(GuiAppDriver):
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
         self._args = args
+        self._gui_input = gui_input
 
         line_render.set_line_width(3)
 
@@ -167,17 +168,15 @@ class SandboxDriver(GuiAppDriver):
         )
 
         if args.app_state == "fetch":
-            self._app_state_fetch = AppStateFetch(
+            self._app_state = AppStateFetch(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
             )
-            self._app_state = self._app_state_fetch
         elif args.app_state == "rearrange":
-            self._app_state_rearrange = AppStateRearrange(
+            self._app_state = AppStateRearrange(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
             )
-            self._app_state = self._app_state_rearrange
         elif args.app_state == "socialnav":
             self._app_state = AppStateSocialNav(
                 self._sandbox_service,
@@ -185,6 +184,8 @@ class SandboxDriver(GuiAppDriver):
             )
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
+        # Note that we expect SandboxDriver to create multiple AppStates in some
+        # situations and manage the transition between them, e.g. tutorial -> rearrange.
 
         self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
@@ -307,16 +308,16 @@ class SandboxDriver(GuiAppDriver):
         if saved_keyframes or saved_episode_data:
             self._num_recorded_episodes += 1
 
+    # trying to get around mypy complaints about missing sim attributes
+    def get_sim(self) -> Any:
+        return self.habitat_env.task._sim
+
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
         self._num_episodes_done += 1
 
         if do_reset and self._next_episode_exists():
             self._reset_environment()
-
-    # trying to get around mypy complaints about missing sim attributes
-    def get_sim(self) -> Any:
-        return self.habitat_env.task._sim
 
     def _save_recorded_keyframes_to_file(self):
         if not self._recording_keyframes:
@@ -379,9 +380,9 @@ class SandboxDriver(GuiAppDriver):
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self._sandbox_service.sim.navmesh_visualization = (  # type: ignore
-                not self._sandbox_service.sim.navmesh_visualization  # type: ignore
+        if self._gui_input.get_key_down(GuiInput.KeyNS.N):
+            self.get_sim().navmesh_visualization = (  # type: ignore
+                not self.get_sim().navmesh_visualization  # type: ignore
             )
 
         self._app_state.sim_update(dt, post_sim_update_dict)
