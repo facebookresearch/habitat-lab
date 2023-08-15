@@ -136,6 +136,9 @@ class ArmActionConfig(ActionConfig):
     gaze_center_square_width: float = 1
     grasp_threshold: float = 0.0
     oracle_snap: bool = False
+    gaze_use_xy_distance: bool = True
+    gaze_distance_to_bbox: bool = False
+
 
 
 @attr.s(auto_attribs=True, slots=True)

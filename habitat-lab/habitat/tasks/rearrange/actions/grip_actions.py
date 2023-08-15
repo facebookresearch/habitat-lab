@@ -198,6 +198,8 @@ class GazeGraspAction(MagicGraspAction):
         self._grasp_thresh_dist = config.grasp_thresh_dist
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         self._distance_from = getattr(config, "gaze_distance_from", "camera")
+        self._gaze_use_xy_distance = config.gaze_use_xy_distance
+        self._gaze_distance_to_bbox = config.gaze_distance_to_bbox
         self._center_square_width = config.gaze_center_square_width
         self._grasp_threshold = config.grasp_threshold
         self._oracle_snap = config.oracle_snap
@@ -329,16 +331,41 @@ class GazeGraspAction(MagicGraspAction):
             int(g.object_id) for g in self._sim.ep_info.candidate_objects
         ]
         ee_pos = self.cur_robot.ee_transform.translation
-        distances = np.linalg.norm(
-                (
-                    self._sim.get_scene_pos()[allowed_scene_obj_ids]
-                    - ee_pos
-                )[:, [0, 2]],
-                axis=1,
-            )
-        closest = np.argmin(distances)
-        if distances[closest] > self._grasp_thresh_dist:
-            return
+        ee_to_objects =self._sim.get_scene_pos()[allowed_scene_obj_ids] - ee_pos
+        if self._gaze_use_xy_distance:
+            ee_to_objects = ee_to_objects[:, [0, 2]]
+        distances = np.linalg.norm(ee_to_objects, axis=1)
+        closest_ids = np.argsort(distances)
+
+        if self._gaze_distance_to_bbox:
+            distance_to_bbox = np.inf
+            for index in closest_ids:
+                BBOX_SIZE_LIMIT = 1.0
+                # check distance to bbox only for close objects
+                if distances[index] > BBOX_SIZE_LIMIT + self._grasp_thresh_dist:
+                    return
+                rom = self._sim.get_rigid_object_manager()
+                rigid_obj_mgr = self._sim.get_rigid_object_manager()
+                object_idx = np.array(self._sim.scene_obj_ids)[
+                    allowed_scene_obj_ids
+                ][index]
+                obj = rigid_obj_mgr.get_object_by_id(object_idx)
+                center = np.array(obj.translation)
+                sizes = np.array(obj.root_scene_node.cumulative_bb.size())
+                rotation = obj.rotation
+                object_obb = habitat_sim.geo.OBB(center, sizes, rotation)
+                distance_to_bbox = object_obb.distance(ee_pos)
+                if distance_to_bbox <= self._grasp_thresh_dist:
+                    closest = index
+                    break
+
+            if distance_to_bbox > self._grasp_thresh_dist:
+                return
+
+        else:
+            closest = closest_ids[0]
+            if distances[closest] > self._grasp_thresh_dist:
+                return
 
         snap_obj_idx = np.array(self._sim.scene_obj_ids)[
             allowed_scene_obj_ids
