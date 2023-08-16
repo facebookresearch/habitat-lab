@@ -10,6 +10,7 @@ defaults:
     - articulated_agent_force
     - force_terminate
     - articulated_agent_colls
+    - collisions_terminate
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
@@ -33,5 +34,11 @@ constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 measurements:
   force_terminate:
-    max_accum_force: 10_000.0
-    max_instant_force: 10_000.0
+    max_accum_force: -1 #10_000.0
+    max_instant_force: -1 #10_000.0
+  collisions_terminate:
+    max_scene_colls: 100.0
+  rearrange_nav_to_obj_reward:
+    force_pen: 0.01
+    max_force_pen: 0.01
+    force_end_pen: 1.0

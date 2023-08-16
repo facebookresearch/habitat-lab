@@ -31,7 +31,8 @@ class RearrangePickTaskV1(RearrangeTask):
         )
 
         self.prev_colls = None
-        self.force_set_idx = None
+        # Force to use the first object
+        self.force_set_idx = None  # None  # 0 -> for replica_cad policy in FP
         self._base_angle_noise = self._config.base_angle_noise
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts

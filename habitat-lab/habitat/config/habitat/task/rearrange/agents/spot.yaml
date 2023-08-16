@@ -1,0 +1,28 @@
+# @package habitat.task.actions
+defaults:
+  - /habitat/task/actions:
+    - arm_action
+    - base_velocity
+  - _self_
+
+arm_action:
+  type: "ArmAction"
+  arm_controller: "ArmRelPosMaskKinematicAction"
+  arm_joint_mask: [1,1,0,1,1,1,1]
+  arm_joint_dimensionality: 7
+  grasp_thresh_dist: 0.15
+  disable_grip: False
+  delta_pos_limit: 0.0125
+  ee_ctrl_lim: 0.015
+  grip_controller: MagicGraspAction
+
+base_velocity:
+  lin_speed: 2.0
+  ang_speed: 2.0
+  allow_dyn_slide: True
+  allow_back: True
+
+# grip_controller: "GazeGraspAction"
+# gaze_distance_range: [0.01, 0.3]
+# center_cone_angle_threshold: 20.0
+# center_cone_vector: [0.0, 1.0, 0.0]

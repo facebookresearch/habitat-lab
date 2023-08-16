@@ -18,7 +18,9 @@ import numpy as np
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.tasks.rearrange.utils import get_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 
 # global module singleton for mesh importing instantiated upon first import
@@ -73,6 +75,13 @@ class Receptacle(ABC):
         Convenience query for articulated vs. rigid object check.
         """
         return self.parent_link is not None
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return mn.Range3D()
 
     @abstractmethod
     def sample_uniform_local(
@@ -196,8 +205,15 @@ class AABBReceptacle(Receptacle):
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
-        self.bounds = bounds
+        self._bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return self._bounds
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -354,10 +370,12 @@ class TriangleMeshReceptacle(Receptacle):
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0.0
+        triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
+            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
@@ -370,6 +388,17 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
@@ -688,7 +717,8 @@ def parse_receptacles_from_user_config(
                 )
             elif mesh_receptacle_id_string in sub_config_key:
                 mesh_file = os.path.join(
-                    parent_template_directory, sub_config.get("mesh_filepath")
+                    parent_template_directory,
+                    sub_config.get("mesh_filepath"),
                 )
                 assert os.path.exists(
                     mesh_file
@@ -859,8 +889,12 @@ class ReceptacleTracker:
                 r_set.excluded_receptacle_substrings.extend(
                     filtered_unique_names
                 )
-            logger.debug(
+            logger.info(
                 f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
+            )
+        else:
+            logger.info(
+                f"Loaded receptacle filter data for scene '{scene_handle}' does not have configured filter file."
             )
 
     def inc_count(self, recep_name: str) -> None:
@@ -909,3 +943,70 @@ class ReceptacleTracker:
                     ]
             return True
         return False
+
+
+def get_obj_manager_for_receptacle(
+    sim: habitat_sim.Simulator, receptacle: Receptacle
+):
+    if receptacle.is_parent_object_articulated:
+        obj_mgr = sim.get_articulated_object_manager()
+    else:
+        obj_mgr = sim.get_rigid_object_manager()
+    return obj_mgr
+
+
+def get_navigable_receptacles(
+    sim: habitat_sim.Simulator,
+    receptacles: List[Receptacle],
+) -> List[Receptacle]:
+    """Given a list of receptacles, return the ones that are navigable from the given navmesh island"""
+    navigable_receptacles: List[Receptacle] = []
+    for receptacle in receptacles:
+        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
+        receptacle_obj = obj_mgr.get_object_by_handle(
+            receptacle.parent_object_handle
+        )
+        receptacle_bb = get_aabb(
+            receptacle_obj.object_id, sim, transformed=True
+        )
+
+        if (
+            receptacle_bb.size_y()
+            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        ):
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+            )
+            continue
+
+        recep_points = [
+            receptacle_bb.back_bottom_left,
+            receptacle_bb.back_bottom_right,
+            receptacle_bb.front_bottom_left,
+            receptacle_bb.front_bottom_right,
+        ]
+        # At least 2 corners should be accessible
+        corners_accessible = True
+        corners_accessible = (
+            sum(
+                is_accessible(sim, point, nav_to_min_distance=1.5)
+                for point in recep_points
+            )
+            >= 2
+        )
+
+        if not corners_accessible:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible."
+            )
+            continue
+        else:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is accessible."
+            )
+            navigable_receptacles.append(receptacle)
+
+    logger.info(
+        f"Found {len(navigable_receptacles)}/{len(receptacles)} accessible receptacles."
+    )
+    return navigable_receptacles

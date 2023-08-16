@@ -65,6 +65,7 @@ __all__ = [
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
+    "CollisionsTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
@@ -721,6 +722,19 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class CollisionsTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+
+    :property max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :property max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
+    type: str = "CollisionsTerminate"
+    max_scene_colls: float = -1.0
+
+
+@dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
@@ -943,6 +957,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property drop_obj_should_end: If true, the task will end if the robot drops the object.
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    :property enable_vel_penality:.
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -956,6 +971,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    enable_vel_penality: float = -1.0
 
 
 @dataclass
@@ -988,6 +1004,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     :property drop_pen: The penalty for dropping the object.
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    :property enable_vel_penality.
     """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
@@ -1001,6 +1018,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    enable_vel_penality: float = -1.0
 
 
 @dataclass
@@ -2006,6 +2024,12 @@ cs.store(
     group="habitat/task/measurements",
     name="force_terminate",
     node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.collisions_terminate",
+    group="habitat/task/measurements",
+    name="collisions_terminate",
+    node=CollisionsTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",
