@@ -12,6 +12,7 @@ import numpy as np
 
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.utils import get_aabb
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import get_active_obs_transforms
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -25,6 +26,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
 from habitat_baselines.utils.common import get_num_actions
+from habitat_sim.physics import CollisionGroups
 
 from .controller_abc import BaselinesController
 
@@ -171,7 +173,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.current_state = FetchState.WAIT
         self.object_interest_id = None
         self.rigid_obj_interest = None
+        self.grasped_object_id = None
+        self.grasped_object = None
+        self._last_object_drop_info = None
         self._env = env
+        self._thrown_object_collision_group = CollisionGroups.UserGroup7
 
         super().__init__(agent_idx, is_multi_agent, config, env)
 
@@ -179,6 +185,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         agents_mgr = env._sim.agents_mgr
         grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
         return grasp_mgr
+
+    def get_articulated_agent(self, env):
+        return env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def act(self, obs, env):
         human_trans = env._sim.agents_mgr[
@@ -206,7 +215,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             else:
                 self._get_grasp_mgr(env).snap_to_obj(self.object_interest_id)
-
+                self.grasped_object = self.rigid_obj_interest
+                self.grasped_object_id = self.object_interest_id
+                self.grasped_object.override_collision_group(
+                    self._thrown_object_collision_group
+                )
                 self.current_state = FetchState.BRING
 
         elif self.current_state == FetchState.BRING:
@@ -219,8 +232,39 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # Open gripper
                 self._get_grasp_mgr(env).desnap()
 
+                grasped_rigid_obj = self.grasped_object
+
+                obj_bb = get_aabb(self.grasped_object_id, env._sim)
+                self._last_object_drop_info = (
+                    grasped_rigid_obj,
+                    max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                )
+                self.grasped_object_id = None
+                self.grasped_object = None
                 self.current_state = FetchState.WAIT
+
+        if self._last_object_drop_info is not None:
+            grasp_mgr = self._get_grasp_mgr(env)
+
+            # when the thrown object leaves the hand, update the collisiongroups
+            rigid_obj = self._last_object_drop_info[0]
+            ee_pos = (
+                self.get_articulated_agent(env)
+                .ee_transform(grasp_mgr.ee_index)
+                .translation
+            )
+            dist = np.linalg.norm(ee_pos - rigid_obj.translation)
+            if dist >= self._last_object_drop_info[1]:
+                rigid_obj.override_collision_group(CollisionGroups.Default)
+                self._last_object_drop_info = None
+
         return action_array
 
     def on_environment_reset(self):
         self._step_i = 0
+        self.current_state = FetchState.WAIT
+        self.object_interest_id = None
+        self.rigid_obj_interest = None
+        self.grasped_object_id = None
+        self.grasped_object = None
+        self._last_object_drop_info = None

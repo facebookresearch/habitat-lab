@@ -72,19 +72,3 @@ class GuiThrowHelper:
         )
 
         return vel_vector
-
-    @staticmethod
-    def _evaluate_cubic_bezier(ctrl_pts, t):
-        assert len(ctrl_pts) == 4
-        weights = (
-            pow(1 - t, 3),
-            3 * t * pow(1 - t, 2),
-            3 * pow(t, 2) * (1 - t),
-            pow(t, 3),
-        )
-
-        result = weights[0] * ctrl_pts[0]
-        for i in range(1, 4):
-            result += weights[i] * ctrl_pts[i]
-
-        return result
