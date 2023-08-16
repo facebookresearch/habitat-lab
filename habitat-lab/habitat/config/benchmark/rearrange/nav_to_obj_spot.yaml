@@ -10,7 +10,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - arm_depth
+      - articulated_agent_arm_depth
       - goal_to_agent_gps_compass
       - joint
   environment:
