@@ -124,9 +124,9 @@ class ControllerHelper:
 
         return self.controllers[0]
 
-    def get_state_machine_agent_controller(self) -> Optional[Controller]:
+    def get_policy_driven_agent_controller(self) -> Optional[Controller]:
         if self._gui_controlled_agent_index is None:
-            return None
+            return self.controllers[0]
 
         # This is pretty hacky
         return self.controllers[1]
