@@ -8,7 +8,7 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from controllers.baselines_controller import CurrentFetchState
+from controllers.baselines_controller import FetchState
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
@@ -22,7 +22,7 @@ from habitat.gui.text_drawer import TextOnScreenAlignment
 class AppStateFetch(AppState):
     def __init__(self, sandbox_service, gui_agent_ctrl, robot_agent_ctrl):
         self._sandbox_service = sandbox_service
-        self.gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = gui_agent_ctrl
         self.state_machine_agent_ctrl = robot_agent_ctrl
         self._can_grasp_place_threshold = (
             self._sandbox_service.args.can_grasp_place_threshold
@@ -92,7 +92,7 @@ class AppStateFetch(AppState):
                 if self._prepare_throw:
                     will_throw = True
                     throw_obj_id = (
-                        self.gui_agent_ctrl._get_grasp_mgr().snap_idx
+                        self._gui_agent_ctrl._get_grasp_mgr().snap_idx
                     )
                     self.state_machine_agent_ctrl.object_interest_id = (
                         throw_obj_id
@@ -110,7 +110,7 @@ class AppStateFetch(AppState):
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
-                assert not self.gui_agent_ctrl.is_grasped
+                assert not self._gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self._sandbox_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
@@ -150,30 +150,30 @@ class AppStateFetch(AppState):
                     GuiInput.MouseNS.RIGHT
                 ):
                     walk_dir = candidate_walk_dir
-            self.gui_agent_ctrl.set_act_hints(
+            self._gui_agent_ctrl.set_act_hints(
                 walk_dir,
                 grasp_object_id,
                 drop_pos,
                 self._camera_helper.lookat_offset_yaw,
             )
         else:
-            computed_speed = self._throw_helper.viz_and_get_humanoid_throw()
-            drop_speed = None
+            computed_throw_vel = (
+                self._throw_helper.viz_and_get_humanoid_throw()
+            )
+            throw_vel = None
 
             if will_throw:
-                drop_speed = computed_speed
-                self.gui_agent_ctrl.set_act_hints(
+                throw_vel = computed_throw_vel
+                self._gui_agent_ctrl.set_act_hints(
                     walk_dir,
                     None,
                     drop_pos,
                     self._camera_helper.lookat_offset_yaw,
-                    drop_speed=drop_speed,
+                    throw_vel=throw_vel,
                 )
             if will_throw:
                 # pass
-                self.state_machine_agent_ctrl.current_state = (
-                    CurrentFetchState.PICK
-                )
+                self.state_machine_agent_ctrl.current_state = FetchState.PICK
 
             will_throw = False
         return drop_pos
@@ -230,18 +230,18 @@ class AppStateFetch(AppState):
             )
 
     def get_gui_controlled_agent_index(self):
-        return self.gui_agent_ctrl._agent_idx
+        return self._gui_agent_ctrl._agent_idx
 
     def _get_agent_translation(self):
-        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         return (
-            self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
         )
 
     def _get_agent_feet_height(self):
-        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
-            self.gui_agent_ctrl.get_articulated_agent().params.base_offset
+            self._gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
         agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]

@@ -154,7 +154,7 @@ class MultiAgentBaselinesController(BaselinesController):
         self._agent.load_state_dict(checkpoint)
 
 
-class CurrentFetchState(Enum):
+class FetchState(Enum):
     WAIT = 1
     PICK = 2
     BRING = 3
@@ -168,7 +168,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         config,
         env,
     ):
-        self.current_state = CurrentFetchState.WAIT
+        self.current_state = FetchState.WAIT
         self.object_interest_id = None
         self.rigid_obj_interest = None
         self._env = env
@@ -197,7 +197,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             act_space, "agent_0_oracle_nav_action"
         )
 
-        if self.current_state == CurrentFetchState.PICK:
+        if self.current_state == FetchState.PICK:
             obj_trans = self.rigid_obj_interest.translation
             if not finish_oracle_nav:
                 action_array[
@@ -207,9 +207,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             else:
                 self._get_grasp_mgr(env).snap_to_obj(self.object_interest_id)
 
-                self.current_state = CurrentFetchState.BRING
+                self.current_state = FetchState.BRING
 
-        elif self.current_state == CurrentFetchState.BRING:
+        elif self.current_state == FetchState.BRING:
             if not finish_oracle_nav:
                 # Keep gripper closed
                 action_array[
@@ -219,7 +219,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # Open gripper
                 self._get_grasp_mgr(env).desnap()
 
-                self.current_state = CurrentFetchState.WAIT
+                self.current_state = FetchState.WAIT
         return action_array
 
     def on_environment_reset(self):

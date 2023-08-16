@@ -193,7 +193,7 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
-        self._hint_drop_speed = None
+        self._hint_throw_vel = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
@@ -209,7 +209,7 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
-        self._hint_drop_speed = None
+        self._hint_throw_vel = None
         CollisionGroupHelper.set_mask_for_group(
             CollisionGroups.UserGroup7, ~CollisionGroups.Robot
         )
@@ -256,13 +256,16 @@ class GuiHumanoidController(GuiController):
         return humanoidjoint_action
 
     def set_act_hints(
-        self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None, drop_speed=None
+        self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None, throw_vel=None
     ):
+        assert (
+            throw_vel is None or do_drop is None
+        ), "You can not set throw_velocity and drop_position at the same time"
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
-        self._hint_drop_speed = drop_speed
+        self._hint_throw_vel = throw_vel
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -319,11 +322,11 @@ class GuiHumanoidController(GuiController):
         self._update_grasp(
             self._hint_grasp_obj_idx,
             self._hint_drop_pos,
-            self._hint_drop_speed,
+            self._hint_throw_vel,
         )
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
-        self._hint_drop_speed = None
+        self._hint_throw_vel = None
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
