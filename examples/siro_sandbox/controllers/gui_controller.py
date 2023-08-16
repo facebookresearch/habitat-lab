@@ -214,10 +214,13 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._cam_yaw = 0
         self._hint_throw_vel = None
+<<<<<<< HEAD
         self._last_object_thrown_info = None
 
         # Disable collision between thrown object and the agents.
         # Both agents (robot and humanoid) have the collision group Robot.
+=======
+>>>>>>> cb3a5765 (name changes to address PRR)
         CollisionGroupHelper.set_mask_for_group(
             self._thrown_object_collision_group, ~CollisionGroups.Robot
         )
