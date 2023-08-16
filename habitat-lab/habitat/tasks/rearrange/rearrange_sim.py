@@ -719,6 +719,7 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
+
         rigid_T, rigid_V = [], []
         for i in self._scene_obj_ids:
             obj_i = rom.get_object_by_id(i)
