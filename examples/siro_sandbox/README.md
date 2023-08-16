@@ -7,7 +7,7 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 
 # Known Issues
 * The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See Snapshots section below for best results.
-* The skinned humanoid doesn't render correctly; see workaround below.
+* The skinned humanoid doesn't render correctly. If you prefer, you can hide it with `--hide-humanoid-in-gui`.
 * When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
 
 # Snapshots with examples of running the tool
@@ -81,10 +81,8 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
-# Workaround to avoid broken skinned humanoid
-Following the default install instructions, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
-
-Update June 16: `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
+# Workaround to use a rigid-skeleton humanoid
+Following the default install instructions, a broken skinned humanoid is rendered. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning. `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
 
 Alternately, here's an older, outdated workaround where we revert to a rigid-skeleton humanoid. This workaround is worse than `--hide-humanoid-in-gui` because the rigid skeleton is also rendered into observations fed to policies, which is wrong, but we leave these steps here for reference:
 1. Make a copy (or symlink) of `female2_0.urdf`.
@@ -103,6 +101,9 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 
 # Command-line Options
 
+## App State and use cases
+Use `--app-state rearrange` (default) or `--app-state fetch`. These correspond to the different use cases for the HITL tool. See also `app_state_rearrange.py` and `app_state_fetch.py`.
+
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
 
@@ -120,12 +121,12 @@ Add `--debug-third-person-width 600` to enable the debug third-person camera. Li
 ## GUI-controlled agents and free camera mode
 Add `--gui-controlled-agent-index` followed by the agent's index you want to control via GUI (for example, `--gui-controlled-agent-index 0` to control the first agent).
 
-If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents.
+If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents. Update Aug 11: free camera is temporarily unsupported!
 
 **Note:** Currently, only Spot and Humanoid agents can be policy-controlled (PDDL planner + oracle skills). If you want to test the free camera mode, omit `--gui-controlled-agent-index` argument.
 
 ## First-person and third-person mode for GUI-controlled humanoid
-Include `--first-person-mode`, or omit it to use third-person mode. With first-person mode, use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees.
+Include `--first-person-mode`, or omit it to use third-person mode. With first-person mode, use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `--hide-humanoid-in-gui` with `--first-person-mode`, because it doesn't make sense to visualize the humanoid with this camera.
 
 ## Can grasp/place area
 Use `--can-grasp-place-threshold` argument to set/change grasp/place area radius.
@@ -146,7 +147,7 @@ Add `--save-episode-record` flag to enable saving recorded episode data to file 
 Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_session.gfx_replay.json.gz`.
 
 ## Human-in-the-loop tutorial sequence
-The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
+The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument. Update Aug 11: temporarily unsupported!
 
 ## Testing BatchReplayRenderer
 This is an experimental feature aimed at those of us building the batch renderer. Run the above command but also include `--use-batch-renderer` as one of the first arguments.
@@ -164,6 +165,7 @@ This is an experimental feature aimed at those of us building the batch renderer
     * This class is provided a `gui_input` object that encapsulates OS input (keyboard and mouse input). We should avoid making direct calls to PyGame, GLFW, and other OS-specific APIs.
     * `sim_update` returns a `post_sim_update_dict` that contains info needed by the app renderer (below). E.g. a gfx-replay keyframe and a camera transform for rendering, plus optional "debug images" to be shown to the user.
     * This class also has access to a `debug_line_render` instance for visualizing lines in the GUI (the lines aren't rendered into camera sensors). This access is somewhat hacky; future versions of HITL apps will likely convey lines via `post_sim_update_dict` instead of getting direct access to this object.
+    * See `app_states/app_state_rearrange.py` and similar classes for per-step logic that is specific to various use cases (rearrange, fetch, etc.).
 * `GuiApplication`
     * manages the OS window (via GLFW for now), including OS-input-handling (keyboard and mouse) and updating the display (invoking the renderer).
 * `ReplayGuiAppRenderer`
