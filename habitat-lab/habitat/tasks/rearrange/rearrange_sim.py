@@ -535,32 +535,36 @@ class RearrangeSim(HabitatSim):
 
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
-        snap_point can return nan which produces hard to catch errors.
+        Returns the 3D coordinates corresponding to a point belonging
+        to the biggest navmesh island in the scenee and closest to pos.
+        When that point returns NaN, computes a navigable point at increasing
+        distances to it.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
+        new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
+        max_iter = 10
+        offset_distance = 1.5
+        distance_per_iter = 0.5
+        num_sample_points = 1000
+
+        regen_i = 0
+        while np.isnan(new_pos[0]) and regen_i < 10:
+            # Increase the search radius
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+                pos,
+                offset_distance + regen_i * distance_per_iter,
+                num_sample_points,
+                island_index=self._largest_island_idx,
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
+            regen_i += 1
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # This is a last resort, take a navmesh vertex that is closest
-            use_verts = [
-                x
-                for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
-            ]
-            distances = np.linalg.norm(
-                np.array(pos).reshape(1, 3) - use_verts, axis=-1
-            )
-            closest_idx = np.argmin(distances)
-            new_pos = self._navmesh_vertices[closest_idx]
+        if np.isnan(new_pos[0]):
+            print("init robot randomly")
+            new_pos = self.pathfinder.get_random_navigable_point()
+
+        # assert not np.isnan(
+        #     new_pos[0]
+        # ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
 
         return new_pos
 
