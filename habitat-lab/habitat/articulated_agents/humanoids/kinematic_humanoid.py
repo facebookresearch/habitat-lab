@@ -124,9 +124,7 @@ class KinematicHumanoid(MobileManipulator):
         """Get the humanoid base ground position"""
         # via configured local offset from origin
         base_transform = self.base_transformation
-        return base_transform.translation + base_transform.transform_vector(
-            self.params.base_offset
-        )
+        return base_transform.translation + self.params.base_offset
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
@@ -137,12 +135,10 @@ class KinematicHumanoid(MobileManipulator):
         if len(position) != 3:
             raise ValueError("Base position needs to be three dimensions")
         base_transform = self.base_transformation
-        base_pos = position - base_transform.transform_vector(
-            self.params.base_offset
-        )
+        base_pos = position - self.params.base_offset
         base_transform.translation = base_pos
-        final_transform = base_transform @ self.offset_transform
-
+        add_rot = self.offset_transform_base.inverted()
+        final_transform = base_transform @ add_rot @ self.offset_transform
         self.sim_obj.transformation = final_transform
 
     @property
@@ -196,7 +192,8 @@ class KinematicHumanoid(MobileManipulator):
                     if cam_info.attached_link_id == -1:
                         link_trans = self.sim_obj.transformation
                     elif cam_info.attached_link_id == -2:
-                        link_trans = self.base_transformation
+                        rot_offset = self.offset_transform_base.inverted()
+                        link_trans = self.base_transformation @ rot_offset
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
                             cam_info.attached_link_id
