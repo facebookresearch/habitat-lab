@@ -943,6 +943,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property drop_obj_should_end: If true, the task will end if the robot drops the object.
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    :property enable_vel_penality:.
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -956,6 +957,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    enable_vel_penality: float = -1.0
 
 
 @dataclass
@@ -988,6 +990,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     :property drop_pen: The penalty for dropping the object.
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    :property enable_vel_penality.
     """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
@@ -1001,6 +1004,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    enable_vel_penality: float = -1.0
 
 
 @dataclass

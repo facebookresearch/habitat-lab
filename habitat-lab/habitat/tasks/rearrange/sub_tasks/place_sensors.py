@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import numpy as np
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -27,6 +29,8 @@ class PlaceReward(RearrangeReward):
         self._prev_dist = -1.0
         self._prev_dropped = False
         self._metric = None
+        self._last_pos = None
+        self._last_rot = None
 
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
@@ -65,6 +69,41 @@ class PlaceReward(RearrangeReward):
             **kwargs
         )
         reward = self._metric
+
+        # Penalize the base movement
+        # Check if the robot moves or not
+        move = 0.0
+        if self._last_pos is not None:
+            cur_pos = np.array(self._sim.articulated_agent.base_pos)
+            last_rot = float(self._sim.articulated_agent.base_rot)
+            if (
+                np.linalg.norm(self._last_pos - cur_pos) >= 0.01
+                or abs(self._last_rot - last_rot) >= 0.01
+            ):
+                move = 1.0
+
+        # Get the control inputs
+        lin_vel = np.array(
+            self._task.actions["base_velocity"].base_vel_ctrl.linear_velocity
+        )
+        lin_vel_norm = np.linalg.norm(lin_vel)
+
+        ang_vel = np.array(
+            self._task.actions["base_velocity"].base_vel_ctrl.angular_velocity
+        )
+        ang_vel_norm = np.linalg.norm(ang_vel)
+
+        if self._config.enable_vel_penality != -1:
+            self._metric -= (
+                move
+                * self._config.enable_vel_penality
+                * (lin_vel_norm**2 + ang_vel_norm**2)
+            )
+
+        # Update the last location of the robot
+        self._last_pos = np.array(self._sim.articulated_agent.base_pos)
+        self._last_rot = float(self._sim.articulated_agent.base_rot)
+
         ee_to_goal_dist = task.measurements.measures[
             EndEffectorToGoalDistance.cls_uuid
         ].get_metric()
