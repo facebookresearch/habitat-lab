@@ -256,11 +256,9 @@ class HumanoidRearrangeController:
         )
 
         # Remove the forward component, and orient according to forward_V
-        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(1.0, 0, 0))
-        add_rot2 = mn.Matrix4.rotation(
-            mn.Rad(-np.pi / 2), mn.Vector3(0, 0, 1.0)
-        )
-        obj_transform = add_rot @ add_rot2 @ obj_transform
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
+        obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
         # This is the rotation and translation caused by the current motion pose
@@ -273,7 +271,10 @@ class HumanoidRearrangeController:
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
-        self.obj_transform_base = obj_transform_base
+        rot_offset = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base = obj_transform_base @ rot_offset
         self.joint_pose = joint_pose
 
     def get_pose(self):
