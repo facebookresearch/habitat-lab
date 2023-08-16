@@ -110,7 +110,7 @@ class AppStateFetch(AppState):
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
-                assert not self._gui_agent_ctrl.is_grasped
+                assert not self.gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self._sandbox_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
@@ -230,18 +230,18 @@ class AppStateFetch(AppState):
             )
 
     def get_gui_controlled_agent_index(self):
-        return self._gui_agent_ctrl._agent_idx
+        return self.gui_agent_ctrl._agent_idx
 
     def _get_agent_translation(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
         return (
-            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+            self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
         )
 
     def _get_agent_feet_height(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
-            self._gui_agent_ctrl.get_articulated_agent().params.base_offset
+            self.gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
         agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]

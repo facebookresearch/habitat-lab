@@ -339,7 +339,7 @@ class OracleNavCoordAction(OracleNavAction):
             self._action_arg_prefix + "oracle_nav_coord_action"
         ]
         if np.linalg.norm(nav_to_target_coord) == 0:
-            return None
+            return {}
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
             nav_to_target_coord
         )

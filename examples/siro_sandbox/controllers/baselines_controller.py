@@ -175,13 +175,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         super().__init__(agent_idx, is_multi_agent, config, env)
 
-    def _get_grasp_mgr(self):
-        agents_mgr = self._env.env._sim.agents_mgr
+    def _get_grasp_mgr(self, env):
+        agents_mgr = env._sim.agents_mgr
         grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
         return grasp_mgr
 
     def act(self, obs, env):
-        human_trans = self._env.env._sim.agents_mgr[
+        human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
         ].articulated_agent.base_transformation.translation
         finish_oracle_nav = obs["agent_0_has_finished_oracle_nav"]
@@ -200,10 +200,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if self.current_state == CurrentFetchState.PICK:
             obj_trans = self.rigid_obj_interest.translation
             if not finish_oracle_nav:
-                action_array[action_ind_nav[0] : action_ind_nav[1]] = obj_trans
+                action_array[
+                    action_ind_nav[0] : action_ind_nav[0] + action_ind_nav[1]
+                ] = obj_trans
 
             else:
-                self._get_grasp_mgr().snap_to_obj(self.object_interest_id)
+                self._get_grasp_mgr(env).snap_to_obj(self.object_interest_id)
 
                 self.current_state = CurrentFetchState.BRING
 
@@ -211,11 +213,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if not finish_oracle_nav:
                 # Keep gripper closed
                 action_array[
-                    action_ind_nav[0] : action_ind_nav[1]
+                    action_ind_nav[0] : action_ind_nav[0] + action_ind_nav[1]
                 ] = human_trans
             else:
                 # Open gripper
-                self._get_grasp_mgr().desnap()
+                self._get_grasp_mgr(env).desnap()
 
                 self.current_state = CurrentFetchState.WAIT
         return action_array
