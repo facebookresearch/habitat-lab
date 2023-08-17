@@ -210,7 +210,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             obj_trans = self.rigid_obj_interest.translation
             if not finish_oracle_nav:
                 action_array[
-                    action_ind_nav[0] : action_ind_nav[0] + action_ind_nav[1]
+                    action_ind_nav[0] : action_ind_nav[0] + 3
                 ] = obj_trans
 
             else:
@@ -226,7 +226,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if not finish_oracle_nav:
                 # Keep gripper closed
                 action_array[
-                    action_ind_nav[0] : action_ind_nav[0] + action_ind_nav[1]
+                    action_ind_nav[0] : action_ind_nav[0] + 3
                 ] = human_trans
             else:
                 # Open gripper
