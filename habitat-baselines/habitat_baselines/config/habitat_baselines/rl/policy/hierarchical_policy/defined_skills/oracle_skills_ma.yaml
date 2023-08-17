@@ -65,14 +65,14 @@ reset_arm:
 
 
 turn_left:
-  skill_name: "TurnSkillPolicy"
+  skill_name: "MoveSkillPolicy"
   force_end_on_timeout: False
   max_skill_steps: 1
   turn_power_y: 1.0
   apply_postconds: True
 
 turn_right:
-  skill_name: "TurnSkillPolicy"
+  skill_name: "MoveSkillPolicy"
   force_end_on_timeout: False
   max_skill_steps: 1
   turn_power_y: -1.0
