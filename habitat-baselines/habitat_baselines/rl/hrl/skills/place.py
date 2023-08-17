@@ -11,9 +11,25 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
+from habitat_baselines.rl.hrl.utils import find_action_range
 
 
 class PlaceSkillPolicy(PickSkillPolicy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Get the action space
+        action_space = args[2]
+        for k, _ in action_space.items():
+            if k == "pick_base_velocity":
+                self.pick_start_id, self.pick_len = find_action_range(
+                    action_space, "pick_base_velocity"
+                )
+            if k == "place_base_velocity":
+                self.place_start_id, self.place_len = find_action_range(
+                    action_space, "place_base_velocity"
+                )
+
     @dataclass(frozen=True)
     class PlaceSkillArgs:
         obj: int
@@ -47,9 +63,46 @@ class PlaceSkillPolicy(PickSkillPolicy):
             self._internal_log(
                 f"Terminating with {rel_resting_pos} and {is_holding}",
             )
+        print(rel_resting_pos, is_holding, self._config.at_resting_threshold)
+        # is_done = torch.zeros(1, dtype=torch.bool).to('cuda:0')
+        # if is_done:
+        #     breakpoint()
         return is_done
 
     def _parse_skill_arg(self, skill_arg):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = super()._internal_act(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+        # print(action)
+        # action = self._mask_pick(action, observations)
+
+        action.actions[
+            :, self.place_start_id : self.place_start_id + self.place_len
+        ] = action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ]
+        size = action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ].shape
+        action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ] = torch.zeros(size)
+        return action
