@@ -7,13 +7,17 @@
 import magnum as mn
 import numpy as np
 
+DIST_HIGHLIGHT = 0.15
+
 
 class GuiPickHelper:
-    def __init__(self, gui_service, agent_idx):
+    def __init__(self, gui_service, agent_idx, agent_feet_height):
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx
         self._rom = self._get_sim().get_rigid_object_manager()
         self.obj_ids = self._get_sim()._scene_obj_ids
+        self.agent_feet_height = agent_feet_height
+        self._dist_to_highlight_obj = DIST_HIGHLIGHT
 
     def _get_sim(self):
         return self._sandbox_service.sim
@@ -26,11 +30,11 @@ class GuiPickHelper:
         distances = np.linalg.norm(closest_points - points, axis=1)
         return np.argmin(distances), np.min(distances)
 
-    def on_environment_reset(self):
+    def on_environment_reset(self, agent_feet_height=0.15):
         sim = self._get_sim()
         self._rom = sim.get_rigid_object_manager()
         self.obj_ids = sim._scene_obj_ids
-        self.agent_feet_height = 0.15
+        self.agent_feet_height = agent_feet_height
 
     def _viz_object(self, this_target_pos):
         color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
@@ -56,10 +60,11 @@ class GuiPickHelper:
 
     def viz_and_get_pick_object(self):
         ray = self._sandbox_service.gui_input.mouse_ray
-
-        floor_y = 0.15  # hardcoded to ReplicaCAD
-
-        if not ray or ray.direction.y >= 0 or ray.origin.y <= floor_y:
+        if (
+            not ray
+            or ray.direction.y >= 0
+            or ray.origin.y <= self.agent_feet_height
+        ):
             return None
 
         object_coords = [
@@ -74,7 +79,7 @@ class GuiPickHelper:
         obj_id, distance = self._closest_point_and_dist(
             np.array(ray.origin), np.array(ray.direction), object_coords
         )
-        if distance < 0.15:
+        if distance < self._dist_to_highlight_obj:
             self._viz_object(mn.Vector3(object_coords[obj_id]))
             return self.obj_ids[obj_id]
         else:

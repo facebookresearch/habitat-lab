@@ -47,7 +47,9 @@ class AppStateFetch(AppState):
             self._sandbox_service, self.get_gui_controlled_agent_index()
         )
         self._pick_helper = GuiPickHelper(
-            self._sandbox_service, self.get_gui_controlled_agent_index()
+            self._sandbox_service,
+            self.get_gui_controlled_agent_index(),
+            self._get_agent_feet_height(),
         )
         self._prepare_throw = False
 
@@ -61,8 +63,9 @@ class AppStateFetch(AppState):
         ]
 
         self._nav_helper.on_environment_reset()
-        self._pick_helper.on_environment_reset()
-        self._pick_helper.agent_feet_height = self._get_agent_feet_height()
+        self._pick_helper.on_environment_reset(
+            agent_feet_height=self._get_agent_feet_height()
+        )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
