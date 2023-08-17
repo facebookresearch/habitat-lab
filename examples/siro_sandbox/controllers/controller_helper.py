@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, List, Optional
 import numpy as np
 
 from .baselines_controller import (
+    FetchBaselinesController,
     MultiAgentBaselinesController,
     SingleAgentBaselinesController,
 )
@@ -34,7 +35,7 @@ class ControllerHelper:
         recorder,
     ):
         self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
-        self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
+        self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env  # type: ignore
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
         self.n_agents: int = len(self._env._sim.agents_mgr)  # type: ignore[attr-defined]
@@ -97,22 +98,38 @@ class ControllerHelper:
                     gui_input=gui_input,
                 )
             self.controllers.append(gui_agent_controller)
-
             if is_multi_agent:
-                self.controllers.append(
-                    SingleAgentBaselinesController(
-                        0 if self._gui_controlled_agent_index == 1 else 1,
-                        is_multi_agent,
-                        config,
-                        self._gym_habitat_env,
+                if args.app_state == "fetch":
+                    self.controllers.append(
+                        FetchBaselinesController(
+                            0 if self._gui_controlled_agent_index == 1 else 1,
+                            is_multi_agent,
+                            config,
+                            self._gym_habitat_env,
+                        )
                     )
-                )
+                else:
+                    self.controllers.append(
+                        SingleAgentBaselinesController(
+                            0 if self._gui_controlled_agent_index == 1 else 1,
+                            is_multi_agent,
+                            config,
+                            self._gym_habitat_env,
+                        )
+                    )
 
     def get_gui_agent_controller(self) -> Optional[Controller]:
         if self._gui_controlled_agent_index is None:
             return None
 
         return self.controllers[0]
+
+    def get_policy_driven_agent_controller(self) -> Optional[Controller]:
+        if self._gui_controlled_agent_index is None:
+            return self.controllers[0]
+
+        # This is pretty hacky
+        return self.controllers[1]
 
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index

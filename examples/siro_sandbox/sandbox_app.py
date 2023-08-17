@@ -171,6 +171,7 @@ class SandboxDriver(GuiAppDriver):
             self._app_state = AppStateFetch(
                 self._sandbox_service,
                 self.ctrl_helper.get_gui_agent_controller(),
+                self.ctrl_helper.get_policy_driven_agent_controller(),
             )
         elif args.app_state == "rearrange":
             self._app_state = AppStateRearrange(
