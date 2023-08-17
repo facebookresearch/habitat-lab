@@ -486,12 +486,12 @@ class HierarchicalPolicy(nn.Module, Policy):
                 )
 
                 if self._has_ll_hidden_state:
-                    _write_tensor_batched(
+                    ll_rnn_hidden_states = _write_tensor_batched(
                         ll_rnn_hidden_states,
                         ll_rnn_hidden_states_batched,
                         batch_ids,
                     )
-                _write_tensor_batched(
+                prev_actions = _write_tensor_batched(
                     prev_actions, prev_actions_batched, batch_ids
                 )
 
@@ -579,10 +579,10 @@ class HierarchicalPolicy(nn.Module, Policy):
                 ],
             )
 
-            _write_tensor_batched(
+            self._cur_call_high_level = _write_tensor_batched(
                 self._cur_call_high_level, call_hl_batch, batch_ids
             )
-            _write_tensor_batched(
+            bad_should_terminate = _write_tensor_batched(
                 bad_should_terminate, bad_should_terminate_batch, batch_ids
             )
             actions[batch_ids] += new_actions
@@ -672,8 +672,8 @@ def _write_tensor_batched(
 ) -> torch.Tensor:
     """
     This assumes that write_tensor has already been indexed into by
-    `write_idxs` and only needs to be copied to `source_tensor`. Updates
-    `source_tensor` in place.
+    `write_idxs` and only needs to be copied to `source_tensor`. Returns the
+    updated `source_tensor`.
     """
 
     if source_tensor.shape[0] == len(write_idxs):
@@ -690,7 +690,7 @@ def _update_tensor_batched(
 ) -> torch.Tensor:
     """
     Writes the indices of `write_idxs` from `write_tensor` into
-    `source_tensor`. Updates `source_tensor` in place.
+    `source_tensor`. Returns the updated `source_tensor`.
     """
 
     if source_tensor.shape[0] == len(write_idxs):
