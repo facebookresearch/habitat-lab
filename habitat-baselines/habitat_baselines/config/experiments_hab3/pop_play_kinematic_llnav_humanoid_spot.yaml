@@ -44,6 +44,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
@@ -79,6 +80,7 @@ habitat:
   gym:
     obs_keys:
       - agent_0_head_depth
+      - agent_0_articulated_agent_arm_depth
       - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
@@ -187,7 +189,6 @@ habitat_baselines:
               - pick
               - place
             policy_input_keys:
-              - "head_depth"
               - "joint"
               - "is_holding"
               - "obj_start_sensor"
@@ -197,12 +198,28 @@ habitat_baselines:
               - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
+
+            # pick:
+            #   skill_name: "PickSkillPolicy"
+            #   obs_skill_inputs: ["obj_start_sensor"]
+            #   load_ckpt_file: "data/models/pick_latest.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 3
+
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 300
-              stop_thresh: 0.00001
-              apply_postconds: False
+              skill_name: "NavSkillPolicy"
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 2
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+            nav_to_robot:
+              skill_name: "NavSkillPolicy"
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 2
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
       agent_1:
         hierarchical_policy:
           high_level_policy:

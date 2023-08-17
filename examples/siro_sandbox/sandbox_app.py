@@ -66,7 +66,8 @@ from server.remote_gui_input import RemoteGuiInput
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    # "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
@@ -186,6 +187,7 @@ class SandboxDriver(GuiAppDriver):
                 AppStateFetch(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller()
                 )
             ]
         elif args.app_state == "rearrange":
