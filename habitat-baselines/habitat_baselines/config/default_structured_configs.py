@@ -425,6 +425,26 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
+    """
+    `_target_` points to the `VectorEnvFactory` to setup the vectorized
+    environment. Defaults to the Habitat vectorized environment setup.
+    """
+
+    _target_: str = "habitat_baselines.common.HabitatVectorEnvFactory"
+
+
+@dataclass
+class HydraCallbackConfig(HabitatBaselinesBaseConfig):
+    """
+    Generic callback option for Hydra. Used to create the `_target_` class or
+    call the `_target_` method.
+    """
+
+    _target_: Optional[str] = None
+
+
+@dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # If habitat_baselines.evaluate is true, the run will be in evaluation mode
