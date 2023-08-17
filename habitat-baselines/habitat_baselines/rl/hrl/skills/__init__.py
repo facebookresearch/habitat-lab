@@ -3,6 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat_baselines.rl.hrl.skills.art_obj import ArtObjSkillPolicy
+from habitat_baselines.rl.hrl.skills.ll_nav import MoveSkillPolicy
 from habitat_baselines.rl.hrl.skills.nav import NavSkillPolicy
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.skills.noop import NoopSkillPolicy
