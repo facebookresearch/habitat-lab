@@ -604,7 +604,7 @@ def _write_tensor_batched(
     """
 
     if source_tensor.shape[0] == len(write_idxs):
-        source_tensor = write_tensor
+        source_tensor[write_idxs] = write_tensor
     else:
         source_tensor[write_idxs] = write_tensor
     return source_tensor
@@ -621,7 +621,7 @@ def _update_tensor_batched(
     """
 
     if source_tensor.shape[0] == len(write_idxs):
-        source_tensor = write_tensor[write_idxs]
+        source_tensor[write_idxs] = write_tensor[write_idxs]
     else:
         source_tensor[write_idxs] = write_tensor[write_idxs]
     return source_tensor
