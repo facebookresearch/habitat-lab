@@ -261,7 +261,22 @@ class HierarchicalPolicy(nn.Module, Policy):
                 if dat_k == "observations":
                     # Reduce the slicing required by only extracting what the
                     # skills will actually need.
-                    dat = dat.slice_keys(*self._skills[k].required_obs_keys)
+                    if (
+                        "goal_to_agent_gps_compass"
+                        in self._skills[k].required_obs_keys
+                    ):
+                        dat = dat.slice_keys(
+                            self._skills[k].required_obs_keys
+                            + [
+                                "is_holding",
+                                "obj_goal_gps_compass",
+                                "obj_start_gps_compass",
+                            ]
+                        )
+                    else:
+                        dat = dat.slice_keys(
+                            *self._skills[k].required_obs_keys
+                        )
                 skill_dat[dat_k] = dat[v]
             grouped_skills[k] = (v, skill_dat)
         return grouped_skills

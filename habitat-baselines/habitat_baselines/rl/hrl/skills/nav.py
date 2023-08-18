@@ -45,7 +45,6 @@ class NavSkillPolicy(NnSkillPolicy):
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
-
         if NavGoalPointGoalSensor.cls_uuid in ret_obs:
             for i, batch_i in enumerate(cur_batch_idx):
                 if self._cur_skill_args[batch_i].is_target:
@@ -54,7 +53,7 @@ class NavSkillPolicy(NnSkillPolicy):
                     replace_sensor = TargetStartGpsCompassSensor.cls_uuid
                 ret_obs[NavGoalPointGoalSensor.cls_uuid][i] = observations[
                     replace_sensor
-                ][i]
+                ][i][0:2]
         return ret_obs
 
     def _get_multi_sensor_index(self, batch_idx):
@@ -63,10 +62,56 @@ class NavSkillPolicy(NnSkillPolicy):
     def _is_skill_done(
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
-        return (self._did_want_done[batch_idx] > 0.0).to(masks.device)
+        success_pos = 0.5
+        success_ang = 0.50  # 261799
+        print(
+            observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][
+                0, 0
+            ],
+            success_pos
+            and abs(
+                observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][
+                    0, 1
+                ]
+            ),
+        )
+        if (
+            observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][0, 0]
+            < success_pos
+            and abs(
+                observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][
+                    0, 1
+                ]
+            )
+            < success_ang
+        ):
+            return torch.ones(1, dtype=torch.bool).to(masks.device)
+        else:
+            return torch.zeros(1, dtype=torch.bool).to(masks.device)
+        # return (self._did_want_done[batch_idx] > 0.0).to(masks.device)
 
     def _parse_skill_arg(self, skill_arg):
         targ_name, targ_idx = skill_arg[-2].split("|")
         return NavSkillPolicy.NavArgs(
             obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")
         )
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = super()._internal_act(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+        # print("action:", action)
+        return action

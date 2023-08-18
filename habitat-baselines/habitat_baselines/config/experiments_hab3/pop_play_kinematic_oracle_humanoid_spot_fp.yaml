@@ -75,11 +75,11 @@ habitat_baselines:
               - "obj_start_sensor"
               - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
-          defined_skills:
-            nav_to_obj:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 1500
+          # defined_skills:
+          #   nav_to_obj:
+          #     skill_name: "OracleNavPolicy"
+          #     obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+          #     max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
           high_level_policy:

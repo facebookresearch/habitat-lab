@@ -31,6 +31,7 @@ defaults:
     - runtime_perf_stats
     - agent_blame_measure
   - /habitat/task/lab_sensors:
+    - nav_goal_sensor
     - relative_resting_pos_sensor
     - target_start_sensor
     - goal_sensor
@@ -93,8 +94,8 @@ habitat:
         # lin_speed: 40.0
         # ang_speed: 20.0
         agent_index: 0
-        lin_speed: 5.0
-        ang_speed: 5.0
+        lin_speed: 10.0
+        ang_speed: 10.0
         allow_dyn_slide: True
         allow_back: True
 
@@ -176,6 +177,7 @@ habitat:
       - agent_0_obj_goal_sensor
       - agent_0_obj_start_gps_compass
       - agent_0_obj_goal_gps_compass
+      - agent_0_goal_to_agent_gps_compass
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor

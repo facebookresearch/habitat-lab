@@ -18,6 +18,7 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
+    place_agent_at_dist_from_pos,
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
@@ -99,6 +100,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
+        self._target = {}
         super().__init__(*args, task=task, **kwargs)
 
     def _get_sensor_type(self, *args, **kwargs):
@@ -117,8 +119,28 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
     def _get_positions(self) -> np.ndarray:
         raise NotImplementedError("Must override _get_positions")
 
+    def _get_target_for_idx(self, obj_pos, target_idx):
+        sample_distance = 1.0
+
+        start_pos, _, _ = place_agent_at_dist_from_pos(
+            np.array(obj_pos[target_idx]),
+            0.0,
+            sample_distance,
+            self._sim,
+            10,
+            1,
+            self._sim.get_agent_data(self.agent_id).articulated_agent,
+        )
+        # self._target[target_idx] = (start_pos, np.array(obj_pos))
+
+        return (start_pos, np.array(obj_pos))
+
     def get_observation(self, task, *args, **kwargs):
         pos = self._get_positions()
+        # pos_0 = self._get_target_for_idx(pos, 0)[0]
+        # pos_1 = self._get_target_for_idx(pos, 1)[0]
+        # pos[0] = pos_0
+        # pos[1] = pos_1
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
@@ -131,6 +153,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
 
+        print(" self._polar_pos", self._polar_pos)
         return self._polar_pos
 
 
