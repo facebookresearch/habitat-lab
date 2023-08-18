@@ -315,7 +315,7 @@ class RearrangeGraspManager:
             the object is already in the grasped state.
         """
 
-        if snap_obj_id in self._did_place:
+        if self._block_double_pick and snap_obj_id in self._did_place:
             # Block the pick, we cannot pick an object that was already placed.
             return
 
