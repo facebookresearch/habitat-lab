@@ -187,6 +187,32 @@ class HierarchicalPolicy(nn.Module, Policy):
     def eval(self):
         pass
 
+    @property
+    def policy_action_space(self):
+        """
+        Fetches the policy action space for learning. If we are learning the HL
+        policy, it will return its custom action space for learning.
+        """
+        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
+            # The LL skill will take priority for the prev action.
+            return self._action_space
+        else:
+            return self._high_level_policy.get_policy_action_space(
+                self._action_space
+            )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self.policy_action_space]
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
+
+    @property
+    def hidden_state_shape(self):
+        return (self.num_recurrent_layers, self.recurrent_hidden_size)
+
     def get_policy_action_space(
         self, env_action_space: spaces.Space
     ) -> spaces.Space:

@@ -103,11 +103,13 @@ class BaselinesController(Controller):
         self._action_shape: Tuple[int]
         self._discrete_actions: bool
         self._action_shape, self._discrete_actions = get_action_space_info(
-            self._agent.policy_action_space
+            self._agent.actor_critic.policy_action_space
         )
 
-        hidden_state_lens = self._agent.hidden_state_shape_lens
-        action_space_lens = self._agent.policy_action_space_shape_lens
+        hidden_state_lens = self._agent.actor_critic.hidden_state_shape_lens
+        action_space_lens = (
+            self._agent.actor_critic.policy_action_space_shape_lens
+        )
 
         self._space_lengths: Dict = {}
         n_agents = len(self._config.habitat.simulator.agents)
@@ -156,7 +158,7 @@ class BaselinesController(Controller):
         self._test_recurrent_hidden_states = torch.zeros(
             (
                 self._num_envs,
-                *self._agent.hidden_state_shape,
+                *self._agent.actor_critic.hidden_state_shape,
             ),
             device=self.device,
         )
@@ -195,7 +197,7 @@ class BaselinesController(Controller):
                 )
                 self._prev_actions.copy_(action_data.actions)  # type: ignore
             else:
-                self._agent.update_hidden_state(
+                self._agent.actor_critic.update_hidden_state(
                     self._test_recurrent_hidden_states,
                     self._prev_actions,
                     action_data,

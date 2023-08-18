@@ -33,6 +33,7 @@ class HighLevelPolicy(nn.Module):
         self._obs_space = observation_space
         self._device = None
         self._agent_name = agent_name
+        self._action_space = action_space
 
     def to(self, device):
         self._device = device
@@ -67,7 +68,30 @@ class HighLevelPolicy(nn.Module):
         raise NotImplementedError()
 
     @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self._action_space]
+
+    @property
+    def policy_action_space(self):
+        return self._action_space
+
+    @property
     def num_recurrent_layers(self):
+        return 0
+
+    @property
+    def recurrent_hidden_size(self):
         return 0
 
     def parameters(self):
