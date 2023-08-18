@@ -94,6 +94,16 @@ class RearrangeEpisodeGenerator:
         self._limit_scene_set = limit_scene_set
         self._limit_scene = limit_scene
         self._ignore_cache = ignore_cache
+        if ignore_cache:
+            self._cache_staleness = {
+                "navmesh": True,
+                "viewpoints": True,
+            }
+        else:
+            self._cache_staleness = {
+                "navmesh": False,
+                "viewpoints": False,
+            }
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
@@ -513,21 +523,24 @@ class RearrangeEpisodeGenerator:
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
-        if osp.exists(navmesh_path) and not self._ignore_cache:
+        if osp.exists(navmesh_path) and not self._cache_staleness["navmesh"]:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
         else:
             self.sim.navmesh_settings = NavMeshSettings()
             self.sim.navmesh_settings.set_defaults()
-            self.sim.navmesh_settings.agent_radius = 0.3
-            self.sim.navmesh_settings.agent_height = 1.41
-            self.sim.navmesh_settings.agent_max_climb = 0.01
+            self.sim.navmesh_settings.agent_radius = self.cfg.agent.radius
+            self.sim.navmesh_settings.agent_height = self.cfg.agent.height
+            self.sim.navmesh_settings.agent_max_climb = (
+                self.cfg.agent.max_climb
+            )
+            self.sim.navmesh_settings.include_static_objects = True
             self.sim.recompute_navmesh(
                 self.sim.pathfinder,
                 self.sim.navmesh_settings,
-                include_static_objects=True,
             )
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.sim.pathfinder.save_nav_mesh(navmesh_path)
+            self._cache_staleness["navmesh"] = False
 
         compute_navmesh_island_classifications(self.sim)
 
@@ -837,21 +850,23 @@ class RearrangeEpisodeGenerator:
         """
         # Setup a camera coincident with the agent body node.
         # For debugging visualizations place the default agent where you want the camera with local -Z oriented toward the point of focus.
-        camera_resolution = [540, 720]
+        camera_cfg = self.cfg.agent.camera
         sensors = {
             "semantic": {
                 "sensor_type": habitat_sim.SensorType.SEMANTIC,
-                "resolution": [256, 256],
+                "resolution": camera_cfg.resolution,
                 "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
+                "orientation": [camera_cfg.tilt_degrees * np.pi / 180, 0, 0.0],
+                "hfov": camera_cfg.hfov,
             },
         }
         if self._render_debug_obs:
-            sensors["rgb"] = {
+            sensors["color"] = {
                 "sensor_type": habitat_sim.SensorType.COLOR,
-                "resolution": camera_resolution,
+                "resolution": [640, 480],
                 "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
+                "orientation": [camera_cfg.tilt_degrees * np.pi / 180, 0, 0.0],
+                "hfov": camera_cfg.hfov,
             }
 
         backend_cfg = habitat_sim.SimulatorConfiguration()
@@ -871,6 +886,7 @@ class RearrangeEpisodeGenerator:
             sensor_spec.resolution = sensor_params["resolution"]
             sensor_spec.position = sensor_params["position"]
             sensor_spec.orientation = sensor_params["orientation"]
+            sensor_spec.hfov = sensor_params["hfov"]
             sensor_spec.sensor_subtype = (
                 habitat_sim.SensorSubType.EQUIRECTANGULAR
             )
@@ -916,7 +932,7 @@ class RearrangeEpisodeGenerator:
             if self.vdb is None
             else self.vdb.output_path
         )
-        self.vdb = DebugVisualizer(self.sim, output_path=output_path)
+        self.vdb = DebugVisualizer(self.sim, output_path=output_path, default_sensor_uuid="color")
 
     def settle_sim(
         self,
@@ -1103,7 +1119,10 @@ class RearrangeEpisodeGenerator:
             dataset_name,
             scene_name + ".pkl",
         )
-        if osp.exists(receptacle_cache_path) and not self._ignore_cache:
+        if (
+            osp.exists(receptacle_cache_path)
+            and not self._cache_staleness["viewpoints"]
+        ):
             with open(receptacle_cache_path, "rb") as f:
                 _, viewable_receptacle_names = pickle.load(f)
             receptacles = find_receptacles(self.sim)
@@ -1124,7 +1143,9 @@ class RearrangeEpisodeGenerator:
             (
                 receptacle_viewpoints,
                 viewable_receptacles,
-            ) = get_receptacle_viewpoints(self.sim, navigable_receptacles)
+            ) = get_receptacle_viewpoints(
+                self.sim, navigable_receptacles, self.cfg.agent.camera.height
+            )
             viewable_receptacle_names = {
                 rec.name for rec in viewable_receptacles
             }
@@ -1138,6 +1159,7 @@ class RearrangeEpisodeGenerator:
                     pickle.dump(
                         (receptacle_viewpoints, viewable_receptacle_names), f
                     )
+                self._cache_staleness["viewpoints"] = False
             except Exception as e:
                 os.unlink(receptacle_cache_path)
                 raise e

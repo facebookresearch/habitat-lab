@@ -1,0 +1,1806 @@
+---
+dataset_path: "data/hssd-hab/hssd-hab-uncluttered.scene_dataset_config.json"
+additional_object_paths:
+- data/objects/train_val/amazon_berkeley/configs/
+- data/objects/train_val/google_scanned/configs/
+- data/objects/train_val/ai2thorhab/configs/objects/
+- data/objects/train_val/hssd/configs/objects/
+correct_unstable_results: True
+scene_sets:
+    name: "train"
+    included_substrings:
+      - "/102344049."
+      - "/102344193."
+      - "/102344250."
+      - "/102344280."
+      - "/102816216."
+      - "/102817200."
+      - "/103997424_171030444."
+      - "/103997460_171030507."
+      - "/103997643_171030747."
+      - "/103997919_171031233."
+      - "/104348082_171512994."
+      - "/104348463_171513588."
+      - "/104862621_172226772."
+      - "/104862639_172226823."
+      - "/104862660_172226844."
+      - "/104862669_172226853."
+      - "/104862681_172226874."
+      - "/105515211_173104179."
+      - "/105515448_173104512."
+      - "/106366173_174226431."
+      - "/106366353_174226695."
+      - "/106878945_174887058."
+      - "/106879044_174887172."
+      - "/107734449_176000403."
+      - "/107734479_176000442."
+      - "/108294573_176710113."
+      - "/108294870_176710551."
+      - "/108294897_176710602."
+      - "/108736635_177263256."
+      - "/108736737_177263406."
+      - "/108736824_177263559."
+      - "/108736851_177263586."
+      - "/108736872_177263607."
+      - "/102344022."
+      - "/102344403."
+      - "/102344457."
+      - "/102815859."
+      - "/102816009."
+    excluded_substrings:
+      - "NONE"
+
+object_sets:
+  - name: train_watch
+    included_substrings:
+    - Watch_1.
+    excluded_substrings: []
+  - name: train_dumbbell
+    included_substrings:
+    - B00R3MZITG.
+    - B01LR5RSG0.
+    - B01LR5RVYE.
+    - B01LR5RBZ8.
+    - B074DZ5YL9.
+    - B01LR5RO5U.
+    - B01LR5RG08.
+    - B074DZGRMG.
+    - B074DZHYS6.
+    - B01LR5R18K.
+    - B01LR5S1WA.
+    - B074DZ6NGS.
+    - B01LR5S6HK.
+    - B071WSFSGC.
+    - B074DZNJ3T.
+    excluded_substrings: []
+  - name: train_bundt_pan
+    included_substrings:
+    - Nordic_Ware_Original_Bundt_Pan.
+    excluded_substrings: []
+  - name: train_cushion
+    included_substrings:
+    - pillow_4.
+    - c1eebdc4888ed084314f15e8547a22f725f5f818.
+    - b5818ca4cd4a3fa1884ecca7995af62149da13a3.
+    - xxxx8a64d36ax736ax4dc9x99f8xa2b68365e94e.
+    - 2dee26ada15e0c2591ab9f19b3386d8929ee1515.
+    - ae971cf1248f4aff07a3cabd0d19353964c313c9.
+    - pillow_6.
+    - e0e3a0e2063464e0ed033315746dca3f62401549.
+    - 6d4bd784f6705ce51a304c1a98df9c5babcc05be.
+    - B07MF1RR14.
+    - 3a4de797eaf7e86ae473c53104760c4457a3ee15.
+    - 5f2d27e98b7ea385ed2b50519926a23cbbfb96fc.
+    - 5d9b5550007cd90910a97c826ab866bb16ba8a4e.
+    - a8ffa8fc0627283171cb66d6c9a4fe4c445d14dc.
+    - 75ded4e81ac4482d81d7fa40552045df52768911.
+    - 2112ac57da8c769fdd1766b5b66db787fcf29069.
+    - 03db515e46a0ad189105897ee11576bf0513bb5c.
+    - 0b464632636e6fcf8e8039d42f82309bbff208bc.
+    - ba0b27270f2d7b08495e8eff041013d96d5f905c.
+    - d97ae87265bdc52de376c669e2b2ab4025f6d425.
+    - a9e73eb4266cde5b9e1e25ca18be5829001817dd.
+    - c4472ca217b9e9950127380da08708effce795b8.
+    - 65c9abdb193b55a48b11192b69678053ae0a0b98.
+    - 4b1344e2aefffc21dda963f1df0ffe2cec16c313.
+    - B07JLSSWM6.
+    - 2a102acfc249c362eca648f2ae59f0e6487b66da.
+    - B07JLZJG2V.
+    - 1323d9a4f7c0f69238a6db411a54ed85976ce03d.
+    - d7d8654b50cbe24a72d81deabb2f317a0905e534.
+    - fd0c0ff8a8550172efb5d3487c1c8aacb4a6f5d3.
+    - 71320f99c6618641568d141e9dcd7cb994408132.
+    - 8fba7557cf88cc31a6b44a28459b874dc494fe55.
+    - B07JL5PZ1S.
+    - c0b0c87dec3041ed21e55c1c636e0957e7bdf015.
+    - c5fcf6b7903d9e12ace723ffeff19f44387d959e.
+    - b44584c657c4ae1a2c230133997aefd8885cf7d5.
+    - d79618d0a592a3433f372d4cefac5e577c7aca01.
+    - B07JLGCKKJ.
+    - f7085cff7c820e5a9c74e515e00bacc1e56a2974.
+    - 74de83890cfd1d14dd84bc878d7c52f7dcf7620c.
+    - 7a1c4358fc7c76af7902be3a7688786961983678.
+    - B07JLZC567.
+    - 6d3003a6bb48e58ef7bc50b5f81539bf4702cdd1.
+    - 876f8ba5321b2761b14cb1f0115ee912e5a0b96c.
+    - B07M6PJ4LX.
+    - 7f480b6bdcfe59cb35fa96ade8625c4921fbd84d.
+    - 6a2519beef422dc67cbffd40f156a03d27099e08.
+    - B07JKJKJCC.
+    - B07JKJP5N6.
+    - e14fcf4e84764f56c1a29487b45df680b7124655.
+    - e54dc3d50f38ea25737f674b04d8581fdeca9ff5.
+    - b371f5b7a81a330a48c8529beee3c655fa6e03d9.
+    - 730051ab5f9e294e8f9139912a598187771d8099.
+    - cc5900bba23d7c46daece6f7a24cd20a491ebc0d.
+    - B07MBF93XS.
+    - a640ae6134ab74e2e2d8b7da6cc1dffdc8eaa76d.
+    - 5359e67dc170ea57c34e0ab21552dd5079ca1016.
+    - fe51d88301a8301cc6def692d25784a5bbd5cc2a.
+    - 4b4257c16b6eb014790661fc0cfeba5fa9bbc032.
+    - B07M6PJ4MC.
+    - xxxx638af359x991fx4e3ax9d7cx10b39614bf6b.
+    - b3d8fc0343fdfef83b7651a47801cf72128a6270.
+    - 7d4c647508b560310f14e9d992979dafd61f897f.
+    - 5d17a71502e7a27602e8755574b2d4588a352662.
+    - B07JKJP5N2.
+    - xxxx041a75a1x3270x4573x8991xd08d08e3ae14.
+    - B07JLGCKPV.
+    - 3b80c5e16511d91e06778abe6389ac6686408fa1.
+    - 90a02b042575c099b81e4f0372a893f78031e355.
+    - 0b8ab67101875851aa7447520d5807e67fe798f8.
+    - 6ff5251d907c64bfdf8cf4cf04afc9a039dbd4d1.
+    - 193f8007669b484da104bb34c3d367210647e480.
+    - 24233dc85b27cbfbbfeb019dd674ee2d4dc6bff5.
+    - db1129bfbb71e2a7eeee3538c464bf3fbe927ba4.
+    - a58017bdd5c63666442746ea9baeca7d0a57185b.
+    - da812f26d2448c343cd750d57078fc8d3f251435.
+    - 1a1ffc43ec21c48b12650b72f77709d5a74f2697.
+    - B07MBFGB51.
+    - 78bb66268105bf1dcdff769949aa5b3508a5f9cf.
+    - e27bd844321a8dff81c1d5895f978ba7742da524.
+    - 2e5d3d800dc19b5ba0ec93213d413c53f9b6435d.
+    - xxxx996984dcx59f5x4813xb4a1x3e5021c1fa1b.
+    - c96ca985a9281157cc833ef70cca6d992d382908.
+    - faa19f6d232be5eb22f422290cda6b9a0bd5958d.
+    - ba765c4772e91ddf81250d6431f7233f01e2503b.
+    - B07JPG7K3N.
+    - e2441f79ede3e2c30f23a5b37e675c3689c36f75.
+    - 92da8043801940d3b219910f5c7852dc678b89b1.
+    - 9f408cf05900baf2f79ce287b5e8ec10709e468f.
+    - xxxx8c029877x36d8x45e2x8f82xc159b9847528.
+    - 23838df4e36d1d9844eb89195bc19c0f8bddee04.
+    - 8791195b0cbe6a78f2a649b23f1e97c89add69f3.
+    - pillow_24.
+    - e3fd946c45edefb08bb36c29f7755c4a90c67caa.
+    - e4c95482cca64d8c12291dfe5897fa7081104c87.
+    - pillow_3.
+    - 73c5703d71d04e71abe1a44006c39e52b9019a9a.
+    - c6939e705b5d024be79b76af8d8b432e9ea0e480.
+    - B07JLST2G7.
+    - 2918a1221f785fc66e4bf1665b095afa9ce1ec7b.
+    - a506c15b7a7f4d0fc633a073e7c483c961b3cbf8.
+    - 616d758b541907b6dad07d783fb67d0980c201f3.
+    - 8b50f6388f968348545e5df221de7011c0abec15.
+    - B07JLGCKJJ.
+    - e17d69a10322122847b830d07109e93ca41caf97.
+    - 31fb4ebf30cddd82ba457e4a94e94f8f6c7657a7.
+    - 8c3ae4ae678dab4649af6fbae1588966a38bed7f.
+    - 9e57af1b16c23e2acc7aa8aeb56bf4542f083bea.
+    - 133e3f3027bda528929d8990b65acbaa0671ed4e.
+    - 2c15efb833211d784d267d1af34267965a4c88ad.
+    - pillow_18.
+    - 7db892f5e4439c39cf6907a73e23f924ba11547c.
+    - B07JLSSYT5.
+    - a05e849b1e9578645f9d1fbded44644f55128101.
+    - 5330e5d35c400b82e58d1a85e4959a33f7c2964d.
+    - 487c9d12f288b57ff14645e816666a9f3080812c.
+    - e782e7768c9bf8efa7a01d10f048b3e56ea3f9e1.
+    - 4e9dab0f0b6921ceecf74f65a2980903e25fdae1.
+    - 7b49505186a34ac8f7390a6cae35e6e8be0b65f9.
+    - 27a6e39d531c9e64ccfb95f57da88c6b7766e300.
+    - 32e6015fabc0e2bd7e8ad9970173c52e23b8957d.
+    - B07JLZ7QDP.
+    - 129106295eb39d18aac50e32aed62d6577cc0d99.
+    - b6690d7957484c3ab8c86901e6eb4ae0cf8ca377.
+    - 2246723fa8585d64664fcca5dfd01e990b823fdd.
+    - 2c1c74ae8203cb548aa3bc5bee464c8fc2423607.
+    - f0b1373db08b9bbf978e41654ea70c85db16bea7.
+    - 029320781a2fc9117543a3004e3bf0dd78616470.
+    - B07JY4GZW8.
+    - B07JL5Q7FC.
+    - ddd0c97dc2930ce7161187a00d002fc5cfa4c612.
+    - 549009278de1efc70ca5b4ee51f88cf7b04b43db.
+    - 51a82cb5a7e221dbe49bd694d83d2caa9b220b2a.
+    - 00b543e5c1ec525f02523484c372d31fbcc696ea.
+    - dbc51b634eba6fabcda98e914361de9d7764a671.
+    - 6b7ebb851b33edbd484a046ccf9ceb1134c471a5.
+    - c15250e40df1bf237336358f1fc4f4f8f4c800a2.
+    - 776f3530cb5858583bff8a5556c38b5b2c876c55.
+    - 859e59d95cf7d15023e25c9ac5c93931553caed3.
+    - 481284cdbd0f8573163593bd67182696d6b1a491.
+    - 903c47ff263e0802e0c380e47f26348d192c665c.
+    - 8e0b9a2ce5f3af2c280e23ba63cbfbde78867207.
+    - B07JXDPKBR.
+    - 2fb8e419222b0e5265424f021efd650286dc1894.
+    - bcbb14de3ef8819f2ba2df51ff769b4a61fe0a7b.
+    - c36462b8244ce01c07c03e1c6e08bd2c69a2af1e.
+    - 8735071b2a1ca57f774cd43d3ed0a2751c528884.
+    - 002f87c8e4e2b870387e095797a2f40b30e7baec.
+    - 6bc1d5984d7a16d0342188edf662de3dae7a1a26.
+    - de4c07542babc2f77245d343aee1e6e5acb0941f.
+    - B07JKJP7QG.
+    - e58b65178e79d0ea46d60521aa1137344bf6b036.
+    - 78dd5e949d7df816ac67920463345420646eb708.
+    - B07JQX8DV8.
+    - e50137b5a3dd3a4f670418a240e2d7de269f8e6c.
+    - B07JLSSWCP.
+    - b8991630db79e6c6ab40e844759564dd96637fa3.
+    - 7a1da1c983712d6cb8e82681c72b66da03fa037b.
+    - 9e2b2559015dbc36eb323998201baf709c22e1d2.
+    - pillow_30.
+    - 2be4c3572c9e74ad4d85689df775dd438c3ac7c8.
+    - pillow_25.
+    - cbf66246fbbe6ec055a967d3618ae4129b4d5c68.
+    - 0cbf999d1253ea1f444bdf16c2ee625deff8e756.
+    - B07JKJSLWM.
+    - 0df420ba1955cb367db1e0ee098332b84bf040a5.
+    - 619269b259a849e647ef885f13642dab1060a380.
+    - 9d4ad983d032d320ca0ed6ecb47b71258d18dc80.
+    - 45a8faad91c6b065d37cc689b6a3c674f2b9d4d1.
+    - 37a878a151fe7fdeabe1e2480684f5a6112e5feb.
+    - 0b0b04bfddf686d7acbfa435e5ee6a8be5335328.
+    - af682e4476cc11ea9ae59186c27ca271edd5e221.
+    - pillow_26.
+    - fea22a2f360f47c36578e3f793525e53c28f0a10.
+    - pillow_8.
+    - 7049c96c99124b73ed2e8ce69c874b600f0b379f.
+    - fd8d2fe025eec667866cae0c9908a8f1cc486228.
+    - 2ee2e9c2ca6484b89ba607acc837ab0f51fce171.
+    - e2f243346d7a2c02a492adba3098b3e732417ebf.
+    - pillow_27.
+    - 1b706dbc65e1ecf00016d464cb3ee9bccb7dc96a.
+    - 70f7938f0e85f8361b676f18969e934f05be8f5a.
+    - xxxxfd0c8cbfx9cbax42e1xbba6x3d56adb64218.
+    - d64b292957a43247fa3792f6bd1d575466dcf769.
+    - 2086992b17fa1ad6882c1442ef4f15b1b4142460.
+    - 748ccdbbac88181d4a7c064efceb64d1fb4bde2f.
+    - B07JL5PT1J.
+    - 55a1ffd21d700770bdfe2904152e6e7652d9ebf7.
+    - 9c0e03bc1bcfc38cc33381a31cf0cb0eb07c2db4.
+    - 786502f5c1c94c2c58feda6c8b9515edc192af5a.
+    - befb176958fba73675904a995e32aafae2841824.
+    - 39404b2e277c41cac40093adc87ed510da39aca4.
+    - cc779956c36e5f3b15a84918b2fa40295f1c4773.
+    - 1e621d79a5af2aabc745c8993082f76629528f78.
+    - 0e08e658a0cc484570751b42c2784f53297b862f.
+    - 397c30169e061925b4157b1b2cee783bd25dc56b.
+    - 8ddc3d044fc22331b0cfdff50db2ca48a023ffe7.
+    - 0db7078f7703f0a0f32a47c8e9b8f76e2bf61b54.
+    - B07JKJSJ9F.
+    - B07JM1QSL6.
+    - 8530b6bf34fd9a647efcc55f188e22a05ab89bf7.
+    - pillow_11.
+    - 28436c38337eb67ae8d04d2c471deae7aed97fb4.
+    - B07JL5PLPK.
+    - 8a87da4e6f20989ade61e37c43f8c306c6353ef4.
+    - 52a8210e7629b5564298a9b4c637e7365acd1f70.
+    - pillow_28.
+    - 6511c3140f37ccb0742673ed34b3b189ceced758.
+    - xxxx6ffe1177x99fax4d71xa773x4a1a44dd25ed.
+    - 9929e9ecbc0aee77d8493fa03752b8376ccb54d9.
+    - 97f5b6e8724726978d08518a54490ffdd59f0f2b.
+    - B07JLSSW6K.
+    - 1b2aeea2950a58551e6463fdbaefc03a7a912fff.
+    - 19079bc04b922fbf1b9ffac1983b0f088fe1eab8.
+    - 0678d5e4b8b1ceedadaa6ca750edb759910e2053.
+    - 08c62bf3d64aa02805d5ae80a64361e16e3e0c24.
+    - eaf5d6b91e4806848c3f394cea2a36e9a7204662.
+    - 07534d847b14fac9fd32730ee2581fa4c22f2768.
+    - 59503e2e56d8990aa577d04ff110fffca8b9aae3.
+    - B07MBFDS2R.
+    - 115303a4c8d577475d304f0aac234de9a0fb0156.
+    - B07JM1XVHS.
+    - b06b267984dec630bb9f0a0481b798955059fca7.
+    - edfa72764d7e160fc8bc0ef4bd2ee480c4b6dca6.
+    - 3f0dd5f850d5f769c9f6c409b97a6cb20ceb0ec8.
+    - xxxxc30e08f4x160ax4eb1x8845xa223d2a9b435.
+    - eef3db56fba979e8543edc586b3749e9383fcdc7.
+    - B07JKJSTL4.
+    - xxxx6cb87718x6144x4b76xb562xb99e16b34553.
+    - 7426e2cd3752400c8eb20a2914f569817c3eeff9.
+    - d9eeae92d87296aa2f9a8ec1e2b8f729b861de62.
+    - B07M6PKCPF.
+    - ba01530d043d906de59d3cebf910365e2d0f3b23.
+    - B07M6PJ67T.
+    - 07bc2b656ca791517e755ebc30406b00a45724d3.
+    - 2dba1ac5ece0278e56ecab61b7d2d9e750a51914.
+    - 90490b30a3bd57a95fd8b8ea46f3a88e7be4d624.
+    - 9ad203f8b978af549108a2e91b692aacfaa351db.
+    - B07JL5PNGZ.
+    - eb666a39a15497803a138f231dbe12d48b61f303.
+    - pillow_23.
+    - B07JL5PNHT.
+    - B07JQYHQ9D.
+    - b63342d90580e1719522fa6313f73af190f4baf9.
+    - ee8637bede8d8bc3d3f206f6008a1cf60817cedc.
+    - 33fd4562e23904d53be190b35c5b7d3ff6047646.
+    - 7add51eeca2fe20b270fa96ef6c002aab3020170.
+    - B07JLGC7XN.
+    - B07JKJSLXR.
+    - pillow_1.
+    - 4268591d5dd40d5ecda06a244639462ceacf67a4.
+    - 4410b9775c033a58c75efaffb9cccb1ce3b2277c.
+    - B07JLZJ94P.
+    - B07JLZJ94R.
+    - c309eda1f978f3721f8664b12f8a9c2414df3252.
+    - B07JKJKH43.
+    - 0978b652fcaa6190a0b614c32e3c6abb2cc5da98.
+    - 262abce62a15f965d65606a9a2710b0beee3a546.
+    - 0d7da84758fb997f003bba227a886e07f7fb8486.
+    - 84f587619a6415604ef4b4c02da6bec3e96a25b0.
+    - pillow_5.
+    - xxxx89738871x99acx4877xae92x8b914253a0c7.
+    - 7ce0dd0ec341b1d36b9eb1f5966bff31f459bf02.
+    - B07JLGCLV3.
+    - B07JL5Q12D.
+    - d571d8f6a39fef7153ebb8ee723e4f0279fd3ca4.
+    - 1e888d9b36c50320b2cd1691d09845e73ce9f97e.
+    - B07JM1QT63.
+    - 031ccffaf5026ee18cdc60c1d3dc62ea41c690d0.
+    - xxxxd71360fbxaefex4891x8c82xefbb2d701018.
+    - B07JLZJ9JM.
+    - 43e1b51b7ed143cef82ccda6d61d350caf6a1e43.
+    - 82c8de27d7894fd2aa7ec91fd3fb254332cfc82a.
+    - 5cd18d52a64052d113a58a5c72c4a7aadefd31f5.
+    - B07JLSSWLN.
+    - e3382c78be27376239a04a5daa7299f3a882210c.
+    - ac7f0aeb74c301dbb6a871f8c1020ff97fc170c0.
+    - xxxxdff89276xa99ax422ex8c43x9266c5331df6.
+    - pillow_15.
+    - cc90c5cf4609f5f9693dc60a0e64cf45c7d5f449.
+    - b6d2d770c0bc4752c89c6f1405c9986d81c3009c.
+    - 6488874477b3b2a1f22a7850f315ebfa66e31cff.
+    - B07MBFF1K5.
+    - a13475d927ae8e04cd3bbfa6e384ee0330d8e6a3.
+    - b949b91a6761ec51ecbf9485047920709dd15c33.
+    - db5a42bfb05b92d60fe280d48eb5493d8e9210b7.
+    - B07JL5PT18.
+    - 784085a279accc73546b59523144a83f40046c3a.
+    - xxxxc9dd921bx3ac3x4ec3xbd42xd1051b99b543.
+    - e4b1d0d6b3c0f8fb8a728ae4636376f10f1a3b63.
+    - 2b97481c9bcba11a74ce9331eb973ac6db2396c5.
+    - B07JXF7251.
+    - 4f5d47113c4cc86f9441077d77b162a89029cef2.
+    - 66204fa26b334068303591c4e31123030e7c434c.
+    - 7e9e1ea776892f4c427cfb2ba93ca21d12cf3927.
+    - fe7bd204726280681e2e10a20fcf6033fce9c8a9.
+    - 04b85c45598c9650b3d2d538fe6c737c608a581d.
+    - a5ad2b8123b11b0b0a119849c142cd10c0ab070d.
+    - ad8a6ac19ea02c75c38105671d67f4f93686a49b.
+    - 6221ee6c569f2cd1a50820d74366201dd82b9e13.
+    - B07JLZJFWW.
+    - B07JXDPKBQ.
+    - e52aacbf00b74415e9a718d963ddb7c43535be30.
+    - c48d93076b65f58ed1992994cbab16239fb0d24f.
+    - pillow_21.
+    - xxxxd6dd4d47x3311x44e6xaba0x6f7193158e02.
+    - 012206d2b382d07af6b113f4968003c7d8d70b85.
+    - 9060fa31725f1a51b4b7714a8c9578860d9e1d7d.
+    - 9630ac7593f933ea669826d339c77b2f17973115.
+    - xxxxefdf1c75x32c0x4bfaxada2x48abb454466a.
+    - 993ff1199d078cae6b4da93bd2247b3a3fa72b89.
+    - 4fcb7452a9bd0a46dff33bc7f8ccbc8ff7476872.
+    - 9abcfae90b1c809c786607b192800b395830fd36.
+    - pillow_7.
+    - f6e1b91a12a782b87acc2369e613399bd6fd1574.
+    - B07MBFGB46.
+    - 94caa134a7e999d3a8df744064177f2350593df1.
+    - b4fadcb8743b75c01e4bfa64e54bd5a86209f3ba.
+    - 4da6526aaf4eb7fa9be8038a3335f03a9d14cdc5.
+    - B07JLST325.
+    - B07JQZMSF1.
+    - xxxx8c571039x10c0x4aaex93fbx3b776cf9410c.
+    - d64e9f430e1e2531199e72c58439eff62545c68b.
+    - B07JM1ZP24.
+    - 7f86d51f8a5f1e9c32ad7096cdfe205ea4ae9677.
+    - c605855fd97f1798eef75a9c99ed30df8450fe6a.
+    - 61bb33a7ffa08bce73405ebe7c6d931ae6c6b2d3.
+    - ff6db99061b0d2d0745a399411e484d35385e2b0.
+    - 96235a628c875afb8ec67de2c462a4c2b451723c.
+    - B07JLGBY2C.
+    - B07JLZJ93D.
+    - B07JLZ7QC7.
+    - 1800cb6d2678f6ec8478e53e992ae669250b8080.
+    - f06c68f87b5d56cb825f7029249c1eea91dace92.
+    - B07JLZC56G.
+    - b6d0b74cb71a665cfc66b00cc9c7303ddc4eddb4.
+    - 3925f8b8166a101d2d81a7947f0884aaef13e772.
+    - fc64d679a53ebcc94fed2536c715d0b1b21ec95f.
+    - 4ab7e10da4f03537809c918706c2456a431b8938.
+    - 1c3a2db7f8e8ffe9ebb42e5285df71f3ddd3871a.
+    - B07JLZJ93B.
+    - 1b9e157550fc5b5c44f898d390b503e012941416.
+    - 7e5935dc3b2286c0dbfe461c6ee7d6e3826664ac.
+    - 32856ef0051468b85bf88eb693e5f78cfe550bc4.
+    - f1d6e648da6a766b84a7a0c5b3f9df93a09a1579.
+    - B07JL5Q123.
+    - d2678474a0cc066877cce47d349a81c4c2f6c75f.
+    - a75ab1ee47de5ae0a21713f2cf1965b0c8dc8cd3.
+    - b0f4774afd8a4392ec83f91d2d9bba115e927ce9.
+    - d327bd7ba027444c790778cbea7692962ba3e3f3.
+    - 50549dea6434f912fa0134d5ed43f35f164908a4.
+    - 0fbd6192609bf635c9ba510125e21f86d05018b1.
+    - pillow_14.
+    - 144f299fdf4bacb8637a38422a8483c554241a8c.
+    - 54bbd167e0d08f75c787422a675088e7fdc87507.
+    - d6a04461b9855cd6fa6a6a234b30d2039a4d3848.
+    - pillow_12.
+    - 60347b173896dfa4f431afc166ab594c0ca3fa10.
+    - xxxx7be8b02ax468bx40d5x9fd4x9edca1d27d1b.
+    - ce514fe2653e527bfa11b0e0752ef54d36f5c6e3.
+    - B07JL5PT64.
+    - B07JM1QT5Y.
+    - 8672dbd382a312e8cea9a33c681b9ee95b32b0ad.
+    - 8cc4297c248a4e5735f39a57ab0a48b103437379.
+    - 44b1f3cf3048eb3e6aa6e32e74c85429861aa727.
+    - B07JL5PNHK.
+    - 7288d3e89a79c29263431933e2b2dba13debacf1.
+    - ccc492feb8057fb00ebb99bbb049c346855cc183.
+    - 45ab88693d0053fdc8bbd8b9aba7cb202161b9bb.
+    - ca1edde60c54c134d8276c5103f274c28e1005ae.
+    - c54489d31fda59e0b89fdf1da56efbb704c5cf64.
+    - 7f4dbebcba5be27146af895ef301b0d70ad4fb7c.
+    - fb4b685d7fad41f234069e88f1fc1d10134bded1.
+    - 36cccd72a954bd7b08069072d069c6f0b93c06e4.
+    - 7b81210ab62dfc33b46c6445b11ca8962ce99046.
+    - B07JKJSLXQ.
+    - B07JL5Q2XQ.
+    - pillow_9.
+    - 4c8a0d8db0b1e604f9a2018fc214cc9303afacf5.
+    - pillow_29.
+    - 6d207d1911735b52db77c7817278b445c2d0f4aa.
+    - 2d53fbbd91b9476e9e2e36c9fbdccf92a4e82a8d.
+    - eb11f9e93435a1956b10ad95bc4b8cbe19358b3b.
+    - B07JLGCKP6.
+    - cfb936ead974440cf048cde240683881fbe1cd44.
+    - bbd11f801cc2af6bd16b1a19180de1ce4d50fb88.
+    - 09da56b41f7d3f43a35cc985833a05ff34a9cf37.
+    - B07JKJP8V6.
+    - a093c11a53871a9dbe3c1b2247844c16979c2e2f.
+    - 8f283ccafa339aeb40685056f8308f913c43fc8d.
+    - 621cce44da2188f7952227253716c2748437fb86.
+    - d208c35b9cb8ceb97ca64e297651f8c24c50b97a.
+    - 81d68793c0c79d92a8bf34866efd02cb1066a5cb.
+    - B07JL5Q77N.
+    - 3c3695f1e1c2c31e2507ca7e789b133695781752.
+    - 9aadc5abe53ec720a8a05e312e3b68f86c5c6d09.
+    - af322da11e1961aab69a9b513966fb2ba4d3d360.
+    - b9f34fec251e217addccee9fc021905f76eaef13.
+    - B07MF1RKS9.
+    - B07JLSSYTG.
+    - c055c30fb20a20b2ab9984e19039416ebe1f1717.
+    - B07JKJKDLD.
+    - a5b5509d27889aa3653568f9252f986aec6507a6.
+    - aef368c5d5013fdcb6f09a4b200aabb90ff3a51d.
+    - B07JLGC7XK.
+    - 3e99c10124197b7948be97db5066f25c18d81248.
+    - 484f0f9c39984b0bbd30ad5507b1488294346f14.
+    - 04a0156632b5fe136cbe6400b23b28cf88d23ccc.
+    - 7458255e2e6de219c0e9bb0c8b020f21eb94161a.
+    - B07JLGC7YC.
+    - f051410f7352c01b4ca09825d57d007df8221981.
+    - 10b447f63c75b468e62c1ab52b0d28d569d8c9dc.
+    - 81630deb0f6186499573f0b63ba1e0b9aa01946e.
+    - 3e647fdf41d67812a049b3f94a7113c97ac0aa6c.
+    - 6267aeaf1c9312e3d756923ede63c52c074ce307.
+    - 7441ce44ceffee74fca2c8b793501df58e726f4b.
+    - a9ced9c8b27e8b0cf197abf9564fa963078d9425.
+    - e37753403547f3fdd6290f289d2ecfa975d05417.
+    - 29f5f19c75693ea64781c0cc39b788e3c70c3442.
+    - c6d2a57b75f4f798434d9f887cde208f30274db4.
+    - f7695ad4af96588f474d7effe8e03b59c42889a5.
+    - 80236349c737113167c2bf039069153392929085.
+    - 47f282fdaac97b859a4b75e73c7686581477fe45.
+    - e9c78bce74ccebc2c7299d799afa0950c5e4cd35.
+    - 05084521811cf5a58469c3ccf0240a067ca318bb.
+    - B07JKJSJ8G.
+    - B07JLSSTN1.
+    - 1f0f1b3ec0cdbd99b037a5ca6d373e4a31015130.
+    - B07MBFDQPK.
+    - 1effb3112571777ec2168b4080d9ac7c6a6fe3c3.
+    - 847097a2cea50249956585df5510a4c03e6ad589.
+    - b14707bf586b55c44c65eaba8da9f6ccc2773e25.
+    - 4f1ca2fba51314af1ef27f27a2618eaa19529c2a.
+    - 9254a7cffb42d02fb06de53b76863e200e128e68.
+    excluded_substrings: []
+  - name: train_apple
+    included_substrings:
+    - Apple_26.
+    - Apple_3.
+    - Apple_24.
+    - Apple_30.
+    - Apple_4.
+    - Apple_18.
+    - Apple_12.
+    - Apple_9.
+    - Apple_23.
+    - Apple_10.
+    - Apple_21.
+    - Apple_29.
+    - Apple_19.
+    - Apple_11.
+    - Apple_7.
+    - Apple_20.
+    - Apple_27.
+    - Apple_8.
+    - Apple_28.
+    excluded_substrings: []
+  - name: train_carrying_case
+    included_substrings:
+    - B00F5CKWBA.
+    excluded_substrings: []
+  - name: train_scissors
+    included_substrings:
+    - Diamond_Visions_Scissors_Red.
+    excluded_substrings: []
+  - name: train_jug
+    included_substrings:
+    - 264b8bf954ce7d7d2f0c135151bcb6bf6b11acb4.
+    - 2b429c575b4de6837a9d3ce5472ceb8a918fdbd2.
+    - 320f797f7f3936b01c7fb659ddd56c63cc52f85f.
+    - 794f4ad86d136c76bfe3082ffedc4133e876ac9a.
+    - e70ea42b5270583ea34fe50123b841d79a380e19.
+    - 79590e37b261153df0b50a05e90edf40bc4f13c0.
+    - aaf1ba3e91ae781751ab5eba22ec2bbd30e05365.
+    - aee86f6cb8551b9601a11062038936fdb927860d.
+    excluded_substrings: []
+  - name: train_butter_dish
+    included_substrings:
+    - Cole_Hardware_Butter_Dish_Square_Red.
+    excluded_substrings: []
+  - name: train_pen
+    included_substrings:
+    - Pen_4.
+    - Pen_3.
+    excluded_substrings: []
+  - name: train_bottle
+    included_substrings:
+    - ce33c1228cfca3da78e22645019258d7a92af3a9.
+    - QAbsorb_CoQ10.
+    - e1b703e78962df6a81b81acab566c6a202b17197.
+    - Perricone_MD_Health_Weight_Management_Supplements.
+    - Theanine.
+    - Folic_Acid.
+    - 03758534dd2a3a8303e742cf4fc10fedd4c48843.
+    - 6321b6d56d59d1298990434517ac65e2d93f5274.
+    - xxxx55b940d1x7fecx4ea5xa0e2xb695c9547b28.
+    - QHPomegranate.
+    - Sleep_Optimizer.
+    - 1eb36fba48eb1f378fcbebaf74f30e3dcc5021de.
+    - e5dc7a8a5601d4d26ece19878d8d7b6407129c63.
+    - 8358e371f092d654f97dd20b5d41af5eb30d45fd.
+    - 22c78acc789ce802af372af9dca938a1c08c5f16.
+    - 0198c423ae08bf04bb03b16238b34407d6ab4ecf.
+    - Organic_Whey_Protein_Unflavored.
+    - 2f92d709c9e94753a896c065cb62ed33765837c0.
+    - a63cb49060e3a034ebc86fea841e5e1521a85629.
+    - 8c4b0396525dfedeaabd64fafcde66ae1e87863a.
+    - Bifidus_Balance_FOS.
+    - 5de840e0dbacebbce6b2686706e4e5acc55c8e78.
+    - 21527bf23974c98dc7bc88b44ba6b54ed32e676c.
+    - 49e444157676c90fb1cfa5696f50dc1f82c9f052.
+    - 867cf3a6f88aa00b97aee772c2349bff732fbac5.
+    - c1bd4ed24b1eab295513bd16896686129dff4f1a.
+    - 4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd.
+    - 5_HTP.
+    - c82a08279ca1a84d891e9bc0928fd461c1e41cd2.
+    - d60ba70ec8b1b5faedcf3998713fb94ebb9c4bb2.
+    - PhosphOmega.
+    - 2f3cdc387d8c8e6e4ec9ce174e5f3dbe090933dd.
+    - d946cb7fdeeb63eefb33fa3ee04b98d3a44bc966.
+    - NattoMax.
+    - CoQ10_wSSVoxVppVD.
+    - ec09eff22b5cba63c206b16a960ab411411d2488.
+    excluded_substrings: []
+  - name: train_candle
+    included_substrings:
+    - Candle_1.
+    - edb1c6cfdba7c7a7f48e18db9194eb9efe0356a6.
+    - Candle_5.
+    - Candle_2.
+    - 8afd350c5cc0029c3604c697947d1e1399403955.
+    - xxxx3713898ex0dd8x429fx84c4x1b6f912a2eba.
+    - 42b700c2f764ffffd3bba8d4851c12ef064c86d1.
+    - b30e6297b98aba4d59324fc88a4f2e74a863261e.
+    - Candle_6.
+    - 7696a432ae056712d7c12321200c49ff89b5ce32.
+    - 36f46c7b967c8101325848bcf43db07589ae2cc1.
+    - dfae7906d8b3395a7645056b7ab9aff1986f96df.
+    - 9c762323bc8e1c45b31ee978e21749a1cb218446.
+    excluded_substrings: []
+  - name: train_bread
+    included_substrings:
+    - Bread_16.
+    - Bread_11.
+    - Bread_18.
+    - Bread_15.
+    - Bread_5.
+    - Bread_8.
+    - Bread_26.
+    - Bread_12.
+    - Bread_25.
+    - Bread_28.
+    - Bread_21.
+    - Bread_19.
+    - Bread_9.
+    - Bread_29.
+    - Bread_4.
+    - Bread_22.
+    - Bread_1.
+    - Bread_7.
+    - Bread_13.
+    excluded_substrings: []
+  - name: train_pitcher
+    included_substrings:
+    - Threshold_Porcelain_Pitcher_White.
+    excluded_substrings: []
+  - name: train_picture_frame
+    included_substrings:
+    - xxxx8568f6a7xb370x4773x8e7dxc78e3edacdc0.
+    - 9bc5df943ee50b4e1aa3a2c3493d59e9d1a82d28.
+    - 0369f773266cd0aadce9e6ccdaf6d3f321ddab3e.
+    - 83f4e46c232371f134fd0159b06e658c6641fc7d.
+    - 6c1881c745e6f79398ffe8df2df845dd821210f4.
+    - 4703ad3f7c43eb385dadfe6fbdd02a2c163ada93.
+    - xxxxd7b51f21x5eabx4ba0xa5c4xc71d874e6e9b.
+    - 6ea1f9bd1fe5ae7cfcb44d3d3b7f0799464db426.
+    - b8dec2c0a5f261f0d1828cad68a605e54d635c50.
+    - 8a426c6129449e93c784fc0c57b48fc31c765cbb.
+    - 90703c2fcd04fd85a9bbcf916cf8949716df35c5.
+    - a9a76fab18205fcfe2daf953f3fec031af2cbf0a.
+    - 029c59012cbc787082f4b8725695730327daf981.
+    - 0bd6d843c2deeedeee39e4a37d785eedbc3f4b57.
+    - 53ac98581095be4ca935e19ec16a3e445ded7c6e.
+    - d1f85a83cd9d47209bad6f29f8c567afa0f19478.
+    - 64de4deefa01ccc241d8551b6dccd65d4eaa1cc4.
+    - b7cb814bf208d769ae2e1143b630ed80288c9e38.
+    - d494fa9ee269f2a557a274d9156ec60795051b80.
+    - 6955369a923016cfd0f7652c39cf9d57393227d2.
+    - 2d340e937b4159a096702a978796280197966ead.
+    - 844510f08ce0cfae1b8e6079c03896aa649cbcc7.
+    - b0e9b703ff916647e932671971535efbfddc1bee.
+    - d5a65235abfa2c1307eb1ba6ee12cc6a5b34208e.
+    - b10cf89f96b42242113af28de2f6bc2ce7492a10.
+    - 4146a7675ab6add71194b562205c185e81cdb9c9.
+    - 4910a3122ae318e3e7211123a996d5c85f4c43d3.
+    - faa3c5c9cb8d500bc1b11cc2baeb3f49bef68b4a.
+    - 8859dead706a83af80c93778223a41deeb2bc2d6.
+    - fd4eab6ad6b9085a2cab8f918366c957c0f75c51.
+    - 3bf74df814a94dd52f776f589760f85ff0ac9682.
+    - ba29460814ad1bd7bcc3543fa28c73ae96267ac9.
+    - eb75e6007ed56a7dafc699f170ce01463177d67b.
+    - b5c374fb79fcba53183287a9350abd61d6bcacbc.
+    - 7700307a49829ada0515f667b847562a79c9a2fd.
+    - cd2f6a34f4c65388245ea2d66964edd3519f000e.
+    - a2864c57f9ac3e98bfdc0bc4f0b37c3560330f2e.
+    - b8432a9781e64709d163a875a14fe3f1350540cf.
+    - a25bd54073d8c44c5f6a9009ed167888848b5014.
+    - fe6c8a9d716dc203ebe5e7d439217dc03ff5a3c1.
+    - 4713608e8ae23b27fee0a05db95eafc35566e824.
+    - 5fe15ef90630a9f6f53042e18f4f9c9d54f0cb87.
+    - 7f7ff035afca3430dddd75936e75073404e883fd.
+    - 8ccf94189d5c50b5f985f014155647ebcc71c3a0.
+    - af168ce1c4e779ff70e86e4b06caf8ab34d795cd.
+    - e64c9947229ecf6b7c49986729f3020409233c71.
+    - c29dc1d7b6cb991b553d8c9ef5c0c1a4b71d20c8.
+    - 4ffabf35be7d46b75cf937bb340837d361025c1b.
+    - e5f4446829ce3de2cfab2a44394378ab6ce69851.
+    - b77c4ef36bc4add9267447571929f16fd80926ed.
+    - ae1ede393b5fac3b22489f612d3927dbdf066ba1.
+    - 3ac675209efcc9de8a399f139bab28f84c30a5d5.
+    - 26540236af4e6e21bb4f29da7fbaeb9d6897bf75.
+    - d23846c841ccdff4c2e16e9515e1a3f89ab0ee83.
+    - ca9c712d6923ab579cd69766af2559877ada03d6.
+    - 7797d87c9e3e8a8273548d598bcb7fc023b2063e.
+    - 0b9c27848a2ee27eac95824d920f09e3cf08adf0.
+    - f0d044e427713818c8a0d9ee84f33e0266007fd1.
+    - 95ad29cccf624874e83a01342483e0198569c20e.
+    - 026aed52ad8a3e60e5432fbbc07b03f466541ce0.
+    - 03f18e41c8808dd0031637e759ac79a388477f52.
+    - e33bad4ffd6713bbed50be821dbb0f7bd5711d99.
+    - 240ed54f2ae16f7a49c7b269520873d66eb0e60b.
+    excluded_substrings: []
+  - name: train_file_sorter
+    included_substrings:
+    - Poppin_File_Sorter_Pink.
+    excluded_substrings: []
+  - name: train_spray_bottle
+    included_substrings:
+    - Spray_Bottle_1.
+    - Spray_Bottle_7.
+    - Spray_Bottle_3.
+    - Spray_Bottle_8.
+    - Spray_Bottle_5.
+    excluded_substrings: []
+  - name: train_potato
+    included_substrings:
+    - Potato_19.
+    - Potato_24.
+    - Potato_20.
+    - Potato_30.
+    - Potato_8.
+    - Potato_25.
+    - Potato_28.
+    - Potato_7.
+    - Potato_16.
+    - Potato_3.
+    - Potato_22.
+    - Potato_17.
+    - Potato_13.
+    - Potato_11.
+    - Potato_9.
+    - Potato_29.
+    - Potato_12.
+    - Potato_14.
+    - Potato_1.
+    excluded_substrings: []
+  - name: train_toy_cactus
+    included_substrings:
+    - BALANCING_CACTUS.
+    excluded_substrings: []
+  - name: train_milk_frother_cup
+    included_substrings:
+    - Aroma_Stainless_Steel_Milk_Frother_2_Cup.
+    excluded_substrings: []
+  - name: train_toy_swing
+    included_substrings:
+    - 3D_Dollhouse_Swing.
+    excluded_substrings: []
+  - name: train_teapot
+    included_substrings:
+    - cd77c8f1b272d2776dc5f7a89dad82a1cdb4ebc8.
+    - c7a409e41936a6b12e017b30d9328aac5bf0de93.
+    - 79d0108478f89df6a9556b733718de3731af4e0c.
+    - 3e991a6cc8ed46bb9f3b9641e7062ce627fe7ca9.
+    - bbf4aa8262d369bc6b16a1669d7acf4c2a4d7b89.
+    - d0a06a5a905aee68c410b6ca8714bde74a834df5.
+    - 303b98fac9e22c364d2e7770ef586f9c963df7e8.
+    excluded_substrings: []
+  - name: train_candy_bar
+    included_substrings:
+    - Nestle_Raisinets_Milk_Chocolate_35_oz_992_g.
+    excluded_substrings: []
+  - name: train_tape
+    included_substrings:
+    - 3M_Antislip_Surfacing_Light_Duty_White.
+    - Cole_Hardware_Antislip_Surfacing_Material_White.
+    - Cole_Hardware_Antislip_Surfacing_White_2_x_60.
+    - Shurtape_Gaffers_Tape_Silver_2_x_60_yd.
+    excluded_substrings: []
+  - name: train_soap_dish
+    included_substrings:
+    - Threshold_Bamboo_Ceramic_Soap_Dish.
+    excluded_substrings: []
+  - name: train_spatula
+    included_substrings:
+    - Spatula_1.
+    excluded_substrings: []
+  - name: train_clock
+    included_substrings:
+    - Alarm_Clock_4.
+    - Alarm_Clock_6.
+    - 1565076fc4398d7ae449941b4dcf3cfbf1de292d.
+    - Alarm_Clock_25.
+    - Alarm_Clock_12.
+    - c4ea785cbf5c58bd600131838c3cedb2fec57761.
+    - Alarm_Clock_28.
+    - Alarm_Clock_27.
+    - 44684c200433dc4842bf0a6317d735e98e9fb903.
+    - e7840601d8b63a3391abde3a4c1f4983bd60f7ab.
+    - Alarm_Clock_2.
+    - Alarm_Clock_14.
+    - Alarm_Clock_23.
+    - Alarm_Clock_9.
+    - Alarm_Clock_13.
+    - Alarm_Clock_30.
+    - dfc9026e1433b4f18ee76e7c6784e9406489a8c3.
+    - da06e4266205dbcaaa469ae0b03e6cc49222a256.
+    - Alarm_Clock_15.
+    - 4a421b6a19d9b439afc3b2e69488367336423ee5.
+    - fabb45d488452bae3eacf96d91af57db48176ac1.
+    - Alarm_Clock_21.
+    - cb3626861ee7d70bd63f933029a48012f48ca92b.
+    - Alarm_Clock_24.
+    - ffef466940c5dbf1af90815ce2f506f68ecd25d1.
+    - d1a70d769420b582d349243fabf32b18844ebf0e.
+    - Alarm_Clock_5.
+    - d16effe38b05286d600cd543f0e8d5a197f33e2e.
+    - f03a9160a43f06d49d579eb58f6ed63740afa2e4.
+    - 1f3e6b134f72abf7d3914874957ba7a2857df332.
+    - 739934e1838a630706d354d75a73355c93e07f69.
+    - e49ec0db22ed30a46206d04ac116474a049716eb.
+    - Alarm_Clock_19.
+    - 08c6d474cc07b00fe01be5120f2ed108a0968b29.
+    - Alarm_Clock_10.
+    - 2b2f31fee32cb0d073d69fb9bfe373684bbdd465.
+    - e06c9b37dd552c672716eef31af3e2e1b58ecce2.
+    - a50665eb9bf6c57860330bc8f492760001163607.
+    - b2625691eadc913dbb1c8be0b17ed6104d75758d.
+    - Alarm_Clock_20.
+    - 2667ff4f698140233c3a3ab06686f2bc973d842b.
+    - Alarm_Clock_11.
+    - Alarm_Clock_18.
+    - c4d2556b341f612e226156792dff2eb13d752ca0.
+    - 2503515e4e92100f8d9c1e8fc661c4ff7ba9496a.
+    - Alarm_Clock_17.
+    excluded_substrings: []
+  - name: train_toy_food
+    included_substrings:
+    - Squirt_Strain_Fruit_Basket.
+    excluded_substrings: []
+  - name: train_multiport_hub
+    included_substrings:
+    - B076YRSWH2.
+    - B076YNV36K.
+    - B076YFNTRS.
+    - B076YJ1XZS.
+    - B076YKYHCB.
+    - B076YJFGCW.
+    - B076YJFGCN.
+    - B076YS4SJT.
+    - B076YRSP32.
+    - B076YRSWGH.
+    excluded_substrings: []
+  - name: train_cup
+    included_substrings:
+    - 547c0a77b74f52c4e6c4a0a52f14f6c9c7a57b49.
+    - 1bc20d448937a6c0c1936b28486a110f31093947.
+    - Cup_19.
+    - 72a1da1ecef422dbf6ba0c505c3e1cf86a11f70e.
+    - Cup_2.
+    - Ecoforms_Cup_B4_SAN.
+    - Cup_10.
+    - Cup_30.
+    - e3479ce73271171bdaa163968c50500719ed4d72.
+    - 6e8ac33c3e309c177c8b63483dfcae81a2b0fe64.
+    - 8b7632a97cc5c3adf66e7eed98b59a51ef86bf26.
+    - 22899dfeb3cfe700149f4fbf87f6d443351cee67.
+    - Cup_20.
+    - Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White.
+    - 6dd0f10b6eb11dd530c6f4229e7ea20d50333bf6.
+    - 4732b4385ae973f1309ad75682fc11704818afe7.
+    - Cup_28.
+    - 94a332bec3e3408abef55d1cfff170262c8b3fdc.
+    - e14277deea40140eef220e7c75c291dbaf39efbe.
+    - 53e7d7c13d3c89976da853ba6a606dfd3fc3f7b4.
+    - 6327ba4a244492ad0b3389841220c16a577e6a4d.
+    - fcae3d93545969544b5aec155f56fda69f1a2f9a.
+    - 5742501065a46cf69165e60257b42a86f5fadf8b.
+    - 8e8fa96be074973692545b222867725fffb480a4.
+    - d4960da019b35da664905c729de7bd9fa233ff51.
+    - Cup_8.
+    - Cup_15.
+    - Mug_3.
+    - 572e2f04cf9e17424557ecc4f449e6122a9cae95.
+    - 6a833596dd725a0044674dbaada29368ebe7a53e.
+    - 9475586d9db640875150dc2a3beb7e0234d815d4.
+    - c7f51a814b3319836007955e10ae1da1060465ec.
+    - Cup_7.
+    - Cup_6.
+    - Cup_16.
+    - Cup_4.
+    - bd12f6fd478618cc550689cd9a050e61b1b5abe0.
+    - Cup_17.
+    - Mug_1.
+    - b5d5f688a226b182e406b595b49fe7a53842621c.
+    - c89ad9df5af596d19da02bea32f469ecb872e57d.
+    - Cole_Hardware_Mug_Classic_Blue.
+    - xxxx5c7e6e1fx622fx41c1x8138x6fb9d7764061.
+    - c707408215afcc11910353f0ccbe67eb53cb1e49.
+    - 4c439ebcd2eec3923ab3e41dc64d71092b54a0ab.
+    - Cup_9.
+    - Cup_11.
+    - 666effa6a16d624cbaebdbcaca82bcb97dfe0988.
+    - 5d1f718ed51e63cdf4d69617f849e10ad36f9b97.
+    - dc053d1212b867ffee642809e9e4ce612c7fdeb4.
+    - 98c9f836f480292409eba3cc56d2d7de01624bdf.
+    - Cup_13.
+    - 6f5798f9d8c522047a6faf5672f26e684b036e33.
+    - Cup_12.
+    - cb1704d6c4cc1aae0e801e94c92c67a846246274.
+    - 3c3143392a1d13fa86796d07b8518a0963902c86.
+    - c71222582b58b14c0dfc64f55bdb8a44b34f3959.
+    excluded_substrings: []
+  - name: train_action_figure
+    included_substrings:
+    - Nintendo_Yoshi_Action_Figure.
+    - Dino_3.
+    - Teenage_Mutant_Ninja_Turtles_Rahzar_Action_Figure.
+    - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Leonardo.
+    - Dino_4.
+    - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Michelangelo.
+    - Playmates_nickelodeon_teenage_mutant_ninja_turtles_shredder.
+    - Playmates_Industrial_CoSplinter_Teenage_Mutant_Ninja_Turtle_Action_Figure.
+    excluded_substrings: []
+  - name: train_board_game
+    included_substrings:
+    - Clue_Board_Game_Classic_Edition.
+    - Frozen_Olafs_In_Trouble_PopOMatic_Game_OEu83W9T8pD.
+    excluded_substrings: []
+  - name: train_casserole
+    included_substrings:
+    - 3024a2ac938ec92f5f6e5e62714c5dfd4a73d10c.
+    - 2e220a72339bd2be92f210affc6adb599e7a297a.
+    - 6ef158c281131036302a2c6d12c8a5fd5e34ad49.
+    - 696d6ec35f255e7649f731fc937dde61b9fb0439.
+    - 089c89c9d166731f737c77be2e9f6d7345324da8.
+    - 37baf0a14c64605c3c68d56dad6e725f1f0eff47.
+    - 713fd2f383ff0f09f30ce0749b8b5abda788a795.
+    - 90935a479f67a46bebbdb47c3d21cebf0b0f10b6.
+    - 8e2cdcd475c5b8676779bf6a24605861517818bd.
+    excluded_substrings: []
+  - name: train_tray
+    included_substrings:
+    - 7ca70aff4fdd657af5f96c12e3af68e0ce21b83c.
+    - 45ef260cbb5f19848878081e98db6af0fa1b155c.
+    - d484ce7925cb15f669f0ad3215e4c614cc0ecccd.
+    - 7089364ca91b4807b7a586b5ac21469fd2a532ea.
+    - bd1807eaa96b204d8f0aeb18a9cbc8caa9dbc137.
+    - 5fdbf4be188692d133ea1f516bc391599d4959b5.
+    - 772b40cd81cc68e48baed6f2cfb08f704591e515.
+    - 4cc64d92790d590a2e44d09d5ef9dbb366f265a2.
+    - 268356d4dc32f85461c8a475736c94d6239fa523.
+    - c139234bf8464898e67b064e1726440a3e84b0b6.
+    - db00e9a4f735191f39d6e884b840775549367ce8.
+    - 9d1a125a6188c7009effc529afd62b15bc84ee0a.
+    - 0f97a7a44f35bbecfdc8eaca31ddc7342c3b0be0.
+    - 8312990d94806a278f96710e662f98a9791fb892.
+    - 6e626cd638483fdd95008ff671718119299dc0b2.
+    - 6169840e73fb82fbbbfe8c050e0bb5ae916876a3.
+    - cb84dcea9f11b0699855eed316a11f1cae277490.
+    - 84f9c27d36b878fb19042c0c9d4c3fa072689d7e.
+    - xxxx1ae0e97exf786x4862x8c5ex80b5044f44c0.
+    - b77055fb68783c24bec2c9abf5f839e88b26e8ff.
+    - bc852f5714f9721918177bfa794bb1aabcc9c699.
+    - 2fdd58d5bfd0f569ce072266cf1fccc55ea21150.
+    - da29f67f9ed90652128b715ef29b0d1636da5d6a.
+    excluded_substrings: []
+  - name: train_candle_holder
+    included_substrings:
+    - B075HXHKTZ.
+    excluded_substrings: []
+  - name: train_spicemill
+    included_substrings:
+    - 1b6b4fba98a44faaf0d99aec2d224e2d60216230.
+    - 60ca191abdd4d03733365c6ba4494275aeef9862.
+    - eee3b2d1fa82d72e09107a69f66e366363c58619.
+    - 913d6033893eb7c63eb93a7e668d7b91c3af7bfb.
+    excluded_substrings: []
+  - name: train_electric_kettle
+    included_substrings:
+    - b9eeb2332833946d5678b0c4a8d9209c6add31a6.
+    - 20dbe8187f7e98eeb7e369e31c6879148f46fb50.
+    - 551cfe57a753326c99503bc098e8cce80f80410c.
+    excluded_substrings: []
+  - name: train_credit_card
+    included_substrings:
+    - CreditCard_3.
+    - CreditCard_1.
+    excluded_substrings: []
+  - name: train_stuffed toy
+    included_substrings:
+    - 4823bfe94520f3df3bb07ab8c5d95c197f68f2c8.
+    excluded_substrings: []
+  - name: train_bath_towel
+    included_substrings:
+    - Threshold_Performance_Bath_Sheet_Sandoval_Blue_33_x_63.
+    excluded_substrings: []
+  - name: train_cake_pan
+    included_substrings:
+    - Chef_Style_Round_Cake_Pan_9_inch_pan.
+    excluded_substrings: []
+  - name: train_laptop
+    included_substrings:
+    - Laptop_2.
+    - Laptop_24.
+    - Laptop_3.
+    - Laptop_29.
+    - Laptop_16.
+    - Laptop_12.
+    - Laptop_20.
+    - Laptop_27.
+    - Laptop_23.
+    - Laptop_28.
+    - Laptop_22.
+    - Laptop_11.
+    - Laptop_1.
+    - Laptop_4.
+    - Laptop_25.
+    - Laptop_6.
+    - Laptop_21.
+    - Laptop_26.
+    - Laptop_10.
+    excluded_substrings: []
+  - name: train_hat
+    included_substrings:
+    - DPC_tropical_Trends_Hat.
+    excluded_substrings: []
+  - name: train_folder
+    included_substrings:
+    - B01B254OVC.
+    excluded_substrings: []
+  - name: train_box
+    included_substrings:
+    - Box_4.
+    - Phillips_Colon_Health_Probiotic_Capsule.
+    - Office_Depot_Canon_PG_240XL_Ink_Cartridge_Black_5206B001.
+    - Asus_Z97AR_LGA_1150_Intel_ATX_Motherboard.
+    - B073PB1H88.
+    - Box_13.
+    - Office_Depot_Dell_Series_9_Color_Ink_Ink_Cartridge_MK991_MK993.
+    - Sony_Downloadable_Loops.
+    - Box_5.
+    - Philips_60ct_Warm_White_LED_Smooth_Mini_String_Lights.
+    - Box_27.
+    - Box_7.
+    - DecorativeBox3.
+    - 646144788153660717192cf8a799c12319e9d117.
+    - Nestl_Crunch_Girl_Scouts_Cookie_Flavors_Caramel_Coconut_78_oz_box.
+    - Perricone_MD_The_Power_Treatments.
+    - Perricone_MD_AcylGlutathione_Eye_Lid_Serum.
+    - Office_Depot_HP_61Tricolor_Ink_Cartridge.
+    - Perricone_MD_The_Cold_Plasma_Face_Eyes_Duo.
+    - B073V1SPHP.
+    - Dell_Ink_Cartridge_Yellow_31.
+    - The_Coffee_Bean_Tea_Leaf_KCup_Packs_Jasmine_Green_Tea_16_count.
+    - Nips_Hard_Candy_Rich_Creamy_Butter_Rum_4_oz_1133_g.
+    - Epson_LabelWorks_LC4WBN9_Tape_reel_labels_047_x_295_Roll_Black_on_White.
+    - 25edae83c6b16ef5b10514124e2d06a932fbffc9.
+    - B075HXHKVF.
+    - Brother_Ink_Cartridge_Magenta_LC75M.
+    - Dell_Series_9_Color_Ink_Cartridge_MK993_High_Yield.
+    - Nescafe_Memento_Latte_Caramel_8_08_oz_23_g_packets_64_oz_184_g.
+    - Perricone_MD_Face_Finishing_Moisturizer.
+    - B07F3W4QWM.
+    - Office_Depot_Canon_CLI_8CMY_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count.
+    - Sonicare_2_Series_Toothbrush_Plaque_Control.
+    - TWISTED_PUZZLE.
+    - Black_and_Decker_PBJ2000_FusionBlade_Blender_Jars.
+    - Office_Depot_HP_920XL_920_High_Yield_Black_and_Standard_CMY_Color_Ink_Cartridges.
+    - Office_Depot_Canon_PGI5BK_Remanufactured_Ink_Cartridge_Black.
+    - Box_9.
+    - Perricone_MD_Cold_Plasma.
+    - B071225BBS.
+    - DecorativeBox2.
+    - Box_19.
+    - Office_Depot_Canon_CLI_8Y_Ink_Cartridge_Yellow_0623B002.
+    - B075HWBL9Q.
+    - Asus_M5A78LMUSB3_Motherboard_Micro_ATX_Socket_AM3.
+    - Perricone_MD_Vitamin_C_Ester_15.
+    - 0fd6dd8b61f930d6c1e1bab3d5db2d7cbd342e58.
+    - Box_16.
+    - Pepsi_Caffeine_Free_Diet_12_CT.
+    - Canon_Pixma_Ink_Cartridge_251_M.
+    - Office_Depot_HP_564XL_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count.
+    - Swiss_Miss_Hot_Cocoa_KCups_Milk_Chocolate_12_count.
+    - Epson_UltraChrome_T0543_Ink_Cartridge_Magenta_1pack.
+    - Perricone_MD_Nutritive_Cleanser.
+    - Perricone_MD_Vitamin_C_Ester_Serum.
+    - B075HWDS7Y.
+    - Box_2.
+    - Office_Depot_HP_75_Remanufactured_Ink_Cartridge_TriColor.
+    - "Pok\xE9mon_Omega_Ruby_Alpha_Sapphire_Dual_Pack_Nintendo_3DS."
+    - Crunch_Girl_Scouts_Candy_Bars_Peanut_Butter_Creme_78_oz_box.
+    - Epson_T5803_Ink_Cartridge_Magenta_1pack.
+    - 42105592e35934803a55b6510bb230ccdfe190a1.
+    - 27584d59cc4fe564020ed5d65dbb5762d0638404.
+    - Tetris_Link_Game.
+    - Asus_Sabertooth_Z97_MARK_1_Motherboard_ATX_LGA1150_Socket.
+    - Office_Depot_HP_74XL75_Remanufactured_Ink_Cartridges_BlackTriColor_2_count.
+    - B075HXQJT1.
+    - Office_Depot_Canon_PG21XL_Remanufactured_Ink_Cartridge_Black.
+    - Balderdash_Game.
+    - Office_Depot_HP_950XL_Ink_Cartridge_Black_CN045AN.
+    - Box_26.
+    - Perricone_MD_Neuropeptide_Facial_Conformer.
+    - Box_20.
+    - Super_Mario_3D_World_Wii_U_Game.
+    - Asus_X99Deluxe_Motherboard_ATX_LGA2011v3_Socket.
+    - Perricone_MD_The_Metabolic_Formula_Supplements.
+    - Office_Depot_HP_98_Remanufactured_Ink_Cartridge_Black.
+    - Perricone_MD_Firming_Neck_Therapy_Treatment.
+    - Box_17.
+    - FemDophilus.
+    - Sorry_Sliders_Board_Game.
+    - Beyonc_Life_is_But_a_Dream_DVD.
+    - Paper_Mario_Sticker_Star_Nintendo_3DS_Game.
+    - Perricone_MD_Omega_3_Supplements.
+    - Box_23.
+    - Asus_Sabertooth_990FX_20_Motherboard_ATX_Socket_AM3.
+    - Box_21.
+    - Crayola_Crayons_Washable_24_crayons.
+    - Epson_UltraChrome_T0548_Ink_Cartridge_Matte_Black_1pack.
+    - Crayola_Washable_Sidewalk_Chalk_16_pack.
+    - Firefly_Clue_Board_Game.
+    - Nestle_Skinny_Cow_Dreamy_Clusters_Candy_Dark_Chocolate_6_pack_1_oz_pouches.
+    - Asus_M5A99FX_PRO_R20_Motherboard_ATX_Socket_AM3.
+    - Perricone_MD_Neuropeptide_Firming_Moisturizer.
+    - Asus_Z97IPLUS_Motherboard_Mini_ITX_LGA1150_Socket.
+    - Box_14.
+    - Perricone_MD_AcylGlutathione_Deep_Crease_Serum.
+    - Perricone_MD_The_Crease_Cure_Duo.
+    - Tena_Pads_Heavy_Long_42_pads.
+    - Pokmon_X_Nintendo_3DS_Game.
+    - Animal_Crossing_New_Leaf_Nintendo_3DS_Game.
+    - Box_29.
+    - Perricone_MD_OVM.
+    - Crayola_Washable_Sidewalk_Chalk_16_pack_wDZECiw7J6s.
+    - Perricoen_MD_No_Concealer_Concealer.
+    - Cootie_Game_tDhURNbfU5J.
+    - a964c4d71e0119c73560715b0c3e4b27d81bb595.
+    - Box_11.
+    - Box_6.
+    - DecorativeBox4.
+    - Canon_Ink_Cartridge_Green_6.
+    - Black_Elderberry_Syrup_54_oz_Gaia_Herbs.
+    - Perricone_MD_No_Bronzer_Bronzer.
+    - 04f411297e7255eee22742e15995c9d138c41d62.
+    - Box_24.
+    - d6189c1cfc1e10376309aaa049f36275e5c2990a.
+    - Crayola_Model_Magic_Modeling_Material_Single_Packs_6_pack_05_oz_packs.
+    - FisherPrice_Make_A_Match_Game_Thomas_Friends.
+    - Perricone_MD_High_Potency_Evening_Repair.
+    - Philips_Sonicare_Tooth_Brush_2_count.
+    - Perricone_MD_No_Foundation_Serum.
+    - Canon_Pixma_Ink_Cartridge_8_Green.
+    - Frozen_Scrabble_Jr.
+    - Box_15.
+    - Box_28.
+    - Crayola_Crayons_120_crayons.
+    - Dell_Ink_Cartridge.
+    - Epson_Ink_Cartridge_126_Yellow.
+    - Crayola_Bonus_64_Crayons.
+    - B0711RQMNF.
+    - Box_3.
+    - ebce1f2f3ee46a07b1a94a554202b18e684dd6cc.
+    - Perricone_MD_Hypoallergenic_Firming_Eye_Cream_05_oz.
+    - Pass_The_Popcorn_Movie_Guessing_Game.
+    - Frozen_Olafs_In_Trouble_PopOMatic_Game.
+    - Orbit_Bubblemint_Mini_Bottle_6_ct.
+    excluded_substrings: []
+  - name: train_fork
+    included_substrings:
+    - Fork_1.
+    excluded_substrings: []
+  - name: train_hand_towel
+    included_substrings:
+    - Cole_Hardware_Dishtowel_Stripe.
+    - Cole_Hardware_Dishtowel_Red.
+    - Cole_Hardware_Dishtowel_Blue.
+    - Envision_Home_Dish_Drying_Mat_Red_6_x_18.
+    - Threshold_Hand_Towel_Blue_Medallion_16_x_27.
+    - Tag_Dishtowel_Dobby_Stripe_Blue_18_x_26.
+    - Tag_Dishtowel_Green.
+    excluded_substrings: []
+  - name: train_basketball
+    included_substrings:
+    - Basketball_1.
+    excluded_substrings: []
+  - name: train_pan
+    included_substrings:
+    - Chefmate_8_Frypan.
+    - Pan_26.
+    - Pan_20.
+    - 0e607f6c2832197973ab6fe479fd92e536f1edf7.
+    - Pan_12.
+    - 956838c23fc7f521eefe09235d59b9fbbec7c0b1.
+    - ef65c930c62e036c22ecbdfd26e4c9e5f052c8f9.
+    - Pan_23.
+    - 214a993418b4aee37d1b3797e2b6ed2bd2fd73bc.
+    - Pan_28.
+    - Pan_9.
+    - Pan_25.
+    - Pan_27.
+    - Pan_10.
+    - Pan_24.
+    - Pan_7.
+    - Pan_21.
+    - Pan_6.
+    - Pan_8.
+    - Pan_14.
+    - 7242d1d75427afd2da95c250342b676f2a4ed851.
+    - Pan_18.
+    - Pan_29.
+    - Pan_1.
+    - Pan_5.
+    excluded_substrings: []
+  - name: train_egg
+    included_substrings:
+    - Egg_7.
+    - Egg_6.
+    - Egg_3.
+    - Egg_26.
+    - Egg_30.
+    - Egg_20.
+    - Egg_13.
+    - Egg_4.
+    - Egg_29.
+    - Egg_9.
+    - Egg_24.
+    - Egg_15.
+    - Egg_12.
+    - Egg_16.
+    - Egg_19.
+    - Egg_21.
+    - Egg_17.
+    - Egg_8.
+    - Egg_1.
+    excluded_substrings: []
+  - name: train_soap_dispenser
+    included_substrings:
+    - Soap_Bottle_20.
+    - Soap_Bottle_2.
+    - Soap_Bottle_16.
+    - Soap_Bottle_14.
+    - Soap_Bottle_10.
+    - Soap_Bottle_26.
+    - Soap_Bottle_29.
+    - Soap_Bottle_5.
+    - Soap_Bottle_1.
+    - Soap_Bottle_30.
+    - Soap_Bottle_4.
+    - Soap_Bottle_13.
+    - Soap_Bottle_27.
+    - B07FFSKHK4.
+    - Soap_Bottle_15.
+    - Soap_Bottle_7.
+    - Soap_Bottle_21.
+    - Soap_Bottle_28.
+    - Soap_Bottle_24.
+    - Soap_Bottle_22.
+    excluded_substrings: []
+  - name: train_spoon
+    included_substrings:
+    - Spoon_1.
+    excluded_substrings: []
+  - name: train_lunch_box
+    included_substrings:
+    - Paul_Frank_Dot_Lunch_Box.
+    excluded_substrings: []
+  - name: train_book
+    included_substrings:
+    - Eat_to_Live_The_Amazing_NutrientRich_Program_for_Fast_and_Sustained_Weight_Loss_Revised_Edition_Book.
+    - Book_23.
+    - c9d140d976657e8d058bd6bc3dc068b87daf9260.
+    - B078GTTCCF.
+    - Book_5.
+    - Book_15.
+    - 8db837a85a24fbb6e51e4bba33cd3253d0ebfa92.
+    - Book_21.
+    - B01DN8TB5U.
+    - c42c9cc7db0f5e58e14f3d6acfff94c9b2c5f488.
+    - d413be1b49919287e484dd5cb5658c56b05aebf5.
+    - 8f2898b7a87221b1689078fedc133b3aea95a38c.
+    - e204459fc66073fd8832ec0c5f5f9c018ae2f440.
+    - 1ccad6983b2f452110705e8175626fc2760a106a.
+    - bd53d8e362a0b1c63854b3d97187ba2f46a36a57.
+    - 79431fb55870504f86c5f3e2e4c47f4ba88f63e0.
+    - Book_24.
+    - Book_11.
+    - b6e22b867069fc1a559eeade866de21ad233fb8c.
+    - Book_4.
+    - 0e00b8fa01cc07735378cc1df01619b667af2698.
+    - Book_19.
+    - Book_17.
+    - Book_20.
+    - 9434ebf4ba8489f4ba751d2b67688d120f822d0c.
+    - 2d16bb0da869abae99bb080d54869111fdfa2c67.
+    - 7c4abfaad6caa34008cf4aac249adcba013ad51b.
+    - Book_14.
+    - bf3d6b452f8d2ea2af24debf3b19cb187d6798af.
+    - 361a6c08b1137a16977f5a00761aabcb311a7475.
+    - Book_26.
+    - c366e25f8eedfeff6ebe1991e712b91ef235031f.
+    - 73e424cce8835563a1ca043e199122c3dfe62d11.
+    - Book_10.
+    - Book_22.
+    - Book_3.
+    - c28aa62e0d287fa9b35fa7e64b4379f66004225c.
+    - e46d683380db1069cea53aaec940d9c400c9b61d.
+    - edf5a667080ed733fda55514ee18a8081f9dcf9c.
+    - xxxx9a19f571x1dc0x45c3x99fdxbf82a1abcb7f.
+    - afe9e2965cc528e785591c47971a404d742e2c7b.
+    - 0e11918fe7eaf8bdee859494e0d3dfe59d5b2d32.
+    - 99843575975c6fcf087647c77f56bce970b7902a.
+    - 8c6411e06f17477320b687b36a247e4ebc86dc3d.
+    - Book_13.
+    - 6305d9ce403689f0085d59aa72008c136ef8fa58.
+    - 2a06baac13fbb8210ccc11325b72b844426c208f.
+    - Book_9.
+    - Book_16.
+    - e6a24c5d82ac274c29caa24dc71c18c5c5481a56.
+    - fa86c98cbdba8962a436be647969fa0f304d2c84.
+    - Book_7.
+    - 1aedffbcaec52392b114758a0490c39ea92080e7.
+    - Book_1.
+    excluded_substrings: []
+  - name: train_sushi_mat
+    included_substrings:
+    - Sushi_Mat.
+    excluded_substrings: []
+  - name: train_gaming_console
+    included_substrings:
+    - Super_Mario_3D_World_Deluxe_Set.
+    - BlueBlack_Nintendo_3DSXL.
+    excluded_substrings: []
+  - name: train_toy_animal
+    included_substrings:
+    - Schleich_Lion_Action_Figure.
+    - Schleich_African_Black_Rhino.
+    - Schleich_Allosaurus.
+    - DANCING_ALLIGATOR.
+    - Schleich_S_Bayala_Unicorn_70432.
+    - Breyer_Horse_Of_The_Year_2015.
+    - Schleich_Hereford_Bull.
+    - DANCING_ALLIGATOR_zoWBjc0jbTs.
+    excluded_substrings: []
+  - name: train_toy_fire_truck
+    included_substrings:
+    - FIRE_ENGINE.
+    excluded_substrings: []
+  - name: train_screwdriver
+    included_substrings:
+    - Craftsman_Grip_Screwdriver_Phillips_Cushion.
+    excluded_substrings: []
+  - name: train_statue
+    included_substrings:
+    - Fertility_Statue_3.
+    - Stone_Statue_3.
+    - Hand_Statue_3.
+    - Towel_Statue_Master.
+    - Waving_Statue_1.
+    - Fertility_Statue_1.
+    - Waving_Statue_3.
+    - Towel_Statue_2.
+    - Towel_Statue_3.
+    - Stone_Statue_2.
+    - Dog_Statue_4.
+    - Dog_Statue_1.
+    - Hand_Statue_2.
+    - Fertility_Statue_2.
+    - Dog_Statue_3.
+    - Stone_Statue_4.
+    - Dog_Statue_2.
+    excluded_substrings: []
+  - name: train_laptop_stand
+    included_substrings:
+    - B01MZ81SKB.
+    - B00WRDS8H0.
+    excluded_substrings: []
+  - name: train_laptop_cover
+    included_substrings:
+    - B013TGFGWS.
+    excluded_substrings: []
+  - name: train_toy_vehicle
+    included_substrings:
+    - Thomas_Friends_Woodan_Railway_Henry.
+    - Thomas_Friends_Wooden_Railway_Deluxe_Track_Accessory_Pack.
+    - BABY_CAR.
+    - Thomas_Friends_Wooden_Railway_Talking_Thomas_z7yi7UFHJRj.
+    - COAST_GUARD_BOAT.
+    excluded_substrings: []
+  - name: train_glass
+    included_substrings:
+    - b808e79f1fd6afd447a261a1582225a3a4aecb0b.
+    - e287e12ce31d87baa7b6faadf574ebd5aae505f0.
+    - 11abcecb63a82d14a55fc5c31c7aaa0095e65959.
+    - 038920896508242bee4ea865b8ece6c201e4d858.
+    - f0fcdbcf659234717b03b5ff7fd76c1bbd7302ad.
+    - cd31b4fdd82a4e828ef8d81df613750a7891b2c6.
+    - bba3a6aa50ca40c96680cd4873571b5077e05e85.
+    - f737d0e07f2927d7b4f43abb3a7267adfa5e3cf9.
+    - 47a2abe797aaaf6798271125727058b33860f456.
+    - Cup_23.
+    - 1ca7e1561d6e217a554a69cee35d79f54210efbd.
+    - deae6afb3e14ad1c829bb9f89d3eae8a34272c42.
+    - 705123a0be38cef21403a7f373db0c73b1d49ab6.
+    - 9e9c524a5a0e48b10ac64db3205ba7e282b3890d.
+    - Cup_25.
+    - e99a85fea330ded959c456ac63824608c55c4a2b.
+    - 5c574ca2d0488f3c0d093b2ed98f14b4621ddf52.
+    - c5cfee504a6981913ed99661a89fc226f2b8bfc2.
+    - 36901b91ca69637a346f6960fb759e2ee3137a63.
+    - 57206ff682d16e45f0abb873010eef8b1b73d4f7.
+    - fd4b49e473ea5f9b0b4956c606d6079d21038065.
+    - 7f4208d306cfb2f43162195c46f59058525d9933.
+    - b8e358f78ada8bc52942ae23f7dbfbb40c754f74.
+    - 8095a303ede64878ee48b9033c98fbc373a52a42.
+    - 180b7d1568055fbd98a2beea6e4ebf87cc3cc13a.
+    - xxxx6c766532xa291x4bd4xa75fx2ef35a0e008d.
+    - 6d8cb689ff72a3541b44a4f06522d9af8a2fc849.
+    - 9428caf70c42e50bb3c3c604eba00c43b8efb58f.
+    - 0bb625a34e05d6cde6fe76da7535bc5bdc645187.
+    - 713f7728ff51839ceb2fe0e3a42afd5abc78a21f.
+    - ce8c564ea9c0c35b4471f30d0a05a1e42b2c2e4b.
+    - 80b1ffbe7ec9e1a52084d11a4ed6881f0a6c45bb.
+    - f04d80ce2525f028590578c9c04f7626ca3f4d94.
+    - 557a40dc33710de63f7694b1b61bfeed6e8169c8.
+    - xxxxf16549ddx025ax48bdxa70dx755da3ec8608.
+    - d0013d74e62fab22d3ebf6788dc6d7aacb13a6ae.
+    - 451db10082188928fc1dd679bfc60002cd15d215.
+    - Cup_24.
+    - f16d84784094d5618b4147424339d2ede8b22163.
+    - f9ce9e87b840524cfd4404f4a0cfc52d88f2c794.
+    - 5abb2927ea06f2e203f8a6a6b6ae686951c2b8ba.
+    - 342e1b341104c33d7043365732480ff3a895c86e.
+    - Cup_26.
+    - ea1077f65aea8ec9e385ff8ef1a385e01a20a77b.
+    excluded_substrings: []
+  - name: train_tennis_racquet
+    included_substrings:
+    - Tennis_Racquet_3.
+    - Tennis_Racquet_2.
+    - Tennis_Racquet_5.
+    excluded_substrings: []
+  - name: train_kettle
+    included_substrings:
+    - Kettle_1.
+    - 6e35f1ab01230ea2687cade5e71e4a3abf07262e.
+    - 6982c7794384aecaa6134b600d473e98d812b8be.
+    excluded_substrings: []
+  - name: train_hammer
+    included_substrings:
+    - Cole_Hardware_Hammer_Black.
+    excluded_substrings: []
+  - name: train_shoe
+    included_substrings:
+    - ASICS_GEL1140V_WhiteRoyalSilver.
+    - ASICS_GELTour_Lyte_WhiteOrchidSilver.
+    - TZX_Runner.
+    - PureCadence_2_Color_TleBluLmePnchSlvMoodIndgWh_Size_50_EEzAfcBfHHO.
+    - Chelsea_BlkHeelPMP_DwxLtZNxLZZ.
+    - ASICS_GELBlur33_20_GS_BlackWhiteSafety_Orange.
+    - FYW_DIVISION.
+    - PureCadence_2_Color_HiRskRedNghtlfeSlvrBlckWht_Size_70.
+    - Santa_Cruz_Mens_umxTczr1Ygg.
+    - D_ROSE_ENGLEWOOD_II.
+    - Azure_Snake_Tieks_Leather_Snake_Print_Ballet_Flats.
+    - PureConnect_2_Color_AnthrcteKnckoutPnkGrnGecko_Size_50.
+    - Santa_Cruz_Mens_G7kQXK7cIky.
+    - ASICS_GEL1140V_WhiteBlackSilver.
+    - ASICS_GELResolution_5_Flash_YellowBlackSilver.
+    - Copperhead_Snake_Tieks_Brown_Snake_Print_Ballet_Flats.
+    - Crazy_Shadow_2_oW4Jd10HFFr.
+    - PHEEHAN_RUN.
+    - Colton_Wntr_Chukka_y4jO0I8JQFW.
+    - Cascadia_8_Color_AquariusHibscsBearingSeaBlk_Size_50.
+    - TERREX_FAST_X_GTX.
+    - Starstruck_Tieks_Glittery_Gold_Italian_Leather_Ballet_Flats.
+    - Crazy_8.
+    - Sperry_TopSider_tNB9t6YBUf3.
+    - F10_TRX_FG_ssscuo9tGxb.
+    - Adrenaline_GTS_13_Color_WhtObsdianBlckOlmpcSlvr_Size_70.
+    - Chelsea_lo_fl_rdheel_zAQrnhlEfw8.
+    - F5_TRX_FG.
+    - Sienna_Brown_Croc_Tieks_Patent_Leather_Crocodile_Print_Ballet_Flats.
+    - PureConnect_2_Color_FernNightlifeSilverBlack_Size_70_5w0BYsiogeV.
+    - ENFR_MID_ENFORCER.
+    - Predator_LZ_TRX_FG.
+    - 11pro_SL_TRX_FG.
+    - AMBERLIGHT_UP_W.
+    - TROCHILUS_BOOST.
+    - Adrenaline_GTS_13_Color_DrkDenimWhtBachlorBttnSlvr_Size_50_yfK40TNjq0V.
+    - Cream_Tieks_Italian_Leather_Ballet_Flats.
+    - Ravenna_4_Color_WhtOlyBluBlkShkOrngSlvRdO_Size_70.
+    - D_ROSE_45.
+    - TERREX_FAST_R.
+    - ASICS_GELChallenger_9_Royal_BlueWhiteBlack.
+    - TOP_TEN_HI_60KlbRbdoJA.
+    - PureConnect_2_Color_BlckBrllntBluNghtlfeAnthrct_Size_70.
+    - ClimaCool_Aerate_2_W_Wide.
+    excluded_substrings: []
+  - name: train_mouse_pad
+    included_substrings:
+    - B003QTD4Y6.
+    excluded_substrings: []
+  - name: train_keychain
+    included_substrings:
+    - Keychain_2.
+    excluded_substrings: []
+  - name: train_spectacles
+    included_substrings:
+    - d2c0aeb28407ba01f6934b50e7078b6a7103f49a.
+    excluded_substrings: []
+  - name: train_ladle
+    included_substrings:
+    - Ladle_3.
+    excluded_substrings: []
+  - name: train_toy_pineapple
+    included_substrings:
+    - PINEAPPLE_MARACA_6_PCSSET.
+    excluded_substrings: []
+  - name: train_cellphone
+    included_substrings:
+    - Cellphone_5.
+    - Cellphone_2.
+    - Cellphone_6.
+    - Cellphone_7.
+    - Cellphone_3.
+    excluded_substrings: []
+  - name: train_monitor_stand
+    included_substrings:
+    - B017DORX3M.
+    excluded_substrings: []
+  - name: train_ramekin
+    included_substrings:
+    - 45oz_RAMEKIN_ASST_DEEP_COLORS.
+    excluded_substrings: []
+  - name: train_baseballbat
+    included_substrings:
+    - BaseballBat_1.
+    - BaseballBat_3.
+    excluded_substrings: []
+  - name: train_bowl
+    included_substrings:
+    - Threshold_Bead_Cereal_Bowl_White.
+    - ec97c8297cfd755ee3ab2a1d8476d60d0afe84eb.
+    - Footed_Bowl_Sand.
+    - B075HWTX4Z.
+    - Bowl_26.
+    - 48277d16bf13630253d689050996618fb110b343.
+    - Threshold_Porcelain_Serving_Bowl_Coupe_White.
+    - Bowl_12.
+    - Bowl_15.
+    - Bowl_16.
+    - Bowl_27.
+    - Bowl_28.
+    - 694889dda7ff371417c7fb85da4ce6973be3c8aa.
+    - 798d3da97aa9cbf7bcab52071200338b482f3a0b.
+    - Bowl_2.
+    - 647b37525fb5214528260ec0fb59ef2347d68ce0.
+    - Bowl_30.
+    - e61f5c2f356c354af2dccff80eb7609b39d19397.
+    - Bowl_11.
+    - B075HWDSDK.
+    - Bowl_17.
+    - afe2a47842d4d89337398f1412c5330aad6ce9dd.
+    - Bowl_4.
+    - Cole_Hardware_Bowl_Scirocco_YellowBlue.
+    - Now_Designs_Bowl_Akita_Black.
+    - xxxxbcdf0625xdd05x4bb0x8c90x522f58f47de3.
+    - Sea_to_Summit_Xl_Bowl.
+    - e5371dec8e064b3a3611ec880315a8e519e0e03b.
+    - 11a27304451d7af4d398303cccdfea4d8c26ebb9.
+    - 8703b6343efd1b00f37c102d7fa76fb08db66d7a.
+    - 23f37264ac6b7a445a6c1be53d464660b8c8b2ec.
+    - 65d4ce13f8eae64e5ffe4073c3bd9e403904d0d5.
+    - Bowl_20.
+    - Bradshaw_International_11642_7_Qt_MP_Plastic_Bowl.
+    - Bowl_9.
+    - 55727571c1ad5a8082817f7e49f4239f4d606724.
+    - bbebc9bb04547add4f5fc38f885595451dadb09c.
+    - 968e253549f156221a1d7487d8fade0ee8f3c913.
+    - Bowl_5.
+    - xxxxed731722xceb4x4be0x8226x59294aacdf10.
+    - Bowl_24.
+    - Bowl_14.
+    - Bowl_25.
+    - 98bda20462843fb446a678c0cfca18f2736f7060.
+    - e102c85032933084b9cf7af4a75c9f33ba6ccf3b.
+    - 93107d702eede74e64d4778192f1fce0a8ee2f43.
+    - Neat_Solutions_Character_Bib_2_pack.
+    - Bowl_18.
+    - Bowl_1.
+    - Bowl_21.
+    - 7aec926807a58f4ec2071758b4e6d46f91de9d08.
+    excluded_substrings: []
+  - name: train_handbag
+    included_substrings:
+    - B00DUGZFLK.
+    excluded_substrings: []
+  - name: train_c-clamp
+    included_substrings:
+    - Pony_C_Clamp_1440.
+    excluded_substrings: []
+  - name: train_lamp
+    included_substrings:
+    - B07HK83QRB.
+    excluded_substrings: []
+  - name: train_plant_container
+    included_substrings:
+    - Cole_Hardware_Electric_Pot_Assortment_55.
+    - Cole_Hardware_Orchid_Pot_85.
+    - Cole_Hardware_Electric_Pot_Cabana_55.
+    - Ecoforms_Plant_Pot_GP9_SAND.
+    - Cole_Hardware_Flower_Pot_1025.
+    excluded_substrings: []
+  - name: train_tomato
+    included_substrings:
+    - Tomato_27.
+    - Tomato_6.
+    - Tomato_16.
+    - Tomato_20.
+    - Tomato_10.
+    - Tomato_11.
+    - Tomato_29.
+    - Tomato_12.
+    - Tomato_4.
+    - Tomato_26.
+    - Tomato_2.
+    - Tomato_5.
+    - Tomato_18.
+    - Tomato_25.
+    - Tomato_30.
+    - Tomato_17.
+    - Tomato_1.
+    - Tomato_24.
+    - Tomato_22.
+    excluded_substrings: []
+  - name: train_knife
+    included_substrings:
+    - Knife_7.
+    - ButterKnife_1.
+    - Knife_4.
+    - Knife_5.
+    - Knife_2.
+    excluded_substrings: []
+  - name: train_stuffed_toy
+    included_substrings:
+    - 7c36beb8e017c9b8c66291ad9c5be9f7270281b4.
+    - f172324eef47eb930d2d10f6ddce5852d6e44941.
+    - bbab821a01804c11220bb499da6aec0142a3e253.
+    - a3fce687e16c92cce0a801e92c7705a20ac74525.
+    - 1a3ab8e3d8569a2a2e2b6f8510af417848b71c6a.
+    - f8b01d51b06fcba41cd2a7fa3f3f3a358df0b6a5.
+    - Ortho_Forward_Facing.
+    - 1c1f8cb950c338c7685124f7cfba716c242435c4.
+    - 567ba453e60735e7667f25ea6d09377be18bda66.
+    - 5998b2343f9bd0da7fd75c77cca93bc84d735fbc.
+    - 5149957d46a31be888657d1b041130d8dc7ed905.
+    - Ortho_Forward_Facing_QCaor9ImJ2G.
+    - Shark.
+    - b3e8be210978ec373be6eb5fcffec36c6a9712e6.
+    - d5cbf59bbda4034360222434bd46e2e7b9d448c9.
+    - Ortho_Forward_Facing_3Q6J2oKJD92.
+    - Squirrel.
+    - Racoon.
+    - Sootheze_Toasty_Orca.
+    - Animal_Planet_Foam_2Headed_Dragon.
+    - 963d58e321de1039c6404fd25b9fe470b7217979.
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "hab2"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: subset
+  params:
+    scene_sets:
+      - "train"
+object_samplers:
+- name: train_set
+  type: category_balanced
+  sampler_range: dynamic
+  params:
+    object_sets:
+      - train_watch
+      - train_dumbbell
+      - train_bundt_pan
+      - train_cushion
+      - train_apple
+      - train_carrying_case
+      - train_scissors
+      - train_jug
+      - train_butter_dish
+      - train_pen
+      - train_bottle
+      - train_candle
+      - train_bread
+      - train_pitcher
+      - train_picture_frame
+      - train_file_sorter
+      - train_spray_bottle
+      - train_potato
+      - train_toy_cactus
+      - train_milk_frother_cup
+      - train_toy_swing
+      - train_teapot
+      - train_candy_bar
+      - train_tape
+      - train_soap_dish
+      - train_spatula
+      - train_clock
+      - train_toy_food
+      - train_multiport_hub
+      - train_cup
+      - train_action_figure
+      - train_board_game
+      - train_casserole
+      - train_tray
+      - train_candle_holder
+      - train_spicemill
+      - train_electric_kettle
+      - train_credit_card
+      - train_stuffed toy
+      - train_bath_towel
+      - train_cake_pan
+      - train_laptop
+      - train_hat
+      - train_folder
+      - train_box
+      - train_fork
+      - train_hand_towel
+      - train_basketball
+      - train_pan
+      - train_egg
+      - train_soap_dispenser
+      - train_spoon
+      - train_lunch_box
+      - train_book
+      - train_sushi_mat
+      - train_gaming_console
+      - train_toy_animal
+      - train_toy_fire_truck
+      - train_screwdriver
+      - train_statue
+      - train_laptop_stand
+      - train_laptop_cover
+      - train_toy_vehicle
+      - train_glass
+      - train_tennis_racquet
+      - train_kettle
+      - train_hammer
+      - train_shoe
+      - train_mouse_pad
+      - train_keychain
+      - train_spectacles
+      - train_ladle
+      - train_toy_pineapple
+      - train_cellphone
+      - train_monitor_stand
+      - train_ramekin
+      - train_baseballbat
+      - train_bowl
+      - train_handbag
+      - train_c-clamp
+      - train_lamp
+      - train_plant_container
+      - train_tomato
+      - train_knife
+      - train_stuffed_toy
+    receptacle_sets:
+    - hab2
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+object_target_samplers:
+- name: hab2
+  type: uniform
+  sampler_range: fixed
+  params:
+    object_samplers:
+    - train_set
+    receptacle_sets:
+    - hab2
+    num_samples:
+    - 1
+    - 1
+    orientation_sampling: up
+    nav_to_min_distance: 1.5
+
+agent:
+  camera:
+    height: 1.31
+    hfov: 42
+    tilt_degrees: -30
+    resolution: [160, 120]
+  radius: 0.25
+  height: 1.41
+  max_climb: 0.01
