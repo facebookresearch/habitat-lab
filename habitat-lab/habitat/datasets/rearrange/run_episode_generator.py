@@ -4,16 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import ctypes
 import os
 import os.path as osp
 import random
-import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -42,6 +37,22 @@ class SceneSamplerConfig:
     type: str = "single"
     params: SceneSamplerParamsConfig = SceneSamplerParamsConfig()
     comment: str = ""
+
+
+@dataclass
+class CameraConfig:
+    height: float = 0.88
+    hfov: float = 90
+    tilt_degrees: float = 0
+    resolution: List[int] = field(default_factory=lambda: [256, 256])
+
+
+@dataclass
+class AgentConfig:
+    camera: CameraConfig = CameraConfig()
+    radius: float = 0.3
+    height: float = 0.88
+    max_climb: float = 0.01
 
 
 @dataclass
@@ -200,6 +211,8 @@ class RearrangeEpisodeGeneratorConfig:
     #   "offset": vec3 []
     #  }
     markers: List[Any] = field(default_factory=list)
+
+    agent: AgentConfig = AgentConfig()
 
 
 def get_config_defaults() -> "DictConfig":
