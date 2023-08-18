@@ -67,6 +67,9 @@ class RearrangeGraspManager:
         self._leave_info = None
         self._vis_info: List[Any] = []
 
+        # Track which objects were placed, so they cannot be picked again.
+        self._did_place: List[int] = []
+
     def is_violating_hold_constraint(self) -> bool:
         """
         Returns true if the object is too far away from the gripper, meaning
@@ -143,6 +146,9 @@ class RearrangeGraspManager:
         for constraint_id in self._snap_constraints:
             self._sim.remove_rigid_constraint(constraint_id)
         self._snap_constraints = []
+
+        # Track that this object was placed.
+        self._did_place.append(self._snapped_obj_id)
 
         self._snapped_obj_id = None
         self._snapped_marker_id = None
@@ -307,6 +313,11 @@ class RearrangeGraspManager:
         :param force: Will kinematically snap the object to the robot's end-effector, even if
             the object is already in the grasped state.
         """
+
+        if snap_obj_id in self._did_place:
+            # Block the pick, we cannot pick an object that was already placed.
+            return
+
         if snap_obj_id == self._snapped_obj_id:
             # Already grasping this object.
             return
