@@ -48,6 +48,7 @@ class RearrangeGraspManager:
         self.ee_index = ee_index
 
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
+        self._block_double_pick = self._sim.habitat_config.block_double_pick
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
