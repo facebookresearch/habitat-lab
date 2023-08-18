@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
-
-import gym.spaces as spaces
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.storage import Storage
@@ -41,22 +39,6 @@ class AgentAccessMgr(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
-        """
-        Update the hidden state of the policies in the population. Writes to the
-        data in place.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def hidden_state_shape(self):
-        """
-        Stack the hidden states of all the policies in the active population.
-        """
-        raise NotImplementedError()
-
     @property
     @abstractmethod
     def nbuffers(self) -> int:
@@ -73,23 +55,6 @@ class AgentAccessMgr(ABC):
         :param create_rollouts_fn: Override behavior for creating the
             rollout storage. Default behavior for this and the call signature is
             `default_create_rollouts`.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def policy_action_space(self) -> spaces.Space:
-        """
-        The action space the policy acts in. This can be different from the
-        environment action space for hierarchical policies.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def policy_action_space_shape_lens(self) -> List[int]:
-        """
-        A list with the dimensionality of action space of each of the agents.
         """
         raise NotImplementedError()
 
@@ -144,22 +109,6 @@ class AgentAccessMgr(ABC):
 
     @abstractmethod
     def load_state_dict(self, state: Dict) -> None:
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def hidden_state_shape(self) -> Tuple[int]:
-        """
-        The shape of the tensor to track the hidden state, such as the RNN hidden state.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def hidden_state_shape_lens(self) -> List[int]:
-        """
-        A list with the dimensionality of the hidden state of each of the agents.
-        """
         raise NotImplementedError()
 
     @property

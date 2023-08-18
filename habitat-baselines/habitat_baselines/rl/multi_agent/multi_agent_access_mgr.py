@@ -337,30 +337,6 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             sum(self._agents[i].masks_shape[0] for i in self._active_agents),
         )
 
-    @property
-    def hidden_state_shape(self):
-        """
-        Stack the hidden states of all the policies in the active population.
-        """
-        hidden_shapes = np.stack(
-            [self._agents[i].hidden_state_shape for i in self._active_agents]
-        )
-        # We do max because some policies may be non-neural
-        # And will have a hidden state of [0, hidden_dim]
-        max_hidden_shape = hidden_shapes.max(0)
-        # The hidden states will be concatenated over the last dimension.
-        return [*max_hidden_shape[:-1], np.sum(hidden_shapes[:, -1])]
-
-    @property
-    def hidden_state_shape_lens(self):
-        """
-        Stack the hidden states of all the policies in the active population.
-        """
-        hidden_indices = [
-            self._agents[i].hidden_state_shape[-1] for i in self._active_agents
-        ]
-        return hidden_indices
-
     def after_update(self):
         """
         Will resample the active agent population every `agent_sample_interval` calls to this method.
@@ -418,65 +394,3 @@ class MultiAgentAccessMgr(AgentAccessMgr):
     @property
     def updater(self):
         return self._multi_updater
-
-    @property
-    def policy_action_space(self):
-        # TODO: Hack for discrete HL action spaces.
-        all_discrete = np.all(
-            [
-                isinstance(agent.policy_action_space, spaces.MultiDiscrete)
-                for agent in self._agents
-            ]
-        )
-        if all_discrete:
-            return spaces.MultiDiscrete(
-                tuple(
-                    [
-                        self._agents[agent_i].policy_action_space.n
-                        for agent_i in self._active_agents
-                    ]
-                )
-            )
-        else:
-            return spaces.Dict(
-                {
-                    agent_i: self._agents[agent_i].policy_action_space
-                    for agent_i in self._active_agents
-                }
-            )
-
-    @property
-    def policy_action_space_shape_lens(self):
-        lens = []
-        for agent_i in self._active_agents:
-            agent = self._agents[agent_i]
-            if isinstance(agent.policy_action_space, spaces.Discrete):
-                lens.append(1)
-            elif isinstance(agent.policy_action_space, spaces.Box):
-                lens.append(agent.policy_action_space.shape[0])
-            else:
-                raise ValueError(
-                    f"Action distribution {agent.policy_action_space}"
-                    "not supported."
-                )
-        return lens
-
-    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
-        # TODO: will not work with different hidden states
-        n_agents = len(self._active_agents)
-        hxs_dim = rnn_hxs.shape[-1] // n_agents
-        ac_dim = prev_actions.shape[-1] // n_agents
-        # Not very efficient, but update each policies's hidden state individually.
-        for env_i, should_insert in enumerate(action_data.should_inserts):
-            for policy_i, agent_should_insert in enumerate(should_insert):
-                if not agent_should_insert.item():
-                    continue
-                rnn_sel = slice(policy_i * hxs_dim, (policy_i + 1) * hxs_dim)
-                rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
-                    env_i, :, rnn_sel
-                ]
-
-                ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
-                prev_actions[env_i, ac_sel].copy_(
-                    action_data.actions[env_i, ac_sel]
-                )
