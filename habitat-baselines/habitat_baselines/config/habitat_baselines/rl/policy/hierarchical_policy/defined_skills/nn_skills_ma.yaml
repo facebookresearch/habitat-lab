@@ -45,12 +45,12 @@ wait:
   max_skill_steps: -1
 
 nav_to_obj:
-  skill_name: "NavSkillPolicy"
+  skill_name: "NoopSkillPolicy"
   obs_skill_inputs: ["goal_to_agent_gps_compass"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_nav_1_fp_11/ckpt.175.pth"
-  max_skill_steps: 500
+  max_skill_steps: 1
+  apply_postconds: False
+  force_end_on_timeout: False
   obs_skill_input_dim: 2
-  #pddl_action_names: ["nav", "nav_to_receptacle"]
   pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
 
 reset_arm:

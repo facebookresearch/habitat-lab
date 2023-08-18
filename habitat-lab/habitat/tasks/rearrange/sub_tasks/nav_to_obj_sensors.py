@@ -15,10 +15,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import (
-    UsesArticulatedAgentInterface,
-    place_agent_at_dist_from_pos,
-)
+from habitat.tasks.rearrange.utils import UsesArticulatedAgentInterface
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
@@ -36,8 +33,6 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
-        self._poss_entities = task.pddl_problem.get_ordered_entities_list()
-        self._targets = {}
         super().__init__(*args, task=task, **kwargs)
 
     def _get_uuid(self, *args, **kwargs):
@@ -54,44 +49,15 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
-    def _get_target_for_idx(self, nav_to_target_idx: int):
-        nav_to_obj = self._poss_entities[nav_to_target_idx]
-        if (
-            nav_to_target_idx not in self._targets
-            or "robot" in nav_to_obj.name
-        ):
-            obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
-                nav_to_obj
-            )
-            if "robot" in nav_to_obj.name:
-                # Safety margin between the human and the robot
-                sample_distance = 1.0
-            else:
-                sample_distance = 1.5
-            start_pos, _, _ = place_agent_at_dist_from_pos(
-                np.array(obj_pos),
-                0.0,
-                sample_distance,
-                self._sim,
-                1000,
-                1,
-                self._sim.get_agent_data(self.agent_id).articulated_agent,
-            )
-
-            self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
-        return self._targets[nav_to_target_idx]
-
     def get_observation(self, task, *args, **kwargs):
-        final_nav_targ, _ = self._get_target_for_idx(task.targ_idx)
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
-        dir_vector = articulated_agent_T.inverted().transform_point(
-            final_nav_targ
-        )
 
+        dir_vector = articulated_agent_T.inverted().transform_point(
+            task.nav_goal_pos
+        )
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
-        # print(rho, phi)
 
         return np.array([rho, -phi], dtype=np.float32)
 
