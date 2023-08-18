@@ -1525,6 +1525,7 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
+    block_double_pick: bool = True
     force_soft_reset: bool = False
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
