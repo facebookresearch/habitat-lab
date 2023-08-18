@@ -62,20 +62,21 @@ class NavSkillPolicy(NnSkillPolicy):
     def _is_skill_done(
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
-        success_pos = 0.5
-        success_ang = 0.50  # 261799
-        print(
-            observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][
-                0, 0
-            ],
-            success_pos
+        success_pos = 1.5
+        success_ang = 3.0  # 261799
+        if (
+            observations[TargetGoalGpsCompassSensor.cls_uuid][batch_idx][0, 0]
+            < success_pos
             and abs(
-                observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][
+                observations[TargetGoalGpsCompassSensor.cls_uuid][batch_idx][
                     0, 1
                 ]
-            ),
-        )
-        if (
+            )
+            < success_ang
+            and self._cur_skill_args[0].is_target
+        ):
+            return torch.ones(1, dtype=torch.bool).to(masks.device)
+        elif (
             observations[TargetStartGpsCompassSensor.cls_uuid][batch_idx][0, 0]
             < success_pos
             and abs(
@@ -84,6 +85,7 @@ class NavSkillPolicy(NnSkillPolicy):
                 ]
             )
             < success_ang
+            and not self._cur_skill_args[0].is_target
         ):
             return torch.ones(1, dtype=torch.bool).to(masks.device)
         else:

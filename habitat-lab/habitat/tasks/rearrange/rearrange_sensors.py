@@ -101,6 +101,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         self._task = task
         self._sim = sim
         self._target = {}
+        self._step = 0
         super().__init__(*args, task=task, **kwargs)
 
     def _get_sensor_type(self, *args, **kwargs):
@@ -120,14 +121,14 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         raise NotImplementedError("Must override _get_positions")
 
     def _get_target_for_idx(self, obj_pos, target_idx):
-        sample_distance = 1.0
-
+        sample_distance = 1.5
+        print(target_idx)
         start_pos, _, _ = place_agent_at_dist_from_pos(
             np.array(obj_pos[target_idx]),
             0.0,
             sample_distance,
             self._sim,
-            10,
+            100,
             1,
             self._sim.get_agent_data(self.agent_id).articulated_agent,
         )
@@ -136,11 +137,18 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         return (start_pos, np.array(obj_pos))
 
     def get_observation(self, task, *args, **kwargs):
+        self._step += 1
+        print(self._step)
         pos = self._get_positions()
-        # pos_0 = self._get_target_for_idx(pos, 0)[0]
-        # pos_1 = self._get_target_for_idx(pos, 1)[0]
-        # pos[0] = pos_0
-        # pos[1] = pos_1
+        # try:
+        #     if not np.linalg.norm(kwargs["action"]["action_args"]["agent_0_base_vel"] - np.zeros(2)) < 0.01:
+        #         pos_0 = self._get_target_for_idx(pos, 0)[0]
+        #         pos_1 = self._get_target_for_idx(pos, 1)[0]
+        #         pos[0] = pos_0
+        #         pos[1] = pos_1
+        #         print("process pos")
+        # except:
+        #     print("no")
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation

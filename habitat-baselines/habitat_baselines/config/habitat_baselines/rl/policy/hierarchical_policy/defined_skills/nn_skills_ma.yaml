@@ -33,12 +33,21 @@ close_fridge:
 pick:
   skill_name: "PickSkillPolicy"
   obs_skill_inputs: ["obj_start_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_10_5/ckpt.120.pth"
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_10_5/latest.pth"
 
 place:
   skill_name: "PlaceSkillPolicy"
   obs_skill_inputs: ["obj_goal_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_0/ckpt.146.pth"
+  max_skill_steps: 500
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_0/latest.pth"
+
+# place:
+#   skill_name: "NoopSkillPolicy"
+#   obs_skill_inputs: ["obj_goal_sensor"]
+#   max_skill_steps: 1
+#   apply_postconds: True
+#   force_end_on_timeout: False
+
 
 wait:
   skill_name: "WaitSkillPolicy"
@@ -47,7 +56,7 @@ wait:
 nav_to_obj:
   skill_name: "NavSkillPolicy"
   obs_skill_inputs: ["goal_to_agent_gps_compass"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_nav_1_fp_11/ckpt.175.pth"
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_nav_1_fp_11/latest.pth"
   max_skill_steps: 500
   obs_skill_input_dim: 2
   #pddl_action_names: ["nav", "nav_to_receptacle"]
