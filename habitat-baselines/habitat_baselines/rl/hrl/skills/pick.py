@@ -97,4 +97,6 @@ class PickSkillPolicy(NnSkillPolicy):
             + self.org_pick_len,
         ] = torch.zeros(size)
 
+        action = self._mask_pick(action, observations)
+
         return action

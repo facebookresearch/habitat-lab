@@ -38,7 +38,7 @@ pick:
 place:
   skill_name: "PlaceSkillPolicy"
   obs_skill_inputs: ["obj_goal_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_3/latest.pth"
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_0/latest.pth"
 
 # place:
 #   skill_name: "NoopSkillPolicy"
