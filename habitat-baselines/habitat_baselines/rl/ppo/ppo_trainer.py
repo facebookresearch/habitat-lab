@@ -932,7 +932,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._agent = self._create_agent(None)
         action_shape, discrete_actions = get_action_space_info(
-            self._agent.policy_action_space
+            self._agent.actor_critic.policy_action_space
         )
 
         if (
@@ -952,12 +952,14 @@ class PPOTrainer(BaseRLTrainer):
         test_recurrent_hidden_states = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,
-                *self._agent.hidden_state_shape,
+                *self._agent.actor_critic.hidden_state_shape,
             ),
             device=self.device,
         )
-        hidden_state_lens = self._agent.hidden_state_shape_lens
-        action_space_lens = self._agent.policy_action_space_shape_lens
+        hidden_state_lens = self._agent.actor_critic.hidden_state_shape_lens
+        action_space_lens = (
+            self._agent.actor_critic.policy_action_space_shape_lens
+        )
         prev_actions = torch.zeros(
             self.config.habitat_baselines.num_environments,
             *action_shape,
@@ -1036,7 +1038,7 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
-                    self._agent.update_hidden_state(
+                    self._agent.actor_critic.update_hidden_state(
                         test_recurrent_hidden_states, prev_actions, action_data
                     )
 

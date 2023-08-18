@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional
 
+import gym.spaces as spaces
 import numpy as np
 import torch
 
@@ -36,6 +37,50 @@ class MultiPolicy(Policy):
     def pause_envs(self, envs_to_pause):
         for policy in self._active_policies:
             policy.pause_envs(envs_to_pause)
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Get the length of the hidden states of all the policies
+        """
+        hidden_indices = [
+            policy.hidden_state_shape[-1] for policy in self._active_policies
+        ]
+        return hidden_indices
+
+    @property
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        hidden_shapes = np.stack(
+            [policy.hidden_state_shape for policy in self._active_policies]
+        )
+        # We do max because some policies may be non-neural
+        # And will have a hidden state of [0, hidden_dim]
+        max_hidden_shape = hidden_shapes.max(0)
+        # The hidden states will be concatenated over the last dimension.
+        return [*max_hidden_shape[:-1], np.sum(hidden_shapes[:, -1])]
+
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        # TODO: will not work with hidden states with different number of layers
+        n_agents = len(self._active_policies)
+        hxs_dim = rnn_hxs.shape[-1] // n_agents
+        ac_dim = prev_actions.shape[-1] // n_agents
+        # Not very efficient, but update each policies's hidden state individually.
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            for policy_i, agent_should_insert in enumerate(should_insert):
+                if not agent_should_insert.item():
+                    continue
+                rnn_sel = slice(policy_i * hxs_dim, (policy_i + 1) * hxs_dim)
+                rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
+                    env_i, :, rnn_sel
+                ]
+
+                ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
+                prev_actions[env_i, ac_sel].copy_(
+                    action_data.actions[env_i, ac_sel]
+                )
 
     def act(
         self,
@@ -206,6 +251,47 @@ class MultiPolicy(Policy):
             ret.append(env_d)
 
         return ret
+
+    @property
+    def policy_action_space(self):
+        # TODO: Hack for discrete HL action spaces.
+        all_discrete = np.all(
+            [
+                isinstance(policy.policy_action_space, spaces.MultiDiscrete)
+                for policy in self._active_policies
+            ]
+        )
+        if all_discrete:
+            return spaces.MultiDiscrete(
+                tuple(
+                    [
+                        policy.policy_action_space.n
+                        for policy in self._active_policies
+                    ]
+                )
+            )
+        else:
+            return spaces.Dict(
+                {
+                    policy_i: policy.policy_action_space
+                    for policy_i, policy in enumerate(self._active_policies)
+                }
+            )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        lens = []
+        for policy in self._active_policies:
+            if isinstance(policy.policy_action_space, spaces.Discrete):
+                lens.append(1)
+            elif isinstance(policy.policy_action_space, spaces.Box):
+                lens.append(policy.policy_action_space.shape[0])
+            else:
+                raise ValueError(
+                    f"Action distribution {policy.policy_action_space}"
+                    "not supported."
+                )
+        return lens
 
     @classmethod
     def from_config(
