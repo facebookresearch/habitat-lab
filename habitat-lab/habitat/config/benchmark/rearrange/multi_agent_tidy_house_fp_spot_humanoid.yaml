@@ -114,8 +114,8 @@ habitat:
         # lin_speed: 40.0
         # ang_speed: 20.0 #arm 0.05
         agent_index: 0
-        lin_speed: 1.0
-        ang_speed: 1.0
+        lin_speed: 2.0
+        ang_speed: 2.0
         allow_dyn_slide: True
         allow_back: True
         gym_action_prefix: place_base_vel
