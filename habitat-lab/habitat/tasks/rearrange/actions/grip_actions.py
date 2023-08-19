@@ -80,8 +80,27 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_articulated_agent.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
+    # def _find_closet_rep(self):
+    #     cur_pos = np.array(self.cur_articulated_agent.base_pos)
+    #     min_rep_pos = None
+    #     min_rep_dis = float("inf")
+    #     for rep in self._sim.receptacles:
+    #         rep_bb = self._sim.receptacles[rep]
+    #         rep_pos = np.random.uniform(rep_bb.min, rep_bb.max)
+    #         if np.linalg.norm(cur_pos - rep_pos) < min_rep_dis:
+    #             min_rep_dis = np.linalg.norm(cur_pos - rep_pos)
+    #             min_rep_pos = rep_pos
+    #     return min_rep_pos
+
     def _ungrasp(self):
+        # Teleporting the object
+        obj_id = self.cur_grasp_mgr._snapped_obj_id
+        _, pos_targs = self._sim.get_targets()
+        targ_pos = pos_targs[0]
         self.cur_grasp_mgr.desnap()
+        self._sim.get_rigid_object_manager().get_object_by_id(
+            obj_id
+        ).translation = targ_pos
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
