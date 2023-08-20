@@ -121,7 +121,6 @@ class AgentAccessMgr(ABC):
         Must be called by the trainer after the updater has called `update` and
         the rollout `after_update` is called.
         """
-        raise NotImplementedError()
 
     @abstractmethod
     def pre_rollout(self) -> None:

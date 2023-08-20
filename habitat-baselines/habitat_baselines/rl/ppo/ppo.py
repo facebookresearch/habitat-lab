@@ -374,9 +374,6 @@ class PPO(nn.Module, Updater):
         if isinstance(self.entropy_coef, LagrangeInequalityCoefficient):
             self.entropy_coef.project_into_bounds()
 
-    def after_update(self):
-        pass
-
     def get_resume_state(self):
         return {
             "optim_state": self.optimizer.state_dict(),
