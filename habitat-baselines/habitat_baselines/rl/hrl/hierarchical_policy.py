@@ -384,7 +384,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         batch_size = masks.shape[0]
         hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
         hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
-        print("should_choose_new_skill:", should_choose_new_skill)
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,

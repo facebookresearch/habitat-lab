@@ -251,12 +251,6 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 )
 
             elif self.motion_type == "human_joints":
-                print(
-                    "dist_to_final_nav_targ:",
-                    dist_to_final_nav_targ,
-                    self._dist_thresh,
-                )
-                print("angle_to_obj:", angle_to_obj, self._turn_thresh)
                 # Update the humanoid base
                 self.humanoid_controller.obj_transform_base = base_T
                 if not at_goal:
