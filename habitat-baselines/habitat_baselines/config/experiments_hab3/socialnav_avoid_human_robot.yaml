@@ -22,6 +22,20 @@ defaults:
 
   - /habitat/task/measurements:
     - social_nav_reward
+    # Additional one for nav_to_obj
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - collisions_terminate
+    - rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    - does_want_terminate
+    - rearrange_nav_to_obj_success
+    - bad_called_terminate
+    - rearrange_nav_to_obj_reward
+
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -33,7 +47,9 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - humanoid_joint_sensor
-  - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+    # Additional one for nav_to_obj
+    - nav_goal_sensor
+
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/lab_sensors:
     # For the oracle navigation
@@ -51,14 +67,17 @@ habitat:
         y_len: 1.5
         agent_idx: 1
 
-    reward_measure: social_nav_reward
-    slack_reward: 0.
-    success_reward: 0.
+    reward_measure: nav_to_obj_reward
+    success_measure: nav_to_obj_success
+    success_reward: 10.0
+    slack_reward: -0.005
     task_spec: multi_agent_tidy_house_fp_2obj #multi_agent_tidy_house_solved
     pddl_domain_def: fp
     actions:
-      agent_0_arm_action:
-        grip_controller: MagicGraspAction
+      agent_0_base_velocity:
+        agent_index : 0
+        lin_speed: 40.0
+        ang_speed: 20.0
 
       agent_1_base_velocity:
         agent_index : 1
@@ -82,22 +101,34 @@ habitat:
         lin_speed: 40.0
         ang_speed: 20.0
 
+    measurements:
+      force_terminate:
+        max_accum_force: -1 #10_000.0
+        max_instant_force: -1 #10_000.0
+      collisions_terminate:
+        max_scene_colls: 100.0
+      rearrange_nav_to_obj_reward:
+        force_pen: 0.01
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+
   environment:
     max_episode_steps: 700
 
   gym:
     obs_keys:
-      - agent_0_head_depth
-      - agent_0_relative_resting_position
-      - agent_0_obj_start_sensor
-      - agent_0_obj_goal_sensor
-      - agent_0_obj_start_gps_compass
-      - agent_0_obj_goal_gps_compass
+      - agent_0_articulated_agent_arm_depth
+      #- agent_0_relative_resting_position
+      #- agent_0_obj_start_sensor
+      #- agent_0_obj_goal_sensor
+      #- agent_0_obj_start_gps_compass
+      #- agent_0_obj_goal_gps_compass
       - agent_0_joint
-      - agent_0_is_holding
-      - agent_0_ee_pos
-      - agent_0_localization_sensor
-      - agent_0_has_finished_oracle_nav
+      #- agent_0_is_holding
+      #- agent_0_ee_pos
+      #- agent_0_localization_sensor
+      #- agent_0_has_finished_oracle_nav
+      - agent_0_goal_to_agent_gps_compass
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
