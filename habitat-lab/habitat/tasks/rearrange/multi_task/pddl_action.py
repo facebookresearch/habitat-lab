@@ -186,6 +186,7 @@ class PddlAction:
         )
 
     def apply(self, sim_info: PddlSimInfo) -> None:
+        print("apply")
         post_conds = self._post_cond
         if self._post_cond_search is not None:
             found_assign = None

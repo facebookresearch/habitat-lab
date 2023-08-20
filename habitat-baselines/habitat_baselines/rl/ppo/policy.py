@@ -221,7 +221,12 @@ class Policy(abc.ABC):
         evaluating policies with multiple environments, where some environments
         will run out of episodes to evaluate and will be closing.
         """
-        raise NotImplementedError
+        # TODO: train low-level policies in multi-agent setting:
+        # implement the case when the envs_to_pause is not zero
+        if len(envs_to_pause) == 0:
+            return
+        else:
+            raise NotImplementedError
 
     @classmethod
     @abc.abstractmethod

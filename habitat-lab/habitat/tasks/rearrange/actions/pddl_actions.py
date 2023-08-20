@@ -86,11 +86,18 @@ class PddlApplyAction(ArticulatedAgentAction):
             cur_i += action.n_args
 
     def step(self, *args, is_last_action, **kwargs):
+        print("pddl_action.py sim.step")
         self._prev_action = None
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         self._was_prev_action_invalid = False
         inputs_outside = any(
             a < 0 or a > len(self.entities) for a in apply_pddl_action
+        )
+
+        print("apply_pddl_action:", apply_pddl_action)
+        print(
+            "kwargs[agent_1_oracle_nav_action]",
+            kwargs["agent_1_oracle_nav_action"],
         )
         if not inputs_outside:
             self._apply_action(apply_pddl_action)

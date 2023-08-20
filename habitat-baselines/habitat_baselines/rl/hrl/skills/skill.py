@@ -53,6 +53,7 @@ class SkillPolicy(Policy):
             )
         else:
             self._pddl_ac_start = None
+
         if self._apply_postconds and self._pddl_ac_start is None:
             raise ValueError(f"Could not find PDDL action in skill {self}")
 

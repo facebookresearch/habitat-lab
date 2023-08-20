@@ -151,6 +151,7 @@ class PddlRobotState:
         """
         Sets the robot state in the simulator.
         """
+        print("pddl_sim_state.py : set_state")
         robot_id = cast(
             int,
             sim_info.search_for_entity(robot_entity),
