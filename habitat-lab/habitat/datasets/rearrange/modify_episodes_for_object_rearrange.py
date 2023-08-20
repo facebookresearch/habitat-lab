@@ -1,20 +1,16 @@
 import argparse
-import ctypes
 import gzip
 import json
 import os
 import os.path as osp
 import pickle
 import re
-import sys
 from typing import Any, Dict, List, Set
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import magnum as mn
 import numpy as np
 import pandas as pd
+from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 import habitat_sim
@@ -196,6 +192,7 @@ def initialize_sim(
     scene_name: str,
     dataset_path: str,
     additional_obj_config_paths: List[str],
+    camera_config: DictConfig,
     debug_viz: bool = False,
 ) -> habitat_sim.Simulator:
     """
@@ -207,29 +204,22 @@ def initialize_sim(
     backend_cfg.create_renderer = True
     backend_cfg.enable_physics = True
 
+    sensors = {
+        "semantic": {
+            "sensor_type": habitat_sim.SensorType.SEMANTIC,
+            "resolution": camera_config.resolution,
+            "position": [0, 0, 0],
+            "orientation": [camera_config.tilt_degrees * np.pi / 180, 0, 0.0],
+            "hfov": camera_config.hfov,
+        },
+    }
     if debug_viz:
-        sensors = {
-            "semantic": {
-                "sensor_type": habitat_sim.SensorType.SEMANTIC,
-                "resolution": [512, 512],
-                "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
-            },
-            "color": {
-                "sensor_type": habitat_sim.SensorType.COLOR,
-                "resolution": [512, 512],
-                "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
-            },
-        }
-    else:
-        sensors = {
-            "semantic": {
-                "sensor_type": habitat_sim.SensorType.SEMANTIC,
-                "resolution": [256, 256],
-                "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
-            },
+        sensors["color"] = {
+            "sensor_type": habitat_sim.SensorType.COLOR,
+            "resolution": [640, 480],
+            "position": [0, 0, 0],
+            "orientation": [camera_config.tilt_degrees * np.pi / 180, 0, 0.0],
+            "hfov": camera_config.hfov,
         }
     sensor_specs = []
     for sensor_uuid, sensor_params in sensors.items():
@@ -239,6 +229,7 @@ def initialize_sim(
         sensor_spec.resolution = sensor_params["resolution"]
         sensor_spec.position = sensor_params["position"]
         sensor_spec.orientation = sensor_params["orientation"]
+        sensor_spec.hfov = sensor_params["hfov"]
         sensor_spec.sensor_subtype = habitat_sim.SensorSubType.EQUIRECTANGULAR
         sensor_spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
         sensor_specs.append(sensor_spec)
@@ -365,6 +356,7 @@ def add_viewpoints(
     obj_idx_to_name,
     rec_viewpoints,
     rec_to_parent_obj,
+    agent_camera_height,
     debug_viz=False,
 ):
     rom = sim.get_rigid_object_manager()
@@ -373,7 +365,7 @@ def add_viewpoints(
         obj_handle = obj_idx_to_name[int(obj["object_id"])]
         sim_obj = rom.get_object_by_handle(obj_handle)
         obj["view_points"] = generate_viewpoints(
-            sim, sim_obj, debug_viz=debug_viz
+            sim, sim_obj, agent_camera_height, debug_viz=debug_viz
         )
         if len(obj["view_points"]) == 0:
             print("Need at least 1 view point for object")
@@ -407,6 +399,7 @@ def add_cat_fields_to_episodes(
     rec_to_id,
     rec_cache_dir,
     num_episodes,
+    config,
     obj_category_mapping=None,
     rec_category_mapping=None,
     enable_add_viewpoints=False,
@@ -427,6 +420,7 @@ def add_cat_fields_to_episodes(
         episodes["episodes"][0]["scene_id"],
         episodes["episodes"][0]["scene_dataset_config"],
         episodes["episodes"][0]["additional_obj_config_paths"],
+        config.agent.camera,
         debug_viz,
     )
 
@@ -448,6 +442,7 @@ def add_cat_fields_to_episodes(
             scene_id,
             episode["scene_dataset_config"],
             episode["additional_obj_config_paths"],
+            config.agent.camera,
             debug_viz,
         )
         load_navmesh(sim, scene_id)
@@ -456,27 +451,30 @@ def add_cat_fields_to_episodes(
         existing_rigid_objects = set(rom.get_object_handles())
 
         rec = find_receptacles(sim)
+        dataset_name = osp.basename(episode["scene_dataset_config"]).split(
+            ".", 1
+        )[0]
+        scene_rec_cache_dir = osp.join(rec_cache_dir, dataset_name)
         rec_viewpoints, _ = load_receptacle_cache(
-            scene_id, rec_cache_dir, receptacle_cache
+            scene_id, scene_rec_cache_dir, receptacle_cache
         )[scene_id]
         rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
         obj_idx_to_name = load_objects(
             sim,
             episode["rigid_objs"],
-            episode["additional_obj_config_paths"],
-        )
-        populate_semantic_graph(sim)
-        all_rec_goals = collect_receptacle_goals(
-            sim, rec, rec_category_mapping=rec_category_mapping
-        )
-        obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
-            episode,
+            obj_cat,
+            start_rec_cat,
+            obj_idx_to_name,
+            name_to_receptacle,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
+            rec_to_parent_obj=rec_to_parent_obj,
         )
 
         if start_rec_cat == goal_rec_cat:
+            print("Start and goal receptacle category are same")
+            print("Skipping episode", episode["episode_id"])
             continue
 
         episode["object_category"] = obj_cat
@@ -515,6 +513,7 @@ def add_cat_fields_to_episodes(
             obj_idx_to_name,
             rec_viewpoints,
             rec_to_parent_obj,
+            config.agent.camera.height,
             debug_viz,
         ):
             print("Skipping episode", episode["episode_id"])
@@ -525,6 +524,7 @@ def add_cat_fields_to_episodes(
             and len(episode["candidate_goal_receps"]) > 0
         )
         new_episodes["episodes"].append(episode)
+        pbar.update()
         if len(new_episodes["episodes"]) >= num_episodes:
             break
         pbar.update()
@@ -551,9 +551,15 @@ if __name__ == "__main__":
         "--target_episodes_tag", type=str, default="categorical_rearrange_easy"
     )
     parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Config file used for first stage of episode generation. Agent's camera parameters are read from here",
+    )
+    parser.add_argument(
         "--rec_cache_dir",
         type=str,
-        default="data/cache/receptacle_viewpoints/fphab",
+        default="data/cache/receptacle_viewpoints",
         help="Path to cache where receptacle viewpoints were saved during first stage of episode generation",
     )
     parser.add_argument("--obj_category_mapping_file", type=str, default=None)
@@ -572,6 +578,7 @@ if __name__ == "__main__":
     target_episodes_tag = args.target_episodes_tag
     rec_cache_dir = args.rec_cache_dir
     num_episodes = args.num_episodes
+    config = OmegaConf.load(args.config)
 
     obj_category_mapping = None
     if args.obj_category_mapping_file is not None:
@@ -605,6 +612,7 @@ if __name__ == "__main__":
             rec_to_id,
             rec_cache_dir,
             num_episodes,
+            config,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
             enable_add_viewpoints=args.add_viewpoints,

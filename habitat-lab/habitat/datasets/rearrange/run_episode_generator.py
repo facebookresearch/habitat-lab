@@ -40,6 +40,22 @@ class SceneSamplerConfig:
 
 
 @dataclass
+class CameraConfig:
+    height: float = 0.88
+    hfov: float = 90
+    tilt_degrees: float = 0
+    resolution: List[int] = field(default_factory=lambda: [256, 256])
+
+
+@dataclass
+class AgentConfig:
+    camera: CameraConfig = CameraConfig()
+    radius: float = 0.3
+    height: float = 0.88
+    max_climb: float = 0.01
+
+
+@dataclass
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5
@@ -198,6 +214,8 @@ class RearrangeEpisodeGeneratorConfig:
     #   "offset": vec3 []
     #  }
     markers: List[Any] = field(default_factory=list)
+
+    agent: AgentConfig = AgentConfig()
 
 
 def get_config_defaults() -> "DictConfig":

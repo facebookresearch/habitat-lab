@@ -7,6 +7,7 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
+from habitat.datasets.rearrange.viewpoint_type import ViewpointType
 from habitat.utils.visualizations import maps
 from habitat_sim.utils import common as utils
 
@@ -23,7 +24,7 @@ COLOR_PALETTE = {
 }
 
 
-def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx):
+def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx, x, z):
     rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
     sem_obs = (obs["semantic"] == obj_semantic_id).astype(np.uint8) * 255
     contours, _ = cv2.findContours(
@@ -95,31 +96,33 @@ def save_topdown_map(
     )
     topdown_map = draw_obj_bbox_on_topdown_map(topdown_map, object_aabb, sim)
 
-    if len(view_locations) == 0:
-        h = topdown_map.shape[0]
-        topdown_map = cv2.copyMakeBorder(
-            topdown_map,
-            0,
-            150,
-            0,
-            0,
-            cv2.BORDER_CONSTANT,
-            value=COLOR_PALETTE["white"],
-        )
+    h = topdown_map.shape[0]
+    topdown_map = cv2.copyMakeBorder(
+        topdown_map,
+        0,
+        150,
+        0,
+        0,
+        cv2.BORDER_CONSTANT,
+        value=COLOR_PALETTE["white"],
+    )
 
-        for i, c in enumerate(poses_type_counter.items()):
-            line = f"{c[0].name}: {c[1]}/{len(candidate_poses_ious_orig)}"
+    for i, c in enumerate(poses_type_counter.items()):
+        line = f"{c[0].name}: {c[1]}/{len(candidate_poses_ious_orig)}"
+        if c[0] == ViewpointType.good:
+            color = COLOR_PALETTE["green"]
+        else:
             color = colors[c[0].value - 1]
-            topdown_map = cv2.putText(
-                topdown_map,
-                line,
-                (10, h + 25 * i + 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                color,
-                1,
-                cv2.LINE_AA,
-            )
+        topdown_map = cv2.putText(
+            topdown_map,
+            line,
+            (10, h + 25 * i + 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            color,
+            1,
+            cv2.LINE_AA,
+        )
 
     img_dir = "data/images/objnav_dataset_gen/maps"
     os.makedirs(img_dir, exist_ok=True)
