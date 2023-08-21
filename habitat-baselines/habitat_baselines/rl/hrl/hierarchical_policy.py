@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
+import hydra
 import numpy as np
 import torch
 import torch.nn as nn
@@ -98,9 +99,9 @@ class HierarchicalPolicy(nn.Module, Policy):
             (self._num_envs,), dtype=torch.bool
         )
 
-        high_level_cls = self._get_hl_policy_cls(config)
-        self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config=config.hierarchical_policy.high_level_policy,
+        self._high_level_policy: HighLevelPolicy = hydra.utils.instantiate(
+            config.hierarchical_policy.high_level_policy.name,
+            cfg=config.hierarchical_policy.high_level_policy,
             pddl_problem=self._pddl,
             num_envs=num_envs,
             skill_name_to_idx=self._name_to_idx,
@@ -109,6 +110,8 @@ class HierarchicalPolicy(nn.Module, Policy):
             aux_loss_config=aux_loss_config,
             agent_name=agent_name,
         )
+        assert isinstance(self._high_level_policy, HighLevelPolicy)
+
         first_idx: Optional[int] = None
 
         # Remap all the Noop skills to the same underlying skill so all the
@@ -153,16 +156,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._idx_to_name[skill_i] = skill_id
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
-
-        first_idx: Optional[int] = None
-        for skill_i, skill in self._skills.items():
-            if self._idx_to_name[skill_i] == "noop":
-                continue
-            if isinstance(skill, NoopSkillPolicy):
-                if first_idx is None:
-                    first_idx = skill_i
-                else:
-                    self._skill_redirects[skill_i] = first_idx
 
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)
@@ -256,12 +249,10 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     @property
     def num_recurrent_layers(self):
-        if self._high_level_policy.num_recurrent_layers != 0:
-            return self._high_level_policy.num_recurrent_layers
-        else:
-            return self._skills[
-                list(self._skills.keys())[0]
-            ].num_recurrent_layers
+        return (
+            self._max_skill_rnn_layers
+            + self._high_level_policy.num_recurrent_layers
+        )
 
     @property
     def should_load_agent_state(self):

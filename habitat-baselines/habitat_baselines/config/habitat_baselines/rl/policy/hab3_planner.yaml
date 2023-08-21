@@ -5,7 +5,8 @@ obs_transforms:
       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
-    name: "PlannerHighLevelPolicy"
+    name:
+      _target_: "habitat_baselines.rl.multi_agent.policies.PlannerHighLevelPolicy"
     allowed_actions:
       - nav_to_receptacle_by_name
       - nav_to_goal

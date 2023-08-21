@@ -32,7 +32,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
 
     def __init__(
         self,
-        config,
+        cfg,
         pddl_problem,
         num_envs,
         skill_name_to_idx,
@@ -42,7 +42,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         agent_name,
     ):
         super().__init__(
-            config,
+            cfg,
             pddl_problem,
             num_envs,
             skill_name_to_idx,

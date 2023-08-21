@@ -5,6 +5,7 @@ obs_transforms:
       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
-    name: "FixedHighLevelPolicy"
+    name:
+      _target_: "habitat_baselines.rl.hrl.hl.FixedHighLevelPolicy"
     add_arm_rest: True
   defined_skills: {}
