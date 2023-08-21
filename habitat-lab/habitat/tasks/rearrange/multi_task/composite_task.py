@@ -88,8 +88,8 @@ class CompositeTaskNavGoal(CompositeTask):
 
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
-        self._object_in_hand_sample_prob = 0.2
-        self._min_start_distance = 4.0
+        self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
+        self._min_start_distance = config.min_start_distance
         # Robot will be the first agent
         self.agent_id = 0
 

@@ -1170,6 +1170,7 @@ class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
     """
     type: str = "DoesWantTerminate"
+    mask_out_rearrange_stop: bool = False
 
 
 @dataclass

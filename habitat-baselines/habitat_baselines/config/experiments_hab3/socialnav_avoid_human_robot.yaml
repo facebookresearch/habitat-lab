@@ -33,7 +33,7 @@ defaults:
     - nav_to_pos_succ
     - does_want_terminate
     - rearrange_nav_to_obj_success
-    #- bad_called_terminate
+    - bad_called_terminate
     - rearrange_nav_to_obj_reward
 
   - /habitat/task/lab_sensors:
@@ -69,6 +69,7 @@ habitat:
         y_len: 1.5
         agent_idx: 1
 
+    min_start_distance: 4.0
     reward_measure: nav_to_obj_reward
     success_measure: nav_to_obj_success
     success_reward: 10.0
@@ -109,14 +110,18 @@ habitat:
         max_accum_force: -1 #10_000.0
         max_instant_force: -1 #10_000.0
       collisions_terminate:
-        max_scene_colls: -1 #100000.0
+        max_scene_colls: 100.0
       rearrange_nav_to_obj_reward:
         force_pen: 0.01
         max_force_pen: 0.01
         force_end_pen: 1.0
+      cooperate_subgoal_reward:
+        end_on_collide: True
+      does_want_terminate:
+        mask_out_rearrange_stop: True
 
   environment:
-    max_episode_steps: 700
+    max_episode_steps: 1500
 
   gym:
     obs_keys:

@@ -1078,6 +1078,10 @@ class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
 
     cls_uuid: str = "does_want_terminate"
 
+    def __init__(self, config, task, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._mask_out_rearrange_stop = config["mask_out_rearrange_stop"]
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return DoesWantTerminate.cls_uuid
@@ -1093,7 +1097,10 @@ class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
                 self._metric = task.actions[use_k].does_want_terminate
             except Exception:
                 use_k = f"agent_{0}_rearrange_stop"
-                self._metric = task.actions[use_k].does_want_terminate
+                if self._mask_out_rearrange_stop:
+                    self._metric = False
+                else:
+                    self._metric = task.actions[use_k].does_want_terminate
         else:
             self._metric = task.actions["rearrange_stop"].does_want_terminate
 
