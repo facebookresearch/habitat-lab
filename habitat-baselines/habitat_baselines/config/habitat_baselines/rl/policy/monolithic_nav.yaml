@@ -12,11 +12,11 @@
 
 
 name: "PointNavResNetPolicy"
-obs_transforms:
-  add_virtual_keys:
-    virtual_keys:
-      "goal_to_agent_gps_compass": 2
-      #"has_finished_oracle_nav": 1
+# obs_transforms:
+#   add_virtual_keys:
+#     virtual_keys:
+#       "goal_to_agent_gps_compass": 2
+#       #"has_finished_oracle_nav": 1
 action_distribution_type: "gaussian"
 action_dist:
   use_log_std: True

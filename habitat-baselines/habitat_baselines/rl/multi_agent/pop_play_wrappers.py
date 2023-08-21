@@ -276,7 +276,6 @@ class MultiStorage(Storage):
                 == 0
             ):
                 insert_d["next_recurrent_hidden_states"][agent_i] = None
-
             if next_observations is not None:
                 agent_next_observations = (
                     self._update_obs_with_agent_prefix_fn(
