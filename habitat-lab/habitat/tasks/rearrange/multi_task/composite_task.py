@@ -147,6 +147,10 @@ class CompositeTaskNavGoal(CompositeTask):
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
 
+    @nav_goal_pos.setter
+    def nav_goal_pos(self, value):
+        self._nav_to_info.nav_goal_pos = value
+
     def reset(self, episode: Episode):
         # Process the nav position
         self._nav_to_info = self._generate_nav_start_goal(

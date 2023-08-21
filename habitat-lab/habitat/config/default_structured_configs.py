@@ -80,6 +80,7 @@ __all__ = [
     "ArtObjSuccessMeasurementConfig",
     "ArtObjRewardMeasurementConfig",
     "NavToObjSuccessMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
     # DEBUG MEASURES
@@ -591,6 +592,7 @@ class GoalSensorConfig(LabSensorConfig):
 @dataclass
 class NavGoalPointGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalPointGoalSensor"
+    goal_is_human: bool = False
 
 
 @dataclass
@@ -979,6 +981,22 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+
+    :property must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :property success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
+    type: str = "SocialNavSeekSuccess"
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+
+
+@dataclass
 class RearrangeReachRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachReward"
     scale: float = 1.0
@@ -1138,6 +1156,9 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    safe_dis_reward: float = 1.0
 
 
 @dataclass
@@ -2384,6 +2405,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_nav_to_obj_success",
     node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_nav_to_obj_reward",
