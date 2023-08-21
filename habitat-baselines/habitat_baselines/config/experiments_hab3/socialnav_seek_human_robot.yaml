@@ -49,6 +49,7 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - humanoid_joint_sensor
+    - humanoid_detector_sensor
     # Additional one for nav_to_obj
     #- nav_goal_sensor
 
@@ -60,7 +61,7 @@ defaults:
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent #rgbd_head_rgbd_arm_agent
   - _self_
 
 hydra:
@@ -88,7 +89,7 @@ habitat:
     success_reward: 10.0
     slack_reward: -0.005
     end_on_success: False
-    task_spec: multi_agent_tidy_house_fp_2obj #multi_agent_tidy_house_solved
+    task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_solved
     pddl_domain_def: fp
     actions:
       agent_0_base_velocity:
@@ -141,6 +142,7 @@ habitat:
   gym:
     obs_keys:
       - agent_0_articulated_agent_arm_depth
+      #- agent_0_articulated_agent_arm_panoptic
       #- agent_0_relative_resting_position
       #- agent_0_obj_start_sensor
       #- agent_0_obj_goal_sensor
@@ -152,6 +154,7 @@ habitat:
       #- agent_0_localization_sensor
       #- agent_0_has_finished_oracle_nav
       - agent_0_goal_to_agent_gps_compass
+      - agent_0_humanoid_detector_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -182,6 +185,10 @@ habitat:
             width: 640
             hfov: 47
           arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+          arm_panoptic_sensor:
             height: 224
             width: 171
             hfov: 55

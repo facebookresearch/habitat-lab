@@ -1214,3 +1214,40 @@ class ContactTestStats(Measure):
         )
         self._contact_flag.append(flag)
         self._metric = np.average(self._contact_flag)
+
+
+@registry.register_sensor
+class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._human_id = 100
+        self._human_detect_threshold = 100
+        self._step_i = 0
+
+    def _get_uuid(self, *args, **kwargs):
+        return "humanoid_detector_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        found_human = False
+
+        panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
+        if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
+            found_human = True
+        print(found_human, self._step_i)
+        self._step_i += 1
+        if found_human:
+            return np.ones(1, dtype=np.float32)
+        else:
+            return np.zeros(1, dtype=np.float32)

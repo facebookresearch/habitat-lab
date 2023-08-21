@@ -56,6 +56,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -496,6 +497,14 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidJointSensor"
     dimensionality: int = 54 * 4
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
 
 
 @dataclass
@@ -2029,6 +2038,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="humanoid_joint_sensor",
     node=HumanoidJointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
