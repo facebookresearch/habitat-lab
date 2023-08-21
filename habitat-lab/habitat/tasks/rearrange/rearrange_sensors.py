@@ -1071,7 +1071,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
-class DoesWantTerminate(Measure):
+class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
     """
     Returns 1 if the agent has called the stop action and 0 otherwise.
     """
@@ -1086,7 +1086,16 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
+        # TODO: fix the agent_id is none issue
+        if self.agent_id is not None or "rearrange_stop" not in task.actions:
+            try:
+                use_k = f"agent_{self.agent_id}_rearrange_stop"
+                self._metric = task.actions[use_k].does_want_terminate
+            except Exception:
+                use_k = f"agent_{0}_rearrange_stop"
+                self._metric = task.actions[use_k].does_want_terminate
+        else:
+            self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure
@@ -1122,7 +1131,6 @@ class BadCalledTerminate(Measure):
         is_succ = task.measurements.measures[
             self._success_measure_name
         ].get_metric()
-
         self._metric = (not is_succ) and does_action_want_stop
 
 

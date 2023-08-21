@@ -33,7 +33,7 @@ defaults:
     - nav_to_pos_succ
     - does_want_terminate
     - rearrange_nav_to_obj_success
-    - bad_called_terminate
+    #- bad_called_terminate
     - rearrange_nav_to_obj_reward
 
   - /habitat/task/lab_sensors:
@@ -51,6 +51,7 @@ defaults:
     - nav_goal_sensor
 
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
@@ -61,6 +62,7 @@ defaults:
 
 habitat:
   task:
+    type: RearrangeCompositeTaskNavGoal-v0
     lab_sensors:
       agent_1_should_replan:
         x_len: 2.0
@@ -71,6 +73,7 @@ habitat:
     success_measure: nav_to_obj_success
     success_reward: 10.0
     slack_reward: -0.005
+    end_on_success: True
     task_spec: multi_agent_tidy_house_fp_2obj #multi_agent_tidy_house_solved
     pddl_domain_def: fp
     actions:
@@ -106,7 +109,7 @@ habitat:
         max_accum_force: -1 #10_000.0
         max_instant_force: -1 #10_000.0
       collisions_terminate:
-        max_scene_colls: 100.0
+        max_scene_colls: -1 #100000.0
       rearrange_nav_to_obj_reward:
         force_pen: 0.01
         max_force_pen: 0.01

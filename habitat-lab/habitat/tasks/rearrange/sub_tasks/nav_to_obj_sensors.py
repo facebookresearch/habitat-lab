@@ -158,7 +158,7 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class DistToGoal(Measure):
+class DistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "dist_to_goal"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -179,7 +179,11 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
+            np.array(
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 
@@ -192,7 +196,7 @@ class DistToGoal(Measure):
 
 
 @registry.register_measure
-class RotDistToGoal(Measure):
+class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "rot_dist_to_goal"
 
     def __init__(self, *args, sim, **kwargs):
@@ -212,7 +216,7 @@ class RotDistToGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
         # Get the agent
-        robot = self._sim.articulated_agent
+        robot = self._sim.get_agent_data(self.agent_id).articulated_agent
         # Get the base transformation
         T = robot.base_transformation
         # Do transformation
