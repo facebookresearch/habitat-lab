@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch import Tensor
 
+from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
@@ -110,6 +111,9 @@ class PPO(nn.Module, Updater):
 
     def _create_optimizer(self, lr, eps):
         params = list(filter(lambda p: p.requires_grad, self.parameters()))
+        logger.info(
+            f"Number of params to train: {sum(param.numel() for param in params)}"
+        )
         if len(params) > 0:
             optim_cls = optim.Adam
             optim_kwargs = dict(
@@ -131,9 +135,6 @@ class PPO(nn.Module, Updater):
             return optim_cls(**optim_kwargs)
         else:
             return None
-
-    def forward(self, *x):
-        raise NotImplementedError
 
     def get_advantages(self, rollouts: RolloutStorage) -> Tensor:
         advantages = (
@@ -372,9 +373,6 @@ class PPO(nn.Module, Updater):
     def after_step(self) -> None:
         if isinstance(self.entropy_coef, LagrangeInequalityCoefficient):
             self.entropy_coef.project_into_bounds()
-
-    def after_update(self):
-        pass
 
     def get_resume_state(self):
         return {

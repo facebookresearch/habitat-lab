@@ -825,7 +825,9 @@ class RearrangeEpisodeGenerator:
             for object_path in self.cfg.additional_object_paths:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
-            if self.sim.config.sim_cfg.scene_id == scene_name:
+            if self.sim.config.sim_cfg.scene_id != scene_name:
+                self.sim.close(destroy=True)
+            else:
                 # we need to force a reset, so reload the NONE scene
                 # TODO: we should fix this to provide an appropriate reset method
                 proxy_backend_cfg = habitat_sim.SimulatorConfiguration()

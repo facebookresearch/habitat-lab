@@ -1950,6 +1950,12 @@ cs.store(
     name="nav_goal_sensor",
     node=NavGoalPointGoalSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.all_predicates",
+    group="habitat/task/lab_sensors",
+    name="all_predicates",
+    node=GlobalPredicatesSensorConfig,
+)
 
 
 # Task Measurements

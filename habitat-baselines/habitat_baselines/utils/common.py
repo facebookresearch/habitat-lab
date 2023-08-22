@@ -390,7 +390,7 @@ def generate_video(
     fps: int = 10,
     verbose: bool = True,
     keys_to_include_in_name: Optional[List[str]] = None,
-) -> None:
+) -> str:
     r"""Generate video according to specified information.
 
     Args:
@@ -404,10 +404,10 @@ def generate_video(
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.
     Returns:
-        None
+        The saved video name.
     """
     if len(images) < 1:
-        return
+        return ""
 
     metric_strs = []
     if (
@@ -439,6 +439,7 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+    return video_name
 
 
 def tensor_to_depth_images(

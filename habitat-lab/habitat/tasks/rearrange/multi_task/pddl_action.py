@@ -68,6 +68,10 @@ class PddlAction:
         self._task_info = task_info
         self._post_cond_search = post_cond_search
 
+    @property
+    def post_cond(self) -> List[Predicate]:
+        return self._post_cond
+
     def set_post_cond_search(
         self, post_cond_search: List[Dict[PddlEntity, PddlEntity]]
     ) -> None:

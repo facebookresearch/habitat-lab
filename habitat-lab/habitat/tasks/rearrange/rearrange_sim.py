@@ -93,7 +93,8 @@ class RearrangeSim(HabitatSim):
 
         self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []
         self._start_art_states: Dict[
-            habitat_sim.physics.ManagedArticulatedObject, List[float]
+            habitat_sim.physics.ManagedArticulatedObject,
+            Tuple[List[float], mn.Matrix4],
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
@@ -281,6 +282,8 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             self._prev_obj_names = None
 
+        # Only remove and re-add objects if we have a new set of objects.
+        ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
         obj_names = [x[0] for x in ep_info.rigid_objs]
         # Only remove and re-add objects if we have a new set of objects.
         should_add_objects = self._prev_obj_names != obj_names
@@ -306,9 +309,10 @@ class RearrangeSim(HabitatSim):
         self._viz_handle_to_template = {}
 
         # Set the default articulated object joint state.
-        for ao, set_joint_state in self._start_art_states.items():
+        for ao, (set_joint_state, set_T) in self._start_art_states.items():
             ao.clear_joint_states()
             ao.joint_positions = set_joint_state
+            ao.transformation = set_T
 
         # Load specified articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
@@ -358,7 +362,8 @@ class RearrangeSim(HabitatSim):
             self.agents_mgr.first_setup()
             # Capture the starting art states
             self._start_art_states = {
-                ao: ao.joint_positions for ao in self.art_objs
+                ao: (ao.joint_positions, ao.transformation)
+                for ao in self.art_objs
             }
 
         if self._should_setup_semantic_ids:

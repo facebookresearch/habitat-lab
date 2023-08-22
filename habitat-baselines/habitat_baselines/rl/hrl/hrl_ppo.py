@@ -33,7 +33,7 @@ class HRLPPO(PPO):
             action_log_probs,
             dist_entropy,
             _,
-            _,
+            aux_loss_res,
         ) = self._evaluate_actions(
             batch["observations"],
             batch["recurrent_hidden_states"],
@@ -80,6 +80,7 @@ class HRLPPO(PPO):
             self.value_loss_coef * value_loss,
             action_loss,
         ]
+        all_losses.extend(v["loss"] for v in aux_loss_res.values())
 
         dist_entropy = reduce_loss(dist_entropy)
         if isinstance(self.entropy_coef, float):
@@ -100,6 +101,12 @@ class HRLPPO(PPO):
         with inference_mode():
             record_min_mean_max(orig_values, "value_pred")
             record_min_mean_max(ratio, "prob_ratio")
+            total_size = batch["loss_mask"].shape[0]
+            if isinstance(n_samples, torch.Tensor):
+                n_samples = n_samples.item()
+            learner_metrics["batch_filled_ratio"].append(
+                n_samples / total_size
+            )
 
             learner_metrics["value_loss"].append(value_loss)
             learner_metrics["action_loss"].append(action_loss)
@@ -115,6 +122,9 @@ class HRLPPO(PPO):
                 learner_metrics["entropy_coef"].append(
                     self.entropy_coef().detach()
                 )
+            for name, res in aux_loss_res.items():
+                for k, v in res.items():
+                    learner_metrics[f"aux_{name}_{k}"].append(v.detach())
 
 
 @baseline_registry.register_updater
