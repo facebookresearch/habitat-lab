@@ -5,6 +5,6 @@ name: "HierarchicalPolicy"
 #       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
-    name: "FixedHighLevelPolicy"
+    name: "RandomWalkHighLevelPolicy"
     add_arm_rest: True
   defined_skills: {}
