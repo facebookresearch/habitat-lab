@@ -20,7 +20,7 @@ defaults:
     - finding_success_rate
     - following_rate
     - following_distance
-    - following_spl
+    # - following_spl
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
