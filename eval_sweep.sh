@@ -1,6 +1,7 @@
 #!/bin/bash
 
-base_dir="/checkpoint/akshararai/hab3"
+# base_dir="/checkpoint/akshararai/hab3"
+base_dir="/fsx-siro/akshararai/hab3"
 # shellcheck disable=SC2162
 read -p "Enter sweep directory name (example: pop_play/2023-04-17/16-19-04):" SWEEP_SUBDIR
 SWEEP_DIR="$base_dir/$SWEEP_SUBDIR"
