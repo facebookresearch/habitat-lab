@@ -402,7 +402,9 @@ class EvaluatorConfig(HabitatBaselinesBaseConfig):
     policy during evaluation mode.
     """
 
-    _target_: str = "habitat_baselines.rl.ppo.evaluator.HabitatEvaluator"
+    _target_: str = (
+        "habitat_baselines.rl.ppo.habitat_evaluator.HabitatEvaluator"
+    )
 
 
 @dataclass

@@ -134,7 +134,6 @@ class PointNavResNetPolicy(NetPolicy):
                 )
             )
         )
-
         return cls(
             observation_space=filtered_obs,
             action_space=action_space,

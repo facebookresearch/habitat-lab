@@ -94,6 +94,7 @@ class HrlRolloutStorage(RolloutStorage):
         should_inserts = should_inserts.flatten()
 
         if should_inserts.sum() == 0:
+            self._last_should_inserts = should_inserts
             return
 
         env_idxs = torch.arange(self._num_envs)
