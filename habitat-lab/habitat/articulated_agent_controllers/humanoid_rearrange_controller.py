@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import os
 import pickle as pkl
 
@@ -111,6 +112,22 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+
+        ## Load hand data
+        if "left_hand" in walk_data:
+            self.hand_data = walk_data["left_hand"]
+            nposes = self.hand_data["pose_motion"]["transform_array"].shape[0]
+            self.vpose_info = self.hand_data["coord_info"].item()
+            self.hand_motion = Motion(
+                self.hand_data["pose_motion"]["joints_array"].reshape(
+                    nposes, -1, 4
+                ),
+                self.hand_data["pose_motion"]["transform_array"],
+                None,
+                1,
+            )
+        else:
+            self.hand_data = None
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
         seconds_per_step = 1.0 / ctrl_freq
@@ -289,3 +306,182 @@ class HumanoidRearrangeController:
             self.obj_transform_base.transposed()
         ).flatten()
         return self.joint_pose + list(obj_trans_offset) + list(obj_trans_base)
+
+    def comp_values(self, index):
+        z_i = index % self.vpose_info["num_bins"][2]
+        x_i = (
+            int(index / self.vpose_info["num_bins"][2])
+            % self.vpose_info["num_bins"][0]
+        )
+        y_i = int(
+            index
+            / (self.vpose_info["num_bins"][0] * self.vpose_info["num_bins"][2])
+        )
+        findex = np.array([x_i, y_i, z_i])
+
+        dist = self.vpose_info["max"] - self.vpose_info["min"]
+        dist_per_bin = dist / (self.vpose_info["num_bins"] - 1)
+        xyz = findex * dist_per_bin + self.vpose_info["min"]
+        return xyz
+
+    def _trilinear_interpolate_pose(self, position):
+        def find_index_quant(minv, maxv, num_bins, value):
+            # Find the quantization bins where a given value falls
+            # E.g. if we have 3 points, min=0, max=1, value=0.75, it
+            # will fall between 1 and 2
+            value = max(min(value, maxv), minv)
+            value_norm = (value - minv) / (maxv - minv)
+
+            index = value_norm * (num_bins - 1)
+            # lower = max(0, math.floor(index))
+            # upper = min(math.ceil(index), num_bins - 1)
+
+            lower = min(max(0, math.floor(index)), num_bins - 1)
+            upper = max(min(math.ceil(index), num_bins - 1), 0)
+
+            return upper, lower, value_norm
+
+        def comp_inter(x_i, y_i, z_i):
+            # Given an integer index from 0 to num_bins - 1
+            # on each dimension, compute the final index
+            index = (
+                y_i
+                * self.vpose_info["num_bins"][0]
+                * self.vpose_info["num_bins"][2]
+                + x_i * self.vpose_info["num_bins"][2]
+                + z_i
+            )
+            return index
+
+        def normalize_quat(quat_tens):
+            # The last dimension contains the quaternion
+            return quat_tens / np.linalg.norm(quat_tens, axis=-1)[..., None]
+
+        def inter_data(x_i, y_i, z_i, dat, is_quat=False):
+            x0, y0, z0 = x_i[0], y_i[0], z_i[0]
+            x1, y1, z1 = x_i[1], y_i[1], z_i[1]
+            xd, yd, zd = x_i[2], y_i[2], z_i[2]
+            c000 = dat[comp_inter(x0, y0, z0)]
+            c001 = dat[comp_inter(x0, y0, z1)]
+            c010 = dat[comp_inter(x0, y1, z0)]
+            c011 = dat[comp_inter(x0, y1, z1)]
+            c100 = dat[comp_inter(x1, y0, z0)]
+            c101 = dat[comp_inter(x1, y0, z1)]
+            c110 = dat[comp_inter(x1, y1, z0)]
+            c111 = dat[comp_inter(x1, y1, z1)]
+
+            c00 = c000 * (1 - xd) + c100 * xd
+            c01 = c001 * (1 - xd) + c101 * xd
+            c10 = c010 * (1 - xd) + c110 * xd
+            c11 = c011 * (1 - xd) + c111 * xd
+            if is_quat:
+                c00 = normalize_quat(c00)
+                c01 = normalize_quat(c01)
+                c10 = normalize_quat(c10)
+                c11 = normalize_quat(c11)
+            c0 = c00 * (1 - yd) + c10 * yd
+            c1 = c01 * (1 - yd) + c11 * yd
+            if is_quat:
+                c0 = normalize_quat(c0)
+                c1 = normalize_quat(c1)
+
+            c = c0 * (1 - zd) + c1 * zd
+            if is_quat:
+                c = normalize_quat(c)
+
+            return c
+
+        relative_pos = position
+        x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
+        coord_diff = [x_diff, y_diff, z_diff]
+        coord_data = [
+            (
+                self.vpose_info["min"][ind_diff],
+                self.vpose_info["max"][ind_diff],
+                self.vpose_info["num_bins"][ind_diff],
+                coord_diff[ind_diff],
+            )
+            for ind_diff in range(3)
+        ]
+        # each value contains the lower, upper index and distance
+        x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
+
+        rotations, translations, joints = [], [], []
+        for ind in range(len(self.hand_motion.poses)):
+            curr_transform = mn.Matrix4(
+                self.hand_motion.poses[ind].root_transform
+            )
+
+            quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+            joints.append(
+                np.array(self.hand_motion.poses[ind].joints).reshape(-1, 4)[
+                    None, ...
+                ]
+            )
+            rotations.append(
+                np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+            )
+            translations.append(
+                np.array(curr_transform.translation)[None, ...]
+            )
+
+        data_trans = np.concatenate(translations)
+        data_rot = np.concatenate(rotations)
+        data_joint = np.concatenate(joints)
+        res_joint = inter_data(x_ind, y_ind, z_ind, data_joint, is_quat=True)
+        res_trans = inter_data(x_ind, y_ind, z_ind, data_trans)
+        res_rot = inter_data(x_ind, y_ind, z_ind, data_rot, is_quat=True)
+        quat_rot = mn.Quaternion(mn.Vector3(res_rot[:3]), res_rot[-1])
+        joint_list = list(res_joint.reshape(-1))
+        transform = mn.Matrix4.from_(
+            quat_rot.to_matrix(), mn.Vector3(res_trans)
+        )
+        return joint_list, transform
+
+    def calculate_reach_pose_2(self, ind):
+        coords = self.comp_values(ind)
+        curr_poses = self.hand_motion.poses[ind].joints
+        curr_transform = self.hand_motion.poses[ind].root_transform
+
+        self.obj_transform_offset = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+            @ curr_transform
+        )
+
+        self.joint_pose = curr_poses
+        transform_obj = self.obj_transform_base
+
+        inv_T = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_x(mn.Rad(-np.pi / 2.0))
+            @ self.obj_transform_base.inverted()
+        )
+
+        T = inv_T.inverted()
+
+        final_vec = T.transform_vector(mn.Vector3(coords))
+        final_coords = transform_obj.translation + final_vec
+        print(curr_transform.translation)
+        return np.array(final_coords)
+
+    def calculate_reach_pose(self, obj_pos: mn.Vector3):
+        root_pos = self.obj_transform_base.translation
+        inv_T = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_x(mn.Rad(-np.pi / 2.0))
+            @ self.obj_transform_base.inverted()
+        )
+        relative_pos = inv_T.transform_vector(obj_pos - root_pos)
+
+        curr_poses, curr_transform = self._trilinear_interpolate_pose(
+            mn.Vector3(relative_pos)
+        )
+
+        self.obj_transform_offset = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+            @ curr_transform
+        )
+
+        self.joint_pose = curr_poses
