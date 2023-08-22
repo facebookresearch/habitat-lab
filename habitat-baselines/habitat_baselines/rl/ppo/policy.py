@@ -124,7 +124,6 @@ class MultiAgentPolicyActionData(PolicyActionData):
             unpack_lengths = [
                 int(tensor_to_unpack.shape[-1] / self.num_agents)
             ] * self.num_agents
-
         return torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
 
     def unpack(self):
@@ -138,7 +137,11 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "actions": self._unpack(self.actions, self.length_actions),
             "value_preds": self._unpack(self.values),
             "action_log_probs": self._unpack(self.action_log_probs),
-            "take_actions": self._unpack(self.take_actions),
+            # Add length action here for training low-level policies in
+            # multi-agent setting
+            "take_actions": self._unpack(
+                self.take_actions, self.length_actions
+            ),
             # This is numpy array and must be split differently.
             "should_inserts": np.split(
                 self.should_inserts, self.num_agents, axis=-1
@@ -221,7 +224,12 @@ class Policy(abc.ABC):
         evaluating policies with multiple environments, where some environments
         will run out of episodes to evaluate and will be closing.
         """
-        raise NotImplementedError
+        # TODO: train low-level policies in multi-agent setting:
+        # implement the case when the envs_to_pause is not zero
+        if len(envs_to_pause) == 0:
+            return
+        else:
+            raise NotImplementedError
 
     @classmethod
     @abc.abstractmethod

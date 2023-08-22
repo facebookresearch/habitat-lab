@@ -267,6 +267,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 else:
                     self.humanoid_controller.calculate_stop_pose()
                     self.skill_done = True
+
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
@@ -770,3 +771,55 @@ class OracleNavCoordAction(OracleNavAction):
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
+
+
+@registry.register_task_action
+class OracleNavRandCoordAction(OracleNavCoordAction):
+    """
+    Oracle Nav RandCoord Action. Selects a random position in the scene and navigates
+    there until reaching. When the arg is 1, does replanning.
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "oracle_nav_randcoord_action": spaces.Box(
+                    shape=(1,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        if self._task._episode_id != self._prev_ep_id:
+            self._targets = {}
+            self._prev_ep_id = self._task._episode_id
+        self.skill_done = False
+        self.coord_nav = None
+
+    def _get_target_for_coord(self, obj_pos):
+        start_pos = obj_pos
+        return (start_pos, np.array(obj_pos))
+
+    def step(self, *args, is_last_action, **kwargs):
+        max_tries = 10
+        self.skill_done = False
+
+        if self.coord_nav is None:
+            self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
+                max_tries,
+                island_index=self._sim._largest_island_idx,
+            )
+        kwargs[
+            self._action_arg_prefix + "oracle_nav_coord_action"
+        ] = self.coord_nav
+        kwargs["is_last_action"] = is_last_action
+        ret_val = super().step(*args, is_last_action, **kwargs)
+        if self.skill_done:
+            self.coord_nav = None
+        return ret_val

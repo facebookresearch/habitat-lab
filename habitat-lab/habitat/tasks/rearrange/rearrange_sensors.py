@@ -783,6 +783,56 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
+class CollisionsTerminate(UsesArticulatedAgentInterface, Measure):
+    """
+    Collision_ termination based on the number of collision
+    """
+
+    cls_uuid: str = "collision_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_scene_colls = self._config.max_scene_colls
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        collisions_info = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        scene_colls = collisions_info["robot_scene_colls"]
+        if self._max_scene_colls > 0 and scene_colls > self._max_scene_colls:
+            rearrange_logger.debug(
+                f"Scene collision threshold={self._max_scene_colls} exceeded with {scene_colls}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
+@registry.register_measure
 class RobotForce(UsesArticulatedAgentInterface, Measure):
     """
     The amount of force in newton's accumulatively applied by the robot.
@@ -1021,12 +1071,16 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
-class DoesWantTerminate(Measure):
+class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
     """
     Returns 1 if the agent has called the stop action and 0 otherwise.
     """
 
     cls_uuid: str = "does_want_terminate"
+
+    def __init__(self, config, task, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._mask_out_rearrange_stop = config["mask_out_rearrange_stop"]
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1036,7 +1090,19 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
+        # TODO: fix the agent_id is none issue
+        if self.agent_id is not None or "rearrange_stop" not in task.actions:
+            try:
+                use_k = f"agent_{self.agent_id}_rearrange_stop"
+                self._metric = task.actions[use_k].does_want_terminate
+            except Exception:
+                use_k = f"agent_{0}_rearrange_stop"
+                if self._mask_out_rearrange_stop:
+                    self._metric = False
+                else:
+                    self._metric = task.actions[use_k].does_want_terminate
+        else:
+            self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure
@@ -1072,7 +1138,6 @@ class BadCalledTerminate(Measure):
         is_succ = task.measurements.measures[
             self._success_measure_name
         ].get_metric()
-
         self._metric = (not is_succ) and does_action_want_stop
 
 
@@ -1112,10 +1177,14 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
             use_k = "oracle_nav_action"
             if "oracle_nav_with_backing_up_action" in self._task.actions:
                 use_k = "oracle_nav_with_backing_up_action"
-
-        nav_action = self._task.actions[use_k]
-
-        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+        try:
+            nav_action = self._task.actions[use_k]
+            return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+        except Exception:
+            # TODO: train low-level policies in multi-agent setting:
+            # When there is no oracle nav action for the agent
+            # it will always return False
+            return np.array(False, dtype=np.float32)[..., None]
 
 
 @registry.register_measure
@@ -1145,3 +1214,40 @@ class ContactTestStats(Measure):
         )
         self._contact_flag.append(flag)
         self._metric = np.average(self._contact_flag)
+
+
+@registry.register_sensor
+class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._human_id = 100
+        self._human_detect_threshold = 100
+        self._step_i = 0
+
+    def _get_uuid(self, *args, **kwargs):
+        return "humanoid_detector_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        found_human = False
+
+        panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
+        if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
+            found_human = True
+        print(found_human, self._step_i)
+        self._step_i += 1
+        if found_human:
+            return np.ones(1, dtype=np.float32)
+        else:
+            return np.zeros(1, dtype=np.float32)

@@ -301,7 +301,9 @@ class SocialNavReward(Measure):
 
     def __init__(self, *args, config, **kwargs):
         super().__init__(*args, config, **kwargs)
-        # self._stage_reward = config.stage_sparse_reward
+        self._config = config
+        self._safe_dis_min = 1
+        self._safe_dis_max = 2
 
     def reset_metric(self, *args, **kwargs):
         self._stage_succ = []
@@ -318,6 +320,10 @@ class SocialNavReward(Measure):
         position_robot = kwargs["observations"]["agent_0_localization_sensor"][
             :3
         ]
-
-        distance = np.linalg.norm(position_human - position_robot)
-        self._metric = -distance
+        dis = np.linalg.norm(position_human - position_robot)
+        if dis >= self._safe_dis_min and dis < self._safe_dis_max:
+            self._metric = 1.0
+        elif dis < self._safe_dis_min:
+            self._metric = 2.0 * dis - 1.0
+        else:
+            self._metric = 5.0 - 2.0 * dis
