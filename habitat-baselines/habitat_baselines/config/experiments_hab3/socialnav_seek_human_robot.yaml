@@ -94,8 +94,8 @@ habitat:
     actions:
       agent_0_base_velocity:
         agent_index : 0
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 10.0
 
       agent_1_base_velocity:
         agent_index : 1
@@ -107,8 +107,8 @@ habitat:
         type: OracleNavRandCoordAction
         agent_index : 1
         motion_control: human_joints
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 10.0
 
     measurements:
       force_terminate:
@@ -124,8 +124,9 @@ habitat:
         end_on_collide: True
       does_want_terminate:
         mask_out_rearrange_stop: True
-
-
+      rearrange_nav_to_obj_success:
+        must_look_at_targ: True
+        must_call_stop: False
 
   environment:
     max_episode_steps: 1500
@@ -145,7 +146,7 @@ habitat:
       #- agent_0_localization_sensor
       #- agent_0_has_finished_oracle_nav
       - agent_0_goal_to_agent_gps_compass
-      - agent_0_humanoid_detector_sensor
+      #- agent_0_humanoid_detector_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor

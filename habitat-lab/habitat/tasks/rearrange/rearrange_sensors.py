@@ -1223,7 +1223,6 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         self._sim = sim
         self._human_id = 100
         self._human_detect_threshold = 100
-        self._step_i = 0
 
     def _get_uuid(self, *args, **kwargs):
         return "humanoid_detector_sensor"
@@ -1245,8 +1244,7 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
         if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
             found_human = True
-        print(found_human, self._step_i)
-        self._step_i += 1
+
         if found_human:
             return np.ones(1, dtype=np.float32)
         else:

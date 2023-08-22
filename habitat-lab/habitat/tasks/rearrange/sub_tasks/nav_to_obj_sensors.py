@@ -182,7 +182,6 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        print("DisToGoal nav_goal_pos:", task.nav_goal_pos[[0, 2]])
         return np.linalg.norm(
             np.array(
                 self._sim.get_agent_data(
