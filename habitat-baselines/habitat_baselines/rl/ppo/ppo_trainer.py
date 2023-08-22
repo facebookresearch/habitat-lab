@@ -912,6 +912,7 @@ class PPOTrainer(BaseRLTrainer):
             device=self.device,
             dtype=torch.long if discrete_actions else torch.float,
         )
+        # breakpoint()
         not_done_masks = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,

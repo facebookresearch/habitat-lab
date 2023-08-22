@@ -186,8 +186,8 @@ habitat:
         navmesh_offset_for_agent_placement: [[0.0, 0.0]]
         lateral_lin_speed: 40.0
         longitudinal_lin_speed: 40.0
-        lin_speed: 10 # 40.0
-        ang_speed: 10 #20.0
+        lin_speed: 40.0
+        ang_speed: 20.0
 
     robot_at_thresh: 3.0
   gym:

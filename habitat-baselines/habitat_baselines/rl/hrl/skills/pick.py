@@ -70,6 +70,7 @@ class PickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
+        # breakpoint()
         action = super()._internal_act(
             observations,
             rnn_hidden_states,
