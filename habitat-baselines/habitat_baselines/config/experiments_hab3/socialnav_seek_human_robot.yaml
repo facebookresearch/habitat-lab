@@ -61,7 +61,7 @@ defaults:
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent #rgbd_head_rgbd_arm_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent #rgbd_head_rgbdp_arm_agent #rgbd_head_rgbd_arm_agent
   - _self_
 
 hydra:
@@ -124,8 +124,8 @@ habitat:
         end_on_collide: True
       does_want_terminate:
         mask_out_rearrange_stop: True
-      rearrange_nav_to_obj_success:
-        must_look_at_targ: True
+      social_nav_seek_success:
+        must_look_at_targ: False
         must_call_stop: False
 
   environment:
@@ -140,13 +140,13 @@ habitat:
       #- agent_0_obj_goal_sensor
       #- agent_0_obj_start_gps_compass
       #- agent_0_obj_goal_gps_compass
-      - agent_0_joint
+      #- agent_0_joint
       #- agent_0_is_holding
       #- agent_0_ee_pos
       #- agent_0_localization_sensor
       #- agent_0_has_finished_oracle_nav
       - agent_0_goal_to_agent_gps_compass
-      #- agent_0_humanoid_detector_sensor
+      - agent_0_humanoid_detector_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -205,14 +205,14 @@ habitat_baselines:
   torch_gpu_id: 0
   video_fps: 30
   eval_ckpt_path_dir: "data/checkpoints"
-  num_environments: 32
+  num_environments: 18
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
   num_checkpoints: 100
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
-  load_resume_state_config: False
+  load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False

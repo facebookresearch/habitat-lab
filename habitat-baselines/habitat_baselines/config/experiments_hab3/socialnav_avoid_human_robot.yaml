@@ -18,7 +18,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
 
   - /habitat/task/measurements:
     - social_nav_reward
@@ -79,7 +79,7 @@ habitat:
     success_reward: 10.0
     slack_reward: -0.005
     end_on_success: True
-    task_spec: multi_agent_tidy_house_fp_2obj #multi_agent_tidy_house_solved
+    task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_fp_2obj #multi_agent_tidy_house_solved
     pddl_domain_def: fp
     actions:
       agent_0_base_velocity:
@@ -93,19 +93,25 @@ habitat:
         agent_index : 1
       agent_1_pddl_apply_action:
         agent_index : 1
-      agent_1_oracle_nav_with_backing_up_action:
-        type: OracleNavAction
+      # agent_1_oracle_nav_with_backing_up_action:
+      #   type: OracleNavAction
+      #   agent_index : 1
+      #   motion_control: human_joints
+      #   spawn_max_dist_to_obj: -1.0
+      #   collision_threshold: 0.02
+      #   dist_thresh: 0.5
+      #   # The navmesh offset for the action control
+      #   navmesh_offset: [[0.0, 0.0]]
+      #   # The navmesh offset for the agent placement
+      #   navmesh_offset_for_agent_placement: [[0.0, 0.0]]
+      #   lateral_lin_speed: 40.0
+      #   longitudinal_lin_speed: 40.0
+      #   lin_speed: 40.0
+      #   ang_speed: 20.0
+      agent_1_oracle_nav_randcoord_action:
+        type: OracleNavRandCoordAction
         agent_index : 1
         motion_control: human_joints
-        spawn_max_dist_to_obj: -1.0
-        collision_threshold: 0.02
-        dist_thresh: 0.5
-        # The navmesh offset for the action control
-        navmesh_offset: [[0.0, 0.0]]
-        # The navmesh offset for the agent placement
-        navmesh_offset_for_agent_placement: [[0.0, 0.0]]
-        lateral_lin_speed: 40.0
-        longitudinal_lin_speed: 40.0
         lin_speed: 40.0
         ang_speed: 20.0
 
@@ -123,6 +129,9 @@ habitat:
         end_on_collide: True
       does_want_terminate:
         mask_out_rearrange_stop: True
+      rearrange_nav_to_obj_success:
+        must_look_at_targ: False
+        must_call_stop: False
 
   environment:
     max_episode_steps: 1500
@@ -195,14 +204,14 @@ habitat_baselines:
   torch_gpu_id: 0
   video_fps: 30
   eval_ckpt_path_dir: "data/checkpoints"
-  num_environments: 32
+  num_environments: 18
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
   num_checkpoints: 100
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
-  load_resume_state_config: False
+  load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
@@ -239,10 +248,11 @@ habitat_baselines:
               - nav_to_receptacle_by_name
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
-            nav_to_obj:
-              skill_name: "OracleNavPolicy"
+            nav_to_randcoord:
+              skill_name: "OracleNavCoordPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
+              ignore_grip: True
     ppo:
       # ppo params
       clip_param: 0.2

@@ -65,6 +65,7 @@ class MultiPolicy(Policy):
             agent_obs = self._update_obs_with_agent_prefix_fn(
                 observations, agent_i
             )
+
             agent_actions.append(
                 policy.act(
                     agent_obs,
