@@ -30,15 +30,27 @@ close_fridge:
   force_end_on_timeout: False
   pddl_action_names: ["close_fridge_by_name"]
 
+# pick:
+#   skill_name: "PickSkillPolicy"
+#   obs_skill_inputs: ["obj_start_sensor"]
+#   load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_10_5/latest.pth"
+
 pick:
   skill_name: "PickSkillPolicy"
   obs_skill_inputs: ["obj_start_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_10_5/latest.pth"
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_9/latest.pth"
+
+# place:
+#   skill_name: "PlaceSkillPolicy"
+#   obs_skill_inputs: ["obj_goal_sensor"]
+#   max_skill_steps: 500
+#   load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_0/latest.pth"
 
 place:
   skill_name: "PlaceSkillPolicy"
   obs_skill_inputs: ["obj_goal_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_6_0/latest.pth"
+  max_skill_steps: 500
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_7_11/latest.pth"
 
 # place:
 #   skill_name: "NoopSkillPolicy"

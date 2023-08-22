@@ -84,7 +84,7 @@ habitat:
         arm_joint_dimensionality: 7
         grasp_thresh_dist: 0.15
         disable_grip: False
-        delta_pos_limit: 0.05
+        delta_pos_limit: 0.20
         ee_ctrl_lim: 0.015
         grip_controller: MagicGraspAction
 
@@ -98,24 +98,46 @@ habitat:
         allow_dyn_slide: True
         allow_back: True
 
+      # agent_0_pick_base_velocity:
+      #   # agent_index: 0
+      #   # lin_speed: 40.0
+      #   # ang_speed: 20.0
+      #   agent_index: 0
+      #   lin_speed: 5.0
+      #   ang_speed: 5.0
+      #   allow_dyn_slide: True
+      #   allow_back: True
+      #   gym_action_prefix: pick_base_vel
+
       agent_0_pick_base_velocity:
         # agent_index: 0
         # lin_speed: 40.0
         # ang_speed: 20.0
         agent_index: 0
-        lin_speed: 5.0
-        ang_speed: 5.0
+        lin_speed: 2.0
+        ang_speed: 2.0
         allow_dyn_slide: True
         allow_back: True
         gym_action_prefix: pick_base_vel
+
+      # agent_0_place_base_velocity:
+      #   # agent_index: 0
+      #   # lin_speed: 40.0
+      #   # ang_speed: 20.0 #arm 0.05
+      #   agent_index: 0
+      #   lin_speed: 2.0
+      #   ang_speed: 2.0
+      #   allow_dyn_slide: True
+      #   allow_back: True
+      #   gym_action_prefix: place_base_vel
 
       agent_0_place_base_velocity:
         # agent_index: 0
         # lin_speed: 40.0
         # ang_speed: 20.0 #arm 0.05
         agent_index: 0
-        lin_speed: 2.0
-        ang_speed: 2.0
+        lin_speed: 5.0
+        ang_speed: 5.0
         allow_dyn_slide: True
         allow_back: True
         gym_action_prefix: place_base_vel
@@ -215,15 +237,15 @@ habitat:
         # height: 1.41
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
-        # sim_sensors:
-        #   arm_rgb_sensor:
-        #     height: 480
-        #     width: 640
-        #     hfov: 47
-        #   arm_depth_sensor:
-        #     height: 224
-        #     width: 171
-        #     hfov: 55
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
         joint_start_noise: 0.0
       agent_1:
         radius: 0.3
