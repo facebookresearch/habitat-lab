@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
@@ -130,22 +129,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
                 log_info,
             )
         return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
-
-    def _setup_actions(self) -> List[PddlAction]:
-        all_actions = self._pddl_prob.get_possible_actions()
-        all_actions = [
-            ac for ac in all_actions if ac.name in self._config.allowed_actions
-        ]
-        if not self._config.allow_other_place:
-            all_actions = [
-                ac
-                for ac in all_actions
-                if (
-                    ac.name != "place"
-                    or ac.param_values[0].name in ac.param_values[1].name
-                )
-            ]
-        return all_actions
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space

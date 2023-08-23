@@ -82,6 +82,8 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
+        self._fixed_starting_position = True
+        self._seed = self._sim.habitat_config.seed
 
         # Get config options
         self._force_regenerate = self._config.force_regenerate
@@ -95,6 +97,11 @@ class RearrangeTask(NavigationTask):
             self._config.constraint_violation_drops_object
         )
         self._count_obj_collisions = self._config.count_obj_collisions
+        if (
+            "overfit" in self._sim.habitat_config
+            and self._sim.habitat_config["overfit"]
+        ):
+            self._fixed_starting_position = True
 
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
@@ -204,6 +211,9 @@ class RearrangeTask(NavigationTask):
             self._is_episode_active = True
 
             if self._should_place_articulated_agent:
+                if self._fixed_starting_position:
+                    np.random.seed(self._seed)
+                    self._sim.pathfinder.seed(self._seed)
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
 

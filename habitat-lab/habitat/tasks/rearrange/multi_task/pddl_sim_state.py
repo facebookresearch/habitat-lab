@@ -141,10 +141,12 @@ class PddlRobotState:
             T = robot.base_transformation
             # Do transformation
             pos = T.inverted().transform_point(targ_pos)
-            # Compute distance
-            dist = np.linalg.norm(pos)
             # Project to 2D plane (x,y,z=0)
             pos[2] = 0.0
+
+            # Compute distance
+            dist = np.linalg.norm(pos)
+
             # Unit vector of the pos
             pos = pos.normalized()
             # Define the coordinate of the robot
