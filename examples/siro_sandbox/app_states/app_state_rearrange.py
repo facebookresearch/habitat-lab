@@ -154,7 +154,7 @@ class AppStateRearrange(AppState):
         walk_dir = None
         if not self._first_person_mode:
             candidate_walk_dir = (
-                self._nav_helper.viz_and_get_humanoid_walk_dir()
+                self._nav_helper.viz_and_get_humanoid_walk_dir_from_ray_cast()
             )
             if self._sandbox_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
