@@ -221,7 +221,6 @@ class NnSkillPolicy(SkillPolicy):
             policy_cfg, filtered_obs_space, filtered_action_space
         )
 
-        # breakpoint()
         if len(ckpt_dict) > 0:
             try:
                 # actor_critic.load_state_dict(

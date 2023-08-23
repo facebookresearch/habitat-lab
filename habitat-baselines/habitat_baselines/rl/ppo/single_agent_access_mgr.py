@@ -282,8 +282,12 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         for env_i, should_insert in enumerate(action_data.should_inserts):
             if should_insert.item():
+                print("inside: update_hidden_state:", prev_actions)
+                print("action_data.actions:", action_data.actions)
+                print("prev_actions:", prev_actions)
                 rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
                 prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
+                print("prev_actions:", prev_actions)
 
 
 def get_rollout_obs_space(obs_space, actor_critic, config):

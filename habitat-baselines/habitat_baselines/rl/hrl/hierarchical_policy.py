@@ -207,11 +207,9 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     @property
     def num_recurrent_layers(self):
-        # breakpoint()
         if self._high_level_policy.num_recurrent_layers != 0:
             return self._high_level_policy.num_recurrent_layers
         else:
-            print(self._skills, list(self._skills.keys())[0])
             return 4  # self._skills[
             # list(self._skills.keys())[0]
             # ].num_recurrent_layers
@@ -264,6 +262,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                     dat = dat.slice_keys(*self._skills[k].required_obs_keys)
                 skill_dat[dat_k] = dat[v]
             grouped_skills[k] = (v, skill_dat)
+
         return grouped_skills
 
     def act(
@@ -320,7 +319,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             actions[batch_ids] += action_data.actions
-            rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+            # TODO: Better way to handle low-level skills rnn hidden states
+            # We comment out this line to avoid affecting the hidden state
+            # of high-level actins
+            # rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         # Skills should not be responsible for terminating the overall episode.
         actions[:, self._stop_action_idx] = 0.0

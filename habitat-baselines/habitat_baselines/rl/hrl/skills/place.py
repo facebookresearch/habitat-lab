@@ -11,7 +11,8 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
-from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.rl.hrl.utils import find_action_range, skill_io_manager
+from habitat_baselines.utils.common import get_num_actions
 
 
 class PlaceSkillPolicy(PickSkillPolicy):
@@ -29,6 +30,10 @@ class PlaceSkillPolicy(PickSkillPolicy):
                 self.place_start_id, self.place_len = find_action_range(
                     action_space, "place_base_velocity"
                 )
+
+        # Get the skill io manager
+        self.sm = skill_io_manager()
+        self._num_ac = get_num_actions(action_space)
 
     @dataclass(frozen=True)
     class PlaceSkillArgs:
@@ -63,10 +68,8 @@ class PlaceSkillPolicy(PickSkillPolicy):
             self._internal_log(
                 f"Terminating with {rel_resting_pos} and {is_holding}",
             )
-        print(rel_resting_pos, is_holding, self._config.at_resting_threshold)
-        # is_done = torch.zeros(1, dtype=torch.bool).to('cuda:0')
-        # if is_done:
-        #     breakpoint()
+            self.sm.hidden_state = None
+
         return is_done
 
     def _parse_skill_arg(self, skill_arg):
@@ -83,15 +86,23 @@ class PlaceSkillPolicy(PickSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
+        if self.sm.hidden_state is None:
+            self.sm.init_hidden_state(
+                observations,
+                self._wrap_policy.net._hidden_size,
+                self._wrap_policy.num_recurrent_layers,
+            )
+            self.sm.init_prev_action(prev_actions, self._num_ac)
+
         action = super()._internal_act(
             observations,
-            rnn_hidden_states,
-            prev_actions,
+            self.sm.hidden_state,
+            self.sm.prev_action,
             masks,
             cur_batch_idx,
             deterministic,
         )
-        # print(action)
+
         action = self._mask_pick(action, observations)
 
         action.actions[
@@ -105,4 +116,9 @@ class PlaceSkillPolicy(PickSkillPolicy):
         action.actions[
             :, self.pick_start_id : self.pick_start_id + self.pick_len
         ] = torch.zeros(size)
+
+        # Update the hidden state / action
+        self.sm.hidden_state = action.rnn_hidden_states
+        self.sm.prev_action = action.actions
+
         return action

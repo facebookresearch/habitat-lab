@@ -9,8 +9,9 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
-from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.rl.hrl.utils import find_action_range, skill_io_manager
 from habitat_baselines.rl.ppo.policy import PolicyActionData
+from habitat_baselines.utils.common import get_num_actions
 
 
 class PickSkillPolicy(NnSkillPolicy):
@@ -29,6 +30,10 @@ class PickSkillPolicy(NnSkillPolicy):
                     action_space, "base_velocity"
                 )
 
+        # Get the skill io manager
+        self.sm = skill_io_manager()
+        self._num_ac = get_num_actions(action_space)
+
     def _is_skill_done(
         self,
         observations,
@@ -45,7 +50,11 @@ class PickSkillPolicy(NnSkillPolicy):
         is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
 
-        return (is_holding * is_within_thresh).type(torch.bool)
+        is_done = (is_holding * is_within_thresh).type(torch.bool)
+        if is_done:
+            self.sm.hidden_state = None
+
+        return is_done
 
     def _parse_skill_arg(self, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
@@ -70,11 +79,18 @@ class PickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        # breakpoint()
+        if self.sm.hidden_state is None:
+            self.sm.init_hidden_state(
+                observations,
+                self._wrap_policy.net._hidden_size,
+                self._wrap_policy.num_recurrent_layers,
+            )
+            self.sm.init_prev_action(prev_actions, self._num_ac)
+
         action = super()._internal_act(
             observations,
-            rnn_hidden_states,
-            prev_actions,
+            self.sm.hidden_state,
+            self.sm.prev_action,
             masks,
             cur_batch_idx,
             deterministic,
@@ -99,5 +115,9 @@ class PickSkillPolicy(NnSkillPolicy):
         ] = torch.zeros(size)
 
         action = self._mask_pick(action, observations)
+
+        # Update the hidden state / action
+        self.sm.hidden_state = action.rnn_hidden_states
+        self.sm.prev_action = action.actions
 
         return action
