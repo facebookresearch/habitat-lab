@@ -10,9 +10,11 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
@@ -80,27 +82,84 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_articulated_agent.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
-    # def _find_closet_rep(self):
-    #     cur_pos = np.array(self.cur_articulated_agent.base_pos)
-    #     min_rep_pos = None
-    #     min_rep_dis = float("inf")
-    #     for rep in self._sim.receptacles:
-    #         rep_bb = self._sim.receptacles[rep]
-    #         rep_pos = np.random.uniform(rep_bb.min, rep_bb.max)
-    #         if np.linalg.norm(cur_pos - rep_pos) < min_rep_dis:
-    #             min_rep_dis = np.linalg.norm(cur_pos - rep_pos)
-    #             min_rep_pos = rep_pos
-    #     return min_rep_pos
+    def _find_closet_rep(self):
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+        all_receps = find_receptacles(self._sim)
+
+        min_rep_dis = float("inf")
+        min_rep = None
+        for rep in all_receps:
+            rep_bb = self._sim.receptacles[rep.name]
+            rep_pos = np.random.uniform(rep_bb.min, rep_bb.max)
+            if np.linalg.norm(cur_pos - rep_pos) < min_rep_dis:
+                min_rep_dis = np.linalg.norm(cur_pos - rep_pos)
+                min_rep_pos = rep_pos
+                min_rep = rep
+        return min_rep, min_rep_pos
+
+    def _snap_down_object(self):
+        breakpoint()
+        obj_id = self.cur_grasp_mgr._snapped_obj_id
+        self.cur_grasp_mgr.desnap()
+        target_obj = self._sim.get_rigid_object_manager().get_object_by_id(
+            obj_id
+        )
+        receptacle, receptacle_pos = self._find_closet_rep()
+
+        support_object_ids = [-1]
+        # add support object ids for non-stage receptacles
+        if receptacle.is_parent_object_articulated:
+            ao_instance = self._sim.get_articulated_object_manager().get_object_by_handle(
+                receptacle.parent_object_handle
+            )
+            for (
+                object_id,
+                link_ix,
+            ) in ao_instance.link_object_ids.items():
+                if receptacle.parent_link == link_ix:
+                    support_object_ids = [
+                        object_id,
+                        ao_instance.object_id,
+                    ]
+                    break
+        elif receptacle.parent_object_handle is not None:
+            support_object_ids = [
+                self._sim.get_rigid_object_manager()
+                .get_object_by_handle(receptacle.parent_object_handle)
+                .object_id
+            ]
+        breakpoint()
+        snap_success = sutils.snap_down(
+            self._sim,
+            target_obj,
+            support_object_ids,
+        )
+        return snap_success, receptacle_pos
 
     def _ungrasp(self):
+        # obj_id = self.cur_grasp_mgr._snapped_obj_id
+        # snap_success, receptacle_pos = self._snap_down_object()
         # Teleporting the object
-        obj_id = self.cur_grasp_mgr._snapped_obj_id
         _, pos_targs = self._sim.get_targets()
         targ_pos = pos_targs[0]
-        self.cur_grasp_mgr.desnap()
-        self._sim.get_rigid_object_manager().get_object_by_id(
-            obj_id
-        ).translation = targ_pos
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+
+        place_threshold = 0.5
+        if np.linalg.norm(cur_pos - targ_pos) <= place_threshold:
+            obj_id = self.cur_grasp_mgr._snapped_obj_id
+            self.cur_grasp_mgr.desnap()
+            # if not snap_success:
+            #     breakpoint()
+            #     self._sim.get_rigid_object_manager().get_object_by_id(
+            #         obj_id
+            #     ).translation = receptacle_pos
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                obj_id
+            ).translation = targ_pos
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
