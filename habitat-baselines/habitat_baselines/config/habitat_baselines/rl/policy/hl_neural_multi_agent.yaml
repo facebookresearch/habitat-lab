@@ -1,0 +1,27 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "NeuralHighLevelPolicy"
+    allowed_actions:
+      - nav_to_goal
+      - nav_to_obj
+      - pick
+      - place
+      - nav_to_receptacle_by_name
+      - turn_left
+      - turn_right
+      - move_forward
+      - move_backward
+    allow_other_place: False
+    hidden_dim: 512
+    use_rnn: True
+    rnn_type: 'LSTM'
+    backbone: resnet18
+    normalize_visual_inputs: False
+    num_rnn_layers: 2
+    termination_obs_name: null
+  defined_skills: {}

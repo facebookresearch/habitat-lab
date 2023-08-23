@@ -552,6 +552,29 @@ class GlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
+    type: str = "MultiAgentGlobalPredicatesSensor"
+
+
+@dataclass
+class ShouldReplanSensorConfig(LabSensorConfig):
+    type: str = "ShouldReplanSensor"
+    x_len: Optional[float] = None
+    y_len: Optional[float] = None
+    agent_idx: int = 0
+
+
+@dataclass
+class HasFinishedOracleNavSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class OtherAgentGpsConfig(LabSensorConfig):
+    type: str = "OtherAgentGps"
+
+
+@dataclass
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
@@ -1012,11 +1035,6 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeNodeIdx"
-
-
-@dataclass
 class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
     r"""
     Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
@@ -1039,6 +1057,25 @@ class CompositeSuccessMeasurementConfig(MeasurementConfig):
 class CompositeSubgoalReward(MeasurementConfig):
     type: str = "CompositeSubgoalReward"
     stage_sparse_reward: float = 1.0
+
+
+@dataclass
+class DidAgentsCollideConfig(MeasurementConfig):
+    type: str = "DidAgentsCollide"
+
+
+@dataclass
+class NumAgentsCollideConfig(MeasurementConfig):
+    type: str = "NumAgentsCollide"
+
+
+@dataclass
+class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
+    type: str = "CooperateSubgoalReward"
+    stage_sparse_reward: float = 1.0
+    end_on_collide: bool = True
+    # Positive penalty means give negative reward.
+    collide_penalty: float = 1.0
 
 
 @dataclass
@@ -1932,6 +1969,31 @@ cs.store(
     node=TargetStartGpsCompassSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.multi_agent_all_predicates",
+    group="habitat/task/lab_sensors",
+    name="multi_agent_all_predicates",
+    node=MultiAgentGlobalPredicatesSensorConfig,
+)
+
+cs.store(
+    package="habitat.task.lab_sensors.should_replan",
+    group="habitat/task/lab_sensors",
+    name="should_replan",
+    node=ShouldReplanSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_oracle_nav",
+    group="habitat/task/lab_sensors",
+    name="has_finished_oracle_nav",
+    node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.other_agent_gps",
+    group="habitat/task/lab_sensors",
+    name="other_agent_gps",
+    node=OtherAgentGpsConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
     group="habitat/task/lab_sensors",
     name="target_goal_gps_compass_sensor",
@@ -2119,6 +2181,24 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_subgoal_reward",
     node=CompositeSubgoalReward,
+)
+cs.store(
+    package="habitat.task.measurements.cooperate_subgoal_reward",
+    group="habitat/task/measurements",
+    name="cooperate_subgoal_reward",
+    node=CooperateSubgoalRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_agents_collide",
+    group="habitat/task/measurements",
+    name="did_agents_collide",
+    node=DidAgentsCollideConfig,
+)
+cs.store(
+    package="habitat.task.measurements.num_agents_collide",
+    group="habitat/task/measurements",
+    name="num_agents_collide",
+    node=NumAgentsCollideConfig,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",

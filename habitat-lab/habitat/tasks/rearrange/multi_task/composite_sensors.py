@@ -14,6 +14,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import (
+    DidAgentsCollide,
     DoesWantTerminate,
     EndEffectorToObjectDistance,
     ObjectToGoalDistance,
