@@ -512,9 +512,16 @@ class RearrangeEpisodeGenerator:
         )
 
         # Load navmesh
-        if not self.cfg.regenerate_new_mesh:
-            self.sim.pathfinder.load_nav_mesh(navmesh_path)
-        else:
+        regenerate_navmesh = self.cfg.regenerate_new_mesh
+        if not regenerate_navmesh and not self.sim.pathfinder.load_nav_mesh(
+            navmesh_path
+        ):
+            # if loading fails, regenerate instead
+            regenerate_navmesh = True
+            logger.error(
+                f"Failed to load navmesh '{navmesh_path}', regenerating instead."
+            )
+        if regenerate_navmesh:
             navmesh_settings = NavMeshSettings()
             navmesh_settings.set_defaults()
             navmesh_settings.agent_radius = self.cfg.agent_radius
