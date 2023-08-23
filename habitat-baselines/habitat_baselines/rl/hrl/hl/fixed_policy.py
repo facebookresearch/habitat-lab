@@ -26,11 +26,20 @@ class FixedHighLevelPolicy(HighLevelPolicy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._solution_actions = [
-            self._parse_solution_actions() for _ in range(self._num_envs)
-        ]
+        self._update_solution_actions(
+            [self._parse_solution_actions() for _ in range(self._num_envs)]
+        )
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
+
+    def _update_solution_actions(
+        self, solution_actions: List[List[Tuple[str, List[str]]]]
+    ) -> None:
+        if len(solution_actions) == 0:
+            raise ValueError(
+                "Solution actions must be non-empty (if want to execute no actions, just include a no-op)"
+            )
+        self._solution_actions = solution_actions
 
     def _parse_solution_actions(self) -> List[Tuple[str, List[str]]]:
         """
@@ -83,9 +92,17 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 f"Calling for immediate end with {self._next_sol_idxs[batch_idx]}"
             )
             immediate_end[batch_idx] = True
+            # Just repeat the last action.
             return len(self._solution_actions[batch_idx]) - 1
         else:
             return self._next_sol_idxs[batch_idx].item()
+
+    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
+        # We assign a value of 0. This is needed so that we can concatenate values in multiagent
+        # policies
+        return torch.zeros(rnn_hidden_states.shape[0], 1).to(
+            rnn_hidden_states.device
+        )
 
     def get_next_skill(
         self,
@@ -97,9 +114,10 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         deterministic,
         log_info,
     ):
-        next_skill = torch.zeros(self._num_envs)
-        skill_args_data = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = masks.shape[0]
+        next_skill = torch.zeros(batch_size)
+        skill_args_data = [None for _ in range(batch_size)]
+        immediate_end = torch.zeros(batch_size, dtype=torch.bool)
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
                 use_idx = self._get_next_sol_idx(batch_idx, immediate_end)

@@ -6,14 +6,11 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, List
 
 import torch
-from numpy import ndarray
-from torch import Tensor
 
 from habitat import logger
-from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
@@ -339,53 +336,3 @@ class BaseRLTrainer(BaseTrainer):
 
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
         raise NotImplementedError
-
-    @staticmethod
-    def _pause_envs(
-        envs_to_pause: List[int],
-        envs: VectorEnv,
-        test_recurrent_hidden_states: Tensor,
-        not_done_masks: Tensor,
-        current_episode_reward: Tensor,
-        prev_actions: Tensor,
-        batch: Dict[str, Tensor],
-        rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
-    ) -> Tuple[
-        VectorEnv,
-        Tensor,
-        Tensor,
-        Tensor,
-        Tensor,
-        Dict[str, Tensor],
-        List[List[Any]],
-    ]:
-        # pausing self.envs with no new episode
-        if len(envs_to_pause) > 0:
-            state_index = list(range(envs.num_envs))
-            for idx in reversed(envs_to_pause):
-                state_index.pop(idx)
-                envs.pause_at(idx)
-
-            # indexing along the batch dimensions
-            test_recurrent_hidden_states = test_recurrent_hidden_states[
-                state_index
-            ]
-            not_done_masks = not_done_masks[state_index]
-            current_episode_reward = current_episode_reward[state_index]
-            prev_actions = prev_actions[state_index]
-
-            for k, v in batch.items():
-                batch[k] = v[state_index]
-
-            rgb_frames = [rgb_frames[i] for i in state_index]
-            # actor_critic.do_pause(state_index)
-
-        return (
-            envs,
-            test_recurrent_hidden_states,
-            not_done_masks,
-            current_episode_reward,
-            prev_actions,
-            batch,
-            rgb_frames,
-        )

@@ -34,6 +34,7 @@ class HrlRolloutStorage(RolloutStorage):
         self._num_envs = num_envs
         self._cur_step_idxs = torch.zeros(self._num_envs, dtype=torch.long)
         self._last_should_inserts = None
+        self._current_step = {}
         assert (
             not self.is_double_buffered
         ), "HRL storage does not support double buffered sampling"
@@ -84,6 +85,7 @@ class HrlRolloutStorage(RolloutStorage):
         current_step = TensorDict(
             {k: v for k, v in current_step.items() if v is not None}
         )
+        self._current_step.update(next_step)
 
         if should_inserts is None:
             should_inserts = self._last_should_inserts
@@ -92,13 +94,14 @@ class HrlRolloutStorage(RolloutStorage):
         should_inserts = should_inserts.flatten()
 
         if should_inserts.sum() == 0:
+            self._last_should_inserts = should_inserts
             return
 
         env_idxs = torch.arange(self._num_envs)
         if rewards is not None:
-            # Accumulate rewards between updates.
-            reward_write_idxs = torch.clamp(self._cur_step_idxs - 1, min=0)
-            self.buffers["rewards"][reward_write_idxs, env_idxs] += rewards
+            rewards = rewards.to(self.device)
+            # Accumulate rewards between writes to the observations.
+            self.buffers["rewards"][self._cur_step_idxs, env_idxs] += rewards
 
         if len(next_step) > 0:
             self.buffers.set(
@@ -127,16 +130,7 @@ class HrlRolloutStorage(RolloutStorage):
         if an element was written to that environment index in the previous
         step.
         """
-
-        self._cur_step_idxs += self._last_should_inserts.long()
-
-        is_past_buffer = self._cur_step_idxs >= self.num_steps
-        if is_past_buffer.sum() > 0:
-            self._cur_step_idxs[is_past_buffer] = self.num_steps - 1
-            env_idxs = torch.arange(self._num_envs)
-            self.buffers["rewards"][
-                self._cur_step_idxs[is_past_buffer], env_idxs[is_past_buffer]
-            ] = 0.0
+        self._cur_step_idxs += self._last_should_inserts
 
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)
@@ -144,9 +138,6 @@ class HrlRolloutStorage(RolloutStorage):
         self.buffers["masks"][1:] = False
         self.buffers["rewards"][1:] = 0.0
 
-        self.current_rollout_step_idxs = [
-            0 for _ in self.current_rollout_step_idxs
-        ]
         self._cur_step_idxs[:] = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
@@ -155,7 +146,7 @@ class HrlRolloutStorage(RolloutStorage):
 
         assert isinstance(self.buffers["value_preds"], torch.Tensor)
         gae = 0.0
-        for step in reversed(range(self._cur_step_idxs.max() - 1)):
+        for step in reversed(range(self._cur_step_idxs.max())):
             delta = (
                 self.buffers["rewards"][step]
                 + gamma
@@ -196,8 +187,8 @@ class HrlRolloutStorage(RolloutStorage):
                 # Stricly less than is so we throw out the last transition. We
                 # need to throw out the last transition because we were not
                 # able to accumulate rewards for it.
-                batch["loss_mask"][:, i] = (
-                    batch["loss_mask"][:, i] < self._cur_step_idxs[env_i]
+                batch["loss_mask"][:, i] = batch["loss_mask"][:, i] < (
+                    self._cur_step_idxs[env_i] - 1
                 )
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
@@ -211,3 +202,30 @@ class HrlRolloutStorage(RolloutStorage):
             )
 
             yield batch.to_tree()
+
+    @property
+    def current_rollout_step_idxs(self):
+        # To ensure we aren't accessing this property from the base rollout
+        # storage and separately tracking the current write index.
+        raise ValueError()
+
+    @current_rollout_step_idxs.setter
+    def current_rollout_step_idxs(self, val):
+        pass
+
+    @property
+    def current_rollout_step_idx(self):
+        # To ensure we aren't accessing this property from the base rollout
+        # storage and separately tracking the current write index.
+        raise ValueError()
+
+    def get_current_step(self, env_slice, buffer_index):
+        return TensorDict(self._current_step)
+
+    def insert_first_observations(self, batch):
+        super().insert_first_observations(batch)
+        self._current_step = self.buffers[0]
+
+    def get_last_step(self):
+        env_idxs = torch.arange(self._num_envs)
+        return self.buffers[self._cur_step_idxs, env_idxs]

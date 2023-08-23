@@ -5,7 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 import abc
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import torch
 from gym import spaces
@@ -29,6 +38,8 @@ from habitat_baselines.utils.common import (
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+from torch import Tensor
 
 from habitat_baselines.utils.timing import g_timer
 
@@ -86,8 +97,6 @@ class PolicyActionData:
 
 
 class Policy(abc.ABC):
-    action_distribution: nn.Module
-
     def __init__(self):
         pass
 
@@ -103,13 +112,11 @@ class Policy(abc.ABC):
     def recurrent_hidden_size(self) -> int:
         return 0
 
-    def forward(self, *x):
-        raise NotImplementedError
-
     @property
     def visual_encoder(self) -> Optional[nn.Module]:
         """
-        Gets the visual encoder for the policy.
+        Gets the visual encoder for the policy. Only necessary to implement if
+        you want to do RL with a frozen visual encoder.
         """
 
     def get_policy_action_space(
@@ -121,6 +128,11 @@ class Policy(abc.ABC):
         return []
 
     def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
+        """
+        Gets parameters of auxiliary modules, not directly used in the policy,
+        but used for auxiliary training objectives. Only necessary if using
+        auxiliary losses.
+        """
         return {}
 
     def policy_parameters(self) -> Iterable[torch.Tensor]:
@@ -153,6 +165,29 @@ class Policy(abc.ABC):
         else:
             return action_data.policy_info
 
+    def evaluate_actions(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        action,
+        rnn_build_seq_info: Dict[str, torch.Tensor],
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Tensor]]:
+        """
+        Only necessary to implement if performing RL training with the policy.
+
+        :returns: Tuple containing
+            - Predicted value.
+            - Log probabilities of actions.
+            - Action distribution entropy.
+            - RNN hidden states.
+            - Auxiliary module losses.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def act(
         self,
         observations,
@@ -163,6 +198,14 @@ class Policy(abc.ABC):
     ) -> PolicyActionData:
         raise NotImplementedError
 
+    def on_envs_pause(self, envs_to_pause: List[int]) -> None:
+        """
+        Clean up data when envs are finished. Makes sure that relevant variables
+        of a policy are updated as environments pause. This is needed when
+        evaluating policies with multiple environments, where some environments
+        will run out of episodes to evaluate and will be closing.
+        """
+
     @classmethod
     @abc.abstractmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
@@ -171,6 +214,7 @@ class Policy(abc.ABC):
 
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
+    action_distribution: nn.Module
 
     def __init__(
         self, net, action_space, policy_config=None, aux_loss_config=None
@@ -205,17 +249,9 @@ class NetPolicy(nn.Module, Policy):
 
         self.critic = CriticHead(self.net.output_size)
 
-        self.aux_loss_modules = nn.ModuleDict()
-        if aux_loss_config is None:
-            return
-        for aux_loss_name, cfg in aux_loss_config.items():
-            aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
-
-            self.aux_loss_modules[aux_loss_name] = aux_loss(
-                action_space,
-                self.net,
-                **cfg,
-            )
+        self.aux_loss_modules = get_aux_modules(
+            aux_loss_config, action_space, self.net
+        )
 
     @property
     def recurrent_hidden_size(self) -> int:
@@ -502,3 +538,22 @@ class PointNavBaselineNet(Net):
         aux_loss_state["rnn_output"] = x_out
 
         return x_out, rnn_hidden_states, aux_loss_state
+
+
+def get_aux_modules(
+    aux_loss_config: "DictConfig",
+    action_space: spaces.Space,
+    net,
+) -> nn.ModuleDict:
+    aux_loss_modules = nn.ModuleDict()
+    if aux_loss_config is None:
+        return aux_loss_modules
+    for aux_loss_name, cfg in aux_loss_config.items():
+        aux_loss = baseline_registry.get_auxiliary_loss(str(aux_loss_name))
+
+        aux_loss_modules[aux_loss_name] = aux_loss(
+            action_space,
+            net,
+            **cfg,
+        )
+    return aux_loss_modules

@@ -6,6 +6,7 @@ obs_transforms:
 hierarchical_policy:
   high_level_policy:
     name: "NeuralHighLevelPolicy"
+    termination_obs_name: null
     allowed_actions:
       - nav
       - pick

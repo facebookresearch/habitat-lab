@@ -86,14 +86,6 @@ class SkillPolicy(Policy):
         """
         return [self._cur_skill_args[i] for i in batch_idx]
 
-    @property
-    def has_hidden_state(self):
-        """
-        Returns if the skill requires a hidden state.
-        """
-
-        return False
-
     def _keep_holding_state(
         self, action_data: PolicyActionData, observations
     ) -> PolicyActionData:
@@ -197,14 +189,15 @@ class SkillPolicy(Policy):
             else:
                 is_skill_done = is_skill_done | over_max_len
 
-        is_skill_done |= hl_wants_skill_term
-
+        # Apply the postconds based on the skill termination, not if the HL policy wanted to terminate.
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
+        # Also terminate the skill if the HL policy wanted termination.
+        is_skill_done |= hl_wants_skill_term
 
         return is_skill_done, bad_terminate, new_actions
 
@@ -306,9 +299,7 @@ class SkillPolicy(Policy):
             to end and 0 if not where batch_size is potentially a subset of the
             overall num_environments as specified by `batch_idx`.
         """
-        return torch.zeros(observations.shape[0], dtype=torch.bool).to(
-            masks.device
-        )
+        return torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
     def _parse_skill_arg(self, skill_arg: str) -> Any:
         """

@@ -93,7 +93,7 @@ class PddlDomain:
                 parent_dir, "domain_configs", domain_file_path
             )
 
-        if "." not in domain_file_path:
+        if "." not in domain_file_path.split("/")[-1]:
             domain_file_path += ".yaml"
 
         with open(get_full_habitat_config_path(domain_file_path), "r") as f:
@@ -216,6 +216,8 @@ class PddlDomain:
         """
 
         self._constants: Dict[str, PddlEntity] = {}
+        if domain_def["constants"] is None:
+            return
         for c in domain_def["constants"]:
             self._constants[c["name"]] = PddlEntity(
                 c["name"],
@@ -467,7 +469,7 @@ class PddlDomain:
         """
         Get all predicates that COULD be true. This is independent of the
         simulator state and is the set of compatible predicate and entity
-        arguments.
+        arguments. The same ordering of predicates is returned every time.
         """
 
         all_entities = self.all_entities.values()
@@ -483,7 +485,7 @@ class PddlDomain:
                 use_pred.set_param_values(entity_input)
                 if use_pred.are_types_compatible(self.expr_types):
                     poss_preds.append(use_pred)
-        return poss_preds
+        return sorted(poss_preds, key=lambda pred: pred.compact_str)
 
     def get_possible_actions(
         self,

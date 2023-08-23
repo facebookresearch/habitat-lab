@@ -259,6 +259,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # map to this skill. If not specified,the name of the skill must match the
     # PDDL action name.
     pddl_action_names: Optional[List[str]] = None
+    turn_power_x: float = 0.0
+    turn_power_y: float = 0.0
 
 
 @dataclass
@@ -396,6 +398,18 @@ class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class EvaluatorConfig(HabitatBaselinesBaseConfig):
+    """
+    `_target_` points to the `Evaluator` class to instantiate to evaluate the
+    policy during evaluation mode.
+    """
+
+    _target_: str = (
+        "habitat_baselines.rl.ppo.habitat_evaluator.HabitatEvaluator"
+    )
+
+
+@dataclass
 class HydraCallbackConfig(HabitatBaselinesBaseConfig):
     """
     Generic callback option for Hydra. Used to create the `_target_` class or
@@ -437,6 +451,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     verbose: bool = True
     # Creates the vectorized environment.
     vector_env_factory: VectorEnvFactoryConfig = VectorEnvFactoryConfig()
+    evaluator: EvaluatorConfig = EvaluatorConfig()
     eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies
     # and nothing of substantive compute. PyTorch has been making

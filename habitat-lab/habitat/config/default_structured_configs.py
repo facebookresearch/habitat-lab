@@ -121,7 +121,6 @@ class EnvironmentConfig(HabitatBaseConfig):
 @dataclass
 class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
-    agent_index: int = 0
 
 
 @dataclass
@@ -1949,6 +1948,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="nav_goal_sensor",
     node=NavGoalPointGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.all_predicates",
+    group="habitat/task/lab_sensors",
+    name="all_predicates",
+    node=GlobalPredicatesSensorConfig,
 )
 
 
