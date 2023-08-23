@@ -35,7 +35,8 @@ habitat_baselines:
   rl:
 
     policy:
-      name: "PointNavResNetPolicy"
+      main_agent:
+        name: "PointNavResNetPolicy"
 
     ppo:
       # ppo params
