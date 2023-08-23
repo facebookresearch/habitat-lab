@@ -100,7 +100,6 @@ class MagicGraspAction(GripSimulatorTaskAction):
         return min_rep, min_rep_pos
 
     def _snap_down_object(self):
-        breakpoint()
         obj_id = self.cur_grasp_mgr._snapped_obj_id
         self.cur_grasp_mgr.desnap()
         target_obj = self._sim.get_rigid_object_manager().get_object_by_id(
@@ -130,7 +129,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 .get_object_by_handle(receptacle.parent_object_handle)
                 .object_id
             ]
-        breakpoint()
+
         snap_success = sutils.snap_down(
             self._sim,
             target_obj,

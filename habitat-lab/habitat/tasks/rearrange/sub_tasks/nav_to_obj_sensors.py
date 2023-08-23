@@ -33,6 +33,7 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
+        self._poss_entities = task.pddl_problem.get_ordered_entities_list()
         super().__init__(*args, task=task, **kwargs)
 
     def _get_uuid(self, *args, **kwargs):
@@ -53,10 +54,9 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
-
-        dir_vector = articulated_agent_T.inverted().transform_point(
-            task.nav_goal_pos
-        )
+        nav_to_obj = self._poss_entities[task.targ_idx]
+        obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(nav_to_obj)
+        dir_vector = articulated_agent_T.inverted().transform_point(obj_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
