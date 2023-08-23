@@ -312,7 +312,11 @@ class RearrangeSim(HabitatSim):
         for ao, (set_joint_state, set_T) in self._start_art_states.items():
             ao.clear_joint_states()
             ao.joint_positions = set_joint_state
-            ao.transformation = set_T
+            if not is_hard_reset:
+                # [Andrew Szot 2023-08-22]: If we don't correct for this, some
+                # articulated objects may "drift" over time when the scene
+                # reset is skipped.
+                ao.transformation = set_T
 
         # Load specified articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
@@ -360,11 +364,12 @@ class RearrangeSim(HabitatSim):
         if self.first_setup:
             self.first_setup = False
             self.agents_mgr.first_setup()
-            # Capture the starting art states
-            self._start_art_states = {
-                ao: (ao.joint_positions, ao.transformation)
-                for ao in self.art_objs
-            }
+            if new_scene:
+                # Capture the starting articulated object states
+                self._start_art_states = {
+                    ao: (ao.joint_positions, ao.transformation)
+                    for ao in self.art_objs
+                }
 
         if self._should_setup_semantic_ids:
             self._setup_semantic_ids()
