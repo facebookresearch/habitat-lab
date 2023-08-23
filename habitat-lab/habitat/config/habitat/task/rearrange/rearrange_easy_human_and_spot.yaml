@@ -1,0 +1,75 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions@actions.agent_0_humanoidjoint_action: humanoidjoint_action
+  - /habitat/task/actions@actions.agent_1_arm_action: arm_action
+  - /habitat/task/actions@actions.agent_1_base_velocity_non_cylinder: base_velocity_non_cylinder
+  - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - composite_success
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+  - _self_
+
+type: RearrangeCompositeTask-v0
+reward_measure: composite_success
+success_measure: composite_success
+success_reward: 100.0
+slack_reward: -0.01
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: False
+task_spec: rearrange_easy
+actions:
+  # Actions are defined per agent. Unlike the sensors, actions are not
+  # automatically duplicated per agent.
+  agent_0_humanoidjoint_action:
+    agent_index : 0
+  agent_1_arm_action:
+    agent_index : 1
+    arm_controller: "ArmRelPosMaskAction"
+    # grip_controller: "GazeGraspAction" # NOTE GazeGraspAction doesnt work in multi-agent setting
+    grip_controller: MagicGraspAction
+    arm_joint_mask: [1,1,0,1,1,1,1]
+    arm_joint_dimensionality: 7
+    grasp_thresh_dist: 0.15
+    disable_grip: False
+    delta_pos_limit: 0.0125
+    ee_ctrl_lim: 0.015
+    gaze_distance_range: [0.01, 0.3]
+    center_cone_angle_threshold: 20.0
+    center_cone_vector: [0.0, 1.0, 0.0]
+  agent_1_base_velocity_non_cylinder:
+    agent_index : 1
+    allow_dyn_slide: True
+    enable_rotation_check_for_dyn_slide: False
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than than collision_threshold for any point
+    collision_threshold: 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+    # If we allow the robot to move laterally
+    enable_lateral_move: True
+  agent_1_rearrange_stop:
+    agent_index : 1
+
+measurements:
+  force_terminate:
+    max_accum_force: 100000.0
+    max_instant_force: 10000.0
+  composite_success:
+    must_call_stop: False

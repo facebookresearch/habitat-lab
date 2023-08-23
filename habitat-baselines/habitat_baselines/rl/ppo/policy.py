@@ -16,6 +16,7 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import torch
 from gym import spaces
 from torch import nn as nn
@@ -74,7 +75,7 @@ class PolicyActionData:
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
     policy_info: Optional[List[Dict[str, Any]]] = None
-    should_inserts: Optional[torch.BoolTensor] = None
+    should_inserts: Optional[np.ndarray] = None
 
     def write_action(self, write_idx: int, write_action: torch.Tensor) -> None:
         """
@@ -96,6 +97,68 @@ class PolicyActionData:
             return self.take_actions
 
 
+@dataclass
+class MultiAgentPolicyActionData(PolicyActionData):
+    """
+    Information returned from the `Policy.act` method representing the
+    information from multiple agent's action. This class is needed to store
+    actions of multiple agents together
+
+    :property length_actions: List containing, for every agent, the size of their action space.
+    :property length_rnn_hidden_states: List containing for every agent the dimensionality of the rnn hidden state.
+    :property num_agents: The number of agents represented in this PolicyActionData
+    """
+
+    rnn_hidden_states: torch.Tensor
+    actions: Optional[torch.Tensor] = None
+    values: Optional[torch.Tensor] = None
+    action_log_probs: Optional[torch.Tensor] = None
+    take_actions: Optional[torch.Tensor] = None
+    policy_info: Optional[List[Dict[str, Any]]] = None
+    should_inserts: Optional[np.ndarray] = None
+
+    # Indices
+    length_rnn_hidden_states: Optional[torch.Tensor] = None
+    length_actions: Optional[torch.Tensor] = None
+    num_agents: Optional[int] = 1
+
+    def _unpack(self, tensor_to_unpack, unpack_lengths=None):
+        """
+        Splits the tensor tensor_to_unpack in the last dimension in the last dimension
+        according to unpack lengths, so that the ith tensor will have unpack_lengths[i]
+        in the last dimension. If unpack_lenghts is None, splits tensor_to_unpack evenly
+        according to self.num_agents.
+
+        :property tensor_to_unpack: The tensor we want to split into different chunks
+        :unpack_lengths: List of integers indicating the sizes to unpack, or None if we want to unpack evenly
+        """
+
+        if unpack_lengths is None:
+            unpack_lengths = [
+                int(tensor_to_unpack.shape[-1] / self.num_agents)
+            ] * self.num_agents
+
+        return torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
+
+    def unpack(self):
+        """
+        Returns attributes of the policy unpacked per agent
+        """
+        return {
+            "next_recurrent_hidden_states": self._unpack(
+                self.rnn_hidden_states, self.length_rnn_hidden_states
+            ),
+            "actions": self._unpack(self.actions, self.length_actions),
+            "value_preds": self._unpack(self.values),
+            "action_log_probs": self._unpack(self.action_log_probs),
+            "take_actions": self._unpack(self.take_actions),
+            # This is numpy array and must be split differently.
+            "should_inserts": np.split(
+                self.should_inserts, self.num_agents, axis=-1
+            ),
+        }
+
+
 class Policy(abc.ABC):
     def __init__(self):
         pass
@@ -109,8 +172,53 @@ class Policy(abc.ABC):
         return 0
 
     @property
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape is only supported in neural network policies"
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape_lens is only supported in neural network policies"
+        )
+
+    @property
+    def policy_action_space(self) -> spaces.Space:
+        """
+        The action space the policy acts in. This can be different from the
+        environment action space for hierarchical policies.
+        """
+        raise NotImplementedError()
+
+    @property
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
+        """
+        raise NotImplementedError()
+
+    @property
     def recurrent_hidden_size(self) -> int:
         return 0
+
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state of the policies in the population. Writes to the
+        data in place.
+        """
+        raise NotImplementedError(
+            "Update hidden state is only supported in neural network policies"
+        )
+
+    def forward(self, *x):
+        raise NotImplementedError
 
     @property
     def visual_encoder(self) -> Optional[nn.Module]:
@@ -165,18 +273,6 @@ class Policy(abc.ABC):
         else:
             return action_data.policy_info
 
-    def evaluate_actions(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        action,
-        rnn_build_seq_info: Dict[str, torch.Tensor],
-    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Tensor]]:
-        """
-        Only necessary to implement if performing RL training with the policy.
-
         :returns: Tuple containing
             - Predicted value.
             - Log probabilities of actions.
@@ -198,18 +294,36 @@ class Policy(abc.ABC):
     ) -> PolicyActionData:
         raise NotImplementedError
 
-    def on_envs_pause(self, envs_to_pause: List[int]) -> None:
+    def pause_envs(self, envs_to_pause):
         """
         Clean up data when envs are finished. Makes sure that relevant variables
         of a policy are updated as environments pause. This is needed when
         evaluating policies with multiple environments, where some environments
         will run out of episodes to evaluate and will be closing.
         """
+        raise NotImplementedError
 
     @classmethod
     @abc.abstractmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
         pass
+
+
+# TODO: SIRo hack. We need to make aux modules generally support obs space input.
+def get_aux_modules(aux_loss_config, action_space, obs_space, net):
+    aux_loss_modules = nn.ModuleDict()
+    if aux_loss_config is None:
+        return aux_loss_modules
+    for aux_loss_name, cfg in aux_loss_config.items():
+        aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
+
+        aux_loss_modules[aux_loss_name] = aux_loss(
+            action_space,
+            obs_space,
+            net,
+            **cfg,
+        )
+    return aux_loss_modules
 
 
 class NetPolicy(nn.Module, Policy):
@@ -223,6 +337,7 @@ class NetPolicy(nn.Module, Policy):
         self.net = net
         self.dim_actions = get_num_actions(action_space)
         self.action_distribution: Union[CategoricalNet, GaussianNet]
+        self._action_space = action_space
 
         if policy_config is None:
             self.action_distribution_type = "categorical"
@@ -250,8 +365,27 @@ class NetPolicy(nn.Module, Policy):
         self.critic = CriticHead(self.net.output_size)
 
         self.aux_loss_modules = get_aux_modules(
-            aux_loss_config, action_space, self.net
+            aux_loss_config, action_space, None, net
         )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self._action_space]
+
+    @property
+    def policy_action_space(self):
+        return self._action_space
+
+    @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
 
     @property
     def recurrent_hidden_size(self) -> int:
@@ -269,6 +403,17 @@ class NetPolicy(nn.Module, Policy):
     def num_recurrent_layers(self) -> int:
         return self.net.num_recurrent_layers
 
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
+
     def forward(self, *x):
         raise NotImplementedError
 
@@ -279,6 +424,7 @@ class NetPolicy(nn.Module, Policy):
         prev_actions,
         masks,
         deterministic=False,
+        **kwargs,
     ):
         features, rnn_hidden_states, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks

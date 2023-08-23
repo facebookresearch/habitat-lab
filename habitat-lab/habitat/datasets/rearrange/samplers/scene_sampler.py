@@ -19,6 +19,9 @@ class SceneSampler(ABC):
     def sample(self):
         pass
 
+    def set_cur_episode(self, cur_episode: int) -> None:
+        pass
+
 
 class SingleSceneSampler(SceneSampler):
     """
@@ -49,3 +52,31 @@ class MultiSceneSampler(SceneSampler):
 
     def num_scenes(self) -> int:
         return len(self.scenes)
+
+
+class BalancedSceneSampler(SceneSampler):
+    """
+    Evenly splits generated episodes amongst all scenes in the set.
+    Generates all episodes for each scene contiguously for efficiency.
+    """
+
+    def __init__(self, scenes: List[str], num_episodes: int) -> None:
+        assert len(scenes) > 0, "No scenes provided to BalancedSceneSampler."
+        self.scenes = scenes
+        self.num_episodes = num_episodes
+        assert self.num_episodes % len(
+            self.scenes
+        ) == 0 and self.num_episodes >= len(
+            self.scenes
+        ), f"Requested number of episodes '{self.num_episodes}' not divisible by number of scenes {len(self.scenes)}, results would be unbalanced."
+        self.num_ep_per_scene = int(self.num_episodes / len(self.scenes))
+        self.cur_episode = 0
+
+    def sample(self) -> str:
+        return self.scenes[int(self.cur_episode / self.num_ep_per_scene)]
+
+    def num_scenes(self) -> int:
+        return len(self.scenes)
+
+    def set_cur_episode(self, cur_episode: int) -> None:
+        self.cur_episode = cur_episode

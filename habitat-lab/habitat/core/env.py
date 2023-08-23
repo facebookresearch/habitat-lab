@@ -143,6 +143,11 @@ class Env:
             for k, v in self._config.environment.iterator_options.items()
         }
         iter_option_dict["seed"] = self._config.seed
+        if (
+            "overfit" in self._config.simulator
+            and self._config.simulator["overfit"]
+        ):
+            iter_option_dict["num_episode_sample"] = 1
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )
@@ -268,17 +273,6 @@ class Env:
 
         return observations
 
-    def _update_step_stats(self) -> None:
-        self._elapsed_steps += 1
-        self._episode_over = not self._task.is_episode_active
-        if self._past_limit():
-            self._episode_over = True
-
-        if self.episode_iterator is not None and isinstance(
-            self.episode_iterator, EpisodeIterator
-        ):
-            self.episode_iterator.step_taken()
-
     def step(
         self, action: Union[int, str, Dict[str, Any]], **kwargs
     ) -> Observations:
@@ -310,14 +304,26 @@ class Env:
             action=action, episode=self.current_episode
         )
 
+        # Compute if the episode is over due to a timeout or the task no longer being active.
+        self._elapsed_steps += 1
+        is_timeout = self._past_limit()
+
         self._task.measurements.update_measures(
             episode=self.current_episode,
             action=action,
             task=self.task,
             observations=observations,
+            # Let the sensor know if this is the last step due to a timeout.
+            is_timeout=is_timeout,
         )
+        self._episode_over = not self._task.is_episode_active
+        if is_timeout:
+            self._episode_over = True
 
-        self._update_step_stats()
+        if self.episode_iterator is not None and isinstance(
+            self.episode_iterator, EpisodeIterator
+        ):
+            self.episode_iterator.step_taken()
 
         return observations
 
@@ -469,11 +475,15 @@ class RLEnv(gym.Env):
 
         :return: :py:`(observations, reward, done, info)`
         """
+        t_start = time.time()
 
         observations = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)
+
+        if "runtime_perf_stats" in info:
+            info["runtime_perf_stats"]["RLEnv.step"] = time.time() - t_start
 
         return observations, reward, done, info
 

@@ -34,10 +34,11 @@ habitat_baselines:
 
   rl:
     policy:
-        action_dist:
-           clamp_std: True
-           std_init: -1.0
-           use_std_param: True
+        main_agent:
+          action_dist:
+            clamp_std: True
+            std_init: -1.0
+            use_std_param: True
     ppo:
       # ppo params
       clip_param: 0.2

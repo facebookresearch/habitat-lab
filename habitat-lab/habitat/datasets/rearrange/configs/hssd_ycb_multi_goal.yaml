@@ -1,0 +1,158 @@
+---
+    dataset_path: "data/fpss/hssd-hab-uncluttered.scene_dataset_config.json"
+    additional_object_paths:
+    - data/objects/ycb/configs/
+    scene_sets:
+      - name: "train"
+        included_substrings:
+          - "102344049"
+          - "102344193"
+          - "102344250"
+          - "102344280"
+          - "102816216"
+          - "102817200"
+          - "103997424_171030444"
+          - "103997460_171030507"
+          - "103997919_171031233"
+          - "104348082_171512994"
+          - "104348463_171513588"
+          - "104862621_172226772"
+          - "104862639_172226823"
+          - "104862660_172226844"
+          - "104862681_172226874"
+          - "105515211_173104179"
+          - "105515448_173104512"
+          - "106366173_174226431"
+          - "106878945_174887058"
+          - "107734449_176000403"
+          - "107734479_176000442"
+          - "108294573_176710113"
+          - "108294870_176710551"
+          - "108294897_176710602"
+          - "108736635_177263256"
+          - "108736737_177263406"
+          - "108736824_177263559"
+          - "108736851_177263586"
+          - "108736872_177263607"
+          - "102344457"
+          - "106879044_174887172"
+          - "104862669_172226853"
+          - "106366353_174226695"
+          - "102344022"
+          - "102344403"
+          - "102815859"
+          - "102816009"
+        excluded_substrings:
+          - "NONE"
+          - "102815859_169535055"
+          - "orig"
+      - name: "val"
+        included_substrings:
+          - "102816756"
+          - "102817140"
+          - "103997586_171030669"
+          - "103997895_171031182"
+          - "104348328_171513363"
+          - "104348361_171513414"
+          #- "105515211_173104185" #no rec filter file annotated
+          - "106366386_174226770"
+          - "106366410_174226806"
+          - "106878915_174887025"
+          - "107733960_175999701"
+          - "107734176_176000019"
+          - "102344529"
+        excluded_substrings:
+          - "NONE"
+          - "orig"
+      - name: "test"
+        included_substrings:
+          - "104862579_172226694"
+          - "104862726_172226952"
+          - "106366233_174226506"
+          - "102817161"
+          - "102816201"
+          - "106879104_174887235"
+          - "105515523_173104614"
+          - "104862609_172226751"
+          - "104862474_172226496"
+          - "102815859_169535055"
+        excluded_substrings:
+          - "NONE"
+          - "orig"
+
+    object_sets:
+      - name: "ycb_hab2"
+        included_substrings:
+          - "002_master_chef_can"
+          - "003_cracker_box"
+          - "004_sugar_box"
+          - "005_tomato_soup_can"
+          - "007_tuna_fish_can"
+          - "008_pudding_box"
+          - "009_gelatin_box"
+          - "010_potted_meat_can"
+          - "024_bowl"
+        excluded_substrings: []
+    receptacle_sets:
+      - name: "all"
+        included_object_substrings:
+          - ""
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+
+    scene_sampler:
+      type: scene_balanced
+      params:
+        scene_sets:
+        - train
+        #- val
+        #- test
+
+    object_samplers:
+    - name: any
+      type: uniform
+      params:
+        object_sets:
+        - ycb_hab2
+        receptacle_sets:
+        - all
+        num_samples:
+        - 5
+        - 10
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+        constrain_to_largest_nav_island: True
+
+    object_target_samplers:
+    - name: any_targets
+      type: uniform
+      params:
+        object_samplers:
+        - any
+        receptacle_sets:
+        - all
+        num_samples:
+        - 2
+        - 2
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+        constrain_to_largest_nav_island: True
+
+    correct_unstable_results: True
+
+    regenerate_new_mesh: True
+    agent_radius: 0.25
+    agent_height: 1.41
+    agent_max_climb: 0.01
+
+    check_navigable: True
+    navmesh_offset: [[0, 0], [0, 0.15], [0, -0.15]]
+    max_collision_rate_for_navigable: 0.3
+    angle_threshold: 0.05
+    angular_velocity: 1.0
+    distance_threshold: 0.25
+    linear_velocity: 1.0
+
+    gpu_device_id: 0

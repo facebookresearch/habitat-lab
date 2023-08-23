@@ -71,7 +71,6 @@ class RearrangeTask(NavigationTask):
         **kwargs,
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
@@ -82,6 +81,27 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
+        self._fixed_starting_position: bool = False
+        self._seed = self._sim.habitat_config.seed
+        self._min_distance_start_agents = (
+            self._config.min_distance_start_agents
+        )
+        # Set config properties
+        self._force_regenerate = self._config.force_regenerate
+        self._obj_succ_thresh = self._config.obj_succ_thresh
+        self._should_save_to_cache = self._config.should_save_to_cache
+        self._enable_safe_drop = self._config.enable_safe_drop
+        self._constraint_violation_drops_object = (
+            self._config.constraint_violation_drops_object
+        )
+        self._constraint_violation_ends_episode = (
+            self._config.constraint_violation_ends_episode
+        )
+        self._count_obj_collisions = self._config.count_obj_collisions
+
+        habitat_config = self._sim.habitat_config
+        if "overfit" in habitat_config and habitat_config["overfit"]:
+            self._fixed_starting_position = True
 
         # Get config options
         self._force_regenerate = self._config.force_regenerate
@@ -172,11 +192,37 @@ class RearrangeTask(NavigationTask):
             agent_idx
         )
         if articulated_agent_start is None:
+            filter_func = None
+            if self._min_distance_start_agents > 0.0:
+                prev_pose_agents = [
+                    np.array(
+                        self._sim.get_agent_data(
+                            agent_indx_prev
+                        ).articulated_agent.base_pos
+                    )
+                    for agent_indx_prev in range(agent_idx)
+                ]
+
+                def _filter_func(start_pos, start_rot):
+                    start_pos_2d = start_pos[[0, 2]]
+                    prev_pos_2d = [
+                        prev_pose_agent[[0, 2]]
+                        for prev_pose_agent in prev_pose_agents
+                    ]
+                    distances = np.array(
+                        [
+                            np.linalg.norm(start_pos_2d - prev_pos_2d_i)
+                            for prev_pos_2d_i in prev_pos_2d
+                        ]
+                    )
+                    return np.all(distances > self._min_distance_start_agents)
+
+                filter_func = _filter_func
             (
                 articulated_agent_pos,
                 articulated_agent_rot,
             ) = self._sim.set_articulated_agent_base_to_random_point(
-                agent_idx=agent_idx
+                agent_idx=agent_idx, filter_func=filter_func
             )
             self._cache_articulated_agent_start(
                 (articulated_agent_pos, articulated_agent_rot), agent_idx
@@ -204,6 +250,10 @@ class RearrangeTask(NavigationTask):
             self._is_episode_active = True
 
             if self._should_place_articulated_agent:
+                if self._fixed_starting_position:
+                    np.random.seed(self._seed)
+                    self._sim.pathfinder.seed(self._seed)
+
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
 

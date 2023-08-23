@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - pop_play_kinematic_oracle
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 30
+
+habitat_baselines:
+  rl:
+    policy:
+      agent_0:
+        hierarchical_policy:
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              max_skill_steps: 1
+      agent_1:
+        hierarchical_policy:
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              max_skill_steps: 1

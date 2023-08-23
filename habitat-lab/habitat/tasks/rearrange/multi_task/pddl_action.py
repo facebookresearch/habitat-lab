@@ -69,7 +69,7 @@ class PddlAction:
         self._post_cond_search = post_cond_search
 
     @property
-    def post_cond(self) -> List[Predicate]:
+    def post_cond(self):
         return self._post_cond
 
     def set_post_cond_search(

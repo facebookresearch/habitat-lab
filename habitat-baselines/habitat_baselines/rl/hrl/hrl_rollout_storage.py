@@ -50,6 +50,7 @@ class HrlRolloutStorage(RolloutStorage):
         next_masks=None,
         buffer_index: int = 0,
         should_inserts: Optional[torch.BoolTensor] = None,
+        **kwargs
     ):
         """
         The only key different from the base `RolloutStorage` is
@@ -61,11 +62,19 @@ class HrlRolloutStorage(RolloutStorage):
 
         Rewards acquired of steps where `should_insert[i] == False` will be summed up and added to the next step where `should_insert[i] == True`
         """
+        # The actions here could be Float instead of long because we previously
+        # concatenated them with actions from other agents.
+        if (
+            type(self.buffers["actions"]) is torch.Tensor
+            and actions is not None
+        ):
+            actions = actions.type(self.buffers["actions"].dtype)
 
         if next_masks is not None:
             next_masks = next_masks.to(self.device)
         if rewards is not None:
             rewards = rewards.to(self.device)
+
         next_step = dict(
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
@@ -89,15 +98,17 @@ class HrlRolloutStorage(RolloutStorage):
 
         if should_inserts is None:
             should_inserts = self._last_should_inserts
+
         assert should_inserts is not None
         # Starts as shape [batch_size, 1]
-        should_inserts = should_inserts.flatten()
+        should_inserts = should_inserts.reshape(-1)
 
         if should_inserts.sum() == 0:
             self._last_should_inserts = should_inserts
             return
 
         env_idxs = torch.arange(self._num_envs)
+
         if rewards is not None:
             rewards = rewards.to(self.device)
             # Accumulate rewards between writes to the observations.
@@ -130,7 +141,12 @@ class HrlRolloutStorage(RolloutStorage):
         if an element was written to that environment index in the previous
         step.
         """
-        self._cur_step_idxs += self._last_should_inserts
+
+        # TODO: It's probably faster to also have `self._cur_step_idxs` as a
+        # numpy array.
+        self._cur_step_idxs += torch.from_numpy(
+            self._last_should_inserts
+        ).long()
 
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)

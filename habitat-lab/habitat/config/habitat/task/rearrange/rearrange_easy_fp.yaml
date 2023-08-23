@@ -1,0 +1,14 @@
+# @package habitat.task
+defaults:
+  - /habitat/task/rearrange: rearrange_easy_base
+  - override /habitat/task/actions:
+    - arm_action
+    - base_velocity
+    - rearrange_stop
+
+task_spec: rearrange_easy_fp
+pddl_domain_def: fp
+
+actions:
+  arm_action:
+    grip_controller: SuctionGraspAction
