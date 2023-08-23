@@ -12,7 +12,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
         name_action = kwargs["name"]
-        self._multi_agent = len(self._sim.agents) > 1
+        self._multi_agent = len(self._sim.agents_mgr) > 1
 
         if not name_action.startswith("agent_"):
             self._agent_index = 0
@@ -23,7 +23,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
             agent_index = name_action.split("_")[1]
             assert agent_index.isnumeric()
             agent_index = int(agent_index)
-            assert agent_index < len(self._sim.agents)
+            assert agent_index < len(self._sim.agents_mgr)
             self._agent_index = agent_index
 
     @property
