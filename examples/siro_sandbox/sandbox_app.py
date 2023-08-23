@@ -719,23 +719,6 @@ if __name__ == "__main__":
                 )
                 exit()
 
-            # avoid camera sensors for GUI-controlled agents
-            gui_controlled_agent_config = get_agent_config(
-                sim_config, agent_id=args.gui_controlled_agent_index
-            )
-            gui_controlled_agent_config.sim_sensors.clear()
-
-            for sensor_name in [
-                "head_depth",
-                "head_rgb",
-                "has_finished_oracle_nav",
-            ]:
-                agent_sensor_name = (
-                    f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
-                )
-                if agent_sensor_name in gym_obs_keys:
-                    gym_obs_keys.remove(agent_sensor_name)
-
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[
                 args.gui_controlled_agent_index
@@ -750,21 +733,60 @@ if __name__ == "__main__":
                 )
                 exit()
 
+            # avoid camera sensors for GUI-controlled agents
+            gui_controlled_agent_config = get_agent_config(
+                sim_config, agent_id=args.gui_controlled_agent_index
+            )
+            gui_controlled_agent_config.sim_sensors.clear()
+
+            lab_sensor_names = ["has_finished_oracle_nav"]
+            for lab_sensor_name in lab_sensor_names:
+                sensor_name = (
+                    lab_sensor_name
+                    if len(sim_config.agents) == 1
+                    else (f"{gui_agent_key}_{lab_sensor_name}")
+                )
+                if sensor_name in task_config.lab_sensors:
+                    task_config.lab_sensors.pop(sensor_name)
+
+            task_measurement_names = [
+                "does_want_terminate",
+                "bad_called_terminate",
+            ]
+            for task_measurement_name in task_measurement_names:
+                measurement_name = (
+                    task_measurement_name
+                    if len(sim_config.agents) == 1
+                    else (f"{gui_agent_key}_{task_measurement_name}")
+                )
+                if measurement_name in task_config.measurements:
+                    task_config.measurements.pop(measurement_name)
+
+            sim_sensor_names = ["head_depth", "head_rgb"]
+            for sensor_name in sim_sensor_names + lab_sensor_names:
+                sensor_name = (
+                    sensor_name
+                    if len(sim_config.agents) == 1
+                    else (f"{gui_agent_key}_{sensor_name}")
+                )
+                if sensor_name in gym_obs_keys:
+                    gym_obs_keys.remove(sensor_name)
+
             # use humanoidjoint_action for GUI-controlled KinematicHumanoid
             # for example, humanoid oracle-planner-based policy uses following actions:
             # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
             task_actions = task_config.actions
+            action_prefix = (
+                "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
+            )
             gui_agent_actions = [
                 action_key
                 for action_key in task_actions.keys()
-                if action_key.startswith(gui_agent_key)
+                if action_key.startswith(action_prefix)
             ]
             for action_key in gui_agent_actions:
                 task_actions.pop(action_key)
 
-            action_prefix = (
-                f"{gui_agent_key}_" if len(sim_config.agents) > 1 else ""
-            )
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig(
