@@ -361,6 +361,8 @@ class GuiHumanoidController(GuiController):
         fixup = filtered_query_pos - target_query_pos
         self._humanoid_controller.obj_transform_base.translation += fixup
 
-        humanoidjoint_action = np.array(self._humanoid_controller.get_pose())
+        humanoidjoint_action = np.array(
+            self._humanoid_controller.get_pose(), dtype=np.float32
+        )
 
         return humanoidjoint_action
