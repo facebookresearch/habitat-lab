@@ -287,6 +287,7 @@ class EmbodiedTask:
                 config=entity_cfg,
                 dataset=self._dataset,
                 task=self,
+                name=entity_name,
             )
         return entities
 
