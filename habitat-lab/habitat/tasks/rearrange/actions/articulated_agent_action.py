@@ -16,7 +16,9 @@ class ArticulatedAgentAction(SimulatorTaskAction):
 
         if not name_action.startswith("agent_"):
             self._agent_index = 0
-            assert not self._multi_agent, f"Error in action: {name_action}. Multiagent actions should start with agent_X."
+            assert (
+                not self._multi_agent
+            ), f"Error in action: {name_action}. Multiagent actions should start with agent_X."
         else:
             agent_index = name_action.split("_")[1]
             assert agent_index.isnumeric()
