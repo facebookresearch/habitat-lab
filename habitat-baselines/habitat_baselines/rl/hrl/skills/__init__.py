@@ -16,6 +16,7 @@ from habitat_baselines.rl.hrl.skills.wait import WaitSkillPolicy
 
 __all__ = [
     "ArtObjSkillPolicy",
+    "MoveSkillPolicy",
     "NavSkillPolicy",
     "NnSkillPolicy",
     "OracleNavPolicy",
