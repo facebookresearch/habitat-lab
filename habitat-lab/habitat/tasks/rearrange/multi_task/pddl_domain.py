@@ -564,14 +564,6 @@ class PddlDomain:
 
         return self.all_entities[k]
 
-    def find_entities(self, entity_type: ExprType) -> Iterable[PddlEntity]:
-        """
-        Returns all the entities that match the condition.
-        """
-        for entity in self.all_entities.values():
-            if entity.expr_type.is_subtype_of(entity_type):
-                yield entity
-
     def get_ordered_entities_list(self) -> List[PddlEntity]:
         """
         Gets all entities sorted alphabetically by name.
@@ -723,4 +715,49 @@ class PddlProblem(PddlDomain):
 
     @property
     def all_entities(self) -> Dict[str, PddlEntity]:
-        return {**self._objects, **super().all_entities}
+        return {**self._objects, **self._constants}
+
+    def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
+        """
+        Expand out a logical expression that could involve a quantifier into
+        only logical expressions that don't involve any quantifier.
+        """
+
+        expr.sub_exprs = [
+            self.expand_quantifiers(subexpr)
+            if isinstance(subexpr, LogicalExpr)
+            else subexpr
+            for subexpr in expr.sub_exprs
+        ]
+
+        if expr.quantifier == LogicalQuantifierType.FORALL:
+            combine_type = LogicalExprType.AND
+        elif expr.quantifier == LogicalQuantifierType.EXISTS:
+            combine_type = LogicalExprType.OR
+        elif expr.quantifier is None:
+            return expr
+        else:
+            raise ValueError(f"Unrecongized {expr.quantifier}")
+
+        all_matching_entities = []
+        for expand_entity in expr.inputs:
+            all_matching_entities.append(
+                [
+                    e
+                    for e in self.all_entities.values()
+                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
+                ]
+            )
+
+        expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
+        for poss_input in itertools.product(*all_matching_entities):
+            assert len(poss_input) == len(expr.inputs)
+            sub_dict = {
+                expand_entity: sub_entity
+                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
+            }
+
+            expanded_exprs.append(expr.clone().sub_in(sub_dict))
+
+        inputs: List[PddlEntity] = []
+        return LogicalExpr(combine_type, expanded_exprs, inputs, None)
