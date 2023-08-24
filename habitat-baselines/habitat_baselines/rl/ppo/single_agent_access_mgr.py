@@ -45,6 +45,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         num_envs: int,
         percent_done_fn: Callable[[], float],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
+        agent_name=None,
     ):
         """
         :param percent_done_fn: Function that will return the percent of the
@@ -53,6 +54,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             specified in the config. Takes as input the current progress in
             training and returns the learning rate multiplier. The default behavior
             is to use `linear_lr_schedule`.
+        :param agent_name: the name of the agent for which we set the singleagentaccessmanager
         """
 
         self._env_spec = env_spec
@@ -64,6 +66,16 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         self._is_static_encoder = (
             not config.habitat_baselines.rl.ddppo.train_encoder
         )
+
+        if agent_name is None:
+            if len(config.habitat.simulator.agents_order) > 1:
+                raise ValueError(
+                    "If there is more than an agent, you should specify the agent name"
+                )
+            else:
+                agent_name = config.habitat.simulator.agents_order[0]
+
+        self.agent_name = agent_name
         self._nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
         self._percent_done_fn = percent_done_fn
         if lr_schedule_fn is None:
@@ -172,17 +184,18 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         """
 
         policy = baseline_registry.get_policy(
-            self._config.habitat_baselines.rl.policy.name
+            self._config.habitat_baselines.rl.policy[self.agent_name].name
         )
         if policy is None:
             raise ValueError(
-                f"Couldn't find policy {self._config.habitat_baselines.rl.policy.name}"
+                f"Couldn't find policy {self._config.habitat_baselines.rl.policy[self.agent_name].name}"
             )
         actor_critic = policy.from_config(
             self._config,
             self._env_spec.observation_space,
             self._env_spec.action_space,
             orig_action_space=self._env_spec.orig_action_space,
+            agent_name=self.agent_name,
         )
         if (
             self._config.habitat_baselines.rl.ddppo.pretrained_encoder
