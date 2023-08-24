@@ -7,10 +7,10 @@ defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.add_virtual_keys:
+  - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_fixed
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: nn_skills
+  - /habitat_baselines/rl/policy: hl_fixed
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: nn_skills
   - /habitat/task/measurements:
     - composite_subgoal_reward
   - _self_

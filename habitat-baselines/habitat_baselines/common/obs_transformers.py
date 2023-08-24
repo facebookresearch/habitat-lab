@@ -1202,16 +1202,8 @@ def get_active_obs_transforms(
     config: "DictConfig",
 ) -> List[ObservationTransformer]:
     active_obs_transforms = []
-
-    # When using observation transformations, we
-    # assume for now that the observation space is shared among agents
-    agent_name = list(config.habitat_baselines.rl.policy.keys())[0]
-    obs_trans_conf = config.habitat_baselines.rl.policy[
-        agent_name
-    ].obs_transforms
-    if hasattr(
-        config.habitat_baselines.rl.policy[agent_name], "obs_transforms"
-    ):
+    obs_trans_conf = config.habitat_baselines.rl.policy.obs_transforms
+    if hasattr(config.habitat_baselines.rl.policy, "obs_transforms"):
         for obs_transform_config in obs_trans_conf.values():
             obs_trans_cls = baseline_registry.get_obs_transformer(
                 obs_transform_config.type

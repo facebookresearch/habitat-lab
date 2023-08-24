@@ -33,9 +33,9 @@ habitat_baselines:
     split: "val"
 
   rl:
+
     policy:
-      main_agent:
-        name: "PointNavResNetPolicy"
+      name: "PointNavResNetPolicy"
 
     ppo:
       # ppo params

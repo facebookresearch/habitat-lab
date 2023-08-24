@@ -3,8 +3,9 @@
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /benchmark/nav/instance_imagenav: instance_imagenav_hm3d_v2
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.resize_shortest_edge: resize_shortest_edge_base
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.center_cropper: center_cropper_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - resize_shortest_edge_base
+    - center_cropper_base
   - _self_
 
 habitat:
@@ -38,11 +39,10 @@ habitat_baselines:
   rl:
 
     policy:
-      main_agent:
-        name: PointNavResNetPolicy
-        obs_transforms:
-          resize_shortest_edge:
-            trans_keys: [rgb, depth, semantic, instance_imagegoal]
+      name: PointNavResNetPolicy
+      obs_transforms:
+        resize_shortest_edge:
+          trans_keys: [rgb, depth, semantic, instance_imagegoal]
 
     ppo:
       # ppo params

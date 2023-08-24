@@ -708,7 +708,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
         return spaces.Dict(
             {
                 "human_joints_trans": spaces.Box(
-                    shape=(4 * num_joints + num_dim_transform * 2,),
+                    shape=(4 * num_joints + num_dim_transform,),
                     low=-1,
                     high=1,
                     dtype=np.float32,
@@ -730,7 +730,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
         human_joints_trans = kwargs[
             self._action_arg_prefix + "human_joints_trans"
         ]
-        new_joints = human_joints_trans[:-32]
+        new_joints = human_joints_trans[:-16]
         new_pos_transform_base = human_joints_trans[-16:]
         new_pos_transform_offset = human_joints_trans[-32:-16]
 

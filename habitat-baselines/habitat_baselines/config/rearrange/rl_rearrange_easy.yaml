@@ -3,7 +3,7 @@
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: monolithic
+  - /habitat_baselines/rl/policy: monolithic
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - _self_
 

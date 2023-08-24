@@ -23,7 +23,7 @@ defaults:
     - rearrange_stop
     - oracle_nav_action
   - override /habitat/task/rearrange: rearrange_easy_base
-  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
   - _self_
 
 habitat:
@@ -46,68 +46,67 @@ habitat:
   simulator:
     agents:
       main_agent:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/amass_male.urdf'
         articulated_agent_type: KinematicHumanoid
         motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 
 habitat_baselines:
   rl:
     policy:
-      main_agent:
-        hierarchical_policy:
-          defined_skills:
-            nav_to_obj:
-              ignore_grip: True
-              pddl_action_names: ["nav", "nav_to_receptacle_by_name"]
-            open_cab:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["open_cab_by_name"]
-              ignore_grip: True
-            open_fridge:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["open_fridge_by_name"]
-              ignore_grip: True
-            close_cab:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["close_cab_by_name"]
-              ignore_grip: True
-            close_fridge:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["close_fridge_by_name"]
-              ignore_grip: True
-            pick:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              ignore_grip: True
-            place:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_goal_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              ignore_grip: True
-            wait:
-              skill_name: "WaitSkillPolicy"
-              ignore_grip: True
-            reset_arm:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              ignore_grip: True
-              force_end_on_timeout: False
+      hierarchical_policy:
+        defined_skills:
+          nav_to_obj:
+            ignore_grip: True
+            pddl_action_names: ["nav", "nav_to_receptacle_by_name"]
+          open_cab:
+            skill_name: "NoopSkillPolicy"
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            pddl_action_names: ["open_cab_by_name"]
+            ignore_grip: True
+          open_fridge:
+            skill_name: "NoopSkillPolicy"
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            pddl_action_names: ["open_fridge_by_name"]
+            ignore_grip: True
+          close_cab:
+            skill_name: "NoopSkillPolicy"
+            obs_skill_inputs: ["obj_start_sensor"]
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            pddl_action_names: ["close_cab_by_name"]
+            ignore_grip: True
+          close_fridge:
+            skill_name: "NoopSkillPolicy"
+            obs_skill_inputs: ["obj_start_sensor"]
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            pddl_action_names: ["close_fridge_by_name"]
+            ignore_grip: True
+          pick:
+            skill_name: "NoopSkillPolicy"
+            obs_skill_inputs: ["obj_start_sensor"]
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            ignore_grip: True
+          place:
+            skill_name: "NoopSkillPolicy"
+            obs_skill_inputs: ["obj_goal_sensor"]
+            max_skill_steps: 1
+            apply_postconds: True
+            force_end_on_timeout: False
+            ignore_grip: True
+          wait:
+            skill_name: "WaitSkillPolicy"
+            ignore_grip: True
+          reset_arm:
+            skill_name: "NoopSkillPolicy"
+            max_skill_steps: 1
+            ignore_grip: True
+            force_end_on_timeout: False

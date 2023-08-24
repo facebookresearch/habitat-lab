@@ -33,11 +33,10 @@ habitat_baselines:
 
   rl:
     policy:
-      main_agent:
-        name: PointNavResNetPolicy
-        obs_transforms:
-          resize_shortest_edge:
-            trans_keys: [rgb, depth, semantic, instance_imagegoal]
+      name: PointNavResNetPolicy
+      obs_transforms:
+        resize_shortest_edge:
+          trans_keys: [rgb, depth, semantic, instance_imagegoal]
 
     ppo:
       # ppo params
