@@ -423,3 +423,7 @@ class AppStateRearrange(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+    def is_over(self):
+        # terminal neverending app state
+        return False
