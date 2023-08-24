@@ -24,7 +24,7 @@ defaults:
 
 hydra:
   job:
-    name: 'spot_pick_1'
+    name: 'spot_pick_2'
 
 habitat_baselines:
   verbose: True
