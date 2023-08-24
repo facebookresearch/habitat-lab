@@ -19,7 +19,7 @@ import numpy as np
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
-from habitat.tasks.rearrange.utils import get_aabb
+from habitat.tasks.rearrange.utils import get_ao_link_aabb, get_rigid_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 from habitat_sim.utils.common import quat_from_two_vectors as qf2v
 from habitat_sim.utils.common import quat_to_magnum as qtm
@@ -946,9 +946,18 @@ def get_navigable_receptacles(
         receptacle_obj = obj_mgr.get_object_by_handle(
             receptacle.parent_object_handle
         )
-        receptacle_bb = get_aabb(
-            receptacle_obj.object_id, sim, transformed=True
-        )
+        receptacle_bb = None
+        if receptacle.is_parent_object_articulated:
+            receptacle_bb = get_ao_link_aabb(
+                receptacle_obj.object_id,
+                receptacle.parent_link,
+                sim,
+                transformed=True,
+            )
+        else:
+            receptacle_bb = get_rigid_aabb(
+                receptacle_obj.object_id, sim, transformed=True
+            )
 
         # TODO: this height heuristic isn't good in general. AABB height doesn't work for objects which are mounted on a wall or stacked. Better would be the abs of the average snap point height minus the average global receptacle corner bottom hieght.
         if (

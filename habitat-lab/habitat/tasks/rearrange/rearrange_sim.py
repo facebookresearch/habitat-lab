@@ -46,7 +46,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 from habitat.tasks.rearrange.utils import (
     add_perf_timing_func,
-    get_aabb,
+    get_rigid_aabb,
     make_render_only,
     rearrange_collision,
     rearrange_logger,
@@ -680,7 +680,7 @@ class RearrangeSim(HabitatSim):
                 self.set_object_bb_draw(True, ro.object_id)
                 ro.transformation = transform
                 make_render_only(ro, self)
-                bb = get_aabb(ro.object_id, self, True)
+                bb = get_rigid_aabb(ro.object_id, self, True)
                 bb_viz_name1 = target_handle + "_bb1"
                 bb_viz_name2 = target_handle + "_bb2"
                 viz_r = 0.01
