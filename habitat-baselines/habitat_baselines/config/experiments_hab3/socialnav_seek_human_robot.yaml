@@ -107,8 +107,8 @@ habitat:
         type: OracleNavRandCoordAction
         agent_index : 1
         motion_control: human_joints
-        lin_speed: 10.0
-        ang_speed: 10.0
+        lin_speed: 5.0
+        ang_speed: 5.0
 
     measurements:
       force_terminate:
@@ -212,7 +212,7 @@ habitat_baselines:
   num_checkpoints: 100
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
-  load_resume_state_config: True
+  load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False

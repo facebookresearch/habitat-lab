@@ -881,6 +881,8 @@ class PPOTrainer(BaseRLTrainer):
         action_shape, discrete_actions = get_action_space_info(
             self._agent.policy_action_space
         )
+        # TODO: better way to handle this
+        discrete_actions = False
 
         if (
             self._agent.actor_critic.should_load_agent_state

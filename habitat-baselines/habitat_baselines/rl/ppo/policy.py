@@ -314,9 +314,12 @@ class NetPolicy(nn.Module, Policy):
         deterministic=False,
         **kwargs,
     ):
+        print("Input: rnn_hidden_states:", rnn_hidden_states)
+        print("input: prev_actions:", prev_actions)
         features, rnn_hidden_states, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
+        print("Output: rnn_hidden_states:", rnn_hidden_states)
         distribution = self.action_distribution(features)
         value = self.critic(features)
 
@@ -329,6 +332,8 @@ class NetPolicy(nn.Module, Policy):
             action = distribution.sample()
 
         action_log_probs = distribution.log_probs(action)
+        print("cur action:", action)
+        breakpoint()
         return PolicyActionData(
             values=value,
             actions=action,
