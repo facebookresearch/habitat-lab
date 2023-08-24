@@ -62,7 +62,9 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         dir_vector = articulated_agent_T.inverted().transform_point(
             task.nav_goal_pos
         )
+
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
+
         return np.array([rho, -phi], dtype=np.float32)
 
 

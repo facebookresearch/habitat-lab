@@ -20,3 +20,6 @@ name: "PointNavResNetPolicy"
 action_distribution_type: "gaussian"
 action_dist:
   use_log_std: True
+  clamp_std: True
+  std_init: -1.0
+  use_std_param: True

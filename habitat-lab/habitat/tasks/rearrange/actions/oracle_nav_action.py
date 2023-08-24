@@ -752,8 +752,12 @@ class OracleNavCoordAction(OracleNavAction):
                         )
                     else:
                         # Move towards the target
+                        if self._config["lin_speed"] == 0:
+                            distance_multiplier = 0.0
+                        else:
+                            distance_multiplier = 1.0
                         self.humanoid_controller.calculate_walk_pose(
-                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]]), distance_multiplier
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()

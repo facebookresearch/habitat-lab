@@ -62,7 +62,10 @@ defaults:
 
 hydra:
   job:
-    name: 'spot_socnav_avoid_1'
+    name: 'spot_socnav_avoid_3'
+
+# habitat.task.measurements.distance_to_goal 
+# self._sim.geodesic_distance
 
 habitat:
   task:
@@ -112,8 +115,8 @@ habitat:
         type: OracleNavRandCoordAction
         agent_index : 1
         motion_control: human_joints
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 10.0
 
     measurements:
       force_terminate:

@@ -1257,7 +1257,6 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
             # plt.savefig(f'/checkpoint/jimmytyyang/depth{self._plot_i}.png')
             # plt.close()
             # self._plot_i += 1
-            # breakpoint()
             found_human = True
 
         if found_human:
