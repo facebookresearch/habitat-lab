@@ -959,16 +959,6 @@ def get_navigable_receptacles(
                 receptacle_obj.object_id, sim, transformed=True
             )
 
-        # TODO: this height heuristic isn't good in general. AABB height doesn't work for objects which are mounted on a wall or stacked. Better would be the abs of the average snap point height minus the average global receptacle corner bottom hieght.
-        if (
-            receptacle_bb.size_y()
-            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
-        ):
-            logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
-            )
-            continue
-
         recep_points = [
             receptacle_bb.back_bottom_left,
             receptacle_bb.back_bottom_right,
