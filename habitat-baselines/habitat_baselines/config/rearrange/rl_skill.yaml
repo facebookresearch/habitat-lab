@@ -3,7 +3,7 @@
 defaults:
   - /benchmark/rearrange: pick
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy: monolithic
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: monolithic
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - _self_
 
@@ -34,10 +34,11 @@ habitat_baselines:
 
   rl:
     policy:
-        action_dist:
-           clamp_std: True
-           std_init: -1.0
-           use_std_param: True
+        main_agent:
+          action_dist:
+            clamp_std: True
+            std_init: -1.0
+            use_std_param: True
     ppo:
       # ppo params
       clip_param: 0.2

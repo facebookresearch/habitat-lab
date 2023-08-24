@@ -66,7 +66,8 @@ def download_data():
             [
                 [],
                 [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                    "+habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.center_cropper=center_cropper_base",
+                    "+habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.resize_shortest_edge=resize_shortest_edge_base",
                 ],
             ],
             ["train", "eval"],
@@ -142,7 +143,8 @@ def test_ver_trainer(
                 "habitat_baselines.trainer_name=ver",
                 f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
                 f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
-                "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                "+habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.center_cropper=center_cropper_base",
+                "+habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.resize_shorter_edge=resize_shortest_edge_base",
                 "habitat_baselines.num_updates=2",
                 "habitat_baselines.total_num_steps=-1",
                 "habitat_baselines.rl.preemption.save_state_batch_only=True",
@@ -226,13 +228,13 @@ def test_cubemap_stiching(
         meta_config.habitat = config
 
         if camera == "equirect":
-            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+            meta_config.habitat_baselines.rl.policy.main_agent.obs_transforms = {
                 "cube2eq": Cube2EqConfig(
                     sensor_uuids=sensor_uuids, width=256, height=256
                 )
             }
         elif camera == "fisheye":
-            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+            meta_config.habitat_baselines.rl.policy.main_agent.obs_transforms = {
                 "cube2fish": Cube2FishConfig(
                     sensor_uuids=sensor_uuids, width=256, height=256
                 )

@@ -655,7 +655,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             else:
                 agent_name = config.habitat.simulator.agents_order[0]
         return cls(
-            config=config.habitat_baselines.rl.policy,
+            config=config.habitat_baselines.rl.policy[agent_name],
             full_config=config,
             observation_space=observation_space,
             action_space=orig_action_space,

@@ -253,8 +253,8 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             f"habitat_baselines.log_file={TRAIN_LOG_FILE}",
-            f"habitat_baselines/rl/policy={policy_type}",
-            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
+            f"habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent={policy_type}",
+            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills={skill_type}",
         ],
     )
     with read_write(config):
@@ -263,7 +263,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             skill_name,
             skill,
         ) in (
-            config.habitat_baselines.rl.policy.hierarchical_policy.defined_skills.items()
+            config.habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.items()
         ):
             if skill.load_ckpt_file == "":
                 continue
