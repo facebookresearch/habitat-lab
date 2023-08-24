@@ -925,6 +925,8 @@ def get_obj_manager_for_receptacle(
 def get_navigable_receptacles(
     sim: habitat_sim.Simulator,
     receptacles: List[Receptacle],
+    nav_island: int,
+    nav_to_min_distance: float = 1.5,
 ) -> List[Receptacle]:
     """
     Given a list of receptacles, return the ones that are heuristically navigable from the largest indoor navmesh island.
@@ -933,6 +935,8 @@ def get_navigable_receptacles(
 
     :param sim: The Simulator instance.
     :param receptacles: The list of Receptacle instances to cull.
+    :param nav_island: The NavMesh island on which to check accessibility. -1 is the full NavMesh.
+    :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
 
     :return: The list of heuristic passing Receptacle instances.
     """
@@ -966,7 +970,7 @@ def get_navigable_receptacles(
         corners_accessible = True
         corners_accessible = (
             sum(
-                is_accessible(sim, point, nav_to_min_distance=1.5)
+                is_accessible(sim, point, nav_to_min_distance, nav_island)
                 for point in recep_points
             )
             >= 2

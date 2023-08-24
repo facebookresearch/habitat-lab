@@ -548,6 +548,11 @@ class RearrangeEpisodeGenerator:
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
 
+        # get the largest indoor island to constrain target navigability check
+        largest_indoor_island_id = get_largest_island_index(
+            self.sim.pathfinder, self.sim, allow_outdoor=False
+        )
+
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
@@ -576,8 +581,12 @@ class RearrangeEpisodeGenerator:
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
+                # optionally constrain to the largest indoor island
+                nav_island = -1
+                if sampler._constrain_to_largest_nav_island:
+                    nav_island = largest_indoor_island_id
                 new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle]
+                    self.sim, [new_receptacle], nav_island
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_target_receptacles.append(new_receptacle[0])  # type: ignore
@@ -608,9 +617,12 @@ class RearrangeEpisodeGenerator:
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
-
+                # optionally constrain to the largest indoor island
+                nav_island = -1
+                if sampler._constrain_to_largest_nav_island:
+                    nav_island = largest_indoor_island_id
                 new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle]
+                    self.sim, [new_receptacle], nav_island
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_goal_receptacles.append(new_receptacle[0])  # type: ignore
@@ -719,11 +731,6 @@ class RearrangeEpisodeGenerator:
             ]
 
         target_refs: Dict[str, str] = {}
-
-        # get the largest indoor island to constrain target navigability check
-        largest_indoor_island_id = get_largest_island_index(
-            self.sim.pathfinder, self.sim, allow_outdoor=False
-        )
 
         # sample goal positions for target objects after all other clutter is placed and validated
         handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
