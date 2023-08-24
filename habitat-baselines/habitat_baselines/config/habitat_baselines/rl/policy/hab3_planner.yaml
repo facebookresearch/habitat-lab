@@ -1,0 +1,23 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "PlannerHighLevelPolicy"
+    allowed_actions:
+      - nav_to_receptacle_by_name
+      - nav_to_goal
+      - nav_to_obj
+      - pick
+      - place
+    allow_other_place: False
+    max_search_depth: 8
+    is_reactive: False
+    # This is the number of non-overlapping steps to sub-sample from each
+    # planned sequence (so the agent only does a part of the overall task).
+    plan_split_len: 4
+    # The index of which plan to take.
+    plan_idx: -1
+  defined_skills: {}

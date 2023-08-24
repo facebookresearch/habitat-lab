@@ -16,6 +16,7 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -81,6 +82,7 @@ class ObjectSampler:
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
+        self.largest_island_id = -1
 
     def reset(self) -> None:
         """
@@ -249,13 +251,9 @@ class ObjectSampler:
             self._constrain_to_largest_nav_island
             and self.largest_island_id == -1
         ):
-            island_areas = list(
-                map(
-                    sim.pathfinder.island_area,
-                    range(sim.pathfinder.num_islands),
-                )
+            self.largest_island_id = get_largest_island_index(
+                sim.pathfinder, sim, allow_outdoor=False
             )
-            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -328,6 +326,9 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not self._is_accessible(sim, new_object):
+                        logger.info(
+                            "   - object is not accessible from navmesh, rejecting placement."
+                        )
                         continue
                     return new_object
 
@@ -338,7 +339,6 @@ class ObjectSampler:
                 if not self._is_accessible(sim, new_object):
                     continue
                 return new_object
-
         # if num_placement_tries > self.max_placement_attempts:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
@@ -363,6 +363,7 @@ class ObjectSampler:
         horizontal Euclidean distance. The nearest navigable point may be
         separated from the object by an obstacle on a stairway, etc...
         """
+
         if self.nav_to_min_distance == -1:
             return True
 
@@ -472,6 +473,7 @@ class ObjectSampler:
                 fixed_obj_handle = target_object_handles[cur_obj_idx]
 
             num_pairing_tries += 1
+
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(

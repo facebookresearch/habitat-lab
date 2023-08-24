@@ -81,7 +81,7 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
-    # PROFILING MEASURES
+    # DEBUG MEASURES
     "RuntimePerfStatsMeasurementConfig",
 ]
 
@@ -271,6 +271,8 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     ang_speed: float = 10.0
     # If we want to do sliding or not
     allow_dyn_slide: bool = False
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
     # If we allow the robot to move back or not
     allow_back: bool = True
     # There is a collision if the difference between the clamped NavMesh position and target position
@@ -288,7 +290,8 @@ class HumanoidJointActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
-    num_joints: int = 17
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
+    num_joints: int = 54
 
 
 @dataclass
@@ -325,8 +328,54 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+
+
+@dataclass
+class OracleNavWithBackingUpActionConfig(ActionConfig):
+    """
+    Rearrangement Only, Oracle navigation action with backing-up motion.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "OracleNavWithBackingUpAction"
+    # Whether the motion is in the form of base_velocity or human_joints
+    motion_control: str = "base_velocity"
+    num_joints: int = 17
+    turn_velocity: float = 1.0
+    forward_velocity: float = 1.0
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
+    # For noncylinder navmesh action
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # The x and y locations of the clamped NavMesh position for placing and picking locations
+    navmesh_offset_for_agent_placement: Optional[List[float]] = None
+    # Simulation frequency for velocity control
+    sim_freq: float = 120.0
+    # Distance threshold between two agents to issue a stop action
+    agents_dist_thresh: float = -1.0
 
 
 # -----------------------------------------------------------------------------
@@ -447,7 +496,7 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the joint positions of the robot.
     """
     type: str = "HumanoidJointSensor"
-    dimensionality: int = 17 * 4
+    dimensionality: int = 54 * 4
 
 
 @dataclass
@@ -552,6 +601,35 @@ class GlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
+    type: str = "MultiAgentGlobalPredicatesSensor"
+
+
+@dataclass
+class ShouldReplanSensorConfig(LabSensorConfig):
+    type: str = "ShouldReplanSensor"
+    x_len: Optional[float] = None
+    y_len: Optional[float] = None
+    agent_idx: int = 0
+
+
+@dataclass
+class ActionHistorySensorConfig(LabSensorConfig):
+    type: str = "ActionHistorySensor"
+    window_size: int = 20
+
+
+@dataclass
+class HasFinishedOracleNavSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class OtherAgentGpsConfig(LabSensorConfig):
+    type: str = "OtherAgentGps"
+
+
+@dataclass
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
@@ -595,6 +673,11 @@ class DistToNavGoalSensorConfig(LabSensorConfig):
 @dataclass
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
+
+
+@dataclass
+class NavigationTargetPositionSensorConfig(LabSensorConfig):
+    type: str = "NavigationTargetPositionSensor"
 
 
 @dataclass
@@ -685,15 +768,7 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
-    """
-    If added to the measurements, this will time various sections of code in
-    the simulator and task logic. If using with a multi-environment trainer
-    (like DD-PPO) it is recommended to only log this stat for one environment
-    since this metric can include many numbers.
-    """
-
     type: str = "RuntimePerfStats"
-    disable_logging: bool = False
 
 
 @dataclass
@@ -722,6 +797,15 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 @dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
+
+
+@dataclass
+class ContactTestStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+
+    """
+    type: str = "ContactTestStats"
 
 
 @dataclass
@@ -1042,6 +1126,35 @@ class CompositeSubgoalReward(MeasurementConfig):
 
 
 @dataclass
+class SocialNavReward(MeasurementConfig):
+    type: str = "SocialNavReward"
+
+
+@dataclass
+class DidAgentsCollideConfig(MeasurementConfig):
+    type: str = "DidAgentsCollide"
+
+
+@dataclass
+class NumAgentsCollideConfig(MeasurementConfig):
+    type: str = "NumAgentsCollide"
+
+
+@dataclass
+class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
+    type: str = "CooperateSubgoalReward"
+    stage_sparse_reward: float = 1.0
+    end_on_collide: bool = True
+    # Positive penalty means give negative reward.
+    collide_penalty: float = 1.0
+
+
+@dataclass
+class AgentBlameMeasureConfig(MeasurementConfig):
+    type: str = "AgentBlameMeasure"
+
+
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -1148,7 +1261,7 @@ class TaskConfig(HabitatBaseConfig):
     should_save_to_cache: bool = False
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
-    gfx_replay_dir = "data/replays"
+    gfx_replay_dir: str = "data/replays"
     render_target: bool = True
     # Spawn parameters
     physics_stability_steps: int = 1
@@ -1182,6 +1295,9 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
+    # The minimum distance between the agents at start. If < 0
+    # there is no minimal distance
+    min_distance_start_agents: float = -1.0
     actions: Dict[str, ActionConfig] = MISSING
 
 
@@ -1326,8 +1442,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
@@ -1340,6 +1456,8 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    max_climb: float = 0.01
+    max_slope: float = 45.0
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
@@ -1353,6 +1471,7 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    rest_pose_data_path: str = ""
 
 
 @dataclass
@@ -1420,10 +1539,7 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
-    # If False, will skip setting the semantic IDs of objects in
-    # `rearrange_sim.py` (there is overhead to this operation so skip if not
-    # using semantic information).
-    should_setup_semantic_ids: bool = True
+    force_soft_reset: bool = False
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
@@ -1697,6 +1813,12 @@ cs.store(
     node=OracleNavActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.oracle_nav_with_backing_up_action",
+    group="habitat/task/actions",
+    name="oracle_nav_with_backing_up_action",
+    node=OracleNavWithBackingUpActionConfig,
+)
+cs.store(
     package="habitat.task.actions.pddl_apply_action",
     group="habitat/task/actions",
     name="pddl_apply_action",
@@ -1848,6 +1970,12 @@ cs.store(
     node=LocalizationSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.navigation_target_position_sensor",
+    group="habitat/task/lab_sensors",
+    name="navigation_target_position_sensor",
+    node=NavigationTargetPositionSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",
     group="habitat/task/lab_sensors",
     name="target_start_sensor",
@@ -1930,6 +2058,43 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_start_gps_compass_sensor",
     node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.all_predicates",
+    group="habitat/task/lab_sensors",
+    name="all_predicates",
+    node=GlobalPredicatesSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.multi_agent_all_predicates",
+    group="habitat/task/lab_sensors",
+    name="multi_agent_all_predicates",
+    node=MultiAgentGlobalPredicatesSensorConfig,
+)
+
+cs.store(
+    package="habitat.task.lab_sensors.should_replan",
+    group="habitat/task/lab_sensors",
+    name="should_replan",
+    node=ShouldReplanSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.action_history",
+    group="habitat/task/lab_sensors",
+    name="action_history",
+    node=ActionHistorySensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_oracle_nav",
+    group="habitat/task/lab_sensors",
+    name="has_finished_oracle_nav",
+    node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.other_agent_gps",
+    group="habitat/task/lab_sensors",
+    name="other_agent_gps",
+    node=OtherAgentGpsConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
@@ -2079,6 +2244,12 @@ cs.store(
     node=RobotCollisionsMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.contact_test_stats",
+    group="habitat/task/measurements",
+    name="contact_test_stats",
+    node=ContactTestStatsMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.object_to_goal_distance",
     group="habitat/task/measurements",
     name="object_to_goal_distance",
@@ -2119,6 +2290,36 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_subgoal_reward",
     node=CompositeSubgoalReward,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_reward",
+    group="habitat/task/measurements",
+    name="social_nav_reward",
+    node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.cooperate_subgoal_reward",
+    group="habitat/task/measurements",
+    name="cooperate_subgoal_reward",
+    node=CooperateSubgoalRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.agent_blame_measure",
+    group="habitat/task/measurements",
+    name="agent_blame_measure",
+    node=AgentBlameMeasureConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_agents_collide",
+    group="habitat/task/measurements",
+    name="did_agents_collide",
+    node=DidAgentsCollideConfig,
+)
+cs.store(
+    package="habitat.task.measurements.num_agents_collide",
+    group="habitat/task/measurements",
+    name="num_agents_collide",
+    node=NumAgentsCollideConfig,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",
@@ -2217,12 +2418,11 @@ cs.store(
     node=RearrangeReachSuccessMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.habitat_perf",
+    package="habitat.task.measurements.runtime_perf_stats",
     group="habitat/task/measurements",
-    name="habitat_perf",
+    name="runtime_perf_stats",
     node=RuntimePerfStatsMeasurementConfig,
 )
-
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins

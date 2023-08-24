@@ -1,0 +1,37 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/task/rearrange: rearrange_easy_human
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_joint
+  environment:
+    max_episode_steps: 1500
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    grasp_impulse: 10000.0
+    hold_thresh: 0.2
+    agents_order:
+      - agent_0
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

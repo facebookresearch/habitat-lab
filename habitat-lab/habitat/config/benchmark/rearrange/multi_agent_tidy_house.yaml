@@ -1,0 +1,58 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
+  - /habitat/task/rearrange: multi_agent_tidy_house
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_1_head_depth
+      - agent_0_obj_start_sensor
+      - agent_1_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_1_obj_goal_sensor
+      - agent_0_joint
+      - agent_1_joint
+  environment:
+    max_episode_steps: 5000
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - agent_0
+      - agent_1
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        articulated_agent_type: FetchSuctionRobot
+        ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+        joint_start_noise: 0.0
+      agent_1:
+        radius: 0.3
+        sim_sensors:
+          head_depth_sensor:
+            height: 256
+            width: 256
+        # A new instance of the sensor is created. The agents do not share a
+        # depth camera, but instead a different depth camera is created for
+        # each agent.
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        articulated_agent_type: FetchSuctionRobot
+
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+  dataset:
+    # data_path: data/datasets/replica_cad/rearrange/v2/{split}/tidy_house_10k_1k.pickle
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz

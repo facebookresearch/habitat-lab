@@ -264,11 +264,7 @@ class EnvBatchRenderer:
             raise NotImplementedError
 
         # Render
-        if is_color_sensor:
-            self._replay_renderer.render(color_images=self._gpu_to_cpu_images)
-        elif is_depth_sensor:
-            self._replay_renderer.render(depth_images=self._gpu_to_cpu_images)
-
+        self._replay_renderer.render(color_images=self._gpu_to_cpu_images)
         return self._gpu_to_cpu_buffer
 
     def _draw_observations_gpu_to_gpu(

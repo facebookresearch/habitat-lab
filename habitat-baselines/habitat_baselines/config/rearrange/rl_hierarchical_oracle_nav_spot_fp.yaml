@@ -1,0 +1,104 @@
+# @package _global_
+
+# Extends the `rl_hierarchical` config to use an oracle navigation action.
+# Several things change to support the oracle navigation:
+# - Adding the oracle navigation action
+# - Add sliding.
+# - Use the oracle navigation skill.
+
+defaults:
+  - rl_hierarchical
+  - /habitat/task/actions:
+    - oracle_nav_with_backing_up_action
+  - /habitat/task/lab_sensors:
+    - has_finished_oracle_nav
+  - /habitat/task/measurements:
+    - composite_subgoal_reward
+    - runtime_perf_stats
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - override /habitat/task/rearrange: rearrange_easy_fp
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - has_finished_oracle_nav
+  task:
+    actions:
+      oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
+    robot_at_thresh: 3.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    # On average, a single nav-pick-place takes about 750 steps
+    max_episode_steps: 2000
+
+  simulator:
+    habitat_sim_v0:
+      allow_sliding: True
+    # Add Spot robot agents
+    agents:
+      main_agent:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
+  dataset:
+    data_path:  data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
+
+habitat_baselines:
+  rl:
+    policy:
+      main_agent:
+        hierarchical_policy:
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+              nav_to_obj:
+                skill_name: "OracleNavPolicy"
+                obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+                max_skill_steps: 2500
+                stop_thresh: 0.5
+                # We do not want Spot to teleport when it is near target receptacles
+                apply_postconds: False

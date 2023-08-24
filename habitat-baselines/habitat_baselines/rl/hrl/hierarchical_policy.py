@@ -20,8 +20,7 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlProblem,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.hrl.hl import FixedHighLevelPolicy  # noqa: F401.
-from habitat_baselines.rl.hrl.hl import NeuralHighLevelPolicy  # noqa: F401.
+from habitat_baselines.rl.hrl.hl import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.hl import HighLevelPolicy
 from habitat_baselines.rl.hrl.skills import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.skills import NoopSkillPolicy, SkillPolicy
@@ -48,8 +47,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
-        aux_loss_config,
-        agent_name: Optional[str],
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -62,12 +61,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._idx_to_name: Dict[int, str] = {}
         # Can map multiple skills to the same underlying skill controller.
         self._skill_redirects: Dict[int, int] = {}
-
-        if "rearrange_stop" not in action_space.spaces:
-            raise ValueError("Hierarchical policy requires the stop action")
-        self._stop_action_idx, _ = find_action_range(
-            action_space, "rearrange_stop"
-        )
 
         self._pddl = self._create_pddl(full_config, config)
         self._create_skills(
@@ -92,7 +85,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._cur_call_high_level: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
-
         self._active_envs: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
@@ -150,6 +142,16 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
 
+        first_idx: Optional[int] = None
+        for skill_i, skill in self._skills.items():
+            if self._idx_to_name[skill_i] == "noop":
+                continue
+            if isinstance(skill, NoopSkillPolicy):
+                if first_idx is None:
+                    first_idx = skill_i
+                else:
+                    self._skill_redirects[skill_i] = first_idx
+
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)
 
@@ -172,6 +174,32 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     def eval(self):
         pass
+
+    @property
+    def policy_action_space(self):
+        """
+        Fetches the policy action space for learning. If we are learning the HL
+        policy, it will return its custom action space for learning.
+        """
+        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
+            # The LL skill will take priority for the prev action.
+            return self._action_space
+        else:
+            return self._high_level_policy.get_policy_action_space(
+                self._action_space
+            )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self.policy_action_space]
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
+
+    @property
+    def hidden_state_shape(self):
+        return (self.num_recurrent_layers, self.recurrent_hidden_size)
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space
@@ -216,10 +244,12 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     @property
     def num_recurrent_layers(self):
-        return (
-            self._max_skill_rnn_layers
-            + self._high_level_policy.num_recurrent_layers
-        )
+        if self._high_level_policy.num_recurrent_layers != 0:
+            return self._high_level_policy.num_recurrent_layers
+        else:
+            return self._skills[
+                list(self._skills.keys())[0]
+            ].num_recurrent_layers
 
     @property
     def should_load_agent_state(self):
@@ -256,7 +286,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         ):
             if not should_add:
                 continue
-
             if cur_skill in self._skill_redirects:
                 cur_skill = self._skill_redirects[cur_skill]
             skill_to_batch[cur_skill].append(i)
@@ -279,6 +308,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         prev_actions,
         masks,
         deterministic=False,
+        **kwargs,
     ):
         batch_size = masks.shape[0]
         masks_cpu = masks.cpu()
@@ -290,17 +320,13 @@ class HierarchicalPolicy(nn.Module, Policy):
             (batch_size, get_num_actions(self._action_space)),
             device=masks.device,
         )
-        hl_rnn_hidden_states, ll_rnn_hidden_states = self._split_hidden_states(
-            rnn_hidden_states
-        )
 
         # Always call high-level if the episode is over.
         self._cur_call_high_level |= (~masks_cpu).view(-1)
 
         hl_terminate_episode, hl_info = self._update_skills(
             observations,
-            hl_rnn_hidden_states,
-            ll_rnn_hidden_states,
+            rnn_hidden_states,
             prev_actions,
             masks,
             actions,
@@ -309,14 +335,6 @@ class HierarchicalPolicy(nn.Module, Policy):
             deterministic,
         )
         did_choose_new_skill = self._cur_call_high_level.clone()
-        if hl_info.rnn_hidden_states is not None and self._has_hl_hidden_state:
-            # Update the HL hidden state.
-            hl_rnn_hidden_states = hl_info.rnn_hidden_states
-
-        if hl_info.policy_info is not None:
-            # Merge the infos.
-            for env_i, info in enumerate(hl_info.policy_info):
-                log_info[env_i].update(info)
 
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -335,11 +353,9 @@ class HierarchicalPolicy(nn.Module, Policy):
                 masks=batch_dat["masks"],
                 cur_batch_idx=batch_ids,
             )
-            actions[batch_ids] += action_data.actions
 
-            if self._has_ll_hidden_state:
-                # Update the LL hidden state.
-                ll_rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+            actions[batch_ids] += action_data.actions
+            rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         # Skills should not be responsible for terminating the overall episode.
         actions[:, self._stop_action_idx] = 0.0
@@ -350,8 +366,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             actions,
         ) = self._get_terminations(
             observations,
-            hl_rnn_hidden_states,
-            ll_rnn_hidden_states,
+            rnn_hidden_states,
             prev_actions,
             masks,
             actions,
@@ -378,61 +393,21 @@ class HierarchicalPolicy(nn.Module, Policy):
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
-            should_inserts=did_choose_new_skill.view(-1, 1),
-            actions=use_action,
-            values=hl_info.values,
-            action_log_probs=hl_info.action_log_probs,
-            rnn_hidden_states=rnn_hidden_states,
+            should_inserts=did_choose_new_skill.view(-1, 1).numpy(),
+            **action_kwargs,
         )
-
-    @property
-    def _has_hl_hidden_state(self) -> bool:
-        return self._high_level_policy.num_recurrent_layers != 0
-
-    @property
-    def _has_ll_hidden_state(self) -> bool:
-        return self._max_skill_rnn_layers != 0
-
-    def _split_hidden_states(
-        self, rnn_hidden_states: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if (not self._has_hl_hidden_state) or (not self._has_ll_hidden_state):
-            # No need to split hidden states if both aren't being used.
-            return rnn_hidden_states, rnn_hidden_states
-        else:
-            hl_num_layers = self._high_level_policy.num_recurrent_layers
-            # Split the hidden state for HL and LL policies
-            hl_rnn_hidden_states = rnn_hidden_states[:, :hl_num_layers]
-            ll_rnn_hidden_states = rnn_hidden_states[:, hl_num_layers:]
-            return hl_rnn_hidden_states, ll_rnn_hidden_states
-
-    def _combine_hidden_states(
-        self,
-        hl_rnn_hidden_states: torch.Tensor,
-        ll_rnn_hidden_states: torch.Tensor,
-    ) -> torch.Tensor:
-        if not self._has_hl_hidden_state:
-            return ll_rnn_hidden_states
-        elif not self._has_ll_hidden_state:
-            return hl_rnn_hidden_states
-        else:
-            # Stack the LL and HL hidden states.
-            return torch.cat(
-                [hl_rnn_hidden_states, ll_rnn_hidden_states], dim=1
-            )
 
     def _update_skills(
         self,
         observations,
-        hl_rnn_hidden_states,
-        ll_rnn_hidden_states,
+        rnn_hidden_states,
         prev_actions,
         masks,
         actions,
         log_info,
         should_choose_new_skill: torch.BoolTensor,
         deterministic: bool,
-    ) -> Tuple[torch.BoolTensor, PolicyActionData]:
+    ) -> Tuple[torch.BoolTensor, Dict[str, Any]]:
         """
         Will potentially update the set of running skills according to the HL
         policy. This updates the active skill indices in `self._cur_skills` in
@@ -450,6 +425,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         # the next skill.
         batch_size = masks.shape[0]
         hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
+        hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,
@@ -458,7 +434,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 hl_info,
             ) = self._high_level_policy.get_next_skill(
                 observations,
-                hl_rnn_hidden_states,
+                rnn_hidden_states,
                 prev_actions,
                 masks,
                 should_choose_new_skill,
@@ -474,55 +450,37 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             for skill_id, (batch_ids, _) in sel_grouped_skills.items():
-                (
-                    ll_rnn_hidden_states_batched,
-                    prev_actions_batched,
-                ) = self._skills[skill_id].on_enter(
+                self._skills[skill_id].on_enter(
                     [new_skill_args[i] for i in batch_ids],
                     batch_ids,
                     observations,
-                    ll_rnn_hidden_states,
+                    rnn_hidden_states,
                     prev_actions,
                 )
-
-                if self._has_ll_hidden_state:
-                    ll_rnn_hidden_states = _write_tensor_batched(
-                        ll_rnn_hidden_states,
-                        ll_rnn_hidden_states_batched,
-                        batch_ids,
+                if "rnn_hidden_states" in hl_info:
+                    rnn_hidden_states[batch_ids] = hl_info[
+                        "rnn_hidden_states"
+                    ][batch_ids]
+                    prev_actions[batch_ids] = hl_info["actions"][batch_ids]
+                elif self._skills[skill_id].has_hidden_state:
+                    raise ValueError(
+                        f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
                     )
-                prev_actions = _write_tensor_batched(
-                    prev_actions, prev_actions_batched, batch_ids
-                )
-
-                if (
-                    hl_info.rnn_hidden_states is not None
-                    and self._has_hl_hidden_state
-                ):
-                    # Only update the RNN hidden state for NEW skills.
-                    hl_rnn_hidden_states = _update_tensor_batched(
-                        hl_rnn_hidden_states,
-                        hl_info.rnn_hidden_states,
-                        batch_ids,
-                    )
-
-            # We made at least some decisions, so update the action info
-            hl_info.rnn_hidden_states = hl_rnn_hidden_states
+            hl_info["actions"] = prev_actions
+            hl_info["rnn_hidden_states"] = rnn_hidden_states
 
             should_choose_new_skill = should_choose_new_skill.numpy()
+
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
-        else:
-            # We made no decisions, so return an empty HL action info.
-            hl_info = PolicyActionData()
+
         return hl_terminate_episode, hl_info
 
     def _get_terminations(
         self,
         observations,
-        hl_rnn_hidden_states,
-        ll_rnn_hidden_states,
+        rnn_hidden_states,
         prev_actions,
         masks,
         actions,
@@ -542,15 +500,14 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         hl_wants_skill_term = self._high_level_policy.get_termination(
             observations,
-            hl_rnn_hidden_states,
+            rnn_hidden_states,
             prev_actions,
             masks,
             self._cur_skills,
             log_info,
         )
-
-        # Check if skills should terminate.
         batch_size = masks.shape[0]
+        # Check if skills should terminate.
         bad_should_terminate: torch.BoolTensor = torch.zeros(
             (batch_size,), dtype=torch.bool
         )
@@ -558,7 +515,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             sel_dat={
                 "observations": observations,
-                "rnn_hidden_states": ll_rnn_hidden_states,
+                "rnn_hidden_states": rnn_hidden_states,
                 "prev_actions": prev_actions,
                 "masks": masks,
                 "actions": actions,
@@ -566,9 +523,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             },
         )
         for skill_id, (batch_ids, dat) in grouped_skills.items():
+            # TODO: either change name of the function or assign actions somewhere
+            # else. Updating actions in should_terminate is counterintuitive
             (
-                call_hl_batch,
-                bad_should_terminate_batch,
+                self._cur_call_high_level[batch_ids],
+                bad_should_terminate[batch_ids],
                 new_actions,
             ) = self._skills[skill_id].should_terminate(
                 **dat,
@@ -577,13 +536,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                 skill_name=[
                     self._idx_to_name[self._cur_skills[i]] for i in batch_ids
                 ],
-            )
-
-            self._cur_call_high_level = _write_tensor_batched(
-                self._cur_call_high_level, call_hl_batch, batch_ids
-            )
-            bad_should_terminate = _write_tensor_batched(
-                bad_should_terminate, bad_should_terminate_batch, batch_ids
             )
             actions[batch_ids] += new_actions
         return self._cur_call_high_level, bad_should_terminate, actions
@@ -614,10 +566,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             rnn_build_seq_info,
         )
 
-    def on_envs_pause(self, envs_to_pause):
+    def pause_envs(self, envs_to_pause):
         """
-        Cleans up stateful variables of the policy so that they match with the
-        active environments
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
         """
 
         if len(envs_to_pause) == 0:
@@ -654,14 +606,15 @@ class HierarchicalPolicy(nn.Module, Policy):
                 )
             else:
                 agent_name = config.habitat.simulator.agents_order[0]
+
         return cls(
-            config=config.habitat_baselines.rl.policy[agent_name],
-            full_config=config,
-            observation_space=observation_space,
-            action_space=orig_action_space,
-            num_envs=config.habitat_baselines.num_environments,
-            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
-            agent_name=agent_name,
+            config.habitat_baselines.rl.policy[agent_name],
+            config,
+            observation_space,
+            orig_action_space,
+            config.habitat_baselines.num_environments,
+            config.habitat_baselines.rl.auxiliary_losses,
+            agent_name,
         )
 
 
@@ -677,7 +630,7 @@ def _write_tensor_batched(
     """
 
     if source_tensor.shape[0] == len(write_idxs):
-        source_tensor = write_tensor
+        source_tensor[write_idxs] = write_tensor
     else:
         source_tensor[write_idxs] = write_tensor
     return source_tensor
@@ -694,7 +647,7 @@ def _update_tensor_batched(
     """
 
     if source_tensor.shape[0] == len(write_idxs):
-        source_tensor = write_tensor[write_idxs]
+        source_tensor[write_idxs] = write_tensor[write_idxs]
     else:
         source_tensor[write_idxs] = write_tensor[write_idxs]
     return source_tensor

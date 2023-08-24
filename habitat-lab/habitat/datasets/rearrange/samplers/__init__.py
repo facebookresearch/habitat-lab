@@ -16,6 +16,7 @@ from habitat.datasets.rearrange.samplers.object_target_sampler import (  # noqa:
     ObjectTargetSampler,
 )
 from habitat.datasets.rearrange.samplers.scene_sampler import (  # noqa: F401 .
+    BalancedSceneSampler,
     MultiSceneSampler,
     SceneSampler,
     SingleSceneSampler,

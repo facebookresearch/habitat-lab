@@ -1,0 +1,5 @@
+type: "BdpAgentAccessMgr"
+num_agent_types: 2
+num_active_agents_per_type: [1, 1]
+num_pool_agents_per_type: [1, 1]
+force_all_agents: False

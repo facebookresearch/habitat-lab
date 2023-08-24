@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import time
 from collections import defaultdict
@@ -16,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -30,6 +30,7 @@ from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
@@ -51,6 +52,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
@@ -98,9 +100,6 @@ class RearrangeSim(HabitatSim):
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
-        # The receptacle information cached between all scenes.
-        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
-        # The per episode receptacle information.
         self._receptacles: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
@@ -115,10 +114,8 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
-        # Setup config options.
-        self._debug_render_articulated_agent = (
-            self.habitat_config.debug_render_articulated_agent
-        )
+        # Setup config properties.
+        self._debug_render_robot = self.habitat_config.debug_render_robot
         self._debug_render_goal = self.habitat_config.debug_render_goal
         self._debug_render = self.habitat_config.debug_render
         self._concur_render = self.habitat_config.concur_render
@@ -131,25 +128,39 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
-        self._auto_sleep = self.habitat_config.auto_sleep
-        self._load_objs = self.habitat_config.load_objs
-        self._additional_object_paths = (
-            self.habitat_config.additional_object_paths
-        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
-
-        self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
-        self._perf_logging_enabled = False
-        self.cur_runtime_perf_scope: List[str] = []
-        self._should_setup_semantic_ids = (
-            self.habitat_config.should_setup_semantic_ids
+        self._force_soft_reset = self.habitat_config.force_soft_reset
+        self._backend_runtime_perf_stat_names = (
+            # super().get_runtime_perf_stat_names()
         )
+        self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
-    def enable_perf_logging(self):
+    @property
+    def receptacles(self) -> Dict[str, AABBReceptacle]:
+        return self._receptacles
+
+    @property
+    def handle_to_object_id(self) -> Dict[str, int]:
         """
-        Will turn on the performance logging (by default this is off).
+        Maps a handle name to the relative position of an object in `self._scene_obj_ids`.
         """
-        self._perf_logging_enabled = True
+        return self._handle_to_object_id
+
+    @property
+    def draw_bb_objs(self) -> List[int]:
+        """
+        Simulator object indices of objects to draw bounding boxes around if
+        debug render is enabled. By default, this is populated with all target
+        objects.
+        """
+        return self._draw_bb_objs
+
+    @property
+    def scene_obj_ids(self) -> List[int]:
+        """
+        The simulator rigid body IDs of all objects in the scene.
+        """
+        return self._scene_obj_ids
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -222,7 +233,6 @@ class RearrangeSim(HabitatSim):
         if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
-    @add_perf_timing_func()
     def _sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
@@ -275,34 +285,63 @@ class RearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
-        self._handle_to_goal_name = ep_info.info["object_labels"]
+        t_start = time.time()
 
         self.ep_info = ep_info
+        self._try_acquire_context()
+
         new_scene = self.prev_scene_id != ep_info.scene_id
+
         if new_scene:
             self._prev_obj_names = None
 
+        if self._force_soft_reset:
+            assert not (
+                new_scene and self.prev_scene_id is not None
+            ), f"Cannot force soft resets when there are new scenes. Switched from {self.prev_scene_id} to {ep_info.scene_id}"
+            # TODO: This is a hack to get soft resets working correctly without
+            # the properly configured dataset. Force take only the first 2
+            # objects and make them exactly the same every episode. These objects
+            # will be the targets as well.
+            ep_info.rigid_objs = ep_info.rigid_objs[:2]
+            assert (
+                len(ep_info.rigid_objs) == 2
+            ), "We cannot have less than 2 objects"
+            if self._prev_obj_names is not None:
+                # Override with the previous object names
+                targ_ks = list(ep_info.targets.keys())
+                new_targs = {}
+                for i, targ_k in enumerate(targ_ks):
+                    ep_info.rigid_objs[i] = (
+                        self._prev_obj_names[i],
+                        ep_info.rigid_objs[i][1],
+                    )
+                    new_targs[self._prev_targ_names[i]] = ep_info.targets[
+                        targ_k
+                    ]
+                ep_info.targets = new_targs
+            else:
+                # Only reset this info once.
+                self._prev_targ_names: List[str] = list(ep_info.targets.keys())
+                self._handle_to_goal_name = ep_info.info["object_labels"]
+        else:
+            self._handle_to_goal_name = ep_info.info["object_labels"]
+
         # Only remove and re-add objects if we have a new set of objects.
-        ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
         obj_names = [x[0] for x in ep_info.rigid_objs]
-        # Only remove and re-add objects if we have a new set of objects.
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
-        self.agents_mgr.pre_obj_clear()
         self._clear_objects(should_add_objects, new_scene)
 
         is_hard_reset = new_scene or should_add_objects
-
         if is_hard_reset:
             with read_write(config):
                 config["scene"] = ep_info.scene_id
-            t_start = time.time()
             super().reconfigure(config, should_close_on_new_scene=False)
-            self.add_perf_timing("super_reconfigure", t_start)
 
-        if new_scene:
-            self.agents_mgr.on_new_scene()
+        self._try_acquire_context()
+        self.agents_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -324,15 +363,15 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
-        if self._load_objs:
+        if self.habitat_config.load_objs:
             self._add_objs(ep_info, should_add_objects, new_scene)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self._auto_sleep:
-            self._sleep_all_objects()
+        if self.habitat_config.auto_sleep:
+            self.sleep_all_objects()
 
         rom = self.get_rigid_object_manager()
         self._obj_orig_motion_types = {
@@ -340,8 +379,7 @@ class RearrangeSim(HabitatSim):
             for handle, ro in rom.get_objects_by_handle_substring().items()
         }
 
-        if new_scene:
-            self._load_navmesh(ep_info)
+        self._load_navmesh(ep_info, new_scene)
 
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
@@ -383,6 +421,7 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
+        self.add_perf_timing("reconfigure", t_start)
 
     def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
@@ -406,7 +445,9 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self._largest_island_idx
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -437,29 +478,52 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    @add_perf_timing_func()
-    def _load_navmesh(self, ep_info):
-        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+    def _load_navmesh(self, ep_info, new_scene):
+        if new_scene:
+            scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
 
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+            if "fpss" in ep_info.scene_id.split("/"):
+                # For FP scenes, we use different path structure than for other scenes.
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
+            else:
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
-        self._navmesh_vertices = np.stack(
-            self.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        self._island_sizes = [
-            self.pathfinder.island_radius(p) for p in self._navmesh_vertices
-        ]
-        self._max_island_size = max(self._island_sizes)
-        self._largest_island_idx = self.pathfinder.get_island(
-            self._navmesh_vertices[np.argmax(self._island_sizes)]
+            navmesh_path = osp.join(
+                base_dir, "navmeshes", scene_name + ".navmesh"
+            )
+            # If we cannot load the navmesh, try generarting navmesh on the fly.
+            if osp.exists(navmesh_path):
+                self.pathfinder.load_nav_mesh(navmesh_path)
+                print(f"Loaded navmesh from {navmesh_path}")
+            else:
+                navmesh_settings = NavMeshSettings()
+                navmesh_settings.set_defaults()
+
+                agent_config = None
+                if hasattr(self.habitat_config.agents, "agent_0"):
+                    agent_config = self.habitat_config.agents.agent_0
+                elif hasattr(self.habitat_config.agents, "main_agent"):
+                    agent_config = self.habitat_config.agents.main_agent
+                else:
+                    raise ValueError(f"Cannot find agent parameters.")
+                navmesh_settings.agent_radius = agent_config.radius
+                navmesh_settings.agent_height = agent_config.height
+                navmesh_settings.agent_max_climb = agent_config.max_climb
+                navmesh_settings.agent_max_slope = agent_config.max_slope
+                navmesh_settings.include_static_objects = True
+                self.recompute_navmesh(self.pathfinder, navmesh_settings)
+                os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+                self.pathfinder.save_nav_mesh(navmesh_path)
+
+        # NOTE: allowing indoor islands only
+        self._largest_island_idx = get_largest_island_index(
+            self.pathfinder, self, allow_outdoor=False
         )
 
     @property
     def largest_island_idx(self) -> int:
         """
-        The path finder index of the island that has the largest area.
+        The path finder index of the indoor island that has the largest area.
         """
         return self._largest_island_idx
 
@@ -511,41 +575,45 @@ class RearrangeSim(HabitatSim):
             ao.joint_positions = ao_pose
 
     def is_point_within_bounds(self, pos):
+        # NOTE: This check is loose: really we want the island bounds, not the full navmesh
         lower_bound, upper_bound = self.pathfinder.get_bounds()
         return all(lower_bound <= pos) and all(upper_bound >= pos)
 
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
-        snap_point can return nan which produces hard to catch errors.
+        Returns the 3D coordinates corresponding to a point belonging
+        to the biggest navmesh island in the scenee and closest to pos.
+        When that point returns NaN, computes a navigable point at increasing
+        distances to it.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
+        new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
+        max_iter = 10
+        offset_distance = 1.5
+        distance_per_iter = 0.5
+        num_sample_points = 1000
+
+        regen_i = 0
+        while np.isnan(new_pos[0]) and regen_i < 10:
+            # Increase the search radius
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+                pos,
+                offset_distance + regen_i * distance_per_iter,
+                num_sample_points,
+                island_index=self._largest_island_idx,
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
+            regen_i += 1
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # This is a last resort, take a navmesh vertex that is closest
-            use_verts = [
-                x
-                for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
-            ]
-            distances = np.linalg.norm(
-                np.array(pos).reshape(1, 3) - use_verts, axis=-1
-            )
-            closest_idx = np.argmin(distances)
-            new_pos = self._navmesh_vertices[closest_idx]
+        # if np.isnan(new_pos[0]):
+        #     logger.info("new position", new_pos, "original position", pos)
+        #     logger.info("scene_id", self.ep_info.scene_id)
+
+        assert not np.isnan(
+            new_pos[0]
+        ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
 
         return new_pos
 
-    @add_perf_timing_func()
     def _add_objs(
         self,
         ep_info: RearrangeEpisode,
@@ -557,6 +625,7 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
+        self._receptacles = {}
         if should_add_objects:
             self._scene_obj_ids = []
 
@@ -575,7 +644,6 @@ class RearrangeSim(HabitatSim):
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
-            self.add_perf_timing("create_asset", t_start)
 
             # The saved matrices need to be flipped when reloading.
             ro.transformation = mn.Matrix4(
@@ -603,45 +671,28 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
         if new_scene:
-            self._receptacles = self._create_recep_info(
-                ep_info.scene_id, list(self._handle_to_object_id.keys())
-            )
-
-            ao_mgr = self.get_articulated_object_manager()
-            # Make all articulated objects (including the robots) kinematic
-            for aoi_handle in ao_mgr.get_object_handles():
-                ao = ao_mgr.get_object_by_handle(aoi_handle)
-                if self._kinematic_mode:
-                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                self.art_objs.append(ao)
-
-    def _create_recep_info(
-        self, scene_id: str, ignore_handles: List[str]
-    ) -> Dict[str, mn.Range3D]:
-        if scene_id not in self._receptacles_cache:
-            receps = {}
-            all_receps = find_receptacles(
-                self,
-                ignore_handles=ignore_handles,
-            )
+            all_receps = find_receptacles(self)
             for recep in all_receps:
-                recep = cast(AABBReceptacle, recep)
                 local_bounds = recep.bounds
                 global_T = recep.get_global_transform(self)
-                # Some coordinates may be flipped by the global transformation,
-                # mixing the minimum and maximum bound coordinates.
-                bounds = np.stack(
-                    [
-                        global_T.transform_point(local_bounds.min),
-                        global_T.transform_point(local_bounds.max),
-                    ],
-                    axis=0,
+                self._receptacles[recep.name] = mn.Range3D(
+                    global_T.transform_point(local_bounds.min),
+                    global_T.transform_point(local_bounds.max),
                 )
-                receps[recep.name] = mn.Range3D(
-                    np.min(bounds, axis=0), np.max(bounds, axis=0)
-                )
-            self._receptacles_cache[scene_id] = receps
-        return self._receptacles_cache[scene_id]
+
+            ao_mgr = self.get_articulated_object_manager()
+            articulated_agent_art_handles = [
+                articulated_agent.sim_obj.handle
+                for articulated_agent in self.agents_mgr.articulated_agents_iter
+            ]
+            for aoi_handle in ao_mgr.get_object_handles():
+                ao = ao_mgr.get_object_by_handle(aoi_handle)
+                if (
+                    self._kinematic_mode
+                    and ao.handle not in articulated_agent_art_handles
+                ):
+                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                self.art_objs.append(ao)
 
     def _create_obj_viz(self):
         """
@@ -693,7 +744,7 @@ class RearrangeSim(HabitatSim):
 
                 self._viz_objs[target_handle] = ro
 
-    def capture_state(self, with_articulated_agent_js=False) -> Dict[str, Any]:
+    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
         """
         Record and return a dict of state info.
 
@@ -715,13 +766,9 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
-
-        rigid_T, rigid_V = [], []
-        for i in self._scene_obj_ids:
-            obj_i = rom.get_object_by_id(i)
-            rigid_T.append(obj_i.transformation)
-            rigid_V.append((obj_i.linear_velocity, obj_i.angular_velocity))
-
+        static_T = [
+            rom.get_object_by_id(i).transformation for i in self._scene_obj_ids
+        ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
 
         articulated_agent_js = [
@@ -774,9 +821,7 @@ class RearrangeSim(HabitatSim):
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
 
-        for T, V, i in zip(
-            state["rigid_T"], state["rigid_V"], self._scene_obj_ids
-        ):
+        for T, i in zip(state["static_T"], self._scene_obj_ids):
             # reset object transform
             obj = rom.get_object_by_id(i)
             obj.transformation = T
@@ -858,13 +903,21 @@ class RearrangeSim(HabitatSim):
                 self.internal_step(-1, update_articulated_agent=False)
 
             t_start = time.time()
-            obs = self._sensor_suite.get_observations(
-                self.get_sensor_observations_async_finish()
+            self._prev_sim_obs = self.get_sensor_observations_async_finish()
+            self.add_perf_timing(
+                "get_sensor_observations_async_finish", t_start
             )
-            self.add_perf_timing("get_sensor_observations", t_start)
+
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
+
+            t_start = time.time()
+            self._prev_sim_obs = self.get_sensor_observations()
+            self.add_perf_timing("get_sensor_observations", t_start)
+
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
             t_start = time.time()
             obs = self._sensor_suite.get_observations(
@@ -950,7 +1003,9 @@ class RearrangeSim(HabitatSim):
         """
         # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
+            t_start = time.time()
             self.step_world(dt)
+            self.add_perf_timing("step_world", t_start)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
@@ -988,25 +1043,17 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-    def add_perf_timing(self, desc: str, t_start: float) -> None:
-        """
-        Records a duration since `t_start` into the perf stats. Note that this
-        is additive, so times between successive calls accumulate, not reset.
-        Also note that this will only log if `self._perf_logging_enabled=True`.
-        """
-        if not self._perf_logging_enabled:
-            return
+    def add_perf_timing(self, desc, t_start):
+        self._extra_runtime_perf_stats[desc] = time.time() - t_start
 
-        name = ".".join(self.cur_runtime_perf_scope)
-        if desc != "":
-            name += "." + desc
-        self._extra_runtime_perf_stats[name] += time.time() - t_start
+    def get_runtime_perf_stats(self):
+        names = self._backend_runtime_perf_stat_names
+        values = super().get_runtime_perf_stat_values()
+        stats_dict = dict(zip(names, values))
 
-    def get_runtime_perf_stats(self) -> Dict[str, float]:
-        stats_dict = {}
         for name, value in self._extra_runtime_perf_stats.items():
             stats_dict[name] = value
         # clear this dict so we don't accidentally collect these twice
-        self._extra_runtime_perf_stats = defaultdict(float)
+        self._extra_runtime_perf_stats = {}
 
         return stats_dict
