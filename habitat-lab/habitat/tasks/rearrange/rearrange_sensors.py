@@ -354,6 +354,43 @@ class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class RelativeRestingJointSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "relative_resting_joint"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeRestingJointSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(7,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        cur_arm_pos = np.array(
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.arm_joint_pos
+        )
+        tar_arm_pos = np.array(
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.params.arm_init_params
+        )
+        relative_desired_resting = tar_arm_pos - cur_arm_pos
+        return np.array(relative_desired_resting, dtype=np.float32)
+
+
+@registry.register_sensor
 class RestingPositionSensor(Sensor):
     """
     Desired resting position in the articulated_agent coordinate frame.
@@ -649,6 +686,33 @@ class EndEffectorToRestDistance(Measure):
 
 
 @registry.register_measure
+class JointToRestDistance(Measure):
+    """
+    Distance between current arm joint position and position where joint rests within the robot body.
+    """
+
+    cls_uuid: str = "joint_to_rest_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return JointToRestDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_resting = observations[RelativeRestingJointSensor.cls_uuid]
+        rest_dist = np.linalg.norm(to_resting)
+
+        self._metric = rest_dist
+
+
+@registry.register_measure
 class ReturnToRestDistance(UsesArticulatedAgentInterface, Measure):
     """
     Distance between end-effector and resting position if the articulated agent is holding the object.
@@ -712,6 +776,71 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._accum_coll_info = CollisionDetails()
+        self._prev_scene_colls = None
+        self._cur_scene_colls = None
+        self._add_scene_colls = None
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    @property
+    def add_scene_colls(self):
+        return self._add_scene_colls
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
+        self._accum_coll_info += cur_coll_info
+
+        self._cur_scene_colls = self._accum_coll_info.robot_scene_colls
+
+        if self._prev_scene_colls is not None:
+            self._add_scene_colls = (
+                self._cur_scene_colls - self._prev_scene_colls
+            )
+            self._prev_scene_colls = self._cur_scene_colls
+        else:
+            self._prev_scene_colls = self._cur_scene_colls
+            self._add_scene_colls = 0.0
+
+        self._metric = {
+            "total_collisions": self._accum_coll_info.total_collisions,
+            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
+        }
+
+
+@registry.register_measure
+class CollisionsTerminate(UsesArticulatedAgentInterface, Measure):
+    """
+    Collision_ termination based on the number of collision
+    """
+
+    cls_uuid: str = "collision_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_scene_colls = self._config.max_scene_colls
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
         self.update_metric(
             *args,
             episode=episode,
@@ -721,14 +850,18 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
-        self._accum_coll_info += cur_coll_info
-        self._metric = {
-            "total_collisions": self._accum_coll_info.total_collisions,
-            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
-            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
-            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
-        }
+        collisions_info = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        scene_colls = collisions_info["robot_scene_colls"]
+        if self._max_scene_colls > 0 and scene_colls > self._max_scene_colls:
+            rearrange_logger.debug(
+                f"Scene collision threshold={self._max_scene_colls} exceeded with {scene_colls}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
 
 
 @registry.register_measure
@@ -924,6 +1057,8 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             [
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                RobotCollisions.cls_uuid,
+                CollisionsTerminate.cls_uuid,
             ],
         )
 
@@ -948,7 +1083,12 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
-        if force_terminate:
+
+        collisions_terminate = task.measurements.measures[
+            CollisionsTerminate.cls_uuid
+        ].get_metric()
+
+        if force_terminate or collisions_terminate:
             reward -= self._config.force_end_pen
 
         self._metric = reward
@@ -957,12 +1097,20 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         reward = 0
 
         force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
+        collisions_metric = self._task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ]
         # Penalize the force that was added to the accumulated force at the
         # last time step.
+        print(
+            "self._force_pen * collisions_metric.add_scene_colls:",
+            self._force_pen * collisions_metric.add_scene_colls,
+        )
         reward -= max(
             0,  # This penalty is always positive
             min(
                 self._force_pen * force_metric.add_force,
+                self._force_pen * collisions_metric.add_scene_colls,
                 self._max_force_pen,
             ),
         )

@@ -80,7 +80,7 @@ except ImportError:
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play_spot.yaml"  # play_spot
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -470,6 +470,7 @@ def play_env(env, args, config):
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     while True:
+        # breakpoint()
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -502,6 +503,12 @@ def play_env(env, args, config):
             args.control_humanoid,
             humanoid_controller=humanoid_controller,
         )
+
+        # ee_pos = env._sim.articulated_agent.ee_transform().translation
+        # trans = env._sim.articulated_agent.base_transformation
+        # local_ee_pos = trans.inverted().transform_point(ee_pos)
+        # print("ee_pos:", ee_pos)
+        # print("local_ee_pos:", local_ee_pos)
 
         if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["pddl_apply_action"]

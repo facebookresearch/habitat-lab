@@ -17,7 +17,7 @@ habitat:
     actions:
       arm_action:
         type: "ArmAction"
-        arm_controller: "ArmRelPosMaskAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
         grip_controller: "GazeGraspAction"
         arm_joint_mask: [1,1,0,1,1,1,1]
         arm_joint_dimensionality: 7
@@ -37,6 +37,10 @@ habitat:
         navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
         # If we allow the robot to move laterally
         enable_lateral_move: True
+        # speed parameters
+        longitudinal_lin_speed: 1.0
+        lateral_lin_speed: 1.0
+
   simulator:
     type: RearrangeSim-v0
     seed: 100
@@ -47,6 +51,7 @@ habitat:
         radius: 0.3
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
+        joint_start_noise: 0.0
         sim_sensors:
           arm_rgb_sensor:
             height: 480
@@ -62,5 +67,6 @@ habitat:
             hfov: 55
     habitat_sim_v0:
       enable_physics: True
+    kinematic_mode: True
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz

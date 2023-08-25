@@ -5,12 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import numpy as np
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
+    JointToRestDistance,
     RearrangeReward,
     RobotForce,
 )
@@ -46,6 +49,8 @@ class RearrangePickReward(RearrangeReward):
         self.cur_dist = -1.0
         self._prev_picked = False
         self._metric = None
+        self._last_pos = None
+        self._last_rot = None
 
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
@@ -97,6 +102,40 @@ class RearrangePickReward(RearrangeReward):
             dist_to_goal = ee_to_object_distance[str(task.abs_targ_idx)]
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+
+        # Penalize the base movement
+        # Check if the robot moves or not
+        move = 0.0
+        if self._last_pos is not None:
+            cur_pos = np.array(self._sim.articulated_agent.base_pos)
+            last_rot = float(self._sim.articulated_agent.base_rot)
+            if (
+                np.linalg.norm(self._last_pos - cur_pos) >= 0.01
+                or abs(self._last_rot - last_rot) >= 0.01
+            ):
+                move = 1.0
+
+        # Get the control inputs
+        lin_vel = np.array(
+            self._task.actions["base_velocity"].base_vel_ctrl.linear_velocity
+        )
+        lin_vel_norm = np.linalg.norm(lin_vel)
+
+        ang_vel = np.array(
+            self._task.actions["base_velocity"].base_vel_ctrl.angular_velocity
+        )
+        ang_vel_norm = np.linalg.norm(ang_vel)
+
+        if self._config.enable_vel_penality != -1:
+            self._metric -= (
+                move
+                * self._config.enable_vel_penality
+                * (lin_vel_norm**2 + ang_vel_norm**2)
+            )
+
+        # Update the last location of the robot
+        self._last_pos = np.array(self._sim.articulated_agent.base_pos)
+        self._last_rot = float(self._sim.articulated_agent.base_rot)
 
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
@@ -186,3 +225,46 @@ class RearrangePickSuccess(Measure):
         )
 
         self._prev_ee_pos = observations["ee_pos"]
+
+
+@registry.register_measure
+class RearrangePickSuccessJoint(Measure):
+    cls_uuid: str = "pick_success_joint"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RearrangePickSuccessJoint.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
+        )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        joint_to_rest_distance = task.measurements.measures[
+            JointToRestDistance.cls_uuid
+        ].get_metric()
+
+        # Is the agent holding the object and it's at the start?
+        abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
+
+        # Check that we are holding the right object and the object is actually
+        # being held.
+        self._metric = (
+            abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
+            and not self._sim.grasp_mgr.is_violating_hold_constraint()
+            and joint_to_rest_distance
+            < self._config.joint_resting_success_threshold
+        )

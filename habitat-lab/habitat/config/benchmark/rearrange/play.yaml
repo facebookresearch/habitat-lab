@@ -34,5 +34,6 @@ habitat:
             width: 128
     habitat_sim_v0:
       enable_physics: True
+    kinematic_mode: True
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

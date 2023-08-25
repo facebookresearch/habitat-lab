@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/task/rearrange: nav_to_obj
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -14,7 +14,7 @@ habitat:
       - goal_to_agent_gps_compass
       - joint
   environment:
-    max_episode_steps: 400
+    max_episode_steps: 1000
   simulator:
     type: RearrangeSim-v0
     additional_object_paths:
@@ -25,11 +25,13 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        articulated_agent_type: FetchSuctionRobot
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        joint_start_noise: 0.0
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
+    kinematic_mode: True
     needs_markers: false
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

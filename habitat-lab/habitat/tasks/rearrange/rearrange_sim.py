@@ -590,6 +590,7 @@ class RearrangeSim(HabitatSim):
             articulated_agent.sim_obj.handle
             for articulated_agent in self.agents_mgr.articulated_agents_iter
         ]
+        articulated_agent_art_handles = []
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
             if (

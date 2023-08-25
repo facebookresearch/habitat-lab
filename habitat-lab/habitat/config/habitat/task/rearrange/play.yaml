@@ -8,14 +8,40 @@ defaults:
     - empty
   - /habitat/task/measurements:
     - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - collisions_terminate
+    - end_effector_to_rest_distance
+    - end_effector_to_object_distance
+    - joint_to_rest_distance
+    - did_pick_object
+    - pick_success
+    - pick_success_joint
+    - pick_reward
   - /habitat/task/lab_sensors:
+    - target_start_sensor
     - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+    - relative_resting_joint
   - _self_
 
 # Config for empty task to explore the scene.
 type: RearrangeEmptyTask-v0
 count_obj_collisions: True
-desired_resting_position: [0.5, 0.0, 1.0]
+desired_resting_position: [0.45, 0.0, 0.43]
+
+measurements:
+  pick_reward:
+    enable_vel_penality: 1.0
+    force_pen: 0.01
+    max_force_pen: 0.01
+    force_end_pen: 1.0
+
+  collisions_terminate:
+    max_scene_colls: -1 #100.0
+
 
 # Reach task config
 render_target: True
