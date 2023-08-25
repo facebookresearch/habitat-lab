@@ -322,7 +322,7 @@ class SocialNavReward(Measure):
             :3
         ]
         dis = np.linalg.norm(position_human - position_robot)
-        
+
         # TODO: This is a solution to make sure the socal nav reward does not exploded
         if dis >= self._safe_dis_min and dis < self._safe_dis_max:
             self._metric = 5.0
@@ -332,6 +332,8 @@ class SocialNavReward(Measure):
         else:
             # self._metric = self._prev_reward - self._prev_reward #5.0 - 2.0 * dis
             self._metric = self._prev_dist - dis
-        
+        if self._prev_dist < 0:
+            self._metric = 0.0
+
         # Update the distance
-        self._prev_dist = dis
+        self._prev_dist = dis  # type: ignore
