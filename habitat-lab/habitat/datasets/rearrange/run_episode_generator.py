@@ -212,6 +212,8 @@ class RearrangeEpisodeGeneratorConfig:
     #  }
     markers: List[Any] = field(default_factory=list)
 
+    agent_name: str = "fetch_robot"
+
     agent: AgentConfig = AgentConfig()
 
 

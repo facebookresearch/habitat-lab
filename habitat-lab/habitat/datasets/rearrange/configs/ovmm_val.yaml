@@ -7,6 +7,7 @@ additional_object_paths:
 - data/objects/train_val/hssd/configs/objects/
 correct_unstable_results: True
 scene_sets:
+  -
     name: "val"
     included_substrings:
       - "/102816756."
@@ -1091,6 +1092,7 @@ object_target_samplers:
     orientation_sampling: up
     nav_to_min_distance: 1.5
 
+agent_name: stretch_robot
 agent:
   camera:
     height: 1.31
