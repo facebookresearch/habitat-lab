@@ -25,6 +25,7 @@ class StretchJointStates:
 
 
 class StretchRobot(MobileManipulator):
+    cls_uuid: str = "stretch_robot"
     def _get_fetch_params(self):
         return MobileManipulatorParams(
             arm_joints=[28, 27, 26, 25, 23, 31, 33, 34, 7, 8],
@@ -94,6 +95,7 @@ class StretchRobot(MobileManipulator):
 
 
 class StretchRobotNoWheels(StretchRobot):
+    cls_uuid: str = "stretch_robot_no_wheels"
     def __init__(
         self, urdf_path, sim, limit_robo_joints=True, fixed_base=True
     ):
