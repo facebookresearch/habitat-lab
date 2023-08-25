@@ -73,6 +73,7 @@ __all__ = [
     "RotDistToGoalMeasurementConfig",
     "CompositeStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
+    "SocialNavStatsMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -948,6 +949,19 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
+
+
+@dataclass
+class SocialNavStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    For evaluating social nav
+    """
+    type: str = "SocialNavStats"
+    check_human_in_frame: bool = False
+    min_dis_human: float = 1.0
+    max_dis_human: float = 2.0
+    human_id: int = 100
+    human_detect_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -2330,6 +2344,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_stats",
+    group="habitat/task/measurements",
+    name="social_nav_stats",
+    node=SocialNavStatsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",

@@ -1263,3 +1263,105 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
             return np.ones(1, dtype=np.float32)
         else:
             return np.zeros(1, dtype=np.float32)
+
+
+@registry.register_measure
+class SocialNavStats(UsesArticulatedAgentInterface, Measure):
+    """
+    The measure for social navigation
+    """
+
+    cls_uuid: str = "social_nav_stats"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+        self._check_human_in_frame = self._config.check_human_in_frame
+        self._min_dis_human = self._config.min_dis_human
+        self._max_dis_human = self._config.max_dis_human
+        self._human_id = self._config.human_id
+        self._human_detect_threshold = (
+            self._config.human_detect_pixel_threshold
+        )
+
+        self._start_end_episode_distance = None
+        self._agent_episode_distance = None
+        self._prev_pos = None
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavStats.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        robot_pos = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
+        )
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+        self._start_end_episode_distance = np.linalg.norm(
+            robot_pos - human_pos, ord=2, axis=-1
+        )
+        self._agent_episode_distance = 0.0
+        self._prev_pos = robot_pos
+        self.update_metric(*args, task=task, **kwargs)
+
+    def _check_human_dis(self, robot_pos, human_pos):
+        dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
+        if dis >= self._min_dis_human and dis < self._max_dis_human:
+            return True
+        else:
+            return False
+
+    def _check_human_frame(self, obs):
+        if not self._check_human_in_frame:
+            return True
+
+        panoptic = obs["agent_0_articulated_agent_arm_panoptic"]
+        if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
+            return True
+        else:
+            return False
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_pos = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
+        )
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+
+        dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
+
+        found_human = False
+        if self._check_human_dis(
+            robot_pos, human_pos
+        ) and self._check_human_frame(observations):
+            found_human = True
+
+        # We accumulate the distance if not found human
+        if not found_human:
+            self._agent_episode_distance += np.linalg.norm(
+                self._prev_pos - robot_pos, ord=2, axis=-1
+            )
+
+        try:
+            spl = (
+                found_human
+                * self._start_end_episode_distance
+                / max(
+                    self._start_end_episode_distance,
+                    self._agent_episode_distance,
+                )
+            )
+        except Exception:
+            spl = 0.0
+
+        self._prev_pos = robot_pos
+
+        self._metric = {
+            "found_human": found_human,
+            "robot_to_human_dis": dis,
+            "spl": spl,
+        }
