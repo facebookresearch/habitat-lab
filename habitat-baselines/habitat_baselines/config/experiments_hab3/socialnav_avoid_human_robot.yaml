@@ -51,7 +51,9 @@ defaults:
     - nav_goal_sensor
 
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
-  - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  # TODO: asnav_9 does have rearrange_stop action
+  # Based on the discussion, rearrange_stop now has been removed
+  #- /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
@@ -64,7 +66,7 @@ hydra:
   job:
     name: 'spot_socnav_avoid_3'
 
-# habitat.task.measurements.distance_to_goal 
+# habitat.task.measurements.distance_to_goal
 # self._sim.geodesic_distance
 
 habitat:
