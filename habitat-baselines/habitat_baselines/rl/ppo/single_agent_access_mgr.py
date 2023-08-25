@@ -194,7 +194,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
         if policy is None:
             raise ValueError(
-                f"Couldn't find policy {self._config.habitat_baselines.rl.policy.name}"
+                f"Couldn't find policy {self._config.habitat_baselines.rl.policy[self.agent_name].name}"
             )
         actor_critic = policy.from_config(
             self._config,

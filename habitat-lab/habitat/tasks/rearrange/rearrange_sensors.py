@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 import numpy as np
 from gym import spaces
 
+from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -247,10 +248,12 @@ class HumanoidJointSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.get_joint_transform()[0]
-        return np.array(joints_pos, dtype=np.float32)
+        curr_agent = self._sim.get_agent_data(self.agent_id).articulated_agent
+        if isinstance(curr_agent, KinematicHumanoid):
+            joints_pos = curr_agent.get_joint_transform()[0]
+            return np.array(joints_pos, dtype=np.float32)
+        else:
+            return np.zeros(self.observation_space.shape, dtype=np.float32)
 
 
 @registry.register_sensor
