@@ -89,7 +89,7 @@ habitat:
     reward_measure: social_nav_reward
     success_measure: nav_seek_success
     success_reward: 10.0
-    slack_reward: 0.0
+    slack_reward: -0.005
     end_on_success: False
     task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_solved
     pddl_domain_def: fp
