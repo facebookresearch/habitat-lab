@@ -1309,20 +1309,16 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
 
     def _check_human_dis(self, robot_pos, human_pos):
         dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
-        if dis >= self._min_dis_human and dis < self._max_dis_human:
-            return True
-        else:
-            return False
+        return dis >= self._min_dis_human and dis < self._max_dis_human
 
     def _check_human_frame(self, obs):
         if not self._check_human_in_frame:
             return True
 
         panoptic = obs["agent_0_articulated_agent_arm_panoptic"]
-        if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
-            return True
-        else:
-            return False
+        return (
+            np.sum(panoptic == self._human_id) > self._human_detect_threshold
+        )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         robot_pos = np.array(
