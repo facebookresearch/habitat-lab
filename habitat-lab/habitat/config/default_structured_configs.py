@@ -56,6 +56,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -65,6 +66,7 @@ __all__ = [
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
+    "CollisionsTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
@@ -79,6 +81,7 @@ __all__ = [
     "ArtObjSuccessMeasurementConfig",
     "ArtObjRewardMeasurementConfig",
     "NavToObjSuccessMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
     # DEBUG MEASURES
@@ -250,6 +253,7 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    gym_action_prefix: str = "base_vel"
 
 
 @dataclass
@@ -370,6 +374,8 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     sim_freq: float = 120.0
     # Distance threshold between two agents to issue a stop action
     agents_dist_thresh: float = -1.0
+    # Define the gym wrapper name
+    gym_action_prefix: str = "base_vel"
 
 
 # -----------------------------------------------------------------------------
@@ -494,6 +500,14 @@ class HumanoidJointSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
+
+
+@dataclass
 class EEPositionSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. the cartesian coordinates (3 floats) of the arm's end effector in the frame of reference of the robot's base.
@@ -587,6 +601,7 @@ class GoalSensorConfig(LabSensorConfig):
 @dataclass
 class NavGoalPointGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalPointGoalSensor"
+    goal_is_human: bool = False
 
 
 @dataclass
@@ -789,6 +804,18 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class CollisionsTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+    :property max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :property max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
+    type: str = "CollisionsTerminate"
+    max_scene_colls: float = -1.0
+
+
+@dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
@@ -963,6 +990,22 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+
+    :property must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :property success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
+    type: str = "SocialNavSeekSuccess"
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+
+
+@dataclass
 class RearrangeReachRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachReward"
     scale: float = 1.0
@@ -1122,6 +1165,9 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    safe_dis_reward: float = 1.0
 
 
 @dataclass
@@ -1154,6 +1200,7 @@ class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
     """
     type: str = "DoesWantTerminate"
+    mask_out_rearrange_stop: bool = False
 
 
 @dataclass
@@ -1993,6 +2040,12 @@ cs.store(
     node=HumanoidJointSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
     group="habitat/task/lab_sensors",
     name="end_effector_sensor",
@@ -2151,6 +2204,12 @@ cs.store(
     group="habitat/task/measurements",
     name="force_terminate",
     node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.collisions_terminate",
+    group="habitat/task/measurements",
+    name="collisions_terminate",
+    node=CollisionsTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",
@@ -2361,6 +2420,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_nav_to_obj_success",
     node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_nav_to_obj_reward",

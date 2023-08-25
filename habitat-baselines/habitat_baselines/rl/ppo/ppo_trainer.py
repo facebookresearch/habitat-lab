@@ -365,7 +365,6 @@ class PPOTrainer(BaseRLTrainer):
             step_batch = self._agent.rollouts.get_current_step(
                 env_slice, buffer_index
             )
-
             profiling_wrapper.range_push("compute actions")
 
             # Obtain lenghts
@@ -491,7 +490,6 @@ class PPOTrainer(BaseRLTrainer):
                 next_masks=not_done_masks,
                 buffer_index=buffer_index,
             )
-
             self._agent.rollouts.advance_rollout(buffer_index)
 
         return env_slice.stop - env_slice.start
@@ -834,7 +832,6 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
         else:
             ckpt_dict = {"config": None}
 
@@ -883,6 +880,8 @@ class PPOTrainer(BaseRLTrainer):
         action_shape, discrete_actions = get_action_space_info(
             self._agent.policy_action_space
         )
+        # TODO: better way to handle this
+        discrete_actions = False
 
         if (
             self._agent.actor_critic.should_load_agent_state
@@ -913,6 +912,7 @@ class PPOTrainer(BaseRLTrainer):
             device=self.device,
             dtype=torch.long if discrete_actions else torch.float,
         )
+
         not_done_masks = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,

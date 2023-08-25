@@ -450,13 +450,12 @@ class BaseVelAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.params.leg_init_params
             )
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, is_last_action, **kwargs):       
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
-
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 

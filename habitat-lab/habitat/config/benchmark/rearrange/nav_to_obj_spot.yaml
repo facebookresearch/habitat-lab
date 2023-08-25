@@ -1,0 +1,44 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - /habitat/task/rearrange: nav_to_obj
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - articulated_agent_arm_depth
+      - goal_to_agent_gps_compass
+      #- joint
+  environment:
+    max_episode_steps: 1000
+  simulator:
+    type: RearrangeSim-v0
+    additional_object_paths:
+      - data/objects/ycb/configs/
+    debug_render_goal: False
+    concur_render: True
+    auto_sleep: True
+    agents:
+      main_agent:
+        radius: 0.3
+        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: SpotRobot
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+    needs_markers: false
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

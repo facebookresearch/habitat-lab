@@ -59,9 +59,13 @@ class MultiPolicy(Policy):
         agent_masks = masks.split([1, 1], -1)
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
+            # TODO: Train low-level policies in multi-agent setting:
+            # Make sure the virtual observation is not impacted by
+            # the other agent
             agent_obs = self._update_obs_with_agent_prefix_fn(
                 observations, agent_i
             )
+
             agent_actions.append(
                 policy.act(
                     agent_obs,
@@ -273,7 +277,6 @@ class MultiStorage(Storage):
                 == 0
             ):
                 insert_d["next_recurrent_hidden_states"][agent_i] = None
-
             if next_observations is not None:
                 agent_next_observations = (
                     self._update_obs_with_agent_prefix_fn(

@@ -34,6 +34,7 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         self._task = task
         self._sim = sim
         super().__init__(*args, task=task, **kwargs)
+        self._goal_is_human = kwargs["config"]["goal_is_human"]
 
     def _get_uuid(self, *args, **kwargs):
         return NavGoalPointGoalSensor.cls_uuid
@@ -53,10 +54,15 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
+        # Make the goal to be the human location
+        if self._goal_is_human:
+            human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+            task.nav_goal_pos = np.array(human_pos)
 
         dir_vector = articulated_agent_T.inverted().transform_point(
             task.nav_goal_pos
         )
+
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
@@ -158,7 +164,7 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class DistToGoal(Measure):
+class DistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "dist_to_goal"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -179,7 +185,11 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
+            np.array(
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 
@@ -192,7 +202,7 @@ class DistToGoal(Measure):
 
 
 @registry.register_measure
-class RotDistToGoal(Measure):
+class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "rot_dist_to_goal"
 
     def __init__(self, *args, sim, **kwargs):
@@ -212,7 +222,7 @@ class RotDistToGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
         # Get the agent
-        robot = self._sim.articulated_agent
+        robot = self._sim.get_agent_data(self.agent_id).articulated_agent
         # Get the base transformation
         T = robot.base_transformation
         # Do transformation
@@ -279,6 +289,57 @@ class NavToObjSuccess(Measure):
         nav_pos_succ = task.measurements.measures[
             NavToPosSucc.cls_uuid
         ].get_metric()
+
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
+        if self._config.must_look_at_targ:
+            self._metric = (
+                nav_pos_succ and angle_dist < self._config.success_angle_dist
+            )
+        else:
+            self._metric = nav_pos_succ
+
+        if self._config.must_call_stop:
+            if called_stop:
+                task.should_end = True
+            else:
+                self._metric = False
+
+
+@registry.register_measure
+class SocialNavSeekSuccess(Measure):
+    cls_uuid: str = "nav_seek_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavSeekSuccess.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        self._sim = kwargs["sim"]
+
+        super().__init__(*args, config=config, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        angle_dist = task.measurements.measures[
+            RotDistToGoal.cls_uuid
+        ].get_metric()
+
+        dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+
+        if dist >= 1.0 and dist < 2.0:
+            nav_pos_succ = True
+        else:
+            nav_pos_succ = False
 
         called_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid

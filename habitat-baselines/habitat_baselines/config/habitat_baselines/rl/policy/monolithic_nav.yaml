@@ -1,0 +1,25 @@
+# name: "HierarchicalPolicy"
+# obs_transforms:
+#   add_virtual_keys:
+#     virtual_keys:
+#       "goal_to_agent_gps_compass": 2
+#       "has_finished_oracle_nav": 1
+# hierarchical_policy:
+#   high_level_policy:
+#     name: "FixedHighLevelPolicy"
+#     add_arm_rest: True
+#   defined_skills: {}
+
+
+name: "PointNavResNetPolicy"
+# obs_transforms:
+#   add_virtual_keys:
+#     virtual_keys:
+#       "goal_to_agent_gps_compass": 2
+#       #"has_finished_oracle_nav": 1
+action_distribution_type: "gaussian"
+action_dist:
+  use_log_std: True
+  clamp_std: True
+  std_init: -1.0
+  use_std_param: True
