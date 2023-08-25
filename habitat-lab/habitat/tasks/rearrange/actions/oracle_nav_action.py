@@ -770,3 +770,209 @@ class OracleNavCoordAction(OracleNavAction):
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
+
+
+@registry.register_task_action
+class OracleNavObstacleAction(OracleNavAction):
+    def __init__(self, *args, task, **kwargs):
+        OracleNavAction.__init__(self, *args, task=task, **kwargs)
+        self.old_human_pos = None
+
+    def update_rel_targ_obstacle(
+        self, rel_targ, new_human_pos, old_human_pos=None
+    ):
+        if old_human_pos is None:
+            human_velocity_scale = 0.0
+        else:
+            # take the norm of the distance between old and new human position
+            human_velocity_scale = float(
+                np.linalg.norm(new_human_pos - old_human_pos) / 0.25
+            )  # 0.25 is a magic number
+            # set a minimum value for the human velocity scale
+            human_velocity_scale = max(human_velocity_scale, 0.1)
+
+        std = 8.0
+        # scale the amplitude by the human velocity
+        amp = 8.0 * human_velocity_scale
+
+        # Get the position of the other agents
+        other_agent_rel_pos, other_agent_dist = [], []
+        curr_agent_T = np.array(
+            self.cur_articulated_agent.base_transformation.translation
+        )[[0, 2]]
+
+        other_agent_rel_pos.append(rel_targ[None, :])
+        other_agent_dist.append(0.0)  # dummy value
+        rel_pos = new_human_pos - curr_agent_T
+        dist_pos = np.linalg.norm(rel_pos)
+        # normalized relative vector
+        rel_pos = rel_pos / dist_pos
+        other_agent_dist.append(float(dist_pos))
+        other_agent_rel_pos.append(-rel_pos[None, :])
+
+        rel_pos = np.concatenate(other_agent_rel_pos)
+        rel_dist = np.array(other_agent_dist)
+        weight = amp * np.exp(-(rel_dist**2) / std)
+        weight[0] = 1.0
+        # TODO: explore softmax?
+        weight_norm = weight[:, None] / weight.sum()
+        # weighted sum of the old target position and
+        # relative position that avoids human
+        final_rel_pos = (rel_pos * weight_norm).sum(0)
+        return final_rel_pos
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "oracle_nav_obstacle_action": spaces.Box(
+                    shape=(1,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def step(self, *args, is_last_action, **kwargs):
+        self.skill_done = False
+        nav_to_target_idx = kwargs[
+            self._action_arg_prefix + "oracle_nav_obstacle_action"
+        ]
+        if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+            self._poss_entities
+        ):
+            if is_last_action:
+                return self._sim.step(HabitatSimActions.base_velocity)
+            else:
+                return {}
+        nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+
+        final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+            nav_to_target_idx
+        )
+        base_T = self.cur_articulated_agent.base_transformation
+        curr_path_points = self._path_to_point(final_nav_targ)
+        robot_pos = np.array(self.cur_articulated_agent.base_pos)
+
+        if curr_path_points is None:
+            raise Exception
+        else:
+            # Compute distance and angle to target
+            if len(curr_path_points) == 1:
+                curr_path_points += curr_path_points
+            cur_nav_targ = curr_path_points[1]
+            forward = np.array([1.0, 0, 0])
+            robot_forward = np.array(base_T.transform_vector(forward))
+
+            # Compute relative target.
+            rel_targ = cur_nav_targ - robot_pos
+
+            # Compute heading angle (2D calculation)
+            robot_forward = robot_forward[[0, 2]]
+            rel_targ = rel_targ[[0, 2]]
+            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+
+            # NEW: We will update the rel_targ position to avoid the humanoid
+            # rel_targ is the next position that the agent wants to walk to
+            old_rel_targ = rel_targ
+            if self._sim.num_articulated_agents > 1:
+                # This is very specific to SIRo. Careful merging
+                for agent_index in range(self._sim.num_articulated_agents):
+                    if self._agent_index == agent_index:
+                        continue
+                    new_human_pos = np.array(
+                        self._sim.get_agent_data(
+                            agent_index
+                        ).articulated_agent.base_transformation.translation
+                    )[[0, 2]]
+
+            rel_targ = self.update_rel_targ_obstacle(
+                rel_targ, new_human_pos, self.old_human_pos
+            )
+            self.old_human_pos = new_human_pos
+
+            # NEW: If avoiding the human makes us change dir, we will
+            # go backwards at times to avoid rotating
+            dot_prod_rel_targ = (rel_targ * old_rel_targ).sum()
+            did_change_dir = dot_prod_rel_targ < 0
+
+            angle_to_target = get_angle(robot_forward, rel_targ)
+            angle_to_obj = get_angle(robot_forward, rel_pos)
+
+            dist_to_final_nav_targ = np.linalg.norm(
+                (final_nav_targ - robot_pos)[[0, 2]]
+            )
+            at_goal = (
+                dist_to_final_nav_targ < self._dist_thresh
+                and angle_to_obj < self._turn_thresh
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
+            if self.motion_type == "base_velocity":
+                if not at_goal:
+                    if dist_to_final_nav_targ < self._dist_thresh:
+                        # Look at the object
+                        vel = OracleNavAction._compute_turn(
+                            rel_pos, self._turn_velocity, robot_forward
+                        )
+                    elif angle_to_target < self._turn_thresh:
+                        # Move towards the target
+                        vel = [self._forward_velocity, 0]
+                    else:
+                        # Look at the target waypoint.
+                        if did_change_dir:
+                            if (np.pi - angle_to_target) < self._turn_thresh:
+                                # Move towards the target
+                                vel = [-self._forward_velocity, 0]
+                            else:
+                                vel = OracleNavAction._compute_turn(
+                                    -rel_targ,
+                                    self._turn_velocity,
+                                    robot_forward,
+                                )
+                        else:
+                            vel = OracleNavAction._compute_turn(
+                                rel_targ, self._turn_velocity, robot_forward
+                            )
+                else:
+                    vel = [0, 0]
+                    self.skill_done = True
+                kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
+                return BaseVelAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )
+
+            elif self.motion_type == "human_joints":
+                self.humanoid_controller.obj_transform_base = base_T
+                if not at_goal:
+                    if dist_to_final_nav_targ < self._dist_thresh:
+                        # Look at the object
+                        self.humanoid_controller.calculate_turn_pose(
+                            mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
+                        )
+                    elif angle_to_target < self._turn_thresh:
+                        # Move towards the target
+                        self.humanoid_controller.calculate_walk_pose(
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                        )
+                    else:
+                        self.humanoid_controller.calculate_walk_pose(
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                        )
+
+                else:
+                    self.humanoid_controller.calculate_stop_pose()
+                    self.skill_done = True
+                self._update_controller_to_navmesh()
+                base_action = self.humanoid_controller.get_pose()
+                kwargs[
+                    f"{self._action_arg_prefix}human_joints_trans"
+                ] = base_action
+
+                return HumanoidJointAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )
+            else:
+                raise ValueError(
+                    "Unrecognized motion type for oracle nav obstacle action"
+                )
