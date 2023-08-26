@@ -522,8 +522,13 @@ class RearrangeEpisodeGenerator:
         )
 
         scene_name = osp.basename(ep_scene_handle).split(".")[0]
+        scenes_dir = os.path.basename(osp.dirname(ep_scene_handle))
         navmesh_path = osp.join(
-            scene_base_dir, "navmeshes", scene_name + ".navmesh"
+            scene_base_dir,
+            "navmeshes",
+            scenes_dir,
+            self.cfg.agent_name,
+            scene_name + ".navmesh",
         )
         if osp.exists(navmesh_path) and not self._cache_staleness["navmesh"]:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
@@ -808,7 +813,7 @@ class RearrangeEpisodeGenerator:
             return (
                 recep.parent_object_handle
                 if recep.parent_object_handle is not None
-                else recep.name,
+                else recep.unique_name,
                 recep.parent_link,
             )
 
@@ -935,7 +940,9 @@ class RearrangeEpisodeGenerator:
             if self.vdb is None
             else self.vdb.output_path
         )
-        self.vdb = DebugVisualizer(self.sim, output_path=output_path, default_sensor_uuid="color")
+        self.vdb = DebugVisualizer(
+            self.sim, output_path=output_path, default_sensor_uuid="color"
+        )
 
     def settle_sim(
         self,
@@ -1132,7 +1139,7 @@ class RearrangeEpisodeGenerator:
             viewable_receptacles = [
                 rec
                 for rec in receptacles
-                if rec.name in viewable_receptacle_names
+                if rec.unique_name in viewable_receptacle_names
             ]
             logger.info(
                 f"{len(viewable_receptacles)} viewable receptacles found in cache."
@@ -1150,7 +1157,7 @@ class RearrangeEpisodeGenerator:
                 self.sim, navigable_receptacles, self.cfg.agent.camera.height
             )
             viewable_receptacle_names = {
-                rec.name for rec in viewable_receptacles
+                rec.unique_name for rec in viewable_receptacles
             }
             logger.info(
                 f"{len(viewable_receptacles)}/{len(receptacles)} viewable receptacles found."

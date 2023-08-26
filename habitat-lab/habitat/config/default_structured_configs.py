@@ -256,6 +256,8 @@ class ArmActionConfig(ActionConfig):
     gaze_center_square_width: float = 1
     grasp_threshold: float = 0.0
     oracle_snap: bool = False
+    gaze_use_xy_distance: bool = True
+    gaze_distance_to_bbox: bool = False
 
 
 @dataclass
@@ -1512,7 +1514,6 @@ class TaskConfig(HabitatBaseConfig):
     start_in_manip_mode: bool = False
     pick_init: bool = False
     place_init: bool = False
-    episode_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
 

@@ -173,7 +173,7 @@ def collect_receptacle_goals(sim, receptacles, rec_category_mapping=None):
         recep_goals.append(
             {
                 "position": [pos.x, pos.y, pos.z],
-                "object_name": receptacle.name,
+                "object_name": receptacle.unique_name,
                 "object_id": str(object_id),
                 "object_category": get_rec_category(
                     rec_name,
@@ -378,11 +378,16 @@ def add_viewpoints(
     return True
 
 
-def load_navmesh(sim, scene):
+def load_navmesh(sim, scene, agent_name):
     scene_base_dir = osp.dirname(osp.dirname(scene))
     scene_name = osp.basename(scene).split(".")[0]
+    scenes_dir = os.path.basename(osp.dirname(scene))
     navmesh_path = osp.join(
-        scene_base_dir, "navmeshes", scene_name + ".navmesh"
+        scene_base_dir,
+        "navmeshes",
+        scenes_dir,
+        agent_name,
+        scene_name + ".navmesh",
     )
     if osp.exists(navmesh_path):
         sim.pathfinder.load_nav_mesh(navmesh_path)
@@ -445,7 +450,7 @@ def add_cat_fields_to_episodes(
             config.agent.camera,
             debug_viz,
         )
-        load_navmesh(sim, scene_id)
+        load_navmesh(sim, scene_id, config.agent_name)
 
         rom = sim.get_rigid_object_manager()
         existing_rigid_objects = set(rom.get_object_handles())
@@ -459,17 +464,22 @@ def add_cat_fields_to_episodes(
             scene_id, scene_rec_cache_dir, receptacle_cache
         )[scene_id]
         rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
-        rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
+        rec_to_parent_obj = {
+            r.unique_name: r.parent_object_handle for r in rec
+        }
         obj_idx_to_name = load_objects(
             sim,
             episode["rigid_objs"],
-            obj_cat,
-            start_rec_cat,
-            obj_idx_to_name,
-            name_to_receptacle,
+            episode["additional_obj_config_paths"],
+        )
+        populate_semantic_graph(sim)
+        all_rec_goals = collect_receptacle_goals(
+            sim, rec, rec_category_mapping=rec_category_mapping
+        )
+        obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
+            episode,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
-            rec_to_parent_obj=rec_to_parent_obj,
         )
 
         if start_rec_cat == goal_rec_cat:
@@ -479,10 +489,7 @@ def add_cat_fields_to_episodes(
 
         episode["object_category"] = obj_cat
         episode["start_recep_category"] = start_rec_cat
-        name_to_receptacle = {
-            k: v.split("|", 1)[1]
-            for k, v in episode["name_to_receptacle"].items()
-        }
+        name_to_receptacle = episode["name_to_receptacle"]
         try:
             episode["goal_recep_category"] = goal_rec_cat
             (

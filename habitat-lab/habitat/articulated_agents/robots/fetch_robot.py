@@ -13,6 +13,8 @@ from habitat.articulated_agents.mobile_manipulator import (
 
 
 class FetchRobot(MobileManipulator):
+    cls_uuid: str = "fetch_robot"
+
     def _get_fetch_params(self):
         return MobileManipulatorParams(
             arm_joints=list(range(15, 22)),
@@ -115,6 +117,8 @@ class FetchRobot(MobileManipulator):
 
 
 class FetchRobotNoWheels(FetchRobot):
+    cls_uuid: str = "fetch_robot_no_wheels"
+
     def __init__(
         self, urdf_path, sim, limit_robo_joints=True, fixed_base=True
     ):

@@ -358,7 +358,7 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             self._load_navmesh(ep_info)
             receptacles = find_receptacles(self)
-            self.receptacles = {r.name: r for r in receptacles}
+            self.receptacles = {r.unique_name: r for r in receptacles}
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
@@ -458,8 +458,14 @@ class RearrangeSim(HabitatSim):
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.dirname(osp.dirname(ep_info.scene_id))
-
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        scenes_dir = osp.basename(osp.dirname(ep_info.scene_id))
+        navmesh_path = osp.join(
+            base_dir,
+            "navmeshes",
+            scenes_dir,
+            self.robot.cls_uuid,
+            scene_name + ".navmesh",
+        )
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
         else:
@@ -475,7 +481,11 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.save_nav_mesh(navmesh_path)
 
         island_classes_path = osp.join(
-            base_dir, "navmeshes", scene_name + ".pkl"
+            base_dir,
+            "navmeshes",
+            scenes_dir,
+            self.robot.cls_uuid,
+            scene_name + ".pkl",
         )
         if osp.exists(island_classes_path):
             with open(island_classes_path, "rb") as f:

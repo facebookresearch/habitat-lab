@@ -68,7 +68,6 @@ constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
 base_angle_noise: 0.2618 # 15 degrees
 receptacle_categories_file: data/objects/hssd-receptacles.csv
-episode_init: True
 actions:
   arm_action:
     type: "ArmAction"
