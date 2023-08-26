@@ -321,8 +321,8 @@ class SocialNavSeekSuccess(Measure):
             self.uuid,
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
         )
-        self.update_metric(*args, task=task, **kwargs)
         self._following_step = 0
+        self.update_metric(*args, task=task, **kwargs)
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
