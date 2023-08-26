@@ -322,12 +322,15 @@ class SocialNavSeekSuccess(Measure):
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
         )
         self.update_metric(*args, task=task, **kwargs)
+        self._following_step = 0
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
         self._sim = kwargs["sim"]
 
         super().__init__(*args, config=config, **kwargs)
+        self._following_step = None
+        self._following_step_succ_threshold = 100
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
@@ -337,9 +340,11 @@ class SocialNavSeekSuccess(Measure):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 
         if dist >= 1.0 and dist < 2.0:
+            self._following_step += 1
+
+        nav_pos_succ = False
+        if self._following_step >= self._following_step_succ_threshold:
             nav_pos_succ = True
-        else:
-            nav_pos_succ = False
 
         called_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid

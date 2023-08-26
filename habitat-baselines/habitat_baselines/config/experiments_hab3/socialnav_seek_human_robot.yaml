@@ -149,7 +149,7 @@ habitat:
       #- agent_0_localization_sensor
       #- agent_0_has_finished_oracle_nav
       - agent_0_goal_to_agent_gps_compass
-      - agent_0_humanoid_detector_sensor
+      #- agent_0_humanoid_detector_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor

@@ -325,7 +325,7 @@ class SocialNavReward(Measure):
 
         # TODO: This is a solution to make sure the socal nav reward does not exploded
         if dis >= self._safe_dis_min and dis < self._safe_dis_max:
-            self._metric = 0.0
+            self._metric = 2.0
         elif dis < self._safe_dis_min:
             # self._metric = 2.0 * dis - 1.0
             self._metric = dis - self._prev_dist
