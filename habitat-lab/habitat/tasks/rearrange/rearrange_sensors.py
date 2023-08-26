@@ -1288,6 +1288,13 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
         self._prev_pos = None
+        self._has_found_human = False
+        self._found_human_times = 0
+        self._after_found_human_times = 0
+        self._dis = 0
+        self._step = 0
+        self._step_after_found = 1
+        self._dis_after_found = 0
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1305,6 +1312,13 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         )
         self._agent_episode_distance = 0.0
         self._prev_pos = robot_pos
+        self._has_found_human = False
+        self._found_human_times = 0
+        self._after_found_human_times = 0
+        self._step = 0
+        self._step_after_found = 1
+        self._dis = 0
+        self._dis_after_found = 0
         self.update_metric(*args, task=task, **kwargs)
 
     def _check_human_dis(self, robot_pos, human_pos):
@@ -1321,6 +1335,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Get the agent locations
         robot_pos = np.array(
             self._sim.get_agent_data(0).articulated_agent.base_pos
         )
@@ -1328,23 +1343,38 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._sim.get_agent_data(1).articulated_agent.base_pos
         )
 
+        # Compute the distance
         dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
+        self._dis += dis
 
+        # Increase the step counter
+        self._step += 1
+
+        # Check if human has been found
         found_human = False
         if self._check_human_dis(
             robot_pos, human_pos
         ) and self._check_human_frame(observations):
             found_human = True
+            self._has_found_human = True
+            self._found_human_times += 1
 
         # We accumulate the distance if not found human
-        if not found_human:
+        # We only consider the last searching distance
+        if not found_human and not self._has_found_human:
             self._agent_episode_distance += np.linalg.norm(
                 self._prev_pos - robot_pos, ord=2, axis=-1
             )
 
+        # Compute the metrics after finding the human
+        if self._has_found_human:
+            self._dis_after_found += dis
+            self._after_found_human_times += found_human
+
+        # Compute the SPL before finding the human
         try:
-            spl = (
-                found_human
+            first_found_spl = (
+                self._has_found_human
                 * self._start_end_episode_distance
                 / max(
                     self._start_end_episode_distance,
@@ -1352,12 +1382,22 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
                 )
             )
         except Exception:
-            spl = 0.0
+            first_found_spl = 0.0
 
         self._prev_pos = robot_pos
 
+        # The final stats only takes the last result, so we need to
+        # do average here.
         self._metric = {
-            "found_human": found_human,
-            "robot_to_human_dis": dis,
-            "spl": spl,
+            "has_found_human": self._has_found_human,
+            "found_human_rate_over_epi": self._found_human_times / self._step,
+            "found_human_rate_after_found_over_epi": self._after_found_human_times
+            / self._step_after_found,
+            "avg_robot_to_human_dis_over_epi": self._dis / self._step,
+            "avg_robot_to_human_after_found_dis_over_epi": self._dis_after_found
+            / self._step_after_found,
+            "first_found_spl": first_found_spl,
         }
+
+        if self._has_found_human:
+            self._step_after_found += 1
