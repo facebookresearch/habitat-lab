@@ -463,7 +463,7 @@ class RearrangeSim(HabitatSim):
             base_dir,
             "navmeshes",
             scenes_dir,
-            self.robot.cls_uuid,
+            self.articulated_agent.cls_uuid,
             scene_name + ".navmesh",
         )
         if osp.exists(navmesh_path):
@@ -484,7 +484,7 @@ class RearrangeSim(HabitatSim):
             base_dir,
             "navmeshes",
             scenes_dir,
-            self.robot.cls_uuid,
+            self.articulated_agent.cls_uuid,
             scene_name + ".pkl",
         )
         if osp.exists(island_classes_path):
