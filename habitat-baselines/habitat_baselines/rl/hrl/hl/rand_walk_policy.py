@@ -79,3 +79,11 @@ class RandomWalkHighLevelPolicy(HighLevelPolicy):
         )
         self._was_running_on_prev_step = False
         return ret
+
+
+class FollowHumanHighLevelPolicy(RandomWalkHighLevelPolicy):
+    _solution_actions: List[Tuple[str, List[str]]]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.skill_name = "nav_to_human"

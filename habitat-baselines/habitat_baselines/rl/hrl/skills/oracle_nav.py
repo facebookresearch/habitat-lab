@@ -232,3 +232,42 @@ class OracleNavCoordPolicy(OracleNavPolicy):
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
+
+
+class OracleNavHumanPolicy(OracleNavCoordPolicy):
+    @dataclass
+    class OracleNavActionArgs:
+        """
+        :property action_idx: The index of the oracle action we want to execute
+        """
+
+        action_idx: int
+
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space,
+        filtered_obs_space,
+        filtered_action_space,
+        batch_size,
+        pddl_domain_path,
+        pddl_task_path,
+        task_config,
+    ):
+        NnSkillPolicy.__init__(
+            self,
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+        )
+        action_name = "oracle_nav_human_action"
+        self._oracle_nav_ac_idx, _ = find_action_range(
+            action_space, action_name
+        )
+
+    def _parse_skill_arg(self, skill_arg):
+        return OracleNavHumanPolicy.OracleNavActionArgs(skill_arg)

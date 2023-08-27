@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     FixedHighLevelPolicy,
+    FollowHumanHighLevelPolicy,
     HighLevelPolicy,
     NeuralHighLevelPolicy,
     PlannerHighLevelPolicy,
@@ -33,6 +34,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     NavSkillPolicy,
     NoopSkillPolicy,
     OracleNavCoordPolicy,
+    OracleNavHumanPolicy,
     OracleNavPolicy,
     PickSkillPolicy,
     PlaceSkillPolicy,
@@ -98,7 +100,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._active_envs: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
-
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
             config=config.hierarchical_policy.high_level_policy,

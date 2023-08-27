@@ -677,9 +677,15 @@ class OracleNavCoordAction(OracleNavAction):
 
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
-        nav_to_target_coord = kwargs[
-            self._action_arg_prefix + "oracle_nav_coord_action"
-        ]
+        # TODO better way to handle this
+        try:
+            nav_to_target_coord = kwargs[
+                self._action_arg_prefix + "oracle_nav_coord_action"
+            ]
+        except Exception:
+            nav_to_target_coord = kwargs[
+                self._action_arg_prefix + "oracle_nav_human_action"
+            ]
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
@@ -757,7 +763,8 @@ class OracleNavCoordAction(OracleNavAction):
                         else:
                             distance_multiplier = 1.0
                         self.humanoid_controller.calculate_walk_pose(
-                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]]), distance_multiplier
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]]),
+                            distance_multiplier,
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()
@@ -826,4 +833,63 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         ret_val = super().step(*args, is_last_action, **kwargs)
         if self.skill_done:
             self.coord_nav = None
+        return ret_val
+
+
+@registry.register_task_action
+class OracleNavHumanAction(OracleNavCoordAction):
+    """
+    Oracle Nav human Action. Selects a random position in the scene and navigates
+    there until reaching. When the arg is 1, does replanning.
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "oracle_nav_human_action": spaces.Box(
+                    shape=(1,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        if self._task._episode_id != self._prev_ep_id:
+            self._targets = {}
+            self._prev_ep_id = self._task._episode_id
+        self.skill_done = False
+        self.human_pos = None
+
+    def _get_target_for_coord(self, obj_pos):
+        start_pos = obj_pos
+        return (start_pos, np.array(obj_pos))
+
+    def step(self, *args, is_last_action, **kwargs):
+        max_tries = 10
+        self.skill_done = False
+
+        if self.human_pos is None:
+            human_pos = np.array(
+                self._sim.get_agent_data(1).articulated_agent.base_pos
+            )
+            self.human_pos = (
+                self._sim.pathfinder.get_random_navigable_point_near(
+                    circle_center=human_pos,
+                    radius=2.0,
+                    max_tries=max_tries,
+                    island_index=self._sim._largest_island_idx,
+                )
+            )
+        kwargs[
+            self._action_arg_prefix + "oracle_nav_human_action"
+        ] = self.human_pos
+        kwargs["is_last_action"] = is_last_action
+        ret_val = super().step(*args, is_last_action, **kwargs)
+        if self.skill_done:
+            self.human_pos = None
         return ret_val

@@ -116,6 +116,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 baselines_logger.info(
                     f"Got next element of the plan with {skill_name}, {skill_args}"
                 )
+                # TODO: both agent needs a similar skills
                 if skill_name not in self._skill_name_to_idx:
                     raise ValueError(
                         f"Could not find skill named {skill_name} in {self._skill_name_to_idx}"
