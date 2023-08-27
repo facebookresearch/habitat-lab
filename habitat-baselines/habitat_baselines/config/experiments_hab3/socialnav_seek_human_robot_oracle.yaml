@@ -16,6 +16,9 @@ defaults:
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
 
+  - /habitat/task/measurements:
+    - social_nav_stats
+
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
@@ -145,3 +148,6 @@ habitat_baselines:
       backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2
+
+
+# python -m habitat_baselines.run --config-name=experiments_hab3/socialnav_seek_human_robot_oracle.yaml habitat.environment.max_episode_steps=1500 habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True habitat_baselines.tensorboard_dir=/fsx-siro/jimmytyyang/rl_log/tb_oracle_social_nav habitat_baselines.video_dir=/fsx-siro/jimmytyyang/rl_log/video_oracle_social_nav habitat_baselines.checkpoint_folder=/fsx-siro/jimmytyyang/rl_log/checkpoints__oracle_social_nav habitat_baselines.eval_ckpt_path_dir=/fsx-siro/jimmytyyang/rl_log/checkpoints_oracle_social_nav habitat_baselines.num_checkpoints=5000 habitat_baselines.total_num_steps=1.0e9 habitat.simulator.kinematic_mode=True habitat.simulator.ac_freq_ratio=1 habitat_baselines.num_environments=1  habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz habitat_baselines.load_resume_state_config=False habitat_baselines.test_episode_count=4 habitat.task.end_on_success=False habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
