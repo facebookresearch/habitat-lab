@@ -259,18 +259,15 @@ class PddlSubgoalReward(Measure):
     Reward that gives a sparse reward on completing a PDDL stage-goal.
     """
 
-    def __init__(self, *args, task, **kwargs):
-        assert isinstance(task, PddlTask)
-        super().__init__(*args, task=task, **kwargs)
-
     cls_uuid: str = "pddl_subgoal_reward"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return PddlSubgoalReward.cls_uuid
 
-    def __init__(self, *args, config, **kwargs):
-        super().__init__(*args, config, **kwargs)
+    def __init__(self, *args, task, config, **kwargs):
+        assert isinstance(task, PddlTask)
+        super().__init__(*args, task=task, config=config, **kwargs)
         self._stage_reward = config.stage_sparse_reward
 
     def reset_metric(self, *args, **kwargs):

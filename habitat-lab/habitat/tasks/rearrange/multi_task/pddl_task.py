@@ -5,15 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
-from typing import List, cast
+from typing import cast
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_task(name="RearrangePddlTask-v0")

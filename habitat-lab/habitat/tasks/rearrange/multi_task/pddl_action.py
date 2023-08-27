@@ -4,8 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
@@ -15,11 +14,6 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     do_entity_lists_match,
     ensure_entity_lists_match,
 )
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
 
 
 class PddlAction:

@@ -12,7 +12,6 @@ from glob import glob
 import magnum as mn
 import numpy as np
 import pytest
-import yaml
 from omegaconf import DictConfig, OmegaConf
 
 import habitat
@@ -22,13 +21,12 @@ import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
 import habitat_sim
-from habitat.config.default import _HABITAT_CFG_DIR, get_config
+from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.utils.geometry_utils import is_point_in_triangle
-from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
@@ -87,7 +85,7 @@ def test_pddl():
         env_class=env_class, config=config
     )
     env.reset()
-    pddl = env.env.env._env.task.pddl_problem
+    pddl = env.env.env._env.task.pddl_problem  # type: ignore
     sim_info = pddl.sim_info
 
     # Check that the predicates are registering that the robot is not holding
