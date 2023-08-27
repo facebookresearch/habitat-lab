@@ -24,10 +24,7 @@ import yaml  # type: ignore[import]
 from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.pddl_action import (
-    ActionTaskInfo,
-    PddlAction,
-)
+from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
     LogicalExprType,
@@ -65,10 +62,10 @@ class PddlDomain:
         read_config: bool = True,
     ):
         """
-        :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
-        :param cur_task_config: The task config (`habitat.task`). This is
-            used when the action initializes a task via `PddlAction::init_task`. If
-            this is not used, `cur_task_config` can be None.
+        :param domain_file_path: Either an absolute path or a path relative to
+            `habitat/task/rearrange/multi_task/domain_configs/`.
+        :param cur_task_config: The task config (`habitat.task`). Needed if the
+            PDDL system will set the simulator state.
         """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
@@ -140,24 +137,9 @@ class PddlDomain:
                 self.parse_predicate(p, postcond_entities)
                 for p in action_d["postcondition"]
             ]
-            task_info_d = action_d.get("task_info", None)
-            task_info = None
-            if task_info_d is not None:
-                full_entities = {**self.all_entities, **name_to_param}
-                add_task_args = {
-                    k: full_entities[v]
-                    for k, v in task_info_d.get("add_task_args", {}).items()
-                }
 
-                task_info = ActionTaskInfo(
-                    task_config=self._config,
-                    task=task_info_d["task"],
-                    task_def=task_info_d["task_def"],
-                    config_args=task_info_d["config_args"],
-                    add_task_args=add_task_args,
-                )
             action = PddlAction(
-                action_d["name"], parameters, pre_cond, post_cond, task_info
+                action_d["name"], parameters, pre_cond, post_cond
             )
             self._orig_actions[action.name] = action
         self._actions = dict(self._orig_actions)

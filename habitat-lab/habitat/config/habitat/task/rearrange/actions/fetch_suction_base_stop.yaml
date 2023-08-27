@@ -1,0 +1,6 @@
+# @package habitat.task.actions
+defaults:
+  - /habitat/task/actions:
+    - base_velocity
+    - rearrange_stop
+  - _self_

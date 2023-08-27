@@ -111,7 +111,7 @@ predicates:
   - name: at
     args:
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: at_entity
         expr_type: static_obj_type
     set_state:
@@ -128,12 +128,6 @@ actions:
     precondition: null
     postcondition:
       - robot_at(obj, robot)
-    task_info:
-      task: NavToObjTask-v0
-      task_def: "nav_to_obj"
-      config_args:
-        task.force_regenerate: True
-        task.should_save_to_cache: False
 
   - name: nav_to_receptacle
     parameters:
@@ -149,12 +143,6 @@ actions:
         - in(obj, marker)
     postcondition:
       - robot_at(marker, robot)
-    task_info:
-      task: NavToObjTask-v0
-      task_def: "nav_to_obj"
-      config_args:
-        task.force_regenerate: True
-        task.should_save_to_cache: False
 
   - name: pick
     parameters:
@@ -176,15 +164,6 @@ actions:
             - closed_cab(recep)
     postcondition:
       - holding(obj, robot)
-    task_info:
-      task: RearrangePickTask-v0
-      task_def: "pick"
-      config_args:
-        habitat.task.should_enforce_target_within_reach: True
-        habitat.task.force_regenerate: True
-        habitat.task.base_angle_noise: 0.0
-        habitat.task.base_noise: 0.0
-        habitat.task.should_save_to_cache: False
 
   - name: place
     parameters:
@@ -202,15 +181,6 @@ actions:
     postcondition:
       - not_holding(robot)
       - at(place_obj, obj)
-    task_info:
-      task: RearrangePlaceTask-v0
-      task_def: "place"
-      config_args:
-        task.should_enforce_target_within_reach: True
-        task.force_regenerate: True
-        task.base_angle_noise: 0.0
-        task.base_noise: 0.0
-        task.should_save_to_cache: False
 
   - name: open_fridge
     parameters:
@@ -228,14 +198,6 @@ actions:
         - in(obj,fridge_id)
     postcondition:
       - opened_fridge(fridge_id)
-    task_info:
-      task_def: "open_fridge"
-      task: RearrangeOpenFridgeTask-v0
-      add_task_args:
-        marker: fridge_id
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: close_fridge
     parameters:
@@ -253,14 +215,6 @@ actions:
         - in(obj,fridge_id)
     postcondition:
       - closed_fridge(fridge_id)
-    task_info:
-      task_def: "close_fridge"
-      task: RearrangeCloseFridgeTask-v0
-      add_task_args:
-        marker: fridge_id
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: open_cab
     parameters:
@@ -278,12 +232,6 @@ actions:
         - in(obj,marker)
     postcondition:
       - opened_cab(marker)
-    task_info:
-      task_def: "open_cab"
-      task: RearrangeOpenDrawerTask-v0
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: close_cab
     parameters:
@@ -301,12 +249,6 @@ actions:
         - in(obj,marker)
     postcondition:
       - closed_cab(marker)
-    task_info:
-      task_def: "close_cab"
-      task: RearrangeCloseDrawerTask-v0
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   #########################################################
   # Receptacle name only based variants of the receptacle skills. This does not
@@ -321,12 +263,6 @@ actions:
     precondition: null
     postcondition:
       - robot_at(marker, robot)
-    task_info:
-      task: NavToObjTask-v0
-      task_def: "nav_to_obj"
-      config_args:
-        task.force_regenerate: True
-        task.should_save_to_cache: False
 
   - name: open_fridge_by_name
     parameters:
@@ -341,14 +277,6 @@ actions:
         - closed_fridge(fridge_id)
     postcondition:
       - opened_fridge(fridge_id)
-    task_info:
-      task_def: "open_fridge"
-      task: RearrangeOpenFridgeTask-v0
-      add_task_args:
-        marker: fridge_id
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: close_fridge_by_name
     parameters:
@@ -363,14 +291,6 @@ actions:
         - opened_fridge(fridge_id)
     postcondition:
       - closed_fridge(fridge_id)
-    task_info:
-      task_def: "close_fridge"
-      task: RearrangeCloseFridgeTask-v0
-      add_task_args:
-        marker: fridge_id
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: open_cab_by_name
     parameters:
@@ -385,12 +305,6 @@ actions:
         - closed_cab(marker)
     postcondition:
       - opened_cab(marker)
-    task_info:
-      task_def: "open_cab"
-      task: RearrangeOpenDrawerTask-v0
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0
 
   - name: close_cab_by_name
     parameters:
@@ -405,9 +319,3 @@ actions:
         - opened_cab(marker)
     postcondition:
       - closed_cab(marker)
-    task_info:
-      task_def: "close_cab"
-      task: RearrangeCloseDrawerTask-v0
-      config_args:
-        task.base_angle_noise: 0.0
-        task.spawn_region_scale: 0.0

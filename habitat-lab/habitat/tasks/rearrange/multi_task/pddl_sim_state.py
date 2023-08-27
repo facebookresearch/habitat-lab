@@ -433,14 +433,7 @@ def _is_object_inside(
 
 
 def _is_obj_state_true(entity, target, sim_info) -> bool:
-    rom = sim_info.sim.get_rigid_object_manager()
-    if not sim_info.check_type_matches(
-        entity, SimulatorObjectType.MOVABLE_ENTITY.value
-    ):
-        raise ValueError(f"Got unexpected entity {entity}")
-    obj_idx = cast(int, sim_info.search_for_entity(entity))
-    abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
-    entity_obj = rom.get_object_by_id(abs_obj_id)
+    entity_pos = sim_info.get_entity_pos(entity)
 
     if sim_info.check_type_matches(
         target, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
@@ -452,8 +445,6 @@ def _is_obj_state_true(entity, target, sim_info) -> bool:
     elif sim_info.check_type_matches(
         target, SimulatorObjectType.GOAL_ENTITY.value
     ):
-        cur_pos = entity_obj.transformation.translation
-
         targ_idx = cast(
             int,
             sim_info.search_for_entity(target),
@@ -461,14 +452,14 @@ def _is_obj_state_true(entity, target, sim_info) -> bool:
         idxs, pos_targs = sim_info.sim.get_targets()
         targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
-        dist = np.linalg.norm(cur_pos - targ_pos)
+        dist = np.linalg.norm(entity_pos - targ_pos)
         if dist >= sim_info.obj_thresh:
             return False
     elif sim_info.check_type_matches(
         target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
     ):
         recep = cast(mn.Range3D, sim_info.search_for_entity(target))
-        return recep.contains(entity_obj.translation)
+        return recep.contains(entity_pos)
     elif sim_info.check_type_matches(
         target, SimulatorObjectType.MOVABLE_ENTITY.value
     ):

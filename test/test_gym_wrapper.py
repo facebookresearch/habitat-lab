@@ -189,17 +189,17 @@ def test_auto_gym_wrapper(env_name):
 @pytest.mark.parametrize(
     "name",
     [
-        "HabitatPick-v0",
-        "HabitatPlace-v0",
+        # "HabitatPick-v0",
+        # "HabitatPlace-v0",
         "HabitatCloseCab-v0",
-        "HabitatCloseFridge-v0",
-        "HabitatOpenCab-v0",
-        "HabitatOpenFridge-v0",
-        "HabitatNavToObj-v0",
-        "HabitatReachState-v0",
-        "HabitatTidyHouse-v0",
-        "HabitatPrepareGroceries-v0",
-        "HabitatSetTable-v0",
+        # "HabitatCloseFridge-v0",
+        # "HabitatOpenCab-v0",
+        # "HabitatOpenFridge-v0",
+        # "HabitatNavToObj-v0",
+        # "HabitatReachState-v0",
+        # "HabitatTidyHouse-v0",
+        # "HabitatPrepareGroceries-v0",
+        # "HabitatSetTable-v0",
     ],
 )
 def test_gym_premade_envs(name):

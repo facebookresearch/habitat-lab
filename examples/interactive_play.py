@@ -734,10 +734,8 @@ if __name__ == "__main__":
                     )
                 }
             )
-            if "composite_success" in task_config.measurements:
-                task_config.measurements.composite_success.must_call_stop = (
-                    False
-                )
+            if "pddl_success" in task_config.measurements:
+                task_config.measurements.pddl_success.must_call_stop = False
             if "rearrange_nav_to_obj_success" in task_config.measurements:
                 task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
                     False
