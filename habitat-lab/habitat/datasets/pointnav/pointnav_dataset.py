@@ -142,11 +142,17 @@ class PointNavDatasetV1(Dataset):
             )
 
     def to_binary(self) -> Dict[str, Any]:
+        """
+        Serialize the dataset to a pickle compatible Dict.
+        """
         raise NotImplementedError()
 
     def from_binary(
         self, data_dict: Dict[str, Any], scenes_dir: Optional[str] = None
     ) -> None:
+        """
+        Load the dataset from a pickle compatible Dict.
+        """
         raise NotImplementedError()
 
     def from_json(

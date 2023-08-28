@@ -85,6 +85,10 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             self.episodes.append(rearrangement_episode)
 
     def to_binary(self) -> Dict[str, Any]:
+        """
+        Serialize the dataset to a pickle compatible Dict.
+        """
+
         def access_idx(k, name_to_idx):
             if len(name_to_idx) == 0:
                 name_to_idx[k] = 0
@@ -163,6 +167,9 @@ class RearrangeDatasetV0(PointNavDatasetV1):
     def from_binary(
         self, data_dict: Dict[str, Any], scenes_dir: Optional[str] = None
     ) -> None:
+        """
+        Load the dataset from a pickle compatible Dict.
+        """
         all_T = data_dict["all_transforms"]
         idx_to_name = data_dict["idx_to_name"]
         for i, ep in enumerate(data_dict["all_eps"]):
