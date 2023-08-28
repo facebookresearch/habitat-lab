@@ -47,7 +47,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 from habitat.tasks.rearrange.utils import (
     add_perf_timing_func,
-    get_aabb,
+    get_rigid_aabb,
     make_render_only,
     rearrange_collision,
     rearrange_logger,
@@ -147,31 +147,11 @@ class RearrangeSim(HabitatSim):
         return self._handle_to_object_id
 
     @property
-    def draw_bb_objs(self) -> List[int]:
-        """
-        Simulator object indices of objects to draw bounding boxes around if
-        debug render is enabled. By default, this is populated with all target
-        objects.
-        """
-        return self._draw_bb_objs
-
-    @property
     def scene_obj_ids(self) -> List[int]:
         """
         The simulator rigid body IDs of all objects in the scene.
         """
         return self._scene_obj_ids
-
-    @property
-    def receptacles(self) -> Dict[str, AABBReceptacle]:
-        return self._receptacles
-
-    @property
-    def handle_to_object_id(self) -> Dict[str, int]:
-        """
-        Maps a handle name to the relative position of an object in `self._scene_obj_ids`.
-        """
-        return self._handle_to_object_id
 
     @property
     def draw_bb_objs(self) -> List[int]:
@@ -181,13 +161,6 @@ class RearrangeSim(HabitatSim):
         objects.
         """
         return self._draw_bb_objs
-
-    @property
-    def scene_obj_ids(self) -> List[int]:
-        """
-        The simulator rigid body IDs of all objects in the scene.
-        """
-        return self._scene_obj_ids
 
     @property
     def articulated_agent(self):
@@ -204,14 +177,6 @@ class RearrangeSim(HabitatSim):
                 f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
             )
         return self.agents_mgr[0].grasp_mgr
-
-    @property
-    def grasp_mgrs(self):
-        if len(self.agents_mgr) > 1:
-            raise ValueError(
-                f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
-            )
-        return self.agents_mgr[0].grasp_mgrs
 
     def _get_target_trans(self):
         """
@@ -341,7 +306,7 @@ class RearrangeSim(HabitatSim):
             super().reconfigure(config, should_close_on_new_scene=False)
 
         self._try_acquire_context()
-        self.agents_mgr.reconfigure(new_scene)
+        self.agents_mgr.on_new_scene(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -421,7 +386,6 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
-        self.add_perf_timing("reconfigure", t_start)
 
     def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
@@ -731,7 +695,7 @@ class RearrangeSim(HabitatSim):
                 self.set_object_bb_draw(True, ro.object_id)
                 ro.transformation = transform
                 make_render_only(ro, self)
-                bb = get_aabb(ro.object_id, self, True)
+                bb = get_rigid_aabb(ro.object_id, self, True)
                 bb_viz_name1 = target_handle + "_bb1"
                 bb_viz_name2 = target_handle + "_bb2"
                 viz_r = 0.01
@@ -744,7 +708,7 @@ class RearrangeSim(HabitatSim):
 
                 self._viz_objs[target_handle] = ro
 
-    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
+    def capture_state(self, with_articulated_agent_js=False) -> Dict[str, Any]:
         """
         Record and return a dict of state info.
 
@@ -766,9 +730,12 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
-        static_T = [
-            rom.get_object_by_id(i).transformation for i in self._scene_obj_ids
-        ]
+
+        rigid_T, rigid_V = [], []
+        for i in self._scene_obj_ids:
+            obj_i = rom.get_object_by_id(i)
+            rigid_T.append(obj_i.transformation)
+            rigid_V.append((obj_i.linear_velocity, obj_i.angular_velocity))
         art_pos = [ao.joint_positions for ao in self.art_objs]
 
         articulated_agent_js = [
@@ -821,7 +788,9 @@ class RearrangeSim(HabitatSim):
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
 
-        for T, i in zip(state["static_T"], self._scene_obj_ids):
+        for T, V, i in zip(
+            state["rigid_T"], state["rigid_V"], self._scene_obj_ids
+        ):
             # reset object transform
             obj = rom.get_object_by_id(i)
             obj.transformation = T

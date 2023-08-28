@@ -396,7 +396,9 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
     agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
-    policy: Dict[str, PolicyConfig] = MISSING
+    policy: Dict[str, PolicyConfig] = field(
+        default_factory=lambda: {"main_agent": PolicyConfig()}
+    )
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()

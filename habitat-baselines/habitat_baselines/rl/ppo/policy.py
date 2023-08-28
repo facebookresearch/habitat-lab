@@ -5,16 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 import abc
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -39,8 +30,6 @@ from habitat_baselines.utils.common import (
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
-
-from torch import Tensor
 
 from habitat_baselines.utils.timing import g_timer
 
@@ -273,16 +262,6 @@ class Policy(abc.ABC):
         else:
             return action_data.policy_info
 
-        :returns: Tuple containing
-            - Predicted value.
-            - Log probabilities of actions.
-            - Action distribution entropy.
-            - RNN hidden states.
-            - Auxiliary module losses.
-        """
-
-        raise NotImplementedError
-
     @abc.abstractmethod
     def act(
         self,
@@ -448,7 +427,7 @@ class NetPolicy(nn.Module, Policy):
             rnn_hidden_states=rnn_hidden_states,
         )
 
-    @g_timer.avg_time("net_policy.get_value", level=1)
+    @g_timer.avg_time("net_policy.get_value")
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         features, _, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
@@ -684,22 +663,3 @@ class PointNavBaselineNet(Net):
         aux_loss_state["rnn_output"] = x_out
 
         return x_out, rnn_hidden_states, aux_loss_state
-
-
-def get_aux_modules(
-    aux_loss_config: "DictConfig",
-    action_space: spaces.Space,
-    net,
-) -> nn.ModuleDict:
-    aux_loss_modules = nn.ModuleDict()
-    if aux_loss_config is None:
-        return aux_loss_modules
-    for aux_loss_name, cfg in aux_loss_config.items():
-        aux_loss = baseline_registry.get_auxiliary_loss(str(aux_loss_name))
-
-        aux_loss_modules[aux_loss_name] = aux_loss(
-            action_space,
-            net,
-            **cfg,
-        )
-    return aux_loss_modules

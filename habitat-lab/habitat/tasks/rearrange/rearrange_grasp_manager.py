@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.tasks.rearrange.utils import get_aabb
+from habitat.tasks.rearrange.utils import get_rigid_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
     CollisionGroups,
@@ -126,7 +126,7 @@ class RearrangeGraspManager:
             return
 
         if self._snapped_obj_id is not None:
-            obj_bb = get_aabb(self.snap_idx, self._sim)
+            obj_bb = get_rigid_aabb(self.snap_idx, self._sim)
             if obj_bb is not None:
                 if force:
                     self.snap_rigid_obj.override_collision_group(

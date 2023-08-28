@@ -305,7 +305,7 @@ class VERTrainer(PPOTrainer):
             self.queues,
             self._iw_sync,
             self._transfer_buffers,
-            self.config.habitat_baselines.rl.policy.name,
+            self.config.habitat_baselines.rl.policy.main_agent.name,
             (
                 self.config,
                 self._env_spec.observation_space,

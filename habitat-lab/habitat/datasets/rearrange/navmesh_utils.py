@@ -375,26 +375,30 @@ def path_is_navigable_given_robot(
 
 
 def is_accessible(
-    sim: habitat_sim.Simulator, point: mn.Vector3, nav_to_min_distance: float
+    sim: habitat_sim.Simulator,
+    point: mn.Vector3,
+    nav_to_min_distance: float,
+    nav_island: int,
 ) -> bool:
     """
-    Return True if the point is within a threshold distance (in XZ plane) of the nearest navigable point on the largest indoor island.
+    Return True if the point is within a threshold distance (in XZ plane) of the nearest navigable point on the selected island.
 
     :param sim: Habitat Simulaton instance.
     :param point: The query point.
     :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
+    :param nav_island: The NavMesh island on which to check accessibility. -1 is the full NavMesh.
 
     Note that this might not catch all edge cases since the nearest navigable point may be separated from the point by an obstacle.
     """
     if nav_to_min_distance == -1:
         return True
-    largest_island_id = get_largest_island_index(
-        sim.pathfinder, sim, allow_outdoor=False
-    )
-    snapped = sim.pathfinder.snap_point(point, island_index=largest_island_id)
 
-    dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
-    return dist < nav_to_min_distance
+    snapped = sim.pathfinder.snap_point(point, island_index=nav_island)
+
+    horizontal_dist = float(
+        np.linalg.norm(np.array((snapped - point))[[0, 2]])
+    )
+    return horizontal_dist < nav_to_min_distance
 
 
 def is_outdoor(

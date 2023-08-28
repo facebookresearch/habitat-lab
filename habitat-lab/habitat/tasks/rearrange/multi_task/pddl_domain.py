@@ -145,13 +145,14 @@ class PddlDomain:
                 for k, v in task_info_d.get("add_task_args", {}).items()
             }
 
-                task_info = ActionTaskInfo(
-                    task_config=self._config,
-                    task=task_info_d["task"],
-                    task_def=task_info_d["task_def"],
-                    config_args=task_info_d["config_args"],
-                    add_task_args=add_task_args,
-                )
+            task_info = ActionTaskInfo(
+                task_config=self._config,
+                task=task_info_d["task"],
+                task_def=task_info_d["task_def"],
+                config_args=task_info_d["config_args"],
+                add_task_args=add_task_args,
+            )
+
             action = PddlAction(
                 action_d["name"], parameters, pre_cond, post_cond, task_info
             )
@@ -640,7 +641,7 @@ class PddlProblem(PddlDomain):
             self.goal = self.parse_only_logical_expr(
                 problem_def["goal"], self.all_entities
             )
-            self.goal, _ = self.expand_quantifiers(self.goal)
+            self.goal = self.expand_quantifiers(self.goal)
         except Exception as e:
             raise ValueError(
                 f"Could not parse goal cond {problem_def['goal']}"
@@ -674,7 +675,6 @@ class PddlProblem(PddlDomain):
                     ) from e
 
                 self._solution.append(action)
-        self.bind_actions()
 
     @property
     def solution(self):

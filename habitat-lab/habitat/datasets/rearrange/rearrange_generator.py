@@ -79,6 +79,11 @@ class RearrangeEpisodeGenerator:
         """
         Initialize the generator object for a particular configuration.
         Loads yaml, sets up samplers and debug visualization settings.
+
+        :param cfg: The RearrangeEpisodeGeneratorConfig.
+        :param debug_visualization: Whether or not to generate debug images and videos.
+        :param limit_scene_set: Option to limit all generation to a single scene set.
+        :param num_episodes: The number of episodes which this RearrangeEpisodeGenerator will generate. Accuracy required only for BalancedSceneSampler.
         """
         # load and cache the config
         self.cfg = cfg
@@ -304,6 +309,8 @@ class RearrangeEpisodeGenerator:
     def _get_scene_sampler(self, num_episodes: int) -> None:
         """
         Initialize the scene sampler.
+
+        :param num_episodes: The nubmer of episodes the sampler will be used for. Must be accurate for BalancedSceneSampler.
         """
         self._scene_sampler: Optional[samplers.SceneSampler] = None
         if self.cfg.scene_sampler.type == "single":
@@ -413,7 +420,6 @@ class RearrangeEpisodeGenerator:
         Reset any sampler internal state related to a specific scene or episode.
         """
         self.ep_sampled_objects = []
-        self._scene_sampler.reset()
         for sampler in self._obj_samplers.values():
             sampler.reset()
 
@@ -460,7 +466,7 @@ class RearrangeEpisodeGenerator:
                 new_episode = self.generate_single_episode()
             except Exception:
                 new_episode = None
-                print("Generation failed with exception...")
+                logger.error("Generation failed with exception...")
             if new_episode is None:
                 failed_episodes += 1
                 continue
@@ -506,9 +512,16 @@ class RearrangeEpisodeGenerator:
         )
 
         # Load navmesh
-        if not self.cfg.regenerate_new_mesh:
-            self.sim.pathfinder.load_nav_mesh(navmesh_path)
-        else:
+        regenerate_navmesh = self.cfg.regenerate_new_mesh
+        if not regenerate_navmesh and not self.sim.pathfinder.load_nav_mesh(
+            navmesh_path
+        ):
+            # if loading fails, regenerate instead
+            regenerate_navmesh = True
+            logger.error(
+                f"Failed to load navmesh '{navmesh_path}', regenerating instead."
+            )
+        if regenerate_navmesh:
             navmesh_settings = NavMeshSettings()
             navmesh_settings.set_defaults()
             navmesh_settings.agent_radius = self.cfg.agent_radius
@@ -534,6 +547,11 @@ class RearrangeEpisodeGenerator:
             targ_sampler_name_to_obj_sampler_names[
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
+
+        # get the largest indoor island to constrain target navigability check
+        largest_indoor_island_id = get_largest_island_index(
+            self.sim.pathfinder, self.sim, allow_outdoor=False
+        )
 
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
@@ -563,8 +581,12 @@ class RearrangeEpisodeGenerator:
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
+                # optionally constrain to the largest indoor island
+                nav_island = -1
+                if sampler._constrain_to_largest_nav_island:
+                    nav_island = largest_indoor_island_id
                 new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle]
+                    self.sim, [new_receptacle], nav_island
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_target_receptacles.append(new_receptacle[0])  # type: ignore
@@ -595,9 +617,12 @@ class RearrangeEpisodeGenerator:
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
-
+                # optionally constrain to the largest indoor island
+                nav_island = -1
+                if sampler._constrain_to_largest_nav_island:
+                    nav_island = largest_indoor_island_id
                 new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle]
+                    self.sim, [new_receptacle], nav_island
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_goal_receptacles.append(new_receptacle[0])  # type: ignore

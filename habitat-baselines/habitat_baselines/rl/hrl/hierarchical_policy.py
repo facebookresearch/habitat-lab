@@ -24,7 +24,6 @@ from habitat_baselines.rl.hrl.hl import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.hl import HighLevelPolicy
 from habitat_baselines.rl.hrl.skills import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.skills import NoopSkillPolicy, SkillPolicy
-from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
@@ -321,12 +320,17 @@ class HierarchicalPolicy(nn.Module, Policy):
             device=masks.device,
         )
 
+        hl_rnn_hidden_states, ll_rnn_hidden_states = self._split_hidden_states(
+            rnn_hidden_states
+        )
+
         # Always call high-level if the episode is over.
         self._cur_call_high_level |= (~masks_cpu).view(-1)
 
         hl_terminate_episode, hl_info = self._update_skills(
             observations,
-            rnn_hidden_states,
+            hl_rnn_hidden_states,
+            ll_rnn_hidden_states,
             prev_actions,
             masks,
             actions,
@@ -393,21 +397,25 @@ class HierarchicalPolicy(nn.Module, Policy):
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
-            should_inserts=did_choose_new_skill.view(-1, 1).numpy(),
-            **action_kwargs,
+            should_inserts=did_choose_new_skill.view(-1, 1),
+            actions=use_action,
+            values=hl_info.values,
+            action_log_probs=hl_info.action_log_probs,
+            rnn_hidden_states=rnn_hidden_states,
         )
 
     def _update_skills(
         self,
         observations,
-        rnn_hidden_states,
+        hl_rnn_hidden_states,
+        ll_rnn_hidden_states,
         prev_actions,
         masks,
         actions,
         log_info,
         should_choose_new_skill: torch.BoolTensor,
         deterministic: bool,
-    ) -> Tuple[torch.BoolTensor, Dict[str, Any]]:
+    ) -> Tuple[torch.BoolTensor, PolicyActionData]:
         """
         Will potentially update the set of running skills according to the HL
         policy. This updates the active skill indices in `self._cur_skills` in
@@ -425,7 +433,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # the next skill.
         batch_size = masks.shape[0]
         hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
-        hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,
@@ -434,7 +441,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 hl_info,
             ) = self._high_level_policy.get_next_skill(
                 observations,
-                rnn_hidden_states,
+                hl_rnn_hidden_states,
                 prev_actions,
                 masks,
                 should_choose_new_skill,
@@ -450,31 +457,48 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             for skill_id, (batch_ids, _) in sel_grouped_skills.items():
-                self._skills[skill_id].on_enter(
+                (
+                    ll_rnn_hidden_states_batched,
+                    prev_actions_batched,
+                ) = self._skills[skill_id].on_enter(
                     [new_skill_args[i] for i in batch_ids],
                     batch_ids,
                     observations,
-                    rnn_hidden_states,
+                    ll_rnn_hidden_states,
                     prev_actions,
                 )
-                if "rnn_hidden_states" in hl_info:
-                    rnn_hidden_states[batch_ids] = hl_info[
-                        "rnn_hidden_states"
-                    ][batch_ids]
-                    prev_actions[batch_ids] = hl_info["actions"][batch_ids]
-                elif self._skills[skill_id].has_hidden_state:
-                    raise ValueError(
-                        f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
+
+                if self._has_ll_hidden_state:
+                    ll_rnn_hidden_states = _write_tensor_batched(
+                        ll_rnn_hidden_states,
+                        ll_rnn_hidden_states_batched,
+                        batch_ids,
                     )
-            hl_info["actions"] = prev_actions
-            hl_info["rnn_hidden_states"] = rnn_hidden_states
+                prev_actions = _write_tensor_batched(
+                    prev_actions, prev_actions_batched, batch_ids
+                )
+
+                if (
+                    hl_info.rnn_hidden_states is not None
+                    and self._has_hl_hidden_state
+                ):
+                    # Only update the RNN hidden state for NEW skills.
+                    hl_rnn_hidden_states = _update_tensor_batched(
+                        hl_rnn_hidden_states,
+                        hl_info.rnn_hidden_states,
+                        batch_ids,
+                    )
+
+            # We made at least some decisions, so update the action info
+            hl_info.rnn_hidden_states = hl_rnn_hidden_states
 
             should_choose_new_skill = should_choose_new_skill.numpy()
-
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
-
+        else:
+            # We made no decisions, so return an empty HL action info.
+            hl_info = PolicyActionData()
         return hl_terminate_episode, hl_info
 
     def _get_terminations(
@@ -608,13 +632,13 @@ class HierarchicalPolicy(nn.Module, Policy):
                 agent_name = config.habitat.simulator.agents_order[0]
 
         return cls(
-            config.habitat_baselines.rl.policy[agent_name],
-            config,
-            observation_space,
-            orig_action_space,
-            config.habitat_baselines.num_environments,
-            config.habitat_baselines.rl.auxiliary_losses,
-            agent_name,
+            config=config.habitat_baselines.rl.policy[agent_name],
+            full_config=config,
+            observation_space=observation_space,
+            action_space=orig_action_space,
+            num_envs=config.habitat_baselines.num_environments,
+            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
+            agent_name=agent_name,
         )
 
 

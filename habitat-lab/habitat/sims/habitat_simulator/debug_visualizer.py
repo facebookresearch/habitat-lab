@@ -186,10 +186,13 @@ class DebugVisualizer:
         self,
         axis_length: float = 1.0,
         transformation: Optional[mn.Matrix4] = None,
-    ):
+    ) -> None:
         """
         Render a coordinate frame of the configured length given a transformation.
         XYZ->RGB.
+
+        :param axis_length: The length of the axis lines.
+        :param transformation: The optional transform matrix of the axis. Identity if not provided.
         """
         if transformation is None:
             transformation = mn.Matrix4.identity_init()

@@ -110,7 +110,7 @@ class RearrangeEpisodeGeneratorConfig:
     #  },
     # NOTE: "single" scene sampler asserts that only a single scene contains the "scene" name substring
     # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
-    # NOTE: "scene_balanced" scene sampler splits desired episodes evenly amongst scenes in the set and generates al episodes for each scene consecutively.
+    # NOTE: "scene_balanced" scene sampler splits desired episodes evenly amongst scenes in the set and generates all episodes for each scene consecutively.
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
     scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
 

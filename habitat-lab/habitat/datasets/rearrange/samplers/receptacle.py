@@ -19,9 +19,10 @@ import numpy as np
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
-from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
-from habitat.tasks.rearrange.utils import get_aabb
+from habitat.tasks.rearrange.utils import get_ao_link_aabb, get_rigid_aabb
 from habitat.utils.geometry_utils import random_triangle_point
+from habitat_sim.utils.common import quat_from_two_vectors as qf2v
+from habitat_sim.utils.common import quat_to_magnum as qtm
 
 # global module singleton for mesh importing instantiated upon first import
 _manager = mn.trade.ImporterManager()
@@ -80,6 +81,7 @@ class Receptacle(ABC):
     def bounds(self) -> mn.Range3D:
         """
         AABB of the Receptacle in local space.
+        Default is empty Range3D.
         """
         return mn.Range3D()
 
@@ -126,14 +128,6 @@ class Receptacle(ABC):
         """
         local_sample = self.sample_uniform_local(sample_region_scale)
         return self.get_global_transform(sim).transform_point(local_sample)
-
-    def add_receptacle_visualization(
-        self, sim: habitat_sim.Simulator
-    ) -> List[habitat_sim.physics.ManagedRigidObject]:
-        """
-        Add one or more visualization objects to the simulation to represent the Receptacle. Return and forget the added objects for external management.
-        """
-        return []
 
     @abstractmethod
     def debug_draw(
@@ -241,9 +235,6 @@ class AABBReceptacle(Receptacle):
         """
         if self.parent_object_handle is None:
             # this is a global stage receptacle
-            from habitat_sim.utils.common import quat_from_two_vectors as qf2v
-            from habitat_sim.utils.common import quat_to_magnum as qtm
-
             # TODO: add an API query or other method to avoid reconstructing the stage frame here
             stage_config = sim.get_stage_initialization_template()
             r_frameup_worldup = qf2v(
@@ -272,43 +263,6 @@ class AABBReceptacle(Receptacle):
         # base class implements getting transform from attached objects
         return super().get_global_transform(sim)
 
-    def add_receptacle_visualization(
-        self, sim: habitat_sim.Simulator
-    ) -> List[habitat_sim.physics.ManagedRigidObject]:
-        """
-        Add a wireframe box object to the simulation to represent the AABBReceptacle and return it for external management.
-        """
-        attachment_scene_node = None
-        if self.is_parent_object_articulated:
-            attachment_scene_node = (
-                sim.get_articulated_object_manager()
-                .get_object_by_handle(self.parent_object_handle)
-                .get_link_scene_node(self.parent_link)
-                .create_child()
-            )
-        elif self.parent_object_handle is not None:
-            # attach to the 1st visual scene node so any COM shift is automatically applied
-            attachment_scene_node = (
-                sim.get_rigid_object_manager()
-                .get_object_by_handle(self.parent_object_handle)
-                .visual_scene_nodes[1]
-                .create_child()
-            )
-        box_obj = add_wire_box(
-            sim,
-            self.bounds.size() / 2.0,
-            self.bounds.center(),
-            attach_to=attachment_scene_node,
-        )
-        # TODO: enable rotation for object local receptacles
-
-        # handle local frame and rotation for global receptacles
-        if self.parent_object_handle is None:
-            box_obj.transformation = self.get_global_transform(sim).__matmul__(
-                box_obj.transformation
-            )
-        return [box_obj]
-
     def debug_draw(
         self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
     ) -> None:
@@ -326,7 +280,6 @@ class AABBReceptacle(Receptacle):
         dblr.push_transform(self.get_global_transform(sim))
         dblr.draw_box(self.bounds.min, self.bounds.max, color)
         dblr.pop_transform()
-        # TODO: test this
 
 
 def assert_triangles(indices: List[int]) -> None:
@@ -398,6 +351,9 @@ class TriangleMeshReceptacle(Receptacle):
 
     @property
     def bounds(self) -> mn.Range3D:
+        """
+        Get the vertex AABB bounds pre-computed during initialization.
+        """
         return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
@@ -947,7 +903,18 @@ class ReceptacleTracker:
 
 def get_obj_manager_for_receptacle(
     sim: habitat_sim.Simulator, receptacle: Receptacle
-):
+) -> Union[
+    habitat_sim.physics.RigidObjectManager,
+    habitat_sim.physics.ArticulatedObjectManager,
+]:
+    """
+    Get the correct object manager for the Receptacle.
+
+    :param sim: The Simulator instance.
+    :param receptacle: The Receptacle instance.
+
+    :return: Either RigidObjectManager or ArticulatedObjectManager.
+    """
     if receptacle.is_parent_object_articulated:
         obj_mgr = sim.get_articulated_object_manager()
     else:
@@ -958,26 +925,39 @@ def get_obj_manager_for_receptacle(
 def get_navigable_receptacles(
     sim: habitat_sim.Simulator,
     receptacles: List[Receptacle],
+    nav_island: int,
+    nav_to_min_distance: float = 1.5,
 ) -> List[Receptacle]:
-    """Given a list of receptacles, return the ones that are navigable from the given navmesh island"""
+    """
+    Given a list of receptacles, return the ones that are heuristically navigable from the largest indoor navmesh island.
+
+    Navigability heuristic is that at least two Receptacle AABB corners are within 1.5m of the largest indoor navmesh island and obejct is within 0.2m of the configured agent height.
+
+    :param sim: The Simulator instance.
+    :param receptacles: The list of Receptacle instances to cull.
+    :param nav_island: The NavMesh island on which to check accessibility. -1 is the full NavMesh.
+    :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
+
+    :return: The list of heuristic passing Receptacle instances.
+    """
     navigable_receptacles: List[Receptacle] = []
     for receptacle in receptacles:
         obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
         receptacle_obj = obj_mgr.get_object_by_handle(
             receptacle.parent_object_handle
         )
-        receptacle_bb = get_aabb(
-            receptacle_obj.object_id, sim, transformed=True
-        )
-
-        if (
-            receptacle_bb.size_y()
-            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
-        ):
-            logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+        receptacle_bb = None
+        if receptacle.is_parent_object_articulated:
+            receptacle_bb = get_ao_link_aabb(
+                receptacle_obj.object_id,
+                receptacle.parent_link,
+                sim,
+                transformed=True,
             )
-            continue
+        else:
+            receptacle_bb = get_rigid_aabb(
+                receptacle_obj.object_id, sim, transformed=True
+            )
 
         recep_points = [
             receptacle_bb.back_bottom_left,
@@ -989,7 +969,7 @@ def get_navigable_receptacles(
         corners_accessible = True
         corners_accessible = (
             sum(
-                is_accessible(sim, point, nav_to_min_distance=1.5)
+                is_accessible(sim, point, nav_to_min_distance, nav_island)
                 for point in recep_points
             )
             >= 2
