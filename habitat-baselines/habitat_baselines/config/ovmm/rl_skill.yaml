@@ -6,6 +6,7 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms:
     - resize_shortest_edge_base
     - center_cropper_base
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - _self_
 
 habitat_baselines:

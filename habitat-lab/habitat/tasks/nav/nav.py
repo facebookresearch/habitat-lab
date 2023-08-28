@@ -1114,7 +1114,7 @@ class MoveForwardAction(SimulatorTaskAction):
         """
         from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
-        if type(self._sim) == RearrangeSim:
+        if isinstance(self._sim, RearrangeSim):
             actuation = (
                 self._sim.config.agents[0].action_space[1].actuation.amount
             )
@@ -1136,13 +1136,12 @@ def rotate_action(sim, task: EmbodiedTask, direction: str):
     from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
     assert direction in ["left", "right"]
-
-    if type(sim) == RearrangeSim:
+    if isinstance(sim, RearrangeSim):
         # TODO: move this code to rearrange file, also ava
         actuation = sim.config.agents[0].action_space[2].actuation.amount
-        if "robot_start_angle" not in dir(sim):
+        if "articulated_agent_start_angle" not in dir(sim):
             sim.articulated_agent_start_angle = (
-                task._nav_to_info.robot_start_angle  # type: ignore
+                task._nav_to_info.articulated_agent_start_angle  # type: ignore
             )
             sim.current_angle = sim.articulated_agent_start_angle
 

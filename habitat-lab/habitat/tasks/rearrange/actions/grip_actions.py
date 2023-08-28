@@ -350,7 +350,7 @@ class GazeGraspAction(MagicGraspAction):
         allowed_scene_obj_ids = [
             int(g.object_id) for g in self._sim.ep_info.candidate_objects
         ]
-        ee_pos = self.cur_articulated_agent.ee_transform.translation
+        ee_pos = self.cur_articulated_agent.ee_transform().translation
         ee_to_objects = (
             self._sim.get_scene_pos()[allowed_scene_obj_ids] - ee_pos
         )
