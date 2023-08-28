@@ -99,7 +99,7 @@ class HumanoidRearrangeController:
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
         self.dist_per_step_size = (
-            self.walk_motion.displacement[-1] / self.walk_emotion.num_poses
+            self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
         # These two matrices store the global transformation of the base
@@ -111,7 +111,7 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
-        self.step_size =  int(self.walk_motion.fps / self.draw_fps)
+        self.step_size = int(self.walk_motion.fps / self.draw_fps)
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
         seconds_per_step = 1.0 / ctrl_freq
@@ -243,10 +243,9 @@ class HumanoidRearrangeController:
         )
         dist_diff = min(distance_to_walk, distance_covered)
 
-
         new_pose = self.walk_motion.poses[self.walk_mocap_frame]
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
-        
+
         # We correct the object transform
         forward_V_norm = mn.Vector3(
             [forward_V[2], forward_V[1], -forward_V[0]]

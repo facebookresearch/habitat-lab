@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+
+  - /benchmark/rearrange/hab3_bench: single_agent_bench
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+    - has_finished_oracle_nav
+  - /habitat/task/actions@habitat.task.actions.oracle_nav_action: oracle_nav_action
+  # For Spot observation space
+  - _self_

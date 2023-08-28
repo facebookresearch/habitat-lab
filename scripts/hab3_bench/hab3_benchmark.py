@@ -142,10 +142,8 @@ class HabDemoRunner:
         self.envs = create_env(self.args, proc_idx)
         self.envs.reset()
         if hasattr(self.envs, "action_space"):
-            print("HERE")
             ac_space = self.envs.action_space
         else:
-            print("HERE2")
             ac_space = self.envs.action_spaces[0]
         ac_space = ActionSpaceWrapper(ac_space.spaces)
         ac_space.num_items_nav = len(
@@ -171,6 +169,7 @@ class HabDemoRunner:
             )
 
         else:
+            breakpoint()
             self.get_actions = lambda i: np.array(
                 [ac_space.sample() for _ in range(self.args.n_procs)]
             )

@@ -1047,9 +1047,8 @@ class DoesWantTerminate(UsesArticulatedAgentInterface, Measure):
             use_k = f"agent_{self.agent_id}_rearrange_stop"
         else:
             use_k = "rearrange_stop"
-        
+
         # TODO: this is a hack, self.agent_id should be set somewhere
-        use_k = "agent_0_rearrange_stop"
         self._metric = task.actions[use_k].does_want_terminate
 
 

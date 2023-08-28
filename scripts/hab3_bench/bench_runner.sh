@@ -24,22 +24,23 @@ NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/human
 for j in 1
 do
   #number of trials
-  for i in {1..1}
+  for i in {1..10}
   do
 
     #TODO: different configs for different agent pairs. Can we make a single high-level config
 
     #Single agent robot
-    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_and_spot_$i"
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_$i"
 
-    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml --n-steps 1 --n-procs 1 --out-name test
-    # python scripts/hab3_bench/hab3_benchmark.py --cfg hab3_bench/spot_humanoid_oracle.yaml --n-steps 1 --n-procs 1 --out-name test
+    # Humanoid oracle
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "human_oracle_$i"
+
+
     #multi-agent robots
-
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_vel.yaml --n-steps 300 --n-procs 1 --out-name "robots_vel_$i"
 
     #multi-agent robot, human (no skinning)
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 300 --n-procs 1 --out-name "robot_human_vel_noskin_$i" "$NO_SKINNING"
+    #python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 300 --n-procs 1 --out-name "robot_human_vel_noskin_$i" "$NO_SKINNING"
 
     #multi-agent robot, human (+skinning)
     # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 1 --n-procs 1 --out-name test --render
