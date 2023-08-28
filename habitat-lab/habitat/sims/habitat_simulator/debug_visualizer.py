@@ -182,6 +182,30 @@ class DebugVisualizer:
                     normal=normal,
                 )
 
+    def render_debug_frame(
+        self,
+        axis_length: float = 1.0,
+        transformation: Optional[mn.Matrix4] = None,
+    ) -> None:
+        """
+        Render a coordinate frame of the configured length given a transformation.
+        XYZ->RGB.
+
+        :param axis_length: The length of the axis lines.
+        :param transformation: The optional transform matrix of the axis. Identity if not provided.
+        """
+        if transformation is None:
+            transformation = mn.Matrix4.identity_init()
+        origin = mn.Vector3()
+        debug_lines = [
+            ([origin, mn.Vector3(axis_length, 0, 0)], mn.Color4.red()),
+            ([origin, mn.Vector3(0, axis_length, 0)], mn.Color4.green()),
+            ([origin, mn.Vector3(0, 0, axis_length)], mn.Color4.blue()),
+        ]
+        self.debug_line_render.push_transform(transformation)
+        self.render_debug_lines(debug_lines)
+        self.debug_line_render.pop_transform()
+
     def peek_rigid_object(
         self,
         obj: habitat_sim.physics.ManagedRigidObject,

@@ -110,6 +110,7 @@ class RearrangeEpisodeGeneratorConfig:
     #  },
     # NOTE: "single" scene sampler asserts that only a single scene contains the "scene" name substring
     # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
+    # NOTE: "scene_balanced" scene sampler splits desired episodes evenly amongst scenes in the set and generates all episodes for each scene consecutively.
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
     scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
 
@@ -201,6 +202,33 @@ class RearrangeEpisodeGeneratorConfig:
     #   "offset": vec3 []
     #  }
     markers: List[Any] = field(default_factory=list)
+
+    # If we want to re-generate the nav mesh or not
+    regenerate_new_mesh: bool = True
+    # The radius of the agent in meters
+    agent_radius: float = 0.25
+    # The height of the agent in meters
+    agent_height: float = 0.61
+    # The max climb of the agent
+    agent_max_climb: float = 0.02
+    # The maximum slope that is considered walkable in degrees
+    agent_max_slope: float = 5.0
+    # If we want to check the navigability of the robot
+    check_navigable: bool = False
+    # The navmesh setting of the robot
+    navmesh_offset: List[Any] = field(default_factory=list)
+    # The angle threshold of the robot
+    angle_threshold: float = 0.1
+    # The angualr velocity of the robot
+    angular_velocity: float = 10
+    # The distance threshold of the robot
+    distance_threshold: float = 0.2
+    # The linear velocity of the robot
+    linear_velocity: float = 10.0
+    # The collision rate for navigation
+    max_collision_rate_for_navigable: float = 0.5
+    # If we want to check the stability of object placement
+    enable_check_obj_stability: bool = True
 
 
 def get_config_defaults() -> "DictConfig":
@@ -346,6 +374,7 @@ if __name__ == "__main__":
         cfg=cfg,
         debug_visualization=args.debug,
         limit_scene_set=args.limit_scene_set,
+        num_episodes=args.num_episodes,
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)

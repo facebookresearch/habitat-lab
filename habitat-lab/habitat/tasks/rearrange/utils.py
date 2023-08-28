@@ -198,7 +198,16 @@ def convert_legacy_cfg(obj_list):
     return list(map(convert_fn, obj_list))
 
 
-def get_aabb(obj_id, sim, transformed=False):
+def get_rigid_aabb(
+    obj_id: int, sim: habitat_sim.Simulator, transformed: bool = False
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a RigidObject. Returns None if object is not found.
+
+    :param obj_id: The unique id of the object instance.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
     obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
     if obj is None:
         return None
@@ -209,6 +218,34 @@ def get_aabb(obj_id, sim, transformed=False):
             obj_node.cumulative_bb, obj_node.transformation
         )
     return obj_bb
+
+
+def get_ao_link_aabb(
+    ao_obj_id: int,
+    link_id: int,
+    sim: habitat_sim.Simulator,
+    transformed: bool = False,
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a link of an ArticulatedObject. Returns None if object or link are not found.
+
+    :param ao_obj_id: The unique id of the ArticulatedObject instance.
+    :param link_id: The index of the link within the ArticulatedObject instance. -1 for base link. Note this is not unique object_id of the link.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
+
+    ao = sim.get_articulated_object_manager().get_object_by_id(ao_obj_id)
+    if ao is None:
+        return None
+    assert link_id < ao.num_links, "Link index out of range."
+    link_node = ao.get_link_scene_node(link_id)
+    link_bb = link_node.cumulative_bb
+    if transformed:
+        link_bb = habitat_sim.geo.get_transformed_bb(
+            link_bb, link_node.absolute_transformation()
+        )
+    return link_bb
 
 
 def euler_to_quat(rpy):
