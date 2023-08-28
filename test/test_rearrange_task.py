@@ -38,6 +38,21 @@ GEN_TEST_CFG = (
 EPISODES_LIMIT = 6
 
 
+def check_binary_serialization(dataset: RearrangeDatasetV0):
+    start_time = time.time()
+    bin_str = dataset.to_binary()
+    logger.info(
+        "Binary conversion finished. {} sec".format((time.time() - start_time))
+    )
+    decoded_dataset = RearrangeDatasetV0()
+    decoded_dataset.from_binary(bin_str)
+    decoded_dataset.config = dataset.config
+    assert len(decoded_dataset.episodes) == len(dataset.episodes)
+    episode = decoded_dataset.episodes[0]
+    assert isinstance(episode, Episode)
+    assert decoded_dataset.to_binary() == dataset.to_binary()
+
+
 def check_json_serialization(dataset: RearrangeDatasetV0):
     start_time = time.time()
     json_str = dataset.to_json()
@@ -71,6 +86,7 @@ def test_rearrange_dataset():
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
     check_json_serialization(dataset)
+    check_binary_serialization(dataset)
 
 
 @pytest.mark.parametrize(
@@ -195,6 +211,7 @@ def test_rearrange_episode_generator(
 
     # test serialization of freshly generated dataset
     check_json_serialization(dataset)
+    check_binary_serialization(dataset)
 
     logger.info(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
