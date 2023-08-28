@@ -37,8 +37,24 @@ close_fridge:
 
 pick:
   skill_name: "PickSkillPolicy"
-  obs_skill_inputs: ["obj_start_sensor"]
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_9/latest.pth"
+  #obs_skill_inputs: ["obj_start_sensor"]
+
+  # load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_9/latest.pth"
+  # # delta_pos_limit=0.2
+  # # base_velocity.lin_speed=2.0
+  # # base_velocity.ang_speed=2.0
+
+  # load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_11/latest.pth"
+  # # delta_pos_limit=0.2
+  # # base_velocity.lin_speed=5.0
+  # # base_velocity.ang_speed=5.0
+  # # max_scene_colls=20
+
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_fp_11/latest.pth"
+  # delta_pos_limit=0.2
+  # base_velocity.lin_speed=5.0
+  # base_velocity.ang_speed=5.0
+  # max_scene_colls=20
 
 # place:
 #   skill_name: "PlaceSkillPolicy"
