@@ -169,7 +169,6 @@ class HabDemoRunner:
             )
 
         else:
-            breakpoint()
             self.get_actions = lambda i: np.array(
                 [ac_space.sample() for _ in range(self.args.n_procs)]
             )
