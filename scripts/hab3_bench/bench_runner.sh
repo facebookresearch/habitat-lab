@@ -19,7 +19,16 @@ USE_ORACLE_ACTION=
 cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_no_skinning.urdf
 NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_no_skinning.urdf'"
 
-#number of processes
+DATA_LARGE="habitat.dataset.datapath="
+
+
+OBJ3="habitat.task.task_spec=rearrange_easy_fp_3obj"
+OBJ5="habitat.task.task_spec=rearrange_easy_fp_5obj"
+
+
+
+
+# number of processes
 # shellcheck disable=SC2043
 for j in 1
 do
@@ -31,6 +40,16 @@ do
 
     #Single agent robot
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_$i"
+
+    #Single agent robot - 3 objects
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_3obj_$i" "$OBJ3"
+
+    #Single agent robot - 5 objects
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_5obj_$i" "$OBJ5"
+
+    #Single agent robot - Large scene
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_large_$i" "$DATA_LARGE"
+
 
     # Humanoid oracle
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps 300 --n-procs 1 --out-name "human_oracle_$i"
