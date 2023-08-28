@@ -37,7 +37,7 @@ close_fridge:
 
 pick:
   skill_name: "PickSkillPolicy"
-  #obs_skill_inputs: ["obj_start_sensor"]
+  obs_skill_inputs: ["obj_start_sensor"]
 
   # load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_9/latest.pth"
   # # delta_pos_limit=0.2
@@ -45,16 +45,22 @@ pick:
   # # base_velocity.ang_speed=2.0
 
   # load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_11/latest.pth"
-  # # delta_pos_limit=0.2
-  # # base_velocity.lin_speed=5.0
-  # # base_velocity.ang_speed=5.0
-  # # max_scene_colls=20
-
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_fp_11/latest.pth"
   # delta_pos_limit=0.2
   # base_velocity.lin_speed=5.0
   # base_velocity.ang_speed=5.0
   # max_scene_colls=20
+
+  # load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_fp_11/latest.pth"
+  # delta_pos_limit=0.2
+  # base_velocity.lin_speed=5.0
+  # base_velocity.ang_speed=5.0
+  # max_scene_colls=20
+
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_pick_11_10/latest.pth"
+  # delta_pos_limit=0.2
+  # base_velocity.lin_speed=5.0
+  # base_velocity.ang_speed=5.0
+  # max_scene_colls=10
 
 # place:
 #   skill_name: "PlaceSkillPolicy"
@@ -66,7 +72,11 @@ place:
   skill_name: "PlaceSkillPolicy"
   obs_skill_inputs: ["obj_goal_sensor"]
   max_skill_steps: 500
-  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_7_11/latest.pth"
+  load_ckpt_file: "/checkpoint/jimmytyyang/slurm/rl_log/checkpoints_place_7_11/ckpt.334.pth"
+  # delta_pos_limit=0.2
+  # lin_speed=5.0
+  # ang_speed=5.0
+  # max_scene_colls=20
 
 # place:
 #   skill_name: "NoopSkillPolicy"
