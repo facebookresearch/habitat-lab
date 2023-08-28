@@ -34,6 +34,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
         # Get the skill io manager
         self.sm = skill_io_manager()
         self._num_ac = get_num_actions(action_space)
+        self._need_reset_arm = False
 
     @dataclass(frozen=True)
     class PlaceSkillArgs:

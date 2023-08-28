@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import numpy as np
 import torch
 
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -29,18 +30,58 @@ class PickSkillPolicy(NnSkillPolicy):
                 self.org_pick_start_id, self.org_pick_len = find_action_range(
                     action_space, "base_velocity"
                 )
-
+            if k == "arm_action":
+                self.arm_start_id, self.arm_len = find_action_range(
+                    action_space, "arm_action"
+                )
         # Get the skill io manager
         self.sm = skill_io_manager()
         self._num_ac = get_num_actions(action_space)
+        self._rest_state = np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0])
+        self._need_reset_arm = True
+        self._pick_down = False
 
     def _is_skill_done(
         self,
         observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        batch_idx,
+        rnn_hidden_states=None,
+        prev_actions=None,
+        masks=None,
+        batch_idx=None,
+    ) -> torch.BoolTensor:
+        # Is the agent holding the object and is the end-effector at the
+        # resting position?
+        rel_resting_pos = torch.norm(
+            observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
+        )
+        is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+
+        current_joint_pos = observations["joint"].cpu().numpy()
+        is_reset_down = (
+            torch.as_tensor(
+                np.abs(current_joint_pos - self._rest_state).max(-1),
+                dtype=torch.float32,
+            )
+            < 0.05
+        )
+        is_reset_down = is_reset_down.to(is_holding.device)
+        is_done = (is_holding * is_within_thresh * is_reset_down).type(
+            torch.bool
+        )
+        if is_done:
+            self.sm.hidden_state = None
+            self._pick_down = False
+
+        return is_done
+
+    def _is_pick_done(
+        self,
+        observations,
+        rnn_hidden_states=None,
+        prev_actions=None,
+        masks=None,
+        batch_idx=None,
     ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?
@@ -53,6 +94,7 @@ class PickSkillPolicy(NnSkillPolicy):
         is_done = (is_holding * is_within_thresh).type(torch.bool)
         if is_done:
             self.sm.hidden_state = None
+            self._pick_down = False
 
         return is_done
 
@@ -119,5 +161,22 @@ class PickSkillPolicy(NnSkillPolicy):
         # Update the hidden state / action
         self.sm.hidden_state = action.rnn_hidden_states
         self.sm.prev_action = action.actions
+
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        for i in torch.nonzero(is_holding):
+            # Do not release the object once it is held
+            if self._need_reset_arm:
+                current_joint_pos = observations["joint"].cpu().numpy()
+                # self._compute_delta(current_joint_pos)
+                delta = self._rest_state - current_joint_pos
+                action.actions[
+                    :, self.arm_start_id : self.arm_start_id + self.arm_len - 1
+                ] = torch.from_numpy(delta).to(
+                    device=action.actions.device, dtype=action.actions.dtype
+                )
+                self._pick_down = True
+        # array([-2.6179938e+00, -3.1415927e+00, -1.0000000e+06,  0.0000000e+00, -2.7925267e+00, -1.8325957e+00, -2.8797932e+00], dtype=float32),
+        # array([3.1415927e+00, 5.2359879e-01, 1.0000000e+06, 3.1415927e+00, 2.7925267e+00, 1.8325957e+00, 2.8797932e+00], dtype=float32)
+        # np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0])
 
         return action
