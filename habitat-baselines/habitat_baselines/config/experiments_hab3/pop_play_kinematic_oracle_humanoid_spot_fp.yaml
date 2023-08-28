@@ -2,6 +2,7 @@
 
 # Command to run the script
 # python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]  habitat_baselines.video_dir=/checkpoint/jimmytyyang/slurm/rl_log/video_GT_37_humanoid_spot_fp habitat_baselines.evaluate=True habitat_baselines.test_episode_count=20 habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=False habitat_baselines.writer_type=tb habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz
+# python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.eval_ckpt_path_dir=/checkpoint/jimmytyyang/slurm/rl_log/GT_37_humanoid_spot_fp/latest_new.pth habitat_baselines.video_dir=/checkpoint/jimmytyyang/slurm/rl_log/hrl_nn_video_v1_0828_back_to_non_nn_nav_v7 habitat_baselines.evaluate=True habitat_baselines.test_episode_count=20 habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=True habitat_baselines.writer_type=tb habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz
 
 defaults:
   - /benchmark/rearrange: multi_agent_tidy_house_fp_spot_humanoid
