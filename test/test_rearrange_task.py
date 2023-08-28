@@ -133,8 +133,6 @@ def test_rearrange_tasks(test_cfg_path):
     """
     Iterates through all the Habitat Rearrangement tasks.
     """
-    if "stretch" in test_cfg_path or "spot" in test_cfg_path:
-        return
 
     config = get_config(
         test_cfg_path,
