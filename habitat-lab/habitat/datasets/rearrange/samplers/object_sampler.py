@@ -353,6 +353,7 @@ class ObjectSampler:
                     )
                     continue
                 return new_object
+
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )

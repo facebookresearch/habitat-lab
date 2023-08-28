@@ -732,11 +732,6 @@ class RearrangeEpisodeGenerator:
 
         target_refs: Dict[str, str] = {}
 
-        # get the largest indoor island to constrain target navigability check
-        largest_indoor_island_id = get_largest_island_index(
-            self.sim.pathfinder, self.sim, allow_outdoor=False
-        )
-
         # sample goal positions for target objects after all other clutter is placed and validated
         handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
         for sampler_name, target_sampler in self._target_samplers.items():
