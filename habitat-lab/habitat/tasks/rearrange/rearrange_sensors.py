@@ -35,6 +35,7 @@ class MultiObjSensor(PointGoalSensor):
 
     def _get_observation_space(self, *args, **kwargs):
         n_targets = self._task.get_n_targets()
+        # breakpoint()
         return spaces.Box(
             shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
