@@ -21,7 +21,12 @@ from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
-from habitat.tasks.rearrange.utils import write_gfx_replay
+from habitat.tasks.rearrange.utils import (
+    get_info_episode_final,
+    get_info_episode_step,
+    write_episode_data,
+    write_gfx_replay,
+)
 from habitat.utils import profiling_wrapper
 from habitat.utils.perf_logger import PerfLogger
 from habitat.utils.visualizations.utils import (
@@ -956,6 +961,12 @@ class PPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self._agent.eval()
+        episode_save_info = None
+        if self.config.habitat_baselines.eval.save_summary_data:
+            episode_save_info = {}  # type: ignore
+            gather_data_step = get_info_episode_step
+            gather_data_final = get_info_episode_final
+
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0
@@ -1058,6 +1069,14 @@ class PPOTrainer(BaseRLTrainer):
                     frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
+                if episode_save_info is not None:
+                    if i not in episode_save_info:
+                        episode_save_info[i] = []
+
+                    info_to_save = get_info_episode_step(infos[i])
+                    if len(info_to_save) > 0:
+                        episode_save_info[i].append(info_to_save)
+
                 # episode ended
                 if not not_done_masks[i].any().item():
                     pbar.update()
@@ -1099,6 +1118,18 @@ class PPOTrainer(BaseRLTrainer):
                             self.config.habitat.task,
                             current_episodes_info[i].episode_id,
                         )
+                    if episode_save_info is not None:
+                        curr_episode_save_info = {
+                            "id": current_episodes_info[i].episode_id,
+                            "step_info": episode_save_info[i],
+                            "summary": episode_stats,
+                        }
+                        write_episode_data(
+                            curr_episode_save_info,
+                            self.config.habitat_baselines.episode_data_dir,
+                            current_episodes_info[i].episode_id,
+                        )
+                        episode_save_info[i] = []
 
             not_done_masks = not_done_masks.to(device=self.device)
             (
