@@ -65,6 +65,11 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
 
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
+        # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
+        # rho = self._sim.geodesic_distance(
+        #     robot_pos, task.nav_goal_pos
+        # )
+
         return np.array([rho, -phi], dtype=np.float32)
 
 

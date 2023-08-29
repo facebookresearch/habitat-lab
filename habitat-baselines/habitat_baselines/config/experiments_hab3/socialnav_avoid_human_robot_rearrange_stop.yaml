@@ -50,7 +50,7 @@ defaults:
     # Additional one for nav_to_obj
     - nav_goal_sensor
 
-  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity #base_velocity_non_cylinder #base_velocity
   # TODO: asnav_9 does have rearrange_stop action
   # Based on the discussion, rearrange_stop now has been removed
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
@@ -89,8 +89,26 @@ habitat:
     actions:
       agent_0_base_velocity:
         agent_index : 0
+
         lin_speed: 40.0
         ang_speed: 20.0
+
+        # longitudinal_lin_speed: 40.0
+        # lateral_lin_speed: 0
+        # ang_speed: 20
+        # # If we want to do sliding or not
+        # allow_dyn_slide: True
+        # # If the condition of sliding includs the checking of rotation
+        # enable_rotation_check_for_dyn_slide: True
+        # # If we allow the robot to move back or not
+        # allow_back: True
+        # # There is a collision if the difference between the clamped NavMesh position and target position
+        # # is more than collision_threshold for any point.
+        # collision_threshold: 1e-5
+        # # The x and y locations of the clamped NavMesh position
+        # navmesh_offset: [[0.0, 0.0], [0.0, 0.0], [-0.0, 0.0]]
+        # # If we allow the robot to move laterally.
+        # enable_lateral_move: False
 
       agent_1_base_velocity:
         agent_index : 1
