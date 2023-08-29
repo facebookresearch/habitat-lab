@@ -180,10 +180,16 @@ class GuiHumanoidController(GuiController):
         gui_input,
         env,
         walk_pose_path,
+        lin_speed,
+        ang_speed,
         recorder,
     ):
         super().__init__(agent_idx, is_multi_agent, gui_input)
-        self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+        humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+        humanoid_controller.set_framerate_for_linspeed(
+            lin_speed, ang_speed, env._sim.ctrl_freq
+        )
+        self._humanoid_controller = humanoid_controller
         self._env = env
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
