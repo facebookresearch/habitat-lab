@@ -606,7 +606,13 @@ if __name__ == "__main__":
         "--app-state",
         default="rearrange",
         type=str,
-        help=("'rearrange' (default) or 'fetch'"),
+        help="'rearrange' (default) or 'fetch'",
+    )
+    parser.add_argument(
+        "--remote-gui-mode",
+        action="store_true",
+        default=False,
+        help="Observer mode, where the humanoid follows the VR headset pose provided by remote_gui_input",
     )
 
     args = parser.parse_args()
@@ -620,6 +626,11 @@ if __name__ == "__main__":
 
     if args.show_tutorial:
         raise ValueError("--show-tutorial is temporarily unsupported!")
+
+    if args.remote_gui_mode and args.app_state != "fetch":
+        raise ValueError(
+            "--remote-gui-mode is only supported for fetch app-state"
+        )
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"

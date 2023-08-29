@@ -186,6 +186,7 @@ class GuiHumanoidController(GuiController):
         self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
         self._env = env
         self._hint_walk_dir = None
+        self._hint_distance_multiplier = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
@@ -200,6 +201,7 @@ class GuiHumanoidController(GuiController):
         base_trans = self.get_articulated_agent().base_transformation
         self._humanoid_controller.reset(base_trans)
         self._hint_walk_dir = None
+        self._hint_distance_multiplier = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
@@ -245,8 +247,16 @@ class GuiHumanoidController(GuiController):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
+    def set_act_hints(
+        self,
+        walk_dir,
+        distance_multiplier,
+        grasp_obj_idx,
+        do_drop,
+        cam_yaw=None,
+    ):
         self._hint_walk_dir = walk_dir
+        self._hint_distance_multiplier = distance_multiplier
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw

@@ -5,10 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
+import numpy as np
 from hablab_utils import get_agent_art_obj_transform
 
 import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
 
 
 class GuiNavigationHelper:
@@ -95,20 +100,64 @@ class GuiNavigationHelper:
             path_points, path_endpoint_radius, path_color
         )
 
-    def viz_and_get_humanoid_walk_dir_from_ray_cast(self):
+    def _get_humanoid_walk_dir_from_remote_gui_input(
+        self, visualize_path=True
+    ):
+        walk_dir = None
+        distance_multiplier = 0.0
+
+        (
+            target_pos,
+            target_rot_quat,
+        ) = self._sandbox_service.remote_gui_input.get_head_pose()
+
+        walk_dir, distance_multiplier = self._get_humanoid_walk_dir(
+            target_pos=target_pos,
+            target_rot_quat=target_rot_quat,
+            visualize_path=visualize_path,
+        )
+
+        return walk_dir, distance_multiplier
+
+    def _get_humanoid_walk_dir_from_ray_cast(self, visualize_path=True):
+        walk_dir = None
+        distance_multiplier = 0.0
+
         target_on_floor = self._get_target_pos_from_ray_cast()
         if target_on_floor is None:
-            return None
+            return walk_dir, distance_multiplier
 
-        found_path, path = self._get_humanoid_walk_path_to(target_on_floor)
-        if not found_path or len(path.points) < 2:
-            return None
+        walk_dir, distance_multiplier = self._get_humanoid_walk_dir(
+            target_pos=target_on_floor,
+            target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
+            visualize_path=visualize_path,
+        )
 
-        self._viz_humanoid_walk_path(path)
+        return walk_dir, distance_multiplier
 
-        walk_dir = self._get_humanoid_walk_dir_from_path(path)
+    def _get_humanoid_walk_dir(
+        self, target_pos, target_rot_quat, visualize_path=True
+    ):
+        walk_dir = None
+        distance_multiplier = 0.0
+        geodesic_dist_threshold = 0.05
 
-        return walk_dir
+        found_path, path = self._get_humanoid_walk_path_to(target_pos)
+        if (
+            found_path
+            and len(path.points) >= 2
+            and path.geodesic_distance >= geodesic_dist_threshold
+        ):
+            walk_dir = self._get_humanoid_walk_dir_from_path(path)
+            distance_multiplier = 1.0
+            if visualize_path:
+                self._viz_humanoid_walk_path(path)
+
+        if walk_dir is None and target_rot_quat is not None:
+            walk_dir = self._compute_turn_dir(target_rot_quat)
+            distance_multiplier = 0.0
+
+        return walk_dir, distance_multiplier
 
     def _get_target_pos_from_ray_cast(self):
         ray = self._sandbox_service.gui_input.mouse_ray
@@ -122,6 +171,15 @@ class GuiNavigationHelper:
         target_on_floor = ray.origin + ray.direction * dist_to_floor_y
 
         return target_on_floor
+
+    def _compute_turn_dir(self, target_rot_quat):
+        direction_vector = np.array([0, 0, -1])
+        np_quat = quaternion_from_coeff(
+            list(target_rot_quat.vector) + [target_rot_quat.scalar]
+        )
+        heading_vector = quaternion_rotate_vector(np_quat, direction_vector)
+
+        return mn.Vector3(heading_vector)
 
     @staticmethod
     def _evaluate_cubic_bezier(ctrl_pts, t):

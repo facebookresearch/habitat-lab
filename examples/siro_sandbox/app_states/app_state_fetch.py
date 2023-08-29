@@ -106,17 +106,33 @@ class AppStateFetch(AppState):
                         ]
 
         walk_dir = None
+        distance_multiplier = 0.0
         if not self._first_person_mode:
-            candidate_walk_dir = (
-                self._nav_helper.viz_and_get_humanoid_walk_dir_from_ray_cast()
-            )
+            if self._sandbox_service.args.remote_gui_mode:
+                (
+                    candidate_walk_dir,
+                    candidate_distance_multiplier,
+                ) = self._nav_helper._get_humanoid_walk_dir_from_remote_gui_input(
+                    visualize_path=False
+                )
+            else:
+                (
+                    candidate_walk_dir,
+                    candidate_distance_multiplier,
+                ) = self._nav_helper._get_humanoid_walk_dir_from_ray_cast(
+                    visualize_path=True
+                )
+
             if self._sandbox_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
             ):
                 walk_dir = candidate_walk_dir
+                distance_multiplier = candidate_distance_multiplier
 
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
+            distance_multiplier,
             grasp_object_id,
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
@@ -172,28 +188,6 @@ class AppStateFetch(AppState):
                 mn.Color3(255 / 255, 255 / 255, 0),
                 24,
             )
-
-    def _viz_agent_go_to_box(self):
-        color = mn.Color3(255 / 255, 0 / 255, 0 / 255)  # red
-
-        agent_pos, _ = self._get_agent_pose()
-
-        box_half_size = 0.5
-        box_offset = mn.Vector3(
-            box_half_size, 2 * box_half_size, box_half_size
-        )
-        self._sandbox_service.line_render.draw_box(
-            agent_pos - box_offset,
-            agent_pos + box_offset,
-            color,
-        )
-        circle_radius = 0.1
-        agent_pos[1] = self._get_agent_feet_height()
-        self._sandbox_service.line_render.draw_circle(
-            agent_pos,
-            circle_radius,
-            color,
-        )
 
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
