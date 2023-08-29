@@ -180,17 +180,23 @@ class AppStateSocialNav(AppState):
             self._episode_found_obj_ids.add(closest_object_id)
 
         walk_dir = None
+        distance_multiplier = 0.0
         if not self._camera_helper._first_person_mode:
-            candidate_walk_dir = (
-                self._nav_helper.viz_and_get_humanoid_walk_dir_from_ray_cast()
+            (
+                candidate_walk_dir,
+                candidate_distance_multiplier,
+            ) = self._nav_helper._get_humanoid_walk_dir_from_ray_cast(
+                visualize_path=True
             )
             if self._sandbox_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
             ):
                 walk_dir = candidate_walk_dir
+                distance_multiplier = candidate_distance_multiplier
 
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
+            distance_multiplier,
             None,
             None,
             self._camera_helper.lookat_offset_yaw,
