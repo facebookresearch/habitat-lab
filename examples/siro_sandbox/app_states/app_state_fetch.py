@@ -53,6 +53,8 @@ class AppStateFetch(AppState):
         )
         self._prepare_throw = False
 
+        self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
+
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
 
@@ -159,6 +161,11 @@ class AppStateFetch(AppState):
                 drop_pos,
                 self._camera_helper.lookat_offset_yaw,
             )
+            # TODO: move this in set_act_hints
+            if obj_pick is not None:
+                self._gui_agent_ctrl.selected_obj = self.get_sim().get_rigid_object_manager().get_object_by_id(
+                    obj_pick
+                )
         else:
             computed_throw_vel = (
                 self._throw_helper.viz_and_get_humanoid_throw()

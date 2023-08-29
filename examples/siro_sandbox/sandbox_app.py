@@ -59,7 +59,8 @@ from sandbox_service import SandboxService
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    # "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
@@ -731,11 +732,16 @@ if __name__ == "__main__":
                 "head_rgb",
                 "has_finished_oracle_nav",
             ]:
-                agent_sensor_name = (
-                    f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
-                )
+                if len(sim_config.agents) > 1:
+                    agent_sensor_name = (
+                        f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
+                    )
+                else:
+                    agent_sensor_name = sensor_name
+
                 if agent_sensor_name in gym_obs_keys:
                     gym_obs_keys.remove(agent_sensor_name)
+                    
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[
@@ -758,11 +764,10 @@ if __name__ == "__main__":
             gui_agent_actions = [
                 action_key
                 for action_key in task_actions.keys()
-                if action_key.startswith(gui_agent_key)
+                if action_key.startswith(gui_agent_key) or len(sim_config.agents) == 1
             ]
             for action_key in gui_agent_actions:
                 task_actions.pop(action_key)
-
             action_prefix = (
                 f"{gui_agent_key}_" if len(sim_config.agents) > 1 else ""
             )

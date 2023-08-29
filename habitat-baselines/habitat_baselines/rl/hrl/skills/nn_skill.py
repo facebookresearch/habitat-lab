@@ -16,7 +16,9 @@ from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
-
+from habitat_baselines.rl.multi_agent.utils import (
+    update_list_with_agent_prefix,
+)
 
 def truncate_obs_space(space: spaces.Box, truncate_len: int) -> spaces.Box:
     """
@@ -56,7 +58,6 @@ class NnSkillPolicy(SkillPolicy):
         self._ac_start = 0
         self._ac_len = get_num_actions(filtered_action_space)
         self._did_want_done = torch.zeros(self._batch_size)
-
         for k, space in action_space.items():
             if k not in filtered_action_space.spaces.keys():
                 self._ac_start += get_num_actions(space)
@@ -137,7 +138,12 @@ class NnSkillPolicy(SkillPolicy):
             :, self._ac_start : self._ac_start + self._ac_len
         ]
         filtered_obs = self._select_obs(filtered_obs, cur_batch_idx)
-
+        # print("PREV")
+        # print(filtered_obs["goal_to_agent_gps_compass"])
+        # print(filtered_prev_actions[0])
+        
+        # print(rnn_hidden_states[0,0,:4])
+        # breakpoint()
         action_data = self._wrap_policy.act(
             filtered_obs,
             rnn_hidden_states,
@@ -145,6 +151,10 @@ class NnSkillPolicy(SkillPolicy):
             masks,
             deterministic,
         )
+        # print("NEXT")
+        # print(action_data.actions[0])
+        # print(action_data.rnn_hidden_states[0,0,:4])
+        # breakpoint()
         full_action = torch.zeros(
             (masks.shape[0], self._full_ac_size), device=masks.device
         )
@@ -184,6 +194,9 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
+        # TOO: Hack the keys should be gotten from somewhere else
+        expected_obs_keys = update_list_with_agent_prefix(expected_obs_keys, 0)
+        
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
@@ -198,10 +211,11 @@ class NnSkillPolicy(SkillPolicy):
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
+        action_keys = update_list_with_agent_prefix(policy_cfg.habitat.task.actions.keys(), 0)
         filtered_action_space = ActionSpace(
             OrderedDict(
                 (k, action_space[k])
-                for k in policy_cfg.habitat.task.actions.keys()
+                for k in action_keys
             )
         )
 
@@ -215,17 +229,15 @@ class NnSkillPolicy(SkillPolicy):
                     if k != "grip_action"
                 }
             )
-
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
-
         actor_critic = policy.from_config(
-            policy_cfg, filtered_obs_space, filtered_action_space
+            policy_cfg, filtered_obs_space, filtered_action_space, agent_name="agent_0"
         )
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(ckpt_dict["state_dict"])
+                actor_critic.load_state_dict(ckpt_dict[0]["state_dict"])
 
             except Exception as e:
                 raise ValueError(

@@ -27,7 +27,9 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
 )
 from habitat_baselines.utils.common import get_num_actions
 from habitat_sim.physics import CollisionGroups
+from habitat.tasks.utils import cartesian_to_polar
 
+import torch
 from .controller_abc import BaselinesController
 
 if TYPE_CHECKING:
@@ -170,7 +172,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         config,
         env,
     ):
-        self.current_state = FetchState.WAIT
+        self._current_state = FetchState.WAIT
+        self.should_start_skill = False
         self.object_interest_id = None
         self.rigid_obj_interest = None
         self.grasped_object_id = None
@@ -180,6 +183,40 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
 
         super().__init__(agent_idx, is_multi_agent, config, env)
+        self._policy_info = self._init_policy_input()
+
+    def _init_policy_input(self):
+        prev_actions = torch.zeros(
+            self._num_envs,
+            *self._action_shape,
+            device=self.device,
+            dtype=torch.long if self._discrete_actions else torch.float,
+        )
+        rnn_hidden_states = torch.zeros(
+            self._num_envs, *self._agent.hidden_state_shape
+        )
+
+        policy_info = {
+            "rnn_hidden_states": rnn_hidden_states,
+            "prev_actions": prev_actions,
+            "masks": torch.ones(1, device=self.device, dtype=torch.bool),
+            "cur_batch_idx": torch.zeros(1, device=self.device, dtype=torch.long)
+        }
+        return {
+            "ll_policy": policy_info
+        }
+
+    @property
+    def current_state(self):
+        return self._current_state
+
+    @current_state.setter
+    def current_state(self, value):
+        if value == FetchState.PICK and self._current_state != value:
+            self.should_start_skill = True
+        else:
+            self.should_start_skill = False
+        self._current_state = value
 
     def _get_grasp_mgr(self, env):
         agents_mgr = env._sim.agents_mgr
@@ -189,6 +226,44 @@ class FetchBaselinesController(SingleAgentBaselinesController):
     def get_articulated_agent(self, env):
         return env._sim.agents_mgr[self._agent_idx].articulated_agent
 
+    def start_skill(self, observations, skill_name):
+        skill_walk = self._agent.actor_critic._skills[self._agent.actor_critic._name_to_idx[skill_name]]
+        policy_input = self._policy_info["ll_policy"]
+        obs = self._batch_and_apply_transforms([observations])
+        prev_actions = policy_input["prev_actions"]
+        rnn_hidden_states = policy_input["rnn_hidden_states"]
+        batch_id = 0
+        skill_args = ["", "0|0", ""]
+        rnn_hidden_states[batch_id], prev_actions[batch_id] = skill_walk.on_enter([skill_args], [batch_id], obs, rnn_hidden_states, prev_actions)
+        self.should_start_skill = False
+
+    def force_apply_skill(self, observations, skill_name, env, obj_trans):
+        # TODO: there is a bit of repeated code here. Would be better to pack fetch into a high level policy
+        # that can be called on different observations
+        skill_walk = self._agent.actor_critic._skills[self._agent.actor_critic._name_to_idx[skill_name]]
+        policy_input = self._policy_info["ll_policy"]
+        policy_input["observations"] = self._batch_and_apply_transforms([observations])
+        # Only take the goal object
+        obj_trans = env._sim.agents_mgr[
+            1 - self._agent_idx
+        ].articulated_agent.base_transformation.translation
+        articulated_agent_T = self.get_articulated_agent(env).base_transformation
+        rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
+        rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
+        pos_sensor = np.array([rho, -phi])[None, ...]
+        # breakpoint()
+        # print(policy_input["observations"]["obj_start_gps_compass"])
+        # policy_input["observations"]["obj_start_gps_compass"] = policy_input["observations"]["obj_start_gps_compass"][:, :2]
+        policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
+        # breakpoint()
+        with torch.no_grad():
+            action_data = skill_walk.act(
+                **policy_input
+            )
+        policy_input["rnn_hidden_states"] = action_data.rnn_hidden_states
+        policy_input["prev_actions"] = action_data.actions
+        return action_data.actions
+        
     def act(self, obs, env):
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
@@ -207,11 +282,18 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         )
 
         if self.current_state == FetchState.PICK:
+            if self.should_start_skill:
+                # TODO: obs can be batched before
+                self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
             if not finish_oracle_nav:
-                action_array[
-                    action_ind_nav[0] : action_ind_nav[0] + 3
-                ] = obj_trans
+                if True:
+                    action_array = self.force_apply_skill(obs, "nav_to_obj", env, obj_trans)[0]
+                    # breakpoint()
+                else:
+                    action_array[
+                        action_ind_nav[0] : action_ind_nav[0] + 3
+                    ] = obj_trans
 
             else:
                 self._get_grasp_mgr(env).snap_to_obj(self.object_interest_id)
@@ -268,3 +350,4 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.grasped_object_id = None
         self.grasped_object = None
         self._last_object_drop_info = None
+        self._policy_info = self._init_policy_input()
