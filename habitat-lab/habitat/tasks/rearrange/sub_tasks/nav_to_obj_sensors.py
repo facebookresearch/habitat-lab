@@ -330,7 +330,7 @@ class SocialNavSeekSuccess(Measure):
 
         super().__init__(*args, config=config, **kwargs)
         self._following_step = 0
-        self._following_step_succ_threshold = 300
+        self._following_step_succ_threshold = 800  # prev: 300
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
