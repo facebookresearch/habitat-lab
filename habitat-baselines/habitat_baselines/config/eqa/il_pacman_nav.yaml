@@ -3,7 +3,7 @@
 defaults:
   - /habitat_baselines: habitat_baselines_il_config_base
   - /benchmark/nav: eqa_rgbonly_mp3d
-  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_agent
   - _self_
 
 habitat:

@@ -28,7 +28,7 @@ from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.utils.geometry_utils import is_point_in_triangle
 
-CFG_TEST = "benchmark/rearrange/pick.yaml"
+CFG_TEST = "benchmark/rearrange/skills/pick.yaml"
 GEN_TEST_CFG = (
     "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
 )
