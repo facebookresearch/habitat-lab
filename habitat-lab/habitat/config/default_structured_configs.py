@@ -1017,6 +1017,12 @@ class NavSeekSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+    # distance
+    following_step_succ_threshold: int = 800
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    need_to_face_human: bool = False
+    use_geo_distance: bool = False
 
 
 @dataclass
@@ -1181,7 +1187,10 @@ class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
     safe_dis_min: float = 1.0
     safe_dis_max: float = 2.0
-    safe_dis_reward: float = 1.0
+    safe_dis_reward: float = 2.0
+    facing_human_dis: float = 3.0
+    facing_human_reward: float = -1.0
+    use_geo_distance: bool = False
 
 
 @dataclass

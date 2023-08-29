@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -329,22 +330,52 @@ class SocialNavSeekSuccess(Measure):
         self._following_step = 0
         self.update_metric(*args, task=task, **kwargs)
 
-    def __init__(self, *args, config, **kwargs):
+    def __init__(self, *args, config, sim, **kwargs):
         self._config = config
-        self._sim = kwargs["sim"]
+        self._sim = sim
 
         super().__init__(*args, config=config, **kwargs)
         self._following_step = 0
-        self._following_step_succ_threshold = 800  # prev: 300
+        self._following_step_succ_threshold = (
+            config.following_step_succ_threshold
+        )  # prev: 300
+        self._safe_dis_min = config.safe_dis_min
+        self._safe_dis_max = config.safe_dis_max
+        self._use_geo_distance = config.use_geo_distance
+        self._need_to_face_human = config.need_to_face_human
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
             RotDistToGoal.cls_uuid
         ].get_metric()
 
-        dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+        position_human = observations["agent_1_localization_sensor"][:3]
+        position_robot = observations["agent_0_localization_sensor"][:3]
 
-        if dist >= 1.0 and dist < 2.0:
+        if self._use_geo_distance:
+            dist = self._sim.geodesic_distance(position_robot, position_human)
+        else:
+            dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+
+        # BLock for computing facing to human
+        vector_human_robot = position_human - position_robot
+        vector_human_robot = vector_human_robot / np.linalg.norm(
+            vector_human_robot
+        )
+        base_T = self._sim.get_agent_data(
+            0
+        ).articulated_agent.base_transformation
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = np.dot(forward_robot.normalized(), vector_human_robot) > 0.0
+
+        print(np.dot(forward_robot.normalized(), vector_human_robot))
+
+        if (
+            dist >= self._safe_dis_min
+            and dist < self._safe_dis_max
+            and self._need_to_face_human != -1
+            and facing
+        ):
             self._following_step += 1
 
         nav_pos_succ = False

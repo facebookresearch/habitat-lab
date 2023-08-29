@@ -7,6 +7,7 @@
 
 from typing import List
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -299,14 +300,20 @@ class SocialNavReward(Measure):
     def _get_uuid(*args, **kwargs):
         return SocialNavReward.cls_uuid
 
-    def __init__(self, *args, config, **kwargs):
+    def __init__(self, *args, config, sim, **kwargs):
         super().__init__(*args, config, **kwargs)
         self._config = config
-        self._safe_dis_min = 1
-        self._safe_dis_max = 2
+        self._sim = sim
+        self._safe_dis_min = config.safe_dis_min
+        self._safe_dis_max = config.safe_dis_max
+        self._safe_dis_reward = config.safe_dis_reward
+        self._facing_human_dis = config.facing_human_dis
+        self._facing_human_reward = config.facing_human_reward
+        self._use_geo_distance = config.use_geo_distance
         self._prev_dist = -1.0
 
     def reset_metric(self, *args, **kwargs):
+        self._prev_dist = -1.0
         self._stage_succ = []
         self.update_metric(
             *args,
@@ -321,17 +328,35 @@ class SocialNavReward(Measure):
         position_robot = kwargs["observations"]["agent_0_localization_sensor"][
             :3
         ]
-        dis = np.linalg.norm(position_human - position_robot)
+
+        if self._use_geo_distance:
+            dis = self._sim.geodesic_distance(position_robot, position_human)
+        else:
+            dis = np.linalg.norm(position_human - position_robot)
 
         # TODO: This is a solution to make sure the socal nav reward does not exploded
         if dis >= self._safe_dis_min and dis < self._safe_dis_max:
-            self._metric = 2.0
+            self._metric = self._safe_dis_reward
         elif dis < self._safe_dis_min:
             # self._metric = 2.0 * dis - 1.0
             self._metric = dis - self._prev_dist
         else:
             # self._metric = self._prev_reward - self._prev_reward #5.0 - 2.0 * dis
             self._metric = self._prev_dist - dis
+
+        if dis < self._facing_human_dis and self._facing_human_reward != -1:
+            vector_human_robot = position_human - position_robot
+            vector_human_robot = vector_human_robot / np.linalg.norm(
+                vector_human_robot
+            )
+            base_T = self._sim.get_agent_data(
+                0
+            ).articulated_agent.base_transformation
+            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+            self._metric += self._facing_human_reward * np.dot(
+                forward_robot.normalized(), vector_human_robot
+            )
+
         if self._prev_dist < 0:
             self._metric = 0.0
 
