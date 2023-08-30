@@ -98,6 +98,6 @@ class AppStateTutorial(AppState):
         # Because the environment is not stepped in the tutorial, we don't need to save state.
         pass
 
-    def is_over(self):
+    def is_app_state_done(self):
         """Returns True if all the tutorial stages are completed."""
         return self._tutorial.is_completed()

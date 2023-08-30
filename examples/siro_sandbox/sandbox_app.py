@@ -408,7 +408,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
-        if self._app_state.is_over():
+        if self._app_state.is_app_state_done():
             self._try_next_state()
 
         if self._pending_cursor_style:

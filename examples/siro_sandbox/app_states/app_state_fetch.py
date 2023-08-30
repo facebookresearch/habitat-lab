@@ -276,6 +276,6 @@ class AppStateFetch(AppState):
 
         self._update_help_text()
 
-    def is_over(self):
+    def is_app_state_done(self):
         # terminal neverending app state
         return False

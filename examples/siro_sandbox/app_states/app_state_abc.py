@@ -23,6 +23,6 @@ class AppState(ABC):
     def record_state(self):
         pass
 
-    # Indicates if the AppState is done. If so, the SandboxDriver will try to switch to the next AppState.
-    def is_over(self):
+    # Indicates if the AppState is done, as a hint to SandboxDriver that a state transition is needed.
+    def is_app_state_done(self):
         pass
