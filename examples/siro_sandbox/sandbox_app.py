@@ -491,7 +491,10 @@ class SandboxDriver(GuiAppDriver):
         if self._app_state_index >= len(self._app_states):
             return
         self._app_state = self._app_states[self._app_state_index]
-        self._app_state.on_environment_reset(self._episode_recorder_dict)
+        self._app_state.on_enter(
+            prev_state=self._get_prev_app_state(),
+            next_state=self._get_next_app_state(),
+        )
 
 
 def _parse_debug_third_person(args, framebuffer_size):
