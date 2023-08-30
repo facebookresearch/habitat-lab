@@ -52,9 +52,11 @@ from habitat_baselines.config.default import get_config as get_baselines_config
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
+from app_states.app_state_abc import AppState
 from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
+from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 
 # Please reach out to the paper authors to obtain this file
@@ -167,25 +169,44 @@ class SandboxDriver(GuiAppDriver):
             lambda: self._set_cursor_style,
         )
 
+        self._app_states: List[AppState]
         if args.app_state == "fetch":
-            self._app_state = AppStateFetch(
-                self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
-            )
+            self._app_states = [
+                AppStateFetch(
+                    self._sandbox_service,
+                    self.ctrl_helper.get_gui_agent_controller(),
+                )
+            ]
         elif args.app_state == "rearrange":
-            self._app_state = AppStateRearrange(
-                self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
-            )
+            self._app_states = [
+                AppStateRearrange(
+                    self._sandbox_service,
+                    self.ctrl_helper.get_gui_agent_controller(),
+                )
+            ]
+            if args.show_tutorial:
+                self._app_states.insert(
+                    0,
+                    AppStateTutorial(
+                        self._sandbox_service,
+                        self.ctrl_helper.get_gui_agent_controller(),
+                    ),
+                )
         elif args.app_state == "socialnav":
-            self._app_state = AppStateSocialNav(
-                self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
-            )
+            self._app_states = [
+                AppStateSocialNav(
+                    self._sandbox_service,
+                    self.ctrl_helper.get_gui_agent_controller(),
+                )
+            ]
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
         # Note that we expect SandboxDriver to create multiple AppStates in some
         # situations and manage the transition between them, e.g. tutorial -> rearrange.
+
+        assert self._app_states
+        self._app_state_index = None
+        self._app_state = None
 
         self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
@@ -284,6 +305,20 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_recorder_dict = ep_dict
 
+    def _get_prev_app_state(self):
+        return (
+            self._app_states[self._app_state_index - 1]
+            if self._app_state_index > 0
+            else None
+        )
+
+    def _get_next_app_state(self):
+        return (
+            self._app_states[self._app_state_index + 1]
+            if self._app_state_index < len(self._app_states) - 1
+            else None
+        )
+
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
@@ -292,7 +327,18 @@ class SandboxDriver(GuiAppDriver):
         if self._save_episode_record:
             self._reset_episode_recorder()
 
-        self._app_state.on_environment_reset(self._episode_recorder_dict)
+        # Reset all the app states
+        for app_state in self._app_states:
+            app_state.on_environment_reset(self._episode_recorder_dict)
+
+        self._app_state_index = (
+            0  # start from the first app state for each episode
+        )
+        self._app_state = self._app_states[self._app_state_index]
+        self._app_state.on_enter(
+            prev_state=self._get_prev_app_state(),
+            next_state=self._get_next_app_state(),
+        )
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False
@@ -387,6 +433,9 @@ class SandboxDriver(GuiAppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
+        if self._app_state.is_app_state_done():
+            self._try_next_state()
+
         if self._pending_cursor_style:
             post_sim_update_dict[
                 "application_cursor"
@@ -436,6 +485,16 @@ class SandboxDriver(GuiAppDriver):
         ]
 
         return post_sim_update_dict
+
+    def _try_next_state(self):
+        self._app_state_index += 1
+        if self._app_state_index >= len(self._app_states):
+            return
+        self._app_state = self._app_states[self._app_state_index]
+        self._app_state.on_enter(
+            prev_state=self._get_prev_app_state(),
+            next_state=self._get_next_app_state(),
+        )
 
 
 def _parse_debug_third_person(args, framebuffer_size):
@@ -620,8 +679,10 @@ if __name__ == "__main__":
             "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
         )
 
-    if args.show_tutorial:
-        raise ValueError("--show-tutorial is temporarily unsupported!")
+    if args.show_tutorial and args.app_state != "rearrange":
+        raise ValueError(
+            "--show-tutorial is only supported for --app-state=rearrange"
+        )
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"

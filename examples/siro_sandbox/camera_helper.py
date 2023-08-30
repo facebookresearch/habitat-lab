@@ -40,6 +40,8 @@ class CameraHelper:
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
         self._min_zoom_dist = 0.02
+        self._eye_pos = None
+        self._lookat_pos = None
         self._cam_transform = None
         self._gui_input = gui_input
 
@@ -122,9 +124,9 @@ class CameraHelper:
         # 2) press left mouse button and move mouse
         self._camera_pitch_and_yaw_mouse_control()
 
-        eye_pos, lookat_pos = self._get_eye_and_lookat(base_pos)
+        self._eye_pos, self._lookat_pos = self._get_eye_and_lookat(base_pos)
         self._cam_transform = mn.Matrix4.look_at(
-            eye_pos, lookat_pos, mn.Vector3(0, 1, 0)
+            self._eye_pos, self._lookat_pos, mn.Vector3(0, 1, 0)
         )
 
     def get_xz_forward(self):
@@ -141,6 +143,14 @@ class CameraHelper:
     def get_cam_transform(self):
         assert self._cam_transform
         return self._cam_transform
+
+    def get_eye_pos(self):
+        assert self._eye_pos
+        return self._eye_pos
+
+    def get_lookat_pos(self):
+        assert self._lookat_pos
+        return self._lookat_pos
 
     @property
     def lookat_offset_yaw(self):

@@ -275,3 +275,7 @@ class AppStateFetch(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+    def is_app_state_done(self):
+        # terminal neverending app state
+        return False
