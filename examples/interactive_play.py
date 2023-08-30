@@ -113,7 +113,8 @@ def get_input_vel_ctlr(
         base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
-        base_action_name = f"{agent_k}base_velocity"
+        # TODO: make sure it can also support base velocity
+        base_action_name = f"{agent_k}base_velocity_non_cylinder"
         arm_key = "arm_action"
         grip_key = "grip_action"
         base_key = "base_vel"
@@ -131,7 +132,7 @@ def get_input_vel_ctlr(
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        base_action = [0, 0]
+        base_action = [0, 0, 0]
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])
@@ -155,16 +156,16 @@ def get_input_vel_ctlr(
         # Base control
         if keys[pygame.K_j]:
             # Left
-            base_action = [0, 1]
+            base_action = [0, 0, 1] # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_l]:
             # Right
-            base_action = [0, -1]
+            base_action = [0, 0, -1] # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_k]:
             # Back
-            base_action = [-1, 0]
+            base_action = [-1, 0, 0] # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_i]:
             # Forward
-            base_action = [1, 0]
+            base_action = [1, 0, 0] # TODO: make sure it can also support base velocity with 2 dimension
 
         if arm_action_space.shape[0] == 7:
             # Velocity control. A different key for each joint
@@ -469,6 +470,7 @@ def play_env(env, args, config):
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
+    last_tras = env._sim.articulated_agent.base_transformation
     while True:
         # breakpoint()
         if (
@@ -504,11 +506,15 @@ def play_env(env, args, config):
             humanoid_controller=humanoid_controller,
         )
 
-        # ee_pos = env._sim.articulated_agent.ee_transform().translation
-        # trans = env._sim.articulated_agent.base_transformation
-        # local_ee_pos = trans.inverted().transform_point(ee_pos)
-        # print("ee_pos:", ee_pos)
-        # print("local_ee_pos:", local_ee_pos)
+        ee_pos = env._sim.articulated_agent.ee_transform().translation
+        trans = env._sim.articulated_agent.base_transformation
+        local_ee_pos = trans.inverted().transform_point(ee_pos)
+        print("ee_pos:", ee_pos)
+        print("local_ee_pos:", local_ee_pos)
+
+        local_base_move = last_tras.inverted().transform_point(env._sim.articulated_agent.base_transformation.translation)
+
+        print("local_base_move:", local_base_move)
 
         if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["pddl_apply_action"]
@@ -601,6 +607,8 @@ def play_env(env, args, config):
         delay = max(1.0 / target_fps - diff, 0)
         time.sleep(delay)
         prev_time = curr_time
+
+        last_tras = env._sim.articulated_agent.base_transformation
 
     if args.save_actions:
         if len(all_arm_actions) < args.save_actions_count:

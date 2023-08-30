@@ -354,10 +354,12 @@ class TriangleMeshReceptacle(Receptacle):
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0.0
+        triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
+            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
@@ -370,6 +372,20 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        Get the vertex AABB bounds pre-computed during initialization.
+        """
+        return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """

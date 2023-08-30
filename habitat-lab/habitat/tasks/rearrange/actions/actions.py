@@ -532,6 +532,9 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
         self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._enable_rotation_check_for_dyn_slide = (
+            self._config.enable_rotation_check_for_dyn_slide
+        )
         self._allow_back = self._config.allow_back
         self._collision_threshold = self._config.collision_threshold
         self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
@@ -636,7 +639,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         )
         # We do sliding only if we allow the robot to do sliding and current
         # robot is not rotating
-        compute_sliding = self._allow_dyn_slide and not if_rotation
+        compute_sliding = self._allow_dyn_slide and not (if_rotation and self._enable_rotation_check_for_dyn_slide)
         # Check if there is a collision
         did_coll, new_target_trans = self.collision_check(
             trans, target_trans, target_rigid_state, compute_sliding
@@ -656,6 +659,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             )
 
     def step(self, *args, **kwargs):
+        print("Base non cylinder")
         lateral_lin_vel = 0.0
         if self._enable_lateral_move:
             longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
