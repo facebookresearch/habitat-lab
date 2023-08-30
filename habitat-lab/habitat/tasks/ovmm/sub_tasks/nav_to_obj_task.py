@@ -26,8 +26,13 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
         )
         self._receptacle_semantic_ids: Dict[int, int] = {}
         self._receptacle_categories: Dict[str, str] = {}
+        self._object_semantic_ids: Dict[int, int] = {}
+        self._object_categories: Dict[str, str] = {}
         self._recep_category_to_recep_category_id = (
             dataset.recep_category_to_recep_category_id
+        )
+        self._obj_category_to_obj_category_id = (
+            dataset.obj_category_to_obj_category_id
         )
         self._loaded_receptacle_categories = False
         if config.receptacle_categories_file is not None and osp.exists(
@@ -38,6 +43,13 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
                     name, category = line.strip().split(",")
                     self._receptacle_categories[name] = category
             self._loaded_receptacle_categories = True
+        self._loaded_object_categories = False
+        if config.object_categories_file is not None and osp.exists(config.object_categories_file):
+            with open(config.object_categories_file) as f:
+                for line in f.readlines():
+                    name, category = line.strip().split(",")
+                    self._object_categories[name] = category
+            self._loaded_object_categories = True
 
     @property
     def receptacle_semantic_ids(self):
@@ -47,9 +59,21 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
     def loaded_receptacle_categories(self):
         return self._loaded_receptacle_categories
 
+    @property
+    def object_semantic_ids(self):
+        return self._object_semantic_ids
+
+    @property
+    def object_receptacle_categories(self):
+        return self._loaded_object_categories
+
+
+
     def reset(self, episode: Episode):
         self._receptacle_semantic_ids = {}
         self._cache_receptacles()
+        self._object_semantic_ids = {}
+        self._cache_objects()
         obs = super().reset(episode)
         self._nav_to_obj_goal = np.stack(
             [
@@ -82,6 +106,20 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
                     category
                 ]
                 self._receptacle_semantic_ids[obj.object_id] = category_id + 1
+
+    def _cache_objects(self):
+        rom = self._sim.get_rigid_object_manager()
+        for scene_obj_id in self._sim.scene_obj_ids:
+            # get the handle
+            handle = rom.get_object_by_id(scene_obj_id).handle
+            category = self._object_categories.get(handle[:-6])
+            if category is None or category not in self._obj_category_to_obj_category_id:
+                continue
+            category_id = self._obj_category_to_obj_category_id[
+                category
+            ]
+            self._object_semantic_ids[scene_obj_id] = category_id + 1
+
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None

@@ -30,6 +30,7 @@ habitat:
       - relative_resting_position
       - ovmm_nav_goal_segmentation
       - receptacle_segmentation
+      - all_object_segmentation
   environment:
     max_episode_steps: 1250
   simulator:

@@ -450,6 +450,12 @@ class ReceptacleSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class AllObjectSegmentationSensorConfig(LabSensorConfig):
+    type: str = "AllObjectSegmentationSensor"
+    blank_out_prob: float = 0.0
+
+
+@attr.s(auto_attribs=True, slots=True)
 class OVMMNavGoalSegmentationSensorConfig(LabSensorConfig):
     type: str = "OVMMNavGoalSegmentationSensor"
     blank_out_prob: float = 0.0
@@ -1097,6 +1103,7 @@ class TaskConfig(HabitatBaseConfig):
     place_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
+    object_categories_file: str = ""
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1860,6 +1867,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="receptacle_segmentation_sensor",
     node=ReceptacleSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.all_object_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="all_object_segmentation_sensor",
+    node=AllObjectSegmentationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.ovmm_nav_goal_segmentation_sensor",

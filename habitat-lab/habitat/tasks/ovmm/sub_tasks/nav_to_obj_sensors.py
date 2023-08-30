@@ -196,6 +196,71 @@ class ReceptacleSegmentationSensor(Sensor):
         return obs
 
 
+@registry.register_sensor
+class AllObjectSegmentationSensor(Sensor):
+    cls_uuid: str = "all_object_segmentation"
+    panoptic_uuid: str = "robot_head_panoptic"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._config = config
+        self._sim = sim
+        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._blank_out_prob = self._config.blank_out_prob
+        self.resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(
+                self.resolution[0],
+                self.resolution[1],
+                1,
+            ),
+            low=np.iinfo(np.uint32).min,
+            high=np.iinfo(np.uint32).max,
+            dtype=np.int32,
+        )
+
+    def get_observation(
+        self, observations, *args, episode, task: OVMMDynNavRLEnv, **kwargs
+    ):
+        obs = np.copy(observations[self.panoptic_uuid])
+        obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
+        assert (
+            task._loaded_object_categories
+        ), "Empty object semantic IDs, task didn't cache them."
+        for obj_id, semantic_id in task.object_semantic_ids.items():
+            instance_id = obj_id + self._instance_ids_start
+            # Skip if object is not in the agent's viewport or if the instance
+            # is selected to be blanked out randomly
+            if (
+                instance_id >= obj_id_map.shape[0]
+                or np.random.random() < self._blank_out_prob
+            ):
+                continue
+            obj_id_map[instance_id] = semantic_id
+        obs = obj_id_map[obs]
+        return obs
+
+
+
 @registry.register_measure
 class OVMMRotDistToGoal(RotDistToGoal):
     """
