@@ -205,8 +205,8 @@ class SandboxDriver(GuiAppDriver):
         # situations and manage the transition between them, e.g. tutorial -> rearrange.
 
         assert self._app_states
-        self._app_state_index = 0
-        self._app_state = self._app_states[self._app_state_index]
+        self._app_state_index = None
+        self._app_state = None
 
         self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
@@ -305,6 +305,20 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_recorder_dict = ep_dict
 
+    def _get_prev_app_state(self):
+        return (
+            self._app_states[self._app_state_index - 1]
+            if self._app_state_index > 0
+            else None
+        )
+
+    def _get_next_app_state(self):
+        return (
+            self._app_states[self._app_state_index + 1]
+            if self._app_state_index < len(self._app_states) - 1
+            else None
+        )
+
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
@@ -313,7 +327,18 @@ class SandboxDriver(GuiAppDriver):
         if self._save_episode_record:
             self._reset_episode_recorder()
 
-        self._app_state.on_environment_reset(self._episode_recorder_dict)
+        # Reset all the app states
+        for app_state in self._app_states:
+            app_state.on_environment_reset(self._episode_recorder_dict)
+
+        self._app_state_index = (
+            0  # start from the first app state for each episode
+        )
+        self._app_state = self._app_states[self._app_state_index]
+        self._app_state.on_enter(
+            prev_state=self._get_prev_app_state(),
+            next_state=self._get_next_app_state(),
+        )
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False

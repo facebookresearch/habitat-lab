@@ -4,10 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import magnum as mn
 from app_states.app_state_abc import AppState
-from camera_helper import CameraHelper
-from hablab_utils import get_agent_art_obj_transform
 from hitl_tutorial import Tutorial, generate_tutorial
 
 from habitat.gui.gui_input import GuiInput
@@ -23,9 +20,7 @@ class AppStateTutorial(AppState):
         self._sandbox_service = sandbox_service
         self._gui_agent_ctrl = gui_agent_ctrl
         self._cam_transform = None
-        self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
-        )
+        self._camera_helper = None
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -33,26 +28,21 @@ class AppStateTutorial(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def _get_camera_lookat_pos(self):
-        agent_root = get_agent_art_obj_transform(
-            self.get_sim(), self.get_gui_controlled_agent_index()
-        )
-        lookat = agent_root.translation + mn.Vector3(0, 1, 0)
-        return lookat
-
-    def on_environment_reset(self, episode_recorder_dict):
-        base_pos = self._get_camera_lookat_pos()
-        self._camera_helper.update(base_pos, None)
+    def on_enter(self, prev_state, next_state):
+        self._camera_helper = next_state._camera_helper
         self._cam_transform = self._camera_helper.get_cam_transform()
 
-        (eye_pos, lookat_pos) = self._camera_helper._get_eye_and_lookat(
-            base_pos
-        )
         self._tutorial: Tutorial = generate_tutorial(
             sim=self.get_sim(),
             agent_idx=self.get_gui_controlled_agent_index(),
-            final_lookat=(eye_pos, lookat_pos),
+            final_lookat=(
+                self._camera_helper.get_eye_pos(),
+                self._camera_helper.get_lookat_pos(),
+            ),
         )
+
+    def on_environment_reset(self, episode_recorder_dict):
+        pass
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sim_update_tutorial(dt)

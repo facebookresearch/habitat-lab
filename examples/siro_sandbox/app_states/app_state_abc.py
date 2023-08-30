@@ -23,6 +23,10 @@ class AppState(ABC):
     def record_state(self):
         pass
 
+    # Called when the AppState is entered. This is a good place to get extra information from previous or next app state.
+    def on_enter(self, prev_state, next_state):
+        pass
+
     # Indicates if the AppState is done, as a hint to SandboxDriver that a state transition is needed.
     def is_app_state_done(self):
         pass
