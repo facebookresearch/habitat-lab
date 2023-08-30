@@ -1080,7 +1080,6 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
                 self._max_force_pen,
             ),
         )
-        print(reward)
         return reward
 
 
