@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
 
   - /habitat/dataset/rearrangement: replica_cad
@@ -28,6 +28,7 @@ defaults:
     - runtime_perf_stats
     - agent_blame_measure
     - social_nav_stats
+    - social_nav_seek_success
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -39,6 +40,7 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - other_agent_gps
+    - humanoid_detector_sensor
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - _self_

@@ -506,6 +506,8 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the joint positions of the robot.
     """
     type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -1023,6 +1025,7 @@ class NavSeekSuccessMeasurementConfig(MeasurementConfig):
     safe_dis_max: float = 2.0
     need_to_face_human: bool = False
     use_geo_distance: bool = False
+    facing_threshold: float = 0.5
 
 
 @dataclass

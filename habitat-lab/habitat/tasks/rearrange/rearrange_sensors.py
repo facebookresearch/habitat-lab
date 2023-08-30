@@ -1221,8 +1221,8 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
-        self._human_id = 100
-        self._human_detect_threshold = 1000
+        self._human_id = config.human_id
+        self._human_pixel_threshold = config.human_pixel_threshold
 
     def _get_uuid(self, *args, **kwargs):
         return "humanoid_detector_sensor"
@@ -1240,21 +1240,21 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         found_human = False
-
         panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
         # rgb = observations["agent_0_articulated_agent_arm_rgb"]
         # depth = observations["agent_0_articulated_agent_arm_depth"]
-        if np.sum(panoptic == self._human_id) > self._human_detect_threshold:
+
+        if np.sum(panoptic == self._human_id) > self._human_pixel_threshold:
             # import matplotlib.pyplot as plt
             # import matplotlib.image as mpimg
-            # plt.imshow(panoptic== self._human_id)
-            # plt.savefig(f'/checkpoint/jimmytyyang/human{self._plot_i}.png')
+            # plt.imshow(panoptic)
+            # plt.savefig(f'/fsx-siro/jimmytyyang/rl_log/debug/human{self._plot_i}.png')
             # plt.close()
             # plt.imshow(rgb)
-            # plt.savefig(f'/checkpoint/jimmytyyang/rgb{self._plot_i}.png')
+            # plt.savefig(f'/fsx-siro/jimmytyyang/rl_log/debug/rgb{self._plot_i}.png')
             # plt.close()
             # plt.imshow(depth)
-            # plt.savefig(f'/checkpoint/jimmytyyang/depth{self._plot_i}.png')
+            # plt.savefig(f'/fsx-siro/jimmytyyang/rl_log/debug/depth{self._plot_i}.png')
             # plt.close()
             # self._plot_i += 1
             found_human = True

@@ -343,6 +343,7 @@ class SocialNavSeekSuccess(Measure):
         self._safe_dis_max = config.safe_dis_max
         self._use_geo_distance = config.use_geo_distance
         self._need_to_face_human = config.need_to_face_human
+        self._facing_threshold = config.facing_threshold
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
@@ -357,7 +358,7 @@ class SocialNavSeekSuccess(Measure):
         else:
             dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 
-        # BLock for computing facing to human
+        # for computing facing to human
         vector_human_robot = position_human - position_robot
         vector_human_robot = vector_human_robot / np.linalg.norm(
             vector_human_robot
@@ -366,14 +367,15 @@ class SocialNavSeekSuccess(Measure):
             0
         ).articulated_agent.base_transformation
         forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
-        facing = np.dot(forward_robot.normalized(), vector_human_robot) > 0.0
-
-        print(np.dot(forward_robot.normalized(), vector_human_robot))
+        facing = (
+            np.dot(forward_robot.normalized(), vector_human_robot)
+            > self._facing_threshold
+        )
 
         if (
             dist >= self._safe_dis_min
             and dist < self._safe_dis_max
-            and self._need_to_face_human != -1
+            and self._need_to_face_human
             and facing
         ):
             self._following_step += 1
