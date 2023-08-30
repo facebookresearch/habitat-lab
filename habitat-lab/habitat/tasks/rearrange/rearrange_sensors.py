@@ -1052,21 +1052,35 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         if force_terminate:
             reward -= self._config.force_end_pen
 
+        collision_terminate = task.measurements.measures[
+            "collision_terminate"
+        ].get_metric()
+        if collision_terminate:
+            reward -= self._config.force_end_pen
+
         self._metric = reward
 
     def _get_coll_reward(self):
         reward = 0
 
         force_metric = self._task.measurements.measures[RobotForce.cls_uuid]
+        collision_metric = self._task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()["robot_scene_colls"]
+
         # Penalize the force that was added to the accumulated force at the
         # last time step.
         reward -= max(
             0,  # This penalty is always positive
             min(
-                self._force_pen * force_metric.add_force,
+                max(
+                    self._force_pen * collision_metric,
+                    self._force_pen * force_metric.add_force,
+                ),
                 self._max_force_pen,
             ),
         )
+        print(reward)
         return reward
 
 

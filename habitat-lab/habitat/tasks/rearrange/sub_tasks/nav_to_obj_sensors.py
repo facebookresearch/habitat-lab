@@ -140,8 +140,18 @@ class NavToObjReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Get the reward rearrangement metrics
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
         reward = 0.0
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+
         if self._prev_dist < 0.0:
             dist_diff = 0.0
         else:
@@ -163,10 +173,26 @@ class NavToObjReward(RearrangeReward):
             else:
                 angle_diff = self._cur_angle_dist - angle_dist
 
+            position_robot = observations["agent_0_localization_sensor"][:3]
+            position_robot[1] = 0
+            position_obj = task.nav_goal_pos.copy()
+            position_obj[1] = 0
+            vector_object_robot = position_obj - position_robot
+            vector_object_robot = vector_object_robot / np.linalg.norm(
+                vector_object_robot
+            )
+            base_T = self._sim.get_agent_data(
+                0
+            ).articulated_agent.base_transformation
+            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+            angle_diff = np.dot(
+                forward_robot.normalized(), vector_object_robot
+            )
+
             reward += self._config.angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
 
-        self._metric = reward
+        self._metric += reward
 
 
 @registry.register_measure
@@ -177,6 +203,7 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         self._config = config
         self._sim = sim
         self._prev_dist = None
+        self._use_geo_distance = config.use_geo_distance
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -190,14 +217,24 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(
-            np.array(
+        if not self._use_geo_distance:
+            return np.linalg.norm(
+                np.array(
+                    self._sim.get_agent_data(
+                        self.agent_id
+                    ).articulated_agent.base_pos
+                )[[0, 2]]
+                - task.nav_goal_pos[[0, 2]]
+            )
+        else:
+            position_robot = np.array(
                 self._sim.get_agent_data(
                     self.agent_id
                 ).articulated_agent.base_pos
-            )[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
-        )
+            )
+            return self._sim.geodesic_distance(
+                position_robot, task.nav_goal_pos
+            )
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -283,14 +320,16 @@ class NavToObjSuccess(Measure):
         )
         self.update_metric(*args, task=task, **kwargs)
 
-    def __init__(self, *args, config, **kwargs):
+    def __init__(self, *args, config, sim, **kwargs):
         self._config = config
+        self._facing_threshold = config.facing_threshold
+        self._sim = sim
         super().__init__(*args, config=config, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        angle_dist = task.measurements.measures[
-            RotDistToGoal.cls_uuid
-        ].get_metric()
+        # angle_dist = task.measurements.measures[
+        #     RotDistToGoal.cls_uuid
+        # ].get_metric()
 
         nav_pos_succ = task.measurements.measures[
             NavToPosSucc.cls_uuid
@@ -300,10 +339,26 @@ class NavToObjSuccess(Measure):
             DoesWantTerminate.cls_uuid
         ].get_metric()
 
+        # for computing facing to object
+        position_robot = observations["agent_0_localization_sensor"][:3]
+        position_robot[1] = 0
+        position_obj = task.nav_goal_pos.copy()
+        position_obj[1] = 0
+        vector_object_robot = position_obj - position_robot
+        vector_object_robot = vector_object_robot / np.linalg.norm(
+            vector_object_robot
+        )
+        base_T = self._sim.get_agent_data(
+            0
+        ).articulated_agent.base_transformation
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = (
+            np.dot(forward_robot.normalized(), vector_object_robot)
+            > self._facing_threshold
+        )
+
         if self._config.must_look_at_targ:
-            self._metric = (
-                nav_pos_succ and angle_dist < self._config.success_angle_dist
-            )
+            self._metric = nav_pos_succ and facing
         else:
             self._metric = nav_pos_succ
 

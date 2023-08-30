@@ -935,6 +935,7 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 @dataclass
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
+    use_geo_distance: bool = False
 
 
 @dataclass
@@ -1003,6 +1004,7 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+    facing_threshold: float = 0.5
 
 
 @dataclass
