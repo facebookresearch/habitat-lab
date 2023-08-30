@@ -88,6 +88,8 @@ class ControllerHelper:
                     gui_input=gui_input,
                     env=self._env,
                     walk_pose_path=args.walk_pose_path,
+                    lin_speed=args.lin_speed,
+                    ang_speed=args.ang_speed,
                     recorder=recorder.get_nested_recorder("gui_humanoid"),
                 )
             else:

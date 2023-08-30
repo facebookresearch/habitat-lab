@@ -514,6 +514,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
     )
+    parser.add_argument("--lin-speed", type=float, default=10.0)
+    parser.add_argument("--ang-speed", type=float, default=10.0)
     parser.add_argument(
         "--never-end",
         action="store_true",

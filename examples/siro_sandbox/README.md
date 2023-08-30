@@ -123,6 +123,8 @@ Add `--gui-controlled-agent-index` followed by the agent's index you want to con
 
 If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents. Update Aug 11: free camera is temporarily unsupported!
 
+Use `--lin-speed` and `--ang-speed` arguments to controll GUI-controlled agent's linear and angular speed respectively. For example, `--lin-speed 10 --ang-speed 10` to set both linear and angular speed to 10.
+
 **Note:** Currently, only Spot and Humanoid agents can be policy-controlled (PDDL planner + oracle skills). If you want to test the free camera mode, omit `--gui-controlled-agent-index` argument.
 
 ## First-person and third-person mode for GUI-controlled humanoid
