@@ -477,12 +477,6 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 ]
 
                 ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
-                print("inside: prev_actions:", prev_actions)
-                print("action_data.actions:", action_data.actions)
-                print(
-                    "action_data.actions:", action_data.actions[env_i, ac_sel]
-                )
                 prev_actions[env_i, ac_sel].copy_(
                     action_data.actions[env_i, ac_sel]
                 )
-                print("inside: prev_actions:", prev_actions)

@@ -509,12 +509,7 @@ class BaseVelAction(ArticulatedAgentAction):
         ]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
-        print(
-            "self._gym_action_prefix:",
-            self._gym_action_prefix,
-            self._lin_speed,
-            lin_vel,
-        )
+
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
