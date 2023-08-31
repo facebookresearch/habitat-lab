@@ -9,10 +9,12 @@ from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
 import numpy as np
+import torch
 
 import habitat.gym.gym_wrapper as gym_wrapper
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.utils import get_aabb
+from habitat.tasks.utils import cartesian_to_polar
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import get_active_obs_transforms
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -27,9 +29,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
 )
 from habitat_baselines.utils.common import get_num_actions
 from habitat_sim.physics import CollisionGroups
-from habitat.tasks.utils import cartesian_to_polar
 
-import torch
 from .controller_abc import BaselinesController
 
 if TYPE_CHECKING:
@@ -184,6 +184,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         super().__init__(agent_idx, is_multi_agent, config, env)
         self._policy_info = self._init_policy_input()
+        self.defined_skills = self._config.habitat_baselines.rl.policy[
+            self._agent_name
+        ].hierarchical_policy.defined_skills
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -200,11 +203,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             "rnn_hidden_states": rnn_hidden_states,
             "prev_actions": prev_actions,
             "masks": torch.ones(1, device=self.device, dtype=torch.bool),
-            "cur_batch_idx": torch.zeros(1, device=self.device, dtype=torch.long)
+            "cur_batch_idx": torch.zeros(
+                1, device=self.device, dtype=torch.long
+            ),
         }
-        return {
-            "ll_policy": policy_info
-        }
+        return {"ll_policy": policy_info}
 
     @property
     def current_state(self):
@@ -227,43 +230,53 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def start_skill(self, observations, skill_name):
-        skill_walk = self._agent.actor_critic._skills[self._agent.actor_critic._name_to_idx[skill_name]]
+        skill_walk = self._agent.actor_critic._skills[
+            self._agent.actor_critic._name_to_idx[skill_name]
+        ]
         policy_input = self._policy_info["ll_policy"]
         obs = self._batch_and_apply_transforms([observations])
         prev_actions = policy_input["prev_actions"]
         rnn_hidden_states = policy_input["rnn_hidden_states"]
         batch_id = 0
         skill_args = ["", "0|0", ""]
-        rnn_hidden_states[batch_id], prev_actions[batch_id] = skill_walk.on_enter([skill_args], [batch_id], obs, rnn_hidden_states, prev_actions)
+        (
+            rnn_hidden_states[batch_id],
+            prev_actions[batch_id],
+        ) = skill_walk.on_enter(
+            [skill_args], [batch_id], obs, rnn_hidden_states, prev_actions
+        )
         self.should_start_skill = False
 
-    def force_apply_skill(self, observations, skill_name, env, obj_trans):
-        # TODO: there is a bit of repeated code here. Would be better to pack fetch into a high level policy
-        # that can be called on different observations
-        skill_walk = self._agent.actor_critic._skills[self._agent.actor_critic._name_to_idx[skill_name]]
-        policy_input = self._policy_info["ll_policy"]
-        policy_input["observations"] = self._batch_and_apply_transforms([observations])
-        # Only take the goal object
-        obj_trans = env._sim.agents_mgr[
-            1 - self._agent_idx
-        ].articulated_agent.base_transformation.translation
-        articulated_agent_T = self.get_articulated_agent(env).base_transformation
+    def get_cartesian_obj_coords(self, obj_trans, env):
+        articulated_agent_T = self.get_articulated_agent(
+            env
+        ).base_transformation
         rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
         rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
+
+        return rho, phi
+
+    def force_apply_skill(self, observations, skill_name, env, obj_trans):
+        # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
+        # that can be called on different observations
+        skill_walk = self._agent.actor_critic._skills[
+            self._agent.actor_critic._name_to_idx[skill_name]
+        ]
+        policy_input = self._policy_info["ll_policy"]
+        policy_input["observations"] = self._batch_and_apply_transforms(
+            [observations]
+        )
+        # Only take the goal object
+
+        rho, phi = self.get_cartesian_obj_coords(obj_trans, env)
         pos_sensor = np.array([rho, -phi])[None, ...]
-        # breakpoint()
-        # print(policy_input["observations"]["obj_start_gps_compass"])
-        # policy_input["observations"]["obj_start_gps_compass"] = policy_input["observations"]["obj_start_gps_compass"][:, :2]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
-        # breakpoint()
         with torch.no_grad():
-            action_data = skill_walk.act(
-                **policy_input
-            )
+            action_data = skill_walk.act(**policy_input)
         policy_input["rnn_hidden_states"] = action_data.rnn_hidden_states
         policy_input["prev_actions"] = action_data.actions
         return action_data.actions
-        
+
     def act(self, obs, env):
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
@@ -286,30 +299,66 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
-            if not finish_oracle_nav:
-                if True:
-                    action_array = self.force_apply_skill(obs, "nav_to_obj", env, obj_trans)[0]
-                    # breakpoint()
+
+            if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 2:
+                rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
+                type_of_skill = self.defined_skills.nav_to_obj.skill_name
+
+                if (
+                    type_of_skill != "OracleNavPolicy"
+                    and rho < self._config.habitat.task["robot_at_thresh"]
+                ):
+                    finish_oracle_nav = True
+                if not finish_oracle_nav:
+                    if type_of_skill == "NavSkillPolicy":
+                        action_array = self.force_apply_skill(
+                            obs, "nav_to_obj", env, obj_trans
+                        )[0]
+                    elif type_of_skill == "OracleNavPolicy":
+                        action_array[
+                            action_ind_nav[0] : action_ind_nav[0] + 3
+                        ] = obj_trans
+                    else:
+                        raise ValueError(
+                            f"Skill {type_of_skill} not recognized."
+                        )
+
                 else:
+                    # Grab object
+                    self._get_grasp_mgr(env).snap_to_obj(
+                        self.object_interest_id
+                    )
+                    self.grasped_object = self.rigid_obj_interest
+                    self.grasped_object_id = self.object_interest_id
+                    self.grasped_object.override_collision_group(
+                        self._thrown_object_collision_group
+                    )
+                    self._init_policy_input()
+                    self.current_state = FetchState.BRING
+
+        elif self.current_state == FetchState.BRING:
+            type_of_skill = self.defined_skills.nav_to_robot.skill_name
+            agent_trans = human_trans
+            rho, _ = self.get_cartesian_obj_coords(agent_trans, env)
+            if (
+                type_of_skill != "OracleNavPolicy"
+                and rho < self._config.habitat.task["robot_at_thresh"]
+            ):
+                finish_oracle_nav = True
+
+            if not finish_oracle_nav:
+                # Keep gripper closed
+                if type_of_skill == "NavSkillPolicy":
+                    action_array = self.force_apply_skill(
+                        obs, "nav_to_robot", env, human_trans
+                    )[0]
+                elif type_of_skill == "OracleNavPolicy":
                     action_array[
                         action_ind_nav[0] : action_ind_nav[0] + 3
                     ] = obj_trans
+                else:
+                    raise ValueError(f"Skill {type_of_skill} not recognized.")
 
-            else:
-                self._get_grasp_mgr(env).snap_to_obj(self.object_interest_id)
-                self.grasped_object = self.rigid_obj_interest
-                self.grasped_object_id = self.object_interest_id
-                self.grasped_object.override_collision_group(
-                    self._thrown_object_collision_group
-                )
-                self.current_state = FetchState.BRING
-
-        elif self.current_state == FetchState.BRING:
-            if not finish_oracle_nav:
-                # Keep gripper closed
-                action_array[
-                    action_ind_nav[0] : action_ind_nav[0] + 3
-                ] = human_trans
             else:
                 # Open gripper
                 self._get_grasp_mgr(env).desnap()
@@ -324,6 +373,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self.grasped_object_id = None
                 self.grasped_object = None
                 self.current_state = FetchState.WAIT
+                self._init_policy_input()
 
         if self._last_object_drop_info is not None:
             grasp_mgr = self._get_grasp_mgr(env)
@@ -337,7 +387,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._last_object_drop_info[1]:
-                rigid_obj.override_collision_group(CollisionGroups.Default)
+                # rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._last_object_drop_info = None
 
         return action_array

@@ -128,7 +128,7 @@ habitat:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/male_1/male_1.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/male_1/backup_male_1_motion_data_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -208,7 +208,14 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "/Users/xavierpuig/latest_socnav_jimmy.pth"
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 2
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+            nav_to_robot:
+              skill_name: "NavSkillPolicy"
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
