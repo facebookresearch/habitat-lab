@@ -3,6 +3,7 @@
 defaults:
 
   - /benchmark/rearrange/hab3_bench: single_agent_bench
+
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -15,7 +16,11 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
+    - has_finished_human_pick
   - /habitat/task/actions@habitat.task.actions.oracle_nav_action: oracle_nav_action
+  - /habitat/task/actions@habitat.task.actions.humanoid_pick_action: humanoid_pick_action
+  - override /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_depth_sensor: third_rgb_sensor
+
   # For Spot observation space
   - _self_
 
@@ -33,4 +38,8 @@ habitat:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/backup_female_2_motion_data_smplx.pkl"
+        sim_sensors:
+          head_depth_sensor:
+            height: 512
+            width: 512

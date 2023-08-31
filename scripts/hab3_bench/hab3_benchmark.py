@@ -14,6 +14,7 @@ import numpy as np
 
 import habitat
 from habitat.core.spaces import ActionSpace
+from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
 def create_env(args, proc_i):
@@ -35,7 +36,7 @@ _barrier = None
 
 
 class ActionSpaceWrapper(ActionSpace):
-    def sample(self):
+    def sample(self, count):
         # custom action sampler, this is because the default
         # sampler only samples one action at a time. Here we want to
         # sample actions from both agents
@@ -44,12 +45,27 @@ class ActionSpaceWrapper(ActionSpace):
         for action_name, action_args in self.spaces.items():
             all_actions.append(action_name)
             for action_arg_name, action_arg in action_args.items():
-                if "oracle_nav" not in action_arg_name:
-                    action_arg_value = action_arg.sample()
-                else:
+                if "oracle_nav" in action_arg_name:
+                    # action_arg_value = (
+                    #     np.array([random.randint(0, self.num_items_nav)]) + 1
+                    # )
+                    action_arg_value = np.array([1]) + 5
+
+                    if count > 70:
+                        action_arg_value *= 0
+                elif "humanoid_pick" in action_arg_name:
                     action_arg_value = (
-                        np.array([random.randint(0, self.num_items_nav)]) + 1
+                        np.array([random.randint(0, self.num_items_nav), 1])
+                        + 1
                     )
+                    action_arg_value *= 0
+
+                    if count > 70:
+                        action_arg_value += 5
+
+                else:
+                    action_arg_value = action_arg.sample()
+
                 all_action_args[action_arg_name] = action_arg_value
         return {"action": tuple(all_actions), "action_args": all_action_args}
 
@@ -90,14 +106,14 @@ class HabDemoRunner:
             from habitat_sim.utils import viz_utils as vut
 
             # TODO: setup an optional 3rd person render camera for debugging
-            sensor_to_use = "agent_1_head_depth"
+            sensor_to_use = "third_rgb"
             if "agent_1_head_depth" not in final_vid[0]:
-                sensor_to_use = "agent_1_third_rgb"
+                sensor_to_use = "third_rgb"
             vut.make_video(
                 final_vid,
                 sensor_to_use,
                 "color",
-                "data/profile/benchmark_render_output",
+                "data/profile/big_benchmark_render_output",
                 open_vid=True,
             )
 
@@ -170,7 +186,7 @@ class HabDemoRunner:
 
         else:
             self.get_actions = lambda i: np.array(
-                [ac_space.sample() for _ in range(self.args.n_procs)]
+                [ac_space.sample(i) for _ in range(self.args.n_procs)]
             )
 
     def benchmark(self):
@@ -218,7 +234,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--n-trials", type=int, default=1)
     parser.add_argument("--n-steps", type=int, default=10000)
-    parser.add_argument("--n-pre-step", type=int, default=1)
+    parser.add_argument("--n-pre-step", type=int, default=10)
     parser.add_argument("--reset-interval", type=int, default=-1)
 
     parser.add_argument("--render", action="store_true")
@@ -272,3 +288,4 @@ if __name__ == "__main__":
         f"Ran {args.n_trials} trial(s) with average FPS of {avg_fps} from {fps_accumulator}."
     )
     print("================================================================")
+    breakpoint()

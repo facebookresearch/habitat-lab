@@ -37,6 +37,11 @@ do
   do
 
     #TODO: different configs for different agent pairs. Can we make a single high-level config
+    # Humanoid pick
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps 300 --n-procs 1 --out-name "human_pick_$i" --render
+    
+    # Humanoid oracle
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps 300 --n-procs 1 --out-name "human_oracle_$i"
 
     #Single agent robot
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps 300 --n-procs 1 --out-name "robot_oracle_$i"

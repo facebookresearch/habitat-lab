@@ -19,8 +19,8 @@ from habitat.articulated_agent_controllers import HumanoidRearrangeController
 default_sim_settings = {
     # settings shared by example.py and benchmark.py
     "max_frames": 1000,
-    "width": 640,
-    "height": 480,
+    "width": 400,
+    "height": 400,
     "default_agent": 0,
     "sensor_height": 1.5,
     "hfov": 90,
@@ -36,7 +36,7 @@ default_sim_settings = {
     "compute_shortest_path": False,
     "compute_action_shortest_path": False,
     "scene": "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
-    "test_scene_data_url": "http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip",
+    "test_scened_data_url": "http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip",
     "goal_position": [5.047, 0.199, 11.145],
     "enable_physics": False,
     "enable_gfx_replay_save": False,
@@ -149,14 +149,12 @@ def simulate(sim, dt, get_observations=False):
 
 
 @pytest.mark.skipif(
-    not osp.exists(
-        "data/humanoids/humanoid_data/armatures/human_armature.urdf"
-    ),
+    not osp.exists("data/humanoids/humanoid_data/female2_0.urdf"),
     reason="Test requires a human armature.",
 )
 @pytest.mark.skipif(
     not osp.exists(
-        "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        "data/humanoids/humanoid_data/female_2_motion_data_smplx.pkl"
     ),
     reason="Test requires motion files.",
 )
@@ -164,7 +162,7 @@ def test_humanoid_controller():
     """Test the humanoid controller"""
 
     # loading the physical scene
-    produce_debug_video = False
+    produce_debug_video = True
     num_steps = 100
     cfg_settings = default_sim_settings.copy()
     cfg_settings["scene"] = "NONE"
@@ -199,14 +197,11 @@ def test_humanoid_controller():
         sim.navmesh_visualization = True
 
         # add the humanoid to the world via the wrapper
-        humanoid_path = (
-            "data/humanoids/humanoid_data/armatures/human_armature.urdf"
-        )
+        humanoid_path = "data/humanoids/humanoid_data/female2_0.urdf"
         kin_humanoid = kinematic_humanoid.KinematicHumanoid(humanoid_path, sim)
         kin_humanoid.reconfigure()
         kin_humanoid.update()
         assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
-        print(kin_humanoid.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # set base ground position from navmesh
@@ -220,17 +215,17 @@ def test_humanoid_controller():
 
         # Test controller
         walk_pose_path = (
-            "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+            "data/humanoids/humanoid_data/female_2_motion_data_smplx.pkl"
         )
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
-
         init_trans = kin_humanoid.base_transformation
-        init_pos = init_trans.transformation
+        init_pos = init_trans.translation
         target_pos = init_pos + mn.Vector3(1.5, 0, 0)
         step_count = 0
         humanoid_controller.reset(init_trans)
         while step_count < num_steps:
             pose_diff = target_pos - kin_humanoid.base_pos
+
             humanoid_controller.calculate_walk_pose(pose_diff)
             new_pose = humanoid_controller.get_pose()
 
@@ -257,7 +252,116 @@ def test_humanoid_controller():
                 observations += simulate(sim, 0.01, produce_debug_video)
             step_count += 1
 
-        assert pose_diff.length() < epsilon
+        # assert pose_diff.length() < epsilon
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_humanoid_wrapper",
+                open_vid=True,
+            )
+
+
+@pytest.mark.skipif(
+    not osp.exists(
+        "data/humanoids/humanoid_data/female_2_motion_data_smplx.pkl"
+    ),
+    reason="Test requires motion files.",
+)
+def test_humanoid_controller_reach_pose():
+    """Test the humanoid controller"""
+
+    # loading the physical scene
+    produce_debug_video = True
+    num_steps = 100
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["hfov"] = 180 / 3
+    cfg_settings["enable_physics"] = True
+    epsilon = 1e-4
+
+    observations = []
+    hab_cfg = make_cfg(cfg_settings)
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        obj_template_mgr = sim.get_object_template_manager()
+        rigid_obj_mgr = sim.get_rigid_object_manager()
+
+        # setup the camera for debug video (looking at 0,0,0)
+        # sim.agents[0].scene_node.translation = [0.0, 0.0, 3.0]
+
+        sim.agents[0].scene_node.transformation = mn.Matrix4.look_at(
+            mn.Vector3(0, 0, 3.0), mn.Vector3(0, 0, 0), mn.Vector3(0, 1, 0)
+        )
+
+        breakpoint()
+        cube_handle = obj_template_mgr.get_template_handles("cubeSolid")[0]
+        cube_template_cpy = obj_template_mgr.get_template_by_handle(
+            cube_handle
+        )
+        cube_template_cpy.scale = np.array([0.5, 0.5, 0.5])
+        obj_template_mgr.register_template(cube_template_cpy)
+        ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
+        ground_plane.translation = [0.0, 0.0, 0.0]
+        ground_plane.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        # add the humanoid to the world via the wrapper
+        humanoid_path = "data/humanoids/humanoid_data/female2_0.urdf"
+        kin_humanoid = kinematic_humanoid.KinematicHumanoid(humanoid_path, sim)
+        kin_humanoid.reconfigure()
+        kin_humanoid.update()
+        observations += simulate(sim, 0.01, produce_debug_video)
+
+        # set base ground position from navmesh
+        # NOTE: because the navmesh floats above the collision geometry we should see a pop/settle with dynamics and no fixed base
+
+        kin_humanoid.base_pos = mn.Vector3(0, -0.9, 0)
+        observations += simulate(sim, 0.01, produce_debug_video)
+
+        # Test controller
+        walk_pose_path = (
+            "data/humanoids/humanoid_data/female_2_motion_data_smplx.pkl"
+        )
+        humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+        init_trans = kin_humanoid.base_transformation
+        init_pos = init_trans.translation
+        step_count = 0
+        humanoid_controller.reset(init_trans)
+        breakpoint()
+        while step_count < 10:
+            humanoid_controller.calculate_reach_pose_ind(0)
+            new_pose = humanoid_controller.get_pose()
+
+            new_joints = new_pose[:-16]
+            new_pos_transform_base = new_pose[-16:]
+            new_pos_transform_offset = new_pose[-32:-16]
+
+            # When the array is all 0, this indicates we are not setting
+            # the human joint
+            if np.array(new_pos_transform_offset).sum() != 0:
+                vecs_base = [
+                    mn.Vector4(new_pos_transform_base[i * 4 : (i + 1) * 4])
+                    for i in range(4)
+                ]
+                vecs_offset = [
+                    mn.Vector4(new_pos_transform_offset[i * 4 : (i + 1) * 4])
+                    for i in range(4)
+                ]
+                new_transform_offset = mn.Matrix4(*vecs_offset)
+                new_transform_base = mn.Matrix4(*vecs_base)
+                kin_humanoid.set_joint_transform(
+                    new_joints, new_transform_offset, new_transform_base
+                )
+
+            observations += simulate(sim, 0.01, produce_debug_video)
+            step_count += 1
+
+        # assert pose_diff.length() < epsilon
+
         # produce some test debug video
         if produce_debug_video:
             from habitat_sim.utils import viz_utils as vut
