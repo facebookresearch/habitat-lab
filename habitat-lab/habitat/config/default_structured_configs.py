@@ -2127,7 +2127,7 @@ cs.store(
 cs.store(
     package="habitat.task.measurements.pddl_subgoal_reward",
     group="habitat/task/measurements",
-    name="composite_subgoal_reward",
+    name="pddl_subgoal_reward",
     node=PddlSubgoalReward,
 )
 cs.store(

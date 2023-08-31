@@ -29,7 +29,7 @@ PRE_REGISTERED_GYM_TASKS = {
     "NavToObj": "benchmark/rearrange/skills/nav_to_obj.yaml",
     "ReachState": "benchmark/rearrange/skills/reach_state.yaml",
     "CloseCab": "benchmark/rearrange/skills/close_cab.yaml",
-    "SetTable": "benchmark/rearrange/skills/set_table.yaml",
+    "SetTable": "benchmark/rearrange/multi_task/set_table.yaml",
     "OpenCab": "benchmark/rearrange/skills/open_cab.yaml",
     "Place": "benchmark/rearrange/skills/place.yaml",
     "Rearrange": "benchmark/rearrange/multi_task/rearrange.yaml",
