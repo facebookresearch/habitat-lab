@@ -390,6 +390,7 @@ def generate_video(
     fps: int = 10,
     verbose: bool = True,
     keys_to_include_in_name: Optional[List[str]] = None,
+    ep_eval_num=None
 ) -> None:
     r"""Generate video according to specified information.
 
@@ -430,6 +431,9 @@ def generate_video(
     video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
     )
+    if ep_eval_num is not None:
+        video_name += f"-ep_eval_num={int(ep_eval_num)}"
+        
     if "disk" in video_option:
         assert video_dir is not None
         images_to_video(

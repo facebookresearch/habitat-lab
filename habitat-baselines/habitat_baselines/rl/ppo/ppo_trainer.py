@@ -945,6 +945,7 @@ class PPOTrainer(BaseRLTrainer):
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
         else:
             total_num_eps = sum(self.envs.number_of_episodes)
+            # import ipdb; ipdb.set_trace()
             # if total_num_eps is negative, it means the number of evaluation episodes is unknown
             if total_num_eps < number_of_eval_episodes and total_num_eps > 1:
                 logger.warn(
@@ -954,6 +955,7 @@ class PPOTrainer(BaseRLTrainer):
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
             else:
+                print(f"total_num_eps: {total_num_eps}", f"number_of_eval_episodes: {number_of_eval_episodes}")
                 assert evals_per_ep == 1
         assert (
             number_of_eval_episodes > 0
@@ -966,6 +968,10 @@ class PPOTrainer(BaseRLTrainer):
             episode_save_info = {}  # type: ignore
             gather_data_step = get_info_episode_step
             gather_data_final = get_info_episode_final
+
+        # create a 1D array of size number_of_eval_episodes 
+        # to store how many times an episode is run
+        ep_eval_num = np.zeros(number_of_eval_episodes)
 
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
@@ -1092,7 +1098,7 @@ class PPOTrainer(BaseRLTrainer):
                     ep_eval_count[k] += 1
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
-
+                    ep_eval_num[int(current_episodes_info[i].episode_id)] += 1
                     if (
                         len(self.config.habitat_baselines.eval.video_option)
                         > 0
@@ -1107,6 +1113,7 @@ class PPOTrainer(BaseRLTrainer):
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
+                            ep_eval_num=ep_eval_num[int(current_episodes_info[i].episode_id)]
                         )
 
                         rgb_frames[i] = []
@@ -1128,6 +1135,7 @@ class PPOTrainer(BaseRLTrainer):
                             curr_episode_save_info,
                             self.config.habitat_baselines.episode_data_dir,
                             current_episodes_info[i].episode_id,
+                            ep_eval_num[int(current_episodes_info[i].episode_id)]
                         )
                         episode_save_info[i] = []
 

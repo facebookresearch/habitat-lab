@@ -395,9 +395,13 @@ def get_info_episode_final(info_dict):
     return res_dict
 
 
-def write_episode_data(episode_summary, episode_data_dir, ep_id):
+def write_episode_data(episode_summary, episode_data_dir, ep_id, eval_num=None):
     os.makedirs(episode_data_dir, exist_ok=True)
     filepath = osp.join(episode_data_dir, f"episode_{ep_id}_info.pkl")
+    if eval_num is not None:
+        filepath = osp.join(
+            episode_data_dir, f"episode_{ep_id}_eval_{int(eval_num)}_info.pkl"
+        )
 
     with open(filepath, "wb+") as f:
         pickle.dump(episode_summary, f)
