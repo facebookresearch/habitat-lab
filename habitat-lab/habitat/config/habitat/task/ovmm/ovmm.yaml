@@ -69,7 +69,7 @@ constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
 base_angle_noise: 0.2618 # 15 degrees
 receptacle_categories_file: data/objects/hssd-receptacles.csv
-object_categories_file: /srv/flash1/syenamandra3/object-rearrangement/ovmm/new_release/home-robot/OVMM_objects/object_categories.csv
+object_categories_file: data/objects/object_categories.csv
 actions:
   arm_action:
     type: "ArmAction"
