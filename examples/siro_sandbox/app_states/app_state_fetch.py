@@ -106,7 +106,7 @@ class AppStateFetch(AppState):
                         ]
 
         walk_dir = None
-        distance_multiplier = 0.0
+        distance_multiplier = 1.0
         if not self._first_person_mode:
             if self._sandbox_service.args.remote_gui_mode:
                 (
@@ -119,7 +119,7 @@ class AppStateFetch(AppState):
                 (
                     candidate_walk_dir,
                     candidate_distance_multiplier,
-                ) = self._nav_helper.get_humanoid_walk_dir_from_ray_cast(
+                ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
                     visualize_path=True
                 )
 

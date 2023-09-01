@@ -124,7 +124,7 @@ class GuiNavigationHelper:
 
         walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
             target_pos=target_on_floor,
-            target_rot_quat=habitat_sim.utils.common.random_quaternion(),  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
+            target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
             visualize_path=visualize_path,
         )
 
