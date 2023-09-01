@@ -44,6 +44,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
@@ -123,10 +124,10 @@ habitat:
             width: 171
             hfov: 55
       agent_1:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/male_1/male_1.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False

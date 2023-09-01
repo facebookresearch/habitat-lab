@@ -428,25 +428,17 @@ class GuiHumanoidController(GuiController):
         fixup = filtered_query_pos - target_query_pos
         self._humanoid_controller.obj_transform_base.translation += fixup
 
-        if gui_input.get_key(KeyNS.F):
-            if self.selected_obj is not None:
-                obj_pos = self.selected_obj.translation
-                self._humanoid_controller.calculate_reach_pose(obj_pos)
-                # final_coord = self._humanoid_controller.calculate_reach_pose_2(self.ind)
-                # box_half_size = 0.03
-                # box_offset = mn.Vector3(
-                #     box_half_size, box_half_size, box_half_size
-                # )
-                # self.line_renderer.draw_box(
-                #     final_coord - box_offset,
-                #     final_coord + box_offset,
-                #     mn.Color3(255 / 255, 128 / 255, 0)
-                # )         
-                # print(final_coord)
-        if gui_input.get_key_up(KeyNS.F):
+        if (
+            gui_input.get_key(GuiInput.KeyNS.SPACE)
+            and self.selected_obj is not None
+        ):
+            obj_pos = self.selected_obj.translation
+            self._humanoid_controller.calculate_reach_pose(obj_pos)
+
+        if gui_input.get_key_up(GuiInput.KeyNS.SPACE):
             self._humanoid_controller.obj_transform_offset = mn.Matrix4()
             self._humanoid_controller.calculate_stop_pose()
             self.ind += 1
         humanoidjoint_action = np.array(self._humanoid_controller.get_pose())
-            
+
         return humanoidjoint_action
