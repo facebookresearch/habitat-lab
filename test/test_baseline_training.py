@@ -275,7 +275,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
                 continue
             skill.update(
                 {
-                    "force_config_file": f"benchmark/rearrange={skill_name}",
+                    "force_config_file": f"benchmark/rearrange/skills={skill_name}",
                     "max_skill_steps": 1,
                     "load_ckpt_file": "",
                 }
