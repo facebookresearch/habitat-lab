@@ -221,7 +221,13 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
             self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos
         )
 
-        if not self._use_geo_distance:
+        if self._use_geo_distance:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = np.array(position_robot)
+            path.requested_end = task.nav_goal_pos
+            found_path = self._sim.pathfinder.find_path(path)
+
+        if not self._use_geo_distance or not found_path:
             return np.linalg.norm(
                 np.array(
                     self._sim.get_agent_data(
