@@ -1196,6 +1196,8 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     facing_human_reward: float = -1.0
     use_geo_distance: bool = False
+    reward_exploration: float = -1.0
+    keep_len: int = 75
 
 
 @dataclass

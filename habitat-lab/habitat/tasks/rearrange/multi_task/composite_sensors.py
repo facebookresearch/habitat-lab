@@ -310,10 +310,17 @@ class SocialNavReward(Measure):
         self._facing_human_dis = config.facing_human_dis
         self._facing_human_reward = config.facing_human_reward
         self._use_geo_distance = config.use_geo_distance
+
+        self._reward_exploration = config.reward_exploration
+        self._keep_len = config.keep_len
+        self._visit_loc = {}
+        self._visit_loc_i = 0
+
         self._prev_dist = -1.0
 
     def reset_metric(self, *args, **kwargs):
         self._prev_dist = -1.0
+        self._visit_loc = {}
         self._stage_succ = []
         self.update_metric(
             *args,
@@ -343,6 +350,31 @@ class SocialNavReward(Measure):
         else:
             # self._metric = self._prev_reward - self._prev_reward #5.0 - 2.0 * dis
             self._metric = self._prev_dist - dis
+
+        if (
+            not (dis >= self._safe_dis_min and dis < self._safe_dis_max)
+        ) and self._reward_exploration != -1:
+            x_pos = round(position_robot[0], 1)
+            y_pos = round(position_robot[2], 1)
+            robot_pos_encoding = (x_pos, y_pos)
+            if robot_pos_encoding not in self._visit_loc:
+                self._visit_loc[robot_pos_encoding] = self._visit_loc_i
+                self._visit_loc_i += 1
+                self._metric += self._reward_exploration
+
+        # Remove the element
+        if self._reward_exploration != -1 and (
+            len(self._visit_loc) >= self._keep_len
+            or (dis >= self._safe_dis_min and dis < self._safe_dis_max)
+        ):
+            min_i = float("inf")
+            min_key = None
+            for k in self._visit_loc:
+                time_i = self._visit_loc[k]
+                if time_i <= min_i:
+                    min_i = time_i
+                    min_key = k
+            self._visit_loc.pop(min_key, 0)
 
         if dis < self._facing_human_dis and self._facing_human_reward != -1:
             vector_human_robot = position_human - position_robot
