@@ -57,44 +57,44 @@ def setup_function(test_trainers):
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
+            ["habitat.dataset.split=minival", "benchmark/rearrange/skills=place"],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["benchmark/rearrange=open_cab"],
+            ["benchmark/rearrange/skills=open_cab"],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
-                "benchmark/rearrange=open_fridge",
+                "benchmark/rearrange/skills=open_fridge",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
+            ["habitat.dataset.split=minival", "benchmark/rearrange/skills=pick"],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange=nav_to_obj",
+                "benchmark/rearrange/skills=nav_to_obj",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
-                "benchmark/rearrange=close_fridge",
+                "benchmark/rearrange/skills=close_fridge",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["benchmark/rearrange=close_cab"],
+            ["benchmark/rearrange/skills=close_cab"],
         ),
         (
             "imagenav/ddppo_imagenav_example.yaml",
