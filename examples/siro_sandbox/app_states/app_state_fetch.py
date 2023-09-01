@@ -163,8 +163,10 @@ class AppStateFetch(AppState):
             )
             # TODO: move this in set_act_hints
             if obj_pick is not None:
-                self._gui_agent_ctrl.selected_obj = self.get_sim().get_rigid_object_manager().get_object_by_id(
-                    obj_pick
+                self._gui_agent_ctrl.selected_obj = (
+                    self.get_sim()
+                    .get_rigid_object_manager()
+                    .get_object_by_id(obj_pick)
                 )
         else:
             computed_throw_vel = (
@@ -183,9 +185,16 @@ class AppStateFetch(AppState):
                 )
             if will_throw:
                 # pass
-                self.state_machine_agent_ctrl.current_state = FetchState.PICK
+                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
 
             will_throw = False
+
+        if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
+            obj_pos = (
+                self.state_machine_agent_ctrl.rigid_obj_interest.translation
+            )
+            self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
+
         return drop_pos
 
     def _get_target_object_position(self, target_obj_idx):
@@ -204,6 +213,14 @@ class AppStateFetch(AppState):
             ]
         )
 
+    def _draw_box_in_pos(self, position, color, box_half_size=0.15):
+        box_offset = mn.Vector3(box_half_size, box_half_size, box_half_size)
+        self._sandbox_service.line_render.draw_box(
+            position - box_offset,
+            position + box_offset,
+            color,
+        )
+
     def _viz_objects(self):
         if self._held_target_obj_idx is not None:
             return
@@ -220,13 +237,8 @@ class AppStateFetch(AppState):
 
             this_target_pos = self._get_target_object_position(i)
             box_half_size = 0.15
-            box_offset = mn.Vector3(
-                box_half_size, box_half_size, box_half_size
-            )
-            self._sandbox_service.line_render.draw_box(
-                this_target_pos - box_offset,
-                this_target_pos + box_offset,
-                color,
+            self._draw_box_in_pos(
+                this_target_pos, color=color, box_half_size=box_half_size
             )
 
             # draw can grasp area

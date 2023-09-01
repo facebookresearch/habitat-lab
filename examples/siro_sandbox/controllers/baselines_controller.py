@@ -160,8 +160,13 @@ class MultiAgentBaselinesController(BaselinesController):
 
 class FetchState(Enum):
     WAIT = 1
-    PICK = 2
-    BRING = 3
+    SEARCH = 2
+    PICK = 3
+    BRING = 4
+    DROP = 5
+
+
+PICK_STEPS = 20
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -181,6 +186,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._last_object_drop_info = None
         self._env = env
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
+        self.counter_pick = 0
 
         super().__init__(agent_idx, is_multi_agent, config, env)
         self._policy_info = self._init_policy_input()
@@ -215,7 +221,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
     @current_state.setter
     def current_state(self, value):
-        if value == FetchState.PICK and self._current_state != value:
+        if self._current_state != value:
             self.should_start_skill = True
         else:
             self.should_start_skill = False
@@ -238,7 +244,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         prev_actions = policy_input["prev_actions"]
         rnn_hidden_states = policy_input["rnn_hidden_states"]
         batch_id = 0
-        skill_args = ["", "0|0", ""]
+        if skill_name == "pick":
+            skill_args = ["0|0"]
+        else:
+            skill_args = ["", "0|0", ""]
         (
             rnn_hidden_states[batch_id],
             prev_actions[batch_id],
@@ -294,13 +303,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             act_space, "agent_0_oracle_nav_action"
         )
 
-        if self.current_state == FetchState.PICK:
+        if self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
 
-            if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 2:
+            if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
 
@@ -325,6 +334,24 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     # Grab object
+                    self._init_policy_input()
+
+                    self.current_state = FetchState.PICK
+
+        elif self.current_state == FetchState.PICK:
+            obj_trans = self.rigid_obj_interest.translation
+            type_of_skill = self.defined_skills.pick.skill_name
+            if type_of_skill == "PickSkillPolicy":
+                if self.should_start_skill:
+                    # TODO: obs can be batched before
+                    self.start_skill(obs, "pick")
+                action_array = self.force_apply_skill(
+                    obs, "pick", env, obj_trans
+                )[0]
+            else:
+                if self.counter_pick < PICK_STEPS:
+                    self.counter_pick += 1
+                else:
                     self._get_grasp_mgr(env).snap_to_obj(
                         self.object_interest_id
                     )
@@ -333,7 +360,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.grasped_object.override_collision_group(
                         self._thrown_object_collision_group
                     )
-                    self._init_policy_input()
+
+                    self.counter_pick = 0
                     self.current_state = FetchState.BRING
 
         elif self.current_state == FetchState.BRING:
@@ -360,20 +388,38 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     raise ValueError(f"Skill {type_of_skill} not recognized.")
 
             else:
-                # Open gripper
-                self._get_grasp_mgr(env).desnap()
-
-                grasped_rigid_obj = self.grasped_object
-
-                obj_bb = get_aabb(self.grasped_object_id, env._sim)
-                self._last_object_drop_info = (
-                    grasped_rigid_obj,
-                    max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                )
-                self.grasped_object_id = None
-                self.grasped_object = None
-                self.current_state = FetchState.WAIT
+                self.current_state = FetchState.DROP
                 self._init_policy_input()
+
+        elif self.current_state == FetchState.DROP:
+            type_of_skill = self.defined_skills.place.skill_name
+
+            if type_of_skill == "PlaceSkillPolicy":
+                if self.should_start_skill:
+                    # TODO: obs can be batched before
+                    self.start_skill(obs, "place")
+                action_array = self.force_apply_skill(
+                    obs, "place", env, obj_trans
+                )[0]
+            else:
+                if self.counter_pick < PICK_STEPS:
+                    self.counter_pick += 1
+                else:
+                    # Open gripper
+                    self._get_grasp_mgr(env).desnap()
+
+                    grasped_rigid_obj = self.grasped_object
+
+                    obj_bb = get_aabb(self.grasped_object_id, env._sim)
+                    self._last_object_drop_info = (
+                        grasped_rigid_obj,
+                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                    )
+                    self.grasped_object_id = None
+                    self.grasped_object = None
+                    self.current_state = FetchState.WAIT
+
+                    self.counter_pick = 0
 
         if self._last_object_drop_info is not None:
             grasp_mgr = self._get_grasp_mgr(env)
@@ -400,4 +446,5 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.grasped_object_id = None
         self.grasped_object = None
         self._last_object_drop_info = None
+        self.counter_pick = 0
         self._policy_info = self._init_policy_input()

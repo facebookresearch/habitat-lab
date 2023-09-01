@@ -198,12 +198,13 @@ habitat_baselines:
               - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
-            # nav_to_obj:
-            #   skill_name: "OracleNavPolicy"
-            #   obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-            #   max_skill_steps: 300
-            #   stop_thresh: 0.00001
-            #   apply_postconds: False
+
+            # pick:
+            #   skill_name: "PickSkillPolicy"
+            #   obs_skill_inputs: ["obj_start_sensor"]
+            #   load_ckpt_file: "data/models/pick_latest.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 3
 
             nav_to_obj:
               skill_name: "NavSkillPolicy"
