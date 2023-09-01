@@ -35,7 +35,7 @@ defaults:
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
-  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
@@ -208,7 +208,7 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "/Users/xavierpuig/latest_socnav_jimmy.pth"
+              load_ckpt_file: "/Users/jimmytyyang/Downloads/fp_9_0_latest.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]

@@ -14,11 +14,12 @@ from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
-from habitat_baselines.rl.ppo.policy import PolicyActionData
-from habitat_baselines.utils.common import get_num_actions
 from habitat_baselines.rl.multi_agent.utils import (
     update_list_with_agent_prefix,
 )
+from habitat_baselines.rl.ppo.policy import PolicyActionData
+from habitat_baselines.utils.common import get_num_actions
+
 
 def truncate_obs_space(space: spaces.Box, truncate_len: int) -> spaces.Box:
     """
@@ -141,7 +142,7 @@ class NnSkillPolicy(SkillPolicy):
         # print("PREV")
         # print(filtered_obs["goal_to_agent_gps_compass"])
         # print(filtered_prev_actions[0])
-        
+
         # print(rnn_hidden_states[0,0,:4])
         # breakpoint()
         action_data = self._wrap_policy.act(
@@ -196,7 +197,7 @@ class NnSkillPolicy(SkillPolicy):
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
         # TOO: Hack the keys should be gotten from somewhere else
         expected_obs_keys = update_list_with_agent_prefix(expected_obs_keys, 0)
-        
+
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
@@ -211,12 +212,11 @@ class NnSkillPolicy(SkillPolicy):
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
-        action_keys = update_list_with_agent_prefix(policy_cfg.habitat.task.actions.keys(), 0)
+        action_keys = update_list_with_agent_prefix(
+            policy_cfg.habitat.task.actions.keys(), 0
+        )
         filtered_action_space = ActionSpace(
-            OrderedDict(
-                (k, action_space[k])
-                for k in action_keys
-            )
+            OrderedDict((k, action_space[k]) for k in action_keys)
         )
 
         if "arm_action" in filtered_action_space.spaces and (
@@ -233,7 +233,10 @@ class NnSkillPolicy(SkillPolicy):
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
         actor_critic = policy.from_config(
-            policy_cfg, filtered_obs_space, filtered_action_space, agent_name="agent_0"
+            policy_cfg,
+            filtered_obs_space,
+            filtered_action_space,
+            agent_name="agent_0",
         )
         if len(ckpt_dict) > 0:
             try:
