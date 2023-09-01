@@ -57,7 +57,10 @@ def setup_function(test_trainers):
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange/skills=place"],
+            [
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=place"
+            ],
         ),
         (
             "rearrange/rl_skill.yaml",
@@ -74,7 +77,10 @@ def setup_function(test_trainers):
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange/skills=pick"],
+            [
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=pick"
+            ],
         ),
         (
             "rearrange/rl_skill.yaml",
