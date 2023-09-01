@@ -148,7 +148,7 @@ class NavToObjReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-
+        # breakpoint()
         reward = 0.0
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 
@@ -217,6 +217,10 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
+        position_robot = np.array(
+            self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos
+        )
+
         if not self._use_geo_distance:
             return np.linalg.norm(
                 np.array(
@@ -352,6 +356,7 @@ class NavToObjSuccess(Measure):
             0
         ).articulated_agent.base_transformation
         forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+
         facing = (
             np.dot(forward_robot.normalized(), vector_object_robot)
             > self._facing_threshold
