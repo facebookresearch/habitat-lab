@@ -355,7 +355,17 @@ class GuiHumanoidController(GuiController):
             + base_offset
         )
 
-        self._humanoid_controller.calculate_walk_pose(relative_pos)
+        # 1.0 is the default value indicating mowing in the relative_pos direction
+        # 0.0 indicates no movement but possibly a rotation on the spot
+        distance_multiplier = (
+            1.0
+            if self._hint_distance_multiplier is None
+            else self._hint_distance_multiplier
+        )
+
+        self._humanoid_controller.calculate_walk_pose(
+            relative_pos, distance_multiplier
+        )
 
         # calculate_walk_pose has updated obj_transform_base.translation with
         # desired motion, but this should be filtered (restricted to navmesh).

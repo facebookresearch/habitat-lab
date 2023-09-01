@@ -112,14 +112,14 @@ class AppStateFetch(AppState):
                 (
                     candidate_walk_dir,
                     candidate_distance_multiplier,
-                ) = self._nav_helper._get_humanoid_walk_dir_from_remote_gui_input(
+                ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
                     visualize_path=False
                 )
             else:
                 (
                     candidate_walk_dir,
                     candidate_distance_multiplier,
-                ) = self._nav_helper._get_humanoid_walk_dir_from_ray_cast(
+                ) = self._nav_helper.get_humanoid_walk_dir_from_ray_cast(
                     visualize_path=True
                 )
 
@@ -274,7 +274,8 @@ class AppStateFetch(AppState):
 
     def _get_camera_lookat_pos(self):
         agent_pos, _ = self._get_agent_pose()
-        lookat = agent_pos + mn.Vector3(0, 1, 0)
+        lookat_y_offset = mn.Vector3(0, 1, 0)
+        lookat = agent_pos + lookat_y_offset
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
