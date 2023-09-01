@@ -124,7 +124,7 @@ habitat:
         lin_speed: 40.0
         ang_speed: 20.0
 
-    robot_at_thresh: 3.0
+    robot_at_thresh: 2.0
   gym:
     obs_keys:
       - agent_0_articulated_agent_arm_depth

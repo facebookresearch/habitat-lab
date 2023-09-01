@@ -334,6 +334,9 @@ class SandboxDriver(GuiAppDriver):
         self._app_state_index = (
             0  # start from the first app state for each episode
         )
+        if self._args.show_tutorial and self._args.short_tutorial and self._num_episodes_done > 0:
+            self._app_state_index = 1
+        
         self._app_state = self._app_states[self._app_state_index]
         self._app_state.on_enter(
             prev_state=self._get_prev_app_state(),
@@ -638,6 +641,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+    )
+    parser.add_argument(
+        "--short-tutorial",
+        action="store_true",
+        default=False,
+        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context, ONLY for 1 episode. Requires --show-tutorial arguement to be specified as well.",
     )
     parser.add_argument(
         "--hide-humanoid-in-gui",
