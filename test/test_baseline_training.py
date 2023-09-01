@@ -59,7 +59,7 @@ def setup_function(test_trainers):
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange/skills=place"
+                "benchmark/rearrange/skills=place",
             ],
         ),
         (
@@ -79,7 +79,7 @@ def setup_function(test_trainers):
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange/skills=pick"
+                "benchmark/rearrange/skills=pick",
             ],
         ),
         (
