@@ -54,7 +54,6 @@ class MagicGraspAction(GripSimulatorTaskAction):
             )
 
             keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
-
             if to_target < self._config.grasp_thresh_dist:
                 self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx],
@@ -86,8 +85,9 @@ class MagicGraspAction(GripSimulatorTaskAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        # TODO: hack here to make sure when the grip action is zero,
+        # the robot does nothing
+        if grip_action > 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
