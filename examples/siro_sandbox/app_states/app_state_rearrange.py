@@ -56,6 +56,7 @@ class AppStateRearrange(AppState):
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
         )
+        self._initialized = False
 
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
@@ -69,7 +70,8 @@ class AppStateRearrange(AppState):
         ]
         self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
 
-        self._num_episodes_done += 1
+        if self._initialized:
+            self._num_episodes_done += 1
 
         self._nav_helper.on_environment_reset()
 
@@ -78,6 +80,8 @@ class AppStateRearrange(AppState):
         if episode_recorder_dict:
             episode_recorder_dict["target_obj_ids"] = self._target_obj_ids
             episode_recorder_dict["goal_positions"] = self._goal_positions
+        
+        self._initialized = True
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -357,7 +361,7 @@ class AppStateRearrange(AppState):
                 text_delta_y=-50,
             )
 
-        progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+        progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes left"
         self._sandbox_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
