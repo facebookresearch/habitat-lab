@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import magnum as mn
 import numpy as np
+import json
 from controllers.controller_helper import ControllerHelper
 
 # from hitl_tutorial import Tutorial, generate_tutorial
@@ -59,6 +60,10 @@ from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 
+from server.server import launch_server_process, terminate_server_process
+from server.interprocess_record import send_keyframe_to_networking_thread, get_queued_client_states
+from server.remote_gui_input import RemoteGuiInput
+
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
@@ -66,6 +71,7 @@ DEFAULT_POSE_PATH = (
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
 
+do_network_server = True  # todo: make as command-line arg or similar
 
 def requires_habitat_sim_with_bullet(callable_):
     @wraps(callable_)
@@ -149,6 +155,11 @@ class SandboxDriver(GuiAppDriver):
 
         self._viz_anim_fraction = 0.0
         self._pending_cursor_style = None
+
+        self._remote_gui_input = None
+        if do_network_server:
+            launch_server_process()
+            self._remote_gui_input = RemoteGuiInput(line_render)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -416,6 +427,9 @@ class SandboxDriver(GuiAppDriver):
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
 
+        if self._remote_gui_input:
+            self._remote_gui_input.update()
+
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
         self._viz_anim_fraction = (
@@ -483,6 +497,16 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict["debug_images"] = [
             np.flipud(image) for image in debug_images
         ]
+
+        if self._remote_gui_input:
+            self._remote_gui_input.on_frame_end()
+
+        if do_network_server:
+            for keyframe_json in keyframes:
+                obj = json.loads(keyframe_json)
+                assert "keyframe" in obj
+                keyframe_obj = obj["keyframe"]
+                send_keyframe_to_networking_thread(keyframe_obj)
 
         return post_sim_update_dict
 
@@ -885,3 +909,6 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
+
+    if do_network_server:
+        terminate_server_process()
