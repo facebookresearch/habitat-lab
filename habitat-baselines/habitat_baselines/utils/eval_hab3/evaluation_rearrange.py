@@ -76,7 +76,7 @@ def aggregate_per_episode_dict(dict_data, average=False, std=False):
                 result = metric_list
             else:
                 if std:
-                    result = [np.mean(metric_list), np.std(metric_list)]
+                    result = (np.mean(metric_list), np.std(metric_list))
                 else:
                     result = np.mean(metric_list)
 
