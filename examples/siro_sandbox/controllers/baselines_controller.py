@@ -248,6 +248,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             skill_args = ["0|0"]
         else:
             skill_args = ["", "0|0", ""]
+
         (
             rnn_hidden_states[batch_id],
             prev_actions[batch_id],
@@ -265,6 +266,15 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         return rho, phi
 
+    def check_if_skill_done(self, observations, skill_name):
+        """Check if the skill is done"""
+        ll_skil = self._agent.actor_critic._skills[  # type: ignore
+            self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
+        ]
+        return ll_skil._is_skill_done(
+            self._batch_and_apply_transforms([observations])
+        )
+
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
         # that can be called on different observations
@@ -275,8 +285,21 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         policy_input["observations"] = self._batch_and_apply_transforms(
             [observations]
         )
-        # Only take the goal object
 
+        # TODO: the observation transformation always picks up
+        # the first object, we overwrite the observation
+        # here, which is a bit hacky
+        if skill_name == "pick":
+            global_T = env._sim.get_agent_data(
+                self._agent_idx
+            ).articulated_agent.ee_transform()
+            T_inv = global_T.inverted()
+            obj_start_pos = np.array(T_inv.transform_point(obj_trans))[
+                None, ...
+            ]
+            policy_input["observations"]["obj_start_sensor"] = obj_start_pos
+
+        # Only take the goal object
         rho, phi = self.get_cartesian_obj_coords(obj_trans, env)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
@@ -335,7 +358,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     # Grab object
                     self._init_policy_input()
-
                     self.current_state = FetchState.PICK
 
         elif self.current_state == FetchState.PICK:
@@ -348,6 +370,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 action_array = self.force_apply_skill(
                     obs, "pick", env, obj_trans
                 )[0]
+                if self.check_if_skill_done(obs, "pick"):
+                    self.grasped_object = self.rigid_obj_interest
+                    self.grasped_object_id = self.object_interest_id
+                    self.grasped_object.override_collision_group(
+                        self._thrown_object_collision_group
+                    )
+                    self.current_state = FetchState.BRING
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1

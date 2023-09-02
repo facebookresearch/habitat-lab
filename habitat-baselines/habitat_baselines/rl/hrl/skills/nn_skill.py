@@ -144,7 +144,6 @@ class NnSkillPolicy(SkillPolicy):
         # print(filtered_prev_actions[0])
 
         # print(rnn_hidden_states[0,0,:4])
-        # breakpoint()
         action_data = self._wrap_policy.act(
             filtered_obs,
             rnn_hidden_states,
