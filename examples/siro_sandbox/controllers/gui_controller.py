@@ -192,6 +192,7 @@ class GuiHumanoidController(GuiController):
         self._humanoid_controller = humanoid_controller
         self._env = env
         self._hint_walk_dir = None
+        self._hint_distance_multiplier = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
@@ -206,6 +207,7 @@ class GuiHumanoidController(GuiController):
         base_trans = self.get_articulated_agent().base_transformation
         self._humanoid_controller.reset(base_trans)
         self._hint_walk_dir = None
+        self._hint_distance_multiplier = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
@@ -251,8 +253,16 @@ class GuiHumanoidController(GuiController):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
+    def set_act_hints(
+        self,
+        walk_dir,
+        distance_multiplier,
+        grasp_obj_idx,
+        do_drop,
+        cam_yaw=None,
+    ):
         self._hint_walk_dir = walk_dir
+        self._hint_distance_multiplier = distance_multiplier
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
@@ -351,7 +361,17 @@ class GuiHumanoidController(GuiController):
             + base_offset
         )
 
-        self._humanoid_controller.calculate_walk_pose(relative_pos)
+        # 1.0 is the default value indicating mowing in the relative_pos direction
+        # 0.0 indicates no movement but possibly a rotation on the spot
+        distance_multiplier = (
+            1.0
+            if self._hint_distance_multiplier is None
+            else self._hint_distance_multiplier
+        )
+
+        self._humanoid_controller.calculate_walk_pose(
+            relative_pos, distance_multiplier
+        )
 
         # calculate_walk_pose has updated obj_transform_base.translation with
         # desired motion, but this should be filtered (restricted to navmesh).
