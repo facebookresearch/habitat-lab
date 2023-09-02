@@ -236,8 +236,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def start_skill(self, observations, skill_name):
-        skill_walk = self._agent.actor_critic._skills[
-            self._agent.actor_critic._name_to_idx[skill_name]
+        skill_walk = self._agent.actor_critic._skills[  # type: ignore
+            self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
         ]
         policy_input = self._policy_info["ll_policy"]
         obs = self._batch_and_apply_transforms([observations])
@@ -268,8 +268,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
         # that can be called on different observations
-        skill_walk = self._agent.actor_critic._skills[
-            self._agent.actor_critic._name_to_idx[skill_name]
+        skill_walk = self._agent.actor_critic._skills[  # type: ignore
+            self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
         ]
         policy_input = self._policy_info["ll_policy"]
         policy_input["observations"] = self._batch_and_apply_transforms(
