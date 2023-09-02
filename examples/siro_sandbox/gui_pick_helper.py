@@ -37,10 +37,10 @@ class GuiPickHelper:
         self.agent_feet_height = agent_feet_height
 
     def _viz_object(self, this_target_pos):
-        color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
+        color = mn.Color3(0, 255, 0)  # green
 
         this_target_pos = mn.Vector3(this_target_pos)
-        box_half_size = 0.15
+        box_half_size = 0.20
         box_offset = mn.Vector3(box_half_size, box_half_size, box_half_size)
         self._sandbox_service.line_render.draw_box(
             this_target_pos - box_offset,

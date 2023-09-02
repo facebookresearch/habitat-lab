@@ -38,7 +38,8 @@ class AppStateFetch(AppState):
         self._camera_helper = CameraHelper(
             self._sandbox_service.args, self._sandbox_service.gui_input
         )
-        self._first_person_mode = self._sandbox_service.args.first_person_mode
+        # not supported for fetch
+        assert not self._sandbox_service.args.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
@@ -80,6 +81,9 @@ class AppStateFetch(AppState):
         drop_pos = None
         grasp_object_id = None
         will_throw = False
+        throw_vel = None
+        obj_pick = None
+
         if self._held_target_obj_idx is not None:
             if self._sandbox_service.gui_input.get_key_down(
                 GuiInput.KeyNS.SPACE
@@ -115,16 +119,18 @@ class AppStateFetch(AppState):
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
+
+                obj_pick = self._pick_helper.viz_and_get_pick_object()
+
                 assert not self._gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self._sandbox_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
                 ):
                     translation = self._get_agent_translation()
-                    obj_pick = self._pick_helper.viz_and_get_pick_object()
 
                     if obj_pick is not None:
-                        # We will use obj0 as our object of interest
+                        # Hack: we will use obj0 as our object of interest
                         self._target_obj_ids[0] = obj_pick
                         min_dist = self._can_grasp_place_threshold
 
@@ -141,26 +147,8 @@ class AppStateFetch(AppState):
                                 self._held_target_obj_idx
                             ]
 
-        walk_dir = None
         if not self._prepare_throw and not will_throw:
-            if not self._first_person_mode:
-                candidate_walk_dir = (
-                    self._nav_helper.viz_and_get_humanoid_walk_dir()
-                    if not self._first_person_mode
-                    else None
-                )
-                obj_pick = self._pick_helper.viz_and_get_pick_object()
 
-                if self._sandbox_service.gui_input.get_mouse_button(
-                    GuiInput.MouseNS.RIGHT
-                ):
-                    walk_dir = candidate_walk_dir
-            self._gui_agent_ctrl.set_act_hints(
-                walk_dir,
-                grasp_object_id,
-                drop_pos,
-                self._camera_helper.lookat_offset_yaw,
-            )
             # TODO: move this in set_act_hints
             if obj_pick is not None:
                 self._gui_agent_ctrl.selected_obj = (
@@ -190,27 +178,26 @@ class AppStateFetch(AppState):
 
         walk_dir = None
         distance_multiplier = 1.0
-        if not self._first_person_mode:
-            if self._sandbox_service.args.remote_gui_mode:
-                (
-                    candidate_walk_dir,
-                    candidate_distance_multiplier,
-                ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
-                    visualize_path=False
-                )
-            else:
-                (
-                    candidate_walk_dir,
-                    candidate_distance_multiplier,
-                ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
-                    visualize_path=True
-                )
+        if self._sandbox_service.args.remote_gui_mode:
+            (
+                candidate_walk_dir,
+                candidate_distance_multiplier,
+            ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
+                visualize_path=False
+            )
+        else:
+            (
+                candidate_walk_dir,
+                candidate_distance_multiplier,
+            ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
+                visualize_path=True
+            )
 
-            if self._sandbox_service.gui_input.get_mouse_button(
-                GuiInput.MouseNS.RIGHT
-            ):
-                walk_dir = candidate_walk_dir
-                distance_multiplier = candidate_distance_multiplier
+        if self._sandbox_service.gui_input.get_mouse_button(
+            GuiInput.MouseNS.RIGHT
+        ):
+            walk_dir = candidate_walk_dir
+            distance_multiplier = candidate_distance_multiplier
 
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         self._gui_agent_ctrl.set_act_hints(
@@ -221,9 +208,6 @@ class AppStateFetch(AppState):
             self._camera_helper.lookat_offset_yaw,
             throw_vel=throw_vel,
         )
-
-
-
 
         return drop_pos
 
@@ -308,21 +292,12 @@ class AppStateFetch(AppState):
         controls_str: str = ""
         controls_str += "ESC: exit\n"
         controls_str += "M: change scene\n"
-
-        if self._first_person_mode:
-            # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
-            controls_str += "I, K: look up, down\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += get_grasp_release_controls_text()
-        # third-person mode
-        else:
-            controls_str += "R + drag: rotate camera\n"
-            controls_str += "Right-click: walk\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += "Scroll: zoom\n"
-            controls_str += get_grasp_release_controls_text()
+        controls_str += "R + drag: rotate camera\n"
+        controls_str += "Right-click: walk\n"
+        controls_str += "A, D: turn\n"
+        controls_str += "W, S: walk\n"
+        controls_str += "Scroll: zoom\n"
+        controls_str += get_grasp_release_controls_text()
 
         return controls_str
 
@@ -378,7 +353,7 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
             self._sandbox_service.end_episode(do_reset=True)
 
-        # self._viz_objects()
+        self._viz_objects()
         self._update_grasping_and_set_act_hints()
         self._sandbox_service.compute_action_and_step_env()
 

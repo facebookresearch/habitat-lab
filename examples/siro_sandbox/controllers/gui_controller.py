@@ -275,7 +275,7 @@ class GuiHumanoidController(GuiController):
         return humanoidjoint_action
 
     def set_act_hints(
-        self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None, throw_vel=None
+        self, walk_dir, distance_multiplier, grasp_obj_idx, do_drop, cam_yaw=None, throw_vel=None
     ):
         assert (
             throw_vel is None or do_drop is None

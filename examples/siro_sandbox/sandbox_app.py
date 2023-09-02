@@ -72,7 +72,7 @@ DEFAULT_POSE_PATH = (
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
 
-do_network_server = True  # todo: make as command-line arg or similar
+do_network_server = False  # todo: make as command-line arg or similar
 
 def requires_habitat_sim_with_bullet(callable_):
     @wraps(callable_)
