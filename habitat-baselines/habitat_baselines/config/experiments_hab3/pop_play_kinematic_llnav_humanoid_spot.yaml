@@ -35,7 +35,7 @@ defaults:
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
-  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
