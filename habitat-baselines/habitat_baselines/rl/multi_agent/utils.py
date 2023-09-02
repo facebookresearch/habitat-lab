@@ -32,11 +32,11 @@ def update_dict_with_agent_prefix(
 
 def update_list_with_agent_prefix(
     names: List[str], agent_idx: int
-) -> Union[Dict[str, Any], TensorDict]:
+) -> Union[Dict[str, Any], TensorDict, List[str]]:
     """
     :param agent_idx: The index of the agent name in the dictionary. Will format as `agent_{agent_idx}`
     """
-    
+
     agent_s = f"agent_{agent_idx}_"
     ret = [
         _remove_agent_prefix(k, agent_s)
@@ -44,6 +44,7 @@ def update_list_with_agent_prefix(
         if agent_s in k or not k.startswith("agent_")
     ]
     return ret
+
 
 def add_agent_prefix(k, agent_i):
     return f"agent_{agent_i}_{k}"

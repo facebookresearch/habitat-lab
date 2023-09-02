@@ -47,6 +47,7 @@ __all__ = [
     "EmptyActionConfig",
     "ArmActionConfig",
     "BaseVelocityActionConfig",
+    "BaseVelocityLegAnimationActionConfig",
     "HumanoidJointActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
@@ -262,6 +263,23 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
+class BaseVelocityLegAnimationActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelLegAnimationAction"
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    leg_animation_checkpoint: str = (
+        "data/robots/spot_data/spot_walking_trajectory.csv"
+    )
+    play_i_perframe: int = 5
+    use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
+
+
+@dataclass
 class BaseVelocityNonCylinderActionConfig(ActionConfig):
     r"""
     In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
@@ -335,8 +353,10 @@ class OracleNavActionConfig(ActionConfig):
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 
+
 class HumanoidPickActionConfig(ActionConfig):
     type: str = "HumanoidPickAction"
+
 
 @dataclass
 class OracleNavWithBackingUpActionConfig(ActionConfig):
@@ -806,6 +826,7 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
 
+
 @dataclass
 class CollisionsTerminateMeasurementConfig(MeasurementConfig):
     r"""
@@ -817,6 +838,7 @@ class CollisionsTerminateMeasurementConfig(MeasurementConfig):
     """
     type: str = "CollisionsTerminate"
     max_scene_colls: float = -1.0
+
 
 @dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
@@ -1797,6 +1819,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity_leg_animation",
+    group="habitat/task/actions",
+    name="base_velocity_leg_animation",
+    node=BaseVelocityLegAnimationActionConfig,
 )
 cs.store(
     package="habitat.task.actions.base_velocity_non_cylinder",

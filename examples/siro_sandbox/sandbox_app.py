@@ -733,15 +733,12 @@ if __name__ == "__main__":
                 "has_finished_oracle_nav",
             ]:
                 if len(sim_config.agents) > 1:
-                    agent_sensor_name = (
-                        f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
-                    )
+                    agent_sensor_name = f"agent_{args.gui_controlled_agent_index}_{sensor_name}"
                 else:
                     agent_sensor_name = sensor_name
 
                 if agent_sensor_name in gym_obs_keys:
                     gym_obs_keys.remove(agent_sensor_name)
-                    
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[
@@ -764,7 +761,8 @@ if __name__ == "__main__":
             gui_agent_actions = [
                 action_key
                 for action_key in task_actions.keys()
-                if action_key.startswith(gui_agent_key) or len(sim_config.agents) == 1
+                if action_key.startswith(gui_agent_key)
+                or len(sim_config.agents) == 1
             ]
             for action_key in gui_agent_actions:
                 task_actions.pop(action_key)
