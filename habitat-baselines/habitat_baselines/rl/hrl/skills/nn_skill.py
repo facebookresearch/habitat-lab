@@ -240,7 +240,10 @@ class NnSkillPolicy(SkillPolicy):
         )
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(ckpt_dict[0]["state_dict"])
+                if "state_dict" not in ckpt_dict:
+                    ckpt_dict = ckpt_dict[0]
+
+                actor_critic.load_state_dict(ckpt_dict["state_dict"])
 
             except Exception as e:
                 raise ValueError(
