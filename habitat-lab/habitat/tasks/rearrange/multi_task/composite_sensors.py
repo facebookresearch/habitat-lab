@@ -11,6 +11,7 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -337,6 +338,12 @@ class SocialNavReward(Measure):
         ]
 
         if self._use_geo_distance:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = np.array(position_robot)
+            path.requested_end = position_human
+            found_path = self._sim.pathfinder.find_path(path)
+
+        if self._use_geo_distance and found_path:
             dis = self._sim.geodesic_distance(position_robot, position_human)
         else:
             dis = np.linalg.norm(position_human - position_robot)
