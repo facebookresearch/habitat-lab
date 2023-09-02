@@ -215,6 +215,13 @@ habitat_baselines:
               max_skill_steps: 500
               obs_skill_input_dim: 3
 
+            # place:
+            #   skill_name: "PlaceSkillPolicy"
+            #   obs_skill_inputs: ["obj_goal_sensor"]
+            #   load_ckpt_file: "data/models/place_ckpt.343.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 3
+
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]

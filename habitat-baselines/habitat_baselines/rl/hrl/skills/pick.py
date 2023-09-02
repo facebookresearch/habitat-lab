@@ -25,6 +25,7 @@ class PickSkillPolicy(NnSkillPolicy):
         # Parameters for resetting the arm
         self._rest_state = np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0])
         self._need_reset_arm = True
+        self._pick_logic = True
 
     def _is_skill_done(
         self,
@@ -62,6 +63,14 @@ class PickSkillPolicy(NnSkillPolicy):
             action.actions[i, self._grip_ac_idx] = 1.0
         return action
 
+    def _mask_place(self, action, observations):
+        # Mask out the grasp if the object is already released.
+        is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
+        for i in torch.nonzero(is_not_holding):
+            # Do not regrasp the object once it is released.
+            action.actions[i, self._grip_ac_idx] = -1.0
+        return action
+
     def _internal_act(
         self,
         observations,
@@ -81,10 +90,29 @@ class PickSkillPolicy(NnSkillPolicy):
         )
 
         # Do not release the object once it is held
-        action = self._mask_pick(action, observations)
+        if self._pick_logic:
+            action = self._mask_pick(action, observations)
+        else:
+            action = self._mask_place(action, observations)
 
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
-        if is_holding and self._need_reset_arm:
+        if (
+            is_holding  # noqa: SIM114
+            and self._need_reset_arm  # noqa: SIM114
+            and self._pick_logic  # noqa: SIM114
+        ):
+            current_joint_pos = observations["joint"].cpu().numpy()
+            delta = self._rest_state - current_joint_pos
+            action.actions[
+                :, self.arm_start_id : self.arm_start_id + self.arm_len - 1
+            ] = torch.from_numpy(delta).to(
+                device=action.actions.device, dtype=action.actions.dtype
+            )
+        elif (
+            (not is_holding)
+            and self._need_reset_arm
+            and (not self._pick_logic)
+        ):
             current_joint_pos = observations["joint"].cpu().numpy()
             delta = self._rest_state - current_joint_pos
             action.actions[
