@@ -283,7 +283,7 @@ class PddlSubgoalReward(Measure):
     def update_metric(self, *args, task, **kwargs):
         self._metric = 0.0
 
-        for stage_name, logical_expr in task.stage_goals.items():
+        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
             if stage_name in self._stage_succ:
                 continue
 
