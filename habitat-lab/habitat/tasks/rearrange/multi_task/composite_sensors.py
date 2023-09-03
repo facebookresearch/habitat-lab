@@ -401,3 +401,41 @@ class SocialNavReward(Measure):
 
         # Update the distance
         self._prev_dist = dis  # type: ignore
+
+
+@registry.register_measure
+class ExplorationReward(Measure):
+    """
+    Reward that gives a continuous reward on the social navigation task.
+    """
+
+    cls_uuid: str = "exploration_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ExplorationReward.cls_uuid
+
+    def __init__(self, *args, config, sim, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        self._config = config
+        self._sim = sim
+        self._visit_loc = {}
+
+    def reset_metric(self, *args, **kwargs):
+        self._visit_loc = {}
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
+            :3
+        ]
+        x_pos = round(position_robot[0], 1)
+        y_pos = round(position_robot[2], 1)
+        robot_pos_encoding = (x_pos, y_pos)
+        if robot_pos_encoding not in self._visit_loc:
+            self._visit_loc[robot_pos_encoding] = 0
+        self._metric = len(self._visit_loc)

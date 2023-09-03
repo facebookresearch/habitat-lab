@@ -989,6 +989,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
     use_one_over_dist_reward: bool = False
+    reward_exploration: float = -1.0
+    keep_len: int = 300
+    min_dist_reward_exploration: float = 3.0
 
 
 @dataclass
@@ -1199,6 +1202,11 @@ class SocialNavReward(MeasurementConfig):
     use_geo_distance: bool = False
     reward_exploration: float = -1.0
     keep_len: int = 75
+
+
+@dataclass
+class ExplorationReward(MeasurementConfig):
+    type: str = "ExplorationReward"
 
 
 @dataclass
@@ -2363,6 +2371,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.exploration_reward",
+    group="habitat/task/measurements",
+    name="exploration_reward",
+    node=ExplorationReward,
 )
 cs.store(
     package="habitat.task.measurements.social_nav_stats",

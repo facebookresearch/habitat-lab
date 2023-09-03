@@ -120,6 +120,16 @@ class NavToObjReward(RearrangeReward):
     def _get_uuid(*args, **kwargs):
         return NavToObjReward.cls_uuid
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._reward_exploration = self._config.reward_exploration
+        self._keep_len = self._config.keep_len
+        self._min_dist_reward_exploration = (
+            self._config.min_dist_reward_exploration
+        )
+        self._visit_loc = {}
+        self._visit_loc_i = 0
+
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
@@ -131,6 +141,11 @@ class NavToObjReward(RearrangeReward):
         )
         self._cur_angle_dist = -1.0
         self._prev_dist = -1.0
+
+        self._visit_loc = {}
+        self._visit_loc_i = 0
+        self._stage_succ = []
+
         super().reset_metric(
             *args,
             episode=episode,
@@ -162,6 +177,33 @@ class NavToObjReward(RearrangeReward):
 
         reward += self._config.dist_reward * dist_diff
         self._prev_dist = cur_dist
+
+        # Encourage exploration
+        if (
+            self._reward_exploration != -1
+            and cur_dist > self._min_dist_reward_exploration
+        ):
+            position_robot = observations["agent_0_localization_sensor"][:3]
+            x_pos = round(position_robot[0], 1)
+            y_pos = round(position_robot[2], 1)
+            robot_pos_encoding = (x_pos, y_pos)
+            if robot_pos_encoding not in self._visit_loc:
+                self._visit_loc[robot_pos_encoding] = self._visit_loc_i
+                self._visit_loc_i += 1
+                reward += self._reward_exploration
+
+        # Remove the element
+        if self._reward_exploration != -1 and (
+            len(self._visit_loc) >= self._keep_len
+        ):
+            min_i = float("inf")
+            min_key = None
+            for k in self._visit_loc:
+                time_i = self._visit_loc[k]
+                if time_i <= min_i:
+                    min_i = time_i
+                    min_key = k
+            self._visit_loc.pop(min_key, 0)
 
         if (
             self._config.should_reward_turn
