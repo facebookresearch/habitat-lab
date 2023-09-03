@@ -106,17 +106,33 @@ class AppStateFetch(AppState):
                         ]
 
         walk_dir = None
+        distance_multiplier = 1.0
         if not self._first_person_mode:
-            candidate_walk_dir = (
-                self._nav_helper.viz_and_get_humanoid_walk_dir()
-            )
+            if self._sandbox_service.args.remote_gui_mode:
+                (
+                    candidate_walk_dir,
+                    candidate_distance_multiplier,
+                ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
+                    visualize_path=False
+                )
+            else:
+                (
+                    candidate_walk_dir,
+                    candidate_distance_multiplier,
+                ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
+                    visualize_path=True
+                )
+
             if self._sandbox_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
             ):
                 walk_dir = candidate_walk_dir
+                distance_multiplier = candidate_distance_multiplier
 
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
+            distance_multiplier,
             grasp_object_id,
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
@@ -250,11 +266,16 @@ class AppStateFetch(AppState):
                 text_delta_y=-50,
             )
 
-    def _get_camera_lookat_pos(self):
+    def _get_agent_pose(self):
         agent_root = get_agent_art_obj_transform(
             self.get_sim(), self.get_gui_controlled_agent_index()
         )
-        lookat = agent_root.translation + mn.Vector3(0, 1, 0)
+        return agent_root.translation, agent_root.rotation
+
+    def _get_camera_lookat_pos(self):
+        agent_pos, _ = self._get_agent_pose()
+        lookat_y_offset = mn.Vector3(0, 1, 0)
+        lookat = agent_pos + lookat_y_offset
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):

@@ -53,20 +53,7 @@ class GuiNavigationHelper:
             sim.pathfinder, sim, allow_outdoor=False
         )
 
-    def viz_and_get_humanoid_walk_dir(self):
-        path_color = mn.Color3(0, 153 / 255, 255 / 255)
-        path_endpoint_radius = 0.12
-
-        ray = self._sandbox_service.gui_input.mouse_ray
-
-        floor_y = 0.15  # hardcoded to ReplicaCAD
-
-        if not ray or ray.direction.y >= 0 or ray.origin.y <= floor_y:
-            return None
-
-        dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
-        target_on_floor = ray.origin + ray.direction * dist_to_floor_y
-
+    def _get_humanoid_walk_path_to(self, target_pos):
         agent_root = get_agent_art_obj_transform(
             self._get_sim(), self._agent_idx
         )
@@ -75,7 +62,7 @@ class GuiNavigationHelper:
         # snap target to the selected island
         assert self._largest_island_idx is not None
         snapped_pos = pathfinder.snap_point(
-            target_on_floor, island_index=self._largest_island_idx
+            target_pos, island_index=self._largest_island_idx
         )
         snapped_start_pos = agent_root.translation
         snapped_start_pos.y = snapped_pos.y
@@ -85,8 +72,16 @@ class GuiNavigationHelper:
         path.requested_end = snapped_pos
         found_path = pathfinder.find_path(path)
 
-        if not found_path or len(path.points) < 2:
-            return None
+        return found_path, path
+
+    def _get_humanoid_walk_dir_from_path(self, path):
+        assert len(path.points) >= 2
+        walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
+        return walk_dir
+
+    def _viz_humanoid_walk_path(self, path):
+        path_color = mn.Color3(0, 153 / 255, 255 / 255)
+        path_endpoint_radius = 0.12
 
         path_points = []
         for path_i in range(0, len(path.points)):
@@ -100,11 +95,85 @@ class GuiNavigationHelper:
             path_points, path_endpoint_radius, path_color
         )
 
-        if len(path.points) >= 2:
-            walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
-            return walk_dir
+    def get_humanoid_walk_hints_from_remote_gui_input(
+        self, visualize_path=True
+    ):
+        walk_dir = None
+        distance_multiplier = 1.0
 
-        return None
+        (
+            target_pos,
+            target_rot_quat,
+        ) = self._sandbox_service.remote_gui_input.get_head_pose()
+
+        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+            target_pos=target_pos,
+            target_rot_quat=target_rot_quat,
+            visualize_path=visualize_path,
+        )
+
+        return walk_dir, distance_multiplier
+
+    def get_humanoid_walk_hints_from_ray_cast(self, visualize_path=True):
+        walk_dir = None
+        distance_multiplier = 1.0
+
+        target_on_floor = self._get_target_pos_from_ray_cast()
+        if target_on_floor is None:
+            return walk_dir, distance_multiplier
+
+        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+            target_pos=target_on_floor,
+            target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
+            visualize_path=visualize_path,
+        )
+
+        return walk_dir, distance_multiplier
+
+    def _get_humanoid_walk_hints(
+        self, target_pos, target_rot_quat, visualize_path=True
+    ):
+        walk_dir = None
+        distance_multiplier = 1.0
+        geodesic_dist_threshold = 0.05
+
+        found_path, path = self._get_humanoid_walk_path_to(target_pos)
+        if (
+            found_path
+            and len(path.points) >= 2
+            and path.geodesic_distance >= geodesic_dist_threshold
+        ):
+            walk_dir = self._get_humanoid_walk_dir_from_path(path)
+            distance_multiplier = 1.0
+            if visualize_path:
+                self._viz_humanoid_walk_path(path)
+
+        if walk_dir is None and target_rot_quat is not None:
+            walk_dir = self._compute_forward_dir(target_rot_quat)
+            distance_multiplier = 0.0
+
+        return walk_dir, distance_multiplier
+
+    def _get_target_pos_from_ray_cast(self):
+        ray = self._sandbox_service.gui_input.mouse_ray
+
+        floor_y = 0.15  # hardcoded to ReplicaCAD
+
+        if not ray or ray.direction.y >= 0 or ray.origin.y <= floor_y:
+            return None
+
+        dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
+        target_on_floor = ray.origin + ray.direction * dist_to_floor_y
+
+        return target_on_floor
+
+    def _compute_forward_dir(self, target_rot_quat):
+        direction_vector = mn.Vector3(1.0, 0.0, 0.0)
+        heading_vector = target_rot_quat.transform_vector(direction_vector)
+        heading_vector.y = 0
+        heading_vector = heading_vector.normalized()
+
+        return heading_vector
 
     @staticmethod
     def _evaluate_cubic_bezier(ctrl_pts, t):

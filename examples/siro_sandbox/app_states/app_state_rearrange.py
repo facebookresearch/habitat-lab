@@ -152,17 +152,23 @@ class AppStateRearrange(AppState):
                         ]
 
         walk_dir = None
+        distance_multiplier = 0.0
         if not self._first_person_mode:
-            candidate_walk_dir = (
-                self._nav_helper.viz_and_get_humanoid_walk_dir()
+            (
+                candidate_walk_dir,
+                candidate_distance_multiplier,
+            ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
+                visualize_path=True
             )
             if self._sandbox_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
             ):
                 walk_dir = candidate_walk_dir
+                distance_multiplier = candidate_distance_multiplier
 
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
+            distance_multiplier,
             grasp_object_id,
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
@@ -401,7 +407,8 @@ class AppStateRearrange(AppState):
         agent_root = get_agent_art_obj_transform(
             self.get_sim(), self.get_gui_controlled_agent_index()
         )
-        lookat = agent_root.translation + mn.Vector3(0, 1, 0)
+        lookat_y_offset = mn.Vector3(0, 1, 0)
+        lookat = agent_root.translation + lookat_y_offset
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
