@@ -638,6 +638,7 @@ class OracleNavCoordAction(OracleNavAction):
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, task=task, **kwargs)
         self.nav_mode = None
+        self.simple_backward = False
 
     @property
     def action_space(self):
@@ -734,7 +735,10 @@ class OracleNavCoordAction(OracleNavAction):
                         )
                         robot_backward = robot_backward[[0, 2]]
                         angle_to_target = get_angle(robot_backward, rel_targ)
-                        if angle_to_target < self._turn_thresh:
+                        if (
+                            self.simple_backward
+                            or angle_to_target < self._turn_thresh
+                        ):
                             # Move backwards the target
                             vel = [-self._forward_velocity, 0]
                         else:
@@ -895,8 +899,8 @@ class OracleNavHumanAction(OracleNavCoordAction):
         max_tries = 100
         dis_to_avoid_human = 3.0
         target_radius_near_human = 3.0
-        target_radius_near_robot = 5.0
-        radius_of_target_to_avoid_human = 6.0
+        target_radius_near_robot = 6.0
+        self.simple_backward = True
 
         self.skill_done = False
 
@@ -922,15 +926,24 @@ class OracleNavHumanAction(OracleNavCoordAction):
             v_robot_to_human = v_robot_to_human / np.linalg.norm(
                 v_robot_to_human
             )
-            target_pos = (
-                robot_pos - radius_of_target_to_avoid_human * v_robot_to_human
-            )
-            target_pos = self._sim.pathfinder.get_random_navigable_point_near(
-                circle_center=target_pos,
-                radius=target_radius_near_robot,
-                max_tries=max_tries,
-                island_index=self._sim._largest_island_idx,
-            )
+            not_found = True
+            while not_found:
+                target_pos = (
+                    self._sim.pathfinder.get_random_navigable_point_near(
+                        circle_center=robot_pos,
+                        radius=target_radius_near_robot,
+                        max_tries=max_tries,
+                        island_index=self._sim._largest_island_idx,
+                    )
+                )
+                v_robot_to_target = np.array(target_pos) - robot_pos
+                v_robot_to_target = v_robot_to_target / np.linalg.norm(
+                    v_robot_to_target
+                )
+                # Make sure the new target point has oppsite direction
+                # to human
+                if np.dot(v_robot_to_human, v_robot_to_target) < 0.0:
+                    not_found = False
             self.nav_mode = "avoid"
 
         # Set the position
