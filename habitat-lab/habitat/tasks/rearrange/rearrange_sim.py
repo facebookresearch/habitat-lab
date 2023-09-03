@@ -394,22 +394,36 @@ class RearrangeSim(HabitatSim):
         max_attempts: int = 50,
         agent_idx: Optional[int] = None,
         filter_func: Optional[Callable[[np.ndarray, float], bool]] = None,
+        nav_to_pos=None,
+        radius=None,
+        percentage_of_near_loc=None,
     ) -> Tuple[np.ndarray, float]:
         """
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
-
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point(
-                island_index=self._largest_island_idx
-            )
+            if (
+                nav_to_pos is not None
+                and np.random.rand() < percentage_of_near_loc
+            ):
+                start_pos = self.pathfinder.get_random_navigable_point_near(
+                    circle_center=nav_to_pos,
+                    radius=radius,
+                    island_index=self._largest_island_idx,
+                )
+            else:
+                start_pos = self.pathfinder.get_random_navigable_point(
+                    island_index=self._largest_island_idx
+                )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
 
-            if filter_func is not None and not filter_func(
-                start_pos, start_rot
+            if (
+                nav_to_pos is None
+                and filter_func is not None
+                and not filter_func(start_pos, start_rot)
             ):
                 continue
 

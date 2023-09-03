@@ -95,7 +95,8 @@ class RearrangeTask(NavigationTask):
             self._config.constraint_violation_ends_episode
         )
         self._count_obj_collisions = self._config.count_obj_collisions
-
+        self._sample_near_target_dis = self._config.sample_near_target_dis
+        self._percentage_of_near_loc = self._config.percentage_of_near_loc
         habitat_config = self._sim.habitat_config
         if "overfit" in habitat_config and habitat_config["overfit"]:
             self._fixed_starting_position = True
@@ -202,12 +203,31 @@ class RearrangeTask(NavigationTask):
                     return np.all(distances > self._min_distance_start_agents)
 
                 filter_func = _filter_func
-            (
-                articulated_agent_pos,
-                articulated_agent_rot,
-            ) = self._sim.set_articulated_agent_base_to_random_point(
-                agent_idx=agent_idx, filter_func=filter_func
-            )
+
+            if agent_idx == 0:
+                (
+                    articulated_agent_pos,
+                    articulated_agent_rot,
+                ) = self._sim.set_articulated_agent_base_to_random_point(
+                    agent_idx=agent_idx,
+                    filter_func=filter_func,
+                    nav_to_pos=self.nav_goal_pos
+                    if self._sample_near_target_dis != -1
+                    else None,
+                    radius=self._sample_near_target_dis
+                    if self._sample_near_target_dis != -1
+                    else None,
+                    percentage_of_near_loc=self._percentage_of_near_loc
+                    if self._sample_near_target_dis != -1
+                    else None,
+                )
+            else:
+                (
+                    articulated_agent_pos,
+                    articulated_agent_rot,
+                ) = self._sim.set_articulated_agent_base_to_random_point(
+                    agent_idx=agent_idx, filter_func=filter_func
+                )
             self._cache_articulated_agent_start(
                 (articulated_agent_pos, articulated_agent_rot), agent_idx
             )

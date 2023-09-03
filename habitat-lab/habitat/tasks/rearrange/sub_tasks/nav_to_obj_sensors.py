@@ -148,7 +148,7 @@ class NavToObjReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        # breakpoint()
+
         reward = 0.0
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 

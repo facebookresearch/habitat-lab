@@ -90,6 +90,8 @@ class CompositeTaskNavGoal(CompositeTask):
         self.force_recep_to_name = None
         self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
         self._min_start_distance = config.min_start_distance
+        self._sample_near_target_dis = config.sample_near_target_dis
+        self._percentage_of_near_loc = config.percentage_of_near_loc
         # Robot will be the first agent
         self.agent_id = 0
 
@@ -134,7 +136,16 @@ class CompositeTaskNavGoal(CompositeTask):
             articulated_agent_pos,
             articulated_agent_angle,
         ) = self._sim.set_articulated_agent_base_to_random_point(
-            filter_func=filter_func
+            filter_func=filter_func,
+            nav_to_pos=nav_to_pos
+            if self._sample_near_target_dis != -1
+            else None,
+            radius=self._sample_near_target_dis
+            if self._sample_near_target_dis != -1
+            else None,
+            percentage_of_near_loc=self._percentage_of_near_loc
+            if self._sample_near_target_dis != -1
+            else None,
         )
         return NavToInfo(
             nav_goal_pos=nav_to_pos,

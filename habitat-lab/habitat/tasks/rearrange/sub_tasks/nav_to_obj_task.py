@@ -101,7 +101,7 @@ class DynNavRLEnv(RearrangeTask):
             articulated_agent_pos,
             articulated_agent_angle,
         ) = self._sim.set_articulated_agent_base_to_random_point(
-            filter_func=filter_func
+            filter_func=filter_func,
         )
 
         return NavToInfo(
