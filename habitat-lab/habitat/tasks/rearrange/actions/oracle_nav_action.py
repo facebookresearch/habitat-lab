@@ -872,19 +872,15 @@ class OracleNavHumanAction(OracleNavCoordAction):
     def step(self, *args, is_last_action, **kwargs):
         max_tries = 10
         self.skill_done = False
-
-        if self.human_pos is None:
-            human_pos = np.array(
-                self._sim.get_agent_data(1).articulated_agent.base_pos
-            )
-            self.human_pos = (
-                self._sim.pathfinder.get_random_navigable_point_near(
-                    circle_center=human_pos,
-                    radius=2.0,
-                    max_tries=max_tries,
-                    island_index=self._sim._largest_island_idx,
-                )
-            )
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+        self.human_pos = self._sim.pathfinder.get_random_navigable_point_near(
+            circle_center=human_pos,
+            radius=2.0,
+            max_tries=max_tries,
+            island_index=self._sim._largest_island_idx,
+        )
         kwargs[
             self._action_arg_prefix + "oracle_nav_human_action"
         ] = self.human_pos
