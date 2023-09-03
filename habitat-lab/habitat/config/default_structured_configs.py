@@ -988,6 +988,7 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    use_one_over_dist_reward: bool = False
 
 
 @dataclass

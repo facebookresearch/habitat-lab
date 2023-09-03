@@ -152,10 +152,13 @@ class NavToObjReward(RearrangeReward):
         reward = 0.0
         cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 
-        if self._prev_dist < 0.0:
-            dist_diff = 0.0
+        if not self._config.use_one_over_dist_reward:
+            if self._prev_dist < 0.0:
+                dist_diff = 0.0
+            else:
+                dist_diff = self._prev_dist - cur_dist
         else:
-            dist_diff = self._prev_dist - cur_dist
+            dist_diff = 1.0 / (1.0 + cur_dist)
 
         reward += self._config.dist_reward * dist_diff
         self._prev_dist = cur_dist
