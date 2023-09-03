@@ -28,7 +28,7 @@ defaults:
     - runtime_perf_stats
     - agent_blame_measure
     - social_nav_stats
-    - social_nav_seek_success
+    #- social_nav_seek_success
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
