@@ -674,6 +674,14 @@ if __name__ == "__main__":
             "--show-tutorial is only supported for --app-state=rearrange"
         )
 
+    if (
+        args.app_state == "free_camera"
+        and args.gui_controlled_agent_index is not None
+    ):
+        raise ValueError(
+            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
+        )
+
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
     glfw_config.size = (args.width, args.height)
