@@ -29,6 +29,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
 )
 from habitat_baselines.utils.common import get_num_actions
 from habitat_sim.physics import CollisionGroups
+from habitat_sim.physics import MotionType
 
 from .controller_abc import BaselinesController
 
@@ -352,6 +353,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
                 else:
+
+                    self.rigid_obj_interest.motion_type = MotionType.KINEMATIC
+
                     self._get_grasp_mgr(env).snap_to_obj(
                         self.object_interest_id
                     )
@@ -407,6 +411,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     # Open gripper
                     self._get_grasp_mgr(env).desnap()
+
+                    self.grasped_object.motion_type = MotionType.DYNAMIC
 
                     grasped_rigid_obj = self.grasped_object
 
