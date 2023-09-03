@@ -12,6 +12,7 @@ class SandboxService:
         args,
         config,
         gui_input,
+        remote_gui_input,
         line_render,
         text_drawer,
         get_anim_fraction,
@@ -26,6 +27,7 @@ class SandboxService:
         self._args = args
         self._config = config
         self._gui_input = gui_input
+        self._remote_gui_input = remote_gui_input
         self._line_render = line_render
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
@@ -48,6 +50,10 @@ class SandboxService:
     @property
     def gui_input(self):
         return self._gui_input
+
+    @property
+    def remote_gui_input(self):
+        return self._remote_gui_input
 
     @property
     def line_render(self):

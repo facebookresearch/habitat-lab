@@ -15,6 +15,7 @@ from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
+from habitat_sim.physics import MotionType
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
 
@@ -31,6 +32,7 @@ class AppStateFetch(AppState):
         self._cam_transform = None
 
         self._held_target_obj_idx = None
+        self._held_hand_idx = None  # currently only used with remote_gui_input
 
         # will be set in on_environment_reset
         self._target_obj_ids = None
@@ -77,7 +79,174 @@ class AppStateFetch(AppState):
     def get_sim(self):
         return self._sandbox_service.sim
 
+    def get_grasp_keys_by_hand(self, hand_idx):
+        if hand_idx == 0:
+            return [GuiInput.KeyNS.ZERO, GuiInput.KeyNS.ONE]
+        else:
+            assert hand_idx == 1
+            return [GuiInput.KeyNS.TWO, GuiInput.KeyNS.THREE]
+
+    def _try_grasp_remote(self):
+
+        assert not self._held_target_obj_idx
+
+        # todo: rename remote_gui_input 
+        remote_gui_input = self._sandbox_service.remote_gui_input
+
+        hand_positions = []
+        num_hands = 2
+        for i in range(num_hands):
+            hand_pos, _ = remote_gui_input.get_hand_pose(i)
+            if hand_pos:
+                hand_positions.append(hand_pos)
+        if len(hand_positions) == 0:
+            return
+        assert len(hand_positions) == num_hands
+
+        grasp_threshold = 0.25
+        grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
+
+        found_obj_idx = None
+        found_hand_idx = None
+        for i in range(len(self._target_obj_ids)):
+            # object is grasped
+            if i in grasped_objects_idxs:
+                continue
+
+            this_target_pos = self._get_target_object_position(i)
+
+            for hand_idx in range(num_hands):
+                hand_pos = hand_positions[hand_idx]
+                if (this_target_pos - hand_pos).length() < grasp_threshold:
+                    found_obj_idx = i
+                    found_hand_idx = hand_idx
+                    break
+
+            if found_obj_idx is not None:
+                color = mn.Color3(0, 1, 0)  # green
+                box_half_size = 0.20
+                self._draw_box_in_pos(
+                    this_target_pos, color=color, box_half_size=box_half_size
+                )
+
+        if found_obj_idx is None:
+            return
+
+        remote_button_input = remote_gui_input.get_gui_input()
+        
+        do_grasp = False
+        for key in self.get_grasp_keys_by_hand(found_hand_idx):
+            if remote_button_input.get_key_down(key):
+                do_grasp = True
+                break
+
+        if not do_grasp:
+            return
+        
+        self._held_target_obj_idx = found_obj_idx
+        self._held_hand_idx = found_hand_idx
+
+    def _update_held_and_try_throw_remote(self):
+
+        assert self._held_target_obj_idx is not None
+        assert self._held_hand_idx is not None
+
+        remote_gui_input = self._sandbox_service.remote_gui_input
+        remote_button_input = remote_gui_input.get_gui_input()
+
+        do_throw = False
+        for key in self.get_grasp_keys_by_hand(self._held_hand_idx):
+            if remote_button_input.get_key_up(key):
+                do_throw = True
+
+        rom_obj = self._get_target_rigid_object(self._held_target_obj_idx)
+
+        if do_throw:
+
+            rom_obj.motion_type = MotionType.DYNAMIC
+            rom_obj.collidable = True
+
+            hand_idx = self._held_hand_idx
+            history_len = remote_gui_input.get_history_length()
+            assert history_len >= 2
+            history_offset = 1
+            pos1, _ = remote_gui_input.get_hand_pose(hand_idx, history_index=history_offset)
+            pos0, _ = remote_gui_input.get_hand_pose(hand_idx, history_index=history_len - 1)
+            if pos0 and pos1:
+                vel = (pos1 - pos0) / (remote_gui_input.get_history_timestep() * (history_len - history_offset))
+                rom_obj.linear_velocity = vel
+            else:
+                rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
+
+
+            self._fetch_object(self._held_target_obj_idx)
+            self._held_target_obj_idx = None
+            self._held_hand_idx = None
+        else:
+            # snap to hand
+            hand_pos, _ = remote_gui_input.get_hand_pose(self._held_hand_idx)
+            assert hand_pos is not None
+
+            rom_obj.translation = hand_pos
+            rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
+            
+
+    def _fetch_object(self, obj_idx):
+
+        object_id = self._target_obj_ids[obj_idx]
+        throw_obj_id = object_id
+
+        self.state_machine_agent_ctrl.object_interest_id = (
+            throw_obj_id
+        )
+        sim = self.get_sim()
+        self.state_machine_agent_ctrl.rigid_obj_interest = (
+            sim.get_rigid_object_manager().get_object_by_id(
+                throw_obj_id
+            )
+        )
+
+        self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+
+    def _update_grasping_and_set_act_hints_remote(self):
+
+        if self._held_target_obj_idx is None:
+            self._try_grasp_remote()
+        else:
+            self._update_held_and_try_throw_remote()
+
+        walk_dir = None
+        distance_multiplier = 1.0
+        (
+            candidate_walk_dir,
+            candidate_distance_multiplier,
+        ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
+            visualize_path=False
+        )
+        walk_dir = candidate_walk_dir
+        distance_multiplier = candidate_distance_multiplier
+
+        grasp_object_id = None
+        drop_pos = None
+        throw_vel = None
+        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
+        self._gui_agent_ctrl.set_act_hints(
+            walk_dir,
+            distance_multiplier,
+            grasp_object_id,
+            drop_pos,
+            self._camera_helper.lookat_offset_yaw,
+            throw_vel=throw_vel,
+        )        
+
     def _update_grasping_and_set_act_hints(self):
+
+        if self._sandbox_service.args.remote_gui_mode:
+            self._update_grasping_and_set_act_hints_remote()
+        else:
+            self._update_grasping_and_set_act_hints_local()
+
+    def _update_grasping_and_set_act_hints_local(self):
         drop_pos = None
         grasp_object_id = None
         will_throw = False
@@ -99,19 +268,24 @@ class AppStateFetch(AppState):
                 GuiInput.KeyNS.SPACE
             ):
                 if self._prepare_throw:
-                    will_throw = True
                     throw_obj_id = (
                         self._gui_agent_ctrl._get_grasp_mgr().snap_idx
                     )
-                    self.state_machine_agent_ctrl.object_interest_id = (
-                        throw_obj_id
-                    )
-                    sim = self.get_sim()
-                    self.state_machine_agent_ctrl.rigid_obj_interest = (
-                        sim.get_rigid_object_manager().get_object_by_id(
+
+                    if throw_obj_id is None:
+                        print("warning: invalid throw!")
+                    else:
+                        will_throw = True
+                        self.state_machine_agent_ctrl.object_interest_id = (
                             throw_obj_id
                         )
-                    )
+                        sim = self.get_sim()
+                        self.state_machine_agent_ctrl.rigid_obj_interest = (
+                            sim.get_rigid_object_manager().get_object_by_id(
+                                throw_obj_id
+                            )
+                        )
+
                     self._held_target_obj_idx = None
                 self._prepare_throw = False
 
@@ -178,21 +352,12 @@ class AppStateFetch(AppState):
 
         walk_dir = None
         distance_multiplier = 1.0
-        if self._sandbox_service.args.remote_gui_mode:
-            (
-                candidate_walk_dir,
-                candidate_distance_multiplier,
-            ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
-                visualize_path=False
-            )
-        else:
-            (
-                candidate_walk_dir,
-                candidate_distance_multiplier,
-            ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
-                visualize_path=True
-            )
-
+        (
+            candidate_walk_dir,
+            candidate_distance_multiplier,
+        ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
+            visualize_path=True
+        )
         if self._sandbox_service.gui_input.get_mouse_button(
             GuiInput.MouseNS.RIGHT
         ):
@@ -210,6 +375,12 @@ class AppStateFetch(AppState):
         )
 
         return drop_pos
+
+    def _get_target_rigid_object(self, target_obj_idx):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        object_id = self._target_obj_ids[target_obj_idx]
+        return rom.get_object_by_id(object_id)
 
     def _get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()

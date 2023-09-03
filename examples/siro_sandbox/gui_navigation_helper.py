@@ -106,11 +106,12 @@ class GuiNavigationHelper:
             target_rot_quat,
         ) = self._sandbox_service.remote_gui_input.get_head_pose()
 
-        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
-            target_pos=target_pos,
-            target_rot_quat=target_rot_quat,
-            visualize_path=visualize_path,
-        )
+        if target_pos and target_rot_quat:
+            walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+                target_pos=target_pos,
+                target_rot_quat=target_rot_quat,
+                visualize_path=visualize_path,
+            )
 
         return walk_dir, distance_multiplier
 
@@ -168,7 +169,7 @@ class GuiNavigationHelper:
         return target_on_floor
 
     def _compute_forward_dir(self, target_rot_quat):
-        direction_vector = mn.Vector3(1.0, 0.0, 0.0)
+        direction_vector = mn.Vector3(0.0, 0.0, 1.0)
         heading_vector = target_rot_quat.transform_vector(direction_vector)
         heading_vector.y = 0
         heading_vector = heading_vector.normalized()

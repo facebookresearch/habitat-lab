@@ -169,6 +169,7 @@ class SandboxDriver(GuiAppDriver):
             args,
             config,
             gui_input,
+            self._remote_gui_input,
             line_render,
             text_drawer,
             lambda: self._viz_anim_fraction,
@@ -720,6 +721,9 @@ if __name__ == "__main__":
         raise ValueError(
             "--remote-gui-mode is only supported for fetch app-state"
         )
+
+    # todo: do this more cleanly
+    do_network_server = args.remote_gui_mode
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
