@@ -305,7 +305,10 @@ class GuiHumanoidController(GuiController):
                 grasp_object_id
             )
             self._saved_object_rotation = rigid_obj.rotation
-
+            
+            rigid_obj.motion_type = MotionType.KINEMATIC
+            rigid_obj.collidable = False
+            
             self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
             self._recorder.record("grasp_object_id", grasp_object_id)
