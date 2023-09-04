@@ -145,7 +145,7 @@ class RemoteGuiInput:
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
-        if "input" not in client_states:
+        if "input" not in client_state:
             return
         
         input_json = client_state["input"]
