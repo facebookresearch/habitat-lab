@@ -176,7 +176,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         agent_idx,
         is_multi_agent,
         config,
-        env,
+        gym_env,
+        habitat_env
     ):
         self._current_state = FetchState.WAIT
         self.should_start_skill = False
@@ -185,11 +186,15 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.grasped_object_id = None
         self.grasped_object = None
         self._last_object_drop_info = None
-        self._env = env
+        self._env = gym_env
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self.counter_pick = 0
+        self._habitat_env = habitat_env
+        # also consider self._config.habitat.task["robot_at_thresh"]
+        self._pick_dist_threshold = 1.2
+        self._drop_dist_threshold = 1.8
 
-        super().__init__(agent_idx, is_multi_agent, config, env)
+        super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
             self._agent_name
@@ -216,6 +221,30 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         }
         return {"ll_policy": policy_info}
 
+    def cancel_fetch(self):
+        if self.grasped_object:
+            env = self._habitat_env
+
+            # Open gripper
+            self._get_grasp_mgr(env).desnap()
+
+            self.grasped_object.motion_type = MotionType.DYNAMIC
+
+            grasped_rigid_obj = self.grasped_object
+
+            obj_bb = get_aabb(self.grasped_object_id, env._sim)
+            self._last_object_drop_info = (
+                grasped_rigid_obj,
+                max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+            )
+            self.grasped_object_id = None
+            self.grasped_object = None
+
+        self.current_state = FetchState.WAIT
+        self.counter_pick = 0
+        self.rigid_obj_interest = None
+
+    # todo: make this non-public, since user code shouldn't be able to set arbitrary states
     @property
     def current_state(self):
         return self._current_state
@@ -316,7 +345,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 if (
                     type_of_skill != "OracleNavPolicy"
-                    and rho < self._config.habitat.task["robot_at_thresh"]
+                    and rho < self._pick_dist_threshold
                 ):
                     finish_oracle_nav = True
                 if not finish_oracle_nav:
@@ -374,7 +403,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             rho, _ = self.get_cartesian_obj_coords(agent_trans, env)
             if (
                 type_of_skill != "OracleNavPolicy"
-                and rho < self._config.habitat.task["robot_at_thresh"]
+                and rho < self._drop_dist_threshold
             ):
                 finish_oracle_nav = True
 
@@ -409,23 +438,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
                 else:
-                    # Open gripper
-                    self._get_grasp_mgr(env).desnap()
-
-                    self.grasped_object.motion_type = MotionType.DYNAMIC
-
-                    grasped_rigid_obj = self.grasped_object
-
-                    obj_bb = get_aabb(self.grasped_object_id, env._sim)
-                    self._last_object_drop_info = (
-                        grasped_rigid_obj,
-                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                    )
-                    self.grasped_object_id = None
-                    self.grasped_object = None
-                    self.current_state = FetchState.WAIT
-
-                    self.counter_pick = 0
+                    self.cancel_fetch()
 
         if self._last_object_drop_info is not None:
             grasp_mgr = self._get_grasp_mgr(env)

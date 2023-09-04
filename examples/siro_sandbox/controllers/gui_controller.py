@@ -202,13 +202,13 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._hint_throw_vel = None
+        self._hint_reach_pos = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
 
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self._last_object_thrown_info = None
-        self.selected_obj = None
 
         self.ind = 0
 
@@ -275,7 +275,7 @@ class GuiHumanoidController(GuiController):
         return humanoidjoint_action
 
     def set_act_hints(
-        self, walk_dir, distance_multiplier, grasp_obj_idx, do_drop, cam_yaw=None, throw_vel=None
+        self, walk_dir, distance_multiplier, grasp_obj_idx, do_drop, cam_yaw=None, throw_vel=None, reach_pos=None
     ):
         assert (
             throw_vel is None or do_drop is None
@@ -286,6 +286,7 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
         self._hint_throw_vel = throw_vel
+        self._hint_reach_pos = reach_pos
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -450,12 +451,9 @@ class GuiHumanoidController(GuiController):
         fixup = filtered_query_pos - target_query_pos
         self._humanoid_controller.obj_transform_base.translation += fixup
 
-        if (
-            gui_input.get_key(GuiInput.KeyNS.SPACE)
-            and self.selected_obj is not None
-        ):
-            obj_pos = self.selected_obj.translation
-            self._humanoid_controller.calculate_reach_pose(obj_pos)
+        if self._hint_reach_pos:
+            self._humanoid_controller.calculate_reach_pose(self._hint_reach_pos)
+            self._hint_reach_pos = None
 
         if gui_input.get_key_up(GuiInput.KeyNS.SPACE):
             self._humanoid_controller.obj_transform_offset = mn.Matrix4()

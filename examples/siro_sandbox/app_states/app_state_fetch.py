@@ -33,6 +33,7 @@ class AppStateFetch(AppState):
 
         self._held_target_obj_idx = None
         self._held_hand_idx = None  # currently only used with remote_gui_input
+        self._recent_reach_pos = None
 
         # will be set in on_environment_reset
         self._target_obj_ids = None
@@ -54,7 +55,6 @@ class AppStateFetch(AppState):
             self.get_gui_controlled_agent_index(),
             self._get_agent_feet_height(),
         )
-        self._prepare_throw = False
 
         self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
 
@@ -74,8 +74,6 @@ class AppStateFetch(AppState):
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
-        self._prepare_throw = False
-
     def get_sim(self):
         return self._sandbox_service.sim
 
@@ -87,6 +85,8 @@ class AppStateFetch(AppState):
             return [GuiInput.KeyNS.TWO, GuiInput.KeyNS.THREE]
 
     def _try_grasp_remote(self):
+
+        reach_pos = None
 
         assert not self._held_target_obj_idx
 
@@ -108,6 +108,7 @@ class AppStateFetch(AppState):
 
         found_obj_idx = None
         found_hand_idx = None
+        found_obj_pos = None
         for i in range(len(self._target_obj_ids)):
             # object is grasped
             if i in grasped_objects_idxs:
@@ -120,6 +121,7 @@ class AppStateFetch(AppState):
                 if (this_target_pos - hand_pos).length() < grasp_threshold:
                     found_obj_idx = i
                     found_hand_idx = hand_idx
+                    found_obj_pos = this_target_pos
                     break
 
             if found_obj_idx is not None:
@@ -130,21 +132,33 @@ class AppStateFetch(AppState):
                 )
 
         if found_obj_idx is None:
-            return
+            return None
 
         remote_button_input = remote_gui_input.get_gui_input()
         
         do_grasp = False
+        do_try_reach = False
         for key in self.get_grasp_keys_by_hand(found_hand_idx):
-            if remote_button_input.get_key_down(key):
+            if remote_button_input.get_key(key):
+                do_try_reach = True
+                break
+            if remote_button_input.get_key_up(key):
                 do_grasp = True
                 break
 
-        if not do_grasp:
-            return
-        
-        self._held_target_obj_idx = found_obj_idx
-        self._held_hand_idx = found_hand_idx
+        if do_try_reach:
+            agent_pos = self._get_agent_translation()
+            reach_dist_threshold = 1.0
+            dist_xz = (mn.Vector2(agent_pos.x, agent_pos.z) - mn.Vector2(found_obj_pos.x, found_obj_pos.z)).length()
+            if dist_xz < reach_dist_threshold:
+                reach_pos = found_obj_pos
+
+        if do_grasp:
+            self._held_target_obj_idx = found_obj_idx
+            self._held_hand_idx = found_hand_idx
+            self.state_machine_agent_ctrl.cancel_fetch()
+
+        return reach_pos
 
     def _update_held_and_try_throw_remote(self):
 
@@ -179,7 +193,7 @@ class AppStateFetch(AppState):
                 rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
 
 
-            self._fetch_object(self._held_target_obj_idx)
+            self._fetch_object_remote(self._held_target_obj_idx)
             self._held_target_obj_idx = None
             self._held_hand_idx = None
         else:
@@ -191,7 +205,7 @@ class AppStateFetch(AppState):
             rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
             
 
-    def _fetch_object(self, obj_idx):
+    def _fetch_object_remote(self, obj_idx):
 
         object_id = self._target_obj_ids[obj_idx]
         throw_obj_id = object_id
@@ -210,8 +224,9 @@ class AppStateFetch(AppState):
 
     def _update_grasping_and_set_act_hints_remote(self):
 
+        reach_pos = None
         if self._held_target_obj_idx is None:
-            self._try_grasp_remote()
+            reach_pos = self._try_grasp_remote()
         else:
             self._update_held_and_try_throw_remote()
 
@@ -229,6 +244,7 @@ class AppStateFetch(AppState):
         grasp_object_id = None
         drop_pos = None
         throw_vel = None
+
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
@@ -237,6 +253,7 @@ class AppStateFetch(AppState):
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
             throw_vel=throw_vel,
+            reach_pos=reach_pos
         )        
 
     def _update_grasping_and_set_act_hints(self):
@@ -249,47 +266,54 @@ class AppStateFetch(AppState):
     def _update_grasping_and_set_act_hints_local(self):
         drop_pos = None
         grasp_object_id = None
-        will_throw = False
         throw_vel = None
         obj_pick = None
+        reach_pos = None
 
         if self._held_target_obj_idx is not None:
-            if self._sandbox_service.gui_input.get_key_down(
+
+            if self._sandbox_service.gui_input.get_key(GuiInput.KeyNS.SPACE):
+
+                if self._recent_reach_pos:
+                    # Continue reaching towards the recent reach position (the
+                    # original position of the grasped object before it was snapped
+                    # into our hand).
+                    reach_pos = self._recent_reach_pos
+                else:
+                    # Reach towards our held object. This doesn't make a lot of sense,
+                    # but it creates a kind of hacky reaching animation over time,
+                    # because as we reach, the object in our hand moves, affecting our
+                    # reach pose on the next frame.
+                    obj_id = self._target_obj_ids[self._held_target_obj_idx]
+                    reach_pos = self.get_sim().get_rigid_object_manager().get_object_by_id(obj_id).translation
+
+            if self._sandbox_service.gui_input.get_key_up(
                 GuiInput.KeyNS.SPACE
             ):
-                self._prepare_throw = True
-                # # temp: drop object right where it is
-                # drop_pos = self._get_target_object_position(
-                #     self._held_target_obj_idx
-                # )
-                # drop_pos.y = 0.0
-                # self._held_target_obj_idx = None
-            elif self._sandbox_service.gui_input.get_key_up(
-                GuiInput.KeyNS.SPACE
-            ):
-                if self._prepare_throw:
+                if self._recent_reach_pos:
+                    # this spacebar release means we've finished the reach-and-grasp motion
+                    self._recent_reach_pos = None
+                else:
+                    # this spacebar release means we've finished the throwing motion
                     throw_obj_id = (
                         self._gui_agent_ctrl._get_grasp_mgr().snap_idx
                     )
 
-                    if throw_obj_id is None:
-                        print("warning: invalid throw!")
-                    else:
-                        will_throw = True
-                        self.state_machine_agent_ctrl.object_interest_id = (
+                    assert throw_obj_id is not None
+                    self.state_machine_agent_ctrl.object_interest_id = (
+                        throw_obj_id
+                    )
+                    sim = self.get_sim()
+                    self.state_machine_agent_ctrl.rigid_obj_interest = (
+                        sim.get_rigid_object_manager().get_object_by_id(
                             throw_obj_id
                         )
-                        sim = self.get_sim()
-                        self.state_machine_agent_ctrl.rigid_obj_interest = (
-                            sim.get_rigid_object_manager().get_object_by_id(
-                                throw_obj_id
-                            )
-                        )
+                    )
+                    throw_vel = self._throw_helper.viz_and_get_humanoid_throw()
+                    self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
 
                     self._held_target_obj_idx = None
-                self._prepare_throw = False
 
-            # todo: implement throwing, including viz
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
@@ -306,6 +330,7 @@ class AppStateFetch(AppState):
                     if obj_pick is not None:
                         # Hack: we will use obj0 as our object of interest
                         self._target_obj_ids[0] = obj_pick
+
                         min_dist = self._can_grasp_place_threshold
 
                         i = 0
@@ -317,38 +342,19 @@ class AppStateFetch(AppState):
                         dist_xz = offset.length()
                         if dist_xz < min_dist:
                             self._held_target_obj_idx = 0
+                            self.state_machine_agent_ctrl.cancel_fetch()
                             grasp_object_id = self._target_obj_ids[
                                 self._held_target_obj_idx
                             ]
-
-        if not self._prepare_throw and not will_throw:
-
-            # TODO: move this in set_act_hints
-            if obj_pick is not None:
-                self._gui_agent_ctrl.selected_obj = (
-                    self.get_sim()
-                    .get_rigid_object_manager()
-                    .get_object_by_id(obj_pick)
-                )
-        else:
-            computed_throw_vel = (
-                self._throw_helper.viz_and_get_humanoid_throw()
-            )
-            throw_vel = None
-
-            if will_throw:
-                throw_vel = computed_throw_vel
-                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
-
-            will_throw = False
+                            # we will reach towards this position until spacebar is released
+                            self._recent_reach_pos = this_target_pos
+                            reach_pos = self._recent_reach_pos
 
         if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
             obj_pos = (
                 self.state_machine_agent_ctrl.rigid_obj_interest.translation
             )
             self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
-
-
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -372,6 +378,7 @@ class AppStateFetch(AppState):
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
             throw_vel=throw_vel,
+            reach_pos=reach_pos
         )
 
         return drop_pos

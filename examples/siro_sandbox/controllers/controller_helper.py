@@ -108,6 +108,7 @@ class ControllerHelper:
                             is_multi_agent,
                             config,
                             self._gym_habitat_env,
+                            self._env
                         )
                     )
                 else:
