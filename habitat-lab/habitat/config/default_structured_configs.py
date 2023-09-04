@@ -1662,6 +1662,7 @@ class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 512
     height: int = 512
+    hfov: int = 120
 
 
 @dataclass
