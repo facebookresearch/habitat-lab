@@ -19,6 +19,17 @@ from habitat_sim.physics import MotionType
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
 
+COLOR_GRASPABLE = mn.Color3(1, 0.75, 0)
+COLOR_GRASP_PREVIEW = mn.Color3(0.5, 1, 0)
+COLOR_FOCUS_OBJECT = mn.Color3(1, 1, 1)
+COLOR_FETCHER_NAV_PATH = mn.Color3(0, 153 / 255, 255 / 255)
+
+RADIUS_GRASPABLE = 0.2
+RADIUS_GRASP_PREVIEW = 0.35
+RADIUS_FOCUS_OBJECT = 0.15
+RADIUS_FETCHER_NAV_PATH = 0.45
+
+RING_PULSE_SIZE = 0.05
 
 class AppStateFetch(AppState):
     def __init__(self, sandbox_service, gui_agent_ctrl, robot_agent_ctrl):
@@ -34,6 +45,7 @@ class AppStateFetch(AppState):
         self._held_target_obj_idx = None
         self._held_hand_idx = None  # currently only used with remote_gui_input
         self._recent_reach_pos = None
+        self._paused = False
 
         # will be set in on_environment_reset
         self._target_obj_ids = None
@@ -56,16 +68,22 @@ class AppStateFetch(AppState):
             self._get_gui_agent_feet_height(),
         )
 
-        self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
+        # self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
+
+        self._is_remote_active_toggle = False
+
+    def _is_remote_active(self):
+        return self._is_remote_active_toggle
 
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
 
         sim = self.get_sim()
-        temp_ids, _ = sim.get_targets()
-        self._target_obj_ids = [
-            sim._scene_obj_ids[temp_id] for temp_id in temp_ids
-        ]
+        # temp_ids, _ = sim.get_targets()
+        # self._target_obj_ids = [
+        #     sim._scene_obj_ids[temp_id] for temp_id in temp_ids
+        # ]
+        self._target_obj_ids = sim._scene_obj_ids
 
         self._nav_helper.on_environment_reset()
         self._pick_helper.on_environment_reset(
@@ -120,11 +138,13 @@ class AppStateFetch(AppState):
                 hand_pos = hand_positions[hand_idx]
                 if (this_target_pos - hand_pos).length() < grasp_threshold:
 
-                    color = mn.Color3(0, 1, 0)  # green
-                    box_half_size = 0.20
-                    self._draw_box_in_pos(
-                        this_target_pos, color=color, box_half_size=box_half_size
-                    )
+                    # color = mn.Color3(0, 1, 0)  # green
+                    # box_half_size = 0.20
+                    # self._draw_box_in_pos(
+                    #     this_target_pos, color=color, box_half_size=box_half_size
+                    # )
+                    # show grasp 
+                    self._add_target_object_highlight_ring(i, COLOR_GRASP_PREVIEW, radius=RADIUS_GRASP_PREVIEW)
 
                     for key in self.get_grasp_keys_by_hand(hand_idx):
                         if remote_button_input.get_key_down(key):
@@ -247,7 +267,7 @@ class AppStateFetch(AppState):
 
     def _update_grasping_and_set_act_hints(self):
 
-        if self._sandbox_service.args.remote_gui_mode:
+        if self._is_remote_active():
             self._update_grasping_and_set_act_hints_remote()
         else:
             self._update_grasping_and_set_act_hints_local()
@@ -256,7 +276,6 @@ class AppStateFetch(AppState):
         drop_pos = None
         grasp_object_id = None
         throw_vel = None
-        obj_pick = None
         reach_pos = None
 
         if self._held_target_obj_idx is not None:
@@ -307,55 +326,57 @@ class AppStateFetch(AppState):
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
 
-                obj_pick = self._pick_helper.viz_and_get_pick_object()
-
                 assert not self._gui_agent_ctrl.is_grasped
-                # pick up an object
-                if self._sandbox_service.gui_input.get_key_down(
-                    GuiInput.KeyNS.SPACE
-                ):
-                    translation = self._get_gui_agent_translation()
+                translation = self._get_gui_agent_translation()
 
-                    if obj_pick is not None:
-                        # Hack: we will use obj0 as our object of interest
-                        self._target_obj_ids[0] = obj_pick
+                min_dist = self._can_grasp_place_threshold
+                min_i = None
 
-                        min_dist = self._can_grasp_place_threshold
+                # find closest target object within our distance threshold
+                for i in range(len(self._target_obj_ids)):
+                    this_target_pos = self._get_target_object_position(i)
 
-                        i = 0
-                        this_target_pos = self._get_target_object_position(i)
+                    # compute distance in xz plane
+                    offset = this_target_pos - translation
+                    offset.y = 0
+                    dist_xz = offset.length()
+                    if dist_xz < min_dist:
+                        min_dist = dist_xz
+                        min_i = i
 
-                        # compute distance in xz plane
-                        offset = this_target_pos - translation
-                        offset.y = 0
-                        dist_xz = offset.length()
-                        if dist_xz < min_dist:
-                            self._held_target_obj_idx = 0
-                            self.state_machine_agent_ctrl.cancel_fetch()
-                            grasp_object_id = self._target_obj_ids[
-                                self._held_target_obj_idx
-                            ]
-                            # we will reach towards this position until spacebar is released
-                            self._recent_reach_pos = this_target_pos
-                            reach_pos = self._recent_reach_pos
+                if min_i is not None:
+                    self._add_target_object_highlight_ring(min_i, COLOR_GRASP_PREVIEW, radius=RADIUS_GRASP_PREVIEW)
 
-        if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
-            obj_pos = (
-                self.state_machine_agent_ctrl.rigid_obj_interest.translation
-            )
-            self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
+                    if self._sandbox_service.gui_input.get_key_down(
+                        GuiInput.KeyNS.SPACE
+                    ):
+                        self._held_target_obj_idx = min_i
+                        self.state_machine_agent_ctrl.cancel_fetch()
+                        grasp_object_id = self._target_obj_ids[
+                            self._held_target_obj_idx
+                        ]
+                        # we will reach towards this position until spacebar is released
+                        self._recent_reach_pos = this_target_pos
+                        reach_pos = self._recent_reach_pos
+
+        # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
+        #     obj_pos = (
+        #         self.state_machine_agent_ctrl.rigid_obj_interest.translation
+        #     )
+        #     self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
 
         walk_dir = None
         distance_multiplier = 1.0
-        (
-            candidate_walk_dir,
-            candidate_distance_multiplier,
-        ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
-            visualize_path=True
-        )
+
         if self._sandbox_service.gui_input.get_mouse_button(
             GuiInput.MouseNS.RIGHT
         ):
+            (
+                candidate_walk_dir,
+                candidate_distance_multiplier,
+            ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
+                visualize_path=True
+            )
             walk_dir = candidate_walk_dir
             distance_multiplier = candidate_distance_multiplier
 
@@ -402,35 +423,52 @@ class AppStateFetch(AppState):
             color,
         )
 
+    def _add_target_object_highlight_ring(self, target_obj_idx, color, radius, do_pulse=False):
+        pos = self._get_target_object_position(target_obj_idx)
+
+        if do_pulse:
+            radius += (self._sandbox_service.get_anim_fraction() * RING_PULSE_SIZE)
+            # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
+
+        num_segments = 24
+
+        self._sandbox_service.line_render.draw_circle(
+                pos,
+                radius,
+                color,
+                num_segments,
+            )
+
+
     def _viz_objects(self):
+
+        # grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
+
+        focus_obj_idx = None
         if self._held_target_obj_idx is not None:
-            return
+            focus_obj_idx = self._held_target_obj_idx
+        elif self.state_machine_agent_ctrl.object_interest_id is not None:
+            tmp_id = self.state_machine_agent_ctrl.object_interest_id
+            # find focus_obj_idx
+            assert tmp_id in self._target_obj_ids
+            focus_obj_idx = self._target_obj_ids.index(tmp_id)
 
-        grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
 
-        # draw nav_hint and target box
-        for i in range(len(self._target_obj_ids)):
-            # object is grasped
-            if i in grasped_objects_idxs:
-                continue
+        if focus_obj_idx is None:
+            for i in range(len(self._target_obj_ids)):
+                self._add_target_object_highlight_ring(i, COLOR_GRASPABLE, radius=RADIUS_GRASPABLE, do_pulse=True)
+        else:
+            self._add_target_object_highlight_ring(focus_obj_idx, COLOR_FOCUS_OBJECT, radius=RADIUS_FOCUS_OBJECT)
 
-            color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
-
-            this_target_pos = self._get_target_object_position(i)
-            box_half_size = 0.15
-            self._draw_box_in_pos(
-                this_target_pos, color=color, box_half_size=box_half_size
-            )
-
-            # draw can grasp area
-            can_grasp_position = mn.Vector3(this_target_pos)
-            can_grasp_position[1] = self._get_gui_agent_feet_height()
-            self._sandbox_service.line_render.draw_circle(
-                can_grasp_position,
-                self._can_grasp_place_threshold,
-                mn.Color3(255 / 255, 255 / 255, 0),
-                24,
-            )
+            # # draw can grasp area
+            # can_grasp_position = mn.Vector3(this_target_pos)
+            # can_grasp_position[1] = self._get_gui_agent_feet_height()
+            # self._sandbox_service.line_render.draw_circle(
+            #     can_grasp_position,
+            #     self._can_grasp_place_threshold,
+            #     mn.Color3(255 / 255, 255 / 255, 0),
+            #     24,
+            # )
 
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
@@ -462,24 +500,41 @@ class AppStateFetch(AppState):
                 return "Spacebar: pick up\n"
 
         controls_str: str = ""
-        controls_str += "ESC: exit\n"
-        controls_str += "M: change scene\n"
-        controls_str += "R + drag: rotate camera\n"
-        controls_str += "Right-click: walk\n"
-        controls_str += "A, D: turn\n"
-        controls_str += "W, S: walk\n"
-        controls_str += "Scroll: zoom\n"
-        controls_str += get_grasp_release_controls_text()
+        # controls_str += "ESC: exit\n"
+        # controls_str += "M: change scene\n"
+        # controls_str += "R + drag: rotate camera\n"
+        # controls_str += "Right-click: walk\n"
+        # controls_str += "A, D: turn\n"
+        # controls_str += "W, S: walk\n"
+        # controls_str += "Scroll: zoom\n"
+        # controls_str += get_grasp_release_controls_text()
 
         return controls_str
 
     def _get_status_text(self):
         status_str = ""
 
-        if self._held_target_obj_idx is not None:
-            status_str += "Throw the object!"
-        else:
-            status_str += "Grab an object!\n"
+        # if self._held_target_obj_idx is not None:
+        #     status_str += "Throw the object!"
+        # else:
+        #     status_str += "Grab an object!\n"
+
+        if self._sandbox_service.args.remote_gui_mode:
+            status_str += "human control: VR\n" if self._is_remote_active() else "human control: keyboard\n"
+
+        fetch_state = self.state_machine_agent_ctrl.current_state
+        fetch_state_names = {
+            # FetchState.WAIT : "",
+            FetchState.SEARCH : "searching for object",
+            FetchState.PICK : "picking object",
+            FetchState.BRING : "searching for human",
+            FetchState.DROP : "dropping object",
+        }
+        if fetch_state in fetch_state_names:
+            status_str += f"spot: {fetch_state_names[fetch_state]}\n"
+
+        if self._paused:
+            status_str += "\npaused\n"
 
         # center align the status_str
         max_status_str_len = 50
@@ -501,7 +556,7 @@ class AppStateFetch(AppState):
             self._sandbox_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-280,
+                text_delta_x=-480,
                 text_delta_y=-50,
             )
 
@@ -513,7 +568,7 @@ class AppStateFetch(AppState):
 
     def _get_camera_lookat_pos(self):
         agent_pos, _ = self._get_agent_pose()
-        lookat_y_offset = mn.Vector3(0, 1, 0)
+        lookat_y_offset = mn.Vector3(0, 0, 0)
         lookat = agent_pos + lookat_y_offset
         return lookat
 
@@ -529,8 +584,8 @@ class AppStateFetch(AppState):
             floor_y = 0.0  # temp hack
             for pt in path_points:
                 pt.y = floor_y
-            path_endpoint_radius = 0.5
-            path_color = mn.Color3(1, 0, 0.5)
+            path_endpoint_radius = RADIUS_FETCHER_NAV_PATH
+            path_color = COLOR_FETCHER_NAV_PATH
 
             self._sandbox_service.line_render.draw_path_with_endpoint_circles(
                 path_points, path_endpoint_radius, path_color
@@ -538,8 +593,8 @@ class AppStateFetch(AppState):
 
             # sloppy: assume agent 0 and assume agent_0_articulated_agent_arm_depth obs key
             assert self.state_machine_agent_ctrl._agent_idx == 0
-            post_sim_update_dict["debug_images"].append(
-                self._sandbox_service.get_observation_as_debug_image("agent_0_articulated_agent_arm_depth"))
+            post_sim_update_dict["debug_images"].append(("spot depth sensor",
+                self._sandbox_service.get_observation_as_debug_image("agent_0_articulated_agent_arm_depth")))
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
@@ -549,10 +604,19 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
             self._sandbox_service.end_episode(do_reset=True)
 
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+            self._paused = not self._paused
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T) and self._sandbox_service.args.remote_gui_mode:
+            # only allow toggle if not holding anything
+            if self._held_target_obj_idx is None:
+                self._is_remote_active_toggle = not self._is_remote_active_toggle
+
         self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
         self._update_grasping_and_set_act_hints()
-        self._sandbox_service.compute_action_and_step_env()
+        if not self._paused:
+            self._sandbox_service.compute_action_and_step_env()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 

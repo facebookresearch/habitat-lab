@@ -90,7 +90,7 @@ class GuiNavigationHelper:
 
     def _viz_path(self, path):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
-        path_endpoint_radius = 0.12
+        path_endpoint_radius = 0.45
 
         path_points = []
         for path_i in range(0, len(path.points)):
