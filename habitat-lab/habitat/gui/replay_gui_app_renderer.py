@@ -26,6 +26,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self.window_size = window_size
         # arbitrary uuid
         self._sensor_uuid = "rgb_camera"
+        self._viewport_rect = viewport_rect
 
         cfg = ReplayRendererConfiguration()
         cfg.num_environments = 1
@@ -119,6 +120,10 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         mn.gl.default_framebuffer.bind()
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
+
+        # set viewport if not full window size
+        if self._viewport_rect is not None:
+            mn.gl.default_framebuffer.viewport = self._viewport_rect
 
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
         mn.gl.default_framebuffer.bind()
