@@ -10,6 +10,7 @@ import pickle as pkl
 
 from fairmotion_utils import AmassHelper, MotionData
 
+
 class Motions:
     """
     The Motions class is collection of stats that will hold the different movement motions
@@ -25,7 +26,8 @@ class Motions:
 
         # TODO: add more diversity here
         motion_files = {
-            "walk": f"{amass_path}/10_04_stageii.npz",  # [0] cycle walk
+            #"walk": f"{amass_path}/CMU/10/10_04_stageii.npz",  # [0] cycle walk
+            "walk": f"{amass_path}/10_04_stageii.npz",
         }
 
         kwargs = {
@@ -67,7 +69,7 @@ class AmassHumanControllerSMPLX:
             p.getJointInfo(self.human_bullet_id, index)
             for index in self.link_ids
         ]
-        
+
         # Data used to grab
         # self.use_ik_grab = False
         
@@ -75,7 +77,7 @@ class AmassHumanControllerSMPLX:
         
         pose_info = {
             "trans": content_motion["trans"],
-            "root_orient": content_motion["root_orient"],
+            "root_orient": content_motion["poses"][:,:3],
             "pose": content_motion["poses"][:, 3:66]
         }
         num_poses = content_motion["poses"].shape[0]

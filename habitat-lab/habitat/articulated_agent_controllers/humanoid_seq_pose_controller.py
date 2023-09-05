@@ -49,9 +49,6 @@ class Motion:
         self.fps = fps
         self.displacement = displacement
 
-
-
-
 class SeqPoseController:
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions

@@ -67,6 +67,7 @@ class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
         self, sample_shape: Size = torch.Size()  # noqa: B008
     ) -> Tensor:
+        # return None
         return super().sample(sample_shape).unsqueeze(-1)
 
     def log_probs(self, actions: Tensor) -> Tensor:

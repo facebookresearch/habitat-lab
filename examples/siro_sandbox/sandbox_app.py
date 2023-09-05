@@ -52,7 +52,7 @@ from habitat_baselines.config.default import get_config as get_baselines_config
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    "data/humanoids/humanoid_data/mdm_data/back3_sample03_rep02.pkl"
+    "data/humanoids/humanoid_data/ems_data/crawl-new.pkl"
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
