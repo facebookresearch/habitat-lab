@@ -9,7 +9,7 @@ defaults:
   - /habitat/dataset/rearrangement: replica_cad
 
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
-  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  # - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
   # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
@@ -74,10 +74,10 @@ habitat:
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-      agent_0_base_velocity:
-        agent_index: 0
-        lin_speed: 40.0
-        ang_speed: 20.0
+      # agent_0_base_velocity:
+      #   agent_index: 0
+      #   lin_speed: 40.0
+      #   ang_speed: 20.0
 
       # agent_0_oracle_nav_with_backing_up_action:
       #   type: OracleNavAction
