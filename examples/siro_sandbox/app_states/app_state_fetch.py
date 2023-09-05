@@ -8,7 +8,7 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from controllers.baselines_controller import FetchState
+from controllers.baselines_controller import FetchState, FetchBaselinesController
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
@@ -53,7 +53,7 @@ class AppStateFetch(AppState):
         self._pick_helper = GuiPickHelper(
             self._sandbox_service,
             self.get_gui_controlled_agent_index(),
-            self._get_agent_feet_height(),
+            self._get_gui_agent_feet_height(),
         )
 
         self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
@@ -69,7 +69,7 @@ class AppStateFetch(AppState):
 
         self._nav_helper.on_environment_reset()
         self._pick_helper.on_environment_reset(
-            agent_feet_height=self._get_agent_feet_height()
+            agent_feet_height=self._get_gui_agent_feet_height()
         )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
@@ -86,8 +86,6 @@ class AppStateFetch(AppState):
 
     def _try_grasp_remote(self):
 
-        reach_pos = None
-
         assert not self._held_target_obj_idx
 
         # todo: rename remote_gui_input 
@@ -103,14 +101,16 @@ class AppStateFetch(AppState):
             return
         assert len(hand_positions) == num_hands
 
-        grasp_threshold = 0.25
+        grasp_threshold = 0.2
         grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
+
+        remote_button_input = remote_gui_input.get_gui_input()
 
         found_obj_idx = None
         found_hand_idx = None
-        found_obj_pos = None
+
         for i in range(len(self._target_obj_ids)):
-            # object is grasped
+            # object is already grasped by Spot
             if i in grasped_objects_idxs:
                 continue
 
@@ -119,46 +119,28 @@ class AppStateFetch(AppState):
             for hand_idx in range(num_hands):
                 hand_pos = hand_positions[hand_idx]
                 if (this_target_pos - hand_pos).length() < grasp_threshold:
-                    found_obj_idx = i
-                    found_hand_idx = hand_idx
-                    found_obj_pos = this_target_pos
-                    break
+
+                    color = mn.Color3(0, 1, 0)  # green
+                    box_half_size = 0.20
+                    self._draw_box_in_pos(
+                        this_target_pos, color=color, box_half_size=box_half_size
+                    )
+
+                    for key in self.get_grasp_keys_by_hand(hand_idx):
+                        if remote_button_input.get_key_down(key):
+                            found_obj_idx = i
+                            found_hand_idx = hand_idx
+                            break
 
             if found_obj_idx is not None:
-                color = mn.Color3(0, 1, 0)  # green
-                box_half_size = 0.20
-                self._draw_box_in_pos(
-                    this_target_pos, color=color, box_half_size=box_half_size
-                )
+                break
 
         if found_obj_idx is None:
-            return None
+            return
 
-        remote_button_input = remote_gui_input.get_gui_input()
-        
-        do_grasp = False
-        do_try_reach = False
-        for key in self.get_grasp_keys_by_hand(found_hand_idx):
-            if remote_button_input.get_key(key):
-                do_try_reach = True
-                break
-            if remote_button_input.get_key_up(key):
-                do_grasp = True
-                break
-
-        if do_try_reach:
-            agent_pos = self._get_agent_translation()
-            reach_dist_threshold = 1.0
-            dist_xz = (mn.Vector2(agent_pos.x, agent_pos.z) - mn.Vector2(found_obj_pos.x, found_obj_pos.z)).length()
-            if dist_xz < reach_dist_threshold:
-                reach_pos = found_obj_pos
-
-        if do_grasp:
-            self._held_target_obj_idx = found_obj_idx
-            self._held_hand_idx = found_hand_idx
-            self.state_machine_agent_ctrl.cancel_fetch()
-
-        return reach_pos
+        self._held_target_obj_idx = found_obj_idx
+        self._held_hand_idx = found_hand_idx
+        self.state_machine_agent_ctrl.cancel_fetch()
 
     def _update_held_and_try_throw_remote(self):
 
@@ -224,22 +206,29 @@ class AppStateFetch(AppState):
 
     def _update_grasping_and_set_act_hints_remote(self):
 
-        reach_pos = None
         if self._held_target_obj_idx is None:
-            reach_pos = self._try_grasp_remote()
+            self._try_grasp_remote()
         else:
             self._update_held_and_try_throw_remote()
 
-        walk_dir = None
-        distance_multiplier = 1.0
         (
-            candidate_walk_dir,
-            candidate_distance_multiplier,
+            walk_dir,
+            distance_multiplier,
         ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
             visualize_path=False
         )
-        walk_dir = candidate_walk_dir
-        distance_multiplier = candidate_distance_multiplier
+
+        # If the humanoid is near enough to the VR user that it doesn't need to walk
+        # (distance_multiplier == 0.0), then try to reach to held object.
+        reach_pos = None
+        if self._held_target_obj_idx is not None and distance_multiplier == 0.0:
+            # vr_root_pos, _ = self._sandbox_service.remote_gui_input.get_head_pose() 
+            # humanoid_pos = self._get_gui_agent_translation()
+            # dist_threshold = 0.25     
+            # if (vr_root_pos - humanoid_pos).length() < dist_threshold:
+                # reach_pos = self._get_target_object_position(self._held_target_obj_idx)
+                # distance_multiplier = 0.0  # disable walking, but allow rotation via walk_dir
+            reach_pos = self._get_target_object_position(self._held_target_obj_idx)
 
         grasp_object_id = None
         drop_pos = None
@@ -285,7 +274,7 @@ class AppStateFetch(AppState):
                     # because as we reach, the object in our hand moves, affecting our
                     # reach pose on the next frame.
                     obj_id = self._target_obj_ids[self._held_target_obj_idx]
-                    reach_pos = self.get_sim().get_rigid_object_manager().get_object_by_id(obj_id).translation
+                    reach_pos = self._get_target_object_position(self._held_target_obj_idx) # self.get_sim().get_rigid_object_manager().get_object_by_id(obj_id).translation
 
             if self._sandbox_service.gui_input.get_key_up(
                 GuiInput.KeyNS.SPACE
@@ -325,7 +314,7 @@ class AppStateFetch(AppState):
                 if self._sandbox_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
                 ):
-                    translation = self._get_agent_translation()
+                    translation = self._get_gui_agent_translation()
 
                     if obj_pick is not None:
                         # Hack: we will use obj0 as our object of interest
@@ -435,7 +424,7 @@ class AppStateFetch(AppState):
 
             # draw can grasp area
             can_grasp_position = mn.Vector3(this_target_pos)
-            can_grasp_position[1] = self._get_agent_feet_height()
+            can_grasp_position[1] = self._get_gui_agent_feet_height()
             self._sandbox_service.line_render.draw_circle(
                 can_grasp_position,
                 self._can_grasp_place_threshold,
@@ -446,18 +435,23 @@ class AppStateFetch(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def _get_agent_translation(self):
+    def _get_gui_agent_translation(self):
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         return (
             self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
         )
 
-    def _get_agent_feet_height(self):
+    def _get_state_machine_agent_translation(self):
+        assert isinstance(self.state_machine_agent_ctrl, FetchBaselinesController)
+        transform = self.state_machine_agent_ctrl.get_articulated_agent().base_transformation
+        return transform.translation
+
+    def _get_gui_agent_feet_height(self):
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
             self._gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
-        agent_feet_translation = self._get_agent_translation() + base_offset
+        agent_feet_translation = self._get_gui_agent_translation() + base_offset
         return agent_feet_translation[1]
 
     def _get_controls_text(self):
@@ -523,6 +517,30 @@ class AppStateFetch(AppState):
         lookat = agent_pos + lookat_y_offset
         return lookat
 
+    def _viz_fetcher(self, post_sim_update_dict):
+
+        fetch_state = self.state_machine_agent_ctrl.current_state
+
+        if fetch_state == FetchState.SEARCH or fetch_state == FetchState.BRING:
+
+            fetcher_pos = self._get_state_machine_agent_translation()
+            target_pos = self.state_machine_agent_ctrl.rigid_obj_interest.translation if fetch_state == FetchState.SEARCH else self._get_gui_agent_translation()
+            path_points = [fetcher_pos, target_pos]
+            floor_y = 0.0  # temp hack
+            for pt in path_points:
+                pt.y = floor_y
+            path_endpoint_radius = 0.5
+            path_color = mn.Color3(1, 0, 0.5)
+
+            self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+                path_points, path_endpoint_radius, path_color
+            )        
+
+            # sloppy: assume agent 0 and assume agent_0_articulated_agent_arm_depth obs key
+            assert self.state_machine_agent_ctrl._agent_idx == 0
+            post_sim_update_dict["debug_images"].append(
+                self._sandbox_service.get_observation_as_debug_image("agent_0_articulated_agent_arm_depth"))
+
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
             self._sandbox_service.end_episode()
@@ -531,6 +549,7 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
             self._sandbox_service.end_episode(do_reset=True)
 
+        self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
         self._update_grasping_and_set_act_hints()
         self._sandbox_service.compute_action_and_step_env()
