@@ -31,7 +31,11 @@ def pretty_print(metric_dict, latex=False, metric_names=None):
     if metric_names is None:
         metric_names = list(metric_dict)
     for metric_name in metric_names:
-        mean, std = metric_dict[metric_name]
+        if type(metric_dict[metric_name]) == tuple:
+            mean, std = metric_dict[metric_name]
+        else:
+            mean = metric_dict[metric_name]
+            std = 0.
         number_str = get_number_str(mean, std)
         if not latex:
             curr_metric_str = f"{metric_name}: {number_str}"
@@ -132,7 +136,7 @@ def get_checkpoint_results(ckpt_path, separate_agent=False):
         for ck_path in ckpt_path:
             all_files += glob.glob(f"{ck_path}/*")
     dict_results: Dict[str, Any] = {}
-    dict_results_agents: Dict[str, Dict [str, Any]] = {}
+    dict_results_agents: Dict[str, Dict[str, Any]] = {}
     episode_agents: Dict[str, Any] = {}
 
     # Create folders:
@@ -163,19 +167,20 @@ def get_checkpoint_results(ckpt_path, separate_agent=False):
 
         dict_results[episode_id].append(episode_info)
         if separate_agent:
-            agent_name = all_files[index].split('/')[-2]
+            agent_name = all_files[index].split("/")[-2]
             if agent_name not in episode_agents:
                 episode_agents[agent_name] = {}
             if episode_id not in episode_agents[agent_name]:
                 episode_agents[agent_name][episode_id] = []
             episode_agents[agent_name][episode_id].append(episode_info)
-    
+
     # print(time.time() - t1)
     # Potentially verify here that no data is missing
     dict_results = aggregate_per_episode_dict(dict_results, average=True)
     for agent_type in episode_agents.keys():
         dict_results_agents[agent_type] = aggregate_per_episode_dict(
-            episode_agents[agent_type], average=True)
+            episode_agents[agent_type], average=True
+        )
     # if separate_agent:
     #     breakpoint()
     return dict_results, dict_results_agents
@@ -217,7 +222,7 @@ def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
             continue
         all_results.append(curr_metric)
         res_dict[episode_id] = curr_metric
-    
+
     if len(all_results) == 0:
         print(len(per_episode_baseline_dict))
         return {}
@@ -252,12 +257,13 @@ def compute_relative_metrics_multi_ckpt(
             all_results.append(curr_res)
 
             for agent_name in baseline_diff_zsc:
-
-                curr_res = compute_relative_metrics(baseline_diff_zsc[agent_name], solo)
+                curr_res = compute_relative_metrics(
+                    baseline_diff_zsc[agent_name], solo
+                )
                 # breakpoint()
                 if len(curr_res) > 0:
                     if agent_name not in all_results_zsc:
-                        all_results_zsc[agent_name] = []     
+                        all_results_zsc[agent_name] = []
                     all_results_zsc[agent_name].append(curr_res)
 
         results_baseline = aggregate_per_episode_dict(
@@ -272,10 +278,16 @@ def compute_relative_metrics_multi_ckpt(
             res_zsc = aggregate_per_episode_dict(
                 {"all_episodes": all_res}, average=True, std=True
             )["all_episodes"]
+            
             metrics_str = pretty_print(res_zsc, latex=latex)
+                
             print(f"{baseline_name}.{agent_name}: {metrics_str}")
+            for seed in range(len(res_zsc)):
+                metrics_str_seed = pretty_print(all_res[seed], latex=latex)    
+                print(f"{baseline_name}.{seed}.{agent_name}: {metrics_str_seed}")
+                
+        print("-----")
 
-        print('-----')
 
 def compute_all_metrics(latex_print=False):
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
@@ -302,7 +314,6 @@ def extend_exps_zsc(dict_exps):
     # Increases the experiments to include info of different agents
     new_experiments_path = {}
     for exp_name, paths in dict_exps.items():
-        paths_exp = []
         dict_paths = {}
         for path in paths:
             files = glob.glob(f"{path}/eval_data*")
