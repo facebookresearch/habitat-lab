@@ -150,8 +150,9 @@ class HumanoidRearrangeController:
     def calculate_stop_pose(self):
         """
         Calculates a stop, standing pose
-        """
+        """       
         # the object transform does not change
+        self.obj_transform_offset = mn.Matrix4()
         self.joint_pose = self.stop_pose.joints
 
     def calculate_turn_pose(self, target_position: mn.Vector3):
