@@ -500,7 +500,7 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict["keyframes"] = keyframes
 
         for obs_key in self._debug_images:
-            post_sim_update_dict["debug_images"].append(self._get_observation_as_debug_image(obs_key))
+            post_sim_update_dict["debug_images"].append(("spot debug view", self._get_observation_as_debug_image(obs_key)))
 
         if self._remote_gui_input:
             self._remote_gui_input.on_frame_end()
