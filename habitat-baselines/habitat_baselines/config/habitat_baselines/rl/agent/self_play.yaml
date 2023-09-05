@@ -1,0 +1,4 @@
+type: "MultiAgentAccessMgr"
+num_total_agents: 1
+agent_sample_interval: -1
+self_play_batched: True

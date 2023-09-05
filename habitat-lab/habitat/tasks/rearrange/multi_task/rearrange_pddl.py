@@ -117,9 +117,18 @@ def ensure_entity_lists_match(
     # Check types are compatible
     for arg, set_arg in zip(to_set, set_value):
         if not set_arg.expr_type.is_subtype_of(arg.expr_type):
-            raise ValueError(
-                f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
+            exception = (
+                set_arg.expr_type.name == "robot_entity_type"
+                and arg.expr_type.name == "static_obj_type"
+                or (
+                    set_arg.expr_type.name == "robot_entity_type"
+                    and arg.expr_type.name == "obj_type"
+                )
             )
+            if not exception:
+                raise ValueError(
+                    f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
+                )
 
 
 @dataclass
@@ -144,12 +153,6 @@ class PddlSimInfo:
 
     num_spawn_attempts: int
     physics_stability_steps: int
-    recep_place_shrink_factor: float
-
-    pred_truth_cache: Optional[Dict[str, bool]] = None
-
-    def reset_pred_truth_cache(self):
-        self.pred_truth_cache = {}
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
@@ -169,20 +172,17 @@ class PddlSimInfo:
         ):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
-        if self.check_type_matches(
+        elif self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
             idx = self.target_ids[ename]
             targ_idxs, pos_targs = self.sim.get_targets()
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
-        if self.check_type_matches(
-            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
-        ):
-            recep = self.receptacles[ename]
-            return np.array(recep.center())
-        if self.check_type_matches(
+        elif self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
+        ) or self.check_type_matches(
+            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
@@ -191,7 +191,8 @@ class PddlSimInfo:
                 abs_obj_id
             ).transformation.translation
             return cur_pos
-        raise ValueError()
+        else:
+            raise ValueError()
 
     def search_for_entity(
         self, entity: PddlEntity

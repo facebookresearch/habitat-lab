@@ -1,0 +1,93 @@
+# @package habitat_baselines.rl.policy.hierarchical_policy.defined_skills
+# See `oracle_skills.yaml` for details.
+
+open_cab:
+  skill_name: "NoopSkillPolicy"
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["open_cab_by_name"]
+
+open_fridge:
+  skill_name: "NoopSkillPolicy"
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["open_fridge_by_name"]
+
+close_cab:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  force_end_on_timeout: False
+  pddl_action_names: ["close_cab_by_name"]
+
+close_fridge:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["close_fridge_by_name"]
+
+pick:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+
+place:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_goal_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+
+wait:
+  skill_name: "WaitSkillPolicy"
+  max_skill_steps: -1
+
+nav_to_obj:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["goal_to_agent_gps_compass"]
+  max_skill_steps: 1
+  apply_postconds: False
+  force_end_on_timeout: False
+  obs_skill_input_dim: 2
+  pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+
+reset_arm:
+  skill_name: "ResetArmSkill"
+  max_skill_steps: 50
+  reset_joint_state: [-4.50e-01, -1.07e00, 9.95e-02, 9.38e-01, -7.88e-04, 1.57e00, 4.62e-03]
+  force_end_on_timeout: False
+
+
+turn_left:
+  skill_name: "MoveSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power_y: 1.0
+  apply_postconds: True
+
+turn_right:
+  skill_name: "MoveSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power_y: -1.0
+  apply_postconds: True
+
+move_forward:
+  skill_name: "MoveSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power_x: 1.0
+  apply_postconds: True
+
+move_backward:
+  skill_name: "MoveSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power_x: -1.0
+  apply_postconds: True

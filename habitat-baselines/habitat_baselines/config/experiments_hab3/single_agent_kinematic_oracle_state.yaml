@@ -1,0 +1,81 @@
+# @package _global_
+
+defaults:
+  - /rearrange/rl_hierarchical_oracle_nav
+  - /habitat/task/lab_sensors:
+    - multi_agent_all_predicates
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - _self_
+
+hydra:
+  job:
+    name: 'single_oracle'
+
+habitat_baselines:
+  log_interval: 1
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  evaluate: False
+  writer_type: 'wb'
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+  num_environments: 2
+  rl:
+    policy:
+      main_agent:
+        hierarchical_policy:
+          high_level_policy:
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "multi_agent_all_predicates"
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 300
+
+habitat:
+  task:
+    actions:
+      oracle_nav_action:
+        spawn_max_dist_to_obj: -1.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - multi_agent_all_predicates
+
+  environment:
+    max_episode_steps: 700
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False

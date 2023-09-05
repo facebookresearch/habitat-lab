@@ -56,6 +56,9 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+
+# Temporary import for this project to use the custom multi-agent measures.
+import habitat_baselines.rl.multi_agent.measures  # noqa: F401
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -79,7 +82,9 @@ except ImportError:
     pygame = None
 
 # Please reach out to the paper authors to obtain this file
-DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+DEFAULT_POSE_PATH = (
+    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+)
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
@@ -114,9 +119,9 @@ def get_input_vel_ctlr(
         base_key = "human_joints_trans"
     else:
         base_action_name = f"{agent_k}base_velocity"
-        arm_key = "arm_action"
-        grip_key = "grip_action"
-        base_key = "base_vel"
+        arm_key = f"{agent_k}arm_action"
+        grip_key = f"{agent_k}grip_action"
+        base_key = f"{agent_k}base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -276,8 +281,9 @@ def get_input_vel_ctlr(
             ) = env._sim.articulated_agent.get_joint_transform()
             # Divide joint_trans by 4 since joint_trans has flattened quaternions
             # and the dimension of each quaternion is 4
+            base_trans = env._sim.articulated_agent.base_transformation
             num_joints = len(joint_trans) // 4
-            root_trans = np.array(root_trans)
+            root_trans = np.array(base_trans)
             index_arms_start = 10
             joint_trans_quat = [
                 mn.Quaternion(
@@ -303,8 +309,13 @@ def get_input_vel_ctlr(
                     for quat in rotated_joints_quat
                 ]
             )
+            offset_trans = np.array(mn.Matrix4())
             base_action = np.concatenate(
-                [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
+                [
+                    joint_trans.reshape(-1),
+                    offset_trans.transpose().reshape(-1),
+                    root_trans.transpose().reshape(-1),
+                ]
             )
         else:
             # Use the controller
@@ -444,7 +455,9 @@ def play_env(env, args, config):
     obs = env.reset()
 
     if not args.no_render:
-        draw_obs = observations_to_image(obs, {})
+        draw_obs = observations_to_image(
+            {k: v for k, v in obs.items() if "third_rgb" in k}, {}
+        )
         pygame.init()
         screen = pygame.display.set_mode(
             [draw_obs.shape[1], draw_obs.shape[0]]
@@ -467,7 +480,9 @@ def play_env(env, args, config):
     humanoid_controller = None
     if args.use_humanoid_controller:
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
-        humanoid_controller.reset(env._sim.articulated_agent.base_pos)
+        humanoid_controller.reset(
+            env._sim.articulated_agent.base_transformation
+        )
 
     while True:
         if (
@@ -517,11 +532,14 @@ def play_env(env, args, config):
             entity_sel = input("Enter Entity Selection: ")
             action_sel = int(action_sel)
             entity_sel = [int(x) + 1 for x in entity_sel.split(",")]
-            ac = np.zeros(pddl_action.action_space["pddl_action"].shape[0])
+            # Any PDDL action can control both agents.
+            ac = np.zeros(
+                pddl_action.action_space["agent_0_pddl_action"].shape[0]
+            )
             ac_start = pddl_action.get_pddl_action_start(action_sel)
             ac[ac_start : ac_start + len(entity_sel)] = entity_sel
 
-            step_env(env, "pddl_apply_action", {"pddl_action": ac})
+            step_env(env, "pddl_apply_action", {"agent_0_pddl_action": ac})
 
         if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[
@@ -569,7 +587,9 @@ def play_env(env, args, config):
             use_ob[:, : cam.shape[1]] = cam[:, :, :3]
 
         else:
-            use_ob = observations_to_image(obs, info)
+            use_ob = observations_to_image(
+                {k: v for k, v in obs.items() if "third_rgb" in k}, info
+            )
             if not args.skip_render_text:
                 use_ob = overlay_frame(use_ob, info)
 

@@ -1,0 +1,45 @@
+# @package _global_
+
+defaults:
+  - /rearrange/rl_hierarchical
+  - override /benchmark/rearrange: limited_tidy_house
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - _self_
+
+hydra:
+  job:
+    name: 'single_teleport'
+
+habitat_baselines:
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  evaluate: False
+  writer_type: 'wb'
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra.job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  num_environments: 2
+  num_checkpoints: 10
+  total_num_steps: 1.0e7
+
+habitat:
+  task:
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    max_episode_steps: 30
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False

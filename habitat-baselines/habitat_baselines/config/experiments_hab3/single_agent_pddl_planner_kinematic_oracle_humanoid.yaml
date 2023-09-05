@@ -1,0 +1,47 @@
+# @package _global_
+
+defaults:
+  - single_agent_kinematic_oracle_humanoid_fixed
+  - /habitat/task/lab_sensors:
+    - all_predicates
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_planner
+  - _self_
+
+hydra:
+  job:
+    name: 'single_planner_policy_oracle'
+
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - all_predicates
+      - has_finished_oracle_nav
+  task:
+    actions:
+      oracle_nav_action:
+        spawn_max_dist_to_obj: -1.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    max_episode_steps: 700
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False

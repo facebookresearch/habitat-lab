@@ -1,0 +1,148 @@
+# @package _global_
+
+defaults:
+  - /rearrange/rl_hierarchical_oracle_nav_spot_fp
+  # Spot has both arm and head cameras, so we need this override
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  # - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_fixed
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - _self_
+
+hydra:
+  job:
+    name: 'spot_single_oracle'
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  updater_name: "HRLPPO"
+  distrib_updater_name: "HRLDDPPO"
+  torch_gpu_id: 0
+  video_fps: 30
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  num_environments: 4
+  num_updates: -1
+  total_num_steps: 1.0e8
+  log_interval: 1
+  num_checkpoints: 100
+  force_torch_single_threaded: True
+  eval_keys_to_include_in_name: ['composite_success']
+  load_resume_state_config: False
+  rollout_storage_name: "HrlRolloutStorage"
+
+  evaluate: False
+  writer_type: 'wb'
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+  profiling:
+    enable_perf_logger: True
+    perf_logger_skip_interval: 20
+
+  eval:
+    should_load_ckpt: True
+    video_option: ["disk"]
+
+  rl:
+    policy:
+      main_agent:
+        hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 1
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.0001
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 256
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+    ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
+      pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
+      pretrained_encoder: False
+      # Whether the visual encoder backbone will be trained.
+      train_encoder: True
+      # Whether to reset the critic linear layer
+      reset_critic: False
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2
+
+
+habitat:
+  task:
+    actions:
+      oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
+    robot_at_thresh: 3.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    max_episode_steps: 2500
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    # Define the Spot robot here
+    agents:
+      main_agent:
+        radius: 0.3
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_depth_sensor:
+            height: 256
+            width: 256
+            hfov: 55

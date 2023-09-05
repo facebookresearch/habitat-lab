@@ -1,0 +1,229 @@
+types:
+  static_obj_type:
+    - art_receptacle_entity_type
+    - obj_type
+  obj_type:
+    - movable_entity_type
+    - goal_entity_type
+  art_receptacle_entity_type:
+    - cab_type
+    - fridge_type
+
+
+constants: {}
+
+
+predicates:
+  - name: in
+    args:
+      - name: obj
+        expr_type: obj_type
+      - name: receptacle
+        expr_type: art_receptacle_entity_type
+    set_state:
+      obj_states:
+        obj: receptacle
+
+  - name: holding
+    args:
+      - name: obj
+        expr_type: movable_entity_type
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          holding: obj
+
+  - name: not_holding
+    args:
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          should_drop: True
+
+  - name: robot_at
+    args:
+      - name: Y
+        expr_type: static_obj_type
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          pos: Y
+
+  - name: at
+    args:
+      - name: obj
+        expr_type: obj_type
+      - name: at_entity
+        expr_type: static_obj_type
+    set_state:
+        obj_states:
+            obj: at_entity
+
+actions:
+  - name: nav_to_goal
+    parameters:
+      - name: obj
+        expr_type: movable_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition:
+      # The robot cannot be holding the object that it wants to navigate to.
+      expr_type: NAND
+      sub_exprs:
+        - holding(obj, robot)
+    postcondition:
+      - robot_at(obj, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: move_forward
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: move_backward
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: turn_left
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: turn_right
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: nav_to_obj
+    parameters:
+      - name: obj
+        expr_type: goal_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition:
+      - robot_at(obj, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: nav_to_receptacle
+    parameters:
+      - name: marker
+        expr_type: art_receptacle_entity_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - in(obj, marker)
+    postcondition:
+      - robot_at(marker, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: pick
+    parameters:
+      - name: obj
+        expr_type: movable_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - not_holding(robot)
+        - robot_at(obj, robot)
+        - quantifier: FORALL
+          inputs:
+            - name: recep
+              expr_type: cab_type
+          expr_type: NAND
+          sub_exprs:
+            - in(obj, recep)
+            #- closed_cab(recep)
+    postcondition:
+      - holding(obj, robot)
+    task_info:
+      task: RearrangePickTask-v0
+      task_def: "pick"
+      config_args:
+        habitat.task.should_enforce_target_within_reach: True
+        habitat.task.force_regenerate: True
+        habitat.task.base_angle_noise: 0.0
+        habitat.task.base_noise: 0.0
+        habitat.task.should_save_to_cache: False
+
+  - name: place
+    parameters:
+      - name: place_obj
+        expr_type: movable_entity_type
+      - name: obj
+        expr_type: goal_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - holding(place_obj, robot)
+        - robot_at(obj, robot)
+    postcondition:
+      - not_holding(robot)
+      - at(place_obj, obj)
+    task_info:
+      task: RearrangePlaceTask-v0
+      task_def: "place"
+      config_args:
+        task.should_enforce_target_within_reach: True
+        task.force_regenerate: True
+        task.base_angle_noise: 0.0
+        task.base_noise: 0.0
+        task.should_save_to_cache: False
+
+  #########################################################
+  # Receptacle name only based variants of the receptacle skills. This does not
+  # require any information about knowing which objects the receptacle
+  # contains.
+  - name: nav_to_receptacle_by_name
+    parameters:
+      - name: marker
+        expr_type: art_receptacle_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition:
+      - robot_at(marker, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False

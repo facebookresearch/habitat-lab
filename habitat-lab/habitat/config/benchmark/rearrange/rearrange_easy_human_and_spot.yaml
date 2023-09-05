@@ -1,0 +1,62 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: rgbd_head_rgbdp_arm_agent
+  - /habitat/task/rearrange: rearrange_easy_human_and_spot
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_joint
+      - agent_1_arm_depth_sensor
+      - agent_1_arm_rgb_sensor
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_joint
+  environment:
+    max_episode_steps: 1500
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    grasp_impulse: 10000.0
+    hold_thresh: 0.2
+    agents_order:
+      - agent_0
+      - agent_1
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+      agent_1:
+        articulated_agent_type: "SpotRobot"
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        radius: 0.25
+        height: 1.8
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+          arm_panoptic_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
