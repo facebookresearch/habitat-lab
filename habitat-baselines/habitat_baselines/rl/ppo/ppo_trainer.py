@@ -945,7 +945,6 @@ class PPOTrainer(BaseRLTrainer):
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
         else:
             total_num_eps = sum(self.envs.number_of_episodes)
-            # import ipdb; ipdb.set_trace()
             # if total_num_eps is negative, it means the number of evaluation episodes is unknown
             if total_num_eps < number_of_eval_episodes and total_num_eps > 1:
                 logger.warn(
