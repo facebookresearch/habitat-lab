@@ -167,7 +167,7 @@ class FetchState(Enum):
     DROP = 5
 
 
-PICK_STEPS = 20
+PICK_STEPS = 40
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -242,6 +242,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         self.current_state = FetchState.WAIT
         self.counter_pick = 0
+        self.object_interest_id = None
         self.rigid_obj_interest = None
 
     # todo: make this non-public, since user code shouldn't be able to set arbitrary states
@@ -384,6 +385,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                     self.rigid_obj_interest.motion_type = MotionType.KINEMATIC
 
+                    assert self.object_interest_id is not None
                     self._get_grasp_mgr(env).snap_to_obj(
                         self.object_interest_id
                     )
