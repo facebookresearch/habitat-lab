@@ -98,6 +98,7 @@ class PointNavDatasetV1(Dataset):
         """
 
         if fname.endswith(".pickle"):
+            # NOTE: not implemented for pointnav
             with open(fname, "rb") as f:
                 self.from_binary(pickle.load(f), scenes_dir=scenes_dir)
         else:
