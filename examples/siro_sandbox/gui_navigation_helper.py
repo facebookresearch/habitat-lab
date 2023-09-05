@@ -58,28 +58,37 @@ class GuiNavigationHelper:
             self._get_sim(), self._agent_idx
         )
 
-        pathfinder = self._get_sim().pathfinder
-        # snap target to the selected island
-        assert self._largest_island_idx is not None
-        snapped_pos = pathfinder.snap_point(
-            target_pos, island_index=self._largest_island_idx
-        )
-        snapped_start_pos = agent_root.translation
-        snapped_start_pos.y = snapped_pos.y
-
-        path = habitat_sim.ShortestPath()
-        path.requested_start = snapped_start_pos
-        path.requested_end = snapped_pos
-        found_path = pathfinder.find_path(path)
-
-        return found_path, path
+        return self._find_path(agent_root.translation, target_pos)
 
     def _get_humanoid_walk_dir_from_path(self, path):
         assert len(path.points) >= 2
         walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
         return walk_dir
 
-    def _viz_humanoid_walk_path(self, path):
+    def _find_path(self, start_pos, end_pos):
+
+        pathfinder = self._get_sim().pathfinder
+        # snap target to the selected island
+        assert self._largest_island_idx is not None
+        snapped_pos = pathfinder.snap_point(
+            end_pos, island_index=self._largest_island_idx
+        )
+        snapped_start_pos = start_pos
+        snapped_start_pos.y = snapped_pos.y
+
+        path = habitat_sim.ShortestPath()
+        path.requested_start = snapped_start_pos
+        path.requested_end = snapped_pos
+        found_path = pathfinder.find_path(path)   
+
+        return found_path, path     
+
+    def find_and_viz_path(self, start_pos, end_pos):
+        found_path, path = self._find_path(start_pos, end_pos)
+        if (found_path and len(path.points) >= 2):
+            self._viz_path(path)        
+
+    def _viz_path(self, path):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12
 
@@ -136,7 +145,7 @@ class GuiNavigationHelper:
     ):
         walk_dir = None
         distance_multiplier = 1.0
-        geodesic_dist_threshold = 0.05
+        geodesic_dist_threshold = 0.15
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
         if (
@@ -147,7 +156,7 @@ class GuiNavigationHelper:
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
             distance_multiplier = 1.0
             if visualize_path:
-                self._viz_humanoid_walk_path(path)
+                self._viz_path(path)
 
         if walk_dir is None and target_rot_quat is not None:
             walk_dir = self._compute_forward_dir(target_rot_quat)
