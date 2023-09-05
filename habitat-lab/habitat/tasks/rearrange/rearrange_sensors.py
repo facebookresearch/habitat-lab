@@ -1126,9 +1126,12 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
             if "oracle_nav_with_backing_up_action" in self._task.actions:
                 use_k = "oracle_nav_with_backing_up_action"
 
-        nav_action = self._task.actions[use_k]
-
-        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+        if use_k in self._task.actions:
+            nav_action = self._task.actions[use_k]
+            skill_done = nav_action.skill_done
+        else:
+            skill_done = False
+        return np.array(skill_done, dtype=np.float32)[..., None]
 
 
 @registry.register_sensor
@@ -1159,9 +1162,13 @@ class HasFinishedHumanPickSensor(UsesArticulatedAgentInterface, Sensor):
         else:
             use_k = "humanoid_pick_action"
 
-        nav_action = self._task.actions[use_k]
+        if use_k in self._task.actions:
+            nav_action = self._task.actions[use_k]
+            skill_done = nav_action.skill_done
+        else:
+            skill_done = False
 
-        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+        return np.array(skill_done, dtype=np.float32)[..., None]
 
 
 @registry.register_measure

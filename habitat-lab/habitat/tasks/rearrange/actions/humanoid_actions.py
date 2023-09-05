@@ -55,9 +55,9 @@ class HumanoidPickAction(HumanoidJointAction):
             ].motion_data_path
 
             humanoid_controller = HumanoidRearrangeController(walk_pose_path)
-            humanoid_controller.set_framerate_for_linspeed(
-                config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq
-            )
+            # humanoid_controller.set_framerate_for_linspeed(
+            #     config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq
+            # )
             task.humanoid_controller = humanoid_controller
 
         self.vdb = DebugVisualizer(self._sim, output_path="")
@@ -85,8 +85,10 @@ class HumanoidPickAction(HumanoidJointAction):
         return obj_pos
 
     def get_scene_index_obj(self, object_target_idx):
-        pick_obj_entity = self._poss_entities[object_target_idx]
+        pick_obj_entity = self._poss_entities[int(object_target_idx)]
         entity_name = pick_obj_entity.name
+        if entity_name not in self._task.pddl_problem.sim_info.obj_ids:
+            return None
         obj_id = self._task.pddl_problem.sim_info.obj_ids[entity_name]
         return self._sim.scene_obj_ids[obj_id]
 
@@ -100,10 +102,12 @@ class HumanoidPickAction(HumanoidJointAction):
         ]
 
         if object_pick_idx <= 0 or object_pick_idx > len(self._poss_entities):
-            return None
+            return {}
+
+        object_pick_idx = int(object_pick_idx) - 1
 
         object_coord = self._get_coord_for_idx(object_pick_idx)
-        dist_move = 0.04
+        dist_move = 0.1
         init_coord_world = (
             self.humanoid_controller.obj_transform_base.transform_point(
                 self.init_coord
@@ -135,7 +139,10 @@ class HumanoidPickAction(HumanoidJointAction):
                         object_index = self.get_scene_index_obj(
                             object_pick_idx
                         )
-                        if self.cur_grasp_mgr.snap_idx is None:
+                        if (
+                            self.cur_grasp_mgr.snap_idx is None
+                            and object_index is not None
+                        ):
                             self.cur_grasp_mgr.snap_to_obj(
                                 object_index,
                             )
@@ -157,10 +164,10 @@ class HumanoidPickAction(HumanoidJointAction):
             )
             self.hand_pose_iter = max(0, self.hand_pose_iter - 1)
             dist_hand_init = np.linalg.norm(new_hand_coord - init_coord_world)
-            if dist_hand_init < 0.01:
-                self.hand_state = 0
+            if dist_hand_init < 0.02 or self.hand_pose_iter == 0:
                 self.skill_done = True
                 self.hand_pose_iter = 0
+                self.hand_state = 0
 
         if should_rest:
             self.humanoid_controller.calculate_stop_pose()

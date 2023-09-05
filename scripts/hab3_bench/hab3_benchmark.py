@@ -45,22 +45,15 @@ class ActionSpaceWrapper(ActionSpace):
             all_actions.append(action_name)
             for action_arg_name, action_arg in action_args.items():
                 if "oracle_nav" in action_arg_name:
-                    # action_arg_value = (
-                    #     np.array([random.randint(0, self.num_items_nav)]) + 1
-                    # )
-                    action_arg_value = np.array([1]) + 5
-
-                    if count > 70:
-                        action_arg_value *= 0
+                    action_arg_value = (
+                        np.array([random.randint(0, self.num_items_nav)]) + 1
+                    )
+                    
                 elif "humanoid_pick" in action_arg_name:
                     action_arg_value = (
                         np.array([random.randint(0, self.num_items_nav), 1])
                         + 1
                     )
-                    action_arg_value *= 0
-
-                    if count > 70:
-                        action_arg_value += 5
 
                 else:
                     action_arg_value = action_arg.sample()
