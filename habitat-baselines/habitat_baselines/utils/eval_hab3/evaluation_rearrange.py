@@ -5,17 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import json
+import os
 import pickle as pkl
+import time
+from multiprocessing import Pool
 from typing import Any, Dict
 
 import numpy as np
-import time
-from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor
-import os
-import json
 from tqdm import tqdm
-
 
 METRICS_INTEREST = ["composite_success", "num_steps", "num_steps_fail"]
 MAX_NUM_STEPS = 1000
@@ -51,12 +49,14 @@ def pretty_print(metric_dict, latex=False, metric_names=None):
 def get_episode_info(file_name):
     # Read a single pickle file with results from an episode/seed
     json_name = "/fsx-siro/xavierpuig/eval_data_akshara/" + file_name + ".json"
-    
+
     if os.path.isfile(json_name):
         with open(json_name, "r") as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except:
+                print(json_name)
         return data["id"], data["metrics"]
-
 
     with open(file_name, "rb") as f:
         curr_result = pkl.load(f)
@@ -74,16 +74,13 @@ def get_episode_info(file_name):
         metrics["num_steps_fail"] = num_steps_fail
 
     base_dir = os.path.dirname(json_name)
-    
+
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
 
     with open(json_name, "w+") as f:
-        dict_res = {
-            "id": int(curr_result["id"]),
-            "metrics": metrics
-        }
-        f.write(json.dumps(dict_res))   
+        dict_res = {"id": int(curr_result["id"]), "metrics": metrics}
+        f.write(json.dumps(dict_res))
     return int(curr_result["id"]), metrics
 
 
@@ -92,6 +89,8 @@ def aggregate_per_episode_dict(dict_data, average=False, std=False):
     # Returns a dict with the metrics aggregated per episode
     new_dict_data = {}
     for episode_id, episode_data in dict_data.items():
+        if len(episode_data) == 0:
+            breakpoint()
         metric_names = list(episode_data[0].keys())
         results_aggregation = {}
         for metric_name in metric_names:
@@ -110,14 +109,19 @@ def aggregate_per_episode_dict(dict_data, average=False, std=False):
         new_dict_data[episode_id] = results_aggregation
     return new_dict_data
 
+
 def process_file(file_name):
     episode_id, episode_info = get_episode_info(file_name)
     return (episode_id, episode_info)
 
-def get_dir_name(file_name):
-    return os.path.dirname("/fsx-siro/xavierpuig/eval_data_akshara/"+file_name)
 
-def get_checkpoint_results(ckpt_path):
+def get_dir_name(file_name):
+    return os.path.dirname(
+        "/fsx-siro/xavierpuig/eval_data_akshara/" + file_name
+    )
+
+
+def get_checkpoint_results(ckpt_path, separate_agent=False):
     # Reads files from folder ckpt_path
     # and averages different runs of the same episode
     t1 = time.time()
@@ -127,9 +131,10 @@ def get_checkpoint_results(ckpt_path):
         all_files = []
         for ck_path in ckpt_path:
             all_files += glob.glob(f"{ck_path}/*")
-    print(len(all_files))
     dict_results: Dict[str, Any] = {}
-    
+    dict_results_agents: Dict[str, Dict [str, Any]] = {}
+    episode_agents: Dict[str, Any] = {}
+
     # Create folders:
     num_proc = 24
     pool = Pool(num_proc)
@@ -137,11 +142,11 @@ def get_checkpoint_results(ckpt_path):
     pool.close()
     pool.join()
     res = list(set(res))
-    
+
     for elem in res:
         if not os.path.exists(elem):
             os.makedirs(elem)
-    
+
     num_proc = 24
     pool = Pool(num_proc)
     res = pool.map(process_file, all_files)
@@ -152,19 +157,28 @@ def get_checkpoint_results(ckpt_path):
     # with ThreadPoolExecutor(max_workers=num_threads) as executor:
     #     res = executor.map(process_file, all_files)
 
-    for (episode_id, episode_info) in res:
+    for index, (episode_id, episode_info) in enumerate(res):
         if episode_id not in dict_results:
             dict_results[episode_id] = []
 
         dict_results[episode_id].append(episode_info)
-
+        if separate_agent:
+            agent_name = all_files[index].split('/')[-2]
+            if agent_name not in episode_agents:
+                episode_agents[agent_name] = {}
+            if episode_id not in episode_agents[agent_name]:
+                episode_agents[agent_name][episode_id] = []
+            episode_agents[agent_name][episode_id].append(episode_info)
+    
     # print(time.time() - t1)
     # Potentially verify here that no data is missing
     dict_results = aggregate_per_episode_dict(dict_results, average=True)
-    # print(time.time() - t1)
-    print(time.time() - t1, len(all_files))
-    # print('__')
-    return dict_results
+    for agent_type in episode_agents.keys():
+        dict_results_agents[agent_type] = aggregate_per_episode_dict(
+            episode_agents[agent_type], average=True)
+    # if separate_agent:
+    #     breakpoint()
+    return dict_results, dict_results_agents
 
 
 def relative_metric(episode_baseline_data, episode_solo_data):
@@ -203,6 +217,10 @@ def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
             continue
         all_results.append(curr_metric)
         res_dict[episode_id] = curr_metric
+    
+    if len(all_results) == 0:
+        print(len(per_episode_baseline_dict))
+        return {}
     average_over_episodes = aggregate_per_episode_dict(
         {"all_episodes": all_results}, average=True
     )
@@ -215,21 +233,32 @@ def compute_relative_metrics_multi_ckpt(
     # Computes and prints metrics for all baselines
     # given the path of the solo episodes, and a dictionary baseline_name: path_res_baselines
     all_results = []
-    solo = get_checkpoint_results(solo_path)
+    all_results_zsc = {}
+    solo, _ = get_checkpoint_results(solo_path)
     for baseline_name, baselines_path in experiments_path_dict.items():
         print(f"Computing {baseline_name}...")
         for baseline_path in tqdm(baselines_path):
             if type(baselines_path) == list:
-                baseline = get_checkpoint_results(baseline_path)
-            
+                baseline, _ = get_checkpoint_results(baseline_path)
+
             elif type(baselines_path) == dict:
-                
-                baseline = get_checkpoint_results(baselines_path[baseline_path])
+                baseline, baseline_diff_zsc = get_checkpoint_results(
+                    baselines_path[baseline_path], separate_agent=True
+                )
             else:
                 raise Exception
-            
+
             curr_res = compute_relative_metrics(baseline, solo)
             all_results.append(curr_res)
+
+            for agent_name in baseline_diff_zsc:
+
+                curr_res = compute_relative_metrics(baseline_diff_zsc[agent_name], solo)
+                # breakpoint()
+                if len(curr_res) > 0:
+                    if agent_name not in all_results_zsc:
+                        all_results_zsc[agent_name] = []     
+                    all_results_zsc[agent_name].append(curr_res)
 
         results_baseline = aggregate_per_episode_dict(
             {"all_episodes": all_results}, average=True, std=True
@@ -238,6 +267,15 @@ def compute_relative_metrics_multi_ckpt(
         metrics_str = pretty_print(results_baseline, latex=latex)
         print(f"{baseline_name}: {metrics_str}")
 
+        for agent_name in all_results_zsc:
+            all_res = all_results_zsc[agent_name]
+            res_zsc = aggregate_per_episode_dict(
+                {"all_episodes": all_res}, average=True, std=True
+            )["all_episodes"]
+            metrics_str = pretty_print(res_zsc, latex=latex)
+            print(f"{baseline_name}.{agent_name}: {metrics_str}")
+
+        print('-----')
 
 def compute_all_metrics(latex_print=False):
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
@@ -254,11 +292,11 @@ def compute_all_metrics(latex_print=False):
             f"{root_dir}/GTCoord_eval_data",
         ],
     }
-    
 
     compute_relative_metrics_multi_ckpt(
         experiments_path, solo_path, latex=latex_print
     )
+
 
 def extend_exps_zsc(dict_exps):
     # Increases the experiments to include info of different agents
@@ -272,12 +310,14 @@ def extend_exps_zsc(dict_exps):
         new_experiments_path[exp_name] = dict_paths
     return new_experiments_path
 
+
 def compute_all_metrics_zsc(latex_print=False):
     # root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/zsc_eval_data"
-    
-    
-    solo_path = "/fsx-siro/akshararai/hab3/eval_solo/eval_data_multi_ep_speed_10"
+
+    solo_path = (
+        "/fsx-siro/akshararai/hab3/eval_solo/0/eval_data_multi_ep_speed_10"
+    )
     experiments_path = {
         "GT_coord": [
             f"{root_dir}/speed_5/GTCoord/2023-08-19/00-07-24/0",
@@ -294,13 +334,11 @@ def compute_all_metrics_zsc(latex_print=False):
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/7",
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/11",
         ],
-
         "Plan_play_-2": [
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/2",
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/6",
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/10",
         ],
-
         "Plan_play_-3": [
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/1",
             f"{root_dir}/speed_5/plan_play/2023-08-25/18-19-41/5",
@@ -313,7 +351,7 @@ def compute_all_metrics_zsc(latex_print=False):
         ],
     }
     experiments_path = extend_exps_zsc(experiments_path)
-    
+
     compute_relative_metrics_multi_ckpt(
         experiments_path, solo_path, latex=latex_print
     )
@@ -321,8 +359,8 @@ def compute_all_metrics_zsc(latex_print=False):
 
 if __name__ == "__main__":
     print("\n\nResults")
-    compute_all_metrics(latex_print=False)
-    breakpoint()
+    # compute_all_metrics(latex_print=False)
+    # breakpoint()
     compute_all_metrics_zsc(latex_print=False)
     breakpoint()
     print("\n\nLATEX")
