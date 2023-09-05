@@ -1,10 +1,10 @@
 # @package hydra.launcher
 submitit_folder: ${hydra.sweep.dir}/.submitit/%j
-timeout_min: 2160
-cpus_per_task: 10
+timeout_min: 2160 #4320
+cpus_per_task: 12 #24
 name: ${hydra.job.name}
 _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
-partition: siro
+partition: learnlab
 tasks_per_node: 1 #make sure that tasks_per_node and gres are the same
 gpus_per_node: 1
 setup:

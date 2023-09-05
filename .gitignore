@@ -25,6 +25,11 @@ var/
 
 # Hydra
 outputs/
+multirun/
+eval_test_data/
+zsc_eval_test_data/
+video_dir/
+checkpoints/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
