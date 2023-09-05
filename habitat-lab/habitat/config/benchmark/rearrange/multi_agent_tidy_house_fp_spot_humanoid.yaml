@@ -159,8 +159,8 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
-      - "data/objects/amazon_berkeley/configs/"
-      - "data/objects/google_object_dataset/configs/"
+      # - "data/objects/amazon_berkeley/configs/"
+      # - "data/objects/google_object_dataset/configs/"
     concur_render: True
     auto_sleep: True
     agents_order:
@@ -203,4 +203,5 @@ habitat:
   dataset:
     # data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     # data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    # data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_37s_37kepi_2obj.json.gz
