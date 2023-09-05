@@ -756,6 +756,10 @@ if __name__ == "__main__":
         framebuffer_size,
         viewport_rect,
         args.use_batch_renderer,
+        text_drawer_kwargs={
+            "display_font_size": 40,
+            "relative_path_to_font": "./fonts/FuturaPT-Medium.ttf" # default "./fonts/ProggyClean.ttf"
+        }
     )
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
