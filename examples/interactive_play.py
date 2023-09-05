@@ -80,7 +80,7 @@ except ImportError:
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play_spot.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -469,7 +469,10 @@ def play_env(env, args, config):
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
+
+
     while True:
+        print("camera location in x, z, y:", env.sim.articulated_agent._sim._sensors["articulated_agent_arm_depth"]._sensor_object.node.transformation.translation)
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
