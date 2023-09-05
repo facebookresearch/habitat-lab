@@ -1199,7 +1199,7 @@ class Equirect2CubeMap(ProjectionTransformer):
 
 
 def get_active_obs_transforms(
-    config: "DictConfig", agent_name: str = None
+    config: "DictConfig",
 ) -> List[ObservationTransformer]:
     active_obs_transforms = []
 

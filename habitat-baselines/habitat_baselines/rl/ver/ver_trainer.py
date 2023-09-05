@@ -292,7 +292,7 @@ class VERTrainer(PPOTrainer):
         self._agent.actor_critic.share_memory()
 
         if self._is_distributed:
-            self._agent.init_distributed(find_unused_params=False)
+            self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore[operator]
 
         self._iw_sync = InferenceWorkerSync(
             self.mp_ctx,
@@ -478,10 +478,11 @@ class VERTrainer(PPOTrainer):
                     _last_checkpoint_percent=self._last_checkpoint_percent,
                     report_worker_state=self.report_worker.state_dict(),
                 )
-                resume_state = self._agent.get_resume_state()
-                resume_state.update(
-                    {"config": self.config, "requeue_stats": requeue_stats}
-                )
+                resume_state = {
+                    **self._agent.get_resume_state(),
+                    "config": self.config,
+                    "requeue_stats": requeue_stats,
+                }
 
                 save_resume_state(
                     resume_state,

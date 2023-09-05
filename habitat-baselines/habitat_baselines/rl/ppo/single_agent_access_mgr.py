@@ -41,9 +41,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
+        resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done_fn: Callable[[], float],
-        resume_state: Optional[Dict[str, Any]] = None,
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
         agent_name=None,
     ):
@@ -94,16 +94,13 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
             )
         if resume_state is not None:
-            state_dict = {
-                f"actor_critic.{name}": value
-                for name, value in resume_state["state_dict"].items()
-            }
-            self._updater.load_state_dict(state_dict)
-            if self._updater.optimizer is not None:
-                self._updater.optimizer.load_state_dict(
-                    resume_state["optim_state"]
-                )
-
+            self._updater.load_state_dict(resume_state["state_dict"])
+            self._updater.load_state_dict(
+                {
+                    "actor_critic." + k: v
+                    for k, v, in resume_state["state_dict"].items()
+                }
+            )
         self._policy_action_space = self._actor_critic.get_policy_action_space(
             self._env_spec.action_space
         )
@@ -177,15 +174,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
         return updater
 
-    def init_distributed(self, find_unused_params: bool = True) -> None:
-        if len(list(self._updater.parameters())) > 0:
-            self._updater.init_distributed(
-                find_unused_params=find_unused_params
-            )
-
     @property
-    def masks_shape(self):
-        return (1,)
+    def policy_action_space(self):
+        return self._policy_action_space
 
     def _create_policy(self) -> NetPolicy:
         """
@@ -255,8 +246,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
-        if self._updater.optimizer is None:
-            return {"state_dict": {}, "optim_state": {}}
         ret = {
             "state_dict": self._actor_critic.state_dict(),
             **self._updater.get_resume_state(),
@@ -281,11 +270,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def load_state_dict(self, state: Dict) -> None:
         self._actor_critic.load_state_dict(state["state_dict"])
         if self._updater is not None:
-            state_dict = {
-                f"actor_critic.{name}": value
-                for name, value in state["state_dict"].items()
-            }
-            self._updater.load_state_dict(state_dict)
+            self._updater.load_state_dict(state)
             if "lr_sched_state" in state:
                 self._lr_scheduler.load_state_dict(state["lr_sched_state"])
 
@@ -302,17 +287,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.clip_param = self._ppo_cfg.clip_param * (
                 1 - self._percent_done_fn()
             )
-
-    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
-        """
-        Update the hidden state given that `should_inserts` is not None. Writes
-        to `rnn_hxs` and `prev_actions` in place.
-        """
-
-        for env_i, should_insert in enumerate(action_data.should_inserts):
-            if should_insert.item():
-                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
-                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
 
 
 def get_rollout_obs_space(obs_space, actor_critic, config):

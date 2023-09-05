@@ -8,10 +8,7 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.rearrange_sensors import (
-    HasFinishedOracleNavSensor,
-    IsHoldingSensor,
-)
+from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -48,19 +45,13 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
-        match = [
-            val
-            for key, val in task_config["actions"].items()
-            if "oracle_nav_with_backing_up_action" in key
-        ]
-        if len(match) != 0:
-            action_name = "oracle_nav_with_backing_up_action"
-        else:
-            action_name = "oracle_nav_action"
-
         self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, action_name
+            action_space, "oracle_nav_action"
         )
+
+        self._is_target_obj = None
+        self._targ_obj_idx = None
+        self._prev_pos = [None for _ in range(self._batch_size)]
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -77,6 +68,9 @@ class OracleNavPolicy(NnSkillPolicy):
         self._is_target_obj = None
         self._targ_obj_idx = None
         self._prev_angle = {}
+
+        for i in batch_idx:
+            self._prev_pos[i] = None
 
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
@@ -118,10 +112,16 @@ class OracleNavPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-        finish_oracle_nav = observations[
-            HasFinishedOracleNavSensor.cls_uuid
-        ].cpu()
-        ret = finish_oracle_nav.to(torch.bool)[:, 0]
+
+        cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
+
+        for i, batch_i in enumerate(batch_idx):
+            prev_pos = self._prev_pos[batch_i]
+            if prev_pos is not None:
+                movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
+                ret[i] = movement < self._config.stop_thresh
+            self._prev_pos[batch_i] = cur_pos[i]
+
         return ret
 
     def _parse_skill_arg(self, skill_arg):
@@ -142,13 +142,6 @@ class OracleNavPolicy(NnSkillPolicy):
         match_i = self._all_entities.index(target)
 
         return OracleNavPolicy.OracleNavActionArgs(match_i)
-
-    @property
-    def required_obs_keys(self):
-        ret = [HasFinishedOracleNavSensor.cls_uuid]
-        if self._should_keep_hold_state:
-            ret.append(IsHoldingSensor.cls_uuid)
-        return ret
 
     def _internal_act(
         self,

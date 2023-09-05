@@ -26,5 +26,4 @@ __all__ = [
     "SkillPolicy",
     "WaitSkillPolicy",
     "NoopSkillPolicy",
-    "MoveSkillPolicy",
 ]

@@ -32,32 +32,37 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
-    def filter_envs(self, curr_envs_to_keep_active):
-        """
-        Cleans up stateful variables of the policy so that
-        they match with the active environments
-        """
-        self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
+    def _update_solution_actions(
+        self, solution_actions: List[List[Tuple[str, List[str]]]]
+    ) -> None:
+        if len(solution_actions) == 0:
+            raise ValueError(
+                "Solution actions must be non-empty (if want to execute no actions, just include a no-op)"
+            )
+        self._solution_actions = solution_actions
 
-    def _parse_solution_actions(self, solution):
+    def _parse_solution_actions(self) -> List[Tuple[str, List[str]]]:
+        """
+        Returns the sequence of actions to execute as a list of:
+        - The action name.
+        - A list of the action arguments.
+        """
+        solution = self._pddl_prob.solution
+
         solution_actions = []
         for i, hl_action in enumerate(solution):
             sol_action = (
                 hl_action.name,
                 [x.name for x in hl_action.param_values],
             )
-            # Filter out the correct action for the robot
-            robot_id = "robot_" + self._agent_name.split("_")[1]
-            if robot_id == "robot_agent":
-                robot_id = "robot_0"
-            if robot_id in sol_action[1]:
-                solution_actions.append(sol_action)
+            solution_actions.append(sol_action)
 
             if self._config.add_arm_rest and i < (len(solution) - 1):
                 solution_actions.append(parse_func("reset_arm(0)"))
 
         # Add a wait action at the end.
         solution_actions.append(parse_func("wait(30)"))
+
         return solution_actions
 
     def apply_mask(self, mask):
@@ -132,4 +137,5 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 skill_args_data[batch_idx] = skill_args  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
-        return next_skill, skill_args_data, immediate_end, {}
+
+        return next_skill, skill_args_data, immediate_end, PolicyActionData()

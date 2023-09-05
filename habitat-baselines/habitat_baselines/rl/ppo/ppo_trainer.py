@@ -16,22 +16,13 @@ import numpy as np
 import torch
 from omegaconf import OmegaConf
 
-import habitat_baselines.rl.multi_agent  # noqa: F401.
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
 from habitat.utils import profiling_wrapper
-from habitat.utils.perf_logger import PerfLogger
-from habitat.utils.visualizations.utils import (
-    observations_to_image,
-    overlay_frame,
-)
+from habitat_baselines.common import VectorEnvFactory
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.construct_vector_env import (
-    construct_envs,
-    grouped_construct_envs,
-)
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -102,8 +93,6 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
 
-        self._perf_logger = None
-
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
         device and only runs if distributed
@@ -147,39 +136,37 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        if config.habitat_baselines.grouped_scenes:
-            assert not is_eval, "Cannot group scenes when in eval mode"
-            self.envs, num_scenes = grouped_construct_envs(
-                config,
-                workers_ignore_signals=is_slurm_batch_job(),
-                enforce_scenes_greater_eq_environments=False,
-            )
-        else:
-            self.envs, num_scenes = construct_envs(
-                config,
-                workers_ignore_signals=is_slurm_batch_job(),
-                # enforce_scenes_greater_eq_environments=is_eval,
-                # TODO: This must be changed for episodes with few scenes. We
-                # should change it back when expanding to more scenes and final
-                # results so there is no imbalance of scenes per worker.
-                enforce_scenes_greater_eq_environments=is_eval,
-            )
+        env_factory: VectorEnvFactory = hydra.utils.instantiate(
+            config.habitat_baselines.vector_env_factory
+        )
+        self.envs = env_factory.construct_envs(
+            config,
+            workers_ignore_signals=is_slurm_batch_job(),
+            enforce_scenes_greater_eq_environments=is_eval,
+            is_first_rank=(
+                not torch.distributed.is_initialized()
+                or torch.distributed.get_rank() == 0
+            ),
+        )
+
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             orig_action_space=self.envs.orig_action_spaces[0],
         )
 
-        # create PerfLogger once we have observation_space and number of scenes
-        if (
-            rank0_only()
-            and self.config.habitat_baselines.profiling.enable_perf_logger
-        ):
-            self._perf_logger = PerfLogger(
-                config,
-                num_scenes,
-                self._env_spec.observation_space,
-            )
+        # The measure keys that should only be logged on rank0 and nowhere
+        # else. They will be excluded from all other workers and only reported
+        # from the single worker.
+        self._rank0_keys: Set[str] = set(
+            list(self.config.habitat.task.rank0_env0_measure_names)
+            + list(self.config.habitat.task.rank0_measure_names)
+        )
+
+        # Information on measures that declared in `self._rank0_keys` or
+        # to be only reported on rank0. This is seperately logged from
+        # `self.window_episode_stats`.
+        self._single_proc_infos: Dict[str, List[float]] = {}
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -267,7 +254,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self._agent = self._create_agent(resume_state)
         if self._is_distributed:
-            self._agent.init_distributed(find_unused_params=False)
+            self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore
         self._agent.post_init()
 
         self._is_static_encoder = (
@@ -300,7 +287,6 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
-        self.timer = Timing(self._perf_logger)
 
         self.t_start = time.time()
 
@@ -367,19 +353,11 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             profiling_wrapper.range_push("compute actions")
-
-            # Obtain lenghts
-            step_batch_lens = {
-                k: v
-                for k, v in step_batch.items()
-                if k.startswith("index_len")
-            }
             action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
-                **step_batch_lens,
             )
 
         profiling_wrapper.range_pop()  # compute actions
@@ -400,32 +378,15 @@ class PPOTrainer(BaseRLTrainer):
                     act = act.item()
                 self.envs.async_step_at(index_env, act)
 
-        for index_env, act in zip(
-            range(env_slice.start, env_slice.stop),
-            action_data.env_actions.cpu().unbind(0),
-        ):
-            if is_continuous_action_space(self._env_spec.action_space):
-                # Clipping actions to the specified limits
-                act = np.clip(
-                    act.numpy(),
-                    self._env_spec.action_space.low,
-                    self._env_spec.action_space.high,
-                )
-            else:
-                act = act.item()
-            self.envs.async_step_at(index_env, act)
-
-        self.env_time += time.time() - t_step_env
-
-        self._agent.rollouts.insert(
-            next_recurrent_hidden_states=action_data.rnn_hidden_states,
-            actions=action_data.actions,
-            action_log_probs=action_data.action_log_probs,
-            value_preds=action_data.values,
-            buffer_index=buffer_index,
-            should_inserts=action_data.should_inserts,
-            action_data=action_data,
-        )
+        with g_timer.avg_time("trainer.obs_insert"):
+            self._agent.rollouts.insert(
+                next_recurrent_hidden_states=action_data.rnn_hidden_states,
+                actions=action_data.actions,
+                action_log_probs=action_data.action_log_probs,
+                value_preds=action_data.values,
+                buffer_index=buffer_index,
+                should_inserts=action_data.should_inserts,
+            )
 
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -487,36 +448,10 @@ class PPOTrainer(BaseRLTrainer):
                     self.running_episode_stats[k] = torch.zeros_like(
                         self.running_episode_stats["count"]
                     )
-                if len(self.running_episode_stats[k][env_slice]) != len(v):
-                    # Find which is shorter and pad the other
-                    min_len = min(
-                        len(self.running_episode_stats[k][env_slice]), len(v)
-                    )
-                    self.running_episode_stats[k][env_slice][:min_len] += v[:min_len].where(done_masks[:min_len], v.new_zeros(()))  # type: ignore
-                else:
-                    self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
+                self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
-                self.current_episode_reward[env_slice].masked_fill_(
-                    done_masks, 0.0
-                )
-
-            if self._perf_logger:
-                for env_info in infos:
-                    if "runtime_perf_stats" in env_info:
-                        self._perf_logger.add_sample_stats(
-                            env_info["runtime_perf_stats"]
-                        )
-
-            if self._is_static_encoder:
-                with inference_mode():
-                    batch[
-                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                    ] = self._encoder(batch)
-            self._agent.rollouts.insert(
-                next_observations=batch,
-                rewards=rewards,
-                next_masks=not_done_masks,
-                buffer_index=buffer_index,
+            self.current_episode_reward[env_slice].masked_fill_(
+                done_masks, 0.0
             )
 
         if self._is_static_encoder:
@@ -546,18 +481,11 @@ class PPOTrainer(BaseRLTrainer):
     def _update_agent(self):
         with inference_mode():
             step_batch = self._agent.rollouts.get_last_step()
-
-            step_batch_lens = {
-                k: v
-                for k, v in step_batch.items()
-                if k.startswith("index_len")
-            }
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],
                 step_batch.get("recurrent_hidden_states", None),
                 step_batch["prev_actions"],
                 step_batch["masks"],
-                **step_batch_lens,
             )
 
         self._agent.rollouts.compute_returns(
@@ -608,8 +536,6 @@ class PPOTrainer(BaseRLTrainer):
             self.num_rollouts_done_store.set("num_done", "0")
 
         self.num_steps_done += count_steps_delta
-        if self._perf_logger:
-            self._perf_logger.add_steps(count_steps_delta)
 
         return losses
 
@@ -695,9 +621,6 @@ class PPOTrainer(BaseRLTrainer):
                 for k, v in self._single_proc_infos.items():
                     logger.info(f" - {k}: {np.mean(v):.3f}")
 
-            if self._perf_logger:
-                self._perf_logger.check_log_summary()
-
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
             return False
@@ -763,6 +686,7 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_push("train update")
 
                 self._agent.pre_rollout()
+
                 if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
                         count_checkpoints=count_checkpoints,
@@ -774,12 +698,13 @@ class PPOTrainer(BaseRLTrainer):
                         window_episode_stats=dict(self.window_episode_stats),
                         run_id=writer.get_run_id(),
                     )
-                    agent_resume_state = self._agent.get_resume_state()
-                    agent_resume_state.update(
-                        {"config": self.config, "requeue_stats": requeue_stats}
-                    )
+
                     save_resume_state(
-                        agent_resume_state,
+                        dict(
+                            **self._agent.get_resume_state(),
+                            config=self.config,
+                            requeue_stats=requeue_stats,
+                        ),
                         self.config,
                     )
 
@@ -897,33 +822,19 @@ class PPOTrainer(BaseRLTrainer):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
         if len(self.config.habitat_baselines.eval.video_option) > 0:
-            n_agents = len(config.habitat.simulator.agents)
-            for agent_i in range(n_agents):
-                agent_name = config.habitat.simulator.agents_order[agent_i]
-                agent_config = get_agent_config(
-                    config.habitat.simulator, agent_i
-                )
-
-                agent_sensors = agent_config.sim_sensors
-                extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
-                with read_write(agent_sensors):
-                    agent_sensors.update(extra_sensors)
-                with read_write(config):
-                    if config.habitat.gym.obs_keys is not None:
-                        for render_view in extra_sensors.values():
-                            if (
+            agent_config = get_agent_config(config.habitat.simulator)
+            agent_sensors = agent_config.sim_sensors
+            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+            with read_write(agent_sensors):
+                agent_sensors.update(extra_sensors)
+            with read_write(config):
+                if config.habitat.gym.obs_keys is not None:
+                    for render_view in extra_sensors.values():
+                        if render_view.uuid not in config.habitat.gym.obs_keys:
+                            config.habitat.gym.obs_keys.append(
                                 render_view.uuid
-                                not in config.habitat.gym.obs_keys
-                            ):
-                                if n_agents > 1:
-                                    config.habitat.gym.obs_keys.append(
-                                        f"{agent_name}_{render_view.uuid}"
-                                    )
-                                else:
-                                    config.habitat.gym.obs_keys.append(
-                                        render_view.uuid
-                                    )
-                    config.habitat.simulator.debug_render = True
+                            )
+                config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
@@ -931,263 +842,8 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         self._agent = self._create_agent(None)
-        action_shape, discrete_actions = get_action_space_info(
-            self._agent.actor_critic.policy_action_space
-        )
-
-        if (
-            self._agent.actor_critic.should_load_agent_state
-            and self.config.habitat_baselines.eval.should_load_ckpt
-        ):
+        if self._agent.actor_critic.should_load_agent_state:
             self._agent.load_state_dict(ckpt_dict)
-
-        observations = self.envs.reset()
-        batch = batch_obs(observations, device=self.device)
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device="cpu"
-        )
-
-        test_recurrent_hidden_states = torch.zeros(
-            (
-                self.config.habitat_baselines.num_environments,
-                *self._agent.actor_critic.hidden_state_shape,
-            ),
-            device=self.device,
-        )
-        hidden_state_lens = self._agent.actor_critic.hidden_state_shape_lens
-        action_space_lens = (
-            self._agent.actor_critic.policy_action_space_shape_lens
-        )
-        prev_actions = torch.zeros(
-            self.config.habitat_baselines.num_environments,
-            *action_shape,
-            device=self.device,
-            dtype=torch.long if discrete_actions else torch.float,
-        )
-        not_done_masks = torch.zeros(
-            (
-                self.config.habitat_baselines.num_environments,
-                *self._agent.masks_shape,
-            ),
-            device=self.device,
-            dtype=torch.bool,
-        )
-        stats_episodes: Dict[
-            Any, Any
-        ] = {}  # dict of dicts that stores stats per episode
-        ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
-
-        rgb_frames: List[List[np.ndarray]] = [
-            [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]
-        if len(self.config.habitat_baselines.eval.video_option) > 0:
-            os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
-
-        number_of_eval_episodes = (
-            self.config.habitat_baselines.test_episode_count
-        )
-        evals_per_ep = self.config.habitat_baselines.eval.evals_per_ep
-        if number_of_eval_episodes == -1:
-            number_of_eval_episodes = sum(self.envs.number_of_episodes)
-        else:
-            total_num_eps = sum(self.envs.number_of_episodes)
-            # if total_num_eps is negative, it means the number of evaluation episodes is unknown
-            if total_num_eps < number_of_eval_episodes and total_num_eps > 1:
-                logger.warn(
-                    f"Config specified {number_of_eval_episodes} eval episodes"
-                    ", dataset only has {total_num_eps}."
-                )
-                logger.warn(f"Evaluating with {total_num_eps} instead.")
-                number_of_eval_episodes = total_num_eps
-            else:
-                assert evals_per_ep == 1
-        assert (
-            number_of_eval_episodes > 0
-        ), "You must specify a number of evaluation episodes with test_episode_count"
-
-        pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
-        self._agent.eval()
-        while (
-            len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
-            and self.envs.num_envs > 0
-        ):
-            current_episodes_info = self.envs.current_episodes()
-
-            # TODO: make sure this is batched properly
-            space_lengths = {}
-            n_agents = len(config.habitat.simulator.agents)
-            if n_agents > 1:
-                space_lengths = {
-                    "index_len_recurrent_hidden_states": hidden_state_lens,
-                    "index_len_prev_actions": action_space_lens,
-                }
-            with inference_mode():
-                action_data = self._agent.actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    prev_actions,
-                    not_done_masks,
-                    deterministic=False,
-                    **space_lengths,
-                )
-                if action_data.should_inserts is None:
-                    test_recurrent_hidden_states = (
-                        action_data.rnn_hidden_states
-                    )
-                    prev_actions.copy_(action_data.actions)  # type: ignore
-                else:
-                    self._agent.actor_critic.update_hidden_state(
-                        test_recurrent_hidden_states, prev_actions, action_data
-                    )
-
-            # NB: Move actions to CPU.  If CUDA tensors are
-            # sent in to env.step(), that will create CUDA contexts
-            # in the subprocesses.
-            if is_continuous_action_space(self._env_spec.action_space):
-                # Clipping actions to the specified limits
-                step_data = [
-                    np.clip(
-                        a.numpy(),
-                        self._env_spec.action_space.low,
-                        self._env_spec.action_space.high,
-                    )
-                    for a in action_data.env_actions.cpu()
-                ]
-            else:
-                step_data = [a.item() for a in action_data.env_actions.cpu()]
-
-            outputs = self.envs.step(step_data)
-
-            observations, rewards_l, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
-            policy_infos = self._agent.actor_critic.get_extra(
-                action_data, infos, dones
-            )
-            for i in range(len(policy_infos)):
-                infos[i].update(policy_infos[i])
-            batch = batch_obs(  # type: ignore
-                observations,
-                device=self.device,
-            )
-            batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-            not_done_masks = torch.tensor(
-                [[not done] for done in dones],
-                dtype=torch.bool,
-                device="cpu",
-            ).repeat(1, *self._agent.masks_shape)
-
-            rewards = torch.tensor(
-                rewards_l, dtype=torch.float, device="cpu"
-            ).unsqueeze(1)
-            current_episode_reward += rewards
-            next_episodes_info = self.envs.current_episodes()
-            envs_to_pause = []
-            n_envs = self.envs.num_envs
-            for i in range(n_envs):
-                if (
-                    ep_eval_count[
-                        (
-                            next_episodes_info[i].scene_id,
-                            next_episodes_info[i].episode_id,
-                        )
-                    ]
-                    == evals_per_ep
-                ):
-                    envs_to_pause.append(i)
-
-                if len(self.config.habitat_baselines.eval.video_option) > 0:
-                    # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
-                    )
-                    if not not_done_masks[i].any().item():
-                        # The last frame corresponds to the first frame of the next episode
-                        # but the info is correct. So we use a black frame
-                        frame = observations_to_image(
-                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
-                        )
-                    frame = overlay_frame(frame, infos[i])
-                    rgb_frames[i].append(frame)
-
-                # episode ended
-                if not not_done_masks[i].any().item():
-                    pbar.update()
-                    episode_stats = {
-                        "reward": current_episode_reward[i].item()
-                    }
-                    episode_stats.update(extract_scalars_from_info(infos[i]))
-                    current_episode_reward[i] = 0
-                    k = (
-                        current_episodes_info[i].scene_id,
-                        current_episodes_info[i].episode_id,
-                    )
-                    ep_eval_count[k] += 1
-                    # use scene_id + episode_id as unique id for storing stats
-                    stats_episodes[(k, ep_eval_count[k])] = episode_stats
-
-                    if (
-                        len(self.config.habitat_baselines.eval.video_option)
-                        > 0
-                    ):
-                        generate_video(
-                            video_option=self.config.habitat_baselines.eval.video_option,
-                            video_dir=self.config.habitat_baselines.video_dir,
-                            images=rgb_frames[i],
-                            episode_id=current_episodes_info[i].episode_id,
-                            checkpoint_idx=checkpoint_index,
-                            metrics=extract_scalars_from_info(infos[i]),
-                            fps=self.config.habitat_baselines.video_fps,
-                            tb_writer=writer,
-                            keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
-                        )
-
-                        rgb_frames[i] = []
-
-                    gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
-                    if gfx_str != "":
-                        write_gfx_replay(
-                            gfx_str,
-                            self.config.habitat.task,
-                            current_episodes_info[i].episode_id,
-                        )
-
-            not_done_masks = not_done_masks.to(device=self.device)
-            (
-                self.envs,
-                test_recurrent_hidden_states,
-                not_done_masks,
-                current_episode_reward,
-                prev_actions,
-                batch,
-                rgb_frames,
-            ) = self._pause_envs(
-                envs_to_pause,
-                self.envs,
-                test_recurrent_hidden_states,
-                not_done_masks,
-                current_episode_reward,
-                prev_actions,
-                batch,
-                rgb_frames,
-            )
-            self._agent.actor_critic.pause_envs(envs_to_pause)
-
-        pbar.close()
-        assert (
-            len(ep_eval_count) >= number_of_eval_episodes
-        ), f"Expected {number_of_eval_episodes} episodes, got {len(ep_eval_count)}."
-
-        aggregated_stats = {}
-        for stat_key in next(iter(stats_episodes.values())).keys():
-            aggregated_stats[stat_key] = np.mean(
-                [v[stat_key] for v in stats_episodes.values()]
-            )
-
-        for k, v in aggregated_stats.items():
-            logger.info(f"Average episode {k}: {v:.4f}")
 
         step_id = checkpoint_index
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:

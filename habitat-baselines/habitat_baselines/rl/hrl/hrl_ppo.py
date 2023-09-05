@@ -88,8 +88,6 @@ class HRLPPO(PPO):
         else:
             all_losses.append(self.entropy_coef.lagrangian_loss(dist_entropy))
 
-        all_losses.extend(v["loss"] for v in aux_loss_res.values())
-
         total_loss = torch.stack(all_losses).sum()
 
         total_loss = self.before_backward(total_loss)
@@ -110,12 +108,6 @@ class HRLPPO(PPO):
                 n_samples / total_size
             )
 
-            total_size = batch["loss_mask"].shape[0]
-            if isinstance(n_samples, torch.Tensor):
-                n_samples = n_samples.item()
-            learner_metrics["batch_filled_ratio"].append(
-                n_samples / total_size
-            )
             learner_metrics["value_loss"].append(value_loss)
             learner_metrics["action_loss"].append(action_loss)
             learner_metrics["dist_entropy"].append(dist_entropy)
@@ -130,10 +122,6 @@ class HRLPPO(PPO):
                 learner_metrics["entropy_coef"].append(
                     self.entropy_coef().detach()
                 )
-            for name, res in aux_loss_res.items():
-                for k, v in res.items():
-                    learner_metrics[f"aux_{name}_{k}"].append(v.detach())
-
             for name, res in aux_loss_res.items():
                 for k, v in res.items():
                     learner_metrics[f"aux_{name}_{k}"].append(v.detach())

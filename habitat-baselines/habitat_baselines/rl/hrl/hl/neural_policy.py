@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
@@ -14,7 +15,11 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import CriticHead, get_aux_modules
+from habitat_baselines.rl.ppo.policy import (
+    CriticHead,
+    PolicyActionData,
+    get_aux_modules,
+)
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -100,15 +105,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
-        self.aux_modules = get_aux_modules(
-            aux_loss_config, action_space, observation_space, self
-        )
-
-    def filter_envs(self, curr_envs_to_keep_active):
-        """
-        Cleans up stateful variables of the policy so that
-        they match with the active environments
-        """
+        self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
 
     @property
     def should_load_agent_state(self):
@@ -123,10 +120,32 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         cur_skills,
         log_info,
     ):
-        return (observations["should_replan"] > 0.0).view(-1).cpu()
+        if self._termination_obs_name is None:
+            return super().get_termination(
+                observations,
+                rnn_hidden_states,
+                prev_actions,
+                masks,
+                cur_skills,
+                log_info,
+            )
+        return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
 
-    def create_hl_info(self):
-        return {"actions": None}
+    def _setup_actions(self) -> List[PddlAction]:
+        all_actions = self._pddl_prob.get_possible_actions()
+        all_actions = [
+            ac for ac in all_actions if ac.name in self._config.allowed_actions
+        ]
+        if not self._config.allow_other_place:
+            all_actions = [
+                ac
+                for ac in all_actions
+                if (
+                    ac.name != "place"
+                    or ac.param_values[0].name in ac.param_values[1].name
+                )
+            ]
+        return all_actions
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space
@@ -136,10 +155,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     @property
     def num_recurrent_layers(self):
         return self._state_encoder.num_recurrent_layers
-
-    @property
-    def recurrent_hidden_size(self):
-        return self._hidden_size
 
     def parameters(self):
         return chain(
@@ -170,6 +185,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             hidden, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
+    def to(self, device):
+        self._device = device
+        return super().to(device)
+
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         state, _ = self.forward(observations, rnn_hidden_states, masks)
         return self._critic(state)
@@ -183,17 +202,13 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         action,
         rnn_build_seq_info,
     ):
-        features, rnn_hxs = self.forward(
+        features, rnn_hidden_states = self.forward(
             observations, rnn_hidden_states, masks, rnn_build_seq_info
         )
         distribution = self._policy(features)
         value = self._critic(features)
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
-        aux_loss_res = {
-            k: v(features, observations) for k, v in self.aux_modules.items()
-        }
-
         aux_loss_res = {
             k: v(features, observations) for k, v in self.aux_modules.items()
         }
