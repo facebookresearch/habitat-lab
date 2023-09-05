@@ -262,8 +262,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
         return grasp_mgr
 
-    def get_articulated_agent(self, env):
-        return env._sim.agents_mgr[self._agent_idx].articulated_agent
+    def get_articulated_agent(self):
+        return self._habitat_env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def start_skill(self, observations, skill_name):
         skill_walk = self._agent.actor_critic._skills[  # type: ignore
@@ -287,9 +287,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.should_start_skill = False
 
     def get_cartesian_obj_coords(self, obj_trans, env):
-        articulated_agent_T = self.get_articulated_agent(
-            env
-        ).base_transformation
+        articulated_agent_T = self.get_articulated_agent().base_transformation
         rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
         rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
 
@@ -317,10 +315,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return action_data.actions
 
     def act(self, obs, env):
+        # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
         ].articulated_agent.base_transformation.translation
-        finish_oracle_nav = obs["agent_0_has_finished_oracle_nav"]
         act_space = ActionSpace(
             {
                 action_name: space
@@ -329,9 +327,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             }
         )
         action_array = np.zeros(get_num_actions(act_space))
-        action_ind_nav = find_action_range(
-            act_space, "agent_0_oracle_nav_action"
-        )
 
         if self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
@@ -340,20 +335,24 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             obj_trans = self.rigid_obj_interest.translation
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
-                rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
 
-                if (
-                    type_of_skill != "OracleNavPolicy"
-                    and rho < self._pick_dist_threshold
-                ):
-                    finish_oracle_nav = True
-                if not finish_oracle_nav:
+                if type_of_skill == "OracleNavPolicy":
+                    finished_nav = obs["agent_0_has_finished_oracle_nav"]
+                else:
+                    # agent_trans = human_trans
+                    rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
+                    finished_nav = rho < self._pick_dist_threshold
+                
+                if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
                         action_array = self.force_apply_skill(
                             obs, "nav_to_obj", env, obj_trans
                         )[0]
                     elif type_of_skill == "OracleNavPolicy":
+                        action_ind_nav = find_action_range(
+                            act_space, "agent_0_oracle_nav_action"
+                        )
                         action_array[
                             action_ind_nav[0] : action_ind_nav[0] + 3
                         ] = obj_trans
@@ -399,21 +398,24 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         elif self.current_state == FetchState.BRING:
             type_of_skill = self.defined_skills.nav_to_robot.skill_name
-            agent_trans = human_trans
-            rho, _ = self.get_cartesian_obj_coords(agent_trans, env)
-            if (
-                type_of_skill != "OracleNavPolicy"
-                and rho < self._drop_dist_threshold
-            ):
-                finish_oracle_nav = True
 
-            if not finish_oracle_nav:
+            if type_of_skill == "OracleNavPolicy":
+                finished_nav = obs["agent_0_has_finished_oracle_nav"]
+            else:
+                # agent_trans = human_trans
+                rho, _ = self.get_cartesian_obj_coords(human_trans, env)
+                finished_nav = rho < self._pick_dist_threshold
+
+            if not finished_nav:
                 # Keep gripper closed
                 if type_of_skill == "NavSkillPolicy":
                     action_array = self.force_apply_skill(
                         obs, "nav_to_robot", env, human_trans
                     )[0]
                 elif type_of_skill == "OracleNavPolicy":
+                    action_ind_nav = find_action_range(
+                        act_space, "agent_0_oracle_nav_action"
+                    )
                     action_array[
                         action_ind_nav[0] : action_ind_nav[0] + 3
                     ] = obj_trans
@@ -446,7 +448,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # when the thrown object leaves the hand, update the collisiongroups
             rigid_obj = self._last_object_drop_info[0]
             ee_pos = (
-                self.get_articulated_agent(env)
+                self.get_articulated_agent()
                 .ee_transform(grasp_mgr.ee_index)
                 .translation
             )
