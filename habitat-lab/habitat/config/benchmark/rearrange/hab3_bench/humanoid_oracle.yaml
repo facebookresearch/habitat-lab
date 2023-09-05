@@ -38,7 +38,7 @@ habitat:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/backup_female_2_motion_data_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/female_2_motion_data_smplx.pkl"
         sim_sensors:
           head_depth_sensor:
             height: 512

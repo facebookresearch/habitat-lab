@@ -14,7 +14,6 @@ import numpy as np
 
 import habitat
 from habitat.core.spaces import ActionSpace
-from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
 def create_env(args, proc_i):
@@ -288,4 +287,4 @@ if __name__ == "__main__":
         f"Ran {args.n_trials} trial(s) with average FPS of {avg_fps} from {fps_accumulator}."
     )
     print("================================================================")
-    breakpoint()
+    # breakpoint()
