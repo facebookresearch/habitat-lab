@@ -35,7 +35,7 @@ def pretty_print(metric_dict, latex=False, metric_names=None):
             mean, std = metric_dict[metric_name]
         else:
             mean = metric_dict[metric_name]
-            std = 0.
+            std = 0.0
         number_str = get_number_str(mean, std)
         if not latex:
             curr_metric_str = f"{metric_name}: {number_str}"
@@ -278,14 +278,16 @@ def compute_relative_metrics_multi_ckpt(
             res_zsc = aggregate_per_episode_dict(
                 {"all_episodes": all_res}, average=True, std=True
             )["all_episodes"]
-            
+
             metrics_str = pretty_print(res_zsc, latex=latex)
-                
+
             print(f"{baseline_name}.{agent_name}: {metrics_str}")
             for seed in range(len(res_zsc)):
-                metrics_str_seed = pretty_print(all_res[seed], latex=latex)    
-                print(f"{baseline_name}.{seed}.{agent_name}: {metrics_str_seed}")
-                
+                metrics_str_seed = pretty_print(all_res[seed], latex=latex)
+                print(
+                    f"{baseline_name}.{seed}.{agent_name}: {metrics_str_seed}"
+                )
+
         print("-----")
 
 
