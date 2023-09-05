@@ -343,6 +343,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "motion_data_path",
                 "ik_arm_urdf",
                 "grasp_managers",
+                "max_climb",
+                "max_slope",
                 "joint_start_override",
             },
         )
@@ -353,6 +355,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_config.navmesh_settings.set_defaults()
             sim_config.navmesh_settings.agent_radius = agent_config.radius
             sim_config.navmesh_settings.agent_height = agent_config.height
+            sim_config.navmesh_settings.agent_max_climb = (
+                agent_config.max_climb
+            )
+            sim_config.navmesh_settings.agent_max_slope = (
+                agent_config.max_slope
+            )
             sim_config.navmesh_settings.include_static_objects = (
                 self.habitat_config.navmesh_include_static_objects
             )

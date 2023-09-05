@@ -444,7 +444,7 @@ def get_robot_spawns(
         necessarily on the navmesh.
     :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
     :param distance_threshold: The maximum distance from the target.
-    :param sim: The simulator instance.
+    :param sim: The RearrangeSimulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
     :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
@@ -457,24 +457,29 @@ def get_robot_spawns(
     start_position = agent.base_pos
 
     state = sim.capture_state()
+    if agent is None:
+        agent = sim.articulated_agent
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
-        sim.set_state(state)
+        # Place within `distance_threshold` of the object.
+        start_position = sim.pathfinder.get_random_navigable_point_near(
+            target_position,
+            distance_threshold,
+            island_index=sim.largest_island_idx,
+        )
+        # get_random_navigable_point_near() can return NaNs for start_position.
+        # We want to make sure that the generated start_position is valid
+        if np.isnan(start_position).any():
+            continue
 
-        if distance_threshold == -1.0:
-            # Place as close to the object as possible.
-            if not sim.is_point_within_bounds(target_position):
-                rearrange_logger.error(
-                    f"Object {target_position} is out of bounds but trying to set robot position"
-                )
+        target_distance = np.linalg.norm(
+            (start_position - target_position)[[0, 2]]
+        )
 
-            start_position = sim.safe_snap_point(target_position)
-        else:
-            # Place within `distance_threshold` of the object.
-            start_position = sim.pathfinder.get_random_navigable_point_near(
-                target_position, distance_threshold
-            )
+        if target_distance > distance_threshold:
+            continue
+
         # Face the robot towards the object.
         relative_target = target_position - start_position
         angle_to_object = get_angle_to_pos(relative_target)
@@ -483,19 +488,6 @@ def get_robot_spawns(
 
         if physics_stability_steps == 0:
             return start_position, start_rotation, False
-
-        island_idx = sim.pathfinder.get_island(start_position)
-        if island_idx != sim.largest_island_idx:
-            continue
-
-        target_distance = np.linalg.norm(
-            (start_position - target_position)[[0, 2]]
-        )
-
-        is_navigable = sim.pathfinder.is_navigable(start_position)
-
-        if target_distance > distance_threshold or not is_navigable:
-            continue
 
         agent.base_pos = start_position
         agent.base_rot = start_rotation
@@ -516,11 +508,10 @@ def get_robot_spawns(
             if did_collide:
                 break
 
+        sim.set_state(state)
         if not did_collide:
-            sim.set_state(state)
             return start_position, start_rotation, False
 
-    sim.set_state(state)
     return start_position, start_rotation, True
 
 
