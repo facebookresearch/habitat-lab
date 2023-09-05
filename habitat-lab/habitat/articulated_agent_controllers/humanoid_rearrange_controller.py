@@ -216,9 +216,9 @@ class HumanoidRearrangeController:
 
         if did_rotate:
             # When we rotate, we allow some movement
-            distance_to_walk = self.dist_per_step_size * 2
-            if np.abs(forward_angle) >= self.threshold_rotate_not_move:
-                distance_to_walk *= 0
+            distance_to_walk = 0.05 # self.dist_per_step_size * 2
+            #if np.abs(forward_angle) >= self.threshold_rotate_not_move:
+            #    distance_to_walk *= 0
 
         assert not np.isnan(
             distance_to_walk
