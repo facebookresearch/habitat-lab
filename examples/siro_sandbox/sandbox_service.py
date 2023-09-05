@@ -23,6 +23,7 @@ class SandboxService:
         get_metrics,
         end_episode,
         set_cursor_style,
+        get_observation_as_debug_image
     ):
         self._args = args
         self._config = config
@@ -38,6 +39,7 @@ class SandboxService:
         self._get_metrics = get_metrics
         self._end_episode = end_episode
         self._set_cursor_style = set_cursor_style
+        self._get_observation_as_debug_image = get_observation_as_debug_image
 
     @property
     def args(self):
@@ -94,3 +96,9 @@ class SandboxService:
     @property
     def set_cursor_style(self):
         return self._set_cursor_style
+
+    @property
+    def get_observation_as_debug_image(self):
+        return self._get_observation_as_debug_image
+
+    

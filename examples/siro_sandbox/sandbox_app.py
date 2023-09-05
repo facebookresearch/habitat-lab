@@ -20,6 +20,7 @@ import argparse
 from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Dict, List, Set
+from functools import partial
 
 import magnum as mn
 import numpy as np
@@ -179,7 +180,8 @@ class SandboxDriver(GuiAppDriver):
             self._step_recorder,
             lambda: self._get_recent_metrics(),
             local_end_episode,
-            lambda: self._set_cursor_style,
+            partial(self._set_cursor_style),
+            partial(self._get_observation_as_debug_image)
         )
 
         self._app_states: List[AppState]
@@ -427,8 +429,23 @@ class SandboxDriver(GuiAppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
+    def _get_observation_as_debug_image(self, obs_key):
+
+        def depth_to_rgb(obs):
+            converted_obs = np.concatenate(
+                [obs * 255.0 for _ in range(3)], axis=2
+            ).astype(np.uint8)
+            return converted_obs
+
+        assert obs_key in self._obs.keys(), f"Observation {obs_key} not found in list of available observations {list(self._obs.keys())}"
+        
+        debug_image = np.flipud(depth_to_rgb(self._obs[obs_key]) if "depth" in obs_key else self._obs[obs_key])
+
+        return debug_image
+
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
+        post_sim_update_dict["debug_images"] = []
 
         if self._remote_gui_input:
             self._remote_gui_input.update()
@@ -482,24 +499,8 @@ class SandboxDriver(GuiAppDriver):
 
         post_sim_update_dict["keyframes"] = keyframes
 
-        def depth_to_rgb(obs):
-            converted_obs = np.concatenate(
-                [obs * 255.0 for _ in range(3)], axis=2
-            ).astype(np.uint8)
-            return converted_obs
-
-        # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self._obs.keys())), (
-            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self._obs.keys())))} "
-            f"not in available sensors ids: {list(self._obs.keys())}"
-        )
-        debug_images = (
-            depth_to_rgb(self._obs[k]) if "depth" in k else self._obs[k]
-            for k in self._debug_images
-        )
-        post_sim_update_dict["debug_images"] = [
-            np.flipud(image) for image in debug_images
-        ]
+        for obs_key in self._debug_images:
+            post_sim_update_dict["debug_images"].append(self._get_observation_as_debug_image(obs_key))
 
         if self._remote_gui_input:
             self._remote_gui_input.on_frame_end()
