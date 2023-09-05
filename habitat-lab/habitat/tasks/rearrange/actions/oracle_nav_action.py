@@ -670,6 +670,10 @@ class OracleNavCoordAction(OracleNavAction):
         return (start_pos, np.array(obj_pos))
 
     def step(self, *args, is_last_action, **kwargs):
+
+        # temp disable
+        return
+    
         self.skill_done = False
         nav_to_target_coord = kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
