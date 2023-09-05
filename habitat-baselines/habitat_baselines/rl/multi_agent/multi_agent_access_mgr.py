@@ -325,7 +325,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         for agent_i, agent in enumerate(self._agents):
             if not agent.actor_critic.should_load_agent_state:
                 continue
-            agent.load_state_dict(state[agent_i])
+            # load the state dict for the first agent and if type1 agent is None
+            if self._pop_config.load_type1_pop_ckpts is None or agent_i==0: 
+                agent.load_state_dict(state[agent_i])
 
     def load_ckpt_state_dict(self, ckpt):
         for agent in self._agents:

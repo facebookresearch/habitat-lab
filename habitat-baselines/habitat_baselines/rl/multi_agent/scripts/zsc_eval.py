@@ -14,7 +14,7 @@ def zsc_eval_single(plan_idx=None, learned_agent=None, add_opts=None):
         os.system(run_cmd)
 
     if learned_agent is not None:
-        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts}"
+        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts}" 
         print(f"RUNNING {run_cmd}")
         os.system(run_cmd)
 

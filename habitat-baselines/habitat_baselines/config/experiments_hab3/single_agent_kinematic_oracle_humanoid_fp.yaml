@@ -43,7 +43,7 @@ habitat:
         max_instant_force: -1.0
 
   environment:
-    max_episode_steps: 700
+    max_episode_steps: 3000
 
   simulator:
     kinematic_mode: True
