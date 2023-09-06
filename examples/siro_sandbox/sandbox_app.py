@@ -150,6 +150,9 @@ class SandboxDriver(GuiAppDriver):
         self._viz_anim_fraction = 0.0
         self._pending_cursor_style = None
 
+        self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
+        self._num_episodes_done: int = 0
+
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
 
@@ -167,6 +170,9 @@ class SandboxDriver(GuiAppDriver):
             lambda: self._get_recent_metrics(),
             local_end_episode,
             lambda: self._set_cursor_style,
+            lambda: self.get_num_iter_episodes(),
+            lambda: self.get_num_episodes_done(),
+            lambda: self._next_episode_exists(),
         )
 
         self._app_states: List[AppState]
@@ -208,8 +214,6 @@ class SandboxDriver(GuiAppDriver):
         self._app_state_index = None
         self._app_state = None
 
-        self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
-        self._num_episodes_done: int = 0
         self._reset_environment()
 
     def _make_dataset(self, config):
@@ -261,8 +265,14 @@ class SandboxDriver(GuiAppDriver):
             self._metrics,
         ) = self.gym_habitat_env.step(action)
 
+    def get_num_episodes_done(self):
+        return self._num_episodes_done
+
+    def get_num_iter_episodes(self):
+        return self._num_iter_episodes
+
     def _next_episode_exists(self):
-        return self._num_episodes_done < self._num_iter_episodes - 1
+        return self.get_num_episodes_done() < self.get_num_iter_episodes() - 1
 
     def _compute_action_and_step_env(self):
         action = self.ctrl_helper.update(self._obs)
@@ -360,10 +370,11 @@ class SandboxDriver(GuiAppDriver):
 
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
-        self._num_episodes_done += 1
-
         if do_reset and self._next_episode_exists():
             self._reset_environment()
+
+        self._num_episodes_done += 1
+        assert self._num_episodes_done <= self._num_iter_episodes
 
     def _save_recorded_keyframes_to_file(self):
         if not self._recording_keyframes:

@@ -37,9 +37,6 @@ class AppStateRearrange(AppState):
 
         self._cam_transform = None
 
-        self._num_iter_episodes: int = len(self._sandbox_service.env.episode_iterator.episodes)  # type: ignore
-        self._num_episodes_done: int = 0
-
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
         self._num_busy_objects = None  # currently held by non-gui agents
@@ -68,8 +65,6 @@ class AppStateRearrange(AppState):
             sim._scene_obj_ids[temp_id] for temp_id in temp_ids
         ]
         self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
-
-        self._num_episodes_done += 1
 
         self._nav_helper.on_environment_reset()
 
@@ -265,9 +260,6 @@ class AppStateRearrange(AppState):
         agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]
 
-    def _next_episode_exists(self):
-        return self._num_episodes_done < self._num_iter_episodes - 1
-
     def _get_controls_text(self):
         def get_grasp_release_controls_text():
             if self._held_target_obj_idx is not None:
@@ -277,7 +269,7 @@ class AppStateRearrange(AppState):
 
         controls_str: str = ""
         controls_str += "ESC: exit\n"
-        if self._next_episode_exists():
+        if self._sandbox_service.next_episode_exists():
             controls_str += "M: next episode\n"
 
         if self._env_episode_active():
@@ -363,7 +355,11 @@ class AppStateRearrange(AppState):
                 text_delta_y=-50,
             )
 
-        progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+        num_episodes_remaining = (
+            self._sandbox_service.get_num_iter_episodes()
+            - self._sandbox_service.get_num_episodes_done()
+        )
+        progress_str = f"{num_episodes_remaining} episodes remaining"
         self._sandbox_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
@@ -416,7 +412,10 @@ class AppStateRearrange(AppState):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
+        if (
+            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            and self._sandbox_service.next_episode_exists()
+        ):
             self._sandbox_service.end_episode(do_reset=True)
 
         if self._env_episode_active():

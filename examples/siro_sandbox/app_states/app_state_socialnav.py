@@ -31,8 +31,6 @@ class AppStateSocialNav(AppState):
         )
 
         # task-specific parameters:
-        self._num_iter_episodes: int = len(self._sandbox_service.env.episode_iterator.episodes)  # type: ignore
-        self._num_episodes_done: int = 0
         self._object_found_radius: float = 1.2  # TODO: make this a parameter
         self._episode_found_obj_ids: Set = (
             None  # will be set in on_environment_reset
@@ -61,14 +59,15 @@ class AppStateSocialNav(AppState):
                 "target_object_positions"
             ] = self._get_target_object_positions()
 
-        self._num_episodes_done += 1
-
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
+        if (
+            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            and self._sandbox_service.next_episode_exists()
+        ):
             self._sandbox_service.end_episode(do_reset=True)
 
         if self._env_episode_active():
@@ -117,9 +116,6 @@ class AppStateSocialNav(AppState):
         return len(self._episode_target_obj_ids) == len(
             self._episode_found_obj_ids
         )
-
-    def _next_episode_exists(self):
-        return self._num_episodes_done < self._num_iter_episodes - 1
 
     def _get_camera_lookat_pos(self):
         agent_root = get_agent_art_obj_transform(
@@ -248,7 +244,11 @@ class AppStateSocialNav(AppState):
                 text_delta_y=-50,
             )
 
-        progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+        num_episodes_remaining = (
+            self._sandbox_service.get_num_iter_episodes()
+            - self._sandbox_service.get_num_episodes_done()
+        )
+        progress_str = f"{num_episodes_remaining} episodes remaining"
         self._sandbox_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
@@ -260,7 +260,7 @@ class AppStateSocialNav(AppState):
 
         controls_str: str = ""
         controls_str += "ESC: exit\n"
-        if self._next_episode_exists():
+        if self._sandbox_service.next_episode_exists():
             controls_str += "M: next episode\n"
 
         if self._env_episode_active():
