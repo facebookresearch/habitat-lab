@@ -1205,6 +1205,11 @@ class SocialNavReward(MeasurementConfig):
     use_geo_distance: bool = False
     reward_exploration: float = -1.0
     keep_len: int = 75
+    # For collision pen
+    consider_collision: bool = False
+    force_pen: float = 0.0
+    max_force_pen: float = 0.0
+    force_end_pen: float = 0.0
 
 
 @dataclass

@@ -291,7 +291,8 @@ class CompositeSubgoalReward(Measure):
 
 
 @registry.register_measure
-class SocialNavReward(Measure):
+class SocialNavReward(RearrangeReward):
+    # class SocialNavReward(Measure):
     """
     Reward that gives a continuous reward on the social navigation task.
     """
@@ -302,16 +303,18 @@ class SocialNavReward(Measure):
     def _get_uuid(*args, **kwargs):
         return SocialNavReward.cls_uuid
 
-    def __init__(self, *args, config, sim, **kwargs):
-        super().__init__(*args, config, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        config = kwargs["config"]
         self._config = config
-        self._sim = sim
+        self._sim = kwargs["sim"]
         self._safe_dis_min = config.safe_dis_min
         self._safe_dis_max = config.safe_dis_max
         self._safe_dis_reward = config.safe_dis_reward
         self._facing_human_dis = config.facing_human_dis
         self._facing_human_reward = config.facing_human_reward
         self._use_geo_distance = config.use_geo_distance
+        self._consider_collision = config.consider_collision
 
         self._reward_exploration = config.reward_exploration
         self._keep_len = config.keep_len
@@ -330,14 +333,19 @@ class SocialNavReward(Measure):
             **kwargs,
         )
 
-    def update_metric(self, *args, task, **kwargs):
-        self._metric = 0.0
-        position_human = kwargs["observations"]["agent_1_localization_sensor"][
-            :3
-        ]
-        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
-            :3
-        ]
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+        if not self._consider_collision:
+            self._metric = 0.0
+
+        position_human = observations["agent_1_localization_sensor"][:3]
+        position_robot = observations["agent_0_localization_sensor"][:3]
 
         if self._use_geo_distance:
             path = habitat_sim.ShortestPath()
