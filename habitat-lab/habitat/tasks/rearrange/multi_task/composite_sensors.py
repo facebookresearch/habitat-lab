@@ -323,6 +323,7 @@ class SocialNavReward(Measure):
         self._visit_loc_i = 0
 
         self._prev_dist = -1.0
+        self._previous_collision = 0
 
     def reset_metric(self, *args, **kwargs):
         self._prev_dist = -1.0
@@ -333,6 +334,7 @@ class SocialNavReward(Measure):
             *args,
             **kwargs,
         )
+        self._previous_collision = 0
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # super().update_metric(
@@ -342,8 +344,13 @@ class SocialNavReward(Measure):
         #     observations=observations,
         #     **kwargs,
         # )
-        if not self._consider_collision:
-            self._metric = 0.0
+        self._metric = 0.0
+
+        collision_metric = task.measurements.measures[
+            "robot_collisions"
+        ].get_metric()["robot_scene_colls"]
+        if self._previous_collision != collision_metric:
+            self._metric -= self._config.force_pen
 
         position_human = observations["agent_1_localization_sensor"][:3]
         position_robot = observations["agent_0_localization_sensor"][:3]
@@ -412,6 +419,7 @@ class SocialNavReward(Measure):
 
         # Update the distance
         self._prev_dist = dis  # type: ignore
+        self._previous_collision = collision_metric  # type: ignore
 
 
 @registry.register_measure
