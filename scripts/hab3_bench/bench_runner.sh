@@ -73,6 +73,9 @@ do
     #multi-agent robots
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_vel.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_vel_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
+    #multi-agent robots
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
+
     #multi-agent robot, human (no skinning)
     #python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_vel_noskin_$i" "$NO_SKINNING"
 
