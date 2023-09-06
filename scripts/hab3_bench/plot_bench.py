@@ -69,16 +69,37 @@ def plot(name_map, savename, set_title, base_name):
 
 
 # plot rearrange benchmark numbers
+name_list = [
+    ("robot_human_oracle", "[Robot-Human Oracle Paths]"),
+    ("robot_human_vel", "[Robot-Human Vel]"),
+    ("human_oracle", "[Human Oracle]"),
+    ("human_pick", "[Human Pick]"),
+    ("human_oracle_nopick", "[Human Oracle (no pick)]"),
+    # ("robot_human_vel_noskin", "[Robot-Human Vel No Skin]"),
+    ("robots_vel", "[2 Robots Vel]"),
+    ("robot_oracle", "[Robot Oracle]"),
+]
+
+# add object number and scene complexity variations
+if True:
+    obj_scn_base_names = ["robot_oracle"]
+    num_obj = [10, 5, 2]
+    scenes = ["large", "medium", "small"]
+    for base_name in obj_scn_base_names:
+        for scn in scenes:
+            for n_obj in num_obj:
+                name_list.append(
+                    (
+                        f"{base_name}_{n_obj}obj_{scn}_scn",
+                        f"[{base_name}: O={n_obj} S={scn}]",
+                    )
+                )
+
+print(name_list)
+
 for i in [1, 16]:
     plot(
-        name_map=OrderedDict(
-            [
-                ("robots_vel", "[2 Robots Vel]"),
-                ("robot_human_vel_noskin", "[Robot-Human Vel No Skin]"),
-                ("robot_human_vel", "[Robot-Human Vel]"),
-                ("robot_human_oracle", "[Robot-Human Oracle Paths]"),
-            ]
-        ),
+        name_map=OrderedDict(name_list),
         savename="opts_%i" % i,
         set_title="Hab3: 300 Steps %i Processes" % i,
         base_name="%i_300_-1_" % i,
