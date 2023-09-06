@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-name", type=str, default="")
     parser.add_argument(
-        "--cfg", type=str, default="benchmark/rearrange/idle.yaml"
+        "--cfg", type=str, default="benchmark/rearrange/demo/idle.yaml"
     )
 
     parser.add_argument(
