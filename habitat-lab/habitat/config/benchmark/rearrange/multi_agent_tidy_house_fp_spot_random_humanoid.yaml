@@ -12,7 +12,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_human_action: oracle_nav_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_human_action: oracle_nav_with_backing_up_action #oracle_nav_action
 
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
@@ -82,11 +82,21 @@ habitat:
         lin_speed: 40.0
         ang_speed: 20.0
       agent_0_oracle_nav_human_action:
+        # # Control the oracle robot action
+        # type: OracleNavHumanAction
+        # agent_index : 0
+        # motion_control: base_velocity
+        # lin_speed: 10.0
+        # ang_speed: 10.0
+
+        # Control the oracle robot action
         type: OracleNavHumanAction
         agent_index : 0
         motion_control: base_velocity
-        lin_speed: 10.0
         ang_speed: 10.0
+        longitudinal_lin_speed: 10.0
+        navmesh_offset: [[0.0, 0.0]]
+        enable_rotation_check_for_dyn_slide: True
 
       agent_1_base_velocity:
         agent_index : 1

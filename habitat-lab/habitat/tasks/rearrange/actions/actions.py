@@ -431,9 +431,9 @@ class BaseVelAction(ArticulatedAgentAction):
             # Check if in the new articulated_agent state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
-            colls = self._sim.get_collisions()
+            # colls = self._sim.get_collisions()
             did_coll, _ = rearrange_collision(
-                colls, self._sim.snapped_obj_id, False
+                self._sim, count_obj_colls=True, agent_idx=self._agent_index
             )
             if did_coll:
                 # Don't allow the step, revert back.
@@ -450,7 +450,7 @@ class BaseVelAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.params.leg_init_params
             )
 
-    def step(self, *args, is_last_action, **kwargs):       
+    def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed

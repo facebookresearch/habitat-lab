@@ -1301,6 +1301,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._start_end_episode_distance = None
         self._agent_episode_distance = None
         self._prev_pos = None
+        self._prev_human_pos = None
         self._has_found_human = False
         self._found_human_times = 0
         self._after_found_human_times = 0
@@ -1308,6 +1309,9 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._step = 0
         self._step_after_found = 1
         self._dis_after_found = 0
+        self._update_human_pos_x = 0
+        self._update_human_pos_y = 0
+        self._update_human_pos_z = 0
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1325,6 +1329,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         )
         self._agent_episode_distance = 0.0
         self._prev_pos = robot_pos
+        self._prev_human_pos = human_pos
         self._has_found_human = False
         self._found_human_times = 0
         self._after_found_human_times = 0
@@ -1346,6 +1351,21 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         return (
             np.sum(panoptic == self._human_id) > self._human_detect_threshold
         )
+
+    @property
+    def update_human_pos(self):
+        return [
+            self._update_human_pos_x,
+            self._update_human_pos_y,
+            self._update_human_pos_z,
+        ]
+
+    @update_human_pos.setter
+    def update_human_pos(self, val):
+        if val is not None:
+            self._update_human_pos_x = val[0]
+            self._update_human_pos_y = val[1]
+            self._update_human_pos_z = val[2]
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Get the agent locations
@@ -1397,11 +1417,22 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         except Exception:
             first_found_spl = 0.0
 
+        human_rotate = 1
+        if np.linalg.norm(self._prev_human_pos - human_pos) > 0.001:
+            human_rotate = 0
+
         self._prev_pos = robot_pos
+        self._prev_human_pos = human_pos
 
         # The final stats only takes the last result, so we need to
         # do average here.
         self._metric = {
+            "human_goal_x": self._update_human_pos_x,
+            "human_goal_y": self._update_human_pos_y,
+            "human_goal_z": self._update_human_pos_z,
+            "human_rotate": human_rotate,
+            "found_human": found_human,
+            "dis": dis,
             "has_found_human": self._has_found_human,
             "found_human_rate_over_epi": self._found_human_times / self._step,
             "found_human_rate_after_found_over_epi": self._after_found_human_times

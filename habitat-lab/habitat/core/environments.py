@@ -72,7 +72,6 @@ class RLTaskEnv(habitat.RLEnv):
         reward = self.config.task.slack_reward
 
         reward += current_measure
-
         if self._episode_success():
             reward += self.config.task.success_reward
 

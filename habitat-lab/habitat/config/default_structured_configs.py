@@ -992,6 +992,8 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     reward_exploration: float = -1.0
     keep_len: int = 300
     min_dist_reward_exploration: float = 3.0
+    location_decimal: str = "round_1"  # round_half
+    use_simple_angle_diff: bool = False
 
 
 @dataclass
@@ -1009,6 +1011,7 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     # distance in radians.
     success_angle_dist: float = 0.261799
     facing_threshold: float = 0.5
+    use_simple_angle_diff: bool = False
 
 
 @dataclass

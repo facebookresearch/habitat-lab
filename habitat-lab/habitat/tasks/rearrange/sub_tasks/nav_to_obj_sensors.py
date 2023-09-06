@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
+
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -127,8 +129,10 @@ class NavToObjReward(RearrangeReward):
         self._min_dist_reward_exploration = (
             self._config.min_dist_reward_exploration
         )
+        self._location_decimal = self._config.location_decimal
         self._visit_loc = {}
         self._visit_loc_i = 0
+        self._use_simple_angle_diff = self._config.use_simple_angle_diff
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
@@ -153,6 +157,11 @@ class NavToObjReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
+
+    def normal_round(self, n):
+        if n - math.floor(n) < 0.5:
+            return math.floor(n)
+        return math.ceil(n)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Get the reward rearrangement metrics
@@ -184,8 +193,15 @@ class NavToObjReward(RearrangeReward):
             and cur_dist > self._min_dist_reward_exploration
         ):
             position_robot = observations["agent_0_localization_sensor"][:3]
-            x_pos = round(position_robot[0], 1)
-            y_pos = round(position_robot[2], 1)
+            if self._location_decimal == "round_0":
+                x_pos = int(position_robot[0])
+                y_pos = int(position_robot[2])
+            elif self._location_decimal == "round_1":
+                x_pos = round(position_robot[0], 1)
+                y_pos = round(position_robot[2], 1)
+            elif self._location_decimal == "round_half":
+                x_pos = self.normal_round(position_robot[0])
+                y_pos = self.normal_round(position_robot[2])
             robot_pos_encoding = (x_pos, y_pos)
             if robot_pos_encoding not in self._visit_loc:
                 self._visit_loc[robot_pos_encoding] = self._visit_loc_i
@@ -218,21 +234,24 @@ class NavToObjReward(RearrangeReward):
             else:
                 angle_diff = self._cur_angle_dist - angle_dist
 
-            position_robot = observations["agent_0_localization_sensor"][:3]
-            position_robot[1] = 0
-            position_obj = task.nav_goal_pos.copy()
-            position_obj[1] = 0
-            vector_object_robot = position_obj - position_robot
-            vector_object_robot = vector_object_robot / np.linalg.norm(
-                vector_object_robot
-            )
-            base_T = self._sim.get_agent_data(
-                0
-            ).articulated_agent.base_transformation
-            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
-            angle_diff = np.dot(
-                forward_robot.normalized(), vector_object_robot
-            )
+            if not self._use_simple_angle_diff:
+                position_robot = observations["agent_0_localization_sensor"][
+                    :3
+                ]
+                position_robot[1] = 0
+                position_obj = task.nav_goal_pos.copy()
+                position_obj[1] = 0
+                vector_object_robot = position_obj - position_robot
+                vector_object_robot = vector_object_robot / np.linalg.norm(
+                    vector_object_robot
+                )
+                base_T = self._sim.get_agent_data(
+                    0
+                ).articulated_agent.base_transformation
+                forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+                angle_diff = np.dot(
+                    forward_robot.normalized(), vector_object_robot
+                )
 
             reward += self._config.angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
@@ -378,13 +397,34 @@ class NavToObjSuccess(Measure):
     def __init__(self, *args, config, sim, **kwargs):
         self._config = config
         self._facing_threshold = config.facing_threshold
+        self._use_simple_angle_diff = config.use_simple_angle_diff
         self._sim = sim
         super().__init__(*args, config=config, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        # angle_dist = task.measurements.measures[
-        #     RotDistToGoal.cls_uuid
-        # ].get_metric()
+        if self._use_simple_angle_diff:
+            angle_dist = task.measurements.measures[
+                RotDistToGoal.cls_uuid
+            ].get_metric()
+        else:
+            # for computing facing to object
+            position_robot = observations["agent_0_localization_sensor"][:3]
+            position_robot[1] = 0
+            position_obj = task.nav_goal_pos.copy()
+            position_obj[1] = 0
+            vector_object_robot = position_obj - position_robot
+            vector_object_robot = vector_object_robot / np.linalg.norm(
+                vector_object_robot
+            )
+            base_T = self._sim.get_agent_data(
+                0
+            ).articulated_agent.base_transformation
+            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+
+            facing = (
+                np.dot(forward_robot.normalized(), vector_object_robot)
+                > self._facing_threshold
+            )
 
         nav_pos_succ = task.measurements.measures[
             NavToPosSucc.cls_uuid
@@ -394,27 +434,14 @@ class NavToObjSuccess(Measure):
             DoesWantTerminate.cls_uuid
         ].get_metric()
 
-        # for computing facing to object
-        position_robot = observations["agent_0_localization_sensor"][:3]
-        position_robot[1] = 0
-        position_obj = task.nav_goal_pos.copy()
-        position_obj[1] = 0
-        vector_object_robot = position_obj - position_robot
-        vector_object_robot = vector_object_robot / np.linalg.norm(
-            vector_object_robot
-        )
-        base_T = self._sim.get_agent_data(
-            0
-        ).articulated_agent.base_transformation
-        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
-
-        facing = (
-            np.dot(forward_robot.normalized(), vector_object_robot)
-            > self._facing_threshold
-        )
-
         if self._config.must_look_at_targ:
-            self._metric = nav_pos_succ and facing
+            if self._use_simple_angle_diff:
+                self._metric = (
+                    nav_pos_succ
+                    and angle_dist < self._config.success_angle_dist
+                )
+            else:
+                self._metric = nav_pos_succ and facing
         else:
             self._metric = nav_pos_succ
 
