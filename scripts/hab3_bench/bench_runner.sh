@@ -56,7 +56,7 @@ do
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_pick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_ORACLE"
 
     # Humanoid oracle
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK"
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_nopick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK"
 
     #Single agent robot
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
