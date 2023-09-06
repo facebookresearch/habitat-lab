@@ -19,6 +19,10 @@ defaults:
   - _self_
 
 habitat:
+  gym:
+    obs_keys:
+      - joint
+      - relative_resting_position
   task:
     type: RearrangeReachTask-v0
     reward_measure: "rearrange_reach_reward"

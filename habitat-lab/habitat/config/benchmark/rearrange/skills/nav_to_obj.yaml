@@ -27,6 +27,11 @@ defaults:
   - _self_
 
 habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - goal_to_agent_gps_compass
+      - joint
   task:
     type: NavToObjTask-v0
     reward_measure: nav_to_obj_reward

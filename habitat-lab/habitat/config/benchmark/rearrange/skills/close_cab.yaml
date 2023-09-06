@@ -29,6 +29,13 @@ defaults:
   - _self_
 
 habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - joint
+      - ee_pos
+      - is_holding
+      - relative_resting_position
   task:
     type: RearrangeCloseDrawerTask-v0
     reward_measure: art_obj_reward
