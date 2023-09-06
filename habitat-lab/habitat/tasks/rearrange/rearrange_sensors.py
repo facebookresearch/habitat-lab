@@ -1017,6 +1017,8 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         self._task = task
         self._force_pen = self._config.force_pen
         self._max_force_pen = self._config.max_force_pen
+        self._use_fix_collision = True
+        self._previous_collision = 0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -1035,6 +1037,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             observations=observations,
             **kwargs,
         )
+        self._previous_collision = 0
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
@@ -1067,6 +1070,9 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         collision_metric = self._task.measurements.measures[
             RobotCollisions.cls_uuid
         ].get_metric()["robot_scene_colls"]
+        collide = False
+        if self._previous_collision != collision_metric:
+            collide = True
 
         # Penalize the force that was added to the accumulated force at the
         # last time step.
@@ -1074,12 +1080,13 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             0,  # This penalty is always positive
             min(
                 max(
-                    self._force_pen * collision_metric,
+                    self._force_pen * collide,
                     self._force_pen * force_metric.add_force,
                 ),
                 self._max_force_pen,
             ),
         )
+        self._previous_collision = collision_metric
         return reward
 
 

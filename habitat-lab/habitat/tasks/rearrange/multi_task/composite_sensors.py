@@ -291,7 +291,8 @@ class CompositeSubgoalReward(Measure):
 
 
 @registry.register_measure
-class SocialNavReward(RearrangeReward):
+class SocialNavReward(Measure):
+    # class SocialNavReward(RearrangeReward):
     # class SocialNavReward(Measure):
     """
     Reward that gives a continuous reward on the social navigation task.
@@ -334,13 +335,13 @@ class SocialNavReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        super().update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
+        # super().update_metric(
+        #     *args,
+        #     episode=episode,
+        #     task=task,
+        #     observations=observations,
+        #     **kwargs,
+        # )
         if not self._consider_collision:
             self._metric = 0.0
 
