@@ -12,7 +12,6 @@ from glob import glob
 import magnum as mn
 import numpy as np
 import pytest
-import yaml
 from omegaconf import DictConfig, OmegaConf
 
 import habitat
@@ -22,20 +21,19 @@ import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
 import habitat_sim
-from habitat.config.default import _HABITAT_CFG_DIR, get_config
+from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat.utils.geometry_utils import is_point_in_triangle
-from habitat_baselines.config.default import get_config as baselines_get_config
 
-CFG_TEST = "benchmark/rearrange/pick.yaml"
+CFG_TEST = "benchmark/rearrange/skills/pick.yaml"
 GEN_TEST_CFG = (
     "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
 )
 EPISODES_LIMIT = 6
+MAX_PER_TASK_TEST_STEPS = 500
 
 
 def check_binary_serialization(dataset: RearrangeDatasetV0):
@@ -99,26 +97,78 @@ def test_rearrange_dataset():
     check_binary_serialization(dataset)
 
 
+def test_pddl():
+    config = get_config(
+        "habitat-lab/habitat/config/benchmark/rearrange/multi_task/rearrange_easy.yaml",
+        [
+            # Concurrent rendering can cause problems on CI.
+            "habitat.simulator.concur_render=False",
+            "habitat.dataset.split=val",
+        ],
+    )
+    env_class = get_env_class(config.habitat.env_task)
+    env = habitat.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
+    env.reset()
+    pddl = env.env.env._env.task.pddl_problem  # type: ignore
+    sim_info = pddl.sim_info
+
+    # Check that the predicates are registering that the robot is not holding
+    # anything at the start.
+    true_preds = pddl.get_true_predicates()
+    assert any(x.name == "not_holding" for x in true_preds)
+
+    poss_actions = pddl.get_possible_actions()
+    ac_strs = [x.compact_str for x in poss_actions]
+
+    # Make sure we can't do an action if the precondition is not satisfied.
+    place_ac = poss_actions[
+        ac_strs.index("place(goal0|0,TARGET_goal0|0,robot_0)")
+    ]
+    assert not place_ac.apply_if_true(sim_info)
+
+    # Make sure we can do an action that does have satisifed preconditions.
+    nav_ac = poss_actions[ac_strs.index("nav(goal0|0,robot_0)")]
+    assert nav_ac.apply_if_true(sim_info)
+
+    # Now test preconditions hold for a longer chain of actions
+    pick_ac = poss_actions[ac_strs.index("pick(goal0|0,robot_0)")]
+    nav_to_goal_ac = poss_actions[ac_strs.index("nav(TARGET_goal0|0,robot_0)")]
+    assert pick_ac.apply_if_true(sim_info)
+    assert nav_to_goal_ac.apply_if_true(sim_info)
+    assert place_ac.apply_if_true(sim_info)
+
+    # Check the object registers at the goal now.
+    true_preds = pddl.get_true_predicates()
+    assert any(
+        x.compact_str == "at(goal0|0,TARGET_goal0|0)" for x in true_preds
+    )
+
+
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
         glob(
-            "habitat-baselines/habitat_baselines/config/rearrange/**/*.yaml",
+            "habitat-lab/habitat/config/benchmark/rearrange/**/*.yaml",
             recursive=True,
         ),
     ),
 )
-def test_rearrange_baseline_envs(test_cfg_path):
+def test_rearrange_tasks(test_cfg_path):
     """
-    Test the Habitat Baseline environments
+    Iterates through all the Habitat Rearrangement tasks.
     """
-    config = baselines_get_config(
+
+    config = get_config(
         test_cfg_path,
         [
+            # Concurrent rendering can cause problems on CI.
+            "habitat.simulator.concur_render=False",
             "habitat.dataset.split=val",
-            "habitat_baselines.eval.split=val",
         ],
     )
+
     for agent_config in config.habitat.simulator.agents.values():
         if (
             agent_config.articulated_agent_type == "KinematicHumanoid"
@@ -127,49 +177,6 @@ def test_rearrange_baseline_envs(test_cfg_path):
             pytest.skip(
                 "This test should only be run if we have the motion data files."
             )
-    with habitat.config.read_write(config):
-        config.habitat.gym.obs_keys = None
-        config.habitat.gym.desired_goal_keys = []
-
-    env_class = get_env_class(config.habitat.env_task)
-
-    env = habitat.utils.env_utils.make_env_fn(
-        env_class=env_class, config=config
-    )
-
-    with env:
-        for _ in range(10):
-            env.reset()
-            done = False
-            while not done:
-                action = env.action_space.sample()
-                _, _, done, _ = env.step(  # type:ignore[assignment]
-                    action=action
-                )
-
-
-@pytest.mark.parametrize(
-    "test_cfg_path",
-    list(
-        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
-    ),
-)
-def test_composite_tasks(test_cfg_path):
-    """
-    Test for the Habitat composite tasks.
-    """
-    if not osp.isfile(test_cfg_path):
-        return
-
-    config = get_config(
-        test_cfg_path,
-        [
-            "habitat.simulator.concur_render=False",
-            "habitat.dataset.split=val",
-        ],
-    )
-    if "task_spec" not in config.habitat.task:
-        return
 
     if (
         config.habitat.dataset.data_path
@@ -178,27 +185,22 @@ def test_composite_tasks(test_cfg_path):
         pytest.skip(
             "This config is only useful for examples and does not have the generated dataset"
         )
+    env_class = get_env_class(config.habitat.env_task)
 
-    with habitat.Env(config=config) as env:
-        if not isinstance(env.task, CompositeTask):
-            return
+    env = habitat.utils.env_utils.make_env_fn(
+        env_class=env_class, config=config
+    )
 
-        pddl_path = osp.join(
-            _HABITAT_CFG_DIR,
-            config.habitat.task.task_spec_base_path,
-            config.habitat.task.task_spec + ".yaml",
-        )
-        with open(pddl_path, "r") as f:
-            domain = yaml.safe_load(f)
-        if "solution" not in domain:
-            return
-        n_stages = len(domain["solution"])
-
-        for task_idx in range(n_stages):
+    with env:
+        for _ in range(2):
             env.reset()
-            env.task.jump_to_node(task_idx, env.current_episode)
-            env.step(env.action_space.sample())
-            env.reset()
+            for _ in range(MAX_PER_TASK_TEST_STEPS):
+                action = env.action_space.sample()
+                _, _, done, _ = env.step(  # type:ignore[assignment]
+                    action=action
+                )
+                if done:
+                    break
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state

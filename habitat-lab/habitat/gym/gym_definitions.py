@@ -24,20 +24,19 @@ if TYPE_CHECKING:
 
 
 PRE_REGISTERED_GYM_TASKS = {
-    "CloseFridge": "benchmark/rearrange/close_fridge.yaml",
-    "Pick": "benchmark/rearrange/pick.yaml",
-    "NavToObj": "benchmark/rearrange/nav_to_obj.yaml",
-    "RearrangeEasyMultiAgent": "benchmark/rearrange/rearrange_easy_multi_agent.yaml",
-    "ReachState": "benchmark/rearrange/reach_state.yaml",
-    "CloseCab": "benchmark/rearrange/close_cab.yaml",
-    "SetTable": "benchmark/rearrange/set_table.yaml",
-    "OpenCab": "benchmark/rearrange/open_cab.yaml",
-    "Place": "benchmark/rearrange/place.yaml",
-    "Rearrange": "benchmark/rearrange/rearrange.yaml",
-    "PrepareGroceries": "benchmark/rearrange/prepare_groceries.yaml",
-    "RearrangeEasy": "benchmark/rearrange/rearrange_easy.yaml",
-    "OpenFridge": "benchmark/rearrange/open_fridge.yaml",
-    "TidyHouse": "benchmark/rearrange/tidy_house.yaml",
+    "CloseFridge": "benchmark/rearrange/skills/close_fridge.yaml",
+    "Pick": "benchmark/rearrange/skills/pick.yaml",
+    "NavToObj": "benchmark/rearrange/skills/nav_to_obj.yaml",
+    "ReachState": "benchmark/rearrange/skills/reach_state.yaml",
+    "CloseCab": "benchmark/rearrange/skills/close_cab.yaml",
+    "SetTable": "benchmark/rearrange/multi_task/set_table.yaml",
+    "OpenCab": "benchmark/rearrange/skills/open_cab.yaml",
+    "Place": "benchmark/rearrange/skills/place.yaml",
+    "Rearrange": "benchmark/rearrange/multi_task/rearrange.yaml",
+    "PrepareGroceries": "benchmark/rearrange/multi_task/prepare_groceries.yaml",
+    "RearrangeEasy": "benchmark/rearrange/multi_task/rearrange_easy.yaml",
+    "OpenFridge": "benchmark/rearrange/skills/open_fridge.yaml",
+    "TidyHouse": "benchmark/rearrange/multi_task/tidy_house.yaml",
 }
 
 

@@ -128,7 +128,7 @@ importlib.reload(
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            "benchmark/rearrange/pick.yaml",
+            "benchmark/rearrange/skills/pick.yaml",
         )
     )
 ) as env:

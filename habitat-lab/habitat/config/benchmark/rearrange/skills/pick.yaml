@@ -1,0 +1,54 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/task/rearrange/actions: fetch_suction_arm_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
+  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - end_effector_to_rest_distance
+    - end_effector_to_object_distance
+    - did_pick_object
+    - pick_success
+    - pick_reward
+    - did_violate_hold_constraint
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - target_start_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - obj_start_sensor
+      - joint
+      - is_holding
+      - relative_resting_position
+  task:
+    type: RearrangePickTask-v0
+    base_angle_noise: 0.523599
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+    reward_measure: "pick_reward"
+    success_measure: "pick_success"
+    success_reward: 10.0
+    slack_reward: -0.005
+    end_on_success: True
+    measurements:
+      force_terminate:
+        max_accum_force: 10_000.0
+        max_instant_force: 10_000.0
+  environment:
+    max_episode_steps: 300
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

@@ -1,0 +1,5 @@
+# @package habitat.simulator.agents.rgb_head_agent
+
+defaults:
+  - /habitat/simulator/sim_sensors@sim_sensors.head_rgb_sensor: head_rgb_sensor
+  - /habitat/simulator/sim_sensors@sim_sensors.head_depth_sensor: head_depth_sensor

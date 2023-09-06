@@ -12,13 +12,11 @@ import torch
 import torch.nn as nn
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.multi_task.composite_sensors import (
-    CompositeSuccess,
-)
 from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlDomain,
     PddlProblem,
 )
+from habitat.tasks.rearrange.multi_task.pddl_sensors import PddlSuccess
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.hrl.hl import FixedHighLevelPolicy  # noqa: F401.
 from habitat_baselines.rl.hrl.hl import NeuralHighLevelPolicy  # noqa: F401.
@@ -201,7 +199,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 **policy_info,
             }
 
-            did_skill_fail = dones[i] and not info[CompositeSuccess.cls_uuid]
+            did_skill_fail = dones[i] and not info[PddlSuccess.cls_uuid]
             for skill_name, idx in self._name_to_idx.items():
                 ret_policy_info[f"failed_skill_{skill_name}"] = (
                     did_skill_fail if idx == cur_skill_idx else 0.0

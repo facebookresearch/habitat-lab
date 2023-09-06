@@ -69,7 +69,7 @@ __all__ = [
     "ObjAtGoalMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
     "RotDistToGoalMeasurementConfig",
-    "CompositeStageGoalsMeasurementConfig",
+    "PddlStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
@@ -80,7 +80,7 @@ __all__ = [
     "ArtObjRewardMeasurementConfig",
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
-    "CompositeSuccessMeasurementConfig",
+    "PddlSuccessMeasurementConfig",
     # PROFILING MEASURES
     "RuntimePerfStatsMeasurementConfig",
 ]
@@ -908,6 +908,15 @@ class NumStepsMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class ZeroMeasurementConfig(MeasurementConfig):
+    r"""
+    Always returns 0. Can we used for a sparse reward or a task without any
+    success criteria.
+    """
+    type: str = "ZeroMeasure"
+
+
+@dataclass
 class DidPickObjectMeasurementConfig(MeasurementConfig):
     type: str = "DidPickObjectMeasure"
 
@@ -1012,32 +1021,27 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeNodeIdx"
-
-
-@dataclass
-class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
+class PddlStageGoalsMeasurementConfig(MeasurementConfig):
     r"""
-    Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
+    PDDL Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
     """
-    type: str = "CompositeStageGoals"
+    type: str = "PddlStageGoals"
 
 
 @dataclass
-class CompositeSuccessMeasurementConfig(MeasurementConfig):
+class PddlSuccessMeasurementConfig(MeasurementConfig):
     r"""
-    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+    PDDL rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
 
     :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
     """
-    type: str = "CompositeSuccess"
+    type: str = "PddlSuccess"
     must_call_stop: bool = True
 
 
 @dataclass
-class CompositeSubgoalReward(MeasurementConfig):
-    type: str = "CompositeSubgoalReward"
+class PddlSubgoalReward(MeasurementConfig):
+    type: str = "PddlSubgoalReward"
     stage_sparse_reward: float = 1.0
 
 
@@ -1095,8 +1099,8 @@ class TaskConfig(HabitatBaseConfig):
     :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
-    :property task_spec: When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.
-    :property task_spec_base_path:  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.
+    :property task_spec: When doing the `RearrangePddlTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.
+    :property task_spec_base_path:  When doing the `RearrangePddlTask-v0` only, the relative path where the task_spec file will be searched.
     :property spawn_max_dists_to_obj: For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object.
     :property base_angle_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.
     :property base_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.
@@ -1116,7 +1120,7 @@ class TaskConfig(HabitatBaseConfig):
     -   Rearrangement place : `RearrangePlaceTask-v0`
     -   Rearrangement do nothing : `RearrangeEmptyTask-v0`
     -   Rearrangement reach : `RearrangeReachTask-v0`
-    -   Rearrangement composite tasks : `RearrangeCompositeTask-v0`
+    -   Rearrangement composite tasks : `RearrangePddlTask-v0`
     """
     physics_target_sps: float = 60.0
     reward_measure: Optional[str] = None
@@ -2001,6 +2005,12 @@ cs.store(
     node=NumStepsMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.zero",
+    group="habitat/task/measurements",
+    name="zero",
+    node=ZeroMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.articulated_agent_force",
     group="habitat/task/measurements",
     name="articulated_agent_force",
@@ -2115,16 +2125,16 @@ cs.store(
     node=DoesWantTerminateMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.composite_subgoal_reward",
+    package="habitat.task.measurements.pddl_subgoal_reward",
     group="habitat/task/measurements",
-    name="composite_subgoal_reward",
-    node=CompositeSubgoalReward,
+    name="pddl_subgoal_reward",
+    node=PddlSubgoalReward,
 )
 cs.store(
-    package="habitat.task.measurements.composite_success",
+    package="habitat.task.measurements.pddl_success",
     group="habitat/task/measurements",
-    name="composite_success",
-    node=CompositeSuccessMeasurementConfig,
+    name="pddl_success",
+    node=PddlSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.gfx_replay_measure",
@@ -2133,10 +2143,10 @@ cs.store(
     node=GfxReplayMeasureMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.composite_stage_goals",
+    package="habitat.task.measurements.pddl_stage_goals",
     group="habitat/task/measurements",
     name="composite_stage_goals",
-    node=CompositeStageGoalsMeasurementConfig,
+    node=PddlStageGoalsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ee_dist_to_marker",

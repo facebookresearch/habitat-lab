@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: eqa
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgb_agent
   - /habitat/dataset/eqa: mp3d
   - _self_
 

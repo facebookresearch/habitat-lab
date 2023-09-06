@@ -107,7 +107,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     python examples/example.py
     ```
 
-    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent. The script roughly does this:
+    which uses [`habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml) for configuration of task and agent. The script roughly does this:
 
     ```python
     import gym
@@ -128,7 +128,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
     ```python
     config = habitat.get_config(
-      "benchmark/rearrange/pick.yaml",
+      "benchmark/rearrange/skills/pick.yaml",
       overrides=["habitat.environment.max_episode_steps=20"]
     )
     env = habitat.gym.make_gym_from_config(config)

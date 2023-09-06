@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - pddl_geo_base_task
+  - _self_
+
+habitat:
+  task:
+    task_spec: set_table
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz

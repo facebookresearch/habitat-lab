@@ -284,7 +284,7 @@ def test_humanoid_controller():
 )
 def test_gym_humanoid():
     """Test Gym with the humanoid"""
-    config_file = "benchmark/rearrange/pick.yaml"
+    config_file = "benchmark/rearrange/skills/pick.yaml"
     overrides = [
         "~habitat.task.actions.arm_action",
         "~habitat.task.actions.base_velocity",

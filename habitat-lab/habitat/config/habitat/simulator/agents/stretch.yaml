@@ -1,0 +1,17 @@
+# @package habitat.simulator.agents.stretch
+radius: 0.3
+articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+articulated_agent_type: "StretchRobot"
+sim_sensors:
+  head_rgb_sensor:
+    height: 640
+    width: 480
+    hfov: 43
+  head_depth_sensor:
+    height: 640
+    width: 480
+    hfov: 43
+  head_panoptic_sensor:
+    height: 640
+    width: 480
+    hfov: 43
