@@ -16,6 +16,8 @@ import numpy as np
 from tqdm import tqdm
 from tabulate import tabulate
 
+import os
+
 METRICS_INTEREST = ["composite_success", "num_steps", "num_steps_fail"]
 MAX_NUM_STEPS = 1500
 
@@ -59,12 +61,16 @@ def get_episode_info(file_name):
     #         except:
     #             print(json_name)
         # if file type is pickle load it as pickle else load it as json
+    solo = "solo" in file_name
     if file_name.endswith(".pkl"):
+        if not solo:
+            return None, None
         with open(file_name, "rb") as f:
             curr_result = pkl.load(f)
     else:
         with open(file_name, "r") as f:
             curr_result = json.load(f)
+
     metrics = {
         metric_name: curr_result["summary"][metric_name]
         for metric_name in METRICS_INTEREST
@@ -92,21 +98,23 @@ def get_episode_info(file_name):
 def aggregate_per_episode_dict(dict_data, average=False, std=False, solo_data=None):
     # Given a dictionary where every episode has a list of metrics
     # Returns a dict with the metrics aggregated per episode
-    
+
     # if num_steps_fail is nan, then set it as solo num_steps*1.5
     if solo_data is not None:
         for episode_id, episode_data in dict_data.items():
             if episode_id in solo_data:
                 for iter in range(len(episode_data)):
                     if np.isnan(episode_data[iter]["num_steps_fail"]):
-                        # episode_data[iter]["num_steps_fail"] = np.min([solo_data[episode_id]["num_steps"] * 1.5, MAX_NUM_STEPS])
-                        episode_data[iter]["num_steps_fail"] = solo_data[episode_id]["num_steps"]
+                        episode_data[iter]["num_steps_fail"] = np.min([solo_data[episode_id]["num_steps"] * 1.5, MAX_NUM_STEPS])
+                        # episode_data[iter]["num_steps_fail"] = solo_data[episode_id]["num_steps"]*1.5
+
+
                         # print("num_steps_fail is nan, composite success is", episode_data[iter]["composite_success"], " and solo success is ", solo_data[episode_id]["composite_success"])
                         # print("setting num_steps_fail to ", episode_data[iter]["num_steps_fail"], "solo num_steps is ", solo_data[episode_id]["num_steps"])
             else:
                 print("Episode not found in solo data")
                 continue
-    
+
 
     new_dict_data = {}
     for episode_id, episode_data in dict_data.items():
@@ -154,29 +162,29 @@ def get_checkpoint_results(ckpt_path, separate_agent=False, solo_dict=None):
     else:
         all_files = []
         for ck_path in ckpt_path:
-            all_files += glob.glob(f"{ck_path}/*")
+            all_files += sorted(glob.glob(f"{ck_path}/*"))
     dict_results: Dict[str, Any] = {}
     dict_results_agents: Dict[str, Dict [str, Any]] = {}
     episode_agents: Dict[str, Any] = {}
 
     # Create folders:
-    num_proc = 24
-    pool = Pool(num_proc)
-    res = pool.map(get_dir_name, all_files)
-    pool.close()
-    pool.join()
-    res = list(set(res))
+    # num_proc = 24
+    # pool = Pool(num_proc)
+    # res = pool.map(get_dir_name, all_files)
+    # pool.close()
+    # pool.join()
+    # res = list(set(res))
 
-    for elem in res:
-        if not os.path.exists(elem):
-            os.makedirs(elem)
+    # for elem in res:
+    #     if not os.path.exists(elem):
+    #         os.makedirs(elem)
 
     num_proc = 24
     pool = Pool(num_proc)
     res = pool.map(process_file, all_files)
     pool.close()
     pool.join()
-
+    res = [r for r in res if r[0] is not None]
     # num_threads = 24  # You can adjust this value based on your system's capabilities
     # with ThreadPoolExecutor(max_workers=num_threads) as executor:
     #     res = executor.map(process_file, all_files)
@@ -193,7 +201,7 @@ def get_checkpoint_results(ckpt_path, separate_agent=False, solo_dict=None):
             if episode_id not in episode_agents[agent_name]:
                 episode_agents[agent_name][episode_id] = []
             episode_agents[agent_name][episode_id].append(episode_info)
-    
+
     # print(time.time() - t1)
     # Potentially verify here that no data is missing
     dict_results = aggregate_per_episode_dict(dict_results, average=True, std=False, solo_data=solo_dict)
@@ -214,7 +222,7 @@ def relative_metric(episode_baseline_data, episode_solo_data):
         # episode_solo_data["num_steps"] = MAX_NUM_STEPS
         # episode_solo_data["num_steps_fail"] = MAX_NUM_STEPS
         return {}
-    
+
     composite_success = episode_baseline_data["composite_success"]
     efficiency = (
         episode_solo_data["num_steps"] / episode_baseline_data["num_steps"]
@@ -249,7 +257,7 @@ def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
             continue
         all_results.append(curr_metric)
         res_dict[episode_id] = curr_metric
-    
+
     if len(all_results) == 0:
         print(len(per_episode_baseline_dict))
         return {}
@@ -260,16 +268,18 @@ def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
 
 
 def compute_relative_metrics_multi_ckpt(
-    experiments_path_dict, solo_path, latex=False
+    experiments_path_dict, solo_path, latex=False, verbose=False
 ):
     # Computes and prints metrics for all baselines
     # given the path of the solo episodes, and a dictionary baseline_name: path_res_baselines
-    all_results = []
-    all_results_zsc = {}
     solo, _ = get_checkpoint_results(solo_path)
     for baseline_name, baselines_path in experiments_path_dict.items():
-        print(f"Computing {baseline_name}...")
-        for baseline_path in tqdm(baselines_path):
+        all_results = []
+        all_results_zsc = {}
+
+        if verbose:
+            print(f"Computing {baseline_name}...")
+        for baseline_path in tqdm(baselines_path, disable= not verbose):
             if type(baselines_path) == list:
                 baseline, _ = get_checkpoint_results(baseline_path, separate_agent=False, solo_dict=solo)
 
@@ -283,31 +293,32 @@ def compute_relative_metrics_multi_ckpt(
             curr_res = compute_relative_metrics(baseline, solo)
             all_results.append(curr_res)
 
-            for agent_name in baseline_diff_zsc:
+            for agent_name in sorted(baseline_diff_zsc):
 
                 curr_res = compute_relative_metrics(baseline_diff_zsc[agent_name], solo)
                 # breakpoint()
                 if len(curr_res) > 0:
                     if agent_name not in all_results_zsc:
-                        all_results_zsc[agent_name] = []     
+                        all_results_zsc[agent_name] = []
                     all_results_zsc[agent_name].append(curr_res)
 
         results_baseline = aggregate_per_episode_dict(
             {"all_episodes": all_results}, average=True, std=True
         )["all_episodes"]
 
+
         metrics_str = pretty_print(results_baseline, latex=latex)
         print(f"{baseline_name}: {metrics_str}")
 
-        for agent_name in all_results_zsc:
-            all_res = all_results_zsc[agent_name]
-            res_zsc = aggregate_per_episode_dict(
-                {"all_episodes": all_res}, average=True, std=True
-            )["all_episodes"]
-            metrics_str = pretty_print(res_zsc, latex=latex)
-            print(f"{baseline_name}.{agent_name}: {metrics_str}")
+        # for agent_name in all_results_zsc:
+        #     all_res = all_results_zsc[agent_name]
+        #     res_zsc = aggregate_per_episode_dict(
+        #         {"all_episodes": all_res}, average=True, std=True
+        #     )["all_episodes"]
+        #     metrics_str = pretty_print(res_zsc, latex=latex)
+        #     print(f"{baseline_name}.{agent_name}: {metrics_str}")
 
-        print('-----')
+        # print('-----')
 
 def compute_all_metrics(latex_print=False):
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
@@ -382,42 +393,49 @@ def compute_all_metrics_zsc(latex_print=False):
             f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
         ],
 
-        # "Plan_play_-1_train-pop": [
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
-        # ],
-        # "Plan_play_-2_train-pop": [
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
-        # ],
-        # "Plan_play_-3_train-pop": [
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
-        # ],
-        # "Plan_play_-4_train-pop": [
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
-        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
-        # ],
-        # "GT_coord_train-pop": [
-        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
-        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
-        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
-        # ],
-        # "Pop_play_train-pop": [
-        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
-        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
-        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
-        # ],
+        "Plan_play_-1_train-pop": [
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
+        ],
+        "Plan_play_-2_train-pop": [
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
+        ],
+        "Plan_play_-3_train-pop": [
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
+        ],
+        "Plan_play_-4_train-pop": [
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
+            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
+        ],
+        "GT_coord_train-pop": [
+            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
+            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
+            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
+        ],
+        "Pop_play_train-pop": [
+            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
+            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
+            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
+        ],
     }
+
     experiments_path = extend_exps_zsc(experiments_path)
 
     compute_relative_metrics_multi_ckpt(
         experiments_path, solo_path, latex=latex_print
     )
+    # print("-----")
+    # experiments_path = extend_exps_zsc(experiments_path2)
+
+    # compute_relative_metrics_multi_ckpt(
+    #     experiments_path, solo_path, latex=latex_print
+    # )
 
 
 if __name__ == "__main__":
