@@ -181,7 +181,7 @@ class AppStateSocialNav(AppState):
             self._episode_found_obj_ids.add(closest_object_id)
 
         walk_dir = None
-        distance_multiplier = 0.0
+        distance_multiplier = 1.0
         if not self._camera_helper._first_person_mode:
             (
                 candidate_walk_dir,
