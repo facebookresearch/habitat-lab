@@ -21,7 +21,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
 
   - /habitat/task/measurements:
-    - social_nav_reward
+    #- social_nav_reward
     # Additional one for nav_to_obj
     - object_to_goal_distance
     - articulated_agent_force
