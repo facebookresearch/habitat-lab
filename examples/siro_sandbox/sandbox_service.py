@@ -22,6 +22,7 @@ class SandboxService:
         get_metrics,
         end_episode,
         set_cursor_style,
+        episode_helper,
     ):
         self._args = args
         self._config = config
@@ -36,6 +37,7 @@ class SandboxService:
         self._get_metrics = get_metrics
         self._end_episode = end_episode
         self._set_cursor_style = set_cursor_style
+        self._episode_helper = episode_helper
 
     @property
     def args(self):
@@ -88,3 +90,7 @@ class SandboxService:
     @property
     def set_cursor_style(self):
         return self._set_cursor_style
+
+    @property
+    def episode_helper(self):
+        return self._episode_helper
