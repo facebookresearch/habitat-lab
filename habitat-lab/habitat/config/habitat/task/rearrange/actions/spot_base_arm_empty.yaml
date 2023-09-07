@@ -1,0 +1,29 @@
+# @package habitat.task.actions
+defaults:
+  - /habitat/task/actions:
+    - base_velocity_non_cylinder
+    - arm_action
+    - empty
+  - _self_
+arm_action:
+  type: "ArmAction"
+  arm_controller: "ArmRelPosMaskAction"
+  grip_controller: "GazeGraspAction"
+  arm_joint_mask: [1,1,0,1,1,1,1]
+  arm_joint_dimensionality: 7
+  grasp_thresh_dist: 0.15
+  disable_grip: False
+  delta_pos_limit: 0.0125
+  ee_ctrl_lim: 0.015
+  gaze_distance_range: [0.01, 0.3]
+  center_cone_angle_threshold: 20.0
+  center_cone_vector: [0.0, 1.0, 0.0]
+base_velocity_non_cylinder:
+  allow_dyn_slide: False
+  # There is a collision if the difference between the clamped NavMesh position and target position
+  # is more than than collision_threshold for any point
+  collision_threshold: 1e-5
+  # The x and y locations of the clamped NavMesh position
+  navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+  # If we allow the robot to move laterally
+  enable_lateral_move: True

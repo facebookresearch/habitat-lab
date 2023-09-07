@@ -1,0 +1,5 @@
+# @package _global_
+defaults:
+  - play
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: human
+  - _self_

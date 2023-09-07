@@ -821,6 +821,25 @@ class NumStepsMeasure(Measure):
 
 
 @registry.register_measure
+class ZeroMeasure(Measure):
+    """
+    The number of steps elapsed in the current episode.
+    """
+
+    cls_uuid: str = "zero"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ZeroMeasure.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+
+    def update_metric(self, *args, **kwargs):
+        self._metric = 0
+
+
+@registry.register_measure
 class ForceTerminate(Measure):
     """
     If the accumulated force throughout this episode exceeds the limit.

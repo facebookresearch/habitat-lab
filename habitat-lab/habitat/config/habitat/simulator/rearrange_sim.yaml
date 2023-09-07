@@ -1,0 +1,10 @@
+# @package habitat.simulator
+type: RearrangeSim-v0
+additional_object_paths:
+- data/objects/ycb/configs/
+debug_render_goal: False
+concur_render: True
+auto_sleep: True
+habitat_sim_v0:
+  allow_sliding: False
+  enable_physics: True

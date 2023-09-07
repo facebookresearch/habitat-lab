@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+  - play
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbdp_head_rgbd_arm_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: stretch
+  - override /habitat/task/rearrange/actions: stretch_base_arm_empty
+  - _self_

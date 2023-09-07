@@ -11,11 +11,14 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
-import numpy as np
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import (
+    get_largest_island_index,
+    is_accessible,
+)
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -77,10 +80,10 @@ class ObjectSampler:
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
         self.set_num_samples()
-        self.largest_island_id = -1
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
+        self.largest_island_id = -1
 
     def reset(self) -> None:
         """
@@ -249,13 +252,9 @@ class ObjectSampler:
             self._constrain_to_largest_nav_island
             and self.largest_island_id == -1
         ):
-            island_areas = list(
-                map(
-                    sim.pathfinder.island_area,
-                    range(sim.pathfinder.num_islands),
-                )
+            self.largest_island_id = get_largest_island_index(
+                sim.pathfinder, sim, allow_outdoor=False
             )
-            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -327,7 +326,15 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
-                    if not self._is_accessible(sim, new_object):
+                    if not is_accessible(
+                        sim,
+                        new_object.translation,
+                        self.nav_to_min_distance,
+                        self.largest_island_id,
+                    ):
+                        logger.info(
+                            "   - object is not accessible from navmesh, rejecting placement."
+                        )
                         continue
                     return new_object
 
@@ -335,11 +342,18 @@ class ObjectSampler:
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
-                if not self._is_accessible(sim, new_object):
+                if not is_accessible(
+                    sim,
+                    new_object.translation,
+                    self.nav_to_min_distance,
+                    self.largest_island_id,
+                ):
+                    logger.info(
+                        "   - object is not accessible from navmesh, rejecting placement."
+                    )
                     continue
                 return new_object
 
-        # if num_placement_tries > self.max_placement_attempts:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )
@@ -348,33 +362,6 @@ class ObjectSampler:
         )
 
         return None
-
-    def _is_accessible(
-        self,
-        sim: habitat_sim.Simulator,
-        obj: habitat_sim.physics.ManagedRigidObject,
-    ) -> bool:
-        """
-        Return if the object is within a threshold horizontal distance of the nearest
-        navigable point, in which the nearest navigable point is on the same
-        navigation mesh of the object.
-
-        Note that this might not catch all edge cases since the heuristic is
-        horizontal Euclidean distance. The nearest navigable point may be
-        separated from the object by an obstacle on a stairway, etc...
-        """
-        if self.nav_to_min_distance == -1:
-            return True
-
-        # If the sanp_point fails, the sanpped point is NaN and the distance
-        # check returns False. So it works out.
-        snapped = sim.pathfinder.snap_point(
-            obj.translation, self.largest_island_id
-        )
-        horizontal_dist = float(
-            np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
-        )
-        return horizontal_dist < self.nav_to_min_distance
 
     def single_sample(
         self,
@@ -397,6 +384,7 @@ class ObjectSampler:
 
         :return: The newly instanced rigid object or None if sampling failed.
         """
+
         # draw a new pairing
         if fixed_obj_handle is None:
             object_handle = self.sample_object()
@@ -421,6 +409,7 @@ class ObjectSampler:
         """
         Choose a target number of objects to sample from the configured range.
         """
+
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]
@@ -448,6 +437,7 @@ class ObjectSampler:
 
         :return: The list of new (object,receptacle) pairs placed by the sampler.
         """
+
         num_pairing_tries = 0
         new_objects: List[
             Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]
@@ -472,6 +462,7 @@ class ObjectSampler:
                 fixed_obj_handle = target_object_handles[cur_obj_idx]
 
             num_pairing_tries += 1
+
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(

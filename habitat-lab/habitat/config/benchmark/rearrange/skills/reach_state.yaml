@@ -1,0 +1,42 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/task/rearrange/actions: fetch_suction_arm
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
+  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/task/measurements:
+    - end_effector_to_rest_distance
+    - rearrange_reach_success
+    - rearrange_reach_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - relative_resting_pos_sensor
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - joint
+      - relative_resting_position
+  task:
+    type: RearrangeReachTask-v0
+    reward_measure: "rearrange_reach_reward"
+    success_measure: "rearrange_reach_success"
+    success_reward: 10.0
+    end_on_success: True
+    base_angle_noise: 0.0
+    base_noise: 0.0
+    actions:
+      arm_action:
+        grip_controller: null
+        should_clip: True
+        render_ee_target: True
+  environment:
+    max_episode_steps: 20
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/empty_1k_100.json.gz

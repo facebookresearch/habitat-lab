@@ -1,0 +1,51 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/task/rearrange/actions: fetch_suction_base_stop
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
+  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    - does_want_terminate
+    - rearrange_nav_to_obj_success
+    - bad_called_terminate
+    - rearrange_nav_to_obj_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - nav_goal_sensor
+    - joint_sensor
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - goal_to_agent_gps_compass
+      - joint
+  task:
+    type: NavToObjTask-v0
+    reward_measure: nav_to_obj_reward
+    success_measure: nav_to_obj_success
+    success_reward: 10.0
+    slack_reward: -0.005
+    end_on_success: True
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+    measurements:
+      force_terminate:
+        max_accum_force: 10_000.0
+        max_instant_force: 10_000.0
+  environment:
+    max_episode_steps: 400
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

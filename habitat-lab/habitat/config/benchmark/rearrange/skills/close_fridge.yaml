@@ -1,0 +1,58 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/task/rearrange/actions: fetch_suction_arm_base_stop
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - ee_dist_to_marker
+    - end_effector_to_rest_distance
+    - art_obj_at_desired_state
+    - art_obj_state
+    - does_want_terminate
+    - art_obj_success
+    - art_obj_reward
+    - num_steps
+    - did_violate_hold_constraint
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - joint
+      - ee_pos
+      - is_holding
+      - relative_resting_position
+  task:
+    type: RearrangeCloseFridgeTask-v0
+    reward_measure: art_obj_reward
+    success_measure: art_obj_success
+    success_reward: 10.0
+    slack_reward: 0.0
+    end_on_success: True
+    use_marker_t: False
+    actions:
+      arm_action:
+        disable_grip: True
+    measurements:
+      art_obj_reward:
+        wrong_grasp_end: True
+        ee_dist_reward: 1.0
+        marker_dist_reward: 1.0
+  environment:
+    max_episode_steps: 200
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/in_fridge_1k_100.json.gz
