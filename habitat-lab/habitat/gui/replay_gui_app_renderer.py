@@ -70,16 +70,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             **im_framebuffer_drawer_kwargs
         )
         text_drawer_kwargs = text_drawer_kwargs or {}
-        drawer_window_size = (
-            self.window_size
-            if not viewport_rect
-            else mn.Vector2i(
-                viewport_rect.right - viewport_rect.left,
-                viewport_rect.top - viewport_rect.bottom,
-            )
-        )
         self._text_drawer: TextDrawer = TextDrawer(
-            drawer_window_size, **text_drawer_kwargs
+            self.window_size, **text_drawer_kwargs
         )
 
     def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
@@ -120,10 +112,6 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
-        # draws text collected in self._text_drawer._text_transform_pairs on the screen
-        mn.gl.default_framebuffer.bind()
-        self._text_drawer.draw_text()
-
         # arrange debug images on right side of frame, tiled down from the top
         dest_y = self.window_size.y
         for image in self._debug_images:
@@ -132,6 +120,10 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
                 image, self.window_size.x - im_width, dest_y - im_height
             )
             dest_y -= im_height
+
+        # draws text collected in self._text_drawer._text_transform_pairs on the screen
+        mn.gl.default_framebuffer.bind()
+        self._text_drawer.draw_text()
 
         self._need_render = False
 
