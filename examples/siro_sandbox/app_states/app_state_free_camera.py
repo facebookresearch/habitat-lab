@@ -21,12 +21,10 @@ class AppStateFreeCamera(AppState):
         self._lookat_pos = None
         self._cam_transform = None
 
-        self._num_iter_episodes: int = len(self._sandbox_service.env.episode_iterator.episodes)  # type: ignore
-        self._num_episodes_done: int = 0
-
         self._camera_helper = CameraHelper(
             self._sandbox_service.args, self._sandbox_service.gui_input
         )
+        self._episode_helper = self._sandbox_service.episode_helper
 
     def _init_lookat_pos(self):
         random_navigable_point = self.get_sim().sample_navigable_point()
@@ -83,16 +81,13 @@ class AppStateFreeCamera(AppState):
             self._sandbox_service.env.episode_over or self._env_task_complete
         )
 
-    def _next_episode_exists(self):
-        return self._num_episodes_done < self._num_iter_episodes - 1
-
     def _get_camera_lookat_pos(self):
         return self._lookat_pos
 
     def _get_controls_text(self):
         controls_str: str = ""
         controls_str += "ESC: exit\n"
-        if self._next_episode_exists():
+        if self._episode_helper.next_episode_exists():
             controls_str += "M: next episode\n"
 
         controls_str += "I, K: look up, down\n"
@@ -135,7 +130,11 @@ class AppStateFreeCamera(AppState):
                 text_delta_y=-50,
             )
 
-        progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+        num_episodes_remaining = (
+            self._episode_helper.num_iter_episodes
+            - self._episode_helper.num_episodes_done
+        )
+        progress_str = f"{num_episodes_remaining} episodes remaining"
         self._sandbox_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
@@ -146,8 +145,6 @@ class AppStateFreeCamera(AppState):
         return self._sandbox_service.sim
 
     def on_environment_reset(self, episode_recorder_dict):
-        self._num_episodes_done += 1
-
         self._init_lookat_pos()
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
@@ -156,7 +153,10 @@ class AppStateFreeCamera(AppState):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
+        if (
+            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            and self._episode_helper.next_episode_exists()
+        ):
             self._sandbox_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
