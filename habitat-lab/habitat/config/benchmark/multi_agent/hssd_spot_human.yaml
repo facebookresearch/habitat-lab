@@ -20,12 +20,12 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
 
   - /habitat/task/measurements:
-    - composite_success
+    - pddl_success
     - num_steps
     - did_agents_collide
     - num_agents_collide
     - composite_stage_goals
-    - cooperate_subgoal_reward
+    - pddl_subgoal_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -52,9 +52,9 @@ habitat:
         x_len: 2.0
         y_len: 1.5
         agent_idx: 1
-    type: RearrangeCompositeTask-v0
+    type: RearrangePddlTask-v0
     reward_measure: cooperate_subgoal_reward
-    success_measure: composite_success
+    success_measure: pddl_success
     success_reward: 10.0
     min_distance_start_agents: 5.0
     slack_reward: -0.0005
@@ -62,7 +62,7 @@ habitat:
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
     measurements:
-      composite_success:
+      pddl_success:
         must_call_stop: False
       cooperate_subgoal_reward:
         stage_sparse_reward: 5.0

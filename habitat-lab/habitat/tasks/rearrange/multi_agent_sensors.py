@@ -5,7 +5,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.multi_task.composite_sensors import (
-    CompositeSubgoalReward,
+    PddlSubgoalReward,
 )
 from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
@@ -184,9 +184,9 @@ class ShouldReplanSensor(Sensor):
 
 
 @registry.register_measure
-class CooperateSubgoalReward(CompositeSubgoalReward):
+class CooperateSubgoalReward(PddlSubgoalReward):
     """
-    `CompositeSubgoalReward` adapted for 2 agent setups to penalize and
+    `PddlSubgoalReward` adapted for 2 agent setups to penalize and
     potentially end the episode on agent collisions.
     """
 
