@@ -968,9 +968,12 @@ class PPOTrainer(BaseRLTrainer):
             gather_data_step = get_info_episode_step
             gather_data_final = get_info_episode_final
 
-        # create a 1D array of size number_of_eval_episodes 
+        # create a 1D array of size total_num_eps 
         # to store how many times an episode is run
-        ep_eval_num = np.zeros(number_of_eval_episodes)
+        if evals_per_ep > 1:
+            ep_eval_num = np.zeros(number_of_eval_episodes)
+        else:
+            ep_eval_num = np.zeros(total_num_eps)
 
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
