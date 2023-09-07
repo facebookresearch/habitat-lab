@@ -147,7 +147,7 @@ class AppStateRearrange(AppState):
                         ]
 
         walk_dir = None
-        distance_multiplier = 0.0
+        distance_multiplier = 1.0
         if not self._first_person_mode:
             (
                 candidate_walk_dir,
