@@ -1079,7 +1079,7 @@ class NumAgentsCollideConfig(MeasurementConfig):
 
 
 @dataclass
-class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
+class CooperateSubgoalRewardConfig(PddlSubgoalReward):
     type: str = "CooperateSubgoalReward"
     stage_sparse_reward: float = 1.0
     end_on_collide: bool = True
