@@ -83,6 +83,9 @@ class AppStateSocialNav(AppState):
 
         self._update_help_text()
 
+    def get_num_agents(self):
+        return len(self.get_sim().agents_mgr._all_agent_data)
+
     def record_state(self):
         agent_states = []
         for agent_idx in range(self.get_num_agents()):
@@ -225,7 +228,7 @@ class AppStateSocialNav(AppState):
         return np.array(
             [
                 rom.get_object_by_id(obj_id).translation
-                for obj_id in self._target_obj_ids
+                for obj_id in self._episode_target_obj_ids
             ]
         )
 
