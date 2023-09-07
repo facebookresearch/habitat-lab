@@ -1109,6 +1109,10 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
     there until reaching. When the arg is 1, does replanning.
     """
 
+    def __init__(self, *args, task, **kwargs):
+        super().__init__(*args, task=task, **kwargs)
+        self.random_seed_counter = None
+
     @property
     def action_space(self):
         return spaces.Dict(
@@ -1130,6 +1134,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
         self.coord_nav = None
+        self.random_seed_counter = int(self._task._episode_id)
 
     def _get_target_for_coord(self, obj_pos):
         start_pos = obj_pos
@@ -1140,10 +1145,12 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         self.skill_done = False
 
         if self.coord_nav is None:
+            self._sim.seed(self.random_seed_counter)
             self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
                 max_tries,
                 island_index=self._sim._largest_island_idx,
             )
+            self.random_seed_counter += 1
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
         ] = self.coord_nav
@@ -1272,6 +1279,7 @@ class OracleNavHumanAction(OracleNavCoordAction):
         robot_pos = np.array(
             self._sim.get_agent_data(0).articulated_agent.base_pos
         )
+
         dis = np.linalg.norm((human_pos - robot_pos)[[0, 2]])
 
         social_nav_stats = (

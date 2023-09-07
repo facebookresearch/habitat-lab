@@ -398,24 +398,32 @@ class RearrangeSim(HabitatSim):
         radius=None,
         percentage_of_near_loc=None,
     ) -> Tuple[np.ndarray, float]:
+        if agent_idx == None:
+            seed = int(self.ep_info.episode_id) + 10000
+        else:
+            seed = int(self.ep_info.episode_id) + 10000 + agent_idx
+        # print("seed:", seed)
+        self.seed(seed)
+        np.random.seed(seed)
         """
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
         for attempt_i in range(max_attempts):
-            if (
-                nav_to_pos is not None
-                and np.random.rand() < percentage_of_near_loc
-            ):
-                start_pos = self.pathfinder.get_random_navigable_point_near(
-                    circle_center=nav_to_pos,
-                    radius=radius,
-                    island_index=self._largest_island_idx,
-                )
-            else:
-                start_pos = self.pathfinder.get_random_navigable_point(
-                    island_index=self._largest_island_idx
-                )
+            # TODO: do not allow the agent to be started near the location
+            # if (
+            #     nav_to_pos is not None
+            #     and np.random.rand() < percentage_of_near_loc
+            # ):
+            #     start_pos = self.pathfinder.get_random_navigable_point_near(
+            #         circle_center=nav_to_pos,
+            #         radius=radius,
+            #         island_index=self._largest_island_idx,
+            #     )
+            # else:
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self._largest_island_idx
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -439,6 +447,7 @@ class RearrangeSim(HabitatSim):
             rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info.episode_id}"
             )
+        # print("agent id and its location:", agent_idx, start_pos, start_rot)
         return start_pos, start_rot
 
     def _setup_targets(self, ep_info):
