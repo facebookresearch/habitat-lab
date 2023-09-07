@@ -56,7 +56,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         cfg.gpu_device_id = 0  # todo
         cfg.force_separate_semantic_scene_graph = False
         cfg.leave_context_with_background_renderer = False
-        cfg.enable_frustum_culling = False
+        cfg.enable_frustum_culling = False # TODO: Circumvents culling issues
         self._replay_renderer = (
             ReplayRenderer.create_batch_replay_renderer(cfg)
             if use_batch_renderer
