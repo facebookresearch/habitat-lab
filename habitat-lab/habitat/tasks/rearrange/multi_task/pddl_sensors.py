@@ -15,7 +15,6 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.multi_task.pddl_task import PddlTask
 from habitat.tasks.rearrange.rearrange_sensors import (
-    DidAgentsCollide,
     DoesWantTerminate,
     EndEffectorToObjectDistance,
     ObjectToGoalDistance,
