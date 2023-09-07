@@ -130,7 +130,6 @@ class KinematicHumanoid(MobileManipulator):
         # via configured local offset from origin
         base_transform = self.base_transformation
         return base_transform.translation + self.params.base_offset
-        
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
@@ -180,6 +179,9 @@ class KinematicHumanoid(MobileManipulator):
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
         self.update()
         self.set_rest_position()
+        # remove any default damping motors
+        for motor_id in self.sim_obj.existing_joint_motor_ids:
+            self.sim_obj.remove_joint_motor(motor_id)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
