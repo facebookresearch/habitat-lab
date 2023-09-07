@@ -839,6 +839,7 @@ class OracleNavCoordActionNonCylinder(OracleNavWithBackingUpAction):
         super().__init__(*args, task=task, **kwargs)
         self.nav_mode = None
         self.simple_backward = False
+        self.old_human_pos = None
 
     @property
     def action_space(self):
@@ -877,6 +878,49 @@ class OracleNavCoordActionNonCylinder(OracleNavWithBackingUpAction):
             )
         return (start_pos, np.array(obj_pos))
 
+    def update_rel_targ_obstacle(
+        self, rel_targ, new_human_pos, old_human_pos=None
+    ):
+        if old_human_pos is None:
+            human_velocity_scale = 0.0
+        else:
+            # take the norm of the distance between old and new human position
+            human_velocity_scale = float(
+                np.linalg.norm(new_human_pos - old_human_pos) / 0.25
+            )  # 0.25 is a magic number
+            # set a minimum value for the human velocity scale
+            human_velocity_scale = max(human_velocity_scale, 0.5)
+
+        std = 8.0
+        # scale the amplitude by the human velocity
+        amp = 8.0 * human_velocity_scale
+
+        # Get the position of the other agents
+        other_agent_rel_pos, other_agent_dist = [], []
+        curr_agent_T = np.array(
+            self.cur_articulated_agent.base_transformation.translation
+        )[[0, 2]]
+
+        other_agent_rel_pos.append(rel_targ[None, :])
+        other_agent_dist.append(0.0)  # dummy value
+        rel_pos = new_human_pos - curr_agent_T
+        dist_pos = np.linalg.norm(rel_pos)
+        # normalized relative vector
+        rel_pos = rel_pos / dist_pos
+        other_agent_dist.append(float(dist_pos))
+        other_agent_rel_pos.append(-rel_pos[None, :])
+
+        rel_pos = np.concatenate(other_agent_rel_pos)
+        rel_dist = np.array(other_agent_dist)
+        weight = amp * np.exp(-(rel_dist**2) / std)
+        weight[0] = 1.0
+        # TODO: explore softmax?
+        weight_norm = weight[:, None] / weight.sum()
+        # weighted sum of the old target position and
+        # relative position that avoids human
+        final_rel_pos = (rel_pos * weight_norm).sum(0)
+        return final_rel_pos
+
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
         # TODO better way to handle this
@@ -914,6 +958,32 @@ class OracleNavCoordActionNonCylinder(OracleNavWithBackingUpAction):
             robot_forward = robot_forward[[0, 2]]
             rel_targ = rel_targ[[0, 2]]
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+
+            ###############
+            # NEW: We will update the rel_targ position to avoid the humanoid
+            # rel_targ is the next position that the agent wants to walk to
+            old_rel_targ = rel_targ
+            if self._sim.num_articulated_agents > 1:
+                # This is very specific to SIRo. Careful merging
+                for agent_index in range(self._sim.num_articulated_agents):
+                    if self._agent_index == agent_index:
+                        continue
+                    new_human_pos = np.array(
+                        self._sim.get_agent_data(
+                            agent_index
+                        ).articulated_agent.base_transformation.translation
+                    )[[0, 2]]
+
+            rel_targ = self.update_rel_targ_obstacle(
+                rel_targ, new_human_pos, self.old_human_pos
+            )
+            self.old_human_pos = new_human_pos
+
+            # NEW: If avoiding the human makes us change dir, we will
+            # go backwards at times to avoid rotating
+            dot_prod_rel_targ = (rel_targ * old_rel_targ).sum()
+            did_change_dir = dot_prod_rel_targ < 0
+            ###############
 
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
@@ -962,6 +1032,31 @@ class OracleNavCoordActionNonCylinder(OracleNavWithBackingUpAction):
                             )
                     else:
                         vel = [0, 0]
+
+                    # if dist_to_final_nav_targ < self._dist_thresh:
+                    #     # Look at the object
+                    #     vel = OracleNavAction._compute_turn(
+                    #         rel_pos, self._turn_velocity, robot_forward
+                    #     )
+                    # elif angle_to_target < self._turn_thresh:
+                    #     # Move towards the target
+                    #     vel = [self._forward_velocity, 0]
+                    # else:
+                    #     # Look at the target waypoint.
+                    #     if did_change_dir:
+                    #         if (np.pi - angle_to_target) < self._turn_thresh:
+                    #             # Move towards the target
+                    #             vel = [-self._forward_velocity, 0]
+                    #         else:
+                    #             vel = OracleNavAction._compute_turn(
+                    #                 -rel_targ,
+                    #                 self._turn_velocity,
+                    #                 robot_forward,
+                    #             )
+                    #     else:
+                    #         vel = OracleNavAction._compute_turn(
+                    #             rel_targ, self._turn_velocity, robot_forward
+                    #         )
                 else:
                     vel = [0, 0]
                     self.skill_done = True
@@ -1067,8 +1162,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
 
 
 @registry.register_task_action
-class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
-    # class OracleNavHumanAction(OracleNavCoordAction):
+# class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
+class OracleNavHumanAction(OracleNavCoordAction):
     """
     Oracle Nav human Action. Selects a random position in the scene and navigates
     there until reaching. When the arg is 1, does replanning.
@@ -1080,6 +1175,9 @@ class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
         self.first_avoid = True
         self.continue_avoid_count = 0
         self.prev_pos = None
+        self.target_pos = None
+        self.prev_target_pos = None
+        self.prev_human_goal = None
 
     @property
     def action_space(self):
@@ -1105,6 +1203,9 @@ class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
         self.first_avoid = True
         self.continue_avoid_count = 0
         self.prev_pos = None
+        self.target_pos = None
+        self.prev_target_pos = None
+        self.prev_human_goal = None
 
     def _get_target_for_coord(self, obj_pos):
         start_pos = obj_pos
@@ -1117,29 +1218,50 @@ class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
         path_human.requested_start = human_pos
         path_human.requested_end = human_goal
         self._sim.pathfinder.find_path(path_human)
-        # if not found_path:
-        #     breakpoint()
 
         path_robot = habitat_sim.ShortestPath()
         path_robot.requested_start = robot_pos
         path_robot.requested_end = robot_goal
         self._sim.pathfinder.find_path(path_robot)
-        # if not found_path:
-        #     breakpoint()
 
-        for rp in path_robot.points:
-            for hp in path_human.points:
-                if np.linalg.norm((rp - hp)[[0, 2]]) < 0.5:
-                    return True
+        dist_interval = 0.1
+
+        _path_robot = []
+        for i in range(len(path_robot.points) - 1):
+            start_pt = path_robot.points[i][[0, 2]]
+            end_pt = path_robot.points[i + 1][[0, 2]]
+            pts = int(np.linalg.norm((start_pt - end_pt)) / dist_interval) + 2
+            new_x = np.linspace(start_pt[0], end_pt[0], pts)
+            new_y = np.linspace(start_pt[1], end_pt[1], pts)
+            for j in range(pts):
+                _path_robot.append(np.array([new_x[j], new_y[j]]))
+
+        _path_human = []
+        for i in range(len(path_human.points) - 1):
+            start_pt = path_human.points[i][[0, 2]]
+            end_pt = path_human.points[i + 1][[0, 2]]
+            pts = int(np.linalg.norm((start_pt - end_pt)) / dist_interval) + 2
+            new_x = np.linspace(start_pt[0], end_pt[0], pts)
+            new_y = np.linspace(start_pt[1], end_pt[1], pts)
+            for j in range(pts):
+                _path_human.append(np.array([new_x[j], new_y[j]]))
+
+        for i in range(len(_path_human)):
+            if i >= len(_path_robot):
+                break
+            rp = _path_robot[i]
+            hp = _path_human[i]
+            if np.linalg.norm((rp - hp)) < 1.0:
+                return True
         return False
 
     def step(self, *args, is_last_action, **kwargs):
         # Hyperparameter
         max_tries = 100
-        dis_to_avoid_human = 3.0
-        target_radius_near_human = 3.0
-        target_radius_near_robot = 6.0
-        self.simple_backward = False
+        dis_to_avoid_human = 4.0
+        target_radius_near_human = 4.0
+        target_radius_near_robot = 8.0
+        self.simple_backward = True
 
         self.skill_done = False
 
@@ -1189,41 +1311,55 @@ class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
             self.nav_mode = "seek"
             self.first_avoid = True
         else:  # if self.first_avoid:
-            v_robot_to_human = human_pos - robot_pos
-            v_robot_to_human = v_robot_to_human / np.linalg.norm(
-                v_robot_to_human
-            )
-            not_found = True
-            offset = 0.0
-            while not_found:
-                self.target_pos = (
-                    self._sim.pathfinder.get_random_navigable_point_near(
-                        circle_center=robot_pos,
-                        radius=target_radius_near_robot - offset,
-                        max_tries=max_tries,
-                        island_index=self._sim._largest_island_idx,
+            dist_to_cur_goal = np.linalg.norm(self.target_pos - robot_pos)
+            goal_diff = np.linalg.norm(self.prev_human_goal - human_goal)
+            if self.first_avoid or goal_diff > 0.5:
+                v_robot_to_human = human_pos - robot_pos
+                v_robot_to_human = v_robot_to_human / np.linalg.norm(
+                    v_robot_to_human
+                )
+                not_found = True
+                offset = 0.0
+                try_times = 0
+                while not_found:
+                    self.target_pos = (
+                        self._sim.pathfinder.get_random_navigable_point_near(
+                            circle_center=robot_pos,
+                            radius=target_radius_near_robot - offset,
+                            max_tries=max_tries,
+                            island_index=self._sim._largest_island_idx,
+                        )
                     )
-                )
-                v_robot_to_target = np.array(self.target_pos) - robot_pos
-                v_robot_to_target = v_robot_to_target / np.linalg.norm(
-                    v_robot_to_target
-                )
-                # Make sure the new target point has oppsite direction
-                # to human
-                # if np.dot(v_robot_to_human, v_robot_to_target) < 0.0 and not \
-                #     self._check_point_overlap(human_pos, human_goal, robot_pos, self.target_pos):
-                #     breakpoint()
-                #     not_found = False
 
-                if not self._check_point_overlap(
-                    human_pos, human_goal, robot_pos, self.target_pos
-                ):
-                    not_found = False
+                    # self.target_pos = self._sim.pathfinder.get_random_navigable_point(island_index=self._sim._largest_island_idx)
 
-                # print("loop")
+                    if np.isnan(self.target_pos[0]):
+                        self.target_pos = self.prev_target_pos
+                        break
+                    v_robot_to_target = np.array(self.target_pos) - robot_pos
+                    v_robot_to_target = v_robot_to_target / np.linalg.norm(
+                        v_robot_to_target
+                    )
+                    # Make sure the new target point has oppsite direction
+                    # to human
+                    if np.dot(
+                        v_robot_to_human, v_robot_to_target
+                    ) < 0.0 and not self._check_point_overlap(
+                        human_pos, human_goal, robot_pos, self.target_pos
+                    ):
+                        not_found = False
 
-                offset += 0.001
-                # print(offset)
+                    # if not self._check_point_overlap(
+                    #     human_pos, human_goal, robot_pos, self.target_pos
+                    # ):
+                    #     not_found = False
+
+                    # print("loop")
+
+                    try_times += 1
+                    if try_times > 1000:
+                        self.target_pos = self.prev_target_pos
+                        break
 
             self.nav_mode = "avoid"
             self.first_avoid = False
@@ -1238,5 +1374,10 @@ class OracleNavHumanAction(OracleNavCoordActionNonCylinder):
         ] = self.target_pos
         kwargs["is_last_action"] = is_last_action
         ret_val = super().step(*args, is_last_action, **kwargs)
+
+        if not np.isnan(self.target_pos[0]):
+            self.prev_target_pos = self.target_pos
+
+        self.prev_human_goal = human_goal
 
         return ret_val

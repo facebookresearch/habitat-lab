@@ -96,7 +96,7 @@ habitat:
         ang_speed: 10.0
         longitudinal_lin_speed: 10.0
         navmesh_offset: [[0.0, 0.0]]
-        enable_rotation_check_for_dyn_slide: True
+        enable_rotation_check_for_dyn_slide: False
 
       agent_1_base_velocity:
         agent_index : 1
