@@ -29,6 +29,7 @@ class AppStateSocialNav(AppState):
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
         )
+        self._episode_helper = self._sandbox_service.episode_helper
 
         # task-specific parameters:
         self._object_found_radius: float = 1.2  # TODO: make this a parameter
@@ -66,7 +67,7 @@ class AppStateSocialNav(AppState):
 
         if (
             self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
-            and self._sandbox_service.next_episode_exists()
+            and self._episode_helper.next_episode_exists()
         ):
             self._sandbox_service.end_episode(do_reset=True)
 
@@ -245,8 +246,8 @@ class AppStateSocialNav(AppState):
             )
 
         num_episodes_remaining = (
-            self._sandbox_service.get_num_iter_episodes()
-            - self._sandbox_service.get_num_episodes_done()
+            self._episode_helper.num_iter_episodes
+            - self._episode_helper.num_episodes_done
         )
         progress_str = f"{num_episodes_remaining} episodes remaining"
         self._sandbox_service.text_drawer.add_text(
@@ -260,7 +261,7 @@ class AppStateSocialNav(AppState):
 
         controls_str: str = ""
         controls_str += "ESC: exit\n"
-        if self._sandbox_service.next_episode_exists():
+        if self._episode_helper.next_episode_exists():
             controls_str += "M: next episode\n"
 
         if self._env_episode_active():

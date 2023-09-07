@@ -22,9 +22,7 @@ class SandboxService:
         get_metrics,
         end_episode,
         set_cursor_style,
-        num_iter_episodes,
-        num_episodes_done,
-        next_episode_exists,
+        episode_helper,
     ):
         self._args = args
         self._config = config
@@ -39,9 +37,7 @@ class SandboxService:
         self._get_metrics = get_metrics
         self._end_episode = end_episode
         self._set_cursor_style = set_cursor_style
-        self._num_iter_episodes = num_iter_episodes
-        self._num_episodes_done = num_episodes_done
-        self._next_episode_exists = next_episode_exists
+        self._episode_helper = episode_helper
 
     @property
     def args(self):
@@ -96,13 +92,5 @@ class SandboxService:
         return self._set_cursor_style
 
     @property
-    def get_num_iter_episodes(self):
-        return self._num_iter_episodes
-
-    @property
-    def get_num_episodes_done(self):
-        return self._num_episodes_done
-
-    @property
-    def next_episode_exists(self):
-        return self._next_episode_exists
+    def episode_helper(self):
+        return self._episode_helper

@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Set
 import magnum as mn
 import numpy as np
 from controllers.controller_helper import ControllerHelper
+from episode_helper import EpisodeHelper
 
 # from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
@@ -150,8 +151,7 @@ class SandboxDriver(GuiAppDriver):
         self._viz_anim_fraction = 0.0
         self._pending_cursor_style = None
 
-        self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
-        self._num_episodes_done: int = 0
+        self._episode_helper = EpisodeHelper(self.habitat_env)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -170,9 +170,7 @@ class SandboxDriver(GuiAppDriver):
             lambda: self._get_recent_metrics(),
             local_end_episode,
             lambda: self._set_cursor_style,
-            lambda: self.get_num_iter_episodes(),
-            lambda: self.get_num_episodes_done(),
-            lambda: self._next_episode_exists(),
+            self._episode_helper,
         )
 
         self._app_states: List[AppState]
@@ -265,15 +263,6 @@ class SandboxDriver(GuiAppDriver):
             self._metrics,
         ) = self.gym_habitat_env.step(action)
 
-    def get_num_episodes_done(self):
-        return self._num_episodes_done
-
-    def get_num_iter_episodes(self):
-        return self._num_iter_episodes
-
-    def _next_episode_exists(self):
-        return self.get_num_episodes_done() < self.get_num_iter_episodes() - 1
-
     def _compute_action_and_step_env(self):
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
@@ -307,8 +296,8 @@ class SandboxDriver(GuiAppDriver):
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
         ep_dict["dataset"] = self._dataset_config
-        ep_dict["scene_id"] = self.habitat_env.current_episode.scene_id
-        ep_dict["episode_id"] = self.habitat_env.current_episode.episode_id
+        ep_dict["scene_id"] = self._episode_helper.current_episode.scene_id
+        ep_dict["episode_id"] = self._episode_helper.current_episode.episode_id
 
         self._step_recorder.reset()
         ep_dict["steps"] = self._step_recorder._steps
@@ -370,11 +359,10 @@ class SandboxDriver(GuiAppDriver):
 
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
-        if do_reset and self._next_episode_exists():
+        if do_reset and self._episode_helper.next_episode_exists():
             self._reset_environment()
 
-        self._num_episodes_done += 1
-        assert self._num_episodes_done <= self._num_iter_episodes
+        self._episode_helper.increment_done_episode_counter()
 
     def _save_recorded_keyframes_to_file(self):
         if not self._recording_keyframes:
