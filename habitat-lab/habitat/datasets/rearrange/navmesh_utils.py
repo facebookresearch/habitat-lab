@@ -486,6 +486,8 @@ def get_largest_island_index(
             is_outdoor(pathfinder, sim, island_info[0])
             for island_info in island_areas
         ]
+        if False not in island_outdoor_classifications:
+            return -1
         # select the largest outdoor island
         largest_indoor_island = island_areas[
             island_outdoor_classifications.index(False)
