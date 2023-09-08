@@ -65,10 +65,10 @@ class PlaceSkillPolicy(PickSkillPolicy):
         )
         is_done = is_within_thresh & (~is_holding)
         if is_done.sum() > 0:
-            self._internal_log(
-                f"Terminating with {rel_resting_pos} and {is_holding}",
-            )
-            self.sm.hidden_state = None
+            # self._internal_log(
+            #     f"Terminating with {rel_resting_pos} and {is_holding}",
+            # )
+            self.sm.hidden_state[is_done] *= 0
         return is_done
 
     def _parse_skill_arg(self, skill_arg):

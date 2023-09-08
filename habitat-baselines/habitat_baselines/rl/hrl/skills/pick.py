@@ -39,7 +39,7 @@ class PickSkillPolicy(NnSkillPolicy):
         config = args[1]
         self.sm = skill_io_manager()
         self._num_ac = get_num_actions(action_space)
-        self._rest_state = config.reset_joint_state
+        self._rest_state = np.array(config.reset_joint_state)
         self._need_reset_arm = True
         self._dist_to_rest_state = 0.05
 
@@ -126,6 +126,9 @@ class PickSkillPolicy(NnSkillPolicy):
         ac_vel_index = slice(
             self.pick_start_id, self.pick_start_id + self.pick_len
         )
+        arm_slice = slice(
+            self.arm_start_id, self.arm_start_id + self.arm_len - 1
+        )
 
         action.actions[:, ac_vel_index] = action.actions[:, base_vel_index]
         size = action.actions[:, base_vel_index].shape
@@ -135,5 +138,19 @@ class PickSkillPolicy(NnSkillPolicy):
         # Update the hidden state / action
         self.sm.hidden_state = action.rnn_hidden_states
         self.sm.prev_action = action.actions
+
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        # Do not release the object once it is held
+        if self._need_reset_arm:
+            rest_state = torch.from_numpy(self._rest_state).to(
+                device=action.actions.device, dtype=action.actions.dtype
+            )
+            current_joint_pos = observations["joint"]
+            delta = rest_state - current_joint_pos
+            action.actions[torch.nonzero(is_holding), arm_slice] = delta
+            # for i in torch.nonzero(is_holding):
+            #     current_joint_pos = observations["joint"].cpu().numpy()
+            #     delta = rest_state - current_joint_pos
+            #     action.actions[:, arm_slice] = delta
 
         return action
