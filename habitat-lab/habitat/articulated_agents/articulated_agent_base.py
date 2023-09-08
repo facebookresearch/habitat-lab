@@ -11,7 +11,7 @@ import numpy as np
 from habitat.articulated_agents.articulated_agent_interface import (
     ArticulatedAgentInterface,
 )
-from habitat_sim.physics import JointMotorSettings
+from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.simulator import Simulator
 
 
@@ -224,8 +224,10 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
 
             joint_positions = self.sim_obj.joint_positions
 
+            mt = self.sim_obj.motion_type
             for i, jidx in enumerate(self.params.leg_joints):
-                self._set_motor_pos(jidx, ctrl[i])
+                if mt == MotionType.DYNAMIC:
+                    self._set_motor_pos(jidx, ctrl[i])
                 joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
             self.sim_obj.joint_positions = joint_positions
         else:
