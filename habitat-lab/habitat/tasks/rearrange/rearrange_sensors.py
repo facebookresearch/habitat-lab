@@ -1306,6 +1306,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         )
 
         self._start_end_episode_distance = None
+        self._min_start_end_episode_step = None
         self._agent_episode_distance = None
         self._prev_pos = None
         self._prev_human_pos = None
@@ -1319,10 +1320,25 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._update_human_pos_x = 0
         self._update_human_pos_y = 0
         self._update_human_pos_z = 0
+        self._robot_init_pos = None
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return SocialNavStats.cls_uuid
+
+    def _compute_min_path_step(self):
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+        dist_step = self._sim.geodesic_distance(
+            self._robot_init_pos, human_pos
+        ) / (10.0 / 120.0)
+        # print("dist_step:", dist_step)
+        # print("self._step:", self._step)
+        if dist_step <= self._step:
+            return self._step
+        else:
+            return float("inf")
 
     def reset_metric(self, *args, task, **kwargs):
         robot_pos = np.array(
@@ -1334,6 +1350,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._start_end_episode_distance = np.linalg.norm(
             robot_pos - human_pos, ord=2, axis=-1
         )
+        self._robot_init_pos = robot_pos
+        self._min_start_end_episode_step = float("inf")
         self._agent_episode_distance = 0.0
         self._prev_pos = robot_pos
         self._prev_human_pos = human_pos
@@ -1411,6 +1429,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._dis_after_found += dis
             self._after_found_human_times += found_human
 
+        # Update the minimum SPL
+        self._min_start_end_episode_step = min(
+            self._min_start_end_episode_step, self._compute_min_path_step()
+        )
+
         # Compute the SPL before finding the human
         try:
             first_found_spl = (
@@ -1421,8 +1444,14 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
                     self._agent_episode_distance,
                 )
             )
+            first_encounter_spl = (
+                self._has_found_human
+                * self._min_start_end_episode_step
+                / max(self._min_start_end_episode_step, self._step)
+            )
         except Exception:
             first_found_spl = 0.0
+            first_encounter_spl = 0.0
 
         human_rotate = 1
         if np.linalg.norm(self._prev_human_pos - human_pos) > 0.001:
@@ -1433,6 +1462,10 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
 
         # The final stats only takes the last result, so we need to
         # do average here.
+        # print("found human or not:", self._has_found_human)
+        # print("travel distance:", self._agent_episode_distance)
+        # print("min distance:", self._min_start_end_episode_step)
+        # print("first_encounter_spl:", first_encounter_spl)
         self._metric = {
             "human_goal_x": self._update_human_pos_x,
             "human_goal_y": self._update_human_pos_y,
@@ -1448,6 +1481,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             "avg_robot_to_human_after_found_dis_over_epi": self._dis_after_found
             / self._step_after_found,
             "first_found_spl": first_found_spl,
+            "first_encounter_spl": first_encounter_spl,
         }
 
         if self._has_found_human:
