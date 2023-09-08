@@ -123,6 +123,11 @@ class PointNavResNetPolicy(NetPolicy):
             else:
                 agent_name = config.habitat.simulator.agents_order[0]
 
+        # For dealing with multi-agent or single-agent setting
+        policy_config = config.habitat_baselines.rl.policy.get(
+            agent_name, config.habitat_baselines.rl.policy
+        )
+
         return cls(
             observation_space=filtered_obs,
             action_space=action_space,
@@ -132,7 +137,7 @@ class PointNavResNetPolicy(NetPolicy):
             backbone=config.habitat_baselines.rl.ddppo.backbone,
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.habitat_baselines.force_blind_policy,
-            policy_config=config.habitat_baselines.rl.policy[agent_name],
+            policy_config=policy_config,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
             fuse_keys=None,
         )

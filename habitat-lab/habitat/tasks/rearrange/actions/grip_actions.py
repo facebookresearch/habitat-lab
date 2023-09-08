@@ -13,6 +13,7 @@ from gym import spaces
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
@@ -81,7 +82,37 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
-        self.cur_grasp_mgr.desnap()
+        # self.cur_grasp_mgr.desnap()
+        _, pos_targs = self._sim.get_targets()
+        targ_pos = pos_targs[0]
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+
+        place_threshold = 0.5
+        if np.linalg.norm(cur_pos - targ_pos) <= place_threshold:
+            obj_id = self.cur_grasp_mgr._snapped_obj_id
+            self.cur_grasp_mgr.desnap()
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                obj_id
+            ).translation = targ_pos
+
+    def _find_closet_rep(self):
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+        all_receps = find_receptacles(self._sim)
+
+        min_rep_dis = float("inf")
+        min_rep = None
+        for rep in all_receps:
+            rep_bb = self._sim.receptacles[rep.name]
+            rep_pos = rep_bb.sample_uniform_local()
+            if np.linalg.norm(cur_pos - rep_pos) < min_rep_dis:
+                min_rep_dis = float(np.linalg.norm(cur_pos - rep_pos))
+                min_rep_pos = rep_pos
+                min_rep = rep
+        return min_rep, min_rep_pos
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
