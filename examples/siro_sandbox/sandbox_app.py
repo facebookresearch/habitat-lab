@@ -55,6 +55,7 @@ if TYPE_CHECKING:
 
 from app_states.app_state_abc import AppState
 from app_states.app_state_fetch import AppStateFetch
+from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
@@ -135,19 +136,6 @@ class SandboxDriver(GuiAppDriver):
 
         self._debug_images = args.debug_images
 
-        is_free_camera_mode = (
-            self.ctrl_helper.get_gui_controlled_agent_index() is None
-        )
-        if is_free_camera_mode and args.first_person_mode:
-            raise RuntimeError(
-                "--first-person-mode must be used with --gui-controlled-agent-index"
-            )
-
-        if is_free_camera_mode:
-            raise RuntimeError(
-                "Free camera mode is temporarily unsupported! you must set --gui-controlled-agent-index."
-            )
-
         self._viz_anim_fraction = 0.0
         self._pending_cursor_style = None
 
@@ -203,6 +191,8 @@ class SandboxDriver(GuiAppDriver):
                     self.ctrl_helper.get_gui_agent_controller(),
                 )
             ]
+        elif args.app_state == "free_camera":
+            self._app_states = [AppStateFreeCamera(self._sandbox_service)]
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
         # Note that we expect SandboxDriver to create multiple AppStates in some
@@ -692,6 +682,14 @@ if __name__ == "__main__":
     if args.remote_gui_mode and args.app_state != "fetch":
         raise ValueError(
             "--remote-gui-mode is only supported for fetch app-state"
+        )
+
+    if (
+        args.app_state == "free_camera"
+        and args.gui_controlled_agent_index is not None
+    ):
+        raise ValueError(
+            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
         )
 
     glfw_config = Application.Configuration()
