@@ -259,7 +259,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return grasp_mgr
 
     def get_articulated_agent(self):
-        return self._habitat_env._sim.agents_mgr[
+        return self._habitat_env._sim.agents_mgr[  # type: ignore
             self._agent_idx
         ].articulated_agent
 

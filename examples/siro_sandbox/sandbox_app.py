@@ -728,7 +728,6 @@ if __name__ == "__main__":
         raise ValueError(
             "--gui-controlled-agent-index is not supported for --app-state=free_camera"
         )
-    
     # todo: do this more cleanly
     do_network_server = args.remote_gui_mode
 
