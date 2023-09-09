@@ -145,7 +145,9 @@ class GuiNavigationHelper:
     ):
         walk_dir = None
         distance_multiplier = 1.0
-        geodesic_dist_threshold = 0.15
+        geodesic_dist_threshold = 0.05
+
+        forward_dir = self._compute_forward_dir(target_rot_quat)
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
         if (
@@ -154,9 +156,14 @@ class GuiNavigationHelper:
             and path.geodesic_distance >= geodesic_dist_threshold
         ):
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
-            distance_multiplier = 1.0
-            if visualize_path:
-                self._viz_path(path)
+
+            # disallow paths that go backwards, as this would cause the humanoid to "circle back" in an unrealistic way
+            if mn.math.dot(walk_dir.normalized(), forward_dir) > 0.0:
+                distance_multiplier = 1.0
+                if visualize_path:
+                    self._viz_path(path)
+            else:
+                walk_dir = None
 
         if walk_dir is None and target_rot_quat is not None:
             walk_dir = self._compute_forward_dir(target_rot_quat)
