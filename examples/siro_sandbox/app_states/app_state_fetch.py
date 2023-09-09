@@ -310,6 +310,9 @@ class AppStateFetch(AppState):
                         self._held_target_obj_idx
                     )
 
+                    # also preview throw
+                    _ = self._throw_helper.viz_and_get_humanoid_throw()
+
             if self._sandbox_service.gui_input.get_key_up(
                 GuiInput.KeyNS.SPACE
             ):
@@ -663,8 +666,8 @@ class AppStateFetch(AppState):
 
         self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
-        self._update_grasping_and_set_act_hints()
         if not self._paused:
+            self._update_grasping_and_set_act_hints()
             self._sandbox_service.compute_action_and_step_env()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
