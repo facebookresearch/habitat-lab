@@ -8,11 +8,6 @@ import websockets
 
 from . import multiprocessing_config
 from .frequency_limiter import FrequencyLimiter
-from .interprocess_record import (
-    get_queued_keyframes,
-    interprocess_record,
-    send_client_state_to_main_thread,
-)
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -21,7 +16,7 @@ server_process = None
 exit_event = None
 
 
-def launch_server_process():
+def launch_server_process(interprocess_record):
     # see multiprocessing_config to switch between real and dummy multiprocessing
 
     global server_process
@@ -66,7 +61,6 @@ class Server:
     def __init__(self, interprocess_record, exit_event):
         self._connected_clients = {}  # Dictionary to store connected clients
 
-        # todo: get rid of this if not needed (we're currently using a global)
         self._interprocess_record = interprocess_record
 
         # Limit how many messages/sec we send. Note the current server implementation sends
@@ -88,7 +82,7 @@ class Server:
                 break
 
             # todo: refactor to support N clients
-            keyframes = get_queued_keyframes()
+            keyframes = self._interprocess_record.get_queued_keyframes()
 
             if len(keyframes):
                 if not self._hack_first_keyframe:
@@ -126,7 +120,9 @@ class Server:
                 # Parse the received message as a JSON object
                 client_state = json.loads(message)
 
-                send_client_state_to_main_thread(client_state)
+                self._interprocess_record.send_client_state_to_main_thread(
+                    client_state
+                )
 
             except json.JSONDecodeError:
                 print("Received invalid JSON data from the client.")

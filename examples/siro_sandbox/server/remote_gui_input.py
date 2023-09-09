@@ -6,14 +6,14 @@
 
 import magnum as mn
 from server.average_rate_tracker import AverageRateTracker
-from server.interprocess_record import get_queued_client_states
 
 from habitat.gui.gui_input import GuiInput
 
 
 class RemoteGuiInput:
-    def __init__(self, debug_line_render):
+    def __init__(self, interprocess_record, debug_line_render):
         self._recent_client_states = []
+        self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
@@ -240,7 +240,7 @@ class RemoteGuiInput:
             self._debug_line_render.pop_transform()
 
     def update(self):
-        client_states = get_queued_client_states()
+        client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
 
         if len(client_states) > self.get_history_length():

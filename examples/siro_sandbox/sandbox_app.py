@@ -61,7 +61,7 @@ from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
-from server.interprocess_record import send_keyframe_to_networking_thread
+from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
 
@@ -148,10 +148,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        self._remote_gui_input = None
-        if do_network_server:
-            launch_server_process()
-            self._remote_gui_input = RemoteGuiInput(line_render)
+        self._check_init_server(line_render)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -218,6 +215,20 @@ class SandboxDriver(GuiAppDriver):
         self._app_state = None
 
         self._reset_environment()
+
+    def _check_init_server(self, line_render):
+        self._remote_gui_input = None
+        self._interprocess_record = None
+        if do_network_server:
+            # How many frames we can simulate "ahead" of what keyframes have been sent.
+            # A larger value increases lag on the client, while ensuring a more reliable
+            # simulation rate in the presence of unreliable network comms.
+            max_steps_ahead = 3
+            self._interprocess_record = InterprocessRecord(max_steps_ahead)
+            launch_server_process(self._interprocess_record)
+            self._remote_gui_input = RemoteGuiInput(
+                self._interprocess_record, line_render
+            )
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore
@@ -508,7 +519,9 @@ class SandboxDriver(GuiAppDriver):
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]
-                send_keyframe_to_networking_thread(keyframe_obj)
+                self._interprocess_record.send_keyframe_to_networking_thread(
+                    keyframe_obj
+                )
 
         return post_sim_update_dict
 

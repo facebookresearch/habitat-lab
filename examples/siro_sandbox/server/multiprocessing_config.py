@@ -1,7 +1,7 @@
 from typing import Any
 
 # multiprocessing.dummy uses multithreading instead of multiprocessing
-use_dummy = True
+use_dummy = False
 
 # User code should import this file and use e.g. multiprocessing_config.Process. Thus
 # user code doesn't have to know whether we're using multiprocessing.dummy or
