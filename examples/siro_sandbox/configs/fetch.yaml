@@ -1,0 +1,231 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: multi_agent_tidy_house_fp_spot_humanoid
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/agent: pop_play
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+
+  - /habitat/task/measurements:
+    - composite_subgoal_reward
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+    - other_agent_gps
+    - has_finished_oracle_nav
+
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+
+  # For Spot observation space
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+
+  - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
+  - _self_
+
+habitat:
+  task:
+    lab_sensors:
+      agent_0_should_replan:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 0
+      agent_1_should_replan:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 1
+    actions:
+      agent_0_arm_action:
+        grip_controller: MagicGraspAction
+        disable_grip: True
+
+      # Hack: it appears the Spot hierarchical policy config requires an oracle nav
+      # action (or, I haven't found a workaround). We want the Spot to navigate based
+      # on a neural policy that is driving the base_velocity_leg_animation action, but
+      # any active oracle nav policy will also try to overwrite this action each step.
+      # So, we set the oracle nav action type to "OracleNavCoordAction", and then
+      # we disable this action in oracle_nav_action.py OracleNavCoordAction.step via
+      # a hard-coded hack.
+      agent_0_oracle_nav_action:
+        type: OracleNavCoordAction
+
+      agent_0_base_velocity:
+        lin_speed: 6.0
+      agent_1_oracle_nav_action:
+        type: OracleNavAction
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1
+    measurements:
+      cooperate_subgoal_reward:
+        end_on_collide: False
+
+    constraint_violation_drops_object: False
+
+  environment:
+    max_episode_steps: 1000
+  gym:
+    obs_keys:
+      # - agent_0_head_depth
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_joint
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_other_agent_gps
+      # - agent_0_has_finished_oracle_nav
+      # - agent_0_should_replan
+      # - agent_1_head_depth
+      # - agent_1_relative_resting_position
+      # - agent_1_obj_start_sensor
+      # - agent_1_obj_goal_sensor
+      # - agent_1_obj_start_gps_compass
+      # - agent_1_obj_goal_gps_compass
+      # - agent_1_is_holding
+      # - agent_1_ee_pos
+      # - agent_1_localization_sensor
+      # - agent_1_humanoid_joint_sensor
+      # - agent_1_other_agent_gps
+      # - agent_1_has_finished_oracle_nav
+      # - agent_1_should_replan
+
+  simulator:
+    # Add Spot robot agents
+    agents:
+      agent_0:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+      agent_1:
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/male_1/male_1.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: True
+    habitat_sim_v0:
+      allow_sliding: True
+
+  dataset:
+    data_path: "data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz"
+
+habitat_baselines:
+  num_environments: 1
+
+  evaluate: True
+
+  eval:
+    should_load_ckpt: False
+    # video_option: ["disk"]
+
+  rl:
+    agent:
+      num_pool_agents_per_type: [1, 8]
+      agent_sample_interval: 20
+    policy:
+      agent_0:
+        hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+
+            # pick:
+            #   skill_name: "PickSkillPolicy"
+            #   obs_skill_inputs: ["obj_start_sensor"]
+            #   load_ckpt_file: "data/models/pick_latest.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 3
+
+            nav_to_obj:
+              skill_name: "NavSkillPolicy"
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 2
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+            nav_to_robot:
+              skill_name: "NavSkillPolicy"
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
+              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 2
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "humanoid_joint_sensor"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 300
+              stop_thresh: 0.00001
+              apply_postconds: False
+
+    ddppo:
+      # Whether to reset the critic linear layer
+      reset_critic: False
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2
