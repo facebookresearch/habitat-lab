@@ -31,6 +31,8 @@ RADIUS_FETCHER_NAV_PATH = 0.45
 
 RING_PULSE_SIZE = 0.05
 
+disable_spot = False
+
 class AppStateFetch(AppState):
     def __init__(self, sandbox_service, gui_agent_ctrl, robot_agent_ctrl):
         self._sandbox_service = sandbox_service
@@ -70,7 +72,8 @@ class AppStateFetch(AppState):
 
         # self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
 
-        self._is_remote_active_toggle = False
+        # choose initial value for toggle 
+        self._is_remote_active_toggle = self._sandbox_service.args.remote_gui_mode
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -161,6 +164,8 @@ class AppStateFetch(AppState):
         self._held_target_obj_idx = found_obj_idx
         self._held_hand_idx = found_hand_idx
         self.state_machine_agent_ctrl.cancel_fetch()
+        rom_obj = self._get_target_rigid_object(self._held_target_obj_idx)
+        rom_obj.motion_type = MotionType.KINEMATIC
 
     def _update_held_and_try_throw_remote(self):
 
@@ -200,10 +205,11 @@ class AppStateFetch(AppState):
             self._held_hand_idx = None
         else:
             # snap to hand
-            hand_pos, _ = remote_gui_input.get_hand_pose(self._held_hand_idx)
+            hand_pos, hand_rotation = remote_gui_input.get_hand_pose(self._held_hand_idx)
             assert hand_pos is not None
 
             rom_obj.translation = hand_pos
+            rom_obj.rotation = hand_rotation
             rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
             
 
@@ -222,7 +228,8 @@ class AppStateFetch(AppState):
             )
         )
 
-        self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+        if not disable_spot:
+            self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
 
     def _update_grasping_and_set_act_hints_remote(self):
 
@@ -318,7 +325,8 @@ class AppStateFetch(AppState):
                         )
                     )
                     throw_vel = self._throw_helper.viz_and_get_humanoid_throw()
-                    self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+                    if not disable_spot:
+                        self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
 
                     self._held_target_obj_idx = None
 
@@ -350,14 +358,16 @@ class AppStateFetch(AppState):
                     if self._sandbox_service.gui_input.get_key_down(
                         GuiInput.KeyNS.SPACE
                     ):
+                        self._recent_reach_pos = self._get_target_object_position(min_i)
+                        # we will reach towards this position until spacebar is released
+                        reach_pos = self._recent_reach_pos
+                        
                         self._held_target_obj_idx = min_i
                         self.state_machine_agent_ctrl.cancel_fetch()
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
-                        # we will reach towards this position until spacebar is released
-                        self._recent_reach_pos = this_target_pos
-                        reach_pos = self._recent_reach_pos
+
 
         # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
         #     obj_pos = (
@@ -591,6 +601,7 @@ class AppStateFetch(AppState):
                 path_points, path_endpoint_radius, path_color
             )        
 
+        if not disable_spot:
             # sloppy: assume agent 0 and assume agent_0_articulated_agent_arm_depth obs key
             assert self.state_machine_agent_ctrl._agent_idx == 0
             post_sim_update_dict["debug_images"].append(("spot depth sensor",
