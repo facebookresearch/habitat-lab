@@ -53,9 +53,10 @@ class TextDrawer:
         self._display_font = text.FontManager().load_and_instantiate(
             "TrueTypeFont"
         )
+        load_font_size = 26
         self._display_font.open_file(
             os.path.join(os.path.dirname(__file__), relative_path_to_font),
-            13,
+            load_font_size,
         )
         self._display_font_size = display_font_size
         self._max_display_text_chars = max_display_text_chars

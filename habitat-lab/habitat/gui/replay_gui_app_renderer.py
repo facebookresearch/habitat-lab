@@ -10,7 +10,7 @@ import numpy as np
 import habitat_sim
 from habitat.gui.gui_application import GuiAppRenderer
 from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
-from habitat.gui.text_drawer import TextDrawer
+from habitat.gui.text_drawer import TextDrawer, TextOnScreenAlignment
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
@@ -112,14 +112,32 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
-        # arrange debug images on right side of frame, tiled down from the top
-        dest_y = self.window_size.y
-        for image in self._debug_images:
-            im_height, im_width, _ = image.shape
-            self._image_drawer.draw(
-                image, self.window_size.x - im_width, dest_y - im_height
-            )
-            dest_y -= im_height
+        if len(self._debug_images):
+            max_im_width = max(
+                self._debug_images, key=lambda tup: tup[1].shape[1]
+            )[1].shape[1]
+
+            # arrange debug images on right side of frame, tiled down from the top
+            dest_y = self.window_size.y
+            for title, image in self._debug_images:
+                im_height, im_width, _ = image.shape
+
+                # add_text y convention is: top = 0, bottom = -self.window_size.y
+                text_pos_y = -(self.window_size.y - dest_y)
+                text_pos_x = self.window_size.x - max_im_width
+                self._text_drawer.add_text(
+                    title,
+                    TextOnScreenAlignment.TOP_LEFT,
+                    text_pos_x,
+                    text_pos_y,
+                )
+
+                text_pad_y = 40
+                screen_x = self.window_size.x - im_width
+                screen_y = dest_y - im_height - text_pad_y
+                self._image_drawer.draw(image, screen_x, screen_y)
+
+                dest_y -= im_height + text_pad_y
 
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
         mn.gl.default_framebuffer.bind()
