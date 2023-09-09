@@ -232,6 +232,7 @@ class ArmActionConfig(ActionConfig):
     arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
+    place_thres_dist: float = 0.5
     disable_grip: bool = False
     delta_pos_limit: float = 0.0125
     ee_ctrl_lim: float = 0.015

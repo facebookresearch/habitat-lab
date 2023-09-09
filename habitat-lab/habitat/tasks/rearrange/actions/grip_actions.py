@@ -82,15 +82,19 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
-        # self.cur_grasp_mgr.desnap()
         _, pos_targs = self._sim.get_targets()
-        targ_pos = pos_targs[0]
         cur_pos = np.array(
             self.cur_articulated_agent.ee_transform().translation
         )
+        closest_target_id = np.argmin(
+            np.linalg.norm(pos_targs - cur_pos, ord=2, axis=-1)
+        )
+        targ_pos = pos_targs[closest_target_id]
 
-        place_threshold = 0.5
-        if np.linalg.norm(cur_pos - targ_pos) <= place_threshold:
+        if (
+            np.linalg.norm(cur_pos - targ_pos)
+            <= self._config.grasp_thresh_dist
+        ):
             obj_id = self.cur_grasp_mgr._snapped_obj_id
             self.cur_grasp_mgr.desnap()
             self._sim.get_rigid_object_manager().get_object_by_id(
