@@ -14,6 +14,9 @@ from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.multi_agent.utils import (
+    update_list_with_agent_prefix,
+)
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
@@ -56,7 +59,6 @@ class NnSkillPolicy(SkillPolicy):
         self._ac_start = 0
         self._ac_len = get_num_actions(filtered_action_space)
         self._did_want_done = torch.zeros(self._batch_size)
-
         for k, space in action_space.items():
             if k not in filtered_action_space.spaces.keys():
                 self._ac_start += get_num_actions(space)
@@ -184,6 +186,9 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
+        # TOO: Hack the keys should be gotten from somewhere else
+        expected_obs_keys = update_list_with_agent_prefix(expected_obs_keys, 0)
+
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
@@ -198,11 +203,11 @@ class NnSkillPolicy(SkillPolicy):
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
+        action_keys = update_list_with_agent_prefix(
+            policy_cfg.habitat.task.actions.keys(), 0
+        )
         filtered_action_space = ActionSpace(
-            OrderedDict(
-                (k, action_space[k])
-                for k in policy_cfg.habitat.task.actions.keys()
-            )
+            OrderedDict((k, action_space[k]) for k in action_keys)
         )
 
         if "arm_action" in filtered_action_space.spaces and (
@@ -215,16 +220,20 @@ class NnSkillPolicy(SkillPolicy):
                     if k != "grip_action"
                 }
             )
-
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
-
         actor_critic = policy.from_config(
-            policy_cfg, filtered_obs_space, filtered_action_space
+            policy_cfg,
+            filtered_obs_space,
+            filtered_action_space,
+            agent_name="agent_0",
         )
         if len(ckpt_dict) > 0:
             try:
+                if "state_dict" not in ckpt_dict:
+                    ckpt_dict = ckpt_dict[0]
+
                 actor_critic.load_state_dict(ckpt_dict["state_dict"])
 
             except Exception as e:

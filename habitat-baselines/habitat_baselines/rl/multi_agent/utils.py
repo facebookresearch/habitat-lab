@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 from habitat_baselines.common.tensor_dict import TensorDict
 
@@ -28,6 +28,22 @@ def update_dict_with_agent_prefix(
         return TensorDict(ret)
     else:
         return ret
+
+
+def update_list_with_agent_prefix(
+    names: List[str], agent_idx: int
+) -> Union[Dict[str, Any], TensorDict, List[str]]:
+    """
+    :param agent_idx: The index of the agent name in the dictionary. Will format as `agent_{agent_idx}`
+    """
+
+    agent_s = f"agent_{agent_idx}_"
+    ret = [
+        _remove_agent_prefix(k, agent_s)
+        for k in names
+        if agent_s in k or not k.startswith("agent_")
+    ]
+    return ret
 
 
 def add_agent_prefix(k, agent_i):
