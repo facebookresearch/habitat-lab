@@ -176,6 +176,8 @@ class RemoteGuiInput:
         if not len(self._recent_client_states):
             return
         
+        avatar_color = mn.Color3(0.3, 1, 0.3)
+
         if True:
             pos, rot_quat = self.get_head_pose()
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
@@ -184,8 +186,8 @@ class RemoteGuiInput:
             # self._debug_line_render.draw_box(mn.Vector3(-half_size, -half_size, -half_size), 
             #     mn.Vector3(half_size, half_size, half_size),
             #     mn.Color3(151, 206, 222) / 255)
-            color0 = mn.Color3(255, 255, 255) / 255
-            color1 = mn.Color4(255, 255, 255, 0) / 255
+            color0 = avatar_color
+            color1 = mn.Color4(avatar_color.r, avatar_color.g, avatar_color.b, 0)
             size = 0.5
             # draw a frustum (forward is z+)
             self._debug_line_render.draw_transformed_line(
@@ -203,18 +205,18 @@ class RemoteGuiInput:
 
             self._debug_line_render.pop_transform()
 
-        hand_colors = (mn.Color3(255, 0, 0) / 255, mn.Color3(0, 0, 255) / 255)
+        hand_colors = avatar_color
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             trans =  mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-            half_size = 0.1
+            half_size = 0.07
             self._debug_line_render.push_transform(trans)
-            self._debug_line_render.draw_box(mn.Vector3(-half_size, -half_size, -half_size), 
-                mn.Vector3(half_size, half_size, half_size),
-                hand_colors[hand_idx])
+            # self._debug_line_render.draw_box(mn.Vector3(-half_size, -half_size, -half_size), 
+            #     mn.Vector3(half_size, half_size, half_size),
+            #     hand_colors[hand_idx])
             pointer_len = 0.5
             self._debug_line_render.draw_transformed_line(
-                mn.Vector3(0, 0, 0), mn.Vector3(0, 0, -pointer_len),
+                mn.Vector3(0, 0, 0), mn.Vector3(0, 0, pointer_len),
                 color0, color1)
 
             self._debug_line_render.pop_transform()
