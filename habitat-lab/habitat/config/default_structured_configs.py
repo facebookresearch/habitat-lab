@@ -56,6 +56,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -255,7 +256,7 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
-class BaseVelocityNonCylinderActionConfig(ActionConfig):
+class BaseVelocityNonCylinderActionConfig(BaseVelocityActionConfig):
     r"""
     In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
@@ -501,6 +502,16 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidJointSensor"
     dimensionality: int = 54 * 4
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -1144,6 +1155,11 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+
+
+@dataclass
+class ExplorationReward(MeasurementConfig):
+    type: str = "ExplorationReward"
 
 
 @dataclass
@@ -2008,11 +2024,18 @@ cs.store(
     name="joint_sensor",
     node=JointSensorConfig,
 )
+
 cs.store(
     package="habitat.task.lab_sensors.humanoid_joint_sensor",
     group="habitat/task/lab_sensors",
     name="humanoid_joint_sensor",
     node=HumanoidJointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
@@ -2299,6 +2322,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.exploration_reward",
+    group="habitat/task/measurements",
+    name="exploration_reward",
+    node=ExplorationReward,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",

@@ -7,6 +7,7 @@ defaults:
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_pick_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_place_base_velocity: base_velocity
+  - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
   - _self_
 
 hydra:
@@ -59,8 +60,24 @@ habitat:
         ee_ctrl_lim: 0.015
 
       agent_0_base_velocity:
-        lin_speed: 5.0
-        ang_speed: 5.0
+        allow_dyn_slide: True
+        # There is a collision if the difference between the clamped NavMesh position and target position
+        # is more than than collision_threshold for any point
+        collision_threshold: 1e-5
+        # The x and y locations of the clamped NavMesh position
+        navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
+        # If we allow the robot to move laterally
+        enable_lateral_move: False
+        # speed parameters
+        longitudinal_lin_speed: 10.0
+        lateral_lin_speed: 10.0
+        ang_speed: 10.0
+        enable_rotation_check_for_dyn_slide: False
+
+      # agent_0_base_velocity:
+      #   lin_speed: 5.0
+      #   ang_speed: 5.0
+
       agent_0_pick_base_velocity:
         lin_speed: 5.0
         ang_speed: 5.0
@@ -93,7 +110,8 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "multirun/checkpoints_jimmy/jimmy_nav.pth"
-              max_skill_steps: 500
+              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_as21NCAR_2/latest.pth"
+              # load_ckpt_file: "multirun/checkpoints_jimmy/jimmy_nav.pth"
+              max_skill_steps: 1000
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]

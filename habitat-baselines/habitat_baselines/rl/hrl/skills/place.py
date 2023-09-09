@@ -33,6 +33,8 @@ class PlaceSkillPolicy(PickSkillPolicy):
 
         # Get the skill io manager
         self.sm = skill_io_manager()
+        self._need_reset_arm = False
+
         self._num_ac = get_num_actions(action_space)
 
     @dataclass(frozen=True)
@@ -46,9 +48,11 @@ class PlaceSkillPolicy(PickSkillPolicy):
     def _mask_pick(self, action, observations):
         # Mask out the grasp if the object is already released.
         is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
-        for i in torch.nonzero(is_not_holding):
+        if torch.nonzero(is_not_holding).sum() > 0:
             # Do not regrasp the object once it is released.
-            action.actions[i, self._grip_ac_idx] = -1.0
+            action.actions[
+                torch.nonzero(is_not_holding), self._grip_ac_idx
+            ] = -1.0
         return action
 
     def _is_skill_done(
@@ -101,23 +105,22 @@ class PlaceSkillPolicy(PickSkillPolicy):
             cur_batch_idx,
             deterministic,
         )
+        action = self._mask_pick(action, observations)
 
         # The skill outputs a base velocity, but we want to
         # set it to pick_base_velocity. This is because we want
         # to potentially have different lin_speeds
         # For those velocities
-        base_vel_index = slice(
-            self.org_pick_start_id, self.org_pick_start_id + self.org_pick_len
+        place_index = slice(
+            self.place_start_id, self.place_start_id + self.place_len
         )
-        ac_vel_index = slice(
+        pick_index = slice(
             self.pick_start_id, self.pick_start_id + self.pick_len
         )
 
-        action.actions[:, ac_vel_index] = action.actions[:, base_vel_index]
-        size = action.actions[:, base_vel_index].shape
-        action.actions[:, base_vel_index] = torch.zeros(size)
-        action = self._mask_pick(action, observations)
-
+        action.actions[:, place_index] = action.actions[:, pick_index]
+        size = action.actions[:, pick_index].shape
+        action.actions[:, pick_index] = torch.zeros(size)
         # Update the hidden state / action
         self.sm.hidden_state = action.rnn_hidden_states
         self.sm.prev_action = action.actions
