@@ -116,7 +116,10 @@ class PointNavDatasetV1(Dataset):
                 )
 
             for i, scene in enumerate(scenes):
-                if config.scene_indices_range is None or i in range(config.scene_indices_range[0], config.scene_indices_range[1]):
+                if config.scene_indices_range is None or i in range(
+                    config.scene_indices_range[0],
+                    config.scene_indices_range[1],
+                ):
                     scene_filename = self.content_scenes_path.format(
                         data_path=dataset_dir, scene=scene
                     )

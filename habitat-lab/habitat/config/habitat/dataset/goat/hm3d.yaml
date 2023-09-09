@@ -5,4 +5,4 @@ defaults:
 
 type: Goat-v1
 split: train
-data_path: data/datasets/goat/hm3d/v0.2/{split}/{split}.json.gz
+data_path: data/datasets/goat/hm3d/v0.5_easier/{split}/{split}.json.gz
