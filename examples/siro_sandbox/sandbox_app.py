@@ -17,8 +17,9 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+import json
 from datetime import datetime
-from functools import wraps
+from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import magnum as mn
@@ -60,13 +61,19 @@ from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
+from server.interprocess_record import send_keyframe_to_networking_thread
+from server.remote_gui_input import RemoteGuiInput
+from server.server import launch_server_process, terminate_server_process
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    # "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+
+do_network_server = False  # todo: make as command-line arg or similar
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -141,6 +148,11 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
+        self._remote_gui_input = None
+        if do_network_server:
+            launch_server_process()
+            self._remote_gui_input = RemoteGuiInput(line_render)
+
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
 
@@ -148,6 +160,7 @@ class SandboxDriver(GuiAppDriver):
             args,
             config,
             gui_input,
+            self._remote_gui_input,
             line_render,
             text_drawer,
             lambda: self._viz_anim_fraction,
@@ -157,8 +170,9 @@ class SandboxDriver(GuiAppDriver):
             self._step_recorder,
             lambda: self._get_recent_metrics(),
             local_end_episode,
-            lambda: self._set_cursor_style,
+            partial(self._set_cursor_style),
             self._episode_helper,
+            partial(self._get_observation_as_debug_image),
         )
 
         self._app_states: List[AppState]
@@ -167,6 +181,7 @@ class SandboxDriver(GuiAppDriver):
                 AppStateFetch(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
         elif args.app_state == "rearrange":
@@ -402,8 +417,31 @@ class SandboxDriver(GuiAppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
+    def _get_observation_as_debug_image(self, obs_key):
+        def depth_to_rgb(obs):
+            converted_obs = np.concatenate(
+                [obs * 255.0 for _ in range(3)], axis=2
+            ).astype(np.uint8)
+            return converted_obs
+
+        assert (
+            obs_key in self._obs
+        ), f"Observation {obs_key} not found in list of available observations {list(self._obs.keys())}"
+
+        debug_image = np.flipud(
+            depth_to_rgb(self._obs[obs_key])
+            if "depth" in obs_key
+            else self._obs[obs_key]
+        )
+
+        return debug_image
+
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
+        post_sim_update_dict["debug_images"] = []
+
+        if self._remote_gui_input:
+            self._remote_gui_input.update()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -454,24 +492,23 @@ class SandboxDriver(GuiAppDriver):
 
         post_sim_update_dict["keyframes"] = keyframes
 
-        def depth_to_rgb(obs):
-            converted_obs = np.concatenate(
-                [obs * 255.0 for _ in range(3)], axis=2
-            ).astype(np.uint8)
-            return converted_obs
+        for obs_key in self._debug_images:
+            post_sim_update_dict["debug_images"].append(
+                (
+                    "spot debug view",
+                    self._get_observation_as_debug_image(obs_key),
+                )
+            )
 
-        # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self._obs.keys())), (
-            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self._obs.keys())))} "
-            f"not in available sensors ids: {list(self._obs.keys())}"
-        )
-        debug_images = (
-            depth_to_rgb(self._obs[k]) if "depth" in k else self._obs[k]
-            for k in self._debug_images
-        )
-        post_sim_update_dict["debug_images"] = [
-            np.flipud(image) for image in debug_images
-        ]
+        if self._remote_gui_input:
+            self._remote_gui_input.on_frame_end()
+
+        if do_network_server:
+            for keyframe_json in keyframes:
+                obj = json.loads(keyframe_json)
+                assert "keyframe" in obj
+                keyframe_obj = obj["keyframe"]
+                send_keyframe_to_networking_thread(keyframe_obj)
 
         return post_sim_update_dict
 
@@ -691,6 +728,9 @@ if __name__ == "__main__":
         raise ValueError(
             "--gui-controlled-agent-index is not supported for --app-state=free_camera"
         )
+    
+    # todo: do this more cleanly
+    do_network_server = args.remote_gui_mode
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
@@ -722,6 +762,10 @@ if __name__ == "__main__":
         framebuffer_size,
         viewport_rect,
         args.use_batch_renderer,
+        text_drawer_kwargs={
+            "display_font_size": 40,
+            "relative_path_to_font": "./fonts/FuturaPT-Medium.ttf",  # default "./fonts/ProggyClean.ttf"
+        },
     )
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
@@ -882,3 +926,6 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
+
+    if do_network_server:
+        terminate_server_process()

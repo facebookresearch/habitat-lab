@@ -12,6 +12,7 @@ class SandboxService:
         args,
         config,
         gui_input,
+        remote_gui_input,
         line_render,
         text_drawer,
         get_anim_fraction,
@@ -23,10 +24,12 @@ class SandboxService:
         end_episode,
         set_cursor_style,
         episode_helper,
+        get_observation_as_debug_image,
     ):
         self._args = args
         self._config = config
         self._gui_input = gui_input
+        self._remote_gui_input = remote_gui_input
         self._line_render = line_render
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
@@ -38,6 +41,7 @@ class SandboxService:
         self._end_episode = end_episode
         self._set_cursor_style = set_cursor_style
         self._episode_helper = episode_helper
+        self._get_observation_as_debug_image = get_observation_as_debug_image
 
     @property
     def args(self):
@@ -50,6 +54,10 @@ class SandboxService:
     @property
     def gui_input(self):
         return self._gui_input
+
+    @property
+    def remote_gui_input(self):
+        return self._remote_gui_input
 
     @property
     def line_render(self):
@@ -94,3 +102,7 @@ class SandboxService:
     @property
     def episode_helper(self):
         return self._episode_helper
+
+    @property
+    def get_observation_as_debug_image(self):
+        return self._get_observation_as_debug_image

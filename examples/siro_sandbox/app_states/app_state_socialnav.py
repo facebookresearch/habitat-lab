@@ -52,14 +52,6 @@ class AppStateSocialNav(AppState):
         self._nav_helper.on_environment_reset()
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
-        if episode_recorder_dict:
-            episode_recorder_dict[
-                "target_obj_ids"
-            ] = self._episode_target_obj_ids
-            episode_recorder_dict[
-                "target_object_positions"
-            ] = self._get_target_object_positions()
-
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
             self._sandbox_service.end_episode()

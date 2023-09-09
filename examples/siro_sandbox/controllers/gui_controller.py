@@ -12,6 +12,12 @@ import numpy as np
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
+from habitat.tasks.rearrange.utils import get_aabb
+from habitat_sim.physics import (
+    CollisionGroupHelper,
+    CollisionGroups,
+    MotionType,
+)
 
 from .controller_abc import GuiController
 
@@ -195,9 +201,16 @@ class GuiHumanoidController(GuiController):
         self._hint_distance_multiplier = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_throw_vel = None
+        self._hint_reach_pos = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
+
+        self._thrown_object_collision_group = CollisionGroups.UserGroup7
+        self._last_object_thrown_info = None
+
+        self.ind = 0
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -211,6 +224,14 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        self._hint_throw_vel = None
+        self._last_object_thrown_info = None
+
+        # Disable collision between thrown object and the agents.
+        # Both agents (robot and humanoid) have the collision group Robot.
+        CollisionGroupHelper.set_mask_for_group(
+            self._thrown_object_collision_group, ~CollisionGroups.Robot
+        )
         assert not self.is_grasped
 
     def get_random_joint_action(self):
@@ -260,12 +281,19 @@ class GuiHumanoidController(GuiController):
         grasp_obj_idx,
         do_drop,
         cam_yaw=None,
+        throw_vel=None,
+        reach_pos=None,
     ):
+        assert (
+            throw_vel is None or do_drop is None
+        ), "You can not set throw_velocity and drop_position at the same time"
         self._hint_walk_dir = walk_dir
         self._hint_distance_multiplier = distance_multiplier
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
+        self._hint_throw_vel = throw_vel
+        self._hint_reach_pos = reach_pos
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -276,7 +304,7 @@ class GuiHumanoidController(GuiController):
     def is_grasped(self):
         return self._get_grasp_mgr().is_grasped
 
-    def _update_grasp(self, grasp_object_id, drop_pos):
+    def _update_grasp(self, grasp_object_id, drop_pos, speed):
         if grasp_object_id is not None:
             assert not self.is_grasped
 
@@ -285,6 +313,9 @@ class GuiHumanoidController(GuiController):
                 grasp_object_id
             )
             self._saved_object_rotation = rigid_obj.rotation
+
+            rigid_obj.motion_type = MotionType.KINEMATIC
+            rigid_obj.collidable = False
 
             self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
@@ -306,10 +337,50 @@ class GuiHumanoidController(GuiController):
 
             self._recorder.record("drop_pos", drop_pos)
 
+        elif speed is not None:
+            grasp_mgr = self._get_grasp_mgr()
+            grasp_object_id = grasp_mgr.snap_idx
+            grasp_mgr.desnap()
+            sim = self._env.task._sim
+            rigid_obj = sim.get_rigid_object_manager().get_object_by_id(
+                grasp_object_id
+            )
+            rigid_obj.motion_type = MotionType.DYNAMIC
+            rigid_obj.collidable = True
+            rigid_obj.override_collision_group(
+                self._thrown_object_collision_group
+            )
+            rigid_obj.linear_velocity = speed
+            obj_bb = get_aabb(grasp_object_id, self._env.task._sim)
+            self._last_object_thrown_info = (
+                rigid_obj,
+                max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+            )
+
+        if self._last_object_thrown_info is not None:
+            grasp_mgr = self._get_grasp_mgr()
+
+            # when the thrown object leaves the hand, update the collisiongroups
+            rigid_obj = self._last_object_thrown_info[0]
+            ee_pos = (
+                self.get_articulated_agent()
+                .ee_transform(grasp_mgr.ee_index)
+                .translation
+            )
+            dist = np.linalg.norm(ee_pos - rigid_obj.translation)
+            if dist >= self._last_object_thrown_info[1]:
+                rigid_obj.override_collision_group(CollisionGroups.Default)
+                self._last_object_thrown_info = None
+
     def act(self, obs, env):
-        self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
+        self._update_grasp(
+            self._hint_grasp_obj_idx,
+            self._hint_drop_pos,
+            self._hint_throw_vel,
+        )
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._hint_throw_vel = None
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
@@ -387,6 +458,16 @@ class GuiHumanoidController(GuiController):
         fixup = filtered_query_pos - target_query_pos
         self._humanoid_controller.obj_transform_base.translation += fixup
 
+        if self._hint_reach_pos:
+            self._humanoid_controller.calculate_reach_pose(
+                self._hint_reach_pos
+            )
+            self._hint_reach_pos = None
+
+        if gui_input.get_key_up(GuiInput.KeyNS.SPACE):
+            self._humanoid_controller.obj_transform_offset = mn.Matrix4()
+            self._humanoid_controller.calculate_stop_pose()
+            self.ind += 1
         humanoidjoint_action = np.array(
             self._humanoid_controller.get_pose(), dtype=np.float32
         )
