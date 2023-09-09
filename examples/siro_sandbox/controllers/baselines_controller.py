@@ -35,6 +35,7 @@ from .controller_abc import BaselinesController
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+    import habitat
     from habitat.core.environments import GymHabitatEnv
 
 
@@ -183,7 +184,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._env = gym_env
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self.counter_pick = 0
-        self._habitat_env = habitat_env
+        self._habitat_env: habitat.Env = habitat_env  # type: ignore
         # also consider self._config.habitat.task["robot_at_thresh"]
         self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.8
