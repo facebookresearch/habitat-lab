@@ -50,13 +50,18 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
             )
 
-            to_target = np.linalg.norm(
-                ee_pos - scene_obj_pos[closest_obj_idx], ord=2
-            )
+            obj_pos = scene_obj_pos[closest_obj_idx].copy()
+            # IF the object is too tall, we virtually bring it down
+            multiplier_dist = 1.0
+            if (obj_pos[1] - self.cur_articulated_agent.base_pos[1]) > 1.4:
+                obj_pos[1] = self.cur_articulated_agent.base_pos[1] + 1.4
+                multiplier_dist = 3
+
+            to_target = np.linalg.norm(ee_pos - obj_pos, ord=2)
 
             keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
-            if to_target < self._config.grasp_thresh_dist:
+            if to_target < self._config.grasp_thresh_dist * multiplier_dist:
                 self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx],
                     force=False,
@@ -89,11 +94,14 @@ class MagicGraspAction(GripSimulatorTaskAction):
         closest_target_id = np.argmin(
             np.linalg.norm(pos_targs - cur_pos, ord=2, axis=-1)
         )
-        targ_pos = pos_targs[closest_target_id]
+        targ_pos = pos_targs[closest_target_id].copy()
+        multiplier_dist = 1.0
+        if (targ_pos[1] - self.cur_articulated_agent.base_pos[1]) > 1.4:
+            targ_pos[1] = self.cur_articulated_agent.base_pos[1] + 1.4
+            multiplier_dist = 3
 
-        if (
-            np.linalg.norm(cur_pos - targ_pos)
-            <= self._config.grasp_thresh_dist
+        if np.linalg.norm(cur_pos - targ_pos) <= (
+            self._config.grasp_thresh_dist * multiplier_dist
         ):
             obj_id = self.cur_grasp_mgr._snapped_obj_id
             self.cur_grasp_mgr.desnap()
