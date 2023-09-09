@@ -52,6 +52,7 @@ class AppStateFetch(AppState):
         self._held_hand_idx = None  # currently only used with remote_gui_input
         self._recent_reach_pos = None
         self._paused = False
+        self._hide_gui_text = False
 
         # will be set in on_environment_reset
         self._target_obj_ids = None
@@ -536,14 +537,21 @@ class AppStateFetch(AppState):
                 return "Spacebar: pick up\n"
 
         controls_str: str = ""
-        # controls_str += "ESC: exit\n"
-        # controls_str += "M: change scene\n"
-        # controls_str += "R + drag: rotate camera\n"
-        # controls_str += "Right-click: walk\n"
-        # controls_str += "A, D: turn\n"
-        # controls_str += "W, S: walk\n"
-        # controls_str += "Scroll: zoom\n"
-        # controls_str += get_grasp_release_controls_text()
+        if not self._hide_gui_text:
+            controls_str += "ESC: exit\n"
+            controls_str += "M: change scene\n"
+            controls_str += "R + drag: rotate camera\n"
+            controls_str += "Scroll: zoom\n"
+            if self._sandbox_service.args.remote_gui_mode:
+                controls_str += "T: toggle keyboard/VR\n"
+            controls_str += "P: pause\n"
+            controls_str += "H: show.hide controls text\n"
+            if not self._is_remote_active_toggle:
+                controls_str += "\nHumanoid controls\n"
+                controls_str += "Right-click: walk\n"
+                controls_str += "A, D: turn\n"
+                controls_str += "W, S: walk\n"
+                controls_str += get_grasp_release_controls_text()
 
         return controls_str
 
@@ -578,8 +586,8 @@ class AppStateFetch(AppState):
 
         # center align the status_str
         max_status_str_len = 50
-        status_str = "/n".join(
-            line.center(max_status_str_len) for line in status_str.split("/n")
+        status_str = "\n".join(
+            line.center(max_status_str_len) for line in status_str.split("\n")
         )
 
         return status_str
@@ -596,7 +604,7 @@ class AppStateFetch(AppState):
             self._sandbox_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-480,
+                text_delta_x=-480,  # hack approximate centering based on our font size
                 text_delta_y=-50,
             )
 
@@ -655,6 +663,9 @@ class AppStateFetch(AppState):
 
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.H):
+            self._hide_gui_text = not self._hide_gui_text
 
         # toggle remote/local on keypress, if not holding anything
         if (
