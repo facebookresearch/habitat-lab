@@ -138,16 +138,18 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._idx_to_name[skill_i] = skill_id
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
-
-        first_idx: Optional[int] = None
-        for skill_i, skill in self._skills.items():
-            if self._idx_to_name[skill_i] == "noop":
-                continue
-            if isinstance(skill, NoopSkillPolicy):
-                if first_idx is None:
-                    first_idx = skill_i
-                else:
-                    self._skill_redirects[skill_i] = first_idx
+        # This was originally done to reuse NoopSkills, we
+        # want to comment this out cause we want different
+        # skills of type Noop to have different max_Skil_steps
+        # first_idx: Optional[int] = None
+        # for skill_i, skill in self._skills.items():
+        #     if self._idx_to_name[skill_i] == "noop":
+        #         continue
+        #     if isinstance(skill, NoopSkillPolicy):
+        #         if first_idx is None:
+        #             first_idx = skill_i
+        #         else:
+        #             self._skill_redirects[skill_i] = first_idx
 
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)

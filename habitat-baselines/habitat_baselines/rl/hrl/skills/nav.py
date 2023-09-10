@@ -86,6 +86,9 @@ class NavSkillPolicy(NnSkillPolicy):
             if pos[0] <= self.success_dist and abs(pos[1]) <= self.success_ang:
                 successes[i] = True
 
+        if successes.sum() > 0:
+            self.sm.hidden_state[successes] *= 0
+            self.sm._prev_action[successes] *= 0
         return successes
 
     def _parse_skill_arg(self, skill_arg):
@@ -110,7 +113,6 @@ class NavSkillPolicy(NnSkillPolicy):
                 self._wrap_policy.num_recurrent_layers,
             )
             self.sm.init_prev_action(prev_actions, self._num_ac)
-
         action = super()._internal_act(
             observations,
             self.sm.hidden_state,

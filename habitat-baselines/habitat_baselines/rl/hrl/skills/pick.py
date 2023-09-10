@@ -71,8 +71,9 @@ class PickSkillPolicy(NnSkillPolicy):
         is_done = (is_holding * is_within_thresh * is_reset_down).type(
             torch.bool
         )
-        if is_done:
-            self.sm.hidden_state = None
+        if is_done.sum() > 0:
+            self.sm.hidden_state[is_done] *= 0
+            self.sm._prev_action[is_done] *= 0
 
         return is_done
 
