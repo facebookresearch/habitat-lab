@@ -1357,8 +1357,8 @@ class OracleNavHumanAction(OracleNavCoordAction):
     def step(self, *args, is_last_action, **kwargs):
         # Hyperparameter
         max_tries = 100
-        dis_to_avoid_human = 0.1  # 4.0
-        target_radius_near_human = 1.0  # 4.0
+        dis_to_avoid_human = 4.0  # 4.0
+        target_radius_near_human = 4.0  # 4.0
         target_radius_near_robot = 8.0  # 8.0
         self.simple_backward = True
 
