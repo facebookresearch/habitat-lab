@@ -311,10 +311,12 @@ class SimpleVelocityControlEnv:
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
+
         # Get the target rigit state based on the simulation frequency
         target_rigid_state = self.vel_control.integrate_transform(
             1 / self._sim_freq, rigid_state
         )
+
         # Get the ending pos of the agent
         end_pos = target_rigid_state.translation
         # Offset the height
@@ -744,7 +746,6 @@ class OracleNavCoordAction(OracleNavAction):
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
             ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
-
             if self.motion_type == "base_velocity":
                 if not at_goal:
                     if self.nav_mode == "avoid":
@@ -1135,6 +1136,70 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         self.skill_done = False
         self.coord_nav = None
         self.random_seed_counter = int(self._task._episode_id)
+
+    def _find_path_given_start_end(self, start, end):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = start
+        path.requested_end = end
+        found_path = self._sim.pathfinder.find_path(path)
+        if not found_path:
+            return [start, end]
+        return path.points
+
+    def _reach_human(self, robot_pos, human_pos, base_T):
+        # For computing facing to human
+        vector_human_robot = human_pos - robot_pos
+        vector_human_robot = vector_human_robot / np.linalg.norm(
+            vector_human_robot
+        )
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = np.dot(forward_robot.normalized(), vector_human_robot) > 0.5
+
+        return np.linalg.norm((robot_pos - human_pos)[[0, 2]]) < 2.0 and facing
+
+    def _compute_robot_to_human_min_step(self, robot_trans, human_pos):
+        _vel_scale = 10.0
+
+        # Copy the robot transformation
+        base_T = mn.Matrix4(robot_trans)
+
+        vc = SimpleVelocityControlEnv()
+
+        # Compute the step taken to reach the human
+        robot_pos = np.array(base_T.translation)
+        step_taken = 0
+        while (
+            not self._reach_human(robot_pos, human_pos, base_T)
+            and step_taken <= 1500
+        ):
+            path_points = self._find_path_given_start_end(robot_pos, human_pos)
+            cur_nav_targ = path_points[1]
+            forward = np.array([1.0, 0, 0])
+            robot_forward = np.array(base_T.transform_vector(forward))
+
+            # Compute relative target.
+            rel_targ = cur_nav_targ - robot_pos
+
+            # Compute heading angle (2D calculation)
+            robot_forward = robot_forward[[0, 2]]
+            rel_targ = rel_targ[[0, 2]]
+            angle_to_target = get_angle(robot_forward, rel_targ)
+
+            if angle_to_target < self._turn_thresh:
+                # Move towards the target
+                vel = [self._forward_velocity * _vel_scale, 0]
+            else:
+                # Look at the target waypoint.
+                vel = OracleNavAction._compute_turn(
+                    rel_targ, self._turn_velocity * _vel_scale, robot_forward
+                )
+
+            # Update the robot's info
+            base_T = vc.act(base_T, vel)
+            robot_pos = np.array(base_T.translation)
+            step_taken += 1
+
+        return step_taken
 
     def _get_target_for_coord(self, obj_pos):
         start_pos = obj_pos

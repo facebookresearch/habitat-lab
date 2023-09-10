@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -1308,6 +1309,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._start_end_episode_distance = None
         self._min_start_end_episode_step = None
         self._agent_episode_distance = None
+        self._has_found_human_step = float("inf")
         self._prev_pos = None
         self._prev_human_pos = None
         self._has_found_human = False
@@ -1321,6 +1323,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._update_human_pos_y = 0
         self._update_human_pos_z = 0
         self._robot_init_pos = None
+        self._robot_init_trans = None
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1351,11 +1354,17 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             robot_pos - human_pos, ord=2, axis=-1
         )
         self._robot_init_pos = robot_pos
+        self._robot_init_trans = mn.Matrix4(
+            self._sim.get_agent_data(
+                0
+            ).articulated_agent.sim_obj.transformation
+        )
         self._min_start_end_episode_step = float("inf")
         self._agent_episode_distance = 0.0
         self._prev_pos = robot_pos
         self._prev_human_pos = human_pos
         self._has_found_human = False
+        self._has_found_human_step = float("inf")
         self._found_human_times = 0
         self._after_found_human_times = 0
         self._step = 0
@@ -1429,10 +1438,28 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._dis_after_found += dis
             self._after_found_human_times += found_human
 
-        # Update the minimum SPL
-        self._min_start_end_episode_step = min(
-            self._min_start_end_episode_step, self._compute_min_path_step()
-        )
+        if self._has_found_human and self._has_found_human_step == float(
+            "inf"
+        ):
+            self._has_found_human_step = self._step
+
+        # Compute the minimum distance
+        if self._min_start_end_episode_step == float("inf"):
+            robot_to_human_min_step = task.actions[
+                "agent_1_oracle_nav_randcoord_action"
+            ]._compute_robot_to_human_min_step(
+                self._robot_init_trans, human_pos
+            )
+
+            if robot_to_human_min_step <= self._step:
+                robot_to_human_min_step = self._step
+            else:
+                robot_to_human_min_step = float("inf")
+
+            # Update the minimum SPL
+            self._min_start_end_episode_step = min(
+                self._min_start_end_episode_step, robot_to_human_min_step
+            )
 
         # Compute the SPL before finding the human
         try:
@@ -1447,8 +1474,14 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             first_encounter_spl = (
                 self._has_found_human
                 * self._min_start_end_episode_step
-                / max(self._min_start_end_episode_step, self._step)
+                / max(
+                    self._min_start_end_episode_step,
+                    self._has_found_human_step,
+                )
             )
+            # print("first_encounter_spl:", first_encounter_spl)
+            # print("self._min_start_end_episode_step:", self._min_start_end_episode_step)
+            # print("self._step:", self._step)
         except Exception:
             first_found_spl = 0.0
             first_encounter_spl = 0.0
