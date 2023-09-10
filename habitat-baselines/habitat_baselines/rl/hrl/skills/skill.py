@@ -33,10 +33,8 @@ class SkillPolicy(Policy):
         self._apply_postconds = self._config.apply_postconds
         self._force_end_on_timeout = self._config.force_end_on_timeout
         self._max_skill_steps = self._config.max_skill_steps
-
         self._cur_skill_step = torch.zeros(self._batch_size)
         self._should_keep_hold_state = should_keep_hold_state
-
         self._cur_skill_args: List[Any] = [
             None for _ in range(self._batch_size)
         ]
@@ -297,7 +295,6 @@ class SkillPolicy(Policy):
                 raise ValueError(
                     f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
                 )
-
             entity_positions = obs[k].view(
                 len(cur_batch_idx), -1, self._config.obs_skill_input_dim
             )

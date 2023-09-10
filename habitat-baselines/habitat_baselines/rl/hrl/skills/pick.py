@@ -10,7 +10,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
-from habitat_baselines.rl.hrl.utils import find_action_range, skill_io_manager
+from habitat_baselines.rl.hrl.utils import SkillIOManager, find_action_range
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
@@ -21,6 +21,7 @@ class PickSkillPolicy(NnSkillPolicy):
 
         # Get the action space
         action_space = args[2]
+        batch_size = args[-1]
         for k, _ in action_space.items():
             if k == "pick_base_velocity":
                 self.pick_start_id, self.pick_len = find_action_range(
@@ -37,11 +38,18 @@ class PickSkillPolicy(NnSkillPolicy):
 
         # Get the skill io manager
         config = args[1]
-        self.sm = skill_io_manager()
+        self.sm = SkillIOManager()
         self._num_ac = get_num_actions(action_space)
         self._rest_state = np.array(config.reset_joint_state)
         self._need_reset_arm = True
         self._dist_to_rest_state = 0.05
+
+        self.sm.init_hidden_state(
+            batch_size,
+            self._wrap_policy.net._hidden_size,
+            self._wrap_policy.num_recurrent_layers,
+        )
+        self.sm.init_prev_action(batch_size, self._num_ac)
 
     def _is_skill_done(
         self,
@@ -72,8 +80,8 @@ class PickSkillPolicy(NnSkillPolicy):
             torch.bool
         )
         if is_done.sum() > 0:
-            self.sm.hidden_state[is_done] *= 0
-            self.sm._prev_action[is_done] *= 0
+            self.sm.hidden_state[batch_idx][is_done] *= 0
+            self.sm._prev_action[batch_idx][is_done] *= 0
 
         return is_done
 
@@ -91,6 +99,10 @@ class PickSkillPolicy(NnSkillPolicy):
             action.actions[i, self._grip_ac_idx] = 1.0
         return action
 
+    def to(self, device):
+        super().to(device)
+        self.sm.to(device)
+
     def _internal_act(
         self,
         observations,
@@ -100,18 +112,10 @@ class PickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        if self.sm.hidden_state is None:
-            self.sm.init_hidden_state(
-                observations,
-                self._wrap_policy.net._hidden_size,
-                self._wrap_policy.num_recurrent_layers,
-            )
-            self.sm.init_prev_action(prev_actions, self._num_ac)
-
         action = super()._internal_act(
             observations,
-            self.sm.hidden_state,
-            self.sm.prev_action,
+            self.sm.hidden_state[cur_batch_idx],
+            self.sm.prev_action[cur_batch_idx],
             masks,
             cur_batch_idx,
             deterministic,
@@ -137,8 +141,8 @@ class PickSkillPolicy(NnSkillPolicy):
         action = self._mask_pick(action, observations)
 
         # Update the hidden state / action
-        self.sm.hidden_state = action.rnn_hidden_states
-        self.sm.prev_action = action.actions
+        self.sm.hidden_state[cur_batch_idx] = action.rnn_hidden_states
+        self.sm.prev_action[cur_batch_idx] = action.actions
 
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         # Do not release the object once it is held
@@ -146,12 +150,10 @@ class PickSkillPolicy(NnSkillPolicy):
             rest_state = torch.from_numpy(self._rest_state).to(
                 device=action.actions.device, dtype=action.actions.dtype
             )
-            current_joint_pos = observations["joint"]
-            delta = rest_state - current_joint_pos
-            action.actions[torch.nonzero(is_holding), arm_slice] = delta
-            # for i in torch.nonzero(is_holding):
-            #     current_joint_pos = observations["joint"].cpu().numpy()
-            #     delta = rest_state - current_joint_pos
-            #     action.actions[:, arm_slice] = delta
+            if is_holding.sum() > 0:
+                current_joint_pos = observations["joint"][is_holding.bool()]
+                delta = rest_state - current_joint_pos
+
+                action.actions[is_holding.bool(), arm_slice] = delta
 
         return action

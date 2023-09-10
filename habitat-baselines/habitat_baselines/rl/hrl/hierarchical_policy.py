@@ -550,7 +550,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         Cleans up stateful variables of the policy so that
         they match with the active environments
         """
-
         if len(envs_to_pause) == 0:
             return
         # One hot of envs to pause
@@ -564,7 +563,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             curr_envs_to_keep_active
         ]
         self._cur_skills = self._cur_skills[curr_envs_to_keep_active]
-
+        # Update the hidden state of the skills
+        for _, skill in self._skills.items():
+            if hasattr(skill, "sm"):
+                skill.sm.filter_envs(curr_envs_to_keep_active)
         self._active_envs = all_envs_to_keep_active
         self._high_level_policy.filter_envs(curr_envs_to_keep_active)
 

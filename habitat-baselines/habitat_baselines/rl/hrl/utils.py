@@ -31,7 +31,7 @@ def find_action_range(
     return start_idx, end_idx
 
 
-class skill_io_manager:
+class SkillIOManager:
     def __init__(self):
         self._prev_action = None
         self._hidden_state = None
@@ -52,12 +52,16 @@ class skill_io_manager:
     def hidden_state(self, value):
         self._hidden_state = value
 
-    def init_hidden_state(self, obs, hs, nr):
-        for k in obs:
-            bs = obs[k].shape[0]
-            break
-        self._hidden_state = torch.zeros((bs, nr, hs)).to(obs[k].device)
+    def init_hidden_state(self, bs, hs, nr):
+        self._hidden_state = torch.zeros((bs, nr, hs))
 
-    def init_prev_action(self, prev_actions, na):
-        bs = prev_actions.shape[0]
-        self._prev_action = torch.zeros((bs, na)).to(prev_actions.device)
+    def init_prev_action(self, bs, na):
+        self._prev_action = torch.zeros((bs, na))
+
+    def to(self, device):
+        self._prev_action = self._prev_action.to(device)
+        self._hidden_state = self._hidden_state.to(device)
+
+    def filter_envs(self, curr_envs_to_keep_active):
+        self._prev_action = self._prev_action[curr_envs_to_keep_active]
+        self._hidden_state = self._hidden_state[curr_envs_to_keep_active]

@@ -11,7 +11,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
-from habitat_baselines.rl.hrl.utils import find_action_range, skill_io_manager
+from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -31,8 +31,6 @@ class PlaceSkillPolicy(PickSkillPolicy):
                     action_space, "place_base_velocity"
                 )
 
-        # Get the skill io manager
-        self.sm = skill_io_manager()
         self._need_reset_arm = False
 
         self._num_ac = get_num_actions(action_space)
@@ -72,8 +70,8 @@ class PlaceSkillPolicy(PickSkillPolicy):
             # self._internal_log(
             #     f"Terminating with {rel_resting_pos} and {is_holding}",
             # )
-            self.sm.hidden_state[is_done] *= 0
-            self.sm._prev_action[is_done] *= 0
+            self.sm.hidden_state[batch_idx][is_done] *= 0
+            self.sm._prev_action[batch_idx][is_done] *= 0
         return is_done
 
     def _parse_skill_arg(self, skill_arg):
@@ -90,14 +88,6 @@ class PlaceSkillPolicy(PickSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        if self.sm.hidden_state is None:
-            self.sm.init_hidden_state(
-                observations,
-                self._wrap_policy.net._hidden_size,
-                self._wrap_policy.num_recurrent_layers,
-            )
-            self.sm.init_prev_action(prev_actions, self._num_ac)
-
         action = super()._internal_act(
             observations,
             self.sm.hidden_state,
@@ -123,7 +113,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
         size = action.actions[:, pick_index].shape
         action.actions[:, pick_index] = torch.zeros(size)
         # Update the hidden state / action
-        self.sm.hidden_state = action.rnn_hidden_states
-        self.sm.prev_action = action.actions
+        self.sm.hidden_state[cur_batch_idx] = action.rnn_hidden_states
+        self.sm.prev_action[cur_batch_idx] = action.actions
 
         return action
