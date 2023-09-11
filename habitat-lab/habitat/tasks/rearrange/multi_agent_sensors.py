@@ -4,9 +4,7 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.multi_task.composite_sensors import (
-    PddlSubgoalReward,
-)
+from habitat.tasks.rearrange.multi_task.pddl_sensors import PddlSubgoalReward
 from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     coll_name_matches,
