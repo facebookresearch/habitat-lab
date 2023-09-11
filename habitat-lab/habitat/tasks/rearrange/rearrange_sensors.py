@@ -1508,6 +1508,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             )
 
         # Compute the SPL before finding the human
+
         try:
             first_found_spl = (
                 self._has_found_human
@@ -1536,6 +1537,13 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         except Exception:
             first_found_spl = 0.0
             first_encounter_spl = 0.0
+            first_encounter_spl_dis = 0.0
+
+        if first_found_spl == float("nan"):
+            first_found_spl = 0.0
+        if first_encounter_spl == float("nan"):
+            first_encounter_spl = 0.0
+        if first_encounter_spl_dis == float("nan"):
             first_encounter_spl_dis = 0.0
 
         human_rotate = 1
