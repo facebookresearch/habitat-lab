@@ -179,9 +179,8 @@ class OVMMDatasetV0(PointNavDatasetV1):
             ]
         else:
             all_episodes = all_episodes[episodes_index_low:episodes_index_high]
-        for i, episode in enumerate(all_episodes):
+        for episode in all_episodes:
             rearrangement_episode = OVMMEpisode(**episode)
-            rearrangement_episode.episode_id = str(i)
             for goal_type in [
                 "candidate_objects",
                 "candidate_objects_hard",
