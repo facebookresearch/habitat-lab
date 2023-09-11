@@ -1309,8 +1309,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._start_end_episode_distance = None
         self._min_start_end_episode_step = None
         self._agent_episode_distance = None
-        self._has_found_human_step = float("inf")
-        self._has_found_human_step_dis = float("inf")
+        self._has_found_human_step = 1500
+        self._has_found_human_step_dis = 1500
         self._prev_pos = None
         self._prev_human_pos = None
         self._has_found_human = False
@@ -1372,8 +1372,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._prev_human_pos = human_pos
         self._has_found_human = False
         self._has_found_human_dis = False
-        self._has_found_human_step = float("inf")
-        self._has_found_human_step_dis = float("inf")
+        self._has_found_human_step = 1500
+        self._has_found_human_step_dis = 1500
         self._found_human_times = 0
         self._found_human_times_dis = 0
         self._after_found_human_times = 0
@@ -1479,15 +1479,13 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._after_found_human_times_dis += found_human_dis
 
         # Record the step taken to find the human
-        if self._has_found_human and self._has_found_human_step == float(
-            "inf"
-        ):
+        if self._has_found_human and self._has_found_human_step == 1500:
             self._has_found_human_step = self._step
 
         # Record the step taken to find the human based on distance condition
         if (
             self._has_found_human_dis
-            and self._has_found_human_step_dis == float("inf")
+            and self._has_found_human_step_dis == 1500
         ):
             self._has_found_human_step_dis = self._step
 
