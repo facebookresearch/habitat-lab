@@ -1277,6 +1277,7 @@ class OracleNavHumanAction(OracleNavCoordAction):
         self.target_pos = None
         self.prev_target_pos = None
         self.prev_human_goal = None
+        self.config = kwargs["config"]
 
     @property
     def action_space(self):
@@ -1357,9 +1358,10 @@ class OracleNavHumanAction(OracleNavCoordAction):
     def step(self, *args, is_last_action, **kwargs):
         # Hyperparameter
         max_tries = 100
-        dis_to_avoid_human = 4.0  # 4.0
-        target_radius_near_human = 4.0  # 4.0
-        target_radius_near_robot = 8.0  # 8.0
+
+        dis_to_avoid_human = self.config.dis_to_avoid_human
+        target_radius_near_human = self.config.target_radius_near_human
+        target_radius_near_robot = self.config.target_radius_near_robot
         self.simple_backward = True
 
         self.skill_done = False

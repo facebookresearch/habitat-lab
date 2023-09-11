@@ -376,7 +376,11 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     # Distance threshold between two agents to issue a stop action
     agents_dist_thresh: float = -1.0
     # Define the gym wrapper name
-    gym_action_prefix: str = "base_vel"
+
+    # Define the parameters for the oracle navigation
+    dis_to_avoid_human: float = 4.0
+    target_radius_near_human: float = 4.0
+    target_radius_near_robot: float = 8.0
 
 
 # -----------------------------------------------------------------------------

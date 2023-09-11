@@ -97,6 +97,10 @@ habitat:
         longitudinal_lin_speed: 10.0
         navmesh_offset: [[0.0, 0.0]]
         enable_rotation_check_for_dyn_slide: False
+        # For oracle safety distance navigation
+        dis_to_avoid_human: 4.0
+        target_radius_near_human: 4.0
+        target_radius_near_robot: 8.0
 
       agent_1_base_velocity:
         agent_index : 1
