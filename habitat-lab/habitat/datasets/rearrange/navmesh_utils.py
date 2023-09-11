@@ -472,6 +472,8 @@ def get_largest_island_index(
     Optionally exclude outdoor islands.
 
     NOTE: outdoor heuristic may need to be tuned, but parameters are default here.
+
+    If no islands exist satisfying the indoor constraints, then the entire navmesh -1 is returned.
     """
 
     assert pathfinder.is_loaded, "PathFinder is not loaded."
@@ -490,6 +492,8 @@ def get_largest_island_index(
             is_outdoor(pathfinder, sim, island_info[0])
             for island_info in island_areas
         ]
+        if False not in island_outdoor_classifications:
+            return -1
         # select the largest outdoor island
         largest_indoor_island = island_areas[
             island_outdoor_classifications.index(False)

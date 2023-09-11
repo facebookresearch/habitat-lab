@@ -4,8 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
@@ -15,23 +14,6 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     do_entity_lists_match,
     ensure_entity_lists_match,
 )
-from habitat.tasks.rearrange.multi_task.task_creator_utils import (
-    create_task_object,
-)
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
-
-
-@dataclass
-class ActionTaskInfo:
-    task_config: Optional["DictConfig"]
-    task: str
-    task_def: str
-    config_args: Dict[str, Any] = field(default_factory=dict)
-    add_task_args: Dict[str, PddlEntity] = field(default_factory=dict)
 
 
 class PddlAction:
@@ -41,7 +23,6 @@ class PddlAction:
         parameters: List[PddlEntity],
         pre_cond: LogicalExpr,
         post_cond: List[Predicate],
-        task_info: Optional[ActionTaskInfo],
         post_cond_search: Optional[List[Dict[PddlEntity, PddlEntity]]] = None,
     ):
         """
@@ -50,8 +31,6 @@ class PddlAction:
         :param parameters: The parameters to the PDDL action in the domain file.
         :param pre_cond: The pre condition of the PDDL action.
         :param post_cond: The post conditions of the PDDL action.
-        :param task_info: Information to link the PDDL action with a Habitat
-            task definition.
         :param post_cond_search: Mapping expanded quantifier inputs from the
             pre-condition to ungrounded entities in the post-condition. One
             mapping per quantifier expansion.
@@ -65,7 +44,6 @@ class PddlAction:
         self._param_values: Optional[List[PddlEntity]] = None
         self._pre_cond = pre_cond
         self._post_cond = post_cond
-        self._task_info = task_info
         self._post_cond_search = post_cond_search
 
     @property
@@ -135,7 +113,6 @@ class PddlAction:
             self._params,
             new_precond,
             self._post_cond,
-            self._task_info,
             self._post_cond_search,
         )
 
@@ -173,11 +150,6 @@ class PddlAction:
         self._param_values = [sub_dict.get(p, p) for p in self._param_values]
         self._post_cond = [p.sub_in(sub_dict) for p in self._post_cond]
         self._pre_cond = self._pre_cond.sub_in(sub_dict)
-        if self._task_info is not None:
-            self._task_info.add_task_args = {
-                k: sub_dict.get(p, p)
-                for k, p in self._task_info.add_task_args.items()
-            }
 
     def clone(self) -> "PddlAction":
         """
@@ -188,7 +160,6 @@ class PddlAction:
             self._params,
             self._pre_cond.clone(),
             [p.clone() for p in self._post_cond],
-            self._task_info,
             self._post_cond_search,
         )
 
@@ -225,46 +196,3 @@ class PddlAction:
         if len(self._param_values) != len(self._params):
             raise ValueError()
         return self._param_values
-
-    def get_task_kwargs(self, sim_info: PddlSimInfo) -> Dict[str, Any]:
-        assert self._task_info is not None
-        task_kwargs: Dict[str, Any] = {"orig_applied_args": {}}
-        for param, param_value in zip(self._params, self.param_values):
-            task_kwargs[param.name] = sim_info.search_for_entity(param_value)
-            task_kwargs["orig_applied_args"][param.name] = param_value.name
-        task_kwargs.update(
-            **{
-                k: sim_info.search_for_entity(v)
-                for k, v in self._task_info.add_task_args.items()
-            }
-        )
-        task_kwargs["task_name"] = self._task_info.task
-        return task_kwargs
-
-    def init_task(
-        self,
-        sim_info: PddlSimInfo,
-        should_reset: bool = True,
-        add_task_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> RearrangeTask:
-        assert self._task_info is not None
-        rearrange_logger.debug(
-            f"Loading task {self._task_info.task} with definition {self._task_info.task_def}"
-        )
-        if add_task_kwargs is None:
-            add_task_kwargs = {}
-        task_kwargs = {
-            **self.get_task_kwargs(sim_info),
-            **add_task_kwargs,
-        }
-        return create_task_object(
-            task_cls_name=self._task_info.task,
-            task_config_path=self._task_info.task_def,
-            cur_config=self._task_info.task_config,
-            cur_env=sim_info.env,
-            cur_dataset=sim_info.dataset,
-            should_super_reset=should_reset,
-            task_kwargs=task_kwargs,
-            episode=sim_info.episode,
-            task_config_args=self._task_info.config_args,
-        )

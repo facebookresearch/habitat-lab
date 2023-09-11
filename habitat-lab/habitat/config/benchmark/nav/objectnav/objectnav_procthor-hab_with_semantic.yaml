@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: objectnav
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: semantic_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: semantic_agent
   - /habitat/dataset/objectnav: procthor-hab
   - _self_
 

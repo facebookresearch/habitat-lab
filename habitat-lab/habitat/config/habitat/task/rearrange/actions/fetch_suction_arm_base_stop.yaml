@@ -1,0 +1,9 @@
+# @package habitat.task.actions
+defaults:
+  - /habitat/task/actions:
+    - arm_action
+    - base_velocity
+    - rearrange_stop
+  - _self_
+arm_action:
+  grip_controller: SuctionGraspAction

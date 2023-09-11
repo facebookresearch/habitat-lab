@@ -308,11 +308,11 @@ After the configuration system migration to Hydra, Habitat-Lab automatically sup
 and [OmegaConf's](https://omegaconf.readthedocs.io/) features (note that Hydra is build on top of OmegaConf).
 Some of new features are listed below:
 - Config node reuse by redefining the config package. For example, it is possible to use the same agent config to
-  configure two agents of the same type (see [habitat/config/benchmark/rearrange/rearrange_easy_multi_agent.yaml](/habitat-lab/habitat/config/benchmark/rearrange/rearrange_easy_multi_agent.yaml)):
+  configure two agents of the same type:
 ```yaml
 defaults:
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: depth_head_agent
 ```
 - [Variable interpolation](https://omegaconf.readthedocs.io/en/2.2_branch/usage.html#variable-interpolation).
   For example, use the same seed value for `SimulatorConfig.seed` as in `HabitatConfig.seed` (see `SimulatorConfig`

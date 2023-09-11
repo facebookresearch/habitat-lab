@@ -57,44 +57,50 @@ def setup_function(test_trainers):
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
-        ),
-        (
-            "rearrange/rl_skill.yaml",
-            3,
-            ["benchmark/rearrange=open_cab"],
-        ),
-        (
-            "rearrange/rl_skill.yaml",
-            3,
             [
-                "benchmark/rearrange=open_fridge",
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=place",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
+            ["benchmark/rearrange/skills=open_cab"],
+        ),
+        (
+            "rearrange/rl_skill.yaml",
+            3,
+            [
+                "benchmark/rearrange/skills=open_fridge",
+            ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange=nav_to_obj",
+                "benchmark/rearrange/skills=pick",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
-                "benchmark/rearrange=close_fridge",
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=nav_to_obj",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["benchmark/rearrange=close_cab"],
+            [
+                "benchmark/rearrange/skills=close_fridge",
+            ],
+        ),
+        (
+            "rearrange/rl_skill.yaml",
+            3,
+            ["benchmark/rearrange/skills=close_cab"],
         ),
         (
             "imagenav/ddppo_imagenav_example.yaml",
@@ -269,7 +275,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
                 continue
             skill.update(
                 {
-                    "force_config_file": f"benchmark/rearrange={skill_name}",
+                    "force_config_file": f"benchmark/rearrange/skills={skill_name}",
                     "max_skill_steps": 1,
                     "load_ckpt_file": "",
                 }

@@ -4,7 +4,7 @@
 # Supports different HL policy configurations and using a variety of LL policies.
 
 defaults:
-  - /benchmark/rearrange: rearrange_easy
+  - /benchmark/rearrange/multi_task: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.add_virtual_keys:
@@ -12,15 +12,15 @@ defaults:
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_fixed
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: nn_skills
   - /habitat/task/measurements:
-    - composite_subgoal_reward
+    - pddl_subgoal_reward
   - _self_
 
 habitat:
   task:
     measurements:
-      composite_subgoal_reward:
+      pddl_subgoal_reward:
         stage_sparse_reward: 1.0
-    reward_measure: composite_subgoal_reward
+    reward_measure: pddl_subgoal_reward
     slack_reward: -0.01
     success_reward: 5.0
 habitat_baselines:
@@ -38,7 +38,7 @@ habitat_baselines:
   log_interval: 10
   num_checkpoints: 10
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['composite_success']
+  eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 

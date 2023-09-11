@@ -27,19 +27,19 @@ importlib.reload(habitat.gym.gym_wrapper)
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "benchmark/rearrange/reach_state.yaml",
+            "benchmark/rearrange/skills/reach_state.yaml",
             [],
             7,
             dict,
         ),
         (
-            "benchmark/rearrange/pick.yaml",
+            "benchmark/rearrange/skills/pick.yaml",
             [],
             10,  # arm = 7 + base = 2 + grip = 1
             dict,
         ),
         (
-            "benchmark/rearrange/tidy_house.yaml",
+            "benchmark/rearrange/multi_task/tidy_house.yaml",
             [],
             11,  # 7 joints, 1 grip action, 2 base velocity, 1 stop action
             dict,
@@ -126,12 +126,12 @@ def test_gym_wrapper_contract_discrete(
     "config_file,override_options",
     [
         [
-            "benchmark/rearrange/pick.yaml",
+            "benchmark/rearrange/skills/pick.yaml",
             [
                 "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
         ],
-        ["benchmark/rearrange/pick.yaml", []],
+        ["benchmark/rearrange/skills/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
