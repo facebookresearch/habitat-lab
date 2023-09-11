@@ -135,6 +135,9 @@ class RearrangeSim(HabitatSim):
         )
         self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
+        # To control the random seeds
+        self._control_seed = self.habitat_config.control_seed
+
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
         return self._receptacles
@@ -398,13 +401,14 @@ class RearrangeSim(HabitatSim):
         radius=None,
         percentage_of_near_loc=None,
     ) -> Tuple[np.ndarray, float]:
-        if agent_idx == None:
-            seed = int(self.ep_info.episode_id) + 10000
-        else:
-            seed = int(self.ep_info.episode_id) + 10000 + agent_idx
-        # print("seed:", seed)
-        self.seed(seed)
-        np.random.seed(seed)
+        if self._control_seed:
+            if agent_idx == None:
+                seed = int(self.ep_info.episode_id) + 10000
+            else:
+                seed = int(self.ep_info.episode_id) + 10000 + agent_idx
+            # print("seed:", seed)
+            self.seed(seed)
+            np.random.seed(seed)
         """
         :returns: The set base position and rotation
         """

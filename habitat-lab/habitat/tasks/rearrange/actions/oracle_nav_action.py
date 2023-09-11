@@ -1116,6 +1116,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, task=task, **kwargs)
         self.random_seed_counter = None
+        self._config = kwargs["config"]
 
     @property
     def action_space(self):
@@ -1237,7 +1238,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         self.skill_done = False
 
         if self.coord_nav is None:
-            self._sim.seed(self.random_seed_counter)
+            if self._config.control_seed:
+                self._sim.seed(self.random_seed_counter)
             self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
                 max_tries,
                 island_index=self._sim._largest_island_idx,

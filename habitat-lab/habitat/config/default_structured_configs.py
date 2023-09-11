@@ -331,6 +331,9 @@ class OracleNavActionConfig(ActionConfig):
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 
+    # Define the flag to control the seed
+    control_seed: bool = False
+
 
 @dataclass
 class OracleNavWithBackingUpActionConfig(ActionConfig):
@@ -1656,6 +1659,8 @@ class SimulatorConfig(HabitatBaseConfig):
     object_ids_start: int = 100
     # Configuration for rendering
     renderer: RendererConfig = RendererConfig()
+    # Control the random seed for evaluating social nav
+    control_seed: bool = False
 
 
 @dataclass
