@@ -119,6 +119,12 @@ class PickSkillPolicy(NnSkillPolicy):
         skill_name: List[str],
         log_info: List[Dict[str, Any]],
     ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
+        
+        arm_slice = slice(
+            self.arm_start_id, self.arm_start_id + self.arm_len - 1
+        )
+        prev_arm_action = actions[:, arm_slice] 
+        
         is_skill_done, bad_terminate, actions = super().should_terminate(
             observations,
             rnn_hidden_states,
@@ -137,16 +143,19 @@ class PickSkillPolicy(NnSkillPolicy):
         reset_arm_slice = slice(
             self.reset_arm_start_id, self.reset_arm_start_id + self.reset_arm_len
         )
-        arm_slice = slice(
-            self.arm_start_id, self.arm_start_id + self.arm_len - 1
-        )
+        
 
         if hl_wants_skill_term.sum() > 0:
             current_joint_pos = observations["joint"][hl_wants_skill_term, ...]
             delta = rest_state - current_joint_pos    
             actions[hl_wants_skill_term, reset_arm_slice] = delta
-            actions[hl_wants_skill_term, arm_slice] *= 0
-            print(current_joint_pos, delta, rest_state)
+            # We mutiply by -1 to eliminate this action
+            actions[hl_wants_skill_term, arm_slice] = -prev_arm_action[hl_wants_skill_term]
+            
+            print(current_joint_pos)
+            print(delta)
+            print(rest_state)
+            # breakpoint()
         return is_skill_done, bad_terminate, actions
 
     def to(self, device):
