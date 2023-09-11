@@ -127,6 +127,9 @@ class KinematicHumanoid(MobileManipulator):
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         super().reconfigure()
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+        # remove any remaining joint motors
+        for motor_id in self.sim_obj.existing_joint_motor_ids:
+            self.sim_obj.remove_joint_motor(motor_id)
 
     def set_joint_transform(
         self,
