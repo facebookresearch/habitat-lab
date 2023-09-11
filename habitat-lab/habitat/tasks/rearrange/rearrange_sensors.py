@@ -1332,7 +1332,9 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self.human_pos_list = []
         self.robot_pos_list = []
         self._first_debug = True
-        self._enable_shortest_path_computation = self._config.enable_shortest_path_computation
+        self._enable_shortest_path_computation = (
+            self._config.enable_shortest_path_computation
+        )
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -1491,7 +1493,10 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._has_found_human_step_dis = self._step
 
         # Compute the minimum distance only when the minimum distance has not found yet
-        if self._min_start_end_episode_step == float("inf") and self._enable_shortest_path_computation:
+        if (
+            self._min_start_end_episode_step == float("inf")
+            and self._enable_shortest_path_computation
+        ):
             robot_to_human_min_step = task.actions[
                 "agent_1_oracle_nav_randcoord_action"
             ]._compute_robot_to_human_min_step(
@@ -1540,11 +1545,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             first_encounter_spl = 0.0
             first_encounter_spl_dis = 0.0
 
-        if first_found_spl == float("nan"):
+        if np.isnan(first_found_spl):
             first_found_spl = 0.0
-        if first_encounter_spl == float("nan"):
+        if np.isnan(first_encounter_spl):
             first_encounter_spl = 0.0
-        if first_encounter_spl_dis == float("nan"):
+        if np.isnan(first_encounter_spl_dis):
             first_encounter_spl_dis = 0.0
 
         human_rotate = 1
