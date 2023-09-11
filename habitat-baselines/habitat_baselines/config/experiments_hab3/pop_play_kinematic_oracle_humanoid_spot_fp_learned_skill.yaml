@@ -1,13 +1,16 @@
 # @package _global_
 
 defaults:
-  - pop_play_kinematic_oracle_humanoid_spot_fp
+  - planner_learn_kinematic_oracle_humanoid_spot_fp # pop_play_kinematic_oracle_humanoid_spot_fp
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_pick_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_place_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_reset_arm_action: arm_action
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  # - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - _self_
 
 hydra:
@@ -42,6 +45,7 @@ habitat:
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
       - agent_1_should_replan
+      - all_predicates
   simulator:
     agents:
       agent_1:
@@ -56,8 +60,18 @@ habitat:
         arm_joint_dimensionality: 7
         grasp_thresh_dist: 0.15
         disable_grip: False
+        should_clip: True
         delta_pos_limit: 0.20
         ee_ctrl_lim: 0.015
+      
+      agent_0_reset_arm_action:
+        type: "ArmAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
+        arm_joint_mask: [1,1,0,1,1,1,1]
+        arm_joint_dimensionality: 7
+        disable_grip: True
+        should_clip: False
+        gym_action_prefix: "immediate_reset_arm"
 
       agent_0_base_velocity:
         allow_dyn_slide: True
@@ -115,3 +129,14 @@ habitat_baselines:
               max_skill_steps: 1000
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              
+      agent_1:
+        hierarchical_policy:
+          defined_skills:
+            pick:
+              max_skill_steps: 15
+              
+            
+            place:
+              max_skill_steps: 15
+            

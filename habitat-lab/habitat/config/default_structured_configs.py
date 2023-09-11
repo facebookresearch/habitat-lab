@@ -242,6 +242,8 @@ class ArmActionConfig(ActionConfig):
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
 
+    gym_action_prefix: str = "arm_action"
+
 
 @dataclass
 class BaseVelocityActionConfig(ActionConfig):

@@ -4,6 +4,8 @@
 
 import numpy as np
 import torch
+from typing import Any, Dict, List, Optional, Tuple
+
 
 from habitat.tasks.rearrange.rearrange_sensors import (
     IsHoldingSensor,
@@ -14,6 +16,7 @@ from habitat_baselines.rl.hrl.utils import SkillIOManager, find_action_range
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
+from habitat.core.simulator import Observations
 
 class PickSkillPolicy(NnSkillPolicy):
     def __init__(self, *args, **kwargs):
@@ -34,6 +37,10 @@ class PickSkillPolicy(NnSkillPolicy):
             if k == "arm_action":
                 self.arm_start_id, self.arm_len = find_action_range(
                     action_space, "arm_action"
+                )
+            if k == "reset_arm_action":
+                self.reset_arm_start_id, self.reset_arm_len = find_action_range(
+                    action_space, "reset_arm_action"
                 )
 
         # Get the skill io manager
@@ -81,7 +88,7 @@ class PickSkillPolicy(NnSkillPolicy):
         )
         if is_done.sum() > 0:
             self.sm.hidden_state[batch_idx][is_done] *= 0
-            self.sm._prev_action[batch_idx][is_done] *= 0
+            self.sm.prev_action[batch_idx][is_done] *= 0
 
         return is_done
 
@@ -98,6 +105,49 @@ class PickSkillPolicy(NnSkillPolicy):
             # Do not release the object once it is held
             action.actions[i, self._grip_ac_idx] = 1.0
         return action
+    
+
+    def should_terminate(
+        self,
+        observations: Observations,
+        rnn_hidden_states: torch.Tensor,
+        prev_actions: torch.Tensor,
+        masks: torch.Tensor,
+        actions: torch.Tensor,
+        hl_wants_skill_term: torch.BoolTensor,
+        batch_idx: List[int],
+        skill_name: List[str],
+        log_info: List[Dict[str, Any]],
+    ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
+        is_skill_done, bad_terminate, actions = super().should_terminate(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            actions,
+            hl_wants_skill_term,
+            batch_idx,
+            skill_name,
+            log_info
+        )
+        
+        rest_state = torch.from_numpy(self._rest_state).to(
+            device=actions.device, dtype=actions.dtype
+        )
+        reset_arm_slice = slice(
+            self.reset_arm_start_id, self.reset_arm_start_id + self.reset_arm_len
+        )
+        arm_slice = slice(
+            self.arm_start_id, self.arm_start_id + self.arm_len - 1
+        )
+
+        if hl_wants_skill_term.sum() > 0:
+            current_joint_pos = observations["joint"][hl_wants_skill_term, ...]
+            delta = rest_state - current_joint_pos    
+            actions[hl_wants_skill_term, reset_arm_slice] = delta
+            actions[hl_wants_skill_term, arm_slice] *= 0
+            print(current_joint_pos, delta, rest_state)
+        return is_skill_done, bad_terminate, actions
 
     def to(self, device):
         super().to(device)
@@ -145,15 +195,16 @@ class PickSkillPolicy(NnSkillPolicy):
         self.sm.prev_action[cur_batch_idx] = action.actions
 
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        
+        rest_state = torch.from_numpy(self._rest_state).to(
+            device=action.actions.device, dtype=action.actions.dtype
+        )
         # Do not release the object once it is held
-        if self._need_reset_arm:
-            rest_state = torch.from_numpy(self._rest_state).to(
-                device=action.actions.device, dtype=action.actions.dtype
-            )
+        if self._need_reset_arm:  
             if is_holding.sum() > 0:
                 current_joint_pos = observations["joint"][is_holding.bool()]
                 delta = rest_state - current_joint_pos
-
+                print(delta.shape)
                 action.actions[is_holding.bool(), arm_slice] = delta
-
+                
         return action
