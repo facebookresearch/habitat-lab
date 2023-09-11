@@ -1,0 +1,303 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: multi_agent_tidy_house_fp
+  - /habitat_baselines: habitat_baselines_rl_config_base
+
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/agent: pop_play
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic_nav
+
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed_no_virtual_key
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
+
+  - /habitat/task/measurements:
+    # Additional one for nav_to_obj
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - collisions_terminate
+    - rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    # For seek
+    - social_nav_seek_success
+    - does_want_terminate
+    - rearrange_nav_to_obj_success
+    - bad_called_terminate
+    - rearrange_nav_to_obj_reward
+    - social_nav_reward
+    - social_nav_stats
+
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+    - humanoid_detector_sensor
+    # Additional one for nav_to_obj
+    #- nav_goal_sensor
+
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
+  # TODO: ssnav_9 does have rearrange_stop action
+  # Based on the discussion, rearrange_stop now has been removed
+  #- /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/lab_sensors:
+    # For the oracle navigation
+    - has_finished_oracle_nav
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
+  - override /habitat/task/rearrange: multi_agent_tidy_house_base
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent #rgbd_head_rgbdp_arm_agent #rgbd_head_rgbd_arm_agent
+  - _self_
+
+hydra:
+  job:
+    name: 'spot_socnav_seek_3'
+
+habitat:
+  task:
+    type: RearrangeCompositeTaskNavGoal-v0
+    lab_sensors:
+      agent_1_should_replan:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 1
+      agent_0_goal_to_agent_gps_compass:
+        goal_is_human: True
+
+    #         package="habitat.task.lab_sensors.should_replan",
+    # group="habitat/task/lab_sensors",
+    # name="should_replan",
+
+    min_start_distance: 4.0
+    reward_measure: social_nav_reward
+    success_measure: nav_seek_success
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False
+    task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_solved
+    pddl_domain_def: fp
+    actions:
+      agent_0_base_velocity:
+        agent_index : 0
+        allow_dyn_slide: True
+        # There is a collision if the difference between the clamped NavMesh position and target position
+        # is more than than collision_threshold for any point
+        collision_threshold: 1e-5
+        # The x and y locations of the clamped NavMesh position
+        navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
+        # If we allow the robot to move laterally
+        enable_lateral_move: False
+        # speed parameters
+        longitudinal_lin_speed: 5.0
+        lateral_lin_speed: 5.0
+        ang_speed: 5.0
+        enable_rotation_check_for_dyn_slide: False
+
+      agent_1_base_velocity:
+        agent_index : 1
+      agent_1_rearrange_stop:
+        agent_index : 1
+      agent_1_pddl_apply_action:
+        agent_index : 1
+      agent_1_oracle_nav_randcoord_action:
+        type: OracleNavRandCoordAction
+        agent_index : 1
+        motion_control: human_joints
+        lin_speed: 5.0
+        ang_speed: 5.0
+
+    measurements:
+      force_terminate:
+        max_accum_force: -1 #10_000.0
+        max_instant_force: -1 #10_000.0
+      collisions_terminate:
+        max_scene_colls: 100.0
+      rearrange_nav_to_obj_reward:
+        force_pen: 0.01
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+      cooperate_subgoal_reward:
+        end_on_collide: True
+      does_want_terminate:
+        mask_out_rearrange_stop: True
+      social_nav_seek_success:
+        must_look_at_targ: False
+        must_call_stop: False
+
+  environment:
+    max_episode_steps: 1500
+
+  gym:
+    obs_keys:
+      #- agent_0_articulated_agent_arm_depth
+      #- agent_0_articulated_agent_arm_panoptic
+      #- agent_0_relative_resting_position
+      #- agent_0_obj_start_sensor
+      #- agent_0_obj_goal_sensor
+      #- agent_0_obj_start_gps_compass
+      #- agent_0_obj_goal_gps_compass
+      #- agent_0_joint
+      #- agent_0_is_holding
+      #- agent_0_ee_pos
+      #- agent_0_localization_sensor
+      #- agent_0_has_finished_oracle_nav
+      - agent_0_goal_to_agent_gps_compass
+      - agent_0_humanoid_detector_sensor
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_should_replan
+  simulator:
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - agent_0
+      - agent_1
+    agents:
+      agent_0:
+        radius: 0.25
+        height: 1.41
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+          arm_panoptic_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+        joint_start_noise: 0.0
+      agent_1:
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_type: KinematicHumanoid
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    habitat_sim_v0:
+      allow_sliding: True
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  updater_name: "PPO"
+  distrib_updater_name: "DDPPO"
+  torch_gpu_id: 0
+  video_fps: 30
+  eval_ckpt_path_dir: "data/checkpoints"
+  num_environments: 18
+  num_updates: -1
+  total_num_steps: 5.0e7
+  log_interval: 10
+  num_checkpoints: 100
+  force_torch_single_threaded: True
+  eval_keys_to_include_in_name: ['composite_success']
+  load_resume_state_config: False
+  rollout_storage_name: "HrlRolloutStorage"
+
+  evaluate: False
+  writer_type: 'wb'
+
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+
+  eval:
+    should_load_ckpt: True
+    video_option: ["disk"]
+
+  rl:
+    policy:
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
+            policy_input_keys:
+              - "head_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+            allowed_actions:
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+              - nav_to_receptacle_by_name
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_randcoord:
+              skill_name: "OracleNavCoordPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
+              ignore_grip: True
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 1
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.0001
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+
+    ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
+      pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
+      pretrained_encoder: False
+      # Whether the visual encoder backbone will be trained.
+      train_encoder: True
+      # Whether to reset the critic linear layer
+      reset_critic: False
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2

@@ -973,6 +973,7 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     human_id: int = 100
     human_detect_pixel_threshold: int = 1000
     total_steps: int = 1500
+    enable_shortest_path_computation: bool: False
 
 
 @dataclass
