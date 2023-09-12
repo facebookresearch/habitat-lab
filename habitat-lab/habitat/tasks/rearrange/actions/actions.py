@@ -94,8 +94,10 @@ class ArmAction(ArticulatedAgentAction):
         self.disable_grip = False
         if "disable_grip" in config:
             self.disable_grip = config["disable_grip"]
-        
-        self._gym_action_prefix = self._config.get("gym_action_prefix", "arm_action")
+
+        self._gym_action_prefix = self._config.get(
+            "gym_action_prefix", "arm_action"
+        )
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
@@ -116,23 +118,13 @@ class ArmAction(ArticulatedAgentAction):
 
     def step(self, is_last_action, *args, **kwargs):
         arm_action = kwargs[self._action_arg_prefix + self._gym_action_prefix]
-        if self._gym_action_prefix != "arm_action":
-            if sum(arm_action) != 0:
-                print(arm_action)
-                print("JTS", self.cur_articulated_agent.arm_joint_pos)
-                print("PREV", self.cur_articulated_agent.fix_joint_values)
-                
+
         self.arm_ctrlr.step(arm_action)
-        if self._gym_action_prefix != "arm_action":
-            if sum(arm_action) != 0:
-                print('------')    
-                print("JTS", self.cur_articulated_agent.arm_joint_pos)
-                print("FINAL", self.cur_articulated_agent.fix_joint_values)
-                breakpoint()
+
         if self.grip_ctrlr is not None and not self.disable_grip:
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
-        
+
         if is_last_action:
             return self._sim.step(HabitatSimActions.arm_action)
         else:

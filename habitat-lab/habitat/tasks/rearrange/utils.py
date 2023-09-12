@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import logging
 import os
 import os.path as osp
@@ -385,7 +386,6 @@ def get_info_episode_step(info_dict):
 
 def get_info_episode_final(info_dict):
     # Return a dictionary with the data we care about in total
-    breakpoint()
     res_dict = {}
     names_care = ["composite_success", "num_steps"]
     for name in names_care:
@@ -395,16 +395,19 @@ def get_info_episode_final(info_dict):
     return res_dict
 
 
-def write_episode_data(episode_summary, episode_data_dir, ep_id, eval_num=None):
+def write_episode_data(
+    episode_summary, episode_data_dir, ep_id, eval_num=None
+):
     os.makedirs(episode_data_dir, exist_ok=True)
-    filepath = osp.join(episode_data_dir, f"episode_{ep_id}_info.pkl")
+    filepath = osp.join(episode_data_dir, f"episode_{ep_id}_info.pkl.json")
     if eval_num is not None:
         filepath = osp.join(
-            episode_data_dir, f"episode_{ep_id}_eval_{int(eval_num)}_info.pkl"
+            episode_data_dir,
+            f"episode_{ep_id}_eval_{int(eval_num)}_info.pkl.json",
         )
 
-    with open(filepath, "wb+") as f:
-        pickle.dump(episode_summary, f)
+    with open(filepath, "w+") as f:
+        f.write(json.dumps(episode_summary))
 
 
 def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
