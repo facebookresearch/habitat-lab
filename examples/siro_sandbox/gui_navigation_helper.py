@@ -159,7 +159,10 @@ class GuiNavigationHelper:
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
 
             # disallow paths that go backwards, as this would cause the humanoid to "circle back" in an unrealistic way
-            if forward_dir is None or mn.math.dot(walk_dir.normalized(), forward_dir) > 0.0:
+            if (
+                forward_dir is None
+                or mn.math.dot(walk_dir.normalized(), forward_dir) > 0.0
+            ):
                 distance_multiplier = 1.0
                 if visualize_path:
                     self._viz_path(path)
