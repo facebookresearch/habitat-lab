@@ -1231,6 +1231,10 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
 
     def _get_target_for_coord(self, obj_pos):
         start_pos = obj_pos
+        if self.motion_type == "human_joints":
+            self.humanoid_controller.reset(
+                self.cur_articulated_agent.base_transformation
+            )
         return (start_pos, np.array(obj_pos))
 
     def step(self, *args, is_last_action, **kwargs):
@@ -1245,6 +1249,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
                 island_index=self._sim._largest_island_idx,
             )
             self.random_seed_counter += 1
+
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
         ] = self.coord_nav
