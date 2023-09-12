@@ -56,6 +56,8 @@ measurements:
     dist_reward: 1.0
   nav_to_pos_succ:
     success_distance: 0.1
+  ovmm_nav_to_obj_success:
+    min_object_coverage_iou: -1
 lab_sensors:
   joint_sensor:
     dimensionality: 10

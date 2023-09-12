@@ -330,7 +330,7 @@ class RotDistToGoal(Measure):
 
 @registry.register_measure
 class NavToPosSucc(Measure):
-    cls_uuid: str = "nav_to_pos_success"
+    cls_uuid: str = "nav_to_pos_succ"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
