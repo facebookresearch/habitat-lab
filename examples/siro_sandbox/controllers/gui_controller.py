@@ -464,10 +464,11 @@ class GuiHumanoidController(GuiController):
             )
             self._hint_reach_pos = None
 
-        if gui_input.get_key_up(GuiInput.KeyNS.SPACE):
+        elif not self._hint_walk_dir or np.linalg.norm(humancontroller_base_user_input) == 0:
             self._humanoid_controller.obj_transform_offset = mn.Matrix4()
             self._humanoid_controller.calculate_stop_pose()
             self.ind += 1
+        
         humanoidjoint_action = np.array(
             self._humanoid_controller.get_pose(), dtype=np.float32
         )
