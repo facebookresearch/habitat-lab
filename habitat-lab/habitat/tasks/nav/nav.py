@@ -1317,6 +1317,14 @@ class GOATDistanceToSubGoal(DistanceToGoal):
         # print("Update goal", kwargs["task"].update_goal)
         # print('-------------')
         # if self.current_goal_idx != kwargs["task"].current_task_idx:
+        if self._distance_from == "END_EFFECTOR":
+            current_position = self.get_end_effector_position()
+        else:
+            current_position = self.get_base_position()
+
+        if self._previous_position is not None:
+            recent_position_didnt_change = np.allclose(self._previous_position, current_position, atol=1e-4)
+
         if self.goal_change:
             # if self.ctr >= 1:
             self.current_goal_idx = kwargs["task"].current_task_idx
@@ -1324,22 +1332,16 @@ class GOATDistanceToSubGoal(DistanceToGoal):
                 "Updating goal (viewpoints); new current_task_idx:",
                 self.current_goal_idx,
             )
-
+            recent_position_didnt_change = False
             self.update_goal_viewpoints(episode)
             self.goal_change = False
 
-        if self._distance_from == "END_EFFECTOR":
-            current_position = self.get_end_effector_position()
-        else:
-            current_position = self.get_base_position()
 
         if kwargs["task"].update_goal:
             self.goal_change = True
             kwargs["task"].update_goal = False
 
-        if self._previous_position is None or not np.allclose(
-            self._previous_position, current_position, atol=1e-4
-        ):
+        if self._previous_position is None or not recent_position_didnt_change:
             episode_cache = None
             # if self.goal_change:
             #     episode_cache = None

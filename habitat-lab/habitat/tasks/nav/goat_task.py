@@ -181,21 +181,24 @@ class MultiGoalSensor(Sensor):
             if task["task_type"] == "objectnav":
                 goal["target"] = task["object_category"]
             elif task["task_type"] == "languagenav":
-                target = task["llm_response"]["target"]
-                landmarks = task["llm_response"]["landmark"]
-                if target in landmarks:
-                    landmarks.remove(target)
+                if "llm_response" in task.keys():
+                    target = task["llm_response"]["target"]
+                    landmarks = task["llm_response"]["landmark"]
+                    if target in landmarks:
+                        landmarks.remove(target)
 
-                if "wall" in landmarks:
-                    landmarks.remove("wall")  # unhelpful landmark
+                    if "wall" in landmarks:
+                        landmarks.remove("wall")  # unhelpful landmark
 
-                target = "_".join(target.split())
-                landmarks = [
-                    "_".join(landmark.split()) for landmark in landmarks
-                ]
+                    target = "_".join(target.split())
+                    landmarks = [
+                        "_".join(landmark.split()) for landmark in landmarks
+                    ]
+                    goal["landmarks"] = landmarks
+                    goal["target"] = target
+                else:
+                    goal["target"] = task["object_category"]
 
-                goal["target"] = target
-                goal["landmarks"] = landmarks
             elif task["task_type"] == "imagenav":
                 goal["target"] = task["object_category"]
                 goal["image"] = self.get_image_goal(episode, goal_idx)
