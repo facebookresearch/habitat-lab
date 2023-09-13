@@ -226,10 +226,11 @@ class Policy(abc.ABC):
         """
         # TODO: train low-level policies in multi-agent setting:
         # implement the case when the envs_to_pause is not zero
-        if len(envs_to_pause) == 0:
-            return
-        else:
-            raise NotImplementedError
+        return
+        # if len(envs_to_pause) == 0:
+        #     return
+        # else:
+        #     return
 
     @classmethod
     @abc.abstractmethod
@@ -314,7 +315,6 @@ class NetPolicy(nn.Module, Policy):
         deterministic=False,
         **kwargs,
     ):
-
         features, rnn_hidden_states, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
         )
