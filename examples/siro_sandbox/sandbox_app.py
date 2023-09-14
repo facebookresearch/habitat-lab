@@ -439,6 +439,13 @@ class SandboxDriver(GuiAppDriver):
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
 
+        # Manually save recorded gfx-replay keyframes.
+        if (
+            self._gui_input.get_key_down(GuiInput.KeyNS.EQUAL)
+            and self._save_gfx_replay_keyframes
+        ):
+            self._save_recorded_keyframes_to_file()
+
         if self._args.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
             # hides all render instances with a filepath starting with
