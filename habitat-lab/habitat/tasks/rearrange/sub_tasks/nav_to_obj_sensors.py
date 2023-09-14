@@ -165,6 +165,7 @@ class DistToGoal(Measure):
         self._config = config
         self._sim = sim
         self._prev_dist = None
+        self._use_geo_distance = config.use_geo_distance
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -178,10 +179,30 @@ class DistToGoal(Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
+        position_robot = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
         )
+
+        if self._use_geo_distance:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = np.array(position_robot)
+            path.requested_end = task.nav_goal_pos
+            found_path = self._sim.pathfinder.find_path(path)
+
+        if not self._use_geo_distance or not found_path:
+            return np.linalg.norm(
+                np.array(
+                    self._sim.get_agent_data(0).articulated_agent.base_pos
+                )[[0, 2]]
+                - task.nav_goal_pos[[0, 2]]
+            )
+        else:
+            position_robot = np.array(
+                self._sim.get_agent_data(0).articulated_agent.base_pos
+            )
+            return self._sim.geodesic_distance(
+                position_robot, task.nav_goal_pos
+            )
 
     @staticmethod
     def _get_uuid(*args, **kwargs):

@@ -53,7 +53,14 @@ habitat:
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-        disable_grip: True
+        type: "ArmAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
+        arm_joint_mask: [1,1,0,1,1,1,1]
+        arm_joint_dimensionality: 7
+        grasp_thresh_dist: 0.5
+        disable_grip: False
+        delta_pos_limit: 0.20
+        ee_ctrl_lim: 0.015
 
       # Hack: it appears the Spot hierarchical policy config requires an oracle nav
       # action (or, I haven't found a workaround). We want the Spot to navigate based
@@ -66,7 +73,15 @@ habitat:
         type: OracleNavCoordAction
 
       agent_0_base_velocity:
-        lin_speed: 6.0
+        allow_dyn_slide: True
+        collision_threshold: 1e-5
+        navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
+        enable_lateral_move: False
+        longitudinal_lin_speed: 10.0
+        lateral_lin_speed: 10.0
+        ang_speed: 10.0
+        enable_rotation_check_for_dyn_slide: False
+
       agent_1_oracle_nav_action:
         type: OracleNavAction
         motion_control: human_joints
@@ -184,14 +199,14 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              load_ckpt_file: "data/models/point_nav_ckpt.2329.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              load_ckpt_file: "data/models/point_nav_ckpt.2329.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]

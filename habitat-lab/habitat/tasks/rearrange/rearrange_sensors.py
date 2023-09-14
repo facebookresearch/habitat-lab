@@ -1149,6 +1149,41 @@ class ContactTestStats(Measure):
         self._metric = np.average(self._contact_flag)
 
 
+@registry.register_sensor
+class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._human_id = config.human_id
+        self._human_pixel_threshold = config.human_pixel_threshold
+
+    def _get_uuid(self, *args, **kwargs):
+        return "humanoid_detector_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        found_human = False
+        panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
+
+        if np.sum(panoptic == self._human_id) > self._human_pixel_threshold:
+            found_human = True
+
+        if found_human:
+            return np.ones(1, dtype=np.float32)
+        else:
+            return np.zeros(1, dtype=np.float32)
+
+
 @registry.register_measure
 class RuntimePerfStats(Measure):
     cls_uuid: str = "habitat_perf"
