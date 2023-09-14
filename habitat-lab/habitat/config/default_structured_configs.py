@@ -58,6 +58,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -268,10 +269,25 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
     type: str = "BaseVelLegAnimationAction"
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
     lin_speed: float = 10.0
+    # The max angular speed of the robot
     ang_speed: float = 10.0
-    allow_dyn_slide: bool = True
+    # If we want to do sliding or not
+    allow_dyn_slide: bool = False
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # If we allow the robot to move back or not
     allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )
@@ -522,6 +538,16 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidJointSensor"
     dimensionality: int = 54 * 4
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -957,6 +983,7 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 @dataclass
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
+    use_geo_distance: bool = True
 
 
 @dataclass
@@ -1174,6 +1201,11 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+
+
+@dataclass
+class ExplorationReward(MeasurementConfig):
+    type: str = "ExplorationReward"
 
 
 @dataclass
@@ -2074,6 +2106,12 @@ cs.store(
     node=HumanoidJointSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
     group="habitat/task/lab_sensors",
     name="end_effector_sensor",
@@ -2358,6 +2396,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.exploration_reward",
+    group="habitat/task/measurements",
+    name="exploration_reward",
+    node=ExplorationReward,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",
