@@ -1758,6 +1758,8 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
+    # If true, will start simulating an object in kinematic mode after it is released
+    simulate_fall: bool = True
     # If False, will skip setting the semantic IDs of objects in
     # `rearrange_sim.py` (there is overhead to this operation so skip if not
     # using semantic information).

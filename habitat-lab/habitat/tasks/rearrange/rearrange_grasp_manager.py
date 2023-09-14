@@ -15,6 +15,7 @@ from habitat_sim.physics import (
     CollisionGroupHelper,
     CollisionGroups,
     ManagedRigidObject,
+    MotionType,
     RigidConstraintSettings,
     RigidConstraintType,
 )
@@ -46,8 +47,11 @@ class RearrangeGraspManager:
         self._config = config
         self._managed_articulated_agent = articulated_agent
         self.ee_index = ee_index
-
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
+        self._simulate_fall = self._sim.habitat_config.simulate_fall
+        assert (
+            self._kinematic_mode or self._simulate_fall
+        ), "Fall will always be simulated when kinematic_mode=False"
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure."""
@@ -119,7 +123,14 @@ class RearrangeGraspManager:
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """
         self._vis_info = []
-        if len(self._snap_constraints) == 0:
+        if self._simulate_fall and self._snapped_obj_id is not None:
+            self.snap_rigid_obj.motion_type = MotionType.DYNAMIC
+            self.snap_rigid_obj.collidable = True
+            self.snap_rigid_obj.override_collision_group(
+                CollisionGroups.UserGroup7
+            )
+
+        elif len(self._snap_constraints) == 0:
             # No constraints to unsnap
             self._snapped_obj_id = None
             self._snapped_marker_id = None

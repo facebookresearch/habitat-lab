@@ -91,11 +91,6 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
-        if self.cur_grasp_mgr.snap_idx != -1:
-            rom = self._sim.get_rigid_object_manager()
-            ro = rom.get_object_by_id(self.cur_grasp_mgr.snap_idx)
-            ro.motion_type = habitat_sim.physics.MotionType.DYNAMIC
-            ro.collidable = True
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
@@ -427,11 +422,6 @@ class GazeGraspAction(MagicGraspAction):
         return
 
     def _ungrasp(self):
-        if self.cur_grasp_mgr.snap_idx != -1:
-            rom = self._sim.get_rigid_object_manager()
-            ro = rom.get_object_by_id(self.cur_grasp_mgr.snap_idx)
-            ro.motion_type = habitat_sim.physics.MotionType.DYNAMIC
-            ro.collidable = True
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
