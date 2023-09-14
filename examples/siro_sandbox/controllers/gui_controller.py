@@ -202,8 +202,10 @@ class GuiHumanoidController(GuiController):
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self._last_object_thrown_info = None
         self.selected_obj = None
-
+        self.hand_pose_iter = 0
+        self.num_hand_pose_iter = 100
         self.ind = 0
+        self.dist_move = 0.1
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -296,8 +298,8 @@ class GuiHumanoidController(GuiController):
                 grasp_object_id
             )
             self._saved_object_rotation = rigid_obj.rotation
-
-            self._get_grasp_mgr().snap_to_obj(grasp_object_id)
+            if self.hand_pose_iter == self.num_hand_pose_iter:
+                self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
             self._recorder.record("grasp_object_id", grasp_object_id)
 
@@ -433,12 +435,25 @@ class GuiHumanoidController(GuiController):
             and self.selected_obj is not None
         ):
             obj_pos = self.selected_obj.translation
-            self._humanoid_controller.calculate_reach_pose(obj_pos)
+            init_coord_world = self._humanoid_controller.obj_transform_base.transform_point(
+                mn.Vector3(0.2, 0.2, 0)
+            )
+
+            dist_obj = np.linalg.norm(obj_pos - init_coord_world)
+            hand_vector = (obj_pos - init_coord_world) / dist_obj
+            dist_move = self.dist_move
+            hand_pos = init_coord_world + min(dist_move * self.hand_pose_iter, dist_obj) * hand_vector
+            if self.hand_pose_iter < self.num_hand_pose_iter:
+                self.hand_pose_iter += 1
+            else:
+                self.hand_pose_iter = 0
+            self._humanoid_controller.calculate_reach_pose(hand_pos)
 
         if gui_input.get_key_up(GuiInput.KeyNS.SPACE):
             self._humanoid_controller.obj_transform_offset = mn.Matrix4()
             self._humanoid_controller.calculate_stop_pose()
             self.ind += 1
         humanoidjoint_action = np.array(self._humanoid_controller.get_pose())
-
+        print(self.get_articulated_agent().base_pos)
         return humanoidjoint_action
+

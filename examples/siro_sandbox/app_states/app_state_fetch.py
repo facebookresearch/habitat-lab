@@ -56,6 +56,7 @@ class AppStateFetch(AppState):
         self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
 
     def on_environment_reset(self, episode_recorder_dict):
+        
         self._held_target_obj_idx = None
 
         sim = self.get_sim()
@@ -73,6 +74,25 @@ class AppStateFetch(AppState):
 
         self._prepare_throw = False
 
+        rom = sim.get_rigid_object_manager()
+        obj_ids = sim._scene_obj_ids
+        obj_interest = rom.get_object_by_id(obj_ids[0])
+        # pos_obj = self._gui_agent_ctrl.get_articulated_agent().base_posr
+        pos_obj = mn.Vector3(-11.7, .95, -3.5)
+        obj_interest.translation = pos_obj
+        
+        it = 4
+        obj_interest = rom.get_object_by_id(obj_ids[it])
+        # pos_obj = self._gui_agent_ctrl.get_articulated_agent().base_pos
+        pos_obj = mn.Vector3(-10.75, 0.95, -1.1)
+        obj_interest.translation = pos_obj
+
+        robo_agent = self.state_machine_agent_ctrl.get_articulated_agent(self._sandbox_service.env)
+        robo_agent.base_pos = mn.Vector3(-12.2408, 0.124385, -10.236)
+        robo_agent.base_rot = 30
+        
+        # breakpoint()
+
     def get_sim(self):
         return self._sandbox_service.sim
 
@@ -80,11 +100,57 @@ class AppStateFetch(AppState):
         drop_pos = None
         grasp_object_id = None
         will_throw = False
+        if self._sandbox_service.gui_input.get_key_down(
+            GuiInput.KeyNS.X
+        ):
+            
+            sim = self.get_sim()
+            curr_obj_id = self._pick_helper.viz_and_get_pick_object()
+
+            self.state_machine_agent_ctrl.object_interest_id = (
+                curr_obj_id
+            )
+            self.state_machine_agent_ctrl.rigid_obj_interest = (
+                sim.get_rigid_object_manager().get_object_by_id(
+                    curr_obj_id
+                )
+            )
+        if self._sandbox_service.gui_input.get_key_down(
+            GuiInput.KeyNS.C
+        ):
+            self.state_machine_agent_ctrl.current_state = FetchState.SEARCH_K
+        if self._sandbox_service.gui_input.get_key(
+            GuiInput.KeyNS.B
+        ):
+            
+            self.state_machine_agent_ctrl.current_state = FetchState.BACKUP_K
+        if self._sandbox_service.gui_input.get_key(
+            GuiInput.KeyNS.G
+        ):
+            
+            self.state_machine_agent_ctrl.current_state = FetchState.FOR_K
+        if self._sandbox_service.gui_input.get_key(
+            GuiInput.KeyNS.H
+        ):
+            
+            self.state_machine_agent_ctrl.current_state = FetchState.LEFT_K
+        if self._sandbox_service.gui_input.get_key(
+            GuiInput.KeyNS.F
+        ):
+            self.state_machine_agent_ctrl.current_state = FetchState.RIGHT_K
+
+        if self._sandbox_service.gui_input.get_key_down(
+            GuiInput.KeyNS.V
+        ):
+            self.state_machine_agent_ctrl.current_state = FetchState.PICK_K
+
         if self._held_target_obj_idx is not None:
             if self._sandbox_service.gui_input.get_key_down(
                 GuiInput.KeyNS.SPACE
             ):
-                self._prepare_throw = True
+                obj_pick_id = self._gui_agent_ctrl._get_grasp_mgr().snap_idx
+                if obj_pick_id is not None:
+                    self._prepare_throw = True
                 # # temp: drop object right where it is
                 # drop_pos = self._get_target_object_position(
                 #     self._held_target_obj_idx
@@ -144,17 +210,20 @@ class AppStateFetch(AppState):
         walk_dir = None
         if not self._prepare_throw and not will_throw:
             if not self._first_person_mode:
+                press_rm = self._sandbox_service.gui_input.get_mouse_button(
+                    GuiInput.MouseNS.RIGHT
+                )
                 candidate_walk_dir = (
-                    self._nav_helper.viz_and_get_humanoid_walk_dir()
+                    self._nav_helper.viz_and_get_humanoid_walk_dir(should_recompute=press_rm)
                     if not self._first_person_mode
                     else None
                 )
                 obj_pick = self._pick_helper.viz_and_get_pick_object()
 
-                if self._sandbox_service.gui_input.get_mouse_button(
-                    GuiInput.MouseNS.RIGHT
-                ):
-                    walk_dir = candidate_walk_dir
+                # if self._sandbox_service.gui_input.get_mouse_button(
+                #     GuiInput.MouseNS.RIGHT
+                # ):
+                walk_dir = candidate_walk_dir
             self._gui_agent_ctrl.set_act_hints(
                 walk_dir,
                 grasp_object_id,
@@ -190,10 +259,11 @@ class AppStateFetch(AppState):
             will_throw = False
 
         if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
-            obj_pos = (
-                self.state_machine_agent_ctrl.rigid_obj_interest.translation
-            )
-            self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
+            if self.state_machine_agent_ctrl.rigid_obj_interest is not None:
+                obj_pos = (
+                    self.state_machine_agent_ctrl.rigid_obj_interest.translation
+                )
+                self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
 
         return drop_pos
 

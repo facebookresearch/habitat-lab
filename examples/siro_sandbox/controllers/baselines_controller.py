@@ -164,10 +164,22 @@ class FetchState(Enum):
     PICK = 3
     BRING = 4
     DROP = 5
-
+    SEARCH_K = 6
+    PICK_K = 7
+    BACKUP_K = 8
+    FOR_K = 9
+    LEFT_K = 10
+    RIGHT_K = 11
+    
 
 PICK_STEPS = 20
 
+dict_vel = {
+    FetchState.FOR_K: np.array([5, 0]),
+    FetchState.RIGHT_K: np.array([0, -5]),
+    FetchState.LEFT_K: np.array([0, 5]),
+    FetchState.BACKUP_K: np.array([-5, 0])
+}
 
 class FetchBaselinesController(SingleAgentBaselinesController):
     def __init__(
@@ -177,6 +189,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         config,
         env,
     ):
+        
         self._current_state = FetchState.WAIT
         self.should_start_skill = False
         self.object_interest_id = None
@@ -275,6 +288,20 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         policy_input["observations"] = self._batch_and_apply_transforms(
             [observations]
         )
+        # TODO: the observation transformation always picks up
+        # the first object, we overwrite the observation
+        # here, which is a bit hacky
+        if skill_name == "pick":
+            global_T = env._sim.get_agent_data(
+                self._agent_idx
+            ).articulated_agent.ee_transform()
+            T_inv = global_T.inverted()
+            obj_start_pos = np.array(T_inv.transform_point(obj_trans))[
+                None, ...
+            ]
+            policy_input["observations"]["obj_start_sensor"] = obj_start_pos
+
+
         # Only take the goal object
 
         rho, phi = self.get_cartesian_obj_coords(obj_trans, env)
@@ -303,14 +330,16 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             act_space, "agent_0_oracle_nav_action"
         )
 
-        if self.current_state == FetchState.SEARCH:
-            if self.should_start_skill:
+        type_of_skill = self.defined_skills.nav_to_obj.skill_name
+        if self.current_state == FetchState.SEARCH or self.current_state == FetchState.SEARCH_K:
+            if self.should_start_skill and type_of_skill == "NavSkillPolicy":
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
-
+            
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
+                print(rho)
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
 
                 if (
@@ -334,11 +363,23 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     # Grab object
-                    self._init_policy_input()
+                    if self.current_state == FetchState.SEARCH:
+                        self._init_policy_input()
 
-                    self.current_state = FetchState.PICK
-
-        elif self.current_state == FetchState.PICK:
+                        self.current_state = FetchState.PICK
+        elif self.current_state in dict_vel:
+            
+            vel_vec = dict_vel[self.current_state]
+            action_ind_nav = find_action_range(
+                act_space, "agent_0_base_velocity"
+            )
+            action_array[
+                action_ind_nav[0] : action_ind_nav[0] + 2
+            ] = vel_vec
+            self.current_state = FetchState.WAIT
+        
+        
+        elif self.current_state == FetchState.PICK or self.current_state == FetchState.PICK_K:
             obj_trans = self.rigid_obj_interest.translation
             type_of_skill = self.defined_skills.pick.skill_name
             if type_of_skill == "PickSkillPolicy":

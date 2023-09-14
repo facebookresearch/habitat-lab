@@ -314,7 +314,7 @@ class GazeGraspAction(MagicGraspAction):
         if grip_action is None:
             return
 
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        if grip_action > 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()

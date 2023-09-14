@@ -16,6 +16,7 @@ class GuiNavigationHelper:
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx
         self._largest_island_idx = None
+        self.snapped_pos = None
 
     def _get_sim(self):
         return self._sandbox_service.sim
@@ -52,8 +53,9 @@ class GuiNavigationHelper:
         self._largest_island_idx = get_largest_island_index(
             sim.pathfinder, sim, allow_outdoor=False
         )
+        self.snapped_pos = None
 
-    def viz_and_get_humanoid_walk_dir(self):
+    def viz_and_get_humanoid_walk_dir(self, should_recompute=True):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12
 
@@ -79,7 +81,13 @@ class GuiNavigationHelper:
         )
         snapped_start_pos = agent_root.translation
         snapped_start_pos.y = snapped_pos.y
+        
+        if should_recompute:
 
+            self.snapped_pos = snapped_pos
+        if self.snapped_pos is None:
+            return None
+        snapped_pos = self.snapped_pos
         path = habitat_sim.ShortestPath()
         path.requested_start = snapped_start_pos
         path.requested_end = snapped_pos

@@ -69,6 +69,14 @@ habitat:
         agent_idx: 1
     actions:
       agent_0_arm_action:
+        type: "ArmAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
+        arm_joint_mask: [1,1,0,1,1,1,1]
+        arm_joint_dimensionality: 7
+        grasp_thresh_dist: 0.5
+        disable_grip: False
+        delta_pos_limit: 0.20
+        ee_ctrl_lim: 0.015
         grip_controller: MagicGraspAction
       agent_1_oracle_nav_action:
         type: OracleNavAction
@@ -125,10 +133,10 @@ habitat:
             width: 171
             hfov: 55
       agent_1:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/male_1/male_1.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -199,27 +207,41 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
 
-            # pick:
-            #   skill_name: "PickSkillPolicy"
-            #   obs_skill_inputs: ["obj_start_sensor"]
-            #   load_ckpt_file: "data/models/pick_latest.pth"
-            #   max_skill_steps: 500
-            #   obs_skill_input_dim: 3
+            pick:
+              skill_name: "PickSkillPolicy"
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/pick_latest.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 3
 
             nav_to_obj:
-              skill_name: "NavSkillPolicy"
-              obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
-              max_skill_steps: 500
-              obs_skill_input_dim: 2
-              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 300
+              stop_thresh: 0.00001
+              apply_postconds: False
+            
             nav_to_robot:
-              skill_name: "NavSkillPolicy"
-              obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
-              max_skill_steps: 500
-              obs_skill_input_dim: 2
-              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 300
+              stop_thresh: 0.00001
+              apply_postconds: False
+            
+            # nav_to_obj:
+            #   skill_name: "NavSkillPolicy"
+            #   obs_skill_inputs: ["goal_to_agent_gps_compass"]
+            #   load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 2
+            #   pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+            # nav_to_robot:
+            #   skill_name: "NavSkillPolicy"
+            #   obs_skill_inputs: ["goal_to_agent_gps_compass"]
+            #   load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+            #   max_skill_steps: 500
+            #   obs_skill_input_dim: 2
+            #   pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
       agent_1:
         hierarchical_policy:
           high_level_policy:

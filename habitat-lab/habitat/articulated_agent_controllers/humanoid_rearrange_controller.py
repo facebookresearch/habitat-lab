@@ -338,8 +338,8 @@ class HumanoidRearrangeController:
 
             lower = min(max(0, math.floor(index)), num_bins - 1)
             upper = max(min(math.ceil(index), num_bins - 1), 0)
-
-            return upper, lower, value_norm
+            value_norm_t = index - lower
+            return lower, upper, value_norm_t
 
         def comp_inter(x_i, y_i, z_i):
             # Given an integer index from 0 to num_bins - 1
@@ -374,16 +374,16 @@ class HumanoidRearrangeController:
             c01 = c001 * (1 - xd) + c101 * xd
             c10 = c010 * (1 - xd) + c110 * xd
             c11 = c011 * (1 - xd) + c111 * xd
-            if is_quat:
-                c00 = normalize_quat(c00)
-                c01 = normalize_quat(c01)
-                c10 = normalize_quat(c10)
-                c11 = normalize_quat(c11)
+            # if is_quat:
+            #     c00 = normalize_quat(c00)
+            #     c01 = normalize_quat(c01)
+            #     c10 = normalize_quat(c10)
+            #     c11 = normalize_quat(c11)
             c0 = c00 * (1 - yd) + c10 * yd
             c1 = c01 * (1 - yd) + c11 * yd
-            if is_quat:
-                c0 = normalize_quat(c0)
-                c1 = normalize_quat(c1)
+            # if is_quat:
+            #     c0 = normalize_quat(c0)
+            #     c1 = normalize_quat(c1)
 
             c = c0 * (1 - zd) + c1 * zd
             if is_quat:

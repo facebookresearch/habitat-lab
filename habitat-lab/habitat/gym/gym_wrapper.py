@@ -247,9 +247,9 @@ class HabGymWrapper(gym.Wrapper):
     def step(
         self, action: Union[np.ndarray, int]
     ) -> Tuple[HabGymWrapperObsType, float, bool, dict]:
-        assert self.action_space.contains(
-            action
-        ), f"Invalid action {action} for action space {self.action_space}"
+        # assert self.action_space.contains(
+        #     action
+        # ), f"Invalid action {action} for action space {self.action_space}"
 
         if isinstance(self.action_space, spaces.Box):
             assert isinstance(action, np.ndarray)
