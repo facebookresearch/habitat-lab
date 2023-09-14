@@ -496,7 +496,7 @@ def get_robot_spawns(
             )
 
         island_idx = sim.pathfinder.get_island(start_position)
-        if island_idx != sim.largest_island_idx:
+        if island_idx != sim.navmesh_classification_results["active_island"]:
             continue
 
         # Face the robot towards the object.
@@ -507,10 +507,6 @@ def get_robot_spawns(
 
         if physics_stability_steps == 0:
             return start_position, start_rotation, False
-
-        island_idx = sim.pathfinder.get_island(start_position)
-        if island_idx != sim.largest_island_idx:
-            continue
 
         is_navigable = sim.pathfinder.is_navigable(start_position)
         invalid_target_position = (
