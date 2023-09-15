@@ -28,7 +28,7 @@ from episode_helper import EpisodeHelper
 
 # from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
-from serialize_utils import (
+from utils.serialize_utils import (
     NullRecorder,
     StepRecorder,
     save_as_gzip,
