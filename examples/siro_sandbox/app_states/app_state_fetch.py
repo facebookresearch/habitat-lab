@@ -630,6 +630,10 @@ class AppStateFetch(AppState):
                 if fetch_state == FetchState.SEARCH
                 else self._get_gui_agent_translation()
             )
+            # TODO: overwrite the target pos to be the human location
+            target_pos = (
+                self.get_sim().get_agent_data(1).articulated_agent.base_pos
+            )
             path_points = [fetcher_pos, target_pos]
             floor_y = 0.0  # temp hack
             for pt in path_points:
