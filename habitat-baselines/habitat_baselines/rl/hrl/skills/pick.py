@@ -29,10 +29,6 @@ class PickSkillPolicy(NnSkillPolicy):
     def _is_skill_done(
         self,
         observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        batch_idx,
     ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?
@@ -46,6 +42,7 @@ class PickSkillPolicy(NnSkillPolicy):
             < 0.05
         )
         is_reset_done = is_reset_done.to(is_holding.device)
+
         return (is_holding * is_reset_done).type(torch.bool)
 
     def _parse_skill_arg(self, skill_arg):
@@ -79,6 +76,7 @@ class PickSkillPolicy(NnSkillPolicy):
             cur_batch_idx,
             deterministic,
         )
+
         action = self._mask_pick(action, observations)
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         if is_holding and self._need_reset_arm:

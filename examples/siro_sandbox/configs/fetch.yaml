@@ -189,12 +189,12 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
 
-            # pick:
-            #   skill_name: "PickSkillPolicy"
-            #   obs_skill_inputs: ["obj_start_sensor"]
-            #   load_ckpt_file: "data/models/pick_latest.pth"
-            #   max_skill_steps: 500
-            #   obs_skill_input_dim: 3
+            pick:
+              skill_name: "PickSkillPolicy"
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/pick_latest.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 3
 
             nav_to_obj:
               skill_name: "NavSkillPolicy"
