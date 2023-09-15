@@ -29,13 +29,14 @@ defaults:
     - humanoid_joint_sensor
     - other_agent_gps
     - has_finished_oracle_nav
+    - humanoid_detector_sensor
 
   - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
 
   # For Spot observation space
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
-
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
   - _self_
 
@@ -108,6 +109,8 @@ habitat:
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
+      - agent_0_humanoid_detector_sensor
+      - agent_0_goal_to_agent_gps_compass
       # - agent_0_has_finished_oracle_nav
       # - agent_0_should_replan
       # - agent_1_head_depth
@@ -138,6 +141,10 @@ habitat:
             width: 640
             hfov: 47
           arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+          arm_panoptic_sensor:
             height: 224
             width: 171
             hfov: 55
@@ -199,14 +206,14 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/point_nav_ckpt.2329.pth"
+              load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/point_nav_ckpt.2329.pth"
+              load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]

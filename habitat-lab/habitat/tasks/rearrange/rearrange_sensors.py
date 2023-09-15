@@ -7,6 +7,7 @@
 
 from collections import defaultdict, deque
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -1216,3 +1217,313 @@ class RuntimePerfStats(Measure):
             self._metric = {
                 k: np.mean(v) for k, v in self._metric_queue.items()
             }
+
+
+@registry.register_measure
+class SocialNavStats(UsesArticulatedAgentInterface, Measure):
+    """
+    The measure for social navigation
+    """
+
+    cls_uuid: str = "social_nav_stats"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+        self._check_human_in_frame = self._config.check_human_in_frame
+        self._min_dis_human = self._config.min_dis_human
+        self._max_dis_human = self._config.max_dis_human
+        self._human_id = self._config.human_id
+        self._human_detect_threshold = (
+            self._config.human_detect_pixel_threshold
+        )
+
+        self._start_end_episode_distance = None
+        self._min_start_end_episode_step = None
+        self._agent_episode_distance = None
+        self._has_found_human_step = 1500
+        self._has_found_human_step_dis = 1500
+        self._prev_pos = None
+        self._prev_human_pos = None
+        self._has_found_human = False
+        self._has_found_human_dis = False
+        self._found_human_times = 0
+        self._found_human_times_dis = 0
+        self._after_found_human_times = 0
+        self._after_found_human_times_dis = 0
+        self._dis = 0
+        self._step = 0
+        self._step_after_found = 1
+        self._dis_after_found = 0
+        self._update_human_pos_x = 0
+        self._update_human_pos_y = 0
+        self._update_human_pos_z = 0
+        self._robot_init_pos = None
+        self._robot_init_trans = None
+        self._total_step = self._config.total_steps
+        self.human_pos_list = []
+        self.robot_pos_list = []
+        self._first_debug = True
+        self._enable_shortest_path_computation = (
+            self._config.enable_shortest_path_computation
+        )
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavStats.cls_uuid
+
+    def _compute_min_path_step(self):
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+        dist_step = self._sim.geodesic_distance(
+            self._robot_init_pos, human_pos
+        ) / (10.0 / 120.0)
+
+        if dist_step <= self._step:
+            return self._step
+        else:
+            return float("inf")
+
+    def reset_metric(self, *args, task, **kwargs):
+        robot_pos = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
+        )
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+        self._start_end_episode_distance = np.linalg.norm(
+            robot_pos - human_pos, ord=2, axis=-1
+        )
+        self._robot_init_pos = robot_pos
+        self._robot_init_trans = mn.Matrix4(
+            self._sim.get_agent_data(
+                0
+            ).articulated_agent.sim_obj.transformation
+        )
+        self._min_start_end_episode_step = float("inf")
+        self._agent_episode_distance = 0.0
+        self._prev_pos = robot_pos
+        self._prev_human_pos = human_pos
+        self._has_found_human = False
+        self._has_found_human_dis = False
+        self._has_found_human_step = 1500
+        self._has_found_human_step_dis = 1500
+        self._found_human_times = 0
+        self._found_human_times_dis = 0
+        self._after_found_human_times = 0
+        self._after_found_human_times_dis = 0
+        self._step = 0
+        self._step_after_found = 1
+        self._dis = 0
+        self._dis_after_found = 0
+        self.update_metric(*args, task=task, **kwargs)
+        self.human_pos_list = []
+        self.robot_pos_list = []
+        self._first_debug = True
+
+    def _check_human_dis(self, robot_pos, human_pos):
+        # We use geo geodesic distance here
+        dis = self._sim.geodesic_distance(robot_pos, human_pos)
+        return dis >= self._min_dis_human and dis <= self._max_dis_human
+
+    def _check_human_frame(self, obs):
+        if not self._check_human_in_frame:
+            return True
+
+        panoptic = obs["agent_0_articulated_agent_arm_panoptic"]
+        return (
+            np.sum(panoptic == self._human_id) > self._human_detect_threshold
+        )
+
+    def _check_look_at_human(self, human_pos, robot_pos):
+        vector_human_robot = human_pos - robot_pos
+        vector_human_robot = vector_human_robot / np.linalg.norm(
+            vector_human_robot
+        )
+        base_T = self._sim.get_agent_data(
+            0
+        ).articulated_agent.sim_obj.transformation
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = np.dot(forward_robot.normalized(), vector_human_robot) > 0.5
+        return facing
+
+    @property
+    def update_human_pos(self):
+        return [
+            self._update_human_pos_x,
+            self._update_human_pos_y,
+            self._update_human_pos_z,
+        ]
+
+    @update_human_pos.setter
+    def update_human_pos(self, val):
+        if val is not None:
+            self._update_human_pos_x = val[0]
+            self._update_human_pos_y = val[1]
+            self._update_human_pos_z = val[2]
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Get the agent locations
+        robot_pos = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
+        )
+        human_pos = np.array(
+            self._sim.get_agent_data(1).articulated_agent.base_pos
+        )
+
+        self.human_pos_list.append(human_pos)
+        self.robot_pos_list.append(robot_pos)
+
+        # Compute the distance based on the L2 norm
+        dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
+        # Add the current distance to compute average distance
+        self._dis += dis
+
+        # Increase the step counter
+        self._step += 1
+
+        # Check if human has been found
+        found_human = False
+        if self._check_human_dis(
+            robot_pos, human_pos
+        ) and self._check_look_at_human(human_pos, robot_pos):
+            found_human = True
+            self._has_found_human = True
+            self._found_human_times += 1
+
+        # Check if the human has been found based on one condition
+        found_human_dis = False
+        if self._check_human_dis(robot_pos, human_pos):
+            found_human_dis = True
+            self._has_found_human_dis = True
+            self._found_human_times_dis += 1
+
+        # We increase the travel distance if the robot has not yet found the human
+        if not found_human and not self._has_found_human:
+            self._agent_episode_distance += np.linalg.norm(
+                self._prev_pos - robot_pos, ord=2, axis=-1
+            )
+
+        # Compute the metrics after finding the human
+        if self._has_found_human:
+            self._dis_after_found += dis
+            self._after_found_human_times += found_human
+
+        if self._has_found_human_dis:
+            self._after_found_human_times_dis += found_human_dis
+
+        # Record the step taken to find the human
+        if self._has_found_human and self._has_found_human_step == 1500:
+            self._has_found_human_step = self._step
+
+        # Record the step taken to find the human based on distance condition
+        if (
+            self._has_found_human_dis
+            and self._has_found_human_step_dis == 1500
+        ):
+            self._has_found_human_step_dis = self._step
+
+        # Compute the minimum distance only when the minimum distance has not found yet
+        if (
+            self._min_start_end_episode_step == float("inf")
+            and self._enable_shortest_path_computation
+        ):
+            robot_to_human_min_step = task.actions[
+                "agent_1_oracle_nav_randcoord_action"
+            ]._compute_robot_to_human_min_step(
+                self._robot_init_trans, human_pos, self.human_pos_list
+            )
+
+            if robot_to_human_min_step <= self._step:
+                robot_to_human_min_step = self._step
+            else:
+                robot_to_human_min_step = float("inf")
+
+            # Update the minimum SPL
+            self._min_start_end_episode_step = min(
+                self._min_start_end_episode_step, robot_to_human_min_step
+            )
+
+        # Compute the SPL before finding the human
+
+        try:
+            first_found_spl = (
+                self._has_found_human
+                * self._start_end_episode_distance
+                / max(
+                    self._start_end_episode_distance,
+                    self._agent_episode_distance,
+                )
+            )
+            first_encounter_spl = (
+                self._has_found_human
+                * self._min_start_end_episode_step
+                / max(
+                    self._min_start_end_episode_step,
+                    self._has_found_human_step,
+                )
+            )
+            first_encounter_spl_dis = (
+                self._has_found_human_dis
+                * self._min_start_end_episode_step
+                / max(
+                    self._min_start_end_episode_step,
+                    self._has_found_human_step_dis,
+                )
+            )
+        except Exception:
+            first_found_spl = 0.0
+            first_encounter_spl = 0.0
+            first_encounter_spl_dis = 0.0
+
+        if np.isnan(first_found_spl):
+            first_found_spl = 0.0
+        if np.isnan(first_encounter_spl):
+            first_encounter_spl = 0.0
+        if np.isnan(first_encounter_spl_dis):
+            first_encounter_spl_dis = 0.0
+
+        human_rotate = 1
+        if np.linalg.norm(self._prev_human_pos - human_pos) > 0.001:
+            human_rotate = 0
+
+        self._prev_pos = robot_pos
+        self._prev_human_pos = human_pos
+
+        self._metric = {
+            "human_goal_x": self._update_human_pos_x,
+            "human_goal_y": self._update_human_pos_y,
+            "human_goal_z": self._update_human_pos_z,
+            "human_rotate": human_rotate,
+            "found_human": found_human,
+            "dis": dis,
+            "has_found_human": self._has_found_human,
+            "found_human_rate_over_epi": self._found_human_times / self._step,
+            "found_human_rate_after_found_over_epi": self._after_found_human_times
+            / self._step_after_found,
+            "avg_robot_to_human_dis_over_epi": self._dis / self._step,
+            "avg_robot_to_human_after_found_dis_over_epi": self._dis_after_found
+            / self._step_after_found,
+            "first_found_spl": first_found_spl,
+            # The ones we use to report in the paper
+            "first_encounter_spl": first_encounter_spl,
+            "frist_ecnounter_steps": self._has_found_human_step,
+            "frist_ecnounter_steps_ratio": self._has_found_human_step
+            / self._min_start_end_episode_step,
+            "follow_human_steps_after_frist_encounter": self._after_found_human_times,
+            "follow_human_steps_ratio_after_frist_encounter": self._after_found_human_times
+            / (self._total_step - self._min_start_end_episode_step),
+            # The ones we use to report in the paper only based on the distance condition
+            "first_encounter_spl_dis": first_encounter_spl_dis,
+            "frist_ecnounter_steps_dis": self._has_found_human_step_dis,
+            "frist_ecnounter_steps_ratio_dis": self._has_found_human_step_dis
+            / self._min_start_end_episode_step,
+            "follow_human_steps_after_frist_encounter_dis": self._after_found_human_times_dis,
+            "follow_human_steps_ratio_after_frist_encounter_dis": self._after_found_human_times_dis
+            / (self._total_step - self._min_start_end_episode_step),
+        }
+
+        if self._has_found_human:
+            self._step_after_found += 1

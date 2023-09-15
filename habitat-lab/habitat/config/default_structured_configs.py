@@ -75,6 +75,7 @@ __all__ = [
     "RotDistToGoalMeasurementConfig",
     "CompositeStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
+    "SocialNavStatsMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -83,6 +84,7 @@ __all__ = [
     "ArtObjSuccessMeasurementConfig",
     "ArtObjRewardMeasurementConfig",
     "NavToObjSuccessMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
     # PROFILING MEASURES
@@ -1003,6 +1005,21 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class SocialNavStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    For evaluating social nav
+    """
+    type: str = "SocialNavStats"
+    check_human_in_frame: bool = False
+    min_dis_human: float = 1.0
+    max_dis_human: float = 2.0
+    human_id: int = 100
+    human_detect_pixel_threshold: int = 1000
+    total_steps: int = 1500
+    enable_shortest_path_computation: bool = False
+
+
+@dataclass
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation task only. The reward for rearrangement navigation.
@@ -1039,6 +1056,29 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+
+
+@dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+
+    :property must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :property success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
+    type: str = "SocialNavSeekSuccess"
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+    # distance
+    following_step_succ_threshold: int = 800
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    need_to_face_human: bool = False
+    use_geo_distance: bool = False
+    facing_threshold: float = 0.5
 
 
 @dataclass
@@ -2404,6 +2444,12 @@ cs.store(
     node=ExplorationReward,
 )
 cs.store(
+    package="habitat.task.measurements.social_nav_stats",
+    group="habitat/task/measurements",
+    name="social_nav_stats",
+    node=SocialNavStatsMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",
     group="habitat/task/measurements",
     name="cooperate_subgoal_reward",
@@ -2492,6 +2538,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_nav_to_obj_success",
     node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_nav_to_obj_reward",
