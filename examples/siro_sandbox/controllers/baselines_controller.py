@@ -291,6 +291,17 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         return rho, phi
 
+    def get_geodesic_distance_obj_coords(self, obj_trans, env):
+        # TODO: we use geodesic_distance here
+        articulated_agent_T = self.get_articulated_agent().base_transformation
+        rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
+        rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
+        rho = self._habitat_env._sim.geodesic_distance(
+            obj_trans, articulated_agent_T.translation
+        )
+
+        return rho, phi
+
     def check_if_skill_done(self, observations, skill_name):
         """Check if the skill is done"""
         ll_skil = self._agent.actor_critic._skills[  # type: ignore
@@ -326,7 +337,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         # Only take the goal object
 
-        rho, phi = self.get_cartesian_obj_coords(obj_trans, env)
+        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans, env)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
         with torch.no_grad():
