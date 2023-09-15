@@ -10,13 +10,12 @@ from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
+from utils.gui.gui_input import GuiInput
+from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
-
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.text_drawer import TextOnScreenAlignment
 
 
 class AppStateRearrange(AppState):

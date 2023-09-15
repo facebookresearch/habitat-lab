@@ -11,8 +11,8 @@ import time
 import magnum as mn
 from magnum.platform.glfw import Application
 
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.text_drawer import TextOnScreenAlignment
+from .gui_input import GuiInput
+from .text_drawer import TextOnScreenAlignment
 
 
 class GuiAppDriver:

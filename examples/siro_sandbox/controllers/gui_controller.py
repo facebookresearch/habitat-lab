@@ -8,9 +8,9 @@ from typing import Any
 
 import magnum as mn
 import numpy as np
+from utils.gui.gui_input import GuiInput
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
-from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 
 from .controller_abc import GuiController
