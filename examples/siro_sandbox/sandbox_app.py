@@ -89,12 +89,13 @@ def requires_habitat_sim_with_bullet(callable_):
 
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
-    def __init__(self, args, config, gui_input, line_render, text_drawer):
+    def __init__(self, args, config, gui_input, line_render, text_drawer, renderer):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
         self._args = args
         self._gui_input = gui_input
+        self._renderer = renderer
 
         line_render.set_line_width(3)
 
@@ -488,6 +489,15 @@ class SandboxDriver(GuiAppDriver):
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
 
+        # Manually save recorded gfx-replay keyframes.
+        if self._gui_input.get_key_down(GuiInput.KeyNS.MINUS):
+            self._renderer.start_video_recording()
+        if self._gui_input.get_key_down(GuiInput.KeyNS.EQUAL):
+            if self._save_gfx_replay_keyframes:
+                self._save_recorded_keyframes_to_file()
+            self._renderer.save_video()
+
+        
         if self._args.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
             # hides all render instances with a filepath starting with
@@ -926,6 +936,7 @@ if __name__ == "__main__":
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
+        app_renderer
     )
 
     # sanity check if there are no agents with camera sensors
