@@ -54,16 +54,15 @@ class NavSkillPolicy(NnSkillPolicy):
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
-
-        if NavGoalPointGoalSensor.cls_uuid in ret_obs:
-            for i, batch_i in enumerate(cur_batch_idx):
-                if self._cur_skill_args[batch_i].is_target:
-                    replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
-                else:
-                    replace_sensor = TargetStartGpsCompassSensor.cls_uuid
-                ret_obs[NavGoalPointGoalSensor.cls_uuid][i] = observations[
-                    replace_sensor
-                ][i, :2]
+        # if NavGoalPointGoalSensor.cls_uuid in ret_obs:
+        #     for i, batch_i in enumerate(cur_batch_idx):
+        #         if self._cur_skill_args[batch_i].is_target:
+        #             replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
+        #         else:
+        #             replace_sensor = TargetStartGpsCompassSensor.cls_uuid
+        #         ret_obs[NavGoalPointGoalSensor.cls_uuid][i] = observations[
+        #             replace_sensor
+        #         ][i, :2]
         return ret_obs
 
     def _get_multi_sensor_index(self, batch_idx):

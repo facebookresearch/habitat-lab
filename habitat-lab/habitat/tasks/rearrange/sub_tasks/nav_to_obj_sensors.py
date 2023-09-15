@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -33,6 +34,7 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
+        self._goal_is_human = True
         super().__init__(*args, task=task, **kwargs)
 
     def _get_uuid(self, *args, **kwargs):
@@ -53,6 +55,10 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
+
+        if self._goal_is_human:
+            human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+            task.nav_goal_pos = np.array(human_pos)
 
         dir_vector = articulated_agent_T.inverted().transform_point(
             task.nav_goal_pos
@@ -165,6 +171,7 @@ class DistToGoal(Measure):
         self._config = config
         self._sim = sim
         self._prev_dist = None
+        self._use_geo_distance = config.use_geo_distance
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -178,10 +185,30 @@ class DistToGoal(Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
+        position_robot = np.array(
+            self._sim.get_agent_data(0).articulated_agent.base_pos
         )
+
+        if self._use_geo_distance:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = np.array(position_robot)
+            path.requested_end = task.nav_goal_pos
+            found_path = self._sim.pathfinder.find_path(path)
+
+        if not self._use_geo_distance or not found_path:
+            return np.linalg.norm(
+                np.array(
+                    self._sim.get_agent_data(0).articulated_agent.base_pos
+                )[[0, 2]]
+                - task.nav_goal_pos[[0, 2]]
+            )
+        else:
+            position_robot = np.array(
+                self._sim.get_agent_data(0).articulated_agent.base_pos
+            )
+            return self._sim.geodesic_distance(
+                position_robot, task.nav_goal_pos
+            )
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -279,6 +306,94 @@ class NavToObjSuccess(Measure):
         nav_pos_succ = task.measurements.measures[
             NavToPosSucc.cls_uuid
         ].get_metric()
+
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
+        if self._config.must_look_at_targ:
+            self._metric = (
+                nav_pos_succ and angle_dist < self._config.success_angle_dist
+            )
+        else:
+            self._metric = nav_pos_succ
+
+        if self._config.must_call_stop:
+            if called_stop:
+                task.should_end = True
+            else:
+                self._metric = False
+
+
+@registry.register_measure
+class SocialNavSeekSuccess(Measure):
+    cls_uuid: str = "nav_seek_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavSeekSuccess.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+        )
+        self._following_step = 0
+        self.update_metric(*args, task=task, **kwargs)
+
+    def __init__(self, *args, config, sim, **kwargs):
+        self._config = config
+        self._sim = sim
+
+        super().__init__(*args, config=config, **kwargs)
+        self._following_step = 0
+        self._following_step_succ_threshold = (
+            config.following_step_succ_threshold
+        )  # prev: 300
+        self._safe_dis_min = config.safe_dis_min
+        self._safe_dis_max = config.safe_dis_max
+        self._use_geo_distance = config.use_geo_distance
+        self._need_to_face_human = config.need_to_face_human
+        self._facing_threshold = config.facing_threshold
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        angle_dist = task.measurements.measures[
+            RotDistToGoal.cls_uuid
+        ].get_metric()
+
+        position_human = observations["agent_1_localization_sensor"][:3]
+        position_robot = observations["agent_0_localization_sensor"][:3]
+
+        if self._use_geo_distance:
+            dist = self._sim.geodesic_distance(position_robot, position_human)
+        else:
+            dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+
+        # for computing facing to human
+        vector_human_robot = position_human - position_robot
+        vector_human_robot = vector_human_robot / np.linalg.norm(
+            vector_human_robot
+        )
+        base_T = self._sim.get_agent_data(
+            0
+        ).articulated_agent.base_transformation
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = (
+            np.dot(forward_robot.normalized(), vector_human_robot)
+            > self._facing_threshold
+        )
+
+        if (
+            dist >= self._safe_dis_min
+            and dist < self._safe_dis_max
+            and self._need_to_face_human
+            and facing
+        ):
+            self._following_step += 1
+
+        nav_pos_succ = False
+        if self._following_step >= self._following_step_succ_threshold:
+            nav_pos_succ = True
 
         called_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid

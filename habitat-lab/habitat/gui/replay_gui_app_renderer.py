@@ -13,8 +13,14 @@ from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
 from habitat.gui.text_drawer import TextDrawer, TextOnScreenAlignment
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
+from typing import List, Dict
 
 class ReplayGuiAppRenderer(GuiAppRenderer):
+    _recording_images: List[Dict[str, np.ndarray]] = []
+    _gpu_to_cpu_image: mn.MutableImageView2D = None
+    _gpu_to_cpu_buffer: np.ndarray = None
+    _recording_video: bool = False
+
     def __init__(
         self,
         window_size,
@@ -95,6 +101,23 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
     def unproject(self, viewport_pos):
         return self._replay_renderer.unproject(0, viewport_pos)
 
+    def start_video_recording(self):
+        self._recording_video = True
+    
+    def save_video(self):
+        if self._recording_video:
+            habitat_sim.utils.viz_utils.make_video(
+                observations=self._recording_images,
+                primary_obs="s",
+                primary_obs_type="color", # Dummy sensor name
+                video_file="output",
+                fps=30,
+            )
+            exit()
+        else:
+            print("No frame recorded. Press '-' to start recording video.")
+    
+
     def render_update(self, dt):
         if not self._need_render:
             return False
@@ -140,9 +163,40 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
                 dest_y -= im_height + text_pad_y
 
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
-        mn.gl.default_framebuffer.bind()
-        self._text_drawer.draw_text()
+        # Disabled to take videos
+        #mn.gl.default_framebuffer.bind()
+        #self._text_drawer.draw_text()
 
+        # Record video
+        if self._recording_video:
+            viewport = mn.gl.default_framebuffer.viewport
+            if self._gpu_to_cpu_buffer is None:
+                self._gpu_to_cpu_buffer = np.empty(
+                    (
+                        viewport.size_y(),
+                        viewport.size_x(),
+                        3,
+                    ),
+                    dtype=np.uint8,
+                )
+                self._gpu_to_cpu_image = mn.MutableImageView2D(
+                    mn.PixelFormat.RGB8_UNORM,
+                    [
+                        viewport.size_x(),
+                        viewport.size_y(),
+                    ],
+                    self._gpu_to_cpu_buffer,
+                )
+                # Flip the view for presentation
+                self._gpu_to_cpu_buffer = np.flip(
+                    self._gpu_to_cpu_buffer.view(), axis=0
+                )
+            rect = mn.Range2Di(
+                mn.Vector2i(), 
+                mn.Vector2i(viewport.size_x(), viewport.size_y())
+                )
+            mn.gl.default_framebuffer.read(rect, self._gpu_to_cpu_image)
+            self._recording_images.append({'s': self._gpu_to_cpu_buffer.copy()}) # 's' is a dummy sensor name
         self._need_render = False
 
         return True
