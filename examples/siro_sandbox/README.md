@@ -14,72 +14,67 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
 
 # Example commands
-### GUI-controlled humanoid and learned-policy-controlled Spot
+### GUI-controlled humanoid and learned-policy-controlled Spot, HSSD
 
-* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, in HSSD run:
-```
+To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD, run:
+```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
+--app-state rearrange \
 --cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
+habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=1.0 \
+habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.ang_speed=1.0 \
+habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz \
 ~habitat.task.measurements.agent_blame_measure
 ```
 
-<!-- 
-July 18th: the commands below are commented-out because they are broken.
-
-* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
-```
+To launch GUI-controlled humanoid and trained-policy-controlled Spot in HSSD, download [checkpoint](https://drive.google.com/file/d/1kRAB4JgZf4XU__xk8hU8vIgJg9F8Itx5/view?usp=sharing), place it under data/siro_checkpoints/human-spot-GTCoord.pth, and run:
+```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-~habitat.task.measurements.agent_blame_measure
-```
-
-* To launch random-policy-controlled humanoid and Spot in [free camera mode](#gui-controlled-agents-and-free-camera-mode), run:
-```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-~habitat.task.measurements.agent_blame_measure
-```
-
-To use **trained**-policy-controlled agent(s) instead of random-policy-controlled:
-1. Download the pre-trained [checkpoint](https://drive.google.com/file/d/1swH5ZUgxe3xQn_k0s5OD7Ow6-mwCN_ic/view?usp=share_link) (150 updates).
-2.  Run two above commands with the following `--cfg-opts`:
-```
+--app-state rearrange \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=True \
-habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
+habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
+habitat_baselines.eval_ckpt_path_dir=data/siro_checkpoints/human-spot-GTCoord.pth \
+habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=1.0 \
+habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.ang_speed=1.0 \
+habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz \
+~habitat.task.measurements.agent_blame_measure
 ```
--->
+
+### Solo GUI-controlled humanoid, ReplicaCAD
+To launch solo GUI-controlled humanoid in ReplicaCAD, run:
+```bash
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--gui-controlled-agent-index 0 \
+--never-end \
+--app-state rearrange \
+--cfg experiments_hab3/single_agent_pddl_planner_kinematic_oracle_humanoid.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1
+```
 
 
 # Controls
 * See on-screen help text for common keyboard and mouse controls
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
-* For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 # Workaround to use a rigid-skeleton humanoid
 Following the default install instructions, a broken skinned humanoid is rendered. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning. `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
@@ -102,7 +97,7 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 # Command-line Options
 
 ## App State and use cases
-Use `--app-state rearrange` (default) or `--app-state fetch`. These correspond to the different use cases for the HITL tool. See also `app_state_rearrange.py` and `app_state_fetch.py`.
+Use `--app-state rearrange` to run rearrange task in the sandbox  app. Supported app states: `rearrange` (default), `fetch`, `socialnav`, `free_camera`. These correspond to the different use cases for the HITL tool (see corresponding implementations in `app_states/app_state_<state name>.py` files). Note, `free_camera` is special: it's not a "task" state, it's a state that lets the user control the camera instead of controlling an agent (useful for debugging and policies' behaviour visualisation). Also, `tutorial` is a special state that shows a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. Tutorial should be followed by the task app state (`rearrange`, `fetch` or `socialnav`) and is currently supported only for the rearrange task.
 
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
