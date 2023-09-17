@@ -1243,6 +1243,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_steps_to_reach_surface: int = 0
     robot_collisions_pen: float = 0.0
     robot_collisions_end_pen: float = 0.0
+    penalize_wrong_drop_once: bool = False
 
 
 @dataclass
