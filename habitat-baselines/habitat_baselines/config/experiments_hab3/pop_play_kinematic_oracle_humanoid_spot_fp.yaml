@@ -40,7 +40,7 @@ habitat_baselines:
   num_updates: -1
   total_num_steps: 1e8
   log_interval: 1
-  num_checkpoints: 20
+  num_checkpoints: 50
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False

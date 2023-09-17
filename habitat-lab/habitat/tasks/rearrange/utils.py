@@ -8,6 +8,7 @@ import logging
 import os
 import os.path as osp
 import pickle
+import json
 import time
 from typing import List, Optional, Tuple
 
@@ -397,14 +398,15 @@ def get_info_episode_final(info_dict):
 
 def write_episode_data(episode_summary, episode_data_dir, ep_id, eval_num=None):
     os.makedirs(episode_data_dir, exist_ok=True)
-    filepath = osp.join(episode_data_dir, f"episode_{ep_id}_info.pkl")
+    filepath = osp.join(episode_data_dir, f"episode_{ep_id}_info.json")
     if eval_num is not None:
         filepath = osp.join(
-            episode_data_dir, f"episode_{ep_id}_eval_{int(eval_num)}_info.pkl"
+            episode_data_dir, f"episode_{ep_id}_eval_{int(eval_num)}_info.json"
         )
 
-    with open(filepath, "wb+") as f:
-        pickle.dump(episode_summary, f)
+    with open(filepath, "w+") as f:
+        # pickle.dump(episode_summary, f)
+        json.dump(episode_summary, f)
 
 
 def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):

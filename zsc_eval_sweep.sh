@@ -11,7 +11,7 @@ plan_idxs="-4 -3 -2 -1"
 zsc_ckpt_dir="/fsx-siro/akshararai/hab3/zsc_eval/zsc_ckpts"
 learned_agents="ckpt.0.pth  ckpt.1.pth  ckpt.2.pth  ckpt.3.pth  ckpt.4.pth  ckpt.5.pth"
 # learned_agents="/fsx-siro/akshararai/hab3/GTCoord/2023-08-19/00-07-24/0/checkpoints/latest.pth"
-zsc_data_dir="/fsx-siro/akshararai/hab3/zsc_eval/zsc_eval_data/speed_5/"$SWEEP_SUBDIR
+zsc_data_dir="/fsx-siro/akshararai/hab3/zsc_eval/zsc_eval_data/zsc_eval_no_end/speed_10/"$SWEEP_SUBDIR
 
 dirs="8 9 10 11"
 # for dir in "$SWEEP_DIR"/*/; do
@@ -36,7 +36,8 @@ for dir in $dirs; do
         habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 \
         habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.ang_speed=10.0 \
         habitat.environment.max_episode_steps=1500 \
-        habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=True \
+        habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+        habitat.task.lab_sensors.agent_1_should_replan.x_len=-1.0 habitat.task.lab_sensors.agent_1_should_replan.y_len=-1.0 \
         habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True \
         habitat_baselines.eval.should_load_ckpt=True habitat_baselines.eval.evals_per_ep=3 \
         hydra/launcher=aws_submitit_habitat hydra/output=aws_path hydra.job.name='zsc_eval_plan_'$subdir$plan_idx &
@@ -59,7 +60,8 @@ for dir in $dirs; do
         habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 \
         habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.ang_speed=10.0 \
         habitat.environment.max_episode_steps=1500 \
-        habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=True \
+        habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+        habitat.task.lab_sensors.agent_1_should_replan.x_len=-1.0 habitat.task.lab_sensors.agent_1_should_replan.y_len=-1.0 \
         habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True \
         habitat_baselines.eval.should_load_ckpt=True habitat_baselines.eval.evals_per_ep=3 \
         habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz \

@@ -83,6 +83,7 @@ def get_episode_info(file_name):
         else:
             num_steps_fail = np.nan
         metrics["num_steps_fail"] = num_steps_fail
+        metrics["num_steps_fail2"] = num_steps_fail
 
     # base_dir = os.path.dirname(json_name)
 
@@ -105,10 +106,8 @@ def aggregate_per_episode_dict(dict_data, average=False, std=False, solo_data=No
             if episode_id in solo_data:
                 for iter in range(len(episode_data)):
                     if np.isnan(episode_data[iter]["num_steps_fail"]):
-                        episode_data[iter]["num_steps_fail"] = np.min([solo_data[episode_id]["num_steps"] * 1.5, MAX_NUM_STEPS])
-                        # episode_data[iter]["num_steps_fail"] = solo_data[episode_id]["num_steps"]*1.5
-
-
+                        episode_data[iter]["num_steps_fail2"] = np.min([solo_data[episode_id]["num_steps"] * 1.5, MAX_NUM_STEPS])
+                        episode_data[iter]["num_steps_fail"] = solo_data[episode_id]["num_steps"]*1.5
                         # print("num_steps_fail is nan, composite success is", episode_data[iter]["composite_success"], " and solo success is ", solo_data[episode_id]["composite_success"])
                         # print("setting num_steps_fail to ", episode_data[iter]["num_steps_fail"], "solo num_steps is ", solo_data[episode_id]["num_steps"])
             else:
@@ -185,6 +184,9 @@ def get_checkpoint_results(ckpt_path, separate_agent=False, solo_dict=None):
     pool.close()
     pool.join()
     res = [r for r in res if r[0] is not None]
+    # res = []
+    # for i in range(len(all_files)):
+    #     res.append(process_file(all_files[i]))
     # num_threads = 24  # You can adjust this value based on your system's capabilities
     # with ThreadPoolExecutor(max_workers=num_threads) as executor:
     #     res = executor.map(process_file, all_files)
@@ -231,14 +233,19 @@ def relative_metric(episode_baseline_data, episode_solo_data):
     REMT = (
         episode_solo_data["num_steps"] / episode_baseline_data["num_steps_fail"]
     ) * 100
-
+    REMT2 = (
+        episode_solo_data["num_steps"] / episode_baseline_data["num_steps_fail2"]
+    ) * 100
+    if REMT2 < REMT:
+        print("REMT2 is ", REMT2, "REMT is ", REMT, "composite success is ", composite_success, "efficiency is ", efficiency)
+        print("num steps fail is ", episode_baseline_data["num_steps_fail"], "num steps fail2 is ", episode_baseline_data["num_steps_fail2"])
     # average efficiency when composite success is 1.0
     if composite_success == 1.0:
         RES = efficiency * 100
     else:
         RES = np.nan
     composite_success *= 100
-    return {"composite_success": composite_success, "RE": RE, "RE_MT": REMT, "RES": RES}
+    return {"composite_success": composite_success, "RE_MT2": REMT2}
 
 
 def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
@@ -270,18 +277,23 @@ def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
 def compute_relative_metrics_multi_ckpt(
     experiments_path_dict, solo_path, latex=False, verbose=False
 ):
+    # import ipdb; ipdb.set_trace()
     # Computes and prints metrics for all baselines
     # given the path of the solo episodes, and a dictionary baseline_name: path_res_baselines
     solo, _ = get_checkpoint_results(solo_path)
+    results_across_seeds = {}
+    compiled_results_success = []
+    compiled_results_efficiency = []
     for baseline_name, baselines_path in experiments_path_dict.items():
+        print("baseline name ", baseline_name, " baseline path ", baselines_path)
         all_results = []
-        all_results_zsc = {}
 
         if verbose:
             print(f"Computing {baseline_name}...")
         for baseline_path in tqdm(baselines_path, disable= not verbose):
+            all_results_zsc = {}
             if type(baselines_path) == list:
-                baseline, _ = get_checkpoint_results(baseline_path, separate_agent=False, solo_dict=solo)
+                baseline, _ = get_checkpoint_results(baseline_path, separate_agent=True, solo_dict=solo)
 
             elif type(baselines_path) == dict:
                 baseline, baseline_diff_zsc = get_checkpoint_results(
@@ -301,24 +313,51 @@ def compute_relative_metrics_multi_ckpt(
                     if agent_name not in all_results_zsc:
                         all_results_zsc[agent_name] = []
                     all_results_zsc[agent_name].append(curr_res)
-
+        
+            results_across_seeds[baseline_path] = all_results_zsc
+        
         results_baseline = aggregate_per_episode_dict(
             {"all_episodes": all_results}, average=True, std=True
         )["all_episodes"]
+        # ipdb.set_trace()
 
 
         metrics_str = pretty_print(results_baseline, latex=latex)
         print(f"{baseline_name}: {metrics_str}")
 
+        for baseline_path in sorted(results_across_seeds):
+            all_results_zsc = results_across_seeds[baseline_path]
+            for agent_name in all_results_zsc:
+                all_res = all_results_zsc[agent_name]
+                res_zsc = aggregate_per_episode_dict(
+                    {"all_episodes": all_res}, average=True, std=True
+                )["all_episodes"]
+                compiled_results_success.append(res_zsc["composite_success"][0])
+                compiled_results_efficiency.append(res_zsc["RE_MT2"][0])
+                metrics_str = pretty_print(res_zsc, latex=latex)
+                print(f"{baseline_name}.{agent_name}: {metrics_str}")
+
+        # print('-----')
+        # avg_across_agents = {key: 0 for key in res_zsc.keys()}
         # for agent_name in all_results_zsc:
+        #     # average composite success and other metrics per agent
         #     all_res = all_results_zsc[agent_name]
         #     res_zsc = aggregate_per_episode_dict(
         #         {"all_episodes": all_res}, average=True, std=True
         #     )["all_episodes"]
-        #     metrics_str = pretty_print(res_zsc, latex=latex)
-        #     print(f"{baseline_name}.{agent_name}: {metrics_str}")
-
+        #     for metric_name in res_zsc:
+        #         avg_across_agents[metric_name] += res_zsc[metric_name][0]
+        # for metric_name in avg_across_agents:
+        #     avg_across_agents[metric_name] /= len(all_results_zsc)
+        # for metric_name in avg_across_agents:
+        #     avg_across_agents[metric_name] = (avg_across_agents[metric_name], 0.0)
+        # metrics_str = pretty_print(avg_across_agents, latex=latex)
+        # print(f"{baseline_name}.avg_across_agents: {metrics_str}")
         # print('-----')
+        mean_success, std_success = np.mean(compiled_results_success), np.std(compiled_results_success)
+        mean_efficiency, std_efficiency = np.mean(compiled_results_efficiency), np.std(compiled_results_efficiency)
+        print(f"{baseline_name}.compiled_results_success: {mean_success} \u00B1 {std_success}")
+        print(f"{baseline_name}.compiled_results_efficiency: {mean_efficiency} \u00B1 {std_efficiency}")
 
 def compute_all_metrics(latex_print=False):
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
@@ -356,79 +395,100 @@ def extend_exps_zsc(dict_exps):
 
 def compute_all_metrics_zsc(latex_print=False):
     # root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
-    root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/zsc_eval_data/zsc_eval_no_end/"
+    root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/zsc_eval_data/zsc_old_ckpt/zsc_eval_no_end/"
     root_dir_train_pop = '/fsx-siro/akshararai/hab3'
+    root = "/fsx-siro/xavierpuig/multirun_latest"
     solo_path = (
         "/fsx-siro/akshararai/hab3/eval_solo/0/eval_data_multi_ep_speed_10"
     )
     experiments_path = {
-        "Plan_play_-1": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
-        ],
-        "Plan_play_-2": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
-        ],
-        "Plan_play_-3": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
-        ],
-        "Plan_play_-4": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
-        ],
-        "GT_coord": [
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
-        ],
-        "Pop_play": [
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
-        ],
+        # "Plan_play_-2": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
+        # ],
+        # "Plan_play_-1": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
+        # ],
+        # "Plan_play_-3": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
+        # ],
+        # "Plan_play_-4": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
+        # ],
+        # "GT_coord": [
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
+        # ],
+        # "Pop_play": [
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
+        # ],
 
-        "Plan_play_-1_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
-        ],
-        "Plan_play_-2_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
-        ],
-        "Plan_play_-3_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
-        ],
-        "Plan_play_-4_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
-        ],
-        "GT_coord_train-pop": [
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
-        ],
-        "Pop_play_train-pop": [
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
+        # "Plan_play_-1_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
+        # ],
+        # "Plan_play_-2_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
+        # ],
+        # "Plan_play_-3_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
+        # ],
+        # "Plan_play_-4_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
+        # ],
+        # "GT_coord_train-pop": [
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
+        # ],
+        # "Pop_play_train-pop": [
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
+        # ],
+        # "Plan_play_-2": [
+        # f"{root}/learned_skills_iclr/zsc_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/10",
+        # f"{root}/learned_skills_iclr/zsc_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/2",
+        # f"{root}/learned_skills_iclr/zsc_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/6",
+        # ],
+        # "Plan_play_-2_train-pop": [
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/10",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/2",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/6",
+        # ],
+        # "GTCoord-oracle-nav": [
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_oracle_nav/GTCoord/2023-08-19/00-07-24/0",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_oracle_nav/GTCoord/2023-08-19/00-07-24/1",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_oracle_nav/GTCoord/2023-08-19/00-07-24/2",
+        # ],
+        "GTCoord_train-pop": [
+        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/0",
+        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/1",
+        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/2",
         ],
     }
 
     experiments_path = extend_exps_zsc(experiments_path)
 
     compute_relative_metrics_multi_ckpt(
-        experiments_path, solo_path, latex=latex_print
+        experiments_path, solo_path, latex=latex_print, verbose=True
     )
     # print("-----")
     # experiments_path = extend_exps_zsc(experiments_path2)

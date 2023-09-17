@@ -33,19 +33,18 @@ for dir in "$SWEEP_DIR"/*/; do
     # habitat_baselines.eval_ckpt_path_dir="${dir}"/checkpoints/latest.pth \
     # habitat_baselines.writer_type=tb habitat_baselines.num_environments=12 \
     # habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz \
-    # habitat_baselines.video_dir="${dir}"/video_multi_ep_speed_10 \
-    # habitat_baselines.episode_data_dir="${dir}"/eval_data_multi_ep_speed_10 \
+    # habitat_baselines.video_dir="${dir}"/eval_no_end/video_multi_ep_speed_10 \
+    # habitat_baselines.episode_data_dir="${dir}"/eval_no_end/eval_data_multi_ep_speed_10 \
     # habitat_baselines.eval.save_summary_data=True \
     # habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     # habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     # habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     # habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     # habitat.environment.max_episode_steps=1500 \
-    # habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=True \
+    # habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+    # habitat.task.lab_sensors.agent_1_should_replan.x_len=-1.0 habitat.task.lab_sensors.agent_1_should_replan.y_len=-1.0 \
     # habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True \
     # habitat_baselines.eval.should_load_ckpt=True habitat_baselines.eval.evals_per_ep=3 \
-    # habitat.task.measurements.cooperate_subgoal_reward.collide_penalty=2.0 \
-    # habitat.task.slack_reward=-0.001 \
     # hydra/launcher=aws_submitit_habitat hydra/output=aws_path hydra.job.name='eval_GTCoord' &
 
     # python habitat-baselines/habitat_baselines/run.py \
@@ -53,19 +52,18 @@ for dir in "$SWEEP_DIR"/*/; do
     # habitat_baselines.eval_ckpt_path_dir="${dir}"/checkpoints/latest.pth \
     # habitat_baselines.writer_type=tb habitat_baselines.num_environments=12 \
     # habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz \
-    # habitat_baselines.video_dir="${dir}"/video_multi_ep_speed_10 \
-    # habitat_baselines.episode_data_dir="${dir}"/eval_data_multi_ep_speed_10 \
+    # habitat_baselines.video_dir="${dir}"/eval_no_end/video_multi_ep_speed_10 \
+    # habitat_baselines.episode_data_dir="${dir}"/eval_no_end/eval_data_multi_ep_speed_10 \
     # habitat_baselines.eval.save_summary_data=True \
     # habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     # habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     # habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     # habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     # habitat.environment.max_episode_steps=1500 \
-    # habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=True \
-    # habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True \
+    # habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+    # habitat.task.lab_sensors.agent_1_should_replan.x_len=-1.0 habitat.task.lab_sensors.agent_1_should_replan.y_len=-1.0 \
+    # habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8] habitat_baselines.evaluate=True \
     # habitat_baselines.eval.should_load_ckpt=True habitat_baselines.eval.evals_per_ep=3 \
-    # habitat.task.measurements.cooperate_subgoal_reward.collide_penalty=2.0 \
-    # habitat.task.slack_reward=-0.001 \
     # hydra/launcher=aws_submitit_habitat hydra/output=aws_path hydra.job.name='eval_pp8' &
 
     python habitat-baselines/habitat_baselines/run.py \
@@ -73,19 +71,18 @@ for dir in "$SWEEP_DIR"/*/; do
     habitat_baselines.eval_ckpt_path_dir="${dir}"/checkpoints/latest.pth \
     habitat_baselines.writer_type=tb habitat_baselines.num_environments=12 \
     habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz \
-    habitat_baselines.video_dir="${dir}"/video_multi_ep_speed_10 \
-    habitat_baselines.episode_data_dir="${dir}"/eval_data_multi_ep_speed_10 \
+    habitat_baselines.video_dir="${dir}"/eval_no_end/video_multi_ep_speed_10 \
+    habitat_baselines.episode_data_dir="${dir}"/eval_no_end/eval_data_multi_ep_speed_10 \
     habitat_baselines.eval.save_summary_data=True \
     habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 \
     habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.ang_speed=10.0 \
     habitat.environment.max_episode_steps=1500 \
-    habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=True \
+    habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+    habitat.task.lab_sensors.agent_1_should_replan.x_len=-1.0 habitat.task.lab_sensors.agent_1_should_replan.y_len=-1.0 \
     habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True \
     habitat_baselines.eval.should_load_ckpt=True habitat_baselines.eval.evals_per_ep=3 \
-    habitat.task.measurements.cooperate_subgoal_reward.collide_penalty=2.0 \
-    habitat.task.slack_reward=-0.001 \
     habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx="${plan_idx}" \
     hydra/launcher=aws_submitit_habitat hydra/output=aws_path hydra.job.name='eval_plan_play_'$plan_idx &
 
