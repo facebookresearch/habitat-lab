@@ -17,10 +17,11 @@ from tqdm import tqdm
 from tabulate import tabulate
 
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-METRICS_INTEREST = ["composite_success", "num_steps", "num_steps_fail"]
+METRICS_INTEREST = ["composite_success", "num_steps", "num_steps_fail", "CR", "CRprop"]
 MAX_NUM_STEPS = 1500
-
 
 # TODO: this should go into utilities
 def pretty_print(metric_dict, latex=False, metric_names=None):
@@ -84,7 +85,11 @@ def get_episode_info(file_name):
             num_steps_fail = np.nan
         metrics["num_steps_fail"] = num_steps_fail
         metrics["num_steps_fail2"] = num_steps_fail
-
+    
+    if "num_agents_collide" in curr_result["summary"]:
+        agent_collide = curr_result["summary"]["num_agents_collide"]
+        metrics["CR"] = 1 if agent_collide > 0 else 0 
+        metrics["CRprop"] = agent_collide / curr_result["summary"]["num_steps"]
     # base_dir = os.path.dirname(json_name)
 
     # if not os.path.exists(base_dir):
@@ -96,14 +101,16 @@ def get_episode_info(file_name):
     return int(id), metrics
 
 
-def aggregate_per_episode_dict(dict_data, average=False, std=False, solo_data=None):
+def aggregate_per_episode_dict(dict_data, average=False, std=False, solo_data=None, verbose=False):
     # Given a dictionary where every episode has a list of metrics
     # Returns a dict with the metrics aggregated per episode
 
     # if num_steps_fail is nan, then set it as solo num_steps*1.5
+    if verbose:
+        breakpoint()
     if solo_data is not None:
         for episode_id, episode_data in dict_data.items():
-            if episode_id in solo_data:
+            if episode_id  in solo_data:
                 for iter in range(len(episode_data)):
                     if np.isnan(episode_data[iter]["num_steps_fail"]):
                         episode_data[iter]["num_steps_fail2"] = np.min([solo_data[episode_id]["num_steps"] * 1.5, MAX_NUM_STEPS])
@@ -116,6 +123,8 @@ def aggregate_per_episode_dict(dict_data, average=False, std=False, solo_data=No
 
 
     new_dict_data = {}
+    if verbose:
+        breakpoint()
     for episode_id, episode_data in dict_data.items():
         if len(episode_data) == 0:
             breakpoint()
@@ -245,7 +254,10 @@ def relative_metric(episode_baseline_data, episode_solo_data):
     else:
         RES = np.nan
     composite_success *= 100
-    return {"composite_success": composite_success, "RE_MT2": REMT2}
+    collision_rate = episode_baseline_data["CR"]
+
+    collision_rate_proportion = episode_baseline_data["CRprop"]
+    return {"composite_success": composite_success, "RE_MT2": REMT2, "CR": collision_rate, "CRprop": collision_rate_proportion}
 
 
 def compute_relative_metrics(per_episode_baseline_dict, per_episode_solo_dict):
@@ -281,11 +293,14 @@ def compute_relative_metrics_multi_ckpt(
     # Computes and prints metrics for all baselines
     # given the path of the solo episodes, and a dictionary baseline_name: path_res_baselines
     solo, _ = get_checkpoint_results(solo_path)
-    results_across_seeds = {}
-    compiled_results_success = []
-    compiled_results_efficiency = []
+    res_zsc_list, res_per_seed_zsc_dict = {}, {}
     for baseline_name, baselines_path in experiments_path_dict.items():
-        print("baseline name ", baseline_name, " baseline path ", baselines_path)
+        # print("baseline name ", baseline_name, " baseline path ", baselines_path)
+        compiled_results_success = []
+        compiled_results_efficiency = []
+        compiled_results_CR = []
+        results_across_seeds = {}
+    
         all_results = []
 
         if verbose:
@@ -324,19 +339,40 @@ def compute_relative_metrics_multi_ckpt(
 
         metrics_str = pretty_print(results_baseline, latex=latex)
         print(f"{baseline_name}: {metrics_str}")
-
+        results_baseline = {}
+        cont = 0
         for baseline_path in sorted(results_across_seeds):
             all_results_zsc = results_across_seeds[baseline_path]
+            res_dict_per_agent = {}
             for agent_name in all_results_zsc:
+                
                 all_res = all_results_zsc[agent_name]
                 res_zsc = aggregate_per_episode_dict(
                     {"all_episodes": all_res}, average=True, std=True
                 )["all_episodes"]
                 compiled_results_success.append(res_zsc["composite_success"][0])
                 compiled_results_efficiency.append(res_zsc["RE_MT2"][0])
+                compiled_results_CR.append(res_zsc["CR"])
+                
                 metrics_str = pretty_print(res_zsc, latex=latex)
+                
                 print(f"{baseline_name}.{agent_name}: {metrics_str}")
+                if agent_name not in results_baseline:
+                    results_baseline[agent_name] = []
 
+                # This holds the results per agent aggregated across seeds
+                res_zsc_mean = {x: v[0] for x,v in res_zsc.items()}
+                results_baseline[agent_name].append(res_zsc_mean)
+
+                # This holds the results per agent per seed
+                res_dict_per_agent[agent_name] = res_zsc_mean
+            res_per_seed_zsc_dict[f"{baseline_name}.{cont}"] = res_dict_per_agent
+            cont += 1
+        
+        res_zsc = aggregate_per_episode_dict(
+            results_baseline, average=True, std=True, verbose=False
+        )
+        # breakpoint()
         # print('-----')
         # avg_across_agents = {key: 0 for key in res_zsc.keys()}
         # for agent_name in all_results_zsc:
@@ -356,8 +392,17 @@ def compute_relative_metrics_multi_ckpt(
         # print('-----')
         mean_success, std_success = np.mean(compiled_results_success), np.std(compiled_results_success)
         mean_efficiency, std_efficiency = np.mean(compiled_results_efficiency), np.std(compiled_results_efficiency)
+        mean_CR, std_CR = np.mean(compiled_results_CR), np.std(compiled_results_CR)
         print(f"{baseline_name}.compiled_results_success: {mean_success} \u00B1 {std_success}")
         print(f"{baseline_name}.compiled_results_efficiency: {mean_efficiency} \u00B1 {std_efficiency}")
+        print(f"{baseline_name}.compiled_results_CR: {mean_CR} \u00B1 {std_CR}")
+        print("${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean_CR, std_CR))
+        res_zsc["Averaged"] = {"composite_success": (mean_success, std_success), 
+                              "RE_MT2": (mean_efficiency, std_efficiency),
+                              "CR": (mean_CR, std_CR)}
+        res_zsc_list[baseline_name] = res_zsc
+        # breakpoint()
+    return res_zsc_list, res_per_seed_zsc_dict
 
 def compute_all_metrics(latex_print=False):
     root_dir = "/fsx-siro/akshararai/hab3/zsc_eval/20_ep_data"
@@ -402,36 +447,36 @@ def compute_all_metrics_zsc(latex_print=False):
         "/fsx-siro/akshararai/hab3/eval_solo/0/eval_data_multi_ep_speed_10"
     )
     experiments_path = {
-        # "Plan_play_-2": [
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
-        # ],
-        # "Plan_play_-1": [
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
-        # ],
-        # "Plan_play_-3": [
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
-        # ],
-        # "Plan_play_-4": [
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
-        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
-        # ],
-        # "GT_coord": [
-        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
-        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
-        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
-        # ],
-        # "Pop_play": [
-        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
-        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
-        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
-        # ],
+        "Plan_play_-2": [
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
+        ],
+        "Plan_play_-1": [
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
+        ],
+        "Plan_play_-3": [
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
+        ],
+        "Plan_play_-4": [
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
+            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
+        ],
+        "GT_coord": [
+            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
+            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
+            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
+        ],
+        "Pop_play": [
+            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
+            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
+            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
+        ],
 
         # "Plan_play_-1_train-pop": [
         #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
@@ -463,6 +508,7 @@ def compute_all_metrics_zsc(latex_print=False):
         #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
         #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
         # ],
+
         # "Plan_play_-2": [
         # f"{root}/learned_skills_iclr/zsc_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/10",
         # f"{root}/learned_skills_iclr/zsc_pop_learned_skill_learned_nav/plan_play/2023-08-25/18-19-41/2",
@@ -478,18 +524,22 @@ def compute_all_metrics_zsc(latex_print=False):
         # f"{root}/learned_skills_iclr/train_pop_learned_skill_oracle_nav/GTCoord/2023-08-19/00-07-24/1",
         # f"{root}/learned_skills_iclr/train_pop_learned_skill_oracle_nav/GTCoord/2023-08-19/00-07-24/2",
         # ],
-        "GTCoord_train-pop": [
-        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/0",
-        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/1",
-        f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/2",
-        ],
+        # "GTCoord_train-pop": [
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/0",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/1",
+        # f"{root}/learned_skills_iclr/train_pop_learned_skill_learned_nav/GTCoord/2023-08-19/00-07-24/2",
+        # ],
     }
 
     experiments_path = extend_exps_zsc(experiments_path)
 
-    compute_relative_metrics_multi_ckpt(
+    results_agent_train_agent_type, results_train_agent_seed = compute_relative_metrics_multi_ckpt(
         experiments_path, solo_path, latex=latex_print, verbose=True
     )
+
+    with open("aggregated_results.pkl", "wb+") as f:
+        pkl.dump([results_agent_train_agent_type, results_train_agent_seed], f)
+    breakpoint()
     # print("-----")
     # experiments_path = extend_exps_zsc(experiments_path2)
 
@@ -498,11 +548,72 @@ def compute_all_metrics_zsc(latex_print=False):
     # )
 
 
+def str_func(dict_val, key_plot):
+    mean, std = dict_val[key_plot]
+    return "${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean, std)
+
+def convert_name(x):
+    x = x.replace("eval_data_", "").replace(".pth", "")
+    if "ckpt" in x:
+        num = int(x.split('.')[-1])
+        return "Learn-Single$_{{ {} }}$".format(num)
+    elif "plan" in x:
+        num = int(x.split("_")[-1][1:])
+        num = 5 - num
+        return "Plan$_{{ {} }}$".format(num)
+    else:
+        return x
+def convert_name_method(x):
+    x = x.replace("GT_coord", "Learn-Single")
+    x = x.replace("Pop-Play", "Learn-Pop")
+    if "Plan" in x:
+        num = 5 - int(x[-1])
+        x = "Plan-Pop$_{{ {} }}$".format(num)
+    return x
+
+def plot_per_agent_table(results_different_agents, key_plot="CR"):
+    row_labels = list(results_different_agents.keys())
+    column_labels = list(next(iter(results_different_agents.values())).keys())
+    # row_labels = [convert_name(x) for x in row_labels]
+    breakpoint()
+    index_column = [0, 1, 2, 3, 4, 5, 9, 8, 7, 6, 10]
+    column_labels = [column_labels[ind] for ind in index_column]
+    values = [[results_different_agents[row][col][key_plot][0] for col in column_labels] for row in row_labels]
+    annotations = [[str_func(results_different_agents[row][col], key_plot) for col in column_labels] for row in row_labels]
+
+    sns.set()
+    plt.figure(figsize=(15, 6)) 
+    column_labels = [convert_name(x) for x in column_labels]
+    row_labels = [convert_name_method(x) for x in row_labels]
+
+    index_row = [4, 3, 2, 0, 1, 5]
+    values = [values[ind] for ind in index_row]
+    annotations = [annotations[ind] for ind in index_row]
+    row_labels = [row_labels[ind] for ind in index_row]
+    sns.heatmap(values, annot=annotations, fmt="", xticklabels=column_labels, yticklabels=row_labels, cmap="Blues", cbar=False)
+    # Set labels for the axes
+    plt.xlabel('ZSC-Agents', fontsize=20)
+    plt.ylabel('Training agents', fontsize=20)
+    plt.xticks(fontsize=16, rotation=45)
+    plt.yticks(fontsize=16)
+    plt.axvline(x=10, ymin=0, ymax=9, color="white")
+
+
+    # Save the plot to a PDF file
+    plt.savefig('heatmap_zsc_success.pdf', format='pdf', bbox_inches='tight') 
+
+
 if __name__ == "__main__":
     print("\n\nResults")
     # compute_all_metrics(latex_print=False)
     # breakpoint()
+
     compute_all_metrics_zsc(latex_print=False)
+    
+    with open("aggregated_results.pkl", "rb") as f:
+        cont = pkl.load(f)
+    
+    plot_per_agent_table(cont[0])
     breakpoint()
     print("\n\nLATEX")
     # compute_all_metrics(latex_print=True)
