@@ -12,7 +12,3 @@ sim_sensors:
     height: 224
     width: 171
     hfov: 55
-  arm_panoptic_sensor:
-    height: 224
-    width: 171
-    hfov: 55

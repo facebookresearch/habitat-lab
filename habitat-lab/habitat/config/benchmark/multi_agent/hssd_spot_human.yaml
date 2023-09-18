@@ -4,11 +4,11 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
 
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
 
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
 
   - /habitat/dataset/rearrangement: replica_cad
 
@@ -30,6 +30,7 @@ defaults:
     - num_agents_collide
     - composite_stage_goals
     - pddl_subgoal_reward
+    - cooperate_subgoal_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -78,13 +79,11 @@ habitat:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
       agent_0_base_velocity:
-        agent_index: 0
         lin_speed: 40.0
         ang_speed: 20.0
 
       agent_0_oracle_nav_with_backing_up_action:
         type: OracleNavAction
-        agent_index : 0
         spawn_max_dist_to_obj: -1.0
         agents_dist_thresh: 1.5
         # For noncylinder navmesh action
@@ -105,15 +104,9 @@ habitat:
         longitudinal_lin_speed: 100.0
         lin_speed: 40.0
         ang_speed: 20.0
-      agent_1_base_velocity:
-        agent_index : 1
-      agent_1_rearrange_stop:
-        agent_index : 1
-      agent_1_pddl_apply_action:
-        agent_index : 1
+
       agent_1_oracle_nav_with_backing_up_action:
         type: OracleNavAction
-        agent_index : 1
         motion_control: human_joints
         spawn_max_dist_to_obj: -1.0
         collision_threshold: 0.02
