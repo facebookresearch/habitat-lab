@@ -56,6 +56,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -65,6 +66,7 @@ __all__ = [
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
+    "CollisionsTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
@@ -230,6 +232,7 @@ class ArmActionConfig(ActionConfig):
     arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
+    place_thres_dist: float = 0.5
     disable_grip: bool = False
     delta_pos_limit: float = 0.0125
     ee_ctrl_lim: float = 0.015
@@ -238,6 +241,8 @@ class ArmActionConfig(ActionConfig):
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
+
+    gym_action_prefix: str = "arm_action"
 
 
 @dataclass
@@ -250,10 +255,11 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    gym_action_prefix: str = "base_vel"
 
 
 @dataclass
-class BaseVelocityNonCylinderActionConfig(ActionConfig):
+class BaseVelocityNonCylinderActionConfig(BaseVelocityActionConfig):
     r"""
     In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
@@ -376,6 +382,9 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     # Distance threshold between two agents to issue a stop action
     agents_dist_thresh: float = -1.0
 
+    # Define the gym wrapper name
+    gym_action_prefix: str = "base_vel"
+
 
 # -----------------------------------------------------------------------------
 # # EQA actions
@@ -496,6 +505,16 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidJointSensor"
     dimensionality: int = 54 * 4
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -791,6 +810,18 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
     type: str = "ForceTerminate"
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
+
+
+@dataclass
+class CollisionsTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+    :property max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :property max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
+    type: str = "CollisionsTerminate"
+    max_scene_colls: float = -1.0
 
 
 @dataclass
@@ -1127,6 +1158,11 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+
+
+@dataclass
+class ExplorationReward(MeasurementConfig):
+    type: str = "ExplorationReward"
 
 
 @dataclass
@@ -1991,11 +2027,18 @@ cs.store(
     name="joint_sensor",
     node=JointSensorConfig,
 )
+
 cs.store(
     package="habitat.task.lab_sensors.humanoid_joint_sensor",
     group="habitat/task/lab_sensors",
     name="humanoid_joint_sensor",
     node=HumanoidJointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
@@ -2158,6 +2201,12 @@ cs.store(
     node=ForceTerminateMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.collisions_terminate",
+    group="habitat/task/measurements",
+    name="collisions_terminate",
+    node=CollisionsTerminateMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",
     group="habitat/task/measurements",
     name="end_effector_to_object_distance",
@@ -2276,6 +2325,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.exploration_reward",
+    group="habitat/task/measurements",
+    name="exploration_reward",
+    node=ExplorationReward,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",

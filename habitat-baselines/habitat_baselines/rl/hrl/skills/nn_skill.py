@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import re
 from collections import OrderedDict
 
 import gym.spaces as spaces
@@ -181,10 +182,33 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
+
+        # Hack to figure out which agent is creating this skill. This is because some
+        # skills having all the observation keys, and we only want to
+        # obs keys from the agent calling it
+
+        first_action_name = list(list(action_space.values())[0].keys())[0]
+
+        action_keys = list(policy_cfg.habitat.task.actions.keys())
+        prefix_str = ""
+        if "agent_" in first_action_name:
+            prefix_str = re.search(r"agent_\d+", first_action_name).group()
+
+        expected_obs_keys = [
+            obs_key.replace(f"{prefix_str}_", "")
+            for obs_key in expected_obs_keys
+            if not obs_key.startswith("agent")
+            or obs_key.startswith(prefix_str)
+        ]
+        action_keys = [
+            action_n.replace(f"{prefix_str}_", "")
+            for action_n in action_keys
+            if not action_n.startswith("agent")
+            or action_n.startswith(prefix_str)
+        ]
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
-
         for k in config.obs_skill_inputs:
             if k not in filtered_obs_space.spaces:
                 raise ValueError(f"Could not find {k} for skill")
@@ -196,10 +220,7 @@ class NnSkillPolicy(SkillPolicy):
         )
 
         filtered_action_space = ActionSpace(
-            OrderedDict(
-                (k, action_space[k])
-                for k in policy_cfg.habitat.task.actions.keys()
-            )
+            OrderedDict((k, action_space[k]) for k in action_keys)
         )
 
         if "arm_action" in filtered_action_space.spaces and (
@@ -216,18 +237,24 @@ class NnSkillPolicy(SkillPolicy):
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
+        if prefix_str == "":
+            prefix_str = None
 
         actor_critic = policy.from_config(
-            policy_cfg, filtered_obs_space, filtered_action_space
+            policy_cfg,
+            filtered_obs_space,
+            filtered_action_space,
+            agent_name=(prefix_str),
         )
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(
-                    {  # type: ignore
-                        k[len("actor_critic.") :]: v
-                        for k, v in ckpt_dict["state_dict"].items()
-                    }
-                )
+                if "state_dict" in ckpt_dict:
+                    actor_critic.load_state_dict(ckpt_dict["state_dict"])
+                else:
+                    agent_id = int(prefix_str.split("_")[-1])
+                    actor_critic.load_state_dict(
+                        ckpt_dict[agent_id]["state_dict"]
+                    )
 
             except Exception as e:
                 raise ValueError(

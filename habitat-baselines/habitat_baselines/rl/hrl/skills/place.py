@@ -11,9 +11,30 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
+from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.utils.common import get_num_actions
 
 
 class PlaceSkillPolicy(PickSkillPolicy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Get the action space
+        action_space = args[2]
+        for k, _ in action_space.items():
+            if k == "pick_base_velocity":
+                self.pick_start_id, self.pick_len = find_action_range(
+                    action_space, "pick_base_velocity"
+                )
+            if k == "place_base_velocity":
+                self.place_start_id, self.place_len = find_action_range(
+                    action_space, "place_base_velocity"
+                )
+
+        self._need_reset_arm = False
+
+        self._num_ac = get_num_actions(action_space)
+
     @dataclass(frozen=True)
     class PlaceSkillArgs:
         obj: int
@@ -25,9 +46,11 @@ class PlaceSkillPolicy(PickSkillPolicy):
     def _mask_pick(self, action, observations):
         # Mask out the grasp if the object is already released.
         is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
-        for i in torch.nonzero(is_not_holding):
+        if torch.nonzero(is_not_holding).sum() > 0:
             # Do not regrasp the object once it is released.
-            action[i, self._grip_ac_idx] = -1.0
+            action.actions[
+                torch.nonzero(is_not_holding), self._grip_ac_idx
+            ] = -1.0
         return action
 
     def _is_skill_done(
@@ -44,12 +67,53 @@ class PlaceSkillPolicy(PickSkillPolicy):
         )
         is_done = is_within_thresh & (~is_holding)
         if is_done.sum() > 0:
-            self._internal_log(
-                f"Terminating with {rel_resting_pos} and {is_holding}",
-            )
+            # self._internal_log(
+            #     f"Terminating with {rel_resting_pos} and {is_holding}",
+            # )
+            self.sm.hidden_state[batch_idx][is_done] *= 0
+            self.sm._prev_action[batch_idx][is_done] *= 0
         return is_done
 
     def _parse_skill_arg(self, skill_arg):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = super()._internal_act(
+            observations,
+            self.sm.hidden_state,
+            self.sm.prev_action,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+        action = self._mask_pick(action, observations)
+
+        # The skill outputs a base velocity, but we want to
+        # set it to pick_base_velocity. This is because we want
+        # to potentially have different lin_speeds
+        # For those velocities
+        place_index = slice(
+            self.place_start_id, self.place_start_id + self.place_len
+        )
+        pick_index = slice(
+            self.pick_start_id, self.pick_start_id + self.pick_len
+        )
+
+        action.actions[:, place_index] = action.actions[:, pick_index]
+        size = action.actions[:, pick_index].shape
+        action.actions[:, pick_index] = torch.zeros(size)
+        # Update the hidden state / action
+        self.sm.hidden_state[cur_batch_idx] = action.rnn_hidden_states
+        self.sm.prev_action[cur_batch_idx] = action.actions
+
+        return action

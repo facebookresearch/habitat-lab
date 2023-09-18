@@ -138,16 +138,18 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._idx_to_name[skill_i] = skill_id
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
-
-        first_idx: Optional[int] = None
-        for skill_i, skill in self._skills.items():
-            if self._idx_to_name[skill_i] == "noop":
-                continue
-            if isinstance(skill, NoopSkillPolicy):
-                if first_idx is None:
-                    first_idx = skill_i
-                else:
-                    self._skill_redirects[skill_i] = first_idx
+        # This was originally done to reuse NoopSkills, we
+        # want to comment this out cause we want different
+        # skills of type Noop to have different max_Skil_steps
+        # first_idx: Optional[int] = None
+        # for skill_i, skill in self._skills.items():
+        #     if self._idx_to_name[skill_i] == "noop":
+        #         continue
+        #     if isinstance(skill, NoopSkillPolicy):
+        #         if first_idx is None:
+        #             first_idx = skill_i
+        #         else:
+        #             self._skill_redirects[skill_i] = first_idx
 
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)
@@ -259,7 +261,25 @@ class HierarchicalPolicy(nn.Module, Policy):
                 if dat_k == "observations":
                     # Reduce the slicing required by only extracting what the
                     # skills will actually need.
-                    dat = dat.slice_keys(*self._skills[k].required_obs_keys)
+                    # TODO: This is very hacky and specific to learned nav
+                    # Would be good to remove this. Andrew
+                    if (
+                        "goal_to_agent_gps_compass"
+                        in self._skills[k].required_obs_keys
+                    ):
+                        dat = dat.slice_keys(
+                            self._skills[k].required_obs_keys
+                            + [
+                                "is_holding",
+                                "obj_goal_gps_compass",
+                                "obj_start_gps_compass",
+                            ]
+                        )
+                    else:
+                        dat = dat.slice_keys(
+                            *self._skills[k].required_obs_keys
+                        )
+
                 skill_dat[dat_k] = dat[v]
             grouped_skills[k] = (v, skill_dat)
         return grouped_skills
@@ -318,7 +338,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             actions[batch_ids] += action_data.actions
-            rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+
+            # The skill hidden states will be updated using a different wrapper
+            # We dont update rnn_hidden_states here because it would overwrite the hidden
+            # state of the high level skills
+            # rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         # Skills should not be responsible for terminating the overall episode.
         actions[:, self._stop_action_idx] = 0.0
@@ -420,10 +444,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                         "rnn_hidden_states"
                     ][batch_ids]
                     prev_actions[batch_ids] = hl_info["actions"][batch_ids]
-                elif self._skills[skill_id].has_hidden_state:
-                    raise ValueError(
-                        f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
-                    )
+
             hl_info["actions"] = prev_actions
             hl_info["rnn_hidden_states"] = rnn_hidden_states
 
@@ -529,7 +550,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         Cleans up stateful variables of the policy so that
         they match with the active environments
         """
-
         if len(envs_to_pause) == 0:
             return
         # One hot of envs to pause
@@ -543,7 +563,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             curr_envs_to_keep_active
         ]
         self._cur_skills = self._cur_skills[curr_envs_to_keep_active]
-
+        # Update the hidden state of the skills
+        for _, skill in self._skills.items():
+            if hasattr(skill, "sm"):
+                skill.sm.filter_envs(curr_envs_to_keep_active)
         self._active_envs = all_envs_to_keep_active
         self._high_level_policy.filter_envs(curr_envs_to_keep_active)
 
