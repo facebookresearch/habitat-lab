@@ -10,8 +10,10 @@ from gym import spaces
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
+    BaseVelNonCylinderAction,
     HumanoidJointAction,
 )
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
