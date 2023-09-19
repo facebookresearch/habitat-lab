@@ -75,7 +75,7 @@ class HabitatEvaluator(Evaluator):
         )
         not_done_masks = torch.zeros(
             config.habitat_baselines.num_environments,
-            1,
+            *agent.masks_shape,
             device=device,
             dtype=torch.bool,
         )

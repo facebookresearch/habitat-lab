@@ -106,6 +106,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
 
     @property
+    def masks_shape(self):
+        return (1,)
+
+    @property
     def nbuffers(self):
         return self._nbuffers
 
