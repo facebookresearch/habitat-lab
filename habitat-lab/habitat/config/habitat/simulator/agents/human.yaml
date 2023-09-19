@@ -10,9 +10,3 @@ sim_sensors:
   head_depth_sensor:
     height: 128
     width: 128
-  arm_depth_sensor:
-    height: 128
-    width: 128
-  arm_rgb_sensor:
-    height: 128
-    width: 128

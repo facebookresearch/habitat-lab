@@ -829,10 +829,12 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {"config": None}
 
+        if "config" not in ckpt_dict:
+            ckpt_dict["config"] = None
+
         config = self._get_resume_state_config_or_new_config(
             ckpt_dict["config"]
         )
-
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
@@ -864,7 +866,7 @@ class PPOTrainer(BaseRLTrainer):
                                         render_view.uuid
                                     )
 
-            config.habitat.simulator.debug_render = True
+                    config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
