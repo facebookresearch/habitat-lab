@@ -126,6 +126,7 @@ class KinematicHumanoid(MobileManipulator):
 
         if len(position) != 3:
             raise ValueError("Base position needs to be three dimensions")
+
         base_transform = self.base_transformation
         base_pos = position - self.params.base_offset
         base_transform.translation = base_pos
