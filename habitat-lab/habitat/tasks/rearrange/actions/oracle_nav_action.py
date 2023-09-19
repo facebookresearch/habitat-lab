@@ -115,6 +115,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 self._sim,
                 self._config.num_spawn_attempts,
                 1,
+                self.cur_articulated_agent,
             )
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(

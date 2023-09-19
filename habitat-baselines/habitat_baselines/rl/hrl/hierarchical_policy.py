@@ -209,6 +209,17 @@ class HierarchicalPolicy(nn.Module, Policy):
         return ret_policy_infos
 
     @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
+
+    @property
     def recurrent_hidden_size(self) -> int:
         return self._recurrent_hidden_size
 

@@ -59,14 +59,11 @@ class HabitatEvaluator(Evaluator):
         test_recurrent_hidden_states = torch.zeros(
             (
                 config.habitat_baselines.num_environments,
-                agent.actor_critic.num_recurrent_layers,
-                agent.actor_critic.recurrent_hidden_size,
+                *agent.actor_critic.hidden_state_shape,
             ),
             device=device,
         )
-        should_update_recurrent_hidden_states = (
-            np.prod(test_recurrent_hidden_states.shape) != 0
-        )
+
         prev_actions = torch.zeros(
             config.habitat_baselines.num_environments,
             *action_shape,
@@ -142,16 +139,10 @@ class HabitatEvaluator(Evaluator):
                     )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
-                    for i, should_insert in enumerate(
-                        action_data.should_inserts
-                    ):
-                        if not should_insert.item():
-                            continue
-                        if should_update_recurrent_hidden_states:
-                            test_recurrent_hidden_states[
-                                i
-                            ] = action_data.rnn_hidden_states[i]
-                        prev_actions[i].copy_(action_data.actions[i])  # type: ignore
+                    agent.actor_critic.update_hidden_state(
+                        test_recurrent_hidden_states, prev_actions, action_data
+                    )
+
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
@@ -193,7 +184,7 @@ class HabitatEvaluator(Evaluator):
                 [[not done] for done in dones],
                 dtype=torch.bool,
                 device="cpu",
-            )
+            ).repeat(1, *agent.masks_shape)
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device="cpu"
@@ -224,7 +215,7 @@ class HabitatEvaluator(Evaluator):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, disp_info
                     )
-                    if not not_done_masks[i].item():
+                    if not not_done_masks[i].any().item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         final_frame = observations_to_image(
@@ -240,7 +231,7 @@ class HabitatEvaluator(Evaluator):
                         rgb_frames[i].append(frame)
 
                 # episode ended
-                if not not_done_masks[i].item():
+                if not not_done_masks[i].any().item():
                     pbar.update()
                     episode_stats = {
                         "reward": current_episode_reward[i].item()

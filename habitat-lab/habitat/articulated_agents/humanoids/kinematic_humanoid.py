@@ -73,6 +73,14 @@ class KinematicHumanoid(MobileManipulator):
         # a path, whereas the offset transform will be changing the position
         # to simulate different gaits
         self.offset_transform = mn.Matrix4()
+        self.offset_rot = -np.pi / 2
+        add_rot = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
+        )
+        perm = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
+        )
+        self.offset_transform_base = perm @ add_rot
 
     @property
     def inverse_offset_transform(self):
@@ -101,27 +109,37 @@ class KinematicHumanoid(MobileManipulator):
 
         if len(position) != 3:
             raise ValueError("Base position needs to be three dimensions")
-        base_transform = self.base_transformation
-        base_pos = position - base_transform.transform_vector(
-            self.params.base_offset
-        )
-        base_transform.translation = base_pos
-        final_transform = base_transform @ self.offset_transform
 
+        base_transform = self.base_transformation
+        base_pos = position - self.params.base_offset
+        base_transform.translation = base_pos
+        add_rot = self.offset_transform_base.inverted()
+        final_transform = base_transform @ add_rot @ self.offset_transform
         self.sim_obj.transformation = final_transform
 
     @property
     def base_rot(self) -> float:
-        return self.base_transformation.rotation.angle()
+        return self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot)
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
         if self._base_type == "mobile" or self._base_type == "leg":
+            angle_rot = -self.offset_rot
             self.sim_obj.rotation = mn.Quaternion.rotation(
-                mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
+                mn.Rad(rotation_y_rad + angle_rot), mn.Vector3(0, 1, 0)
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
+
+    def set_rest_position(self) -> None:
+        """Sets the agents in a resting position"""
+        joint_list = self.sim_obj.joint_positions
+
+        offset_transform = mn.Matrix4()  # self.rest_matrix
+
+        self.set_joint_transform(
+            joint_list, offset_transform, self.base_transformation
+        )
 
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""

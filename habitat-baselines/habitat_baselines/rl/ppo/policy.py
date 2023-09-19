@@ -166,6 +166,39 @@ class Policy(abc.ABC):
         return True
 
     @property
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape is only supported in neural network policies"
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape_lens is only supported in neural network policies"
+        )
+
+    @property
+    def policy_action_space(self) -> spaces.Space:
+        """
+        The action space the policy acts in. This can be different from the
+        environment action space for hierarchical policies.
+        """
+        raise NotImplementedError()
+
+    @property
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
+        """
+        raise NotImplementedError()
+
+    @property
     def num_recurrent_layers(self) -> int:
         return 0
 
@@ -315,6 +348,25 @@ class NetPolicy(nn.Module, Policy):
         )
 
     @property
+    def policy_action_space_shape_lens(self):
+        return [self._action_space]
+
+    @property
+    def policy_action_space(self):
+        return self._action_space
+
+    @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
+
+    @property
     def recurrent_hidden_size(self) -> int:
         return self.net.recurrent_hidden_size
 
@@ -329,6 +381,17 @@ class NetPolicy(nn.Module, Policy):
     @property
     def num_recurrent_layers(self) -> int:
         return self.net.num_recurrent_layers
+
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
 
     def forward(self, *x):
         raise NotImplementedError
@@ -351,11 +414,10 @@ class NetPolicy(nn.Module, Policy):
             if self.action_distribution_type == "categorical":
                 action = distribution.mode()
             elif self.action_distribution_type == "gaussian":
+                action = distribution.sample([])
                 action = distribution.mean
         else:
-            action = distribution.sample()
-
-        action_log_probs = distribution.log_probs(action)
+            action_log_probs = distribution.log_probs(action)
         return PolicyActionData(
             values=value,
             actions=action,
