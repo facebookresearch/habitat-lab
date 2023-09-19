@@ -17,6 +17,8 @@ defaults:
     - has_finished_oracle_nav
   - _self_
 
+
+
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
@@ -43,12 +45,17 @@ habitat_baselines:
   # writer_type: 'wb'
 
   eval:
+    extra_sim_sensors:
+      third_rgb_sensor:
+        height: 224
+        width: 224
     should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
     agent:
-      num_pool_agents_per_type: [1, 8]
+      type: "MultiAgentAccessMgr"
+      num_pool_agents_per_type: [1, 1]
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:

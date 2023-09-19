@@ -5,8 +5,8 @@ articulated_agent_type: 'KinematicHumanoid'
 motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 sim_sensors:
   head_rgb_sensor:
-    height: 128
-    width: 128
+    height: 224
+    width: 224
   head_depth_sensor:
-    height: 128
-    width: 128
+    height: 224
+    width: 224

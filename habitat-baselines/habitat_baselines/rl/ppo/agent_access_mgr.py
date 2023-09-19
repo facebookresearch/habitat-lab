@@ -128,15 +128,3 @@ class AgentAccessMgr(ABC):
         Called before a rollout is collected.
         """
         raise NotImplementedError()
-
-    @abstractmethod
-    def _create_storage(
-        self,
-        num_envs: int,
-        env_spec: EnvironmentSpec,
-        actor_critic: Policy,
-        policy_action_space: spaces.Space,
-        config: "DictConfig",
-        device,
-    ) -> Storage:
-        pass
