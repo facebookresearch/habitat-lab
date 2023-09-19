@@ -379,6 +379,17 @@ class NetPolicy(nn.Module, Policy):
     def num_recurrent_layers(self) -> int:
         return self.net.num_recurrent_layers
 
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
+
     def forward(self, *x):
         raise NotImplementedError
 
@@ -400,11 +411,10 @@ class NetPolicy(nn.Module, Policy):
             if self.action_distribution_type == "categorical":
                 action = distribution.mode()
             elif self.action_distribution_type == "gaussian":
+                action = distribution.sample([])
                 action = distribution.mean
         else:
-            action = distribution.sample()
-
-        action_log_probs = distribution.log_probs(action)
+            action_log_probs = distribution.log_probs(action)
         return PolicyActionData(
             values=value,
             actions=action,
