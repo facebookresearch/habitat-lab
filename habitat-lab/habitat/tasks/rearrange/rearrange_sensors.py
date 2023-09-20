@@ -1115,6 +1115,10 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
             if "oracle_nav_with_backing_up_action" in self._task.actions:
                 use_k = "oracle_nav_with_backing_up_action"
 
+        if use_k not in self._task.actions:
+            raise ValueError(
+                f"HasFinishedOracleNavSensor needs the oracle nav action in the action space. Actions are currently {list(self._task.actions.keys())}"
+            )
         nav_action = self._task.actions[use_k]
 
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]

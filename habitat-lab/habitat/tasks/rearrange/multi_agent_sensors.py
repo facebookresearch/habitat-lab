@@ -39,7 +39,9 @@ class DidAgentsCollide(Measure):
             for articulated_agent in sim.agents_mgr.articulated_agents_iter
         ]
         if len(agent_ids) != 2:
-            raise ValueError("Sensor only supports 2 agents")
+            raise ValueError(
+                f"Sensor only supports 2 agents. Got {agent_ids=}"
+            )
 
         for cp in contact_points:
             if coll_name_matches(cp, agent_ids[0]) and coll_name_matches(
@@ -80,6 +82,10 @@ class NumAgentsCollide(Measure):
 
 @registry.register_sensor
 class OtherAgentGps(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns the GPS coordinates of the other agent.
+    """
+
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         super().__init__(config=config)
@@ -94,6 +100,9 @@ class OtherAgentGps(UsesArticulatedAgentInterface, Sensor):
         return spaces.Box(shape=(2,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        assert (
+            self.agent_id < 2
+        ), f"OtherAgentGps only supports 2 agents, got {self.agent_id=}"
         other_agent_id = (self.agent_id + 1) % 2
         my_pos = self._sim.get_agent_data(
             self.agent_id
@@ -106,6 +115,12 @@ class OtherAgentGps(UsesArticulatedAgentInterface, Sensor):
 
 @registry.register_sensor
 class MultiAgentGlobalPredicatesSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns the predicates ONLY for the agent this sensor is configured for.
+    This is different from `GlobalPredicatesSensor` which returns the
+    predicates for all agents.
+    """
+
     def __init__(self, sim, config, *args, task, **kwargs):
         self._task = task
         self._sim = sim
@@ -139,6 +154,11 @@ class MultiAgentGlobalPredicatesSensor(UsesArticulatedAgentInterface, Sensor):
 
 @registry.register_sensor
 class ShouldReplanSensor(Sensor):
+    """
+    Returns if the agents are close to each other and about to collide, thus
+    the agents should replan.
+    """
+
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._x_len = config.x_len

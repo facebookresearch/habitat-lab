@@ -179,6 +179,7 @@ class RearrangeTask(NavigationTask):
         if articulated_agent_start is None:
             filter_func = None
             if self._min_distance_start_agents > 0.0:
+                # Force the agents to start a minimum distance apart.
                 prev_pose_agents = [
                     np.array(
                         self._sim.get_agent_data(
