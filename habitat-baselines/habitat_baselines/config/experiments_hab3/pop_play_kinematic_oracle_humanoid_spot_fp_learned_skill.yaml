@@ -61,7 +61,7 @@ habitat:
         grasp_thresh_dist: 0.2
         disable_grip: False
         should_clip: True
-        delta_pos_limit: 0.20
+        delta_pos_limit: 0.25
         ee_ctrl_lim: 0.015
 
       agent_0_reset_arm_action:

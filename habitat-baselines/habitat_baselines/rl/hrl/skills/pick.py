@@ -149,6 +149,25 @@ class PickSkillPolicy(NnSkillPolicy):
         # We use is_skill_done since there are two cases when we do termination:
         # (1) the high-level policy wants to do so, and
         # (2) exceeding the max steps
+        # (3) there is no a single the target object that is within graspable distance
+
+        # filter_observations = self._select_obs(self._get_filtered_obs(observations, batch_idx), batch_idx)
+        # try:
+        #     obj_dis_sensor = filter_observations["obj_start_sensor"]
+        # except Exception:
+        #    obj_dis_sensor = filter_observations["obj_goal_sensor"]
+        # obj_dis_sensor = torch.unsqueeze(obj_dis_sensor, 0)
+        # obj_dis_sensor = torch.reshape(obj_dis_sensor, (-1, 2, 3))
+
+        # Within certain meters of grasping point
+        # cannot_grasp = torch.linalg.norm(obj_dis_sensor, dim=2, ord=2) > 2
+        # cannot_grasp = torch.linalg.norm(obj_dis_sensor, dim=1, ord=2) > 4
+        # cannot_grasp = torch.sum(cannot_grasp, dim=-1) == 2
+        # cannot_grasp = cannot_grasp.to(is_skill_done.device)
+
+        # Update the is_skill_done
+        # is_skill_done = is_skill_done | cannot_grasp
+
         if is_skill_done.sum() > 0:
             current_joint_pos = observations["joint"][is_skill_done, ...]
             delta = rest_state - current_joint_pos
