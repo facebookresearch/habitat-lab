@@ -9,12 +9,12 @@ def zsc_eval_single(plan_idx=None, learned_agent=None, add_opts=None):
     rnd_id = random.choice(string.ascii_uppercase) + str(uuid.uuid4())[:8]
 
     if plan_idx is not None:
-        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/eval_zsc_kinematic_oracle.yaml habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx={plan_idx} {add_opts}"
+        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp_learned_skill.yaml habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx={plan_idx} {add_opts}"
         print(f"RUNNING {run_cmd}")
         os.system(run_cmd)
 
     if learned_agent is not None:
-        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts}" 
+        run_cmd = f"python habitat-baselines/habitat_baselines/run.py -m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp_learned_skill_learn.yaml habitat_baselines.rl.agent.load_type1_pop_ckpts=[{learned_agent}] {add_opts}"
         print(f"RUNNING {run_cmd}")
         os.system(run_cmd)
 

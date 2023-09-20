@@ -10,7 +10,6 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_0_reset_arm_action: arm_action
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
   - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_planner
   - _self_
 
 hydra:
@@ -45,7 +44,7 @@ habitat:
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
       - agent_1_should_replan
-      - all_predicates
+      # - all_predicates
   simulator:
     agents:
       agent_1:
