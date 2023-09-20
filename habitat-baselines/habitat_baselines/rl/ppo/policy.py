@@ -16,7 +16,6 @@ from typing import (
     Union,
 )
 
-import numpy as np
 import torch
 from gym import spaces
 from torch import nn as nn
@@ -97,66 +96,6 @@ class PolicyActionData:
             return self.take_actions
 
 
-@dataclass
-class MultiAgentPolicyActionData(PolicyActionData):
-    """
-    Information returned from the `Policy.act` method representing the
-    information from multiple agent's action. This class is needed to store
-    actions of multiple agents together
-    :property length_actions: List containing, for every agent, the size of their action space.
-    :property length_rnn_hidden_states: List containing for every agent the dimensionality of the rnn hidden state.
-    :property num_agents: The number of agents represented in this PolicyActionData
-    """
-
-    rnn_hidden_states: torch.Tensor
-    actions: Optional[torch.Tensor] = None
-    values: Optional[torch.Tensor] = None
-    action_log_probs: Optional[torch.Tensor] = None
-    take_actions: Optional[torch.Tensor] = None
-    policy_info: Optional[List[Dict[str, Any]]] = None
-    should_inserts: Optional[np.ndarray] = None
-
-    # Indices
-    length_rnn_hidden_states: Optional[torch.Tensor] = None
-    length_actions: Optional[torch.Tensor] = None
-    num_agents: Optional[int] = 1
-
-    def _unpack(self, tensor_to_unpack, unpack_lengths=None):
-        """
-        Splits the tensor tensor_to_unpack in the last dimension in the last dimension
-        according to unpack lengths, so that the ith tensor will have unpack_lengths[i]
-        in the last dimension. If unpack_lenghts is None, splits tensor_to_unpack evenly
-        according to self.num_agents.
-        :property tensor_to_unpack: The tensor we want to split into different chunks
-        :unpack_lengths: List of integers indicating the sizes to unpack, or None if we want to unpack evenly
-        """
-
-        if unpack_lengths is None:
-            unpack_lengths = [
-                int(tensor_to_unpack.shape[-1] / self.num_agents)
-            ] * self.num_agents
-
-        return torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
-
-    def unpack(self):
-        """
-        Returns attributes of the policy unpacked per agent
-        """
-        return {
-            "next_recurrent_hidden_states": self._unpack(
-                self.rnn_hidden_states, self.length_rnn_hidden_states
-            ),
-            "actions": self._unpack(self.actions, self.length_actions),
-            "value_preds": self._unpack(self.values),
-            "action_log_probs": self._unpack(self.action_log_probs),
-            "take_actions": self._unpack(self.take_actions),
-            # This is numpy array and must be split differently.
-            "should_inserts": np.split(
-                self.should_inserts, self.num_agents, axis=-1
-            ),
-        }
-
-
 class Policy(abc.ABC):
     def __init__(self):
         pass
@@ -212,6 +151,22 @@ class Policy(abc.ABC):
         Gets the visual encoder for the policy. Only necessary to implement if
         you want to do RL with a frozen visual encoder.
         """
+
+    def update_hidden_state(
+        self,
+        rnn_hxs: torch.Tensor,
+        prev_actions: torch.Tensor,
+        action_data: PolicyActionData,
+    ) -> None:
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space
@@ -382,17 +337,6 @@ class NetPolicy(nn.Module, Policy):
     def num_recurrent_layers(self) -> int:
         return self.net.num_recurrent_layers
 
-    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
-        """
-        Update the hidden state given that `should_inserts` is not None. Writes
-        to `rnn_hxs` and `prev_actions` in place.
-        """
-
-        for env_i, should_insert in enumerate(action_data.should_inserts):
-            if should_insert.item():
-                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
-                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
-
     def forward(self, *x):
         raise NotImplementedError
 
@@ -414,10 +358,11 @@ class NetPolicy(nn.Module, Policy):
             if self.action_distribution_type == "categorical":
                 action = distribution.mode()
             elif self.action_distribution_type == "gaussian":
-                action = distribution.sample([])
                 action = distribution.mean
         else:
-            action_log_probs = distribution.log_probs(action)
+            action = distribution.sample()
+
+        action_log_probs = distribution.log_probs(action)
         return PolicyActionData(
             values=value,
             actions=action,
