@@ -228,6 +228,8 @@ class RearrangeTask(NavigationTask):
         articulated_agent.base_pos = articulated_agent_pos
         articulated_agent.base_rot = articulated_agent_rot
 
+        print(articulated_agent_pos, articulated_agent_rot)
+
     @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id
@@ -245,7 +247,6 @@ class RearrangeTask(NavigationTask):
                     self._sim.pathfinder.seed(self._seed)
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
-
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
