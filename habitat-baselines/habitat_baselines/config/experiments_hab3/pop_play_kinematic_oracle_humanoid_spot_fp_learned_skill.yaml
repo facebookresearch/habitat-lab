@@ -58,7 +58,7 @@ habitat:
         arm_controller: "ArmRelPosMaskKinematicAction"
         arm_joint_mask: [1,1,0,1,1,1,1]
         arm_joint_dimensionality: 7
-        grasp_thresh_dist: 0.15
+        grasp_thresh_dist: 0.2
         disable_grip: False
         should_clip: True
         delta_pos_limit: 0.20

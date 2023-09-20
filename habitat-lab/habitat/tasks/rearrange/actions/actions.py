@@ -420,22 +420,10 @@ class ArmRelPosMaskKinematicAction(ArticulatedAgentAction):
         target_arm_pos = (
             mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
         )
-        print("step in arm action:", self._step)
-        # if self._step == 181:
-        #     breakpoint()
-        # if abs(mask_delta_pos[0] - 0.09632787) <= 0.01:
-        #     breakpoint()
-        print("mask_delta_pos:", mask_delta_pos)
-        print(
-            "self.cur_articulated_agent.arm_motor_pos:",
-            self.cur_articulated_agent.arm_motor_pos,
-        )
-        print("target_arm_pos:", target_arm_pos)
+
         set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
-        print("set_arm_pos:", set_arm_pos)
+
         self._step += 1
-        # if np.sum(abs(set_arm_pos - np.array([ 0., -3.14,  0.,3.  ,  0.  ,  0.  ,  0.  ]))) <= 0.01:
-        #     breakpoint()
 
         # The actual joint positions
         self._sim: RearrangeSim
