@@ -7,7 +7,8 @@
 from habitat.articulated_agent_controllers.humanoid_rearrange_controller import (
     HumanoidRearrangeController,
 )
+from habitat.articulated_agent_controllers.humanoid_seq_pose_controller import (
+    SeqPoseController,
+)
 
-__all__ = [
-    "HumanoidRearrangeController",
-]
+__all__ = ["HumanoidRearrangeController", "SeqPoseController"]
