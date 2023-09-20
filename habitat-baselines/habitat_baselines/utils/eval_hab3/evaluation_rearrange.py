@@ -24,6 +24,8 @@ METRICS_INTEREST = [
     "num_steps_fail",
     "CR",
     "CRprop",
+    "percent_human",
+    "percent_robot",
 ]
 MAX_NUM_STEPS = 1500
 
@@ -95,6 +97,14 @@ def get_episode_info(file_name):
         agent_collide = curr_result["summary"]["num_agents_collide"]
         metrics["CR"] = 1 if agent_collide > 0 else 0
         metrics["CRprop"] = agent_collide / curr_result["summary"]["num_steps"]
+        metrics["percent_robot"] = 0.25*(curr_result["summary"]['agent_blame.0_stage_1_1'] + 
+                                    curr_result["summary"]['agent_blame.0_stage_1_2'] + 
+                                    curr_result["summary"]['agent_blame.0_stage_2_1'] + 
+                                    curr_result["summary"]['agent_blame.0_stage_2_2'])
+        metrics["percent_human"] = 0.25*(curr_result["summary"]['agent_blame.1_stage_1_1'] + 
+                                    curr_result["summary"]['agent_blame.1_stage_1_2'] + 
+                                    curr_result["summary"]['agent_blame.1_stage_2_1'] + 
+                                    curr_result["summary"]['agent_blame.1_stage_2_2'])
     # base_dir = os.path.dirname(json_name)
 
     # if not os.path.exists(base_dir):
@@ -287,6 +297,8 @@ def relative_metric(episode_baseline_data, episode_solo_data):
         RES = np.nan
     composite_success *= 100
     collision_rate = episode_baseline_data["CR"]
+    percent_human = episode_baseline_data["percent_human"]
+    percent_robot = episode_baseline_data["percent_robot"]
 
     collision_rate_proportion = episode_baseline_data["CRprop"]
     return {
@@ -294,6 +306,8 @@ def relative_metric(episode_baseline_data, episode_solo_data):
         "RE_MT2": REMT2,
         "CR": collision_rate,
         "CRprop": collision_rate_proportion,
+        "percent_human": percent_human,
+        "percent_robot": percent_robot,
     }
 
 
@@ -336,6 +350,8 @@ def compute_relative_metrics_multi_ckpt(
         compiled_results_success = []
         compiled_results_efficiency = []
         compiled_results_CR = []
+        compiled_results_percent_robot = []
+        compiled_results_percent_human = []
         results_across_seeds = {}
 
         all_results = []
@@ -395,6 +411,8 @@ def compute_relative_metrics_multi_ckpt(
                 )
                 compiled_results_efficiency.append(res_zsc["RE_MT2"][0])
                 compiled_results_CR.append(res_zsc["CR"])
+                compiled_results_percent_robot.append(res_zsc["percent_robot"][0])
+                compiled_results_percent_human.append(res_zsc["percent_human"][0])
 
                 metrics_str = pretty_print(res_zsc, latex=latex)
 
@@ -443,20 +461,29 @@ def compute_relative_metrics_multi_ckpt(
         mean_CR, std_CR = np.mean(compiled_results_CR), np.std(
             compiled_results_CR
         )
+        mean_percent_robot, std_percent_robot = np.mean(compiled_results_percent_robot), np.std(compiled_results_percent_robot)
+        mean_percent_human, std_percent_human = np.mean(compiled_results_percent_human), np.std(compiled_results_percent_human)
         print(
             f"{baseline_name}.compiled_results_success: {mean_success} \u00B1 {std_success}"
         )
+        print("${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean_success, std_success))
         print(
             f"{baseline_name}.compiled_results_efficiency: {mean_efficiency} \u00B1 {std_efficiency}"
         )
+        print("${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean_efficiency, std_efficiency))
         print(
             f"{baseline_name}.compiled_results_CR: {mean_CR} \u00B1 {std_CR}"
         )
         print("${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean_CR, std_CR))
+        print(f"{baseline_name}.compiled_results_percent_robot: {mean_percent_robot} \u00B1 {std_percent_robot}")
+        print("${:0.2f}_{{ \\pm {:0.2f} }}$".format(mean_percent_robot, std_percent_robot))
+
         res_zsc["Averaged"] = {
             "composite_success": (mean_success, std_success),
             "RE_MT2": (mean_efficiency, std_efficiency),
             "CR": (mean_CR, std_CR),
+            "percent_robot": (mean_percent_robot, std_percent_robot),
+            "percent_human": (mean_percent_human, std_percent_human),
         }
         res_zsc_list[baseline_name] = res_zsc
         # breakpoint()
@@ -506,36 +533,67 @@ def compute_all_metrics_zsc(latex_print=False):
         "/fsx-siro/akshararai/hab3/eval_solo/0/eval_data_multi_ep_speed_10"
     )
     experiments_path = {
+        "ablation_rgb": [
+            f"{root_dir}/speed_10/ablation_rgb/2023-09-16/02-20-07/0",
+            f"{root_dir}/speed_10/ablation_rgb/2023-09-16/02-20-07/1",
+            f"{root_dir}/speed_10/ablation_rgb/2023-09-16/02-20-07/2"
+        ],
+        "ablation_no_gps": [
+            f"{root_dir}/speed_10/ablation_no_gps/2023-09-16/02-20-57/0",
+            f"{root_dir}/speed_10/ablation_no_gps/2023-09-16/02-20-57/1",
+            f"{root_dir}/speed_10/ablation_no_gps/2023-09-16/02-20-57/2",
+        ],
+        "ablation_no_primitives": [
+            f"{root_dir}/speed_10/ablation_no_primitive/2023-09-16/02-22-36/0",
+            f"{root_dir}/speed_10/ablation_no_primitive/2023-09-16/02-22-36/1",
+            f"{root_dir}/speed_10/ablation_no_primitive/2023-09-16/02-22-36/2",
+        ],
+        "ablation_rgb_train-pop": [
+            f"{root_dir_train_pop}/ablation_rgb/2023-09-16/02-20-07/0/eval_no_end",
+            f"{root_dir_train_pop}/ablation_rgb/2023-09-16/02-20-07/1/eval_no_end",
+            f"{root_dir_train_pop}/ablation_rgb/2023-09-16/02-20-07/2/eval_no_end"
+        ],
+        "ablation_no_gps_train-pop": [
+            f"{root_dir_train_pop}/ablation_no_gps/2023-09-16/02-20-57/0/eval_no_end/",
+            f"{root_dir_train_pop}/ablation_no_gps/2023-09-16/02-20-57/1/eval_no_end/",
+            f"{root_dir_train_pop}/ablation_no_gps/2023-09-16/02-20-57/2/eval_no_end/",
+        ],
+        "ablation_no_primitives_train-pop": [
+            f"{root_dir_train_pop}/ablation_no_primitive/2023-09-16/02-22-36/0/eval_no_end/",
+            f"{root_dir_train_pop}/ablation_no_primitive/2023-09-16/02-22-36/1/eval_no_end/",
+            f"{root_dir_train_pop}/ablation_no_primitive/2023-09-16/02-22-36/2/eval_no_end/",
+        ],
+
         "Plan_play_-2": [
             f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
             f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
             f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
         ],
-        "Plan_play_-1": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
-        ],
-        "Plan_play_-3": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
-        ],
-        "Plan_play_-4": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
-        ],
-        "GT_coord": [
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
-        ],
-        "Pop_play": [
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
-        ],
+        # "Plan_play_-1": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
+        # ],
+        # "Plan_play_-3": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
+        # ],
+        # "Plan_play_-4": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
+        # ],
+        # "GT_coord": [
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
+        #     f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
+        # ],
+        # "Pop_play": [
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
+        # ],
         # "Plan_play_-1_train-pop": [
         #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
         #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
@@ -693,10 +751,10 @@ if __name__ == "__main__":
 
     compute_all_metrics_zsc(latex_print=False)
 
-    with open("aggregated_results.pkl", "rb") as f:
-        cont = pkl.load(f)
+    # with open("aggregated_results.pkl", "rb") as f:
+    #     cont = pkl.load(f)
 
-    plot_per_agent_table(cont[0])
-    breakpoint()
-    print("\n\nLATEX")
+    # plot_per_agent_table(cont[0])
+    # breakpoint()
+    # print("\n\nLATEX")
     # compute_all_metrics(latex_print=True)
