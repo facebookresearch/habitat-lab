@@ -406,7 +406,9 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self._largest_island_idx
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
