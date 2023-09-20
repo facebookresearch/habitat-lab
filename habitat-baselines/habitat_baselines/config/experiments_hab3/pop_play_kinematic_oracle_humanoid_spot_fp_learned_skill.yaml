@@ -63,7 +63,7 @@ habitat:
         should_clip: True
         delta_pos_limit: 0.20
         ee_ctrl_lim: 0.015
-      
+
       agent_0_reset_arm_action:
         type: "ArmAction"
         arm_controller: "ArmRelPosMaskKinematicAction"
@@ -72,6 +72,7 @@ habitat:
         disable_grip: True
         should_clip: False
         gym_action_prefix: "immediate_reset_arm"
+        delta_pos_limit: 1.0
 
       agent_0_base_velocity:
         allow_dyn_slide: True
@@ -110,33 +111,32 @@ habitat_baselines:
             pick:
               skill_name: "PickSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "multirun/checkpoints_jimmy/pick.pth"
-              max_skill_steps: 200
+              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_pick/pick_latest.pth"
+              max_skill_steps: 100 # We reduce the max skill steps so that the high-level policy can replan as soon as possible when the grasping fails
               reset_joint_state: [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
               apply_postconds: False
             place:
               skill_name: "PlaceSkillPolicy"
               obs_skill_inputs: ["obj_goal_sensor"]
-              max_skill_steps: 500
+              max_skill_steps: 100 # We reduce the max skill steps so that the high-level policy can replan as soon as possible when the grasping fails
               apply_postconds: False
               reset_joint_state: [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
-              load_ckpt_file: "multirun/checkpoints_jimmy/place.pth"
+              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_place/place_ckpt.343.pth"
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
               load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_as21NCAR_2/latest.pth"
               # load_ckpt_file: "multirun/checkpoints_jimmy/jimmy_nav.pth"
-              max_skill_steps: 1000
+              max_skill_steps: 2000
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
-              
+
       agent_1:
         hierarchical_policy:
           defined_skills:
             pick:
               max_skill_steps: 15
-              
-            
+
+
             place:
               max_skill_steps: 15
-            
