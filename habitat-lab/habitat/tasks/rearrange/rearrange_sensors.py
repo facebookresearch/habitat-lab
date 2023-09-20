@@ -1312,6 +1312,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._has_found_human_step = 1500
         self._has_found_human_step_dis = 1500
         self._prev_pos = None
+        self._prev_robot_base_T = None
         self._prev_human_pos = None
         self._has_found_human = False
         self._has_found_human_dis = False
@@ -1332,6 +1333,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self.human_pos_list = []
         self.robot_pos_list = []
         self._first_debug = True
+        self._backup_count = 0
+        self._yield_count = 0
         self._enable_shortest_path_computation = (
             self._config.enable_shortest_path_computation
         )
@@ -1372,6 +1375,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._min_start_end_episode_step = float("inf")
         self._agent_episode_distance = 0.0
         self._prev_pos = robot_pos
+        self._prev_robot_base_T = mn.Matrix4(
+            self._sim.get_agent_data(
+                0
+            ).articulated_agent.sim_obj.transformation
+        )
         self._prev_human_pos = human_pos
         self._has_found_human = False
         self._has_found_human_dis = False
@@ -1389,6 +1397,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self.human_pos_list = []
         self.robot_pos_list = []
         self._first_debug = True
+        self._backup_count = 0
+        self._yield_count = 0
 
     def _check_human_dis(self, robot_pos, human_pos):
         # We use geo geodesic distance here
@@ -1447,6 +1457,21 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         dis = np.linalg.norm(robot_pos - human_pos, ord=2, axis=-1)
         # Add the current distance to compute average distance
         self._dis += dis
+
+        # Compute the robot moving velocity
+        robot_move_vec = np.array(
+            self._prev_robot_base_T.inverted().transform_point(robot_pos)
+        )[[0, 2]]
+        robot_move_vel = (
+            np.linalg.norm(robot_move_vec)
+            / (1.0 / 120.0)
+            * np.sign(robot_move_vec[0])
+        )
+        # Compute the metrics for backing up and yield
+        if dis <= 1.5 and robot_move_vel < 0.0:
+            self._backup_count += 1
+        elif dis <= 1.5 and abs(robot_move_vel) < 0.05:
+            self._yield_count += 1
 
         # Increase the step counter
         self._step += 1
@@ -1514,7 +1539,6 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             )
 
         # Compute the SPL before finding the human
-
         try:
             first_found_spl = (
                 self._has_found_human
@@ -1558,6 +1582,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
 
         self._prev_pos = robot_pos
         self._prev_human_pos = human_pos
+        self._prev_robot_base_T = mn.Matrix4(
+            self._sim.get_agent_data(
+                0
+            ).articulated_agent.sim_obj.transformation
+        )
 
         self._metric = {
             "human_goal_x": self._update_human_pos_x,
@@ -1590,6 +1619,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             "follow_human_steps_after_frist_encounter_dis": self._after_found_human_times_dis,
             "follow_human_steps_ratio_after_frist_encounter_dis": self._after_found_human_times_dis
             / (self._total_step - self._min_start_end_episode_step),
+            "backup_ratio": self._backup_count / self._step,
+            "yield_ratio": self._yield_count / self._step,
         }
 
         if self._has_found_human:
