@@ -107,11 +107,6 @@ class RearrangeTask(NavigationTask):
             self._config.constraint_violation_drops_object
         )
         self._count_obj_collisions = self._config.count_obj_collisions
-        if (
-            "overfit" in self._sim.habitat_config
-            and self._sim.habitat_config["overfit"]
-        ):
-            self._fixed_starting_position = True
 
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
