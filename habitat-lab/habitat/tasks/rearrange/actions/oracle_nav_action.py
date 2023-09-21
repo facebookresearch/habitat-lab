@@ -111,7 +111,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 self._config.spawn_max_dist_to_obj,
                 self._sim,
                 self._config.num_spawn_attempts,
-                1,
+                True,
             )
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
