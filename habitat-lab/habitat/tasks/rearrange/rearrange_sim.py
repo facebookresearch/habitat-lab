@@ -554,7 +554,7 @@ class RearrangeSim(HabitatSim):
         num_sample_points = 1000
 
         regen_i = 0
-        while np.isnan(new_pos[0]) and regen_i < 10:
+        while np.isnan(new_pos[0]) and regen_i < max_iter:
             # Increase the search radius
             new_pos = self.pathfinder.get_random_navigable_point_near(
                 pos,
