@@ -216,7 +216,9 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         generated image of a single frame.
     """
     render_obs_images: List[np.ndarray] = []
-    for sensor_name in observation:
+    obs_names = list(observation.keys())
+    obs_names = sorted(obs_names, key=lambda x: 0 if "depth" in x else 1)
+    for sensor_name in obs_names:
         if len(observation[sensor_name].shape) > 1:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):

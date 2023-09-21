@@ -934,6 +934,12 @@ class PPOTrainer(BaseRLTrainer):
         rgb_frames: List[List[np.ndarray]] = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
         ]
+        rgb_frames2: List[List[np.ndarray]] = [
+            [] for _ in range(self.config.habitat_baselines.num_environments)
+        ]
+        rgb_frames3: List[List[np.ndarray]] = [
+            [] for _ in range(self.config.habitat_baselines.num_environments)
+        ]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -943,6 +949,7 @@ class PPOTrainer(BaseRLTrainer):
         evals_per_ep = self.config.habitat_baselines.eval.evals_per_ep
         if number_of_eval_episodes == -1:
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
+            total_num_eps = number_of_eval_episodes
         else:
             total_num_eps = sum(self.envs.number_of_episodes)
             # if total_num_eps is negative, it means the number of evaluation episodes is unknown
@@ -1065,17 +1072,38 @@ class PPOTrainer(BaseRLTrainer):
 
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                    frame1 = observations_to_image(
+                        {k: v[i] for k, v in batch.items() if k == "agent_0_third_rgb"}, infos[i]
                     )
+                    frame2 = observations_to_image(
+                        {k: v[i] for k, v in batch.items() if k == "agent_1_third_rgb"}, infos[i]
+                    )
+                    frame3 = observations_to_image(
+                        {k: v[i] for k, v in batch.items() if k == "agent_1_fourth_rgb"}, infos[i]
+                    )
+                    # frame = observations_to_image(
+                    #     {k: v[i] for k, v in batch.items()}, infos[i]
+                    # )
                     if not not_done_masks[i].any().item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
-                        frame = observations_to_image(
-                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                        frame1 = observations_to_image(
+                            {k: v[i] * 0.0 for k, v in batch.items() if k == "agent_0_third_rgb"}, infos[i]
                         )
-                    frame = overlay_frame(frame, infos[i])
-                    rgb_frames[i].append(frame)
+                        frame2 = observations_to_image(
+                            {k: v[i] * 0.0 for k, v in batch.items() if k == "agent_1_third_rgb"}, infos[i]
+                        )
+                        frame3 = observations_to_image(
+                            {k: v[i] for k, v in batch.items() if k == "agent_1_fourth_rgb"}, infos[i]
+                        )
+
+                        # frame = observations_to_image(
+                        #     {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                        # )
+                    # frame = overlay_frame(frame, infos[i])
+                    rgb_frames[i].append(frame1)
+                    rgb_frames2[i].append(frame2)
+                    rgb_frames3[i].append(frame3)
 
                 if episode_save_info is not None:
                     if i not in episode_save_info:
@@ -1108,9 +1136,33 @@ class PPOTrainer(BaseRLTrainer):
                         generate_video(
                             video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
+                            images=rgb_frames3[i],
+                            episode_id=current_episodes_info[i].episode_id,
+                            checkpoint_idx=checkpoint_index+2,
+                            metrics=extract_scalars_from_info(infos[i]),
+                            fps=self.config.habitat_baselines.video_fps,
+                            tb_writer=writer,
+                            keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
+                            ep_eval_num=ep_eval_num[int(current_episodes_info[i].episode_id)]
+                        )
+                        generate_video(
+                            video_option=self.config.habitat_baselines.eval.video_option,
+                            video_dir=self.config.habitat_baselines.video_dir,
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
+                            metrics=extract_scalars_from_info(infos[i]),
+                            fps=self.config.habitat_baselines.video_fps,
+                            tb_writer=writer,
+                            keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
+                            ep_eval_num=ep_eval_num[int(current_episodes_info[i].episode_id)]
+                        )
+                        generate_video(
+                            video_option=self.config.habitat_baselines.eval.video_option,
+                            video_dir=self.config.habitat_baselines.video_dir,
+                            images=rgb_frames2[i],
+                            episode_id=current_episodes_info[i].episode_id,
+                            checkpoint_idx=checkpoint_index+1,
                             metrics=extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,

@@ -27,7 +27,9 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     PlannerHighLevelPolicy,
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
-    ArtObjSkillPolicy,
+    ArtObjSkillPolicy,    
+    HumanoidPickPolicy,
+    HumanoidPlacePolicy,
     MoveSkillPolicy,
     NavSkillPolicy,
     NoopSkillPolicy,

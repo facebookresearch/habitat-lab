@@ -6,6 +6,7 @@
 
 from typing import Optional
 
+import csv
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -17,6 +18,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
+import os
 
 # flake8: noqa
 # These actions need to be imported since there is a Python evaluation
@@ -417,6 +419,7 @@ class ArmRelPosMaskKinematicAction(ArticulatedAgentAction):
         self.cur_articulated_agent.fix_joint_values = set_arm_pos
 
 
+
 @registry.register_task_action
 class BaseVelAction(ArticulatedAgentAction):
     """
@@ -463,7 +466,7 @@ class BaseVelAction(ArticulatedAgentAction):
         self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
         self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
 
-    def update_base(self):
+    def update_base(self, fix_leg=False):
         ctrl_freq = self._sim.ctrl_freq
 
         before_trans_state = self._capture_articulated_agent_state()
@@ -512,6 +515,12 @@ class BaseVelAction(ArticulatedAgentAction):
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
             )
+        
+        if self.cur_articulated_agent._base_type == "leg" and fix_leg:
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[
@@ -532,6 +541,67 @@ class BaseVelAction(ArticulatedAgentAction):
             return self._sim.step(HabitatSimActions.base_velocity)
         else:
             return {}
+
+@registry.register_task_action
+class BaseVelLegAnimationAction(BaseVelAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._checkpoint = self._config.get("leg_animation_checkpoint", "data/robots/spot_data/spot_walking_trajectory.csv")
+        self._use_range = self._config.get("use_range", [107, 863])
+        assert os.path.exists(self._checkpoint) == 1
+        self._leg_data = {}  # type: ignore
+        self._load_animation()
+        self._play_i = 0
+        self._play_length_data = len(self._leg_data)
+        self._play_i_perframe = self._config.get("play_i_perframe", 5)
+
+    def _load_animation(self):
+        first_row = True
+        time_i = 0
+        with open(self._checkpoint, newline="") as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=" ", quotechar="|")
+            for row in spamreader:
+                if not first_row:
+                    if (
+                        time_i >= self._use_range[0]
+                        and time_i < self._use_range[1]
+                    ):
+                        joint_angs = row[0].split(",")[1:13]
+                        joint_angs = [float(i) for i in joint_angs]
+                        self._leg_data[
+                            time_i - self._use_range[0]
+                        ] = joint_angs
+                    time_i += 1
+                first_row = False
+
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base(fix_leg=False)
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
+            self._play_i += self._play_i_perframe
+        else:
+            self._play_i = 0
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
+        if kwargs["is_last_action"]:
+            return self._sim.step(HabitatSimActions.base_velocity)
+        else:
+            return {}
+
+            
+
 
 
 @registry.register_task_action

@@ -1125,6 +1125,40 @@ class BadCalledTerminate(Measure):
 
         self._metric = (not is_succ) and does_action_want_stop
 
+@registry.register_sensor
+class HasFinishedHumanPickSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_human_pick"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedHumanPickSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_humanoid_pick_action"
+        else:
+            use_k = "humanoid_pick_action"
+
+        if use_k in self._task.actions:
+            nav_action = self._task.actions[use_k]
+            skill_done = nav_action.skill_done
+        else:
+            skill_done = [0]
+        return np.array(skill_done, dtype=np.float32)[..., None]
 
 @registry.register_sensor
 class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):

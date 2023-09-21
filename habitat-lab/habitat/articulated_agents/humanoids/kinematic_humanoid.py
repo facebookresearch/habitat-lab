@@ -41,8 +41,13 @@ class KinematicHumanoid(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.7, 1.4, -0.7),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                    cam_offset_pos=mn.Vector3(0., 2.4, -1.5),
+                    cam_look_at_pos=mn.Vector3(0, 0.0, 0.75),
+                    attached_link_id=-2,
+                ),
+                "top": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0., 7.5, 0),
+                    cam_look_at_pos=mn.Vector3(0, 0.0, 0.0),
                     attached_link_id=-2,
                 ),
             },
@@ -194,35 +199,49 @@ class KinematicHumanoid(MobileManipulator):
                     elif cam_info.attached_link_id == -2:
                         rot_offset = self.offset_transform_base.inverted()
                         link_trans = self.base_transformation @ rot_offset
+                    elif cam_info.attached_link_id == -3:
+                        rot_offset = self.offset_transform_base.inverted()
+                        link_trans = self.base_transformation @ rot_offset
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
                             cam_info.attached_link_id
                         ).transformation
 
-                    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                        pos = cam_info.cam_offset_pos
-                        ori = cam_info.cam_orientation
-                        Mt = mn.Matrix4.translation(pos)
-                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                        cam_transform = Mt @ Mz @ My @ Mx
+                    if cam_info.attached_link_id != -3:
+                        if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                            pos = cam_info.cam_offset_pos
+                            ori = cam_info.cam_orientation
+                            Mt = mn.Matrix4.translation(pos)
+                            Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                            My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                            Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                            cam_transform = Mt @ Mz @ My @ Mx
+                        else:
+                            cam_transform = mn.Matrix4.look_at(
+                                cam_info.cam_offset_pos,
+                                cam_info.cam_look_at_pos,
+                                mn.Vector3(0, 1, 0),
+                            )
+                        cam_transform = (
+                            link_trans
+                            @ cam_transform
+                            @ cam_info.relative_transform
+                        )
+                        cam_transform = inv_T @ cam_transform
+
+                        sens_obj.node.transformation = (
+                            orthonormalize_rotation_shear(cam_transform)
+                        )
                     else:
                         cam_transform = mn.Matrix4.look_at(
                             cam_info.cam_offset_pos,
                             cam_info.cam_look_at_pos,
                             mn.Vector3(0, 1, 0),
                         )
-                    cam_transform = (
-                        link_trans
-                        @ cam_transform
-                        @ cam_info.relative_transform
-                    )
-                    cam_transform = inv_T @ cam_transform
+                        sens_obj.node.transformation = (
+                            orthonormalize_rotation_shear(cam_transform)
+                        )
 
-                    sens_obj.node.transformation = (
-                        orthonormalize_rotation_shear(cam_transform)
-                    )
 
         if self._fix_joint_values is not None:
             self.arm_joint_pos = self._fix_joint_values

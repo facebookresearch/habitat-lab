@@ -1,0 +1,75 @@
+# @package _global_
+
+defaults:
+  - pop_play_kinematic_oracle_humanoid_spot_fp
+  - /habitat/task/lab_sensors:
+    - multi_agent_all_predicates
+    - all_predicates
+  - _self_
+
+habitat_baselines:
+  evaluate: True
+  rl:
+    agent:
+      num_pool_agents_per_type: [1,1]
+    policy:
+      agent_0:
+        hierarchical_policy:
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              apply_postconds: False
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
+
+              # skill_name: "NoopSkillPolicy"
+              # apply_postconds: True
+              # max_skill_steps: 1
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            plan_idx: -1
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              apply_postconds: False
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
+
+              # skill_name: "NoopSkillPolicy"
+              # apply_postconds: True
+              # max_skill_steps: 1
+  eval:
+    should_load_ckpt: True
+    # video_option: []
+habitat:
+  gym:
+    obs_keys:
+      # Include all possible inputs. The agents will filter them out.
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_should_replan
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_other_agent_gps
+      - agent_0_has_finished_oracle_nav
+      - agent_0_multi_agent_all_predicates
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_other_agent_gps
+      - agent_1_multi_agent_all_predicates
+      - agent_1_has_finished_oracle_nav
+      - agent_1_should_replan
+      - all_predicates

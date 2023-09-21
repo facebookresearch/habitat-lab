@@ -48,6 +48,7 @@ __all__ = [
     "ArmActionConfig",
     "BaseVelocityActionConfig",
     "HumanoidJointActionConfig",
+    "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
@@ -257,6 +258,21 @@ class BaseVelocityActionConfig(ActionConfig):
     allow_back: bool = True
     gym_action_prefix: str = "base_vel"
 
+@dataclass
+class BaseVelocityLegAnimationActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelLegAnimationAction"
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    leg_animation_checkpoint: str = (
+        "data/robots/spot_data/spot_walking_trajectory.csv"
+    )
+    play_i_perframe: int = 5
+    use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 @dataclass
 class BaseVelocityNonCylinderActionConfig(BaseVelocityActionConfig):
@@ -293,6 +309,14 @@ class HumanoidJointActionConfig(ActionConfig):
     # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
     num_joints: int = 54
 
+@dataclass
+class HumanoidPickActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
+    type: str = "HumanoidPickAction"
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
+    num_joints: int = 54
 
 @dataclass
 class RearrangeStopActionConfig(ActionConfig):
@@ -640,6 +664,10 @@ class ActionHistorySensorConfig(LabSensorConfig):
 @dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
+
+@dataclass
+class HasFinishedHumanPickSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedHumanPickSensor"
 
 
 @dataclass
@@ -1787,6 +1815,12 @@ cs.store(
     node=ArmActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.base_velocity_leg_animation",
+    group="habitat/task/actions",
+    name="base_velocity_leg_animation",
+    node=BaseVelocityLegAnimationActionConfig,
+)
+cs.store(
     package="habitat.task.actions.base_velocity",
     group="habitat/task/actions",
     name="base_velocity",
@@ -1803,6 +1837,12 @@ cs.store(
     group="habitat/task/actions",
     name="humanoidjoint_action",
     node=HumanoidJointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.humanoid_pick_action",
+    group="habitat/task/actions",
+    name="humanoid_pick_action",
+    node=HumanoidPickActionConfig,
 )
 cs.store(
     package="habitat.task.actions.velocity_control",
@@ -2118,6 +2158,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_human_pick",
+    group="habitat/task/lab_sensors",
+    name="has_finished_human_pick",
+    node=HasFinishedHumanPickSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",

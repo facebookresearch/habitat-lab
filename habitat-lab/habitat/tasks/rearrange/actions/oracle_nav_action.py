@@ -15,6 +15,7 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     BaseVelNonCylinderAction,
     HumanoidJointAction,
+    BaseVelLegAnimationAction
 )
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
@@ -22,7 +23,7 @@ from habitat_sim.physics import VelocityControl
 
 
 @registry.register_task_action
-class OracleNavAction(BaseVelAction, HumanoidJointAction):
+class OracleNavAction(BaseVelLegAnimationAction, HumanoidJointAction):
     """
     An action that will convert the index of an entity (in the sense of
     `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
@@ -36,7 +37,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         config = kwargs["config"]
         self.motion_type = config.motion_control
         if self.motion_type == "base_velocity":
-            BaseVelAction.__init__(self, *args, **kwargs)
+            BaseVelLegAnimationAction.__init__(self, *args, **kwargs)
 
         elif self.motion_type == "human_joints":
             HumanoidJointAction.__init__(self, *args, **kwargs)
@@ -246,7 +247,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                     vel = [0, 0]
                     self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
-                return BaseVelAction.step(
+                return BaseVelLegAnimationAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
                 )
 

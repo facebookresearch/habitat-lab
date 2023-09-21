@@ -163,6 +163,7 @@ def get_checkpoint_results(ckpt_path, separate_agent=False, solo_dict=None):
         all_files = []
         for ck_path in ckpt_path:
             all_files += sorted(glob.glob(f"{ck_path}/*"))
+            print(ck_path, len(sorted(glob.glob(f"{ck_path}/*"))))
     dict_results: Dict[str, Any] = {}
     dict_results_agents: Dict[str, Dict [str, Any]] = {}
     episode_agents: Dict[str, Any] = {}
@@ -210,6 +211,7 @@ def get_checkpoint_results(ckpt_path, separate_agent=False, solo_dict=None):
             episode_agents[agent_type], average=True)
     # if separate_agent:
     #     breakpoint()
+    breakpoint()
     return dict_results, dict_results_agents
 
 
@@ -362,67 +364,67 @@ def compute_all_metrics_zsc(latex_print=False):
         "/fsx-siro/akshararai/hab3/eval_solo/0/eval_data_multi_ep_speed_10"
     )
     experiments_path = {
-        "Plan_play_-1": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
-        ],
-        "Plan_play_-2": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
-        ],
-        "Plan_play_-3": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
-        ],
-        "Plan_play_-4": [
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
-            f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
-        ],
+        # "Plan_play_-1": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/3",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/7",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/11",
+        # ],
+        # "Plan_play_-2": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/2",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/6",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/10",
+        # ],
+        # "Plan_play_-3": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/1",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/5",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/9",
+        # ],
+        # "Plan_play_-4": [
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/0",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/4",
+        #     f"{root_dir}/speed_10/plan_play/2023-08-25/18-19-41/8",
+        # ],
         "GT_coord": [
             f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/0",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
-            f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
+            # f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/1",
+            # f"{root_dir}/speed_10/GTCoord/2023-08-19/00-07-24/2",
         ],
-        "Pop_play": [
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
-            f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
-        ],
+        # "Pop_play": [
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/0",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/1",
+        #     f"{root_dir}/speed_10/pp8/2023-08-19/00-05-08/2",
+        # ],
 
-        "Plan_play_-1_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
-        ],
-        "Plan_play_-2_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
-        ],
-        "Plan_play_-3_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
-        ],
-        "Plan_play_-4_train-pop": [
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
-            f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
-        ],
-        "GT_coord_train-pop": [
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
-            f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
-        ],
-        "Pop_play_train-pop": [
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
-            f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
-        ],
+        # "Plan_play_-1_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/3/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/7/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/11/eval_no_end",
+        # ],
+        # "Plan_play_-2_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/2/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/6/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/10/eval_no_end",
+        # ],
+        # "Plan_play_-3_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/1/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/5/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/9/eval_no_end",
+        # ],
+        # "Plan_play_-4_train-pop": [
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/0/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/4/eval_no_end",
+        #     f"{root_dir_train_pop}/plan_play/2023-08-25/18-19-41/8/eval_no_end",
+        # ],
+        # "GT_coord_train-pop": [
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/0/eval_no_end",
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/1/eval_no_end",
+        #     f"{root_dir_train_pop}/GTCoord/2023-08-19/00-07-24/2/eval_no_end",
+        # ],
+        # "Pop_play_train-pop": [
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/0/eval_no_end",
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/1/eval_no_end",
+        #     f"{root_dir_train_pop}/pp8/2023-08-19/00-05-08/2/eval_no_end",
+        # ],
     }
 
     experiments_path = extend_exps_zsc(experiments_path)
