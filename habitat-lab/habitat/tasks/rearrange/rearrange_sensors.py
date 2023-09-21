@@ -1470,7 +1470,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         # Compute the metrics for backing up and yield
         if dis <= 1.5 and robot_move_vel < 0.0:
             self._backup_count += 1
-        elif dis <= 1.5 and abs(robot_move_vel) < 0.05:
+        elif dis <= 1.5 and abs(robot_move_vel) < 1.0:
             self._yield_count += 1
 
         # Increase the step counter
