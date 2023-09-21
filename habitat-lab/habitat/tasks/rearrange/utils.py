@@ -432,7 +432,7 @@ def get_robot_spawns(
     distance_threshold: float,
     sim,
     num_spawn_attempts: int,
-    physics_stability_steps: int,
+    filter_colliding_states: bool,
     agent: Optional[MobileManipulator] = None,
 ) -> Tuple[np.ndarray, float, bool]:
     """
@@ -446,55 +446,47 @@ def get_robot_spawns(
     :param distance_threshold: The maximum distance from the target.
     :param sim: The RearrangeSimulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
-    :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
-    :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
+    :param filter_colliding_states: Whether or not to filter out states in which the robot is colliding with the scene. If True, runs discrete collision detection, otherwise returns the sampled state without checking.
+    :param agent: The agent to get the state for. If not specified, defaults to the simulator's articulated agent.
 
-    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
     """
     if agent is None:
         agent = sim.articulated_agent
+
     start_rotation = agent.base_rot
     start_position = agent.base_pos
-
-    state = sim.capture_state()
-    if agent is None:
-        agent = sim.articulated_agent
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         # Place within `distance_threshold` of the object.
-        start_position = sim.pathfinder.get_random_navigable_point_near(
+        agent.base_pos = sim.pathfinder.get_random_navigable_point_near(
             target_position,
             distance_threshold,
             island_index=sim.largest_island_idx,
         )
         # get_random_navigable_point_near() can return NaNs for start_position.
         # We want to make sure that the generated start_position is valid
-        if np.isnan(start_position).any():
+        if np.isnan(agent.base_pos).any():
             continue
 
         target_distance = np.linalg.norm(
-            (start_position - target_position)[[0, 2]]
+            (agent.base_pos - target_position)[[0, 2]]
         )
 
         if target_distance > distance_threshold:
             continue
 
         # Face the robot towards the object.
-        relative_target = target_position - start_position
+        relative_target = target_position - agent.base_pos
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
+        agent.base_rot = angle_to_object + rotation_noise
 
-        if physics_stability_steps == 0:
-            return start_position, start_rotation, False
-
-        agent.base_pos = start_position
-        agent.base_rot = start_rotation
-
-        # Make sure the robot is not colliding with anything in this
-        # position.
-        for _ in range(physics_stability_steps):
+        is_feasible_state = True
+        if filter_colliding_states:
+            # Make sure the robot is not colliding with anything in this
+            # position.
             sim.perform_discrete_collision_detection()
             _, details = rearrange_collision(
                 sim,
@@ -503,15 +495,19 @@ def get_robot_spawns(
             )
 
             # Only care about collisions between the robot and scene.
-            did_collide = details.robot_scene_colls != 0
+            is_feasible_state = details.robot_scene_colls == 0
 
-            if did_collide:
-                break
+        if is_feasible_state:
+            propsed_pos = agent.base_pos
+            proposed_rot = agent.base_rot
+            # found a feasbile state: reset state and return proposed stated
+            agent.base_pos = start_position
+            agent.base_rot = start_rotation
+            return propsed_pos, proposed_rot, False
 
-        sim.set_state(state)
-        if not did_collide:
-            return start_position, start_rotation, False
-
+    # failure to sample a feasbile state: reset state and return initial conditions
+    agent.base_pos = start_position
+    agent.base_rot = start_rotation
     return start_position, start_rotation, True
 
 

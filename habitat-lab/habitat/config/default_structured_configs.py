@@ -1155,7 +1155,7 @@ class TaskConfig(HabitatBaseConfig):
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     # Spawn parameters
-    physics_stability_steps: int = 1
+    filter_colliding_states: bool = True
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599

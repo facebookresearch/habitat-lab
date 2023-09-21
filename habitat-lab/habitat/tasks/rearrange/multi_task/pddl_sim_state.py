@@ -62,7 +62,7 @@ class PddlRobotState:
     :property place_at_angle_thresh: The required maximum angle to the target
         entity in the robot's local frame. Specified in radains. If not specified,
         no angle is considered.
-    :property physics_stability_steps: Number of physics checks for placing the
+    :property filter_colliding_states: Whether or not to filter colliding states when placing the
         robot. If not set, sets to task default.
     """
 
@@ -72,7 +72,7 @@ class PddlRobotState:
     place_at_pos_dist: Optional[float] = None
     place_at_angle_thresh: Optional[float] = None
     base_angle_noise: Optional[float] = None
-    physics_stability_steps: Optional[int] = None
+    filter_colliding_states: Optional[bool] = None
 
     def get_place_at_pos_dist(self, sim_info) -> float:
         if self.place_at_pos_dist is None:
@@ -85,11 +85,11 @@ class PddlRobotState:
             return 0.0
         return self.base_angle_noise
 
-    def get_physics_stability_steps(self, sim_info) -> Optional[int]:
-        if self.physics_stability_steps is None:
-            return sim_info.physics_stability_steps
+    def get_filter_colliding_states(self, sim_info) -> Optional[bool]:
+        if self.filter_colliding_states is None:
+            return sim_info.filter_colliding_states
         else:
-            return self.physics_stability_steps
+            return self.filter_colliding_states
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -201,7 +201,7 @@ class PddlRobotState:
                 distance_threshold=self.get_place_at_pos_dist(sim_info),
                 sim=sim,
                 num_spawn_attempts=sim_info.num_spawn_attempts,
-                physics_stability_steps=self.get_physics_stability_steps(
+                filter_colliding_states=self.get_filter_colliding_states(
                     sim_info
                 ),
                 agent=agent_data.articulated_agent,

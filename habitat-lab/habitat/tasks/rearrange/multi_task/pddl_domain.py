@@ -77,8 +77,8 @@ class PddlDomain:
             self._art_succ_thresh = self._config.art_succ_thresh
             self._robot_at_thresh = self._config.robot_at_thresh
             self._num_spawn_attempts = self._config.num_spawn_attempts
-            self._physics_stability_steps = (
-                self._config.physics_stability_steps
+            self._filter_colliding_states = (
+                self._config.filter_colliding_states
             )
             self._recep_place_shrink_factor = (
                 self._config.recep_place_shrink_factor
@@ -376,7 +376,7 @@ class PddlDomain:
             all_entities=self.all_entities,
             predicates=self.predicates,
             num_spawn_attempts=self._num_spawn_attempts,
-            physics_stability_steps=self._physics_stability_steps,
+            filter_colliding_states=self._filter_colliding_states,
             receptacles=sim.receptacles,
             recep_place_shrink_factor=self._recep_place_shrink_factor,
         )
