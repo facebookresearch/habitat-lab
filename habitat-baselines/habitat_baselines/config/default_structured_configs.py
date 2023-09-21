@@ -363,6 +363,8 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     reset_critic: bool = True
     # Forces distributed mode for testing
     force_distributed: bool = False
+    # Whether to perform channel normalizations in the visual encoder
+    normalize_visual_inputs: bool = False
 
 
 @dataclass

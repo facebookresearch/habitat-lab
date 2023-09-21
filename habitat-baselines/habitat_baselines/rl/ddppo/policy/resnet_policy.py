@@ -153,7 +153,7 @@ class PointNavResNetPolicy(NetPolicy):
             rnn_type=config.habitat_baselines.rl.ddppo.rnn_type,
             num_recurrent_layers=config.habitat_baselines.rl.ddppo.num_recurrent_layers,
             backbone=config.habitat_baselines.rl.ddppo.backbone,
-            normalize_visual_inputs="rgb" in observation_space.spaces,
+            normalize_visual_inputs=config.habitat_baselines.rl.ddppo.normalize_visual_inputs,
             force_blind_policy=config.habitat_baselines.force_blind_policy,
             policy_config=config.habitat_baselines.rl.policy,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
