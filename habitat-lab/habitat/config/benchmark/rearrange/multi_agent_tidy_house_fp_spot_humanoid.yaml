@@ -10,6 +10,8 @@ defaults:
 
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_pick_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_place_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
@@ -29,6 +31,7 @@ defaults:
     - runtime_perf_stats
     - agent_blame_measure
   - /habitat/task/lab_sensors:
+    - nav_goal_sensor
     - relative_resting_pos_sensor
     - target_start_sensor
     - goal_sensor
@@ -59,6 +62,7 @@ habitat:
     success_measure: composite_success
     success_reward: 10.0
     min_distance_start_agents: 5.0
+    desired_resting_position: [0.45, 0.0, 0.43]
     slack_reward: -0.0005
     end_on_success: True
     constraint_violation_ends_episode: False
@@ -74,11 +78,70 @@ habitat:
     pddl_domain_def: fp
     actions:
       agent_0_arm_action:
+        # grip_controller: MagicGraspAction
+        type: "ArmAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
+        arm_joint_mask: [1,1,0,1,1,1,1]
+        arm_joint_dimensionality: 7
+        grasp_thresh_dist: 0.15
+        disable_grip: False
+        delta_pos_limit: 0.20
+        ee_ctrl_lim: 0.015
         grip_controller: MagicGraspAction
+
       agent_0_base_velocity:
+        # agent_index: 0
+        # lin_speed: 40.0
+        # ang_speed: 20.0
         agent_index: 0
         lin_speed: 40.0
         ang_speed: 20.0
+        allow_dyn_slide: True
+        allow_back: True
+
+      # agent_0_pick_base_velocity:
+      #   # agent_index: 0
+      #   # lin_speed: 40.0
+      #   # ang_speed: 20.0
+      #   agent_index: 0
+      #   lin_speed: 5.0
+      #   ang_speed: 5.0
+      #   allow_dyn_slide: True
+      #   allow_back: True
+      #   gym_action_prefix: pick_base_vel
+
+      agent_0_pick_base_velocity:
+        # agent_index: 0
+        # lin_speed: 40.0
+        # ang_speed: 20.0
+        agent_index: 0
+        lin_speed: 5.0
+        ang_speed: 5.0
+        allow_dyn_slide: True
+        allow_back: True
+        gym_action_prefix: pick_base_vel
+
+      # agent_0_place_base_velocity:
+      #   # agent_index: 0
+      #   # lin_speed: 40.0
+      #   # ang_speed: 20.0 #arm 0.05
+      #   agent_index: 0
+      #   lin_speed: 2.0
+      #   ang_speed: 2.0
+      #   allow_dyn_slide: True
+      #   allow_back: True
+      #   gym_action_prefix: place_base_vel
+
+      agent_0_place_base_velocity:
+        # agent_index: 0
+        # lin_speed: 40.0
+        # ang_speed: 20.0 #arm 0.05
+        agent_index: 0
+        lin_speed: 5.0
+        ang_speed: 5.0
+        allow_dyn_slide: True
+        allow_back: True
+        gym_action_prefix: place_base_vel
 
       agent_0_oracle_nav_with_backing_up_action:
         type: OracleNavAction
@@ -103,6 +166,8 @@ habitat:
         longitudinal_lin_speed: 100.0
         lin_speed: 40.0
         ang_speed: 20.0
+
+
       agent_1_base_velocity:
         agent_index : 1
       agent_1_rearrange_stop:
@@ -134,12 +199,14 @@ habitat:
       - agent_0_obj_goal_sensor
       - agent_0_obj_start_gps_compass
       - agent_0_obj_goal_gps_compass
+      - agent_0_goal_to_agent_gps_compass
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_has_finished_oracle_nav
       - agent_0_other_agent_gps
       - agent_0_should_replan
+      - agent_0_joint
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -168,8 +235,8 @@ habitat:
       - agent_1
     agents:
       agent_0:
-        radius: 0.25
-        height: 1.41
+        radius: 0.3 #0.25
+        # height: 1.41
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:

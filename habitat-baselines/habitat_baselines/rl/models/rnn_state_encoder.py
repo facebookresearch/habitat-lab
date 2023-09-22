@@ -302,7 +302,6 @@ class RNNStateEncoder(nn.Module):
         self, x, hidden_states, masks
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         r"""Forward for a non-sequence input"""
-
         hidden_states = torch.where(
             masks.view(1, -1, 1), hidden_states, hidden_states.new_zeros(())
         )

@@ -10,9 +10,11 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
@@ -80,8 +82,53 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_articulated_agent.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
+    def _find_closet_rep(self):
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+        all_receps = find_receptacles(self._sim)
+
+        min_rep_dis = float("inf")
+        min_rep = None
+        for rep in all_receps:
+            rep_bb = self._sim.receptacles[rep.name]
+            rep_pos = np.random.uniform(rep_bb.min, rep_bb.max)
+            if np.linalg.norm(cur_pos - rep_pos) < min_rep_dis:
+                min_rep_dis = np.linalg.norm(cur_pos - rep_pos)
+                min_rep_pos = rep_pos
+                min_rep = rep
+        return min_rep, min_rep_pos
+
     def _ungrasp(self):
-        self.cur_grasp_mgr.desnap()
+        # Teleporting the object
+        # The second way
+        # target_obj = self._sim.get_rigid_object_manager().get_object_by_id( self.cur_grasp_mgr._snapped_obj_id)
+        # snap_success, targ_pos = sutils.snap_down(
+        #     self._sim,
+        #     target_obj,
+        #     return_first_hit_obj=True
+        # )
+        # if snap_success:
+        #     obj_id = self.cur_grasp_mgr._snapped_obj_id
+        #     self.cur_grasp_mgr.desnap()
+        #     self._sim.get_rigid_object_manager().get_object_by_id(
+        #         obj_id
+        #     ).translation = targ_pos
+        #     breakpoint()
+        # return
+        # The first way
+        _, pos_targs = self._sim.get_targets()
+        targ_pos = pos_targs[0]
+        cur_pos = np.array(
+            self.cur_articulated_agent.ee_transform().translation
+        )
+        place_threshold = 0.5
+        if np.linalg.norm(cur_pos - targ_pos) <= place_threshold:
+            obj_id = self.cur_grasp_mgr._snapped_obj_id
+            self.cur_grasp_mgr.desnap()
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                obj_id
+            ).translation = targ_pos
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
