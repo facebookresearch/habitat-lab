@@ -1,10 +1,11 @@
 # @package _global_
 
 defaults:
-  - planner_learn_kinematic_oracle_humanoid_spot_fp # pop_play_kinematic_oracle_humanoid_spot_fp
+  - pop_play_kinematic_oracle_humanoid_spot_fp
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
+    - all_predicates
   - /habitat/task/actions@habitat.task.actions.agent_0_pick_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_place_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_reset_arm_action: arm_action
@@ -103,6 +104,10 @@ habitat:
         gym_action_prefix: place_base_vel
 
 habitat_baselines:
+  evaluate: True
+  eval:
+    should_load_ckpt: True
+    video_option: []
   rl:
     policy:
       agent_0:
@@ -111,22 +116,24 @@ habitat_baselines:
             pick:
               skill_name: "PickSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_pick/pick_latest.pth"
+              # load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_pick/pick_latest.pth"
               max_skill_steps: 100 # We reduce the max skill steps so that the high-level policy can replan as soon as possible when the grasping fails
               reset_joint_state: [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
               apply_postconds: False
+              load_ckpt_file: "multirun/checkpoints_jimmy/pick.pth"
             place:
               skill_name: "PlaceSkillPolicy"
               obs_skill_inputs: ["obj_goal_sensor"]
               max_skill_steps: 100 # We reduce the max skill steps so that the high-level policy can replan as soon as possible when the grasping fails
               apply_postconds: False
               reset_joint_state: [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
-              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_place/place_ckpt.343.pth"
+              load_ckpt_file: "multirun/checkpoints_jimmy/place.pth"
+              # load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_place/place_ckpt.343.pth"
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_as21NCAR_2/latest.pth"
-              # load_ckpt_file: "multirun/checkpoints_jimmy/jimmy_nav.pth"
+              # load_ckpt_file: "/fsx-siro/jimmytyyang/rl_log/checkpoints_as21NCAR_2/latest.pth"
+              load_ckpt_file: "multirun/checkpoints_jimmy/jimmy_nav.pth"
               max_skill_steps: 2000
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
