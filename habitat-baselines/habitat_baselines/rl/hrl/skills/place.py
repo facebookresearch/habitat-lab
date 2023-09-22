@@ -4,12 +4,10 @@
 
 from dataclasses import dataclass
 
+import numpy as np
 import torch
 
-from habitat.tasks.rearrange.rearrange_sensors import (
-    IsHoldingSensor,
-    RelativeRestingPositionSensor,
-)
+from habitat.tasks.rearrange.rearrange_sensors import IsHoldingSensor
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
 
 
@@ -31,25 +29,56 @@ class PlaceSkillPolicy(PickSkillPolicy):
         return action
 
     def _is_skill_done(
-        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
+        self,
+        observations,
     ) -> torch.BoolTensor:
         # Is the agent not holding an object and is the end-effector at the
         # resting position?
-        rel_resting_pos = torch.norm(
-            observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
-        )
-        is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
         is_holding = (
             observations[IsHoldingSensor.cls_uuid].view(-1).type(torch.bool)
         )
-        is_done = is_within_thresh & (~is_holding)
-        if is_done.sum() > 0:
-            self._internal_log(
-                f"Terminating with {rel_resting_pos} and {is_holding}",
+        current_joint_pos = observations["joint"].cpu().numpy()
+        is_reset_done = (
+            torch.as_tensor(
+                np.abs(current_joint_pos - self._rest_state).max(-1),
+                dtype=torch.float32,
             )
-        return is_done
+            < 0.05
+        )
+        is_reset_done = is_reset_done.to(is_holding.device)
+
+        return (~is_holding * is_reset_done).type(torch.bool)
 
     def _parse_skill_arg(self, skill_arg):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = super()._internal_act(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+        action = self._mask_pick(action, observations)
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        if not is_holding and self._need_reset_arm:
+            current_joint_pos = observations["joint"].cpu().numpy()
+            delta = self._rest_state - current_joint_pos
+            action.actions[
+                :, self.arm_start_id : self.arm_start_id + self.arm_len - 1
+            ] = torch.from_numpy(delta).to(
+                device=action.actions.device, dtype=action.actions.dtype
+            )
+        return action
