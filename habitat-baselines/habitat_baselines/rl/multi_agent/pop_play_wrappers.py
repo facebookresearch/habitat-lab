@@ -71,6 +71,7 @@ class MultiPolicy(Policy):
                     deterministic,
                 )
             )
+
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
@@ -95,6 +96,7 @@ class MultiPolicy(Policy):
         rnn_hidden_lengths = [
             ac.rnn_hidden_states.shape[-1] for ac in agent_actions
         ]
+
         return MultiAgentPolicyActionData(
             rnn_hidden_states=torch.cat(
                 [ac.rnn_hidden_states for ac in agent_actions], -1

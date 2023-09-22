@@ -220,14 +220,16 @@ class NnSkillPolicy(SkillPolicy):
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )
+
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(
-                    {  # type: ignore
-                        k[len("actor_critic.") :]: v
-                        for k, v in ckpt_dict["state_dict"].items()
-                    }
-                )
+                # actor_critic.load_state_dict(
+                #     {  # type: ignore
+                #         k[len("actor_critic.") :]: v
+                #         for k, v in ckpt_dict["state_dict"].items()
+                #     }
+                # )
+                actor_critic.load_state_dict(ckpt_dict["state_dict"])
 
             except Exception as e:
                 raise ValueError(

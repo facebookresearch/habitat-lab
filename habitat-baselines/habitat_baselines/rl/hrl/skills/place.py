@@ -11,9 +11,30 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
+from habitat_baselines.rl.hrl.utils import find_action_range, skill_io_manager
+from habitat_baselines.utils.common import get_num_actions
 
 
 class PlaceSkillPolicy(PickSkillPolicy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Get the action space
+        action_space = args[2]
+        for k, _ in action_space.items():
+            if k == "pick_base_velocity":
+                self.pick_start_id, self.pick_len = find_action_range(
+                    action_space, "pick_base_velocity"
+                )
+            if k == "place_base_velocity":
+                self.place_start_id, self.place_len = find_action_range(
+                    action_space, "place_base_velocity"
+                )
+
+        # Get the skill io manager
+        self.sm = skill_io_manager()
+        self._num_ac = get_num_actions(action_space)
+
     @dataclass(frozen=True)
     class PlaceSkillArgs:
         obj: int
@@ -27,7 +48,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
         is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_not_holding):
             # Do not regrasp the object once it is released.
-            action[i, self._grip_ac_idx] = -1.0
+            action.actions[i, self._grip_ac_idx] = -1.0
         return action
 
     def _is_skill_done(
@@ -47,9 +68,57 @@ class PlaceSkillPolicy(PickSkillPolicy):
             self._internal_log(
                 f"Terminating with {rel_resting_pos} and {is_holding}",
             )
+            self.sm.hidden_state = None
+
         return is_done
 
     def _parse_skill_arg(self, skill_arg):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        if self.sm.hidden_state is None:
+            self.sm.init_hidden_state(
+                observations,
+                self._wrap_policy.net._hidden_size,
+                self._wrap_policy.num_recurrent_layers,
+            )
+            self.sm.init_prev_action(prev_actions, self._num_ac)
+
+        action = super()._internal_act(
+            observations,
+            self.sm.hidden_state,
+            self.sm.prev_action,
+            masks,
+            cur_batch_idx,
+            deterministic,
+        )
+
+        action = self._mask_pick(action, observations)
+
+        action.actions[
+            :, self.place_start_id : self.place_start_id + self.place_len
+        ] = action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ]
+        size = action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ].shape
+        action.actions[
+            :, self.pick_start_id : self.pick_start_id + self.pick_len
+        ] = torch.zeros(size)
+
+        # Update the hidden state / action
+        self.sm.hidden_state = action.rnn_hidden_states
+        self.sm.prev_action = action.actions
+
+        return action

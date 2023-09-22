@@ -1,5 +1,8 @@
 # @package _global_
 
+# Command to run the script
+# python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]  habitat_baselines.video_dir=/checkpoint/jimmytyyang/slurm/rl_log/video_GT_37_humanoid_spot_fp habitat_baselines.evaluate=True habitat_baselines.test_episode_count=20 habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=False habitat_baselines.writer_type=tb habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz
+
 defaults:
   - /benchmark/rearrange: multi_agent_tidy_house_fp_spot_humanoid
   - /habitat_baselines: habitat_baselines_rl_config_base
@@ -9,11 +12,11 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
+  #- /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
+  #- /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: nn_skills_ma #nn_skills_ma #nn_skills_ma #oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/lab_sensors:
     # For the oracle navigation

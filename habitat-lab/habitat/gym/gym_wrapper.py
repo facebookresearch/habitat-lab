@@ -129,6 +129,7 @@ def continuous_vector_action_to_hab_dict(
         # No need for a tuple if there is only one action
         root_action_names = root_action_names[0]
     action_name_to_lengths = {}
+
     for outer_k, act_dict in original_action_space.spaces.items():
         if isinstance(act_dict, EmptySpace):
             action_name_to_lengths[outer_k] = 1
