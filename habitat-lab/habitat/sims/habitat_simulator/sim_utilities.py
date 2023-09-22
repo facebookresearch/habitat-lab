@@ -137,6 +137,7 @@ def bb_ray_prescreen(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     check_all_corners: bool = False,
+    return_first_hit_obj: bool = False,
 ) -> Dict[str, Any]:
     """
     Pre-screen a potential placement by casting rays in the gravity direction from the object center of mass (and optionally each corner of its bounding box) checking for interferring objects below.
@@ -180,7 +181,7 @@ def bb_ray_prescreen(
             for hit in raycast_results[-1].hits:
                 if hit.object_id == obj.object_id:
                     continue
-                elif hit.object_id in support_obj_ids:
+                elif hit.object_id in support_obj_ids or return_first_hit_obj:
                     hit_point = ray.origin + ray.direction * hit.ray_distance
                     support_impacts[ix] = hit_point
                     support_impact_height = mn.math.dot(
@@ -195,7 +196,6 @@ def bb_ray_prescreen(
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
                         highest_support_impact_with_stage = hit.object_id == -1
-
                 # terminates at the first non-self ray hit
                 break
     # compute the relative base height of the object from its lowest bb corner and COM
@@ -232,6 +232,7 @@ def snap_down(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     vdb: Optional[DebugVisualizer] = None,
+    return_first_hit_obj: bool = False,
 ) -> bool:
     """
     Attempt to project an object in the gravity direction onto the surface below it.
@@ -254,16 +255,18 @@ def snap_down(
         # set default support surface to stage/ground mesh
         support_obj_ids = [-1]
 
-    bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj_ids)
+    bb_ray_prescreen_results = bb_ray_prescreen(
+        sim, obj, support_obj_ids, return_first_hit_obj
+    )
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:
         # no support under this object, return failure
-        return False
+        return False, None
 
     # finish up
     if bb_ray_prescreen_results["surface_snap_point"] is not None:
         # accept the final location if a valid location exists
-        obj.translation = bb_ray_prescreen_results["surface_snap_point"]
+        # obj.translation = bb_ray_prescreen_results["surface_snap_point"]
         if vdb is not None:
             vdb.get_observation(obj.translation)
         sim.perform_discrete_collision_detection()
@@ -279,15 +282,15 @@ def snap_down(
                     or cp.object_id_b in support_obj_ids
                 )
             ):
-                obj.translation = cached_position
+                # obj.translation = cached_position
                 # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
                 # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
-                return False
-        return True
+                return False, None
+        return True, bb_ray_prescreen_results["surface_snap_point"]
     else:
         # no valid position found, reset and return failure
-        obj.translation = cached_position
-        return False
+        # obj.translation = cached_position
+        return False, None
 
 
 def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:

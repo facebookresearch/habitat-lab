@@ -3,6 +3,24 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import sys
+
+try:
+    sys.path.remove(
+        "/private/home/jimmytyyang/facebook/siro/habitat-lab/habitat-lab"
+    )
+    sys.path.remove(
+        "/private/home/jimmytyyang/facebook/siro/habitat-lab/habitat-baselines"
+    )
+    sys.path.append(
+        "/private/home/jimmytyyang/facebook/habitat-lab-checkout-hrl/habitat-lab/habitat-lab"
+    )
+    sys.path.append(
+        "/private/home/jimmytyyang/facebook/habitat-lab-checkout-hrl/habitat-lab/habitat-baselines"
+    )
+    print("Done")
+except Exception:
+    print("Second Done!")
 import random
 import sys
 from typing import TYPE_CHECKING

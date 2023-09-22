@@ -17,7 +17,7 @@ defaults:
   #- /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: nn_skills_ma #nn_skills_ma #nn_skills_ma #oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma #nn_skills_ma #oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/lab_sensors:
     # For the oracle navigation
@@ -44,7 +44,7 @@ habitat_baselines:
   num_updates: -1
   total_num_steps: 1e8
   log_interval: 1
-  num_checkpoints: 50
+  num_checkpoints: 10
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
@@ -52,12 +52,6 @@ habitat_baselines:
 
   evaluate: False
   # writer_type: 'wb'
-
-  # wb:
-  #   project_name: 'hab3'
-  #   entity: 'andrew-colab'
-  #   run_name: ${hydra:job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}/${hydra:job.num}
-
 
   eval:
     should_load_ckpt: False
@@ -82,11 +76,11 @@ habitat_baselines:
               - "obj_start_sensor"
               - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
-          # defined_skills:
-          #   nav_to_obj:
-          #     skill_name: "OracleNavPolicy"
-          #     obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-          #     max_skill_steps: 1500
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
           high_level_policy:

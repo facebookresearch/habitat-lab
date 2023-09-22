@@ -181,6 +181,15 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
+        temp_expected_obs_keys = []
+
+        # TODO, better way to handle loading nav avoid policies
+        for k in policy_cfg.habitat.gym.obs_keys:
+            if "agent_0" in k:
+                true_k = k.split("agent_0_")[-1]
+                temp_expected_obs_keys.append(true_k)
+                expected_obs_keys = temp_expected_obs_keys
+
         filtered_obs_space = spaces.Dict(
             {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
@@ -195,12 +204,18 @@ class NnSkillPolicy(SkillPolicy):
             f"Skill {config.skill_name}: Loaded observation space {filtered_obs_space}",
         )
 
-        filtered_action_space = ActionSpace(
-            OrderedDict(
-                (k, action_space[k])
-                for k in policy_cfg.habitat.task.actions.keys()
+        try:
+            filtered_action_space = ActionSpace(
+                OrderedDict(
+                    (k, action_space[k])
+                    for k in policy_cfg.habitat.task.actions.keys()
+                )
             )
-        )
+        except Exception:
+            nav_action_space = ["base_velocity", "rearrange_stop"]
+            filtered_action_space = ActionSpace(
+                OrderedDict((k, action_space[k]) for k in nav_action_space)
+            )
 
         if "arm_action" in filtered_action_space.spaces and (
             policy_cfg.habitat.task.actions.arm_action.grip_controller is None
@@ -217,17 +232,30 @@ class NnSkillPolicy(SkillPolicy):
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}",
         )
 
-        actor_critic = policy.from_config(
-            policy_cfg, filtered_obs_space, filtered_action_space
-        )
+        if len(policy_cfg.habitat.simulator.agents_order) > 1:
+            actor_critic = policy.from_config(
+                policy_cfg,
+                filtered_obs_space,
+                filtered_action_space,
+                agent_name="agent_0",
+            )
+        else:
+            actor_critic = policy.from_config(
+                policy_cfg, filtered_obs_space, filtered_action_space
+            )
+
         if len(ckpt_dict) > 0:
             try:
-                actor_critic.load_state_dict(
-                    {  # type: ignore
-                        k[len("actor_critic.") :]: v
-                        for k, v in ckpt_dict["state_dict"].items()
-                    }
-                )
+                # actor_critic.load_state_dict(
+                #     {  # type: ignore
+                #         k[len("actor_critic.") :]: v
+                #         for k, v in ckpt_dict["state_dict"].items()
+                #     }
+                # )
+                if len(policy_cfg.habitat.simulator.agents_order) > 1:
+                    actor_critic.load_state_dict(ckpt_dict[0]["state_dict"])
+                else:
+                    actor_critic.load_state_dict(ckpt_dict["state_dict"])
 
             except Exception as e:
                 raise ValueError(

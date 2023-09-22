@@ -1,8 +1,8 @@
 name: "HierarchicalPolicy"
-obs_transforms:
-  add_virtual_keys:
-    virtual_keys:
-      "goal_to_agent_gps_compass": 2
+# obs_transforms:
+#   add_virtual_keys:
+#     virtual_keys:
+#       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
     name: "NeuralHighLevelPolicy"

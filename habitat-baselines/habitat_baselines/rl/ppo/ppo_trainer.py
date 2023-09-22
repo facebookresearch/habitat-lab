@@ -839,7 +839,6 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
         else:
             ckpt_dict = {"config": None}
 
@@ -918,6 +917,7 @@ class PPOTrainer(BaseRLTrainer):
             device=self.device,
             dtype=torch.long if discrete_actions else torch.float,
         )
+
         not_done_masks = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,
