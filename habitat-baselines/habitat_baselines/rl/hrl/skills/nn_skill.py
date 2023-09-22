@@ -186,7 +186,7 @@ class NnSkillPolicy(SkillPolicy):
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
-        # TOO: Hack the keys should be gotten from somewhere else
+        # TODO: Hack the keys should be gotten from somewhere else
         expected_obs_keys = update_list_with_agent_prefix(expected_obs_keys, 0)
 
         filtered_obs_space = spaces.Dict(

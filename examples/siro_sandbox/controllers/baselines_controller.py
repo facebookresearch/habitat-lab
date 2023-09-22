@@ -437,7 +437,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         elif self.current_state == FetchState.BRING:
             type_of_skill = self.defined_skills.nav_to_robot.skill_name
-
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
