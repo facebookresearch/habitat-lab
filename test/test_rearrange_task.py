@@ -93,7 +93,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
             "habitat_baselines.eval.split=val",
         ],
     )
-    for _, agent_config in config.habitat.simulator.agents.items():
+    for agent_config in config.habitat.simulator.agents.values():
         if (
             agent_config.articulated_agent_type == "KinematicHumanoid"
             and not osp.exists(agent_config.motion_data_path)

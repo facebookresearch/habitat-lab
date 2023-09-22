@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - /benchmark/nav/objectnav/objectnav_procthor-hab.yaml
+  - _self_
+
+habitat:
+
+  dataset:
+    type: ObjectNav-v1
+    split: val
+    data_path: data/datasets/objectnav/procthor-hab/{split}/{split}.json.gz
+    scenes_dir: data/scene_datasets/ai2thor-hab/ai2thor-hab/configs/scenes/ProcTHOR/
+    content_scenes: ["*"]

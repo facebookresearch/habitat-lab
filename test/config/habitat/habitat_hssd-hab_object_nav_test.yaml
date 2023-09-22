@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - /benchmark/nav/objectnav/objectnav_hssd-hab.yaml
+  - _self_
+
+habitat:
+
+  dataset:
+    type: ObjectNav-v1
+    split: val
+    data_path: data/datasets/objectnav/hssd-hab/{split}/{split}.json.gz
+    scenes_dir: data/scene_datasets/hssd-hab/scenes
+    content_scenes: ["*"]

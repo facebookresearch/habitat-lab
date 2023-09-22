@@ -260,20 +260,28 @@ class RearrangeEpisodeGenerator:
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
-                    object_handles,
-                    obj_sampler_info["params"]["receptacle_sets"],
-                    obj_sampler_info["sampler_range"],
-                    num_samples,
-                    obj_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(obj_sampler_info),
-                    obj_sampler_info["params"].get(
+                    object_set=object_handles,
+                    allowed_recep_set_names=obj_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    sampler_range_type=obj_sampler_info["sampler_range"],
+                    num_objects=num_samples,
+                    orientation_sample=obj_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        obj_sampler_info
+                    ),
+                    nav_to_min_distance=obj_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
-                    object_set_sampler_probs,
-                    obj_sampler_info["params"].get("sample_probs", None),
-                    obj_sampler_info["params"].get(
-                        "constrain_to_largest_nav_island", False
+                    object_set_sample_probs=object_set_sampler_probs,
+                    recep_set_sample_probs=obj_sampler_info["params"].get(
+                        "sample_probs", None
                     ),
+                    constrain_to_largest_nav_island=obj_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
@@ -301,18 +309,30 @@ class RearrangeEpisodeGenerator:
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
                     # Add object set later
-                    [],
-                    target_sampler_info["params"]["receptacle_sets"],
-                    target_sampler_info["sampler_range"],
-                    (
+                    object_instance_set=[],
+                    allowed_recep_set_names=target_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    sampler_range_type=target_sampler_info["sampler_range"],
+                    num_objects=(
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
                     ),
-                    target_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(target_sampler_info),
-                    target_sampler_info["params"].get(
+                    orientation_sample=target_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        target_sampler_info
+                    ),
+                    nav_to_min_distance=target_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
+                    recep_set_sample_probs=target_sampler_info["params"].get(
+                        "sample_probs", None
+                    ),
+                    constrain_to_largest_nav_island=target_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
