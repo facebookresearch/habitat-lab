@@ -186,12 +186,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             )
 
         if self._config.habitat_baselines.rl.ddppo.pretrained:
-            actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
+            actor_critic.load_state_dict(pretrained_state["state_dict"])
         elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
             if self._config.habitat_baselines.rl.policy.ovrl:
                 state_dict = {
@@ -202,10 +197,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                     state_dict=state_dict, strict=False
                 )
             else:
-                prefix = "actor_critic.net.visual_encoder."
+                prefix = "net.visual_encoder."
                 actor_critic.net.visual_encoder.load_state_dict(
                     {
-                        k[len(prefix) :]: v
+                        k: v
                         for k, v in pretrained_state["state_dict"].items()
                         if k.startswith(prefix)
                     }
