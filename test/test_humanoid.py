@@ -10,6 +10,7 @@ import gym
 import magnum as mn
 import numpy as np
 import pytest
+from omegaconf import DictConfig
 
 import habitat.articulated_agents.humanoids.kinematic_humanoid as kinematic_humanoid
 import habitat_sim
@@ -192,9 +193,17 @@ def test_humanoid_controller(humanoid_name):
 
         # add the humanoid to the world via the wrapper
         humanoid_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}.urdf"
+        walk_pose_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}_motion_data_smplx.pkl"
+
+        agent_config = DictConfig(
+            {
+                "articulated_agent_urdf": humanoid_path,
+                "motion_data_path": walk_pose_path,
+            }
+        )
         if not osp.exists(humanoid_path):
             pytest.skip(f"No humanoid file {humanoid_path}")
-        kin_humanoid = kinematic_humanoid.KinematicHumanoid(humanoid_path, sim)
+        kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
         kin_humanoid.reconfigure()
         kin_humanoid.update()
         assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
@@ -211,7 +220,6 @@ def test_humanoid_controller(humanoid_name):
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # Test controller
-        walk_pose_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}_motion_data_smplx.pkl"
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
 
         init_pos = kin_humanoid.base_pos

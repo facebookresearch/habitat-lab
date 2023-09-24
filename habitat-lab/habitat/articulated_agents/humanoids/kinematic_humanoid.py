@@ -57,11 +57,11 @@ class KinematicHumanoid(MobileManipulator):
         )
 
     def __init__(
-        self, urdf_path, sim, limit_robo_joints=False, fixed_base=False
+        self, agent_cfg, sim, limit_robo_joints=False, fixed_base=False
     ):
         super().__init__(
             self._get_humanoid_params(),
-            urdf_path,
+            agent_cfg,
             sim,
             limit_robo_joints,
             fixed_base,
@@ -85,8 +85,9 @@ class KinematicHumanoid(MobileManipulator):
         self.offset_transform_base = perm @ add_rot
 
         self.rest_joints = None
+        self._set_rest_pose_path(agent_cfg.motion_data_path)
 
-    def set_rest_pose_path(self, rest_pose_path):
+    def _set_rest_pose_path(self, rest_pose_path):
         """Sets the parameters that indicate the reset state of the agent. Note that this function overrides
         _get_X_params, which is used to set parameters of the robots, but the parameters are so large that
         it is better to put that on a file
