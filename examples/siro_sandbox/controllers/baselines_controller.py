@@ -188,6 +188,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # also consider self._config.habitat.task["robot_at_thresh"]
         self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.8
+        self._local_place_target = [0.5, 0.0, 0.0]
 
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
@@ -286,20 +287,18 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         )
         self.should_start_skill = False
 
-    def get_cartesian_obj_coords(self, obj_trans, env):
+    def get_cartesian_obj_coords(self, obj_trans):
         articulated_agent_T = self.get_articulated_agent().base_transformation
         rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
         rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
 
         return rho, phi
 
-    def get_geodesic_distance_obj_coords(self, obj_trans, env):
-        # TODO: we use geodesic_distance here
-        articulated_agent_T = self.get_articulated_agent().base_transformation
-        rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
-        rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
+    def get_geodesic_distance_obj_coords(self, obj_trans):
+        _, phi = self.get_cartesian_obj_coords(obj_trans)
         rho = self._habitat_env._sim.geodesic_distance(
-            obj_trans, articulated_agent_T.translation
+            obj_trans,
+            self.get_articulated_agent().base_transformation.translation,
         )
 
         return rho, phi
@@ -317,7 +316,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         global_T = env._sim.get_agent_data(
             self._agent_idx
         ).articulated_agent.ee_transform()
-        return np.array(global_T.transform_point(np.array([0.5, 0, 0.0])))
+
+        return np.array(
+            global_T.transform_point(np.array(self._local_place_target))
+        )
 
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
@@ -354,7 +356,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
 
         # Only take the goal object
-        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans, env)
+        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
         with torch.no_grad():
@@ -390,7 +392,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     # agent_trans = human_trans
-                    rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
+                    rho, _ = self.get_cartesian_obj_coords(obj_trans)
                     finished_nav = rho < self._pick_dist_threshold
 
                 if not finished_nav:
@@ -458,7 +460,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
                 # agent_trans = human_trans
-                rho, _ = self.get_cartesian_obj_coords(human_trans, env)
+                rho, _ = self.get_cartesian_obj_coords(human_trans)
                 finished_nav = rho < self._pick_dist_threshold
 
             if not finished_nav:

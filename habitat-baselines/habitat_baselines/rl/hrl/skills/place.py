@@ -43,7 +43,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
                 np.abs(current_joint_pos - self._rest_state).max(-1),
                 dtype=torch.float32,
             )
-            < 0.05
+            < self._arm_retract_success_threshold
         )
         is_reset_done = is_reset_done.to(is_holding.device)
 

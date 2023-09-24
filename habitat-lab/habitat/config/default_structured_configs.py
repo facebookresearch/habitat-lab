@@ -279,7 +279,7 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     ang_speed: float = 10.0
     # If we want to do sliding or not
     allow_dyn_slide: bool = False
-    # If the condition of sliding includs the checking of rotation
+    # If the condition of sliding includes the checking of rotation
     enable_rotation_check_for_dyn_slide: bool = True
     # If we allow the robot to move back or not
     allow_back: bool = True

@@ -705,8 +705,10 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
         first_row = True
         time_i = 0
         with open(self._checkpoint, newline="") as csvfile:
-            spamreader = csv.reader(csvfile, delimiter=" ", quotechar="|")
-            for row in spamreader:
+            leg_motion_reader = csv.reader(
+                csvfile, delimiter=" ", quotechar="|"
+            )
+            for row in leg_motion_reader:
                 if not first_row:
                     if (
                         time_i >= self._use_range[0]

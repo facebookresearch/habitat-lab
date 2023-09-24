@@ -355,7 +355,7 @@ class ExplorationReward(Measure):
             **kwargs,
         )
 
-    def normal_round(self, n):
+    def round_to_nearest(self, n):
         if n - math.floor(n) < 0.5:
             return math.floor(n)
         return math.ceil(n)
@@ -377,8 +377,8 @@ class ExplorationReward(Measure):
         if robot_pos_encoding not in self._visit_loc_round_0:
             self._visit_loc_round_0[robot_pos_encoding] = 0
 
-        x_pos = self.normal_round(position_robot[0])
-        y_pos = self.normal_round(position_robot[2])
+        x_pos = self.round_to_nearest(position_robot[0])
+        y_pos = self.round_to_nearest(position_robot[2])
         robot_pos_encoding = (x_pos, y_pos)
         if robot_pos_encoding not in self._visit_loc_round_half:
             self._visit_loc_round_half[robot_pos_encoding] = 0

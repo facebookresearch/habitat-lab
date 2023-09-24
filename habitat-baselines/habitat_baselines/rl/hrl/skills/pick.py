@@ -25,6 +25,7 @@ class PickSkillPolicy(NnSkillPolicy):
         # Parameters for resetting the arm
         self._rest_state = np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0])
         self._need_reset_arm = True
+        self._arm_retract_success_threshold = 0.05
 
     def _is_skill_done(
         self,
@@ -39,7 +40,7 @@ class PickSkillPolicy(NnSkillPolicy):
                 np.abs(current_joint_pos - self._rest_state).max(-1),
                 dtype=torch.float32,
             )
-            < 0.05
+            < self._arm_retract_success_threshold
         )
         is_reset_done = is_reset_done.to(is_holding.device)
 

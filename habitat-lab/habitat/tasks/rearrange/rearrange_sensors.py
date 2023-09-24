@@ -1347,7 +1347,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             np.sum(panoptic == self._human_id) > self._human_detect_threshold
         )
 
-    def _check_look_at_human(self, human_pos, robot_pos):
+    def _check_robot_facing_human(self, human_pos, robot_pos):
         vector_human_robot = human_pos - robot_pos
         vector_human_robot = vector_human_robot / np.linalg.norm(
             vector_human_robot
@@ -1413,7 +1413,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         found_human = False
         if self._check_human_dis(
             robot_pos, human_pos
-        ) and self._check_look_at_human(human_pos, robot_pos):
+        ) and self._check_robot_facing_human(human_pos, robot_pos):
             found_human = True
             self._has_found_human = True
             self._found_human_times += 1
