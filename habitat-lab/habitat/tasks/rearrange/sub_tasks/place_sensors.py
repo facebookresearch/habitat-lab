@@ -158,11 +158,9 @@ class PlaceReward(RearrangeReward):
                 # distance is stale.
                 self._prev_dist = -1
                 self._prev_reached_goal = True
-                # print('added place reward: ', self._place_reward)
             elif obj_at_goal and self._prev_reached_goal:
                 # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
                 reward += self._stability_reward
-                # print('added stability reward: ', self._stability_reward)
             elif not obj_at_goal and (
                 time_since_release == self._max_steps_to_reach_surface
                 or (
@@ -177,7 +175,6 @@ class PlaceReward(RearrangeReward):
                 elif self._drop_pen_type == "penalize_remaining_time":
                     drop_pen *= (300 - self._curr_step) / 300
                 reward -= drop_pen
-                # print('added drop penalty: ', drop_pen)
                 if self._wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
