@@ -108,7 +108,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
     def __init__(
         self,
         params: MobileManipulatorParams,
-        urdf_path: str,
+        agent_cfg,
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
@@ -117,7 +117,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
     ):
         r"""Constructor
         :param params: The parameter of the manipulator articulated agent.
-        :param urdf_path: The path to the agent's URDF file.
+        :param agent_cfg: Config to the agent. Contains urdf_path to URDF file.
         :param sim: The simulator.
         :param limit_robo_joints: If true, joint limits of agent are always
             enforced.
@@ -130,7 +130,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         # instantiate a manipulator
         Manipulator.__init__(
             self,
-            urdf_path=urdf_path,
+            urdf_path=agent_cfg.articulated_agent_urdf,
             params=params,
             sim=sim,
             limit_robo_joints=limit_robo_joints,
@@ -138,7 +138,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         # instantiate a robotBase
         ArticulatedAgentBase.__init__(
             self,
-            urdf_path=urdf_path,
+            urdf_path=agent_cfg.articulated_agent_urdf,
             params=params,
             sim=sim,
             limit_robo_joints=limit_robo_joints,

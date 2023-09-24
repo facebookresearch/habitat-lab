@@ -8,6 +8,7 @@ from os import path as osp
 
 import numpy as np
 import pytest
+from omegaconf import DictConfig
 
 import habitat.articulated_agents.robots.fetch_robot as fetch_robot
 import habitat.articulated_agents.robots.franka_robot as franka_robot
@@ -311,7 +312,10 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-        fetch = fetch_robot.FetchRobot(robot_path, sim, fixed_base=fixed_base)
+        agent_config = DictConfig({"articulated_agent_urdf": robot_path})
+        fetch = fetch_robot.FetchRobot(
+            agent_config, sim, fixed_base=fixed_base
+        )
         fetch.reconfigure()
         fetch.update()
         assert fetch.get_robot_sim_id() == 1  # 0 is the ground plane
@@ -587,7 +591,8 @@ def test_spot_robot_wrapper(fixed_base):
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
-        spot = spot_robot.SpotRobot(robot_path, sim, fixed_base=fixed_base)
+        agent_config = DictConfig({"articulated_agent_urdf": robot_path})
+        spot = spot_robot.SpotRobot(agent_config, sim, fixed_base=fixed_base)
         spot.reconfigure()
         spot.update()
         assert spot.get_robot_sim_id() == 1  # 0 is the ground plane
@@ -726,8 +731,9 @@ def test_stretch_robot_wrapper(fixed_base):
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_stretch/urdf/hab_stretch.urdf"
+        agent_config = DictConfig({"articulated_agent_urdf": robot_path})
         stretch = stretch_robot.StretchRobot(
-            robot_path, sim, fixed_base=fixed_base
+            agent_config, sim, fixed_base=fixed_base
         )
         stretch.reconfigure()
         stretch.update()

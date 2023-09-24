@@ -53,6 +53,9 @@ TURNING_STEP_AMOUNT = (
     20  # The maximum angle we should be rotating at a given step
 )
 THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
+DIST_TO_STOP = (
+    1e-9  # If the amout to move is this distance, just stop the character
+)
 
 
 class HumanoidRearrangeController:
@@ -109,10 +112,24 @@ class HumanoidRearrangeController:
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
-    def reset(self, position) -> None:
+    def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
+        """Set the speed of the humanoid according to the simulator speed"""
+        seconds_per_step = 1.0 / ctrl_freq
+        meters_per_step = lin_speed * seconds_per_step
+        frames_per_step = meters_per_step / self.dist_per_step_size
+        self.draw_fps = self.walk_motion.fps / frames_per_step
+        rotate_amount = ang_speed * seconds_per_step
+        rotate_amount = rotate_amount * 180.0 / np.pi
+        self.turning_step_amount = rotate_amount
+        self.threshold_rotate_not_move = rotate_amount
+
+    def reset(self, base_transformation) -> None:
         """Reset the joints on the human. (Put in rest state)"""
         self.obj_transform_offset = mn.Matrix4()
-        self.obj_transform_base.translation = position + self.base_offset
+        self.obj_transform_base = base_transformation
+        self.prev_orientation = base_transformation.transform_vector(
+            mn.Vector3(1.0, 0.0, 0.0)
+        )
 
     def calculate_stop_pose(self):
         """
@@ -138,9 +155,13 @@ class HumanoidRearrangeController:
         """
         deg_per_rads = 180.0 / np.pi
         forward_V = target_position
-        if forward_V.length() == 0.0:
+        if (
+            forward_V.length() < DIST_TO_STOP
+            or np.isnan(target_position).any()
+        ):
             self.calculate_stop_pose()
             return
+
         distance_to_walk = np.linalg.norm(forward_V)
         did_rotate = False
 
@@ -219,13 +240,19 @@ class HumanoidRearrangeController:
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
+
+        forward_V_norm = mn.Vector3(
+            [forward_V[2], forward_V[1], -forward_V[0]]
+        )
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform_base.translation,
-            self.obj_transform_base.translation + forward_V.normalized(),
+            self.obj_transform_base.translation + forward_V_norm.normalized(),
             mn.Vector3.y_axis(),
         )
 
         # Remove the forward component, and orient according to forward_V
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1, 0))
+        obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
         # This is the rotation and translation caused by the current motion pose
@@ -238,7 +265,10 @@ class HumanoidRearrangeController:
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
-        self.obj_transform_base = obj_transform_base
+        rot_offset = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base = obj_transform_base @ rot_offset
         self.joint_pose = joint_pose
 
     def get_pose(self):
