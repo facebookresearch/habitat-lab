@@ -564,6 +564,7 @@ class RearrangeSim(HabitatSim):
                 num_sample_points,
                 island_index=self._largest_indoor_island_idx,
             )
+            regen_i += 1
 
         assert not np.isnan(
             new_pos[0]

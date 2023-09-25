@@ -470,9 +470,10 @@ def get_robot_spawns(
         if np.isnan(agent.base_pos).any():
             continue
 
-        target_distance = np.linalg.norm(
-            (agent.base_pos - target_position)[[0, 2]]
-        )
+        # get the horizontal distance (XZ planar projection) to the target position
+        hor_disp = agent.base_pos - target_position
+        hor_disp[1] = 0
+        target_distance = hor_disp.length()
 
         if target_distance > distance_threshold:
             continue
