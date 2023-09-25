@@ -29,12 +29,14 @@ defaults:
     - humanoid_joint_sensor
     - other_agent_gps
     - has_finished_oracle_nav
+    - humanoid_detector_sensor
 
-  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+  # We remove the oracle nav action for the agent_0
+  # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
 
   # For Spot observation space
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
 
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
   - _self_
@@ -53,20 +55,26 @@ habitat:
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-        disable_grip: True
-
-      # Hack: it appears the Spot hierarchical policy config requires an oracle nav
-      # action (or, I haven't found a workaround). We want the Spot to navigate based
-      # on a neural policy that is driving the base_velocity_leg_animation action, but
-      # any active oracle nav policy will also try to overwrite this action each step.
-      # So, we set the oracle nav action type to "OracleNavCoordAction", and then
-      # we disable this action in oracle_nav_action.py OracleNavCoordAction.step via
-      # a hard-coded hack.
-      agent_0_oracle_nav_action:
-        type: OracleNavCoordAction
+        type: "ArmAction"
+        arm_controller: "ArmRelPosMaskKinematicAction"
+        arm_joint_mask: [1,1,0,1,1,1,1]
+        arm_joint_dimensionality: 7
+        grasp_thresh_dist: 0.5
+        disable_grip: False
+        delta_pos_limit: 0.20
+        ee_ctrl_lim: 0.015
 
       agent_0_base_velocity:
-        lin_speed: 6.0
+        allow_dyn_slide: True
+        collision_threshold: 1e-5
+        navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
+        enable_lateral_move: False
+        # This longitudinal_lin_speed and ang_speed are used for training skills
+        longitudinal_lin_speed: 10.0
+        lateral_lin_speed: 10.0
+        ang_speed: 10.0
+        enable_rotation_check_for_dyn_slide: False
+
       agent_1_oracle_nav_action:
         type: OracleNavAction
         motion_control: human_joints
@@ -93,6 +101,7 @@ habitat:
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
+      - agent_0_humanoid_detector_sensor
       # - agent_0_has_finished_oracle_nav
       # - agent_0_should_replan
       # - agent_1_head_depth
@@ -171,30 +180,52 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
+
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
 
-            # pick:
-            #   skill_name: "PickSkillPolicy"
-            #   obs_skill_inputs: ["obj_start_sensor"]
-            #   load_ckpt_file: "data/models/pick_latest.pth"
-            #   max_skill_steps: 500
-            #   obs_skill_input_dim: 3
+            pick:
+              skill_name: "PickSkillPolicy"
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/pick_latest.pth"
+              max_skill_steps: 500
+              obs_skill_input_dim: 3
 
+            place:
+              skill_name: "PlaceSkillPolicy"
+              # We can swtich between if we want to use pick skill to replace place skill
+              # or just use the true place skill
+              # Use the place skill
+              # obs_skill_inputs: ["obj_goal_sensor"]
+              # load_ckpt_file: "data/models/place_ckpt.343.pth"
+              # use_pick_skill_as_place_skill: False
+              # Use the pick skill to be the place skill
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/pick_latest.pth"
+              use_pick_skill_as_place_skill: True
+              max_skill_steps: 500
+              obs_skill_input_dim: 3
+
+
+            # Note that the pddl_action_names for nav_to_obj and nav_to_robot cannot contain
+            # the action_names from each other. Otherwise, the planner will only call the
+            # latest skill definition
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
-              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
+
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/latest_socnav_jimmy.pth"
+              load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
               max_skill_steps: 500
               obs_skill_input_dim: 2
-              pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+
       agent_1:
         hierarchical_policy:
           high_level_policy:

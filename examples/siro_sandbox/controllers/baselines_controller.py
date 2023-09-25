@@ -188,12 +188,16 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # also consider self._config.habitat.task["robot_at_thresh"]
         self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.8
-
+        # arm local ee location format: [up,right,front]
+        self._local_place_target = [-0.1, 0.0, 0.5]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
             self._agent_name
         ].hierarchical_policy.defined_skills
+        self._use_pick_skill_as_place_skill = (
+            self.defined_skills.place.use_pick_skill_as_place_skill
+        )
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -274,6 +278,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         batch_id = 0
         if skill_name == "pick":
             skill_args = ["0|0"]
+        elif skill_name == "place":
+            skill_args = ["0|0", "0|0"]
         else:
             skill_args = ["", "0|0", ""]
         (
@@ -284,12 +290,39 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         )
         self.should_start_skill = False
 
-    def get_cartesian_obj_coords(self, obj_trans, env):
+    def get_cartesian_obj_coords(self, obj_trans):
         articulated_agent_T = self.get_articulated_agent().base_transformation
         rel_pos = articulated_agent_T.inverted().transform_point(obj_trans)
         rho, phi = cartesian_to_polar(rel_pos[0], rel_pos[1])
 
         return rho, phi
+
+    def get_geodesic_distance_obj_coords(self, obj_trans):
+        _, phi = self.get_cartesian_obj_coords(obj_trans)
+        rho = self._habitat_env._sim.geodesic_distance(
+            obj_trans,
+            self.get_articulated_agent().base_transformation.translation,
+        )
+
+        return rho, phi
+
+    def check_if_skill_done(self, observations, skill_name):
+        """Check if the skill is done"""
+        ll_skil = self._agent.actor_critic._skills[  # type: ignore
+            self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
+        ]
+        return ll_skil._is_skill_done(
+            self._batch_and_apply_transforms([observations])
+        )
+
+    def get_place_loc(self, env):
+        global_T = env._sim.get_agent_data(
+            self._agent_idx
+        ).articulated_agent.ee_transform()
+
+        return np.array(
+            global_T.transform_point(np.array(self._local_place_target))
+        )
 
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
@@ -297,13 +330,40 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         skill_walk = self._agent.actor_critic._skills[  # type: ignore
             self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
         ]
+
         policy_input = self._policy_info["ll_policy"]
         policy_input["observations"] = self._batch_and_apply_transforms(
             [observations]
         )
-        # Only take the goal object
 
-        rho, phi = self.get_cartesian_obj_coords(obj_trans, env)
+        # TODO: the observation transformation always picks up
+        # the first object, we overwrite the observation
+        # here, which is a bit hacky
+        if skill_name == "pick":
+            global_T = env._sim.get_agent_data(
+                self._agent_idx
+            ).articulated_agent.ee_transform()
+            T_inv = global_T.inverted()
+            obj_start_pos = np.array(T_inv.transform_point(obj_trans))[
+                None, ...
+            ]
+            policy_input["observations"]["obj_start_sensor"] = obj_start_pos
+        elif skill_name == "place":
+            global_T = env._sim.get_agent_data(
+                self._agent_idx
+            ).articulated_agent.ee_transform()
+            T_inv = global_T.inverted()
+            obj_goal_pos = np.array(T_inv.transform_point(obj_trans))[
+                None, ...
+            ]
+            if self._use_pick_skill_as_place_skill:
+                # Reporpose pick skill for place
+                policy_input["observations"]["obj_start_sensor"] = obj_goal_pos
+            else:
+                policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
+
+        # Only take the goal object
+        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
         with torch.no_grad():
@@ -339,7 +399,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     # agent_trans = human_trans
-                    rho, _ = self.get_cartesian_obj_coords(obj_trans, env)
+                    rho, _ = self.get_cartesian_obj_coords(obj_trans)
                     finished_nav = rho < self._pick_dist_threshold
 
                 if not finished_nav:
@@ -375,6 +435,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 action_array = self.force_apply_skill(
                     obs, "pick", env, obj_trans
                 )[0]
+                if self.check_if_skill_done(obs, "pick"):
+                    self.grasped_object = self.rigid_obj_interest
+                    self.grasped_object_id = self.object_interest_id
+                    self.grasped_object.override_collision_group(
+                        self._thrown_object_collision_group
+                    )
+                    self.current_state = FetchState.BRING
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -396,17 +463,19 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         elif self.current_state == FetchState.BRING:
             type_of_skill = self.defined_skills.nav_to_robot.skill_name
-
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
                 # agent_trans = human_trans
-                rho, _ = self.get_cartesian_obj_coords(human_trans, env)
+                rho, _ = self.get_cartesian_obj_coords(human_trans)
                 finished_nav = rho < self._pick_dist_threshold
 
             if not finished_nav:
                 # Keep gripper closed
                 if type_of_skill == "NavSkillPolicy":
+                    if self.should_start_skill:
+                        # TODO: obs can be batched before
+                        self.start_skill(obs, "nav_to_robot")
                     action_array = self.force_apply_skill(
                         obs, "nav_to_robot", env, human_trans
                     )[0]
@@ -430,10 +499,25 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if type_of_skill == "PlaceSkillPolicy":
                 if self.should_start_skill:
                     # TODO: obs can be batched before
+                    self._policy_info = self._init_policy_input()
                     self.start_skill(obs, "place")
+                if self._target_place_trans is None:  # type: ignore
+                    self._target_place_trans = self.get_place_loc(env)  # type: ignore
                 action_array = self.force_apply_skill(
-                    obs, "place", env, obj_trans
+                    obs, "place", env, self._target_place_trans
                 )[0]
+                if self.check_if_skill_done(obs, "place"):
+                    self.grasped_object.motion_type = MotionType.DYNAMIC
+                    grasped_rigid_obj = self.grasped_object
+                    obj_bb = get_aabb(self.grasped_object_id, env._sim)
+                    self._last_object_drop_info = (
+                        grasped_rigid_obj,
+                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                    )
+                    self.grasped_object_id = None
+                    self.grasped_object = None
+                    self._target_place_trans = None
+                    self.current_state = FetchState.WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -467,3 +551,4 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._last_object_drop_info = None
         self.counter_pick = 0
         self._policy_info = self._init_policy_input()
+        self._target_place_trans = None

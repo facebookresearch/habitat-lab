@@ -58,6 +58,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
+    "HumanoidDetectorSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -74,6 +75,7 @@ __all__ = [
     "RotDistToGoalMeasurementConfig",
     "CompositeStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
+    "SocialNavStatsMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -82,6 +84,7 @@ __all__ = [
     "ArtObjSuccessMeasurementConfig",
     "ArtObjRewardMeasurementConfig",
     "NavToObjSuccessMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
     # PROFILING MEASURES
@@ -268,10 +271,25 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
     type: str = "BaseVelLegAnimationAction"
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
     lin_speed: float = 10.0
+    # The max angular speed of the robot
     ang_speed: float = 10.0
-    allow_dyn_slide: bool = True
+    # If we want to do sliding or not
+    allow_dyn_slide: bool = False
+    # If the condition of sliding includes the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # If we allow the robot to move back or not
     allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )
@@ -522,6 +540,16 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidJointSensor"
     dimensionality: int = 54 * 4
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -957,6 +985,7 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 @dataclass
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
+    use_geo_distance: bool = True
 
 
 @dataclass
@@ -973,6 +1002,21 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
+
+
+@dataclass
+class SocialNavStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    For evaluating social nav
+    """
+    type: str = "SocialNavStats"
+    check_human_in_frame: bool = False
+    min_dis_human: float = 1.0
+    max_dis_human: float = 2.0
+    human_id: int = 100
+    human_detect_pixel_threshold: int = 1000
+    total_steps: int = 1500
+    enable_shortest_path_computation: bool = False
 
 
 @dataclass
@@ -1012,6 +1056,29 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+
+
+@dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+
+    :property must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :property success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
+    type: str = "SocialNavSeekSuccess"
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+    # distance
+    following_step_succ_threshold: int = 800
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    need_to_face_human: bool = False
+    use_geo_distance: bool = False
+    facing_threshold: float = 0.5
 
 
 @dataclass
@@ -1174,6 +1241,11 @@ class CompositeSubgoalReward(MeasurementConfig):
 @dataclass
 class SocialNavReward(MeasurementConfig):
     type: str = "SocialNavReward"
+
+
+@dataclass
+class ExplorationReward(MeasurementConfig):
+    type: str = "ExplorationReward"
 
 
 @dataclass
@@ -2074,6 +2146,12 @@ cs.store(
     node=HumanoidJointSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
     group="habitat/task/lab_sensors",
     name="end_effector_sensor",
@@ -2360,6 +2438,12 @@ cs.store(
     node=SocialNavReward,
 )
 cs.store(
+    package="habitat.task.measurements.exploration_reward",
+    group="habitat/task/measurements",
+    name="exploration_reward",
+    node=ExplorationReward,
+)
+cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",
     group="habitat/task/measurements",
     name="cooperate_subgoal_reward",
@@ -2448,6 +2532,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_nav_to_obj_success",
     node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_nav_to_obj_reward",

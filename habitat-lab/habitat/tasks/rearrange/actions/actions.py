@@ -458,61 +458,6 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class BaseVelLegAnimationAction(BaseVelAction):
-    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
-        super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._checkpoint = self._config.get("leg_animation_checkpoint")
-        self._use_range = self._config.get("use_range")
-        assert os.path.exists(self._checkpoint) == 1
-        self._leg_data = {}  # type: ignore
-        self._load_animation()
-        self._play_i = 0
-        self._play_length_data = len(self._leg_data)
-        self._play_i_perframe = self._config.get("play_i_perframe")
-
-    def _load_animation(self):
-        first_row = True
-        time_i = 0
-        with open(self._checkpoint, newline="") as csvfile:
-            spamreader = csv.reader(csvfile, delimiter=" ", quotechar="|")
-            for row in spamreader:
-                if not first_row:
-                    if (
-                        time_i >= self._use_range[0]
-                        and time_i < self._use_range[1]
-                    ):
-                        joint_angs = row[0].split(",")[1:13]
-                        joint_angs = [float(i) for i in joint_angs]
-                        self._leg_data[
-                            time_i - self._use_range[0]
-                        ] = joint_angs
-                    time_i += 1
-                first_row = False
-
-    def step(self, *args, **kwargs):
-        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
-        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
-        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
-        if not self._allow_back:
-            lin_vel = np.maximum(lin_vel, 0)
-
-        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
-        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
-
-        if lin_vel != 0.0 or ang_vel != 0.0:
-            self.update_base(fix_leg=False)
-            cur_i = int(self._play_i % self._play_length_data)
-            self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
-            self._play_i += self._play_i_perframe
-        else:
-            self._play_i = 0
-            # Fix the leg joints
-            self.cur_articulated_agent.leg_joint_pos = (
-                self.cur_articulated_agent.params.leg_init_params
-            )
-
-
-@registry.register_task_action
 class BaseVelNonCylinderAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
@@ -612,7 +557,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         else:
             return False, target_trans
 
-    def update_base(self, if_rotation):
+    def update_base(self, if_rotation, fix_leg=False):
         """
         Update the base of the robot
         if_rotation: if the robot is rotating or not
@@ -651,7 +596,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
+        if self.cur_articulated_agent._base_type == "leg" and fix_leg:
             # Fix the leg joints
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
@@ -689,6 +634,86 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or ang_vel != 0.0
         ):
             self.update_base(ang_vel != 0.0)
+
+
+@registry.register_task_action
+class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._checkpoint = self._config.get("leg_animation_checkpoint")
+        self._use_range = self._config.get("use_range")
+        assert os.path.exists(self._checkpoint) == 1
+        self._leg_data = {}  # type: ignore
+        self._load_animation()
+        self._play_i = 0
+        self._play_length_data = len(self._leg_data)
+        self._play_i_perframe = self._config.get("play_i_perframe")
+
+    def _load_animation(self):
+        first_row = True
+        time_i = 0
+        with open(self._checkpoint, newline="") as csvfile:
+            leg_motion_reader = csv.reader(
+                csvfile, delimiter=" ", quotechar="|"
+            )
+            for row in leg_motion_reader:
+                if not first_row:
+                    if (
+                        time_i >= self._use_range[0]
+                        and time_i < self._use_range[1]
+                    ):
+                        joint_angs = row[0].split(",")[1:13]
+                        joint_angs = [float(i) for i in joint_angs]
+                        self._leg_data[
+                            time_i - self._use_range[0]
+                        ] = joint_angs
+                    time_i += 1
+                first_row = False
+
+    def step(self, *args, **kwargs):
+        lateral_lin_vel = 0.0
+        if self._enable_lateral_move:
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+        else:
+            longitudinal_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+
+        longitudinal_lin_vel = (
+            np.clip(longitudinal_lin_vel, -1, 1) * self._longitudinal_lin_speed
+        )
+        lateral_lin_vel = (
+            np.clip(lateral_lin_vel, -1, 1) * self._lateral_lin_speed
+        )
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
+        if not self._allow_back:
+            longitudinal_lin_vel = np.maximum(longitudinal_lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(
+            longitudinal_lin_vel, 0, -lateral_lin_vel
+        )
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        if (
+            longitudinal_lin_vel != 0.0
+            or lateral_lin_vel != 0.0
+            or ang_vel != 0.0
+        ):
+            self.update_base(ang_vel != 0.0, fix_leg=False)
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
+            self._play_i += int(
+                self._play_i_perframe / (abs(longitudinal_lin_vel) / 10.0)
+            )
+        else:
+            self._play_i = 0
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
 
 
 @registry.register_task_action
@@ -820,3 +845,55 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+
+@registry.register_task_action
+class ArmRelPosMaskKinematicAction(ArticulatedAgentAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        # clip from -1 to 1
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        target_arm_pos = (
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
+        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        self.cur_articulated_agent.fix_joint_values = set_arm_pos
