@@ -19,7 +19,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._ee_to_target_threshold = 0.1
+        self._ee_to_target_threshold = 0.15
 
     def _get_multi_sensor_index(self, batch_idx):
         return [self._cur_skill_args[i].targ for i in batch_idx]
