@@ -188,13 +188,16 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # also consider self._config.habitat.task["robot_at_thresh"]
         self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.8
-        self._local_place_target = [0.5, 0.0, 0.0]
-
+        # arm local ee location format: [up,right,front]
+        self._local_place_target = [-0.25, 0.0, 0.5]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
             self._agent_name
         ].hierarchical_policy.defined_skills
+        self._use_pick_skill_as_place_skill = (
+            self.defined_skills.place.use_pick_skill_as_place_skill
+        )
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -353,7 +356,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             obj_goal_pos = np.array(T_inv.transform_point(obj_trans))[
                 None, ...
             ]
-            policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
+            if self._use_pick_skill_as_place_skill:
+                # Reporpose pick skill for place
+                policy_input["observations"]["obj_start_sensor"] = obj_goal_pos
+            else:
+                policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
 
         # Only take the goal object
         rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)

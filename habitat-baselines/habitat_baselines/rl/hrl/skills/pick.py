@@ -50,6 +50,17 @@ class PickSkillPolicy(NnSkillPolicy):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 
+    def _retract_arm_action(self, observations, action):
+        """Retract the arm"""
+        current_joint_pos = observations["joint"].cpu().numpy()
+        delta = self._rest_state - current_joint_pos
+        action.actions[
+            :, self.arm_start_id : self.arm_start_id + self.arm_len - 1
+        ] = torch.from_numpy(delta).to(
+            device=action.actions.device, dtype=action.actions.dtype
+        )
+        return action
+
     def _mask_pick(
         self, action: PolicyActionData, observations
     ) -> PolicyActionData:
@@ -81,11 +92,6 @@ class PickSkillPolicy(NnSkillPolicy):
         action = self._mask_pick(action, observations)
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         if is_holding and self._need_reset_arm:
-            current_joint_pos = observations["joint"].cpu().numpy()
-            delta = self._rest_state - current_joint_pos
-            action.actions[
-                :, self.arm_start_id : self.arm_start_id + self.arm_len - 1
-            ] = torch.from_numpy(delta).to(
-                device=action.actions.device, dtype=action.actions.dtype
-            )
+            action = self._retract_arm_action(observations, action)
+
         return action

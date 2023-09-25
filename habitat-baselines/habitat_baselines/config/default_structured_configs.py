@@ -255,6 +255,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     turn_steps: int = 1
     turn_power_x: float = 0.0
     turn_power_y: float = 0.0
+    # The flag for using pick skill as the place skill
+    use_pick_skill_as_place_skill: bool = False
 
 
 @dataclass
