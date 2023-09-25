@@ -31,7 +31,7 @@ defaults:
     - has_finished_oracle_nav
     - humanoid_detector_sensor
 
-  # We removethe oracle nav action for the agent_0
+  # We remove the oracle nav action for the agent_0
   # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
 
