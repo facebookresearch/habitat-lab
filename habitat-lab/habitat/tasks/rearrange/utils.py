@@ -434,7 +434,7 @@ def get_robot_spawns(
     num_spawn_attempts: int,
     filter_colliding_states: bool,
     agent: Optional[MobileManipulator] = None,
-) -> Tuple[np.ndarray, float, bool]:
+) -> Tuple[mn.Vector3, float, bool]:
     """
     Attempts to place the robot near the target position, facing towards it.
     This does NOT set the position or angle of the robot, even if a place is

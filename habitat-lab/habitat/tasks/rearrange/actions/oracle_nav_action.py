@@ -117,7 +117,10 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 self.humanoid_controller.reset(
                     self.cur_articulated_agent.base_pos
                 )
-            self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
+            self._targets[nav_to_target_idx] = (
+                np.array(start_pos),
+                np.array(obj_pos),
+            )
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):
