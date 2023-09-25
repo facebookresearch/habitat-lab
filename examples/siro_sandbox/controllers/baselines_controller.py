@@ -500,8 +500,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     obs, "place", env, self._target_place_trans
                 )[0]
                 if self.check_if_skill_done(obs, "place"):
+                    self.grasped_object.motion_type = MotionType.DYNAMIC
                     grasped_rigid_obj = self.grasped_object
-
                     obj_bb = get_aabb(self.grasped_object_id, env._sim)
                     self._last_object_drop_info = (
                         grasped_rigid_obj,
