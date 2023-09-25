@@ -410,7 +410,7 @@ class RearrangeSim(HabitatSim):
 
         for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point(
-                island_index=self._largest_island_idx
+                island_index=self._largest_indoor_island_idx
             )
 
             start_pos = self.safe_snap_point(start_pos)
@@ -476,7 +476,7 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.save_nav_mesh(navmesh_path)
 
         # NOTE: allowing indoor islands only
-        self._largest_island_idx = get_largest_island_index(
+        self._largest_indoor_island_idx = get_largest_island_index(
             self.pathfinder, self, allow_outdoor=False
         )
 
@@ -485,7 +485,7 @@ class RearrangeSim(HabitatSim):
         """
         The path finder index of the indoor island that has the largest area.
         """
-        return self._largest_island_idx
+        return self._largest_indoor_island_idx
 
     @add_perf_timing_func()
     def _clear_objects(
@@ -546,7 +546,9 @@ class RearrangeSim(HabitatSim):
         When that point returns NaN, computes a navigable point at increasing
         distances to it.
         """
-        new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
+        new_pos = self.pathfinder.snap_point(
+            pos, self._largest_indoor_island_idx
+        )
 
         max_iter = 10
         offset_distance = 1.5
@@ -560,7 +562,7 @@ class RearrangeSim(HabitatSim):
                 pos,
                 offset_distance + regen_i * distance_per_iter,
                 num_sample_points,
-                island_index=self._largest_island_idx,
+                island_index=self._largest_indoor_island_idx,
             )
 
         assert not np.isnan(
