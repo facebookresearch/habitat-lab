@@ -73,8 +73,6 @@ DEFAULT_POSE_PATH = (
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
 
-do_network_server = False  # todo: make as command-line arg or similar
-
 
 def requires_habitat_sim_with_bullet(callable_):
     @wraps(callable_)
@@ -216,10 +214,18 @@ class SandboxDriver(GuiAppDriver):
 
         self._reset_environment()
 
+    def __del__(self):
+        if self.do_network_server:
+            terminate_server_process()
+
+    @property
+    def do_network_server(self):
+        return self._args.remote_gui_mode
+
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
         self._interprocess_record = None
-        if do_network_server:
+        if self.do_network_server:
             # How many frames we can simulate "ahead" of what keyframes have been sent.
             # A larger value increases lag on the client, while ensuring a more reliable
             # simulation rate in the presence of unreliable network comms.
@@ -514,7 +520,7 @@ class SandboxDriver(GuiAppDriver):
         if self._remote_gui_input:
             self._remote_gui_input.on_frame_end()
 
-        if do_network_server:
+        if self.do_network_server:
             for keyframe_json in keyframes:
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
@@ -741,8 +747,6 @@ if __name__ == "__main__":
         raise ValueError(
             "--gui-controlled-agent-index is not supported for --app-state=free_camera"
         )
-    # todo: do this more cleanly
-    do_network_server = args.remote_gui_mode
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
@@ -938,6 +942,3 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
-
-    if do_network_server:
-        terminate_server_process()
