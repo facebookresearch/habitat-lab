@@ -31,7 +31,8 @@ defaults:
     - has_finished_oracle_nav
     - humanoid_detector_sensor
 
-  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+  # We removethe oracle nav action for the agent_0
+  # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
 
   # For Spot observation space
@@ -62,16 +63,6 @@ habitat:
         disable_grip: False
         delta_pos_limit: 0.20
         ee_ctrl_lim: 0.015
-
-      # Hack: it appears the Spot hierarchical policy config requires an oracle nav
-      # action (or, I haven't found a workaround). We want the Spot to navigate based
-      # on a neural policy that is driving the base_velocity_leg_animation action, but
-      # any active oracle nav policy will also try to overwrite this action each step.
-      # So, we set the oracle nav action type to "OracleNavCoordAction", and then
-      # we disable this action in oracle_nav_action.py OracleNavCoordAction.step via
-      # a hard-coded hack.
-      agent_0_oracle_nav_action:
-        type: OracleNavCoordAction
 
       agent_0_base_velocity:
         allow_dyn_slide: True
