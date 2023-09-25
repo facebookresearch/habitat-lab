@@ -1434,17 +1434,14 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             )
 
         # Compute the SPL before finding the human
-        try:
-            first_encounter_spl = (
-                self._val_dict["has_found_human"]
-                * self._val_dict["min_start_end_episode_step"]
-                / max(
-                    self._val_dict["min_start_end_episode_step"],
-                    self._val_dict["has_found_human_step"],
-                )
+        first_encounter_spl = (
+            self._val_dict["has_found_human"]
+            * self._val_dict["min_start_end_episode_step"]
+            / max(
+                self._val_dict["min_start_end_episode_step"],
+                self._val_dict["has_found_human_step"],
             )
-        except Exception:
-            first_encounter_spl = 0.0
+        )
 
         # Make sure the first_encounter_spl is not NaN
         if np.isnan(first_encounter_spl):
