@@ -431,6 +431,7 @@ class AppStateFetch(AppState):
         object_id = self._target_obj_ids[target_obj_idx]
         pos = rom.get_object_by_id(object_id).translation
         height = pos[1]
+        # TODO: better way to handle the object's height when the robot drops the object
         if height < 0.0:
             rom.get_object_by_id(object_id).translation = mn.Vector3(
                 [pos[0], 0.0, pos[2]]
