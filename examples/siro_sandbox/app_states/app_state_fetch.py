@@ -425,6 +425,17 @@ class AppStateFetch(AppState):
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id)
 
+    def _reposition_object_height(self, target_obj_idx):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        object_id = self._target_obj_ids[target_obj_idx]
+        pos = rom.get_object_by_id(object_id).translation
+        height = pos[1]
+        if height < 0.0:
+            rom.get_object_by_id(object_id).translation = mn.Vector3(
+                [pos[0], 0.0, pos[2]]
+            )
+
     def _get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
@@ -490,6 +501,8 @@ class AppStateFetch(AppState):
             self._add_target_object_highlight_ring(
                 focus_obj_idx, COLOR_FOCUS_OBJECT, radius=RADIUS_FOCUS_OBJECT
             )
+            # Prevent the object from sinking to the floor
+            self._reposition_object_height(focus_obj_idx)
 
             # # draw can grasp area
             # can_grasp_position = mn.Vector3(this_target_pos)
