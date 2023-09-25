@@ -78,6 +78,7 @@ habitat:
         collision_threshold: 1e-5
         navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
         enable_lateral_move: False
+        # This longitudinal_lin_speed and ang_speed are used for training skills
         longitudinal_lin_speed: 10.0
         lateral_lin_speed: 10.0
         ang_speed: 10.0
