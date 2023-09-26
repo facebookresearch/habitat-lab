@@ -459,11 +459,11 @@ class GuiHumanoidController(GuiController):
         self._humanoid_controller.obj_transform_base.translation += fixup
 
         # TODO: remove the joint angles overwrite here
-        # if self._hint_reach_pos:
-        #     self._humanoid_controller.calculate_reach_pose(
-        #         self._hint_reach_pos
-        #     )
-        #     self._hint_reach_pos = None
+        if self._hint_reach_pos:
+            self._humanoid_controller.calculate_reach_pose(
+                self._hint_reach_pos
+            )
+            self._hint_reach_pos = None
 
         # elif not self._hint_walk_dir or np.linalg.norm(humancontroller_base_user_input) == 0:
         #     self._humanoid_controller.obj_transform_offset = mn.Matrix4()
