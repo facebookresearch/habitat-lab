@@ -165,6 +165,7 @@ class FetchState(Enum):
     PICK = 3
     BRING = 4
     DROP = 5
+    RESET_ARM_BEFORE_WAIT = 6
 
 
 PICK_STEPS = 40
@@ -190,6 +191,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._drop_dist_threshold = 1.8
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.1, 0.0, 0.5]
+        self._local_reset_target = [0.0, 0.0, 0.0]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
@@ -238,8 +240,17 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             self.grasped_object_id = None
             self.grasped_object = None
+            self._target_place_trans = None
 
-        self.current_state = FetchState.WAIT
+        # Make sure that we reset the arm when the robot is in such state that involves the arm movement
+        if (
+            self.current_state == FetchState.PICK
+            or self.current_state == FetchState.DROP
+            or self.current_state == FetchState.RESET_ARM_BEFORE_WAIT
+        ):
+            self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+        else:
+            self.current_state = FetchState.WAIT
         self.counter_pick = 0
         self.object_interest_id = None
         self.rigid_obj_interest = None
@@ -315,14 +326,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self._batch_and_apply_transforms([observations])
         )
 
-    def get_place_loc(self, env):
+    def get_place_loc(self, env, target):
         global_T = env._sim.get_agent_data(
             self._agent_idx
         ).articulated_agent.ee_transform()
 
-        return np.array(
-            global_T.transform_point(np.array(self._local_place_target))
-        )
+        return np.array(global_T.transform_point(np.array(target)))
 
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
@@ -502,7 +511,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self._policy_info = self._init_policy_input()
                     self.start_skill(obs, "place")
                 if self._target_place_trans is None:  # type: ignore
-                    self._target_place_trans = self.get_place_loc(env)  # type: ignore
+                    self._target_place_trans = self.get_place_loc(env, self._local_place_target)  # type: ignore
                 action_array = self.force_apply_skill(
                     obs, "place", env, self._target_place_trans
                 )[0]
@@ -517,6 +526,27 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.grasped_object_id = None
                     self.grasped_object = None
                     self._target_place_trans = None
+                    self.current_state = FetchState.WAIT
+            else:
+                if self.counter_pick < PICK_STEPS:
+                    self.counter_pick += 1
+                else:
+                    self.cancel_fetch()
+
+        elif self.current_state == FetchState.RESET_ARM_BEFORE_WAIT:
+            type_of_skill = self.defined_skills.place.skill_name
+
+            if type_of_skill == "PlaceSkillPolicy":
+                if self.should_start_skill:
+                    # TODO: obs can be batched before
+                    self._policy_info = self._init_policy_input()
+                    self.start_skill(obs, "place")
+                if self._target_place_trans is None:  # type: ignore
+                    self._target_place_trans = self.get_place_loc(env, self._local_reset_target)  # type: ignore
+                action_array = self.force_apply_skill(
+                    obs, "place", env, self._target_place_trans
+                )[0]
+                if self.check_if_skill_done(obs, "place"):
                     self.current_state = FetchState.WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
