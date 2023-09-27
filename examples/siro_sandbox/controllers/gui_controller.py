@@ -398,8 +398,10 @@ class GuiHumanoidController(GuiController):
         if self.iter_pose == num_iters:
             self._is_picking = None
             self.iter_pose = 0
+            self._hint_reach_pos = None
         else:
             self.iter_pose += 1
+
         return hand_pose
 
     def act(self, obs, env):
@@ -495,7 +497,6 @@ class GuiHumanoidController(GuiController):
         if self._is_picking:
             reach_pos = self.update_pick_pose()
             self._humanoid_controller.calculate_reach_pose(reach_pos)
-            self._hint_reach_pos = None
 
         # elif not self._hint_walk_dir or np.linalg.norm(humancontroller_base_user_input) == 0:
         #     self._humanoid_controller.obj_transform_offset = mn.Matrix4()
