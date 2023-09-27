@@ -12,6 +12,7 @@ import numpy as np
 import torch
 
 import habitat.gym.gym_wrapper as gym_wrapper
+import habitat_sim
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat.tasks.utils import cartesian_to_polar
@@ -187,10 +188,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.counter_pick = 0
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
         # also consider self._config.habitat.task["robot_at_thresh"]
-        self._pick_dist_threshold = 1.0
+        self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.0
+        self._can_pick_for_ray_threshold = 0.2
         # arm local ee location format: [up,right,front]
-        self._local_place_target = [-0.1, 0.0, 0.5]
+        self._local_place_target = [-0.05, 0.0, 0.25]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
@@ -340,6 +342,22 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         ).articulated_agent.ee_transform()
         return global_T.translation
 
+    def _check_obj_ray_to_ee(self, obj_trans, env):
+        """Cast a ray from theo object to the robot"""
+        ee_pos = (
+            env._sim.get_agent_data(self._agent_idx)
+            .articulated_agent.ee_transform()
+            .translation
+        )
+        obj_to_ee_vec = ee_pos - obj_trans
+        ray_result = env._sim.cast_ray(
+            habitat_sim.geo.Ray(obj_trans, obj_to_ee_vec)
+        )
+        ee_ray = ray_result.hits[0].point
+        return (
+            np.linalg.norm(ee_pos - ee_ray) < self._can_pick_for_ray_threshold
+        )
+
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
         # that can be called on different observations
@@ -416,7 +434,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     # agent_trans = human_trans
                     rho, _ = self.get_cartesian_obj_coords(obj_trans)
-                    finished_nav = rho < self._pick_dist_threshold
+                    cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
+                    finished_nav = rho < self._pick_dist_threshold and cast_ray
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
