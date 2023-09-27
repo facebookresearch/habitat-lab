@@ -290,6 +290,8 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
+    # The safety distance to human
+    human_safe_dis: float = 0.5
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )

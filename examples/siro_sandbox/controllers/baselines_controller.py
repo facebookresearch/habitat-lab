@@ -239,7 +239,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             self.grasped_object_id = None
             self.grasped_object = None
-            self._target_place_trans = None
 
         # Make sure that we reset the arm when the robot is in such state that involves the arm movement
         if (
@@ -253,6 +252,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.counter_pick = 0
         self.object_interest_id = None
         self.rigid_obj_interest = None
+        self._target_place_trans = None
 
     # todo: make this non-public, since user code shouldn't be able to set arbitrary states
     @property
@@ -308,6 +308,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return rho, phi
 
     def get_geodesic_distance_obj_coords(self, obj_trans):
+        # Make sure the point is a navigatable waypoint
+        obj_trans = self._habitat_env._sim.safe_snap_point(obj_trans)  # type: ignore
         _, phi = self.get_cartesian_obj_coords(obj_trans)
         rho = self._habitat_env._sim.geodesic_distance(
             obj_trans,
@@ -552,6 +554,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     obs, "place", env, self._target_place_trans
                 )[0]
                 if self.check_if_skill_done(obs, "place"):
+                    self._target_place_trans = None
                     self.current_state = FetchState.WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
