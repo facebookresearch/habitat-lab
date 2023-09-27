@@ -187,8 +187,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.counter_pick = 0
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
         # also consider self._config.habitat.task["robot_at_thresh"]
-        self._pick_dist_threshold = 1.2
-        self._drop_dist_threshold = 1.8
+        self._pick_dist_threshold = 1.0
+        self._drop_dist_threshold = 1.0
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.1, 0.0, 0.5]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
@@ -484,7 +484,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             else:
                 # agent_trans = human_trans
                 rho, _ = self.get_cartesian_obj_coords(human_trans)
-                finished_nav = rho < self._pick_dist_threshold
+                finished_nav = rho < self._drop_dist_threshold
 
             if not finished_nav:
                 # Keep gripper closed
