@@ -191,7 +191,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._drop_dist_threshold = 1.8
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.1, 0.0, 0.5]
-        self._local_reset_target = [0.0, 0.0, 0.0]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
@@ -332,6 +331,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         ).articulated_agent.ee_transform()
 
         return np.array(global_T.transform_point(np.array(target)))
+
+    def get_ee_loc(self, env):
+        global_T = env._sim.get_agent_data(
+            self._agent_idx
+        ).articulated_agent.ee_transform()
+        return global_T.translation
 
     def force_apply_skill(self, observations, skill_name, env, obj_trans):
         # TODO: there is a bit of repeated code here. Would be better to pack the full fetch state into a high level policy
@@ -542,7 +547,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self._policy_info = self._init_policy_input()
                     self.start_skill(obs, "place")
                 if self._target_place_trans is None:  # type: ignore
-                    self._target_place_trans = self.get_place_loc(env, self._local_reset_target)  # type: ignore
+                    self._target_place_trans = self.get_ee_loc(env)  # type: ignore
                 action_array = self.force_apply_skill(
                     obs, "place", env, self._target_place_trans
                 )[0]
