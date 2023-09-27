@@ -8,6 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
+import magnum as mn
 import numpy as np
 import torch
 
@@ -543,6 +544,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 )[0]
                 if self.check_if_skill_done(obs, "place"):
                     self.grasped_object.motion_type = MotionType.DYNAMIC
+                    self.grasped_object.linear_velocity = mn.Vector3(0, 0, 0)
                     grasped_rigid_obj = self.grasped_object
                     obj_bb = get_aabb(self.grasped_object_id, env._sim)
                     self._last_object_drop_info = (
