@@ -208,7 +208,7 @@ class GuiHumanoidController(GuiController):
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
-
+        self._obj_to_grasp = None
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self._last_object_thrown_info = None
 
@@ -230,6 +230,7 @@ class GuiHumanoidController(GuiController):
         self._last_object_thrown_info = None
         self._is_picking = None
         self.iter_pose = 0
+        self._obj_to_grasp = None
 
         # Disable collision between thrown object and the agents.
         # Both agents (robot and humanoid) have the collision group Robot.
@@ -320,8 +321,7 @@ class GuiHumanoidController(GuiController):
 
             rigid_obj.motion_type = MotionType.KINEMATIC
             rigid_obj.collidable = False
-
-            self._get_grasp_mgr().snap_to_obj(grasp_object_id)
+            self._obj_to_grasp = grasp_object_id
 
             self._recorder.record("grasp_object_id", grasp_object_id)
 
@@ -394,11 +394,14 @@ class GuiHumanoidController(GuiController):
         hand_pose = (
             init_coord_world + norm_vec * distance_per_iter * iter_to_obj
         )
-
         if self.iter_pose == num_iters:
             self._is_picking = None
             self.iter_pose = 0
             self._hint_reach_pos = None
+            if self._obj_to_grasp is not None:
+                self._get_grasp_mgr().snap_to_obj(self._obj_to_grasp)
+            self._obj_to_grasp = None
+
         else:
             self.iter_pose += 1
 
