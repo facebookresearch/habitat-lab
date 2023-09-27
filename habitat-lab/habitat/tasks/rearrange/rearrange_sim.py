@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import time
 from collections import defaultdict
@@ -30,6 +31,7 @@ from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
@@ -51,6 +53,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
@@ -406,7 +409,9 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self._largest_indoor_island_idx
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -443,25 +448,44 @@ class RearrangeSim(HabitatSim):
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
 
-        self._navmesh_vertices = np.stack(
-            self.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        self._island_sizes = [
-            self.pathfinder.island_radius(p) for p in self._navmesh_vertices
-        ]
-        self._max_island_size = max(self._island_sizes)
-        self._largest_island_idx = self.pathfinder.get_island(
-            self._navmesh_vertices[np.argmax(self._island_sizes)]
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+            logger.info(f"Loaded navmesh from {navmesh_path}")
+        else:
+            logger.warning(
+                f"Requested navmesh to load from {navmesh_path} does not exist. Recomputing from configured values and caching."
+            )
+            navmesh_settings = NavMeshSettings()
+            navmesh_settings.set_defaults()
+
+            agent_config = None
+            if hasattr(self.habitat_config.agents, "agent_0"):
+                agent_config = self.habitat_config.agents.agent_0
+            elif hasattr(self.habitat_config.agents, "main_agent"):
+                agent_config = self.habitat_config.agents.main_agent
+            else:
+                raise ValueError(f"Cannot find agent parameters.")
+            navmesh_settings.agent_radius = agent_config.radius
+            navmesh_settings.agent_height = agent_config.height
+            navmesh_settings.agent_max_climb = agent_config.max_climb
+            navmesh_settings.agent_max_slope = agent_config.max_slope
+            navmesh_settings.include_static_objects = True
+            self.recompute_navmesh(self.pathfinder, navmesh_settings)
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.pathfinder.save_nav_mesh(navmesh_path)
+
+        # NOTE: allowing indoor islands only
+        self._largest_indoor_island_idx = get_largest_island_index(
+            self.pathfinder, self, allow_outdoor=False
         )
 
     @property
     def largest_island_idx(self) -> int:
         """
-        The path finder index of the island that has the largest area.
+        The path finder index of the indoor island that has the largest area.
         """
-        return self._largest_island_idx
+        return self._largest_indoor_island_idx
 
     @add_perf_timing_func()
     def _clear_objects(
@@ -511,37 +535,40 @@ class RearrangeSim(HabitatSim):
             ao.joint_positions = ao_pose
 
     def is_point_within_bounds(self, pos):
+        # NOTE: This check is loose: really we want the island bounds, not the full navmesh
         lower_bound, upper_bound = self.pathfinder.get_bounds()
         return all(lower_bound <= pos) and all(upper_bound >= pos)
 
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
-        snap_point can return nan which produces hard to catch errors.
+        Returns the 3D coordinates corresponding to a point belonging
+        to the biggest navmesh island in the scenee and closest to pos.
+        When that point returns NaN, computes a navigable point at increasing
+        distances to it.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
+        new_pos = self.pathfinder.snap_point(
+            pos, self._largest_indoor_island_idx
+        )
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
+        max_iter = 10
+        offset_distance = 1.5
+        distance_per_iter = 0.5
+        num_sample_points = 1000
+
+        regen_i = 0
+        while np.isnan(new_pos[0]) and regen_i < max_iter:
+            # Increase the search radius
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+                pos,
+                offset_distance + regen_i * distance_per_iter,
+                num_sample_points,
+                island_index=self._largest_indoor_island_idx,
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
+            regen_i += 1
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # This is a last resort, take a navmesh vertex that is closest
-            use_verts = [
-                x
-                for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
-            ]
-            distances = np.linalg.norm(
-                np.array(pos).reshape(1, 3) - use_verts, axis=-1
-            )
-            closest_idx = np.argmin(distances)
-            new_pos = self._navmesh_vertices[closest_idx]
+        assert not np.isnan(
+            new_pos[0]
+        ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
 
         return new_pos
 

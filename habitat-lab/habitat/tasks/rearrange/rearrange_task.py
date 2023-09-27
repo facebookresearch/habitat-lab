@@ -82,6 +82,14 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
+        # TODO: this patch supports hab2 benchmark fixed states, but should be refactored w/ state caching for multi-agent
+        if (
+            hasattr(self._sim.habitat_config.agents, "main_agent")
+            and self._sim.habitat_config.agents[
+                "main_agent"
+            ].is_set_start_state
+        ):
+            self._should_place_articulated_agent = False
 
         # Get config options
         self._force_regenerate = self._config.force_regenerate

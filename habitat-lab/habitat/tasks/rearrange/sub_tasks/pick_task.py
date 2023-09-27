@@ -35,7 +35,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self._base_angle_noise = self._config.base_angle_noise
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts
-        self._physics_stability_steps = self._config.physics_stability_steps
+        self._filter_colliding_states = self._config.filter_colliding_states
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -64,7 +64,7 @@ class RearrangePickTaskV1(RearrangeTask):
             self._spawn_max_dist_to_obj,
             sim,
             self._num_spawn_attempts,
-            self._physics_stability_steps,
+            self._filter_colliding_states,
         )
 
         if was_fail:

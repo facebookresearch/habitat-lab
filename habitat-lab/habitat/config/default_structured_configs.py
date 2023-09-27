@@ -1155,7 +1155,7 @@ class TaskConfig(HabitatBaseConfig):
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     # Spawn parameters
-    physics_stability_steps: int = 1
+    filter_colliding_states: bool = True
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
@@ -1344,6 +1344,8 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    max_climb: float = 0.2
+    max_slope: float = 45.0
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
