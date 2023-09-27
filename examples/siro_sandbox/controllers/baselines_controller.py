@@ -191,7 +191,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # also consider self._config.habitat.task["robot_at_thresh"]
         self._pick_dist_threshold = 1.2
         self._drop_dist_threshold = 1.0
-        self._can_pick_for_ray_threshold = 0.2
+        self._can_pick_for_ray_threshold = 0.3
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.05, 0.0, 0.25]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
