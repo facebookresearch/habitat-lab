@@ -202,6 +202,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._use_pick_skill_as_place_skill = (
             self.defined_skills.place.use_pick_skill_as_place_skill
         )
+        self._skill_steps = 0
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -302,6 +303,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             [skill_args], [batch_id], obs, rnn_hidden_states, prev_actions
         )
         self.should_start_skill = False
+        self._skill_steps = 0
 
     def get_cartesian_obj_coords(self, obj_trans):
         articulated_agent_T = self.get_articulated_agent().base_transformation
@@ -405,6 +407,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             action_data = skill_walk.act(**policy_input)
         policy_input["rnn_hidden_states"] = action_data.rnn_hidden_states
         policy_input["prev_actions"] = action_data.actions
+
+        # Increase the step counter
+        self._skill_steps += 1
+
         return action_data.actions
 
     def act(self, obs, env):
@@ -429,14 +435,20 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
+                max_skill_steps = (
+                    self.defined_skills.nav_to_obj.max_skill_steps
+                )
 
                 if type_of_skill == "OracleNavPolicy":
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
+                    step_terminate = self._skill_steps >= max_skill_steps
                     # agent_trans = human_trans
                     rho, _ = self.get_cartesian_obj_coords(obj_trans)
                     cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                    finished_nav = rho < self._pick_dist_threshold and cast_ray
+                    finished_nav = (
+                        rho < self._pick_dist_threshold and cast_ray
+                    ) or step_terminate
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
@@ -457,13 +469,16 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     # Grab object
+                    if step_terminate:
+                        self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                    else:
+                        self.current_state = FetchState.PICK
                     self._init_policy_input()
-
-                    self.current_state = FetchState.PICK
 
         elif self.current_state == FetchState.PICK:
             obj_trans = self.rigid_obj_interest.translation
             type_of_skill = self.defined_skills.pick.skill_name
+            max_skill_steps = self.defined_skills.pick.max_skill_steps
             if type_of_skill == "PickSkillPolicy":
                 if self.should_start_skill:
                     # TODO: obs can be batched before
@@ -478,6 +493,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self._thrown_object_collision_group
                     )
                     self.current_state = FetchState.BRING
+                if self._skill_steps >= max_skill_steps:
+                    self._get_grasp_mgr(env).desnap()
+                    self.grasped_object_id = None
+                    self.grasped_object = None
+                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -499,12 +519,16 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         elif self.current_state == FetchState.BRING:
             type_of_skill = self.defined_skills.nav_to_robot.skill_name
+            max_skill_steps = self.defined_skills.pick.max_skill_steps
+            step_terminate = self._skill_steps >= max_skill_steps
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
                 # agent_trans = human_trans
                 rho, _ = self.get_cartesian_obj_coords(human_trans)
-                finished_nav = rho < self._drop_dist_threshold
+                finished_nav = (
+                    rho < self._drop_dist_threshold or step_terminate
+                )
 
             if not finished_nav:
                 # Keep gripper closed
@@ -526,12 +550,15 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     raise ValueError(f"Skill {type_of_skill} not recognized.")
 
             else:
-                self.current_state = FetchState.DROP
+                if step_terminate:
+                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                else:
+                    self.current_state = FetchState.DROP
                 self._init_policy_input()
 
         elif self.current_state == FetchState.DROP:
             type_of_skill = self.defined_skills.place.skill_name
-
+            max_skill_steps = self.defined_skills.pick.max_skill_steps
             if type_of_skill == "PlaceSkillPolicy":
                 if self.should_start_skill:
                     # TODO: obs can be batched before
@@ -555,6 +582,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.grasped_object = None
                     self._target_place_trans = None
                     self.current_state = FetchState.WAIT
+                if self._skill_steps >= max_skill_steps:
+                    self._get_grasp_mgr(env).desnap()
+                    self.grasped_object_id = None
+                    self.grasped_object = None
+                    self._target_place_trans = None
+                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
