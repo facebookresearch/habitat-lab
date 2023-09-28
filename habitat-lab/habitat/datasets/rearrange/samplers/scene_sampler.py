@@ -116,5 +116,5 @@ class BalancedSceneSampler(SceneSampler):
         """
         self.cur_episode = cur_episode
         assert (
-            self.cur_episode >= self.num_episodes
+            self.cur_episode <= self.num_episodes
         ), f"Current episode index {self.cur_episode} is out of initially configured range {self.num_episodes}. BalancedSceneSampler behavior is not defined in these conditions. Initially configured number of episodes must be accurate."
