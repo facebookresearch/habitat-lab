@@ -203,10 +203,12 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._hint_throw_vel = None
         self._hint_reach_pos = None
+        self._is_picking = None
+        self.iter_pose = 0
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
-
+        self._obj_to_grasp = None
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self._last_object_thrown_info = None
 
@@ -226,6 +228,9 @@ class GuiHumanoidController(GuiController):
         self._cam_yaw = 0
         self._hint_throw_vel = None
         self._last_object_thrown_info = None
+        self._is_picking = None
+        self.iter_pose = 0
+        self._obj_to_grasp = None
 
         # Disable collision between thrown object and the agents.
         # Both agents (robot and humanoid) have the collision group Robot.
@@ -316,8 +321,7 @@ class GuiHumanoidController(GuiController):
 
             rigid_obj.motion_type = MotionType.KINEMATIC
             rigid_obj.collidable = False
-
-            self._get_grasp_mgr().snap_to_obj(grasp_object_id)
+            self._obj_to_grasp = grasp_object_id
 
             self._recorder.record("grasp_object_id", grasp_object_id)
 
@@ -371,6 +375,37 @@ class GuiHumanoidController(GuiController):
             if dist >= self._last_object_thrown_info[1]:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._last_object_thrown_info = None
+
+    def update_pick_pose(self):
+        num_iters = 10
+        init_coord_world = (
+            self._humanoid_controller.obj_transform_base.transform_point(
+                mn.Vector3(0.2, 0.2, 0)
+            )
+        )
+        dist_obj = np.linalg.norm(self._is_picking - init_coord_world)
+        distance_per_iter = dist_obj / (num_iters / 2)
+        iter_to_obj = (
+            self.iter_pose
+            if self.iter_pose < int(num_iters / 2)
+            else int(3 * num_iters / 2) - self.iter_pose
+        )
+        norm_vec = (self._is_picking - init_coord_world) / dist_obj
+        hand_pose = (
+            init_coord_world + norm_vec * distance_per_iter * iter_to_obj
+        )
+        if self.iter_pose == num_iters:
+            self._is_picking = None
+            self.iter_pose = 0
+            self._hint_reach_pos = None
+            if self._obj_to_grasp is not None:
+                self._get_grasp_mgr().snap_to_obj(self._obj_to_grasp)
+            self._obj_to_grasp = None
+
+        else:
+            self.iter_pose += 1
+
+        return hand_pose
 
     def act(self, obs, env):
         self._update_grasp(
@@ -459,11 +494,12 @@ class GuiHumanoidController(GuiController):
         self._humanoid_controller.obj_transform_base.translation += fixup
 
         # TODO: remove the joint angles overwrite here
-        # if self._hint_reach_pos:
-        #     self._humanoid_controller.calculate_reach_pose(
-        #         self._hint_reach_pos
-        #     )
-        #     self._hint_reach_pos = None
+        if self._hint_reach_pos:
+            self._is_picking = self._hint_reach_pos
+
+        if self._is_picking:
+            reach_pos = self.update_pick_pose()
+            self._humanoid_controller.calculate_reach_pose(reach_pos)
 
         # elif not self._hint_walk_dir or np.linalg.norm(humancontroller_base_user_input) == 0:
         #     self._humanoid_controller.obj_transform_offset = mn.Matrix4()

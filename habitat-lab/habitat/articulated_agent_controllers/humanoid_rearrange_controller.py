@@ -326,25 +326,39 @@ class HumanoidRearrangeController:
         return xyz
 
     def _trilinear_interpolate_pose(self, position):
-        def find_index_quant(minv, maxv, num_bins, value):
+        def find_index_quant(minv, maxv, num_bins, value, interp=False):
             # Find the quantization bins where a given value falls
             # E.g. if we have 3 points, min=0, max=1, value=0.75, it
             # will fall between 1 and 2
-            value = max(min(value, maxv), minv)
+            if interp:
+                value = max(min(value, maxv), 0)
+            else:
+                value = max(min(value, maxv), minv)
+            value = min(value, maxv)
             value_norm = (value - minv) / (maxv - minv)
 
             index = value_norm * (num_bins - 1)
             # lower = max(0, math.floor(index))
             # upper = min(math.ceil(index), num_bins - 1)
 
-            lower = min(max(0, math.floor(index)), num_bins - 1)
+            lower2 = min(math.floor(index), num_bins - 1)
+            # lower = min(max(0, math.floor(index)), num_bins - 1)
             upper = max(min(math.ceil(index), num_bins - 1), 0)
+            value_norm_t = index - lower2
+            if lower2 < 0:
+                min_poss_val = 0.0
+                lower2 = (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
+                value_norm_t = (index - lower2) / -lower2
+                lower2 = -1
 
-            return upper, lower, value_norm
+            return lower2, upper, value_norm_t
 
         def comp_inter(x_i, y_i, z_i):
             # Given an integer index from 0 to num_bins - 1
             # on each dimension, compute the final index
+
+            if y_i < 0 or x_i < 0 or z_i < 0:
+                return -1
             index = (
                 y_i
                 * self.vpose_info["num_bins"][0]
@@ -375,16 +389,16 @@ class HumanoidRearrangeController:
             c01 = c001 * (1 - xd) + c101 * xd
             c10 = c010 * (1 - xd) + c110 * xd
             c11 = c011 * (1 - xd) + c111 * xd
-            if is_quat:
-                c00 = normalize_quat(c00)
-                c01 = normalize_quat(c01)
-                c10 = normalize_quat(c10)
-                c11 = normalize_quat(c11)
+            # if is_quat:
+            #     c00 = normalize_quat(c00)
+            #     c01 = normalize_quat(c01)
+            #     c10 = normalize_quat(c10)
+            #     c11 = normalize_quat(c11)
             c0 = c00 * (1 - yd) + c10 * yd
             c1 = c01 * (1 - yd) + c11 * yd
-            if is_quat:
-                c0 = normalize_quat(c0)
-                c1 = normalize_quat(c1)
+            # if is_quat:
+            #     c0 = normalize_quat(c0)
+            #     c1 = normalize_quat(c1)
 
             c = c0 * (1 - zd) + c1 * zd
             if is_quat:
@@ -405,7 +419,11 @@ class HumanoidRearrangeController:
             for ind_diff in range(3)
         ]
         # each value contains the lower, upper index and distance
-        x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
+        interp = [False, False, True]
+        x_ind, y_ind, z_ind = [
+            find_index_quant(*data, interp)
+            for interp, data in zip(interp, coord_data)
+        ]
 
         rotations, translations, joints = [], [], []
         for ind in range(len(self.hand_motion.poses)):
@@ -425,6 +443,26 @@ class HumanoidRearrangeController:
             translations.append(
                 np.array(curr_transform.translation)[None, ...]
             )
+
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
+        obj_transform = add_rot @ self.walk_motion.poses[0].root_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+        curr_transform = obj_transform
+        trans = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+        ).inverted()
+        curr_transform = trans @ obj_transform
+
+        quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+        joints.append(
+            np.array(self.stop_pose.joints).reshape(-1, 4)[None, ...]
+        )
+        rotations.append(
+            np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+        )
+        translations.append(np.array(curr_transform.translation)[None, ...])
 
         data_trans = np.concatenate(translations)
         data_rot = np.concatenate(rotations)
