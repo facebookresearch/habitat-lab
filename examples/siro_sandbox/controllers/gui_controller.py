@@ -377,34 +377,41 @@ class GuiHumanoidController(GuiController):
                 self._last_object_thrown_info = None
 
     def update_pick_pose(self):
-        num_iters = 10
+        num_iters = 0
         init_coord_world = (
             self._humanoid_controller.obj_transform_base.transform_point(
                 mn.Vector3(0.2, 0.2, 0)
             )
         )
         dist_obj = np.linalg.norm(self._is_picking - init_coord_world)
-        distance_per_iter = dist_obj / (num_iters / 2)
-        iter_to_obj = (
-            self.iter_pose
-            if self.iter_pose < int(num_iters / 2)
-            else int(3 * num_iters / 2) - self.iter_pose
-        )
-        norm_vec = (self._is_picking - init_coord_world) / dist_obj
-        hand_pose = (
-            init_coord_world + norm_vec * distance_per_iter * iter_to_obj
-        )
-        if self.iter_pose == num_iters:
+
+        if num_iters > 0:
+            distance_per_iter = dist_obj / (num_iters / 2)
+            iter_to_obj = (
+                self.iter_pose
+                if self.iter_pose < int(num_iters / 2)
+                else int(3 * num_iters / 2) - self.iter_pose
+            )
+            norm_vec = (self._is_picking - init_coord_world) / dist_obj
+            hand_pose = (
+                init_coord_world + norm_vec * distance_per_iter * iter_to_obj
+            )
+            if self.iter_pose == num_iters:
+                self._is_picking = None
+                self.iter_pose = 0
+                self._hint_reach_pos = None
+                if self._obj_to_grasp is not None:
+                    self._get_grasp_mgr().snap_to_obj(self._obj_to_grasp)
+                self._obj_to_grasp = None
+
+            else:
+                self.iter_pose += 1
+        else:
+            hand_pose = self._is_picking
             self._is_picking = None
-            self.iter_pose = 0
-            self._hint_reach_pos = None
             if self._obj_to_grasp is not None:
                 self._get_grasp_mgr().snap_to_obj(self._obj_to_grasp)
             self._obj_to_grasp = None
-
-        else:
-            self.iter_pose += 1
-
         return hand_pose
 
     def act(self, obs, env):
