@@ -327,10 +327,13 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not is_accessible(
-                        sim,
-                        new_object.translation,
-                        self.nav_to_min_distance,
-                        self.largest_island_id,
+                        sim=sim,
+                        point=new_object.translation,
+                        # TODO: this height is hardcoded for expected robot height and should be passed down from config
+                        height=1.3,
+                        nav_to_min_distance=self.nav_to_min_distance,
+                        nav_island=self.largest_island_id,
+                        target_object_id=new_object.object_id,
                     ):
                         logger.info(
                             "   - object is not accessible from navmesh, rejecting placement."
@@ -343,10 +346,13 @@ class ObjectSampler:
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
                 if not is_accessible(
-                    sim,
-                    new_object.translation,
-                    self.nav_to_min_distance,
-                    self.largest_island_id,
+                    sim=sim,
+                    point=new_object.translation,
+                    # TODO: this height is hardcoded for expected robot height and should be passed down from config
+                    height=1.3,
+                    nav_to_min_distance=self.nav_to_min_distance,
+                    nav_island=self.largest_island_id,
+                    target_object_id=new_object.object_id,
                 ):
                     logger.info(
                         "   - object is not accessible from navmesh, rejecting placement."
