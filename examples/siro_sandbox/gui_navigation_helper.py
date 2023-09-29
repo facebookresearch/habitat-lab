@@ -115,13 +115,17 @@ class GuiNavigationHelper:
         ) = self._sandbox_service.remote_gui_input.get_head_pose()
 
         if target_pos and target_rot_quat:
-            walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+            (
+                walk_dir,
+                distance_multiplier,
+                target_rot_quat,
+            ) = self._get_humanoid_walk_hints(
                 target_pos=target_pos,
                 target_rot_quat=target_rot_quat,
                 visualize_path=visualize_path,
             )
 
-        return walk_dir, distance_multiplier
+        return walk_dir, distance_multiplier, target_rot_quat
 
     def get_humanoid_walk_hints_from_ray_cast(self, visualize_path=True):
         walk_dir = None
@@ -131,19 +135,20 @@ class GuiNavigationHelper:
         if target_on_floor is None:
             return walk_dir, distance_multiplier
 
-        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+        walk_dir, distance_multiplier, _ = self._get_humanoid_walk_hints(
             target_pos=target_on_floor,
             target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
             visualize_path=visualize_path,
         )
 
-        return walk_dir, distance_multiplier
+        return walk_dir, distance_multiplier, None
 
     def _get_humanoid_walk_hints(
         self, target_pos, target_rot_quat, visualize_path=True
     ):
         walk_dir = None
         distance_multiplier = 1.0
+        dist_to_always_move_forward = 0.5
         geodesic_dist_threshold = 0.05
         forward_dir = None
 
@@ -167,13 +172,22 @@ class GuiNavigationHelper:
                 if visualize_path:
                     self._viz_path(path)
             else:
-                walk_dir = None
+                # TODO: potentially check for previous rotation
+                distance_multiplier = 1.0
+                # walk_dir = None
 
         if walk_dir is None and target_rot_quat is not None:
             walk_dir = self._compute_forward_dir(target_rot_quat)
             distance_multiplier = 0.0
+            target_rot_quat = None
 
-        return walk_dir, distance_multiplier
+        if (
+            found_path
+            and len(path.points) >= 2
+            and path.geodesic_distance >= dist_to_always_move_forward
+        ):
+            target_rot_quat = None
+        return walk_dir, distance_multiplier, target_rot_quat
 
     def _get_target_pos_from_ray_cast(self):
         ray = self._sandbox_service.gui_input.mouse_ray
