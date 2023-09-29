@@ -31,7 +31,7 @@ def find_files(
     """
     Recursively find all filepaths under a root directory satisfying a particular constraint as defined by a discriminator function.
 
-    :param root_dir: The roor directory for the recursive search.
+    :param root_dir: The root directory for the recursive search.
     :param discriminator: The discriminator function which takes a filepath and discriminator string and returns a bool.
 
     :return: The list of all absolute filepaths found satisfying the discriminator.
@@ -125,7 +125,7 @@ class GuiAvatarSwitchHelper:
         humanoid.base_rot = prev_humanoid_base_state[1]
 
         # create new grasp manager
-        graps_mgr = RearrangeGraspManager(
+        grasp_mgr = RearrangeGraspManager(
             sim, config.habitat.simulator, humanoid, 0
         )
 
@@ -133,10 +133,10 @@ class GuiAvatarSwitchHelper:
         assert len(humanoid_agent_data.grasp_mgrs) == 1
         if humanoid_agent_data.grasp_mgrs[0].snap_idx is not None:
             grasped_obj_id = humanoid_agent_data.grasp_mgrs[0].snap_idx
-            graps_mgr.snap_to_obj(grasped_obj_id)
+            grasp_mgr.snap_to_obj(grasped_obj_id)
 
         humanoid_agent_data.articulated_agent = humanoid
-        humanoid_agent_data.grasp_mgrs = [graps_mgr]
+        humanoid_agent_data.grasp_mgrs = [grasp_mgr]
 
         # create new humanoid controller
         humanoid_controller = HumanoidRearrangeController(
@@ -151,4 +151,4 @@ class GuiAvatarSwitchHelper:
         humanoid_controller.prev_orientation = prev_humanoid_base_state[2]
         humanoid_controller.walk_mocap_frame = prev_humanoid_base_state[3]
 
-        self._gui_agent_ctrl._humanoid_controller = humanoid_controller
+        self._gui_agent_ctrl.set_humanoid_controller(humanoid_controller)

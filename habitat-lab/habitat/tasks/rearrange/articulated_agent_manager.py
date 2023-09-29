@@ -82,10 +82,10 @@ class ArticulatedAgentManager:
                 agent.set_rest_pose_path(agent_cfg.rest_pose_data_path)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
-                graps_mgr = RearrangeGraspManager(
+                grasp_mgr = RearrangeGraspManager(
                     sim, cfg, agent, grasp_manager_id
                 )
-                grasp_managers.append(graps_mgr)
+                grasp_managers.append(grasp_mgr)
 
             if len(cfg.agents) > 1:
                 # Prefix sensors if there is more than 1 agent in the scene.
