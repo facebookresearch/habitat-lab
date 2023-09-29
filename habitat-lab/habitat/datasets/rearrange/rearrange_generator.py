@@ -968,9 +968,15 @@ class RearrangeEpisodeGenerator:
                 obs_cache=settle_db_obs,
             )
 
+        Y_OFFSET = 4.5
+        scene_bb_center = scene_bb.center()
+        scene_bb_center.y = scene_bb_center.y + Y_OFFSET
+        down = mn.Vector3(scene_bb_center)
+        down.y = scene_bb.center().y - 10.0
         while self.sim.get_world_time() < duration:
             self.sim.step_world(1.0 / 30.0)
             if self._render_debug_obs:
+                self.vdb.look_at(down, look_from=scene_bb_center)
                 self.vdb.get_observation(obs_cache=settle_db_obs)
 
         logger.info(
@@ -1020,6 +1026,7 @@ class RearrangeEpisodeGenerator:
             self.vdb.make_debug_video(
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
+            input("Waiting for input...")
 
         # collect detailed receptacle stability report log
         detailed_receptacle_stability_report = (
