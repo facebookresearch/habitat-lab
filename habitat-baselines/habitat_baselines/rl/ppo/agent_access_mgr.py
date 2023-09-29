@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import gym.spaces as spaces
 
@@ -64,6 +64,14 @@ class AgentAccessMgr(ABC):
 
     @property
     @abstractmethod
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
     def rollouts(self) -> Storage:
         """
         Gets the current rollout storage.
@@ -113,6 +121,11 @@ class AgentAccessMgr(ABC):
 
     @abstractmethod
     def load_state_dict(self, state: Dict) -> None:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def masks_shape(self):
         raise NotImplementedError()
 
     @abstractmethod

@@ -41,9 +41,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
-        resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done_fn: Callable[[], float],
+        resume_state: Optional[Dict[str, Any]] = None,
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
         agent_name=None,
     ):
@@ -187,6 +187,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     @property
     def policy_action_space(self):
         return self._policy_action_space
+
+    @property
+    def policy_action_space_shape_lens(self):
+        return [self._policy_action_space]
 
     def _create_policy(self) -> NetPolicy:
         """

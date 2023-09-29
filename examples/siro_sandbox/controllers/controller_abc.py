@@ -106,7 +106,7 @@ class BaselinesController(Controller):
             self._agent.policy_action_space
         )
 
-        hidden_state_lens = self._agent.hidden_state_shape_lens
+        hidden_state_lens = self._agent.actor_critic.hidden_state_shape_lens
         action_space_lens = self._agent.policy_action_space_shape_lens
 
         self._space_lengths: Dict = {}
@@ -156,7 +156,7 @@ class BaselinesController(Controller):
         self._test_recurrent_hidden_states = torch.zeros(
             (
                 self._num_envs,
-                *self._agent.hidden_state_shape,
+                *self._agent.actor_critic.hidden_state_shape,
             ),
             device=self.device,
         )
@@ -187,7 +187,7 @@ class BaselinesController(Controller):
                 self._prev_actions,
                 self._not_done_masks,
                 deterministic=False,
-                **self._space_lengths,
+                # **self._space_lengths,
             )
             if action_data.should_inserts is None:
                 self._test_recurrent_hidden_states = (
@@ -195,7 +195,7 @@ class BaselinesController(Controller):
                 )
                 self._prev_actions.copy_(action_data.actions)  # type: ignore
             else:
-                self._agent.update_hidden_state(
+                self._agent.actor_critic.update_hidden_state(
                     self._test_recurrent_hidden_states,
                     self._prev_actions,
                     action_data,

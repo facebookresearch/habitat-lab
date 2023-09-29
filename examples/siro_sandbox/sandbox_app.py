@@ -868,8 +868,8 @@ if __name__ == "__main__":
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig(
-                agent_index=args.gui_controlled_agent_index
-            )
+                num_joints=54
+            )  # 54 for SMPL-X, 17 for SMPL
 
     driver = SandboxDriver(
         args,
