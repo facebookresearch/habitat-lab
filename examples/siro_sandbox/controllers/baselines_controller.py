@@ -8,7 +8,6 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
-import magnum as mn
 import numpy as np
 import torch
 
@@ -554,6 +553,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     obs, "pick", env, obj_trans
                 )[0]
                 if self.check_if_skill_done(obs, "pick"):
+                    self.rigid_obj_interest.motion_type = MotionType.KINEMATIC
                     self.grasped_object = self.rigid_obj_interest
                     self.grasped_object_id = self.object_interest_id
                     self.grasped_object.override_collision_group(
@@ -609,6 +609,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     action_array = self.force_apply_skill(
                         obs, "nav_to_robot", env, human_trans
                     )[0]
+
                 elif type_of_skill == "OracleNavPolicy":
                     action_ind_nav = find_action_range(
                         act_space, "agent_0_oracle_nav_action"
@@ -681,9 +682,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 action_array = self.force_apply_skill(
                     obs, "place", env, self._target_place_trans
                 )[0]
-                if self.check_if_skill_done(obs, "place"):
+
+                # Change the object motion type if the robot desnaps the object
+                if not self._get_grasp_mgr(env).is_grasped:
                     self.grasped_object.motion_type = MotionType.DYNAMIC
-                    self.grasped_object.linear_velocity = mn.Vector3(0, 0, 0)
+
+                if self.check_if_skill_done(obs, "place"):
                     grasped_rigid_obj = self.grasped_object
                     obj_bb = get_aabb(self.grasped_object_id, env._sim)
                     self._last_object_drop_info = (
