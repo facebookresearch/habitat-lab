@@ -21,7 +21,7 @@ def snap_point_is_occluded(
     """
     Uses raycasting to check whether a target is occluded given a navmesh snap point.
 
-    :property target: The 3D position whic should be unoccluded from the snap point.
+    :property target: The 3D position which should be unoccluded from the snap point.
     :property snap_point: The navmesh snap point under consideration.
     :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
     :property sim: The Simulator instance.
