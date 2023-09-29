@@ -176,11 +176,11 @@ class SpotRobot(MobileManipulator):
         return self.sim_obj.transformation @ add_rot
 
     def __init__(
-        self, urdf_path, sim, limit_robo_joints=True, fixed_base=True
+        self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
     ):
         super().__init__(
             self._get_spot_params(),
-            urdf_path,
+            agent_cfg,
             sim,
             limit_robo_joints,
             fixed_base,

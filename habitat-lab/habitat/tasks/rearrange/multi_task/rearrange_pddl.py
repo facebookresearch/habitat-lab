@@ -143,7 +143,7 @@ class PddlSimInfo:
     receptacles: Dict[str, mn.Range3D]
 
     num_spawn_attempts: int
-    physics_stability_steps: int
+    filter_colliding_states: bool
     recep_place_shrink_factor: float
 
     pred_truth_cache: Optional[Dict[str, bool]] = None

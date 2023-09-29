@@ -76,7 +76,8 @@ class ArticulatedAgentManager:
         for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.articulated_agent_type)
-            agent = agent_cls(agent_cfg.articulated_agent_urdf, sim)
+            assert issubclass(agent_cls, MobileManipulator)
+            agent = agent_cls(agent_cfg, sim)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
                 graps_mgr = RearrangeGraspManager(

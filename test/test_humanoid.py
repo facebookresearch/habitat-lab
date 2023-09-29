@@ -10,6 +10,7 @@ import gym
 import magnum as mn
 import numpy as np
 import pytest
+from omegaconf import DictConfig
 
 import habitat.articulated_agents.humanoids.kinematic_humanoid as kinematic_humanoid
 import habitat_sim
@@ -148,19 +149,11 @@ def simulate(sim, dt, get_observations=False):
     return observations
 
 
-@pytest.mark.skipif(
-    not osp.exists(
-        "data/humanoids/humanoid_data/armatures/human_armature.urdf"
-    ),
-    reason="Test requires a human armature.",
+@pytest.mark.parametrize(
+    "humanoid_name",
+    ["female_2"],
 )
-@pytest.mark.skipif(
-    not osp.exists(
-        "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-    ),
-    reason="Test requires motion files.",
-)
-def test_humanoid_controller():
+def test_humanoid_controller(humanoid_name):
     """Test the humanoid controller"""
 
     # loading the physical scene
@@ -199,10 +192,18 @@ def test_humanoid_controller():
         sim.navmesh_visualization = True
 
         # add the humanoid to the world via the wrapper
-        humanoid_path = (
-            "data/humanoids/humanoid_data/armatures/human_armature.urdf"
+        humanoid_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}.urdf"
+        walk_pose_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}_motion_data_smplx.pkl"
+
+        agent_config = DictConfig(
+            {
+                "articulated_agent_urdf": humanoid_path,
+                "motion_data_path": walk_pose_path,
+            }
         )
-        kin_humanoid = kinematic_humanoid.KinematicHumanoid(humanoid_path, sim)
+        if not osp.exists(humanoid_path):
+            pytest.skip(f"No humanoid file {humanoid_path}")
+        kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
         kin_humanoid.reconfigure()
         kin_humanoid.update()
         assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
@@ -219,15 +220,13 @@ def test_humanoid_controller():
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # Test controller
-        walk_pose_path = (
-            "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-        )
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
 
         init_pos = kin_humanoid.base_pos
+        base_trans = kin_humanoid.base_transformation
         target_pos = init_pos + mn.Vector3(1.5, 0, 0)
         step_count = 0
-        humanoid_controller.reset(init_pos)
+        humanoid_controller.reset(base_trans)
         while step_count < num_steps:
             pose_diff = target_pos - kin_humanoid.base_pos
             humanoid_controller.calculate_walk_pose(pose_diff)
@@ -271,14 +270,12 @@ def test_humanoid_controller():
 
 
 @pytest.mark.skipif(
-    not osp.exists(
-        "data/humanoids/humanoid_data/armatures/human_armature.urdf"
-    ),
+    not osp.exists("data/humanoids/humanoid_data/female_2/female_2.urdf"),
     reason="Test requires a human armature.",
 )
 @pytest.mark.skipif(
     not osp.exists(
-        "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
     ),
     reason="Test requires motion files.",
 )
@@ -290,9 +287,9 @@ def test_gym_humanoid():
         "~habitat.task.actions.base_velocity",
         "++habitat.task.actions={humanoidjoint_action:{type:HumanoidJointAction}}",
         "++habitat.task.actions.humanoidjoint_action.num_joints=17",
-        "habitat.simulator.agents.main_agent.articulated_agent_urdf=data/humanoids/humanoid_data/amass_male.urdf",
+        "habitat.simulator.agents.main_agent.articulated_agent_urdf=data/humanoids/humanoid_data/female_2/female_2.urdf",
         "habitat.simulator.agents.main_agent.articulated_agent_type=KinematicHumanoid",
-        "habitat.simulator.agents.main_agent.motion_data_path=data/humanoids/humanoid_data/walking_motion_processed.pkl",
+        "habitat.simulator.agents.main_agent.motion_data_path=data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl",
         "habitat.simulator.ac_freq_ratio=1",
         "habitat.task.measurements.force_terminate.max_accum_force=-1.0",
         "habitat.task.measurements.force_terminate.max_instant_force=-1.0",

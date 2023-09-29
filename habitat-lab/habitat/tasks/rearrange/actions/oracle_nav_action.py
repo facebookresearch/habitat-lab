@@ -38,7 +38,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
         elif self.motion_type == "human_joints":
             HumanoidJointAction.__init__(self, *args, **kwargs)
-            self.humanoid_controller = self.lazy_inst_humanoid_controller(task)
+            self.humanoid_controller = self.lazy_inst_humanoid_controller(
+                task, config
+            )
 
         else:
             raise ValueError("Unrecognized motion type for oracle nav  action")
@@ -60,7 +62,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             vel = [0, turn_vel]
         return vel
 
-    def lazy_inst_humanoid_controller(self, task):
+    def lazy_inst_humanoid_controller(self, task, config):
         # Lazy instantiation of humanoid controller
         # We assign the task with the humanoid controller, so that multiple actions can
         # use it.
@@ -78,6 +80,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             ].motion_data_path
 
             humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+            humanoid_controller.set_framerate_for_linspeed(
+                config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq
+            )
             task.humanoid_controller = humanoid_controller
         return task.humanoid_controller
 
@@ -114,14 +119,17 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 self._config.spawn_max_dist_to_obj,
                 self._sim,
                 self._config.num_spawn_attempts,
-                1,
+                True,
                 self.cur_articulated_agent,
             )
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
-                    self.cur_articulated_agent.base_pos
+                    self.cur_articulated_agent.base_transformation
                 )
-            self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
+            self._targets[nav_to_target_idx] = (
+                np.array(start_pos),
+                np.array(obj_pos),
+            )
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):
