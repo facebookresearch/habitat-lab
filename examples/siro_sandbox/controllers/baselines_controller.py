@@ -549,6 +549,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if self.should_start_skill:
                     # TODO: obs can be batched before
                     self.start_skill(obs, "pick")
+                    # TODO: Pre-set the target object id
+                    env.task.actions[
+                        "agent_0_arm_action"
+                    ].grip_ctrlr.pick_object_pos = (
+                        self.rigid_obj_interest.translation
+                    )
                 action_array = self.force_apply_skill(
                     obs, "pick", env, obj_trans
                 )[0]

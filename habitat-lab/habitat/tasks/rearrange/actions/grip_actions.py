@@ -35,6 +35,18 @@ class GripSimulatorTaskAction(ArticulatedAgentAction):
 
 @registry.register_task_action
 class MagicGraspAction(GripSimulatorTaskAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._pick_object_pos = None
+
+    @property
+    def pick_object_pos(self):
+        return self._pick_object_pos
+
+    @pick_object_pos.setter
+    def pick_object_pos(self, object_pos):
+        self._pick_object_pos = object_pos
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -44,10 +56,18 @@ class MagicGraspAction(GripSimulatorTaskAction):
         ee_pos = self.cur_articulated_agent.ee_transform().translation
         # Get objects we are close to.
         if len(scene_obj_pos) != 0:
-            # Get the target the EE is closest to.
-            closest_obj_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
-            )
+            if self._pick_object_pos is not None:
+                # Pre select the target grapsing object
+                closest_obj_idx = np.argmin(  # type: ignore
+                    np.linalg.norm(
+                        scene_obj_pos - self._pick_object_pos, ord=2, axis=-1
+                    )
+                )
+            else:
+                # Get the target the EE is closest to.
+                closest_obj_idx = np.argmin(
+                    np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+                )
 
             to_target = np.linalg.norm(
                 ee_pos - scene_obj_pos[closest_obj_idx], ord=2
