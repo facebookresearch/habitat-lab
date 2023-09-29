@@ -13,6 +13,7 @@ from controllers.baselines_controller import (
     FetchState,
 )
 from controllers.gui_controller import GuiHumanoidController
+from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
@@ -73,6 +74,10 @@ class AppStateFetch(AppState):
             self._sandbox_service,
             self.get_gui_controlled_agent_index(),
             self._get_gui_agent_feet_height(),
+        )
+
+        self._avatar_switch_helper = GuiAvatarSwitchHelper(
+            self._sandbox_service, self._gui_agent_ctrl
         )
 
         # self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
@@ -688,6 +693,9 @@ class AppStateFetch(AppState):
             and self._held_target_obj_idx is None
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
+            self._avatar_switch_helper.switch_avatar()
 
         self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
