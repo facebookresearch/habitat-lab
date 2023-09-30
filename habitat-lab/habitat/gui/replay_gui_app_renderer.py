@@ -59,6 +59,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         # TODO:  Reenable frustum culling when replay renderer issues are solved.
         if hasattr(cfg, "enable_frustum_culling"):
             cfg.enable_frustum_culling = False
+        if hasattr(cfg, "enable_hbao"):
+            cfg.enable_hbao = True
         self._replay_renderer = (
             ReplayRenderer.create_batch_replay_renderer(cfg)
             if use_batch_renderer
