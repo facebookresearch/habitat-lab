@@ -506,26 +506,47 @@ def path_is_navigable_given_robot(
 
 
 def is_accessible(
-    sim: habitat_sim.Simulator, point: mn.Vector3, nav_to_min_distance: float
+    sim: habitat_sim.Simulator,
+    point: mn.Vector3,
+    height: float,
+    nav_to_min_distance: float,
+    nav_island: int = -1,
+    target_object_id: Optional[int] = None,
 ) -> bool:
     """
-    Return True if the point is within a threshold distance (in XZ plane) of the nearest navigable point on the largest indoor island.
+    Return True if the point is within a threshold distance (in XZ plane) of the nearest unoccluded navigable point on the selected island.
 
     :param sim: Habitat Simulaton instance.
     :param point: The query point.
+    :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
     :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
+    :param nav_island: The NavMesh island on which to check accessibility. Default -1 is the full NavMesh.
+    :param target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when checking accessibility of an object's COM, that object should not occlude.
 
-    Note that this might not catch all edge cases since the nearest navigable point may be separated from the point by an obstacle.
+    TODO: target_object_id should be a list to correctly support ArticulatedObjects (e.g. the fridge body should not occlude the fridge drawer for this check.)
+
+    :return: Whether or not the point is accessible.
     """
     if nav_to_min_distance == -1:
         return True
-    largest_island_id = get_largest_island_index(
-        sim.pathfinder, sim, allow_outdoor=False
-    )
-    snapped = sim.pathfinder.snap_point(point, island_index=largest_island_id)
 
-    dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
-    return dist < nav_to_min_distance
+    snapped = unoccluded_navmesh_snap(
+        pos=point,
+        height=height,
+        pathfinder=sim.pathfinder,
+        sim=sim,
+        target_object_id=target_object_id,
+        island_id=nav_island,
+        search_offset=nav_to_min_distance,
+    )
+
+    if snapped is None:
+        return False
+
+    horizontal_dist = float(
+        np.linalg.norm(np.array((snapped - point))[[0, 2]])
+    )
+    return horizontal_dist < nav_to_min_distance
 
 
 def is_outdoor(
