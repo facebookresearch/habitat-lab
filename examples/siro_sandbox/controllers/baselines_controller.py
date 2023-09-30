@@ -14,6 +14,7 @@ import torch
 import habitat.gym.gym_wrapper as gym_wrapper
 import habitat_sim
 from habitat.core.spaces import ActionSpace
+from habitat.datasets.rearrange import navmesh_utils
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat.tasks.utils import cartesian_to_polar
 from habitat_baselines.common.env_spec import EnvironmentSpec
@@ -172,6 +173,7 @@ class FetchState(Enum):
 
 
 PICK_STEPS = 40
+IS_ACCESSIBLE_THRESHOLD = 1.0
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -454,6 +456,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
 
+            # Get gripper height
+            ee_height = (
+                self.get_articulated_agent().ee_transform().translation[1]
+            )
+
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
@@ -465,11 +472,22 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
                     # agent_trans = human_trans
+                    # Check if the agent can see the object
                     rho, _ = self.get_cartesian_obj_coords(obj_trans)
                     cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
+                    # Check if the agent can go to there
+                    is_accessible = navmesh_utils.is_accessible(
+                        sim=env._sim,
+                        point=obj_trans,
+                        height=ee_height,
+                        nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
+                    )
+                    # Finalize it
                     finished_nav = (
-                        rho < self._pick_dist_threshold and cast_ray
-                    ) or step_terminate
+                        (rho < self._pick_dist_threshold and cast_ray)
+                        or step_terminate
+                        or not is_accessible
+                    )
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
@@ -491,6 +509,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     if step_terminate:
                         self.current_state = FetchState.SEARCH_WAYPOINT
+                    elif not is_accessible:
+                        self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
                     else:
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
