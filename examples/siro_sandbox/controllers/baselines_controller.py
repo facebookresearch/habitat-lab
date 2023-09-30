@@ -170,6 +170,7 @@ class FetchState(Enum):
     RESET_ARM_BEFORE_WAIT = 6
     SEARCH_WAYPOINT = 7
     BRING_WAYPOINT = 8
+    BEG_RESET = 9
 
 
 # The hyper-parameters for the state machine
@@ -522,7 +523,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     if step_terminate:
                         self.current_state = FetchState.SEARCH_WAYPOINT
                     elif not is_accessible:
-                        self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                        self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
@@ -760,6 +761,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.counter_pick += 1
                 else:
                     self.cancel_fetch()
+
+        elif self.current_state == FetchState.BEG_RESET:
+            if self.should_start_skill:
+                # TODO: obs can be batched before
+                self.start_skill(obs, "nav_to_obj")
+            breakpoint()
 
         elif self.current_state == FetchState.RESET_ARM_BEFORE_WAIT:
             type_of_skill = self.defined_skills.place.skill_name
