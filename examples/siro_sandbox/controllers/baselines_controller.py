@@ -172,8 +172,11 @@ class FetchState(Enum):
     BRING_WAYPOINT = 8
 
 
+# The hyper-parameters for the state machine
+PICK_DIST_THRESHOLD = 1.0  # Can use 1.2
+DROP_DIST_THRESHOLD = 1.0
 PICK_STEPS = 40
-IS_ACCESSIBLE_THRESHOLD = 1.0
+IS_ACCESSIBLE_THRESHOLD = 1.25
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -191,9 +194,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self.counter_pick = 0
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
-        # also consider self._config.habitat.task["robot_at_thresh"]
-        self._pick_dist_threshold = 1.2
-        self._drop_dist_threshold = 1.0
+        self._pick_dist_threshold = PICK_DIST_THRESHOLD
+        self._drop_dist_threshold = DROP_DIST_THRESHOLD
         self._can_pick_for_ray_threshold = 0.3
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.05, 0.0, 0.25]
@@ -436,7 +438,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return action_data.actions
 
     def act(self, obs, env):
-        print("step:", self.current_state, self._skill_steps)
+        print("Step log:", self.current_state, self._skill_steps)
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
@@ -461,6 +463,14 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self.get_articulated_agent().ee_transform().translation[1]
             )
 
+            # Get the navigable point that is in the navmesh and the location is not unoccluded
+            safe_trans = navmesh_utils.unoccluded_navmesh_snap(
+                pos=obj_trans,
+                height=ee_height,
+                pathfinder=env._sim.pathfinder,
+                sim=env._sim,
+            )
+
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
@@ -472,10 +482,12 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
                     # agent_trans = human_trans
-                    # Check if the agent can see the object
-                    rho, _ = self.get_cartesian_obj_coords(obj_trans)
+                    # Check if the distance to the target safe point
+                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
+                    # Lastly check if the agent can see the object or not
                     cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                    # Check if the agent can go to there
+                    # Check if (1) the agent can go to there and
+                    # (2) the view is not unoccluded or not
                     is_accessible = navmesh_utils.is_accessible(
                         sim=env._sim,
                         point=obj_trans,
@@ -492,7 +504,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
                         action_array = self.force_apply_skill(
-                            obs, "nav_to_obj", env, obj_trans
+                            obs, "nav_to_obj", env, safe_trans
                         )[0]
                     elif type_of_skill == "OracleNavPolicy":
                         action_ind_nav = find_action_range(
@@ -521,6 +533,19 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self.start_skill(obs, "nav_to_obj")
             obj_trans = self.rigid_obj_interest.translation
 
+            # Get gripper height
+            ee_height = (
+                self.get_articulated_agent().ee_transform().translation[1]
+            )
+
+            # Get the navigable point that is in the navmesh and the location is not unoccluded
+            safe_trans = navmesh_utils.unoccluded_navmesh_snap(
+                pos=obj_trans,
+                height=ee_height,
+                pathfinder=env._sim.pathfinder,
+                sim=env._sim,
+            )
+
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
@@ -531,7 +556,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
                     # agent_trans = human_trans
-                    rho, _ = self.get_cartesian_obj_coords(obj_trans)
+                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
                     cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
                     finished_nav = (
                         rho < self._pick_dist_threshold and cast_ray
@@ -540,7 +565,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
                         action_array = self.force_apply_skill(
-                            obs, "nav_to_obj_waypoint", env, obj_trans
+                            obs, "nav_to_obj_waypoint", env, safe_trans
                         )[0]
                     elif type_of_skill == "OracleNavPolicy":
                         action_ind_nav = find_action_range(
