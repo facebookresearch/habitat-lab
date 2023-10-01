@@ -211,8 +211,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self.defined_skills.place.use_pick_skill_as_place_skill
         )
         self._skill_steps = 0
-        self._cur_base_rot = None
         self._beg_state_lock = False
+        self._robot_obj_T = None
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -445,10 +445,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
     def _is_robot_beg_motion_done(self, env, act_space):
         """Generate robot begging motion"""
 
-        total_beg_motion = 250
+        total_beg_motion = 50
         steps_body_motion = 10
         beg_lin_vel = 0.0
         beg_pitch_vel = 10.0
+        animate_front_leg = 0.0
         action_array = np.zeros(get_num_actions(act_space))
         action_ind_motion = find_action_range(
             act_space, "agent_0_motion_control"
@@ -457,26 +458,31 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Start to beg
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([beg_lin_vel, beg_pitch_vel, 0.0])
+            ] = np.array([beg_lin_vel, beg_pitch_vel, animate_front_leg])
 
         elif self._skill_steps >= total_beg_motion - steps_body_motion:
             # End of begging
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([beg_lin_vel, -beg_pitch_vel, 0.0])
+            ] = np.array([beg_lin_vel, -beg_pitch_vel, animate_front_leg])
         else:
             # Animate the leg
+            animate_front_leg = 1.0
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([beg_lin_vel, 0.0, 1.0])
+            ] = np.array([beg_lin_vel, 0.0, animate_front_leg])
 
         if self._skill_steps < total_beg_motion:
             return False, action_array
         else:
-            return True, action_array
+            # Since action_array is consumed after this act function,
+            # we need to return zero action array to avoid
+            # height issue
+            return True, np.zeros(get_num_actions(act_space))
 
     def act(self, obs, env):
         print("Step log:", self.current_state, self._skill_steps)
+
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
@@ -804,15 +810,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.cancel_fetch()
 
         elif self.current_state == FetchState.BEG_RESET:
+            # We only restart the beg_reset state if the current beg_reset state finished
             if self.should_start_skill and not self._beg_state_lock:
-                # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
-                self._cur_base_rot = float(
-                    env._sim.agents_mgr[
-                        self._agent_idx
-                    ].articulated_agent.base_rot
-                )
                 self._beg_state_lock = True
+                self._robot_obj_T = mn.Matrix4(
+                    self.get_articulated_agent().sim_obj.transformation
+                )
 
             # Since we do not apply the skill, so we need to incease the step counter
             self._skill_steps += 1
@@ -821,6 +825,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             if is_done:
                 self._beg_state_lock = False
+                self.get_articulated_agent().sim_obj.transformation = (
+                    mn.Matrix4(self._robot_obj_T)
+                )
+                self._robot_obj_T = None
                 self.current_state = FetchState.WAIT
 
         elif self.current_state == FetchState.RESET_ARM_BEFORE_WAIT:
@@ -860,24 +868,23 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._last_object_drop_info = None
 
-        # Make sure the height is the same
-        # Get the current transformation
-        trans = self.get_articulated_agent().sim_obj.transformation
-        # Get the current rigid state
-        rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
-        )
-        end_pos = rigid_state.translation
-        end_pos[1] = 0.59
-        # Get the traget transformation based on the target rigid state
-        target_trans = mn.Matrix4.from_(
-            rigid_state.rotation.to_matrix(),
-            end_pos,
-        )
-        # Update the base
-        self.get_articulated_agent().sim_obj.transformation = target_trans
+        # # Make sure the height is the same
+        # # Get the current transformation
+        # trans = self.get_articulated_agent().sim_obj.transformation
+        # # Get the current rigid state
+        # rigid_state = habitat_sim.RigidState(
+        #     mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        # )
+        # end_pos = rigid_state.translation
+        # end_pos[1] = 0.59
+        # # Get the traget transformation based on the target rigid state
+        # target_trans = mn.Matrix4.from_(
+        #     rigid_state.rotation.to_matrix(),
+        #     end_pos,
+        # )
+        # # Update the base
+        # self.get_articulated_agent().sim_obj.transformation = target_trans
 
-        print("height:", self.get_articulated_agent().base_pos[1])
         return action_array
 
     def on_environment_reset(self):
