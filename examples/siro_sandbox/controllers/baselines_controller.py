@@ -8,6 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import gym.spaces as spaces
+import magnum as mn
 import numpy as np
 import torch
 
@@ -857,9 +858,22 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self._last_object_drop_info = None
 
         # Make sure the height is the same
-        cur_pos = self.get_articulated_agent().base_pos
-        cur_pos[1] = ROBOT_BASE_HEIGHT
-        self.get_articulated_agent().base_pos = cur_pos
+        # Get the current transformation
+        trans = self.get_articulated_agent().sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        end_pos = rigid_state.translation
+        end_pos[1] = 0.59
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            rigid_state.rotation.to_matrix(),
+            end_pos,
+        )
+        # Update the base
+        self.get_articulated_agent().sim_obj.transformation = target_trans
+
         print("height:", self.get_articulated_agent().base_pos[1])
         return action_array
 
