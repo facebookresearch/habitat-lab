@@ -989,7 +989,7 @@ def get_navigable_receptacles(
         corners_accessible = True
         corners_accessible = (
             sum(
-                is_accessible(sim, point, nav_to_min_distance=1.5)
+                is_accessible(sim, point, height=1.3, nav_to_min_distance=1.5)
                 for point in recep_points
             )
             >= 2
