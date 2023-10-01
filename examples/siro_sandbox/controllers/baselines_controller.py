@@ -180,6 +180,7 @@ DROP_DIST_THRESHOLD = 1.0
 PICK_STEPS = 40
 IS_ACCESSIBLE_THRESHOLD = 1.25
 ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
+TOTAL_BEG_MOTION = 400
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -445,7 +446,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
     def _is_robot_beg_motion_done(self, env, act_space):
         """Generate robot begging motion"""
 
-        total_beg_motion = 400
         steps_body_motion = 10
         beg_lin_vel = 0.0
         beg_pitch_vel = 10.0
@@ -460,7 +460,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 action_ind_motion[0] : action_ind_motion[1]
             ] = np.array([beg_lin_vel, beg_pitch_vel, animate_front_leg])
 
-        elif self._skill_steps >= total_beg_motion - steps_body_motion:
+        elif self._skill_steps >= TOTAL_BEG_MOTION - steps_body_motion:
             # End of begging
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
@@ -472,13 +472,31 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 action_ind_motion[0] : action_ind_motion[1]
             ] = np.array([beg_lin_vel, 0.0, animate_front_leg])
 
-        if self._skill_steps < total_beg_motion:
+        if self._skill_steps < TOTAL_BEG_MOTION:
             return False, action_array
         else:
             # Since action_array is consumed after this act function,
             # we need to return zero action array to avoid
             # height issue
             return True, np.zeros(get_num_actions(act_space))
+
+    def _set_height(self):
+        """Set the height of the robot"""
+        # Get the current transformation
+        trans = self.get_articulated_agent().sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        end_pos = rigid_state.translation
+        end_pos[1] = ROBOT_BASE_HEIGHT
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            rigid_state.rotation.to_matrix(),
+            end_pos,
+        )
+        # Update the base
+        self.get_articulated_agent().sim_obj.transformation = target_trans
 
     def act(self, obs, env):
         print("Step log:", self.current_state, self._skill_steps)
@@ -868,22 +886,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._last_object_drop_info = None
 
-        # # Make sure the height is the same
-        # # Get the current transformation
-        # trans = self.get_articulated_agent().sim_obj.transformation
-        # # Get the current rigid state
-        # rigid_state = habitat_sim.RigidState(
-        #     mn.Quaternion.from_matrix(trans.rotation()), trans.translation
-        # )
-        # end_pos = rigid_state.translation
-        # end_pos[1] = 0.59
-        # # Get the traget transformation based on the target rigid state
-        # target_trans = mn.Matrix4.from_(
-        #     rigid_state.rotation.to_matrix(),
-        #     end_pos,
-        # )
-        # # Update the base
-        # self.get_articulated_agent().sim_obj.transformation = target_trans
+        # Make sure the height is consistents
+        self._set_height()
 
         return action_array
 
