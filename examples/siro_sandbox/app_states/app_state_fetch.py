@@ -326,23 +326,27 @@ class AppStateFetch(AppState):
                         self._gui_agent_ctrl._get_grasp_mgr().snap_idx
                     )
 
-                    assert throw_obj_id is not None
-                    self.state_machine_agent_ctrl.object_interest_id = (
-                        throw_obj_id
-                    )
-                    sim = self.get_sim()
-                    self.state_machine_agent_ctrl.rigid_obj_interest = (
-                        sim.get_rigid_object_manager().get_object_by_id(
+                    # The robot can only pick up the object if there is a throw_obj_id
+                    # throw_obj_id will be None if the users fast press and press again the sapce
+                    if throw_obj_id is not None:
+                        self.state_machine_agent_ctrl.object_interest_id = (
                             throw_obj_id
                         )
-                    )
-                    throw_vel = self._throw_helper.viz_and_get_humanoid_throw()
-                    if not disable_spot:
-                        self.state_machine_agent_ctrl.current_state = (
-                            FetchState.SEARCH
+                        sim = self.get_sim()
+                        self.state_machine_agent_ctrl.rigid_obj_interest = (
+                            sim.get_rigid_object_manager().get_object_by_id(
+                                throw_obj_id
+                            )
                         )
+                        throw_vel = (
+                            self._throw_helper.viz_and_get_humanoid_throw()
+                        )
+                        if not disable_spot:
+                            self.state_machine_agent_ctrl.current_state = (
+                                FetchState.SEARCH
+                            )
 
-                    self._held_target_obj_idx = None
+                        self._held_target_obj_idx = None
 
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
