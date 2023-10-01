@@ -447,6 +447,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         total_beg_motion = 250
         steps_body_motion = 10
+        beg_lin_vel = 0.0
+        beg_pitch_vel = 10.0
         action_array = np.zeros(get_num_actions(act_space))
         action_ind_motion = find_action_range(
             act_space, "agent_0_motion_control"
@@ -455,17 +457,18 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Start to beg
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([0.0, 10.0, 0.0])
+            ] = np.array([beg_lin_vel, beg_pitch_vel, 0.0])
 
         elif self._skill_steps >= total_beg_motion - steps_body_motion:
             # End of begging
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([0.0, -10.0, 0.0])
+            ] = np.array([beg_lin_vel, -beg_pitch_vel, 0.0])
         else:
+            # Animate the leg
             action_array[
                 action_ind_motion[0] : action_ind_motion[1]
-            ] = np.array([0.0, 0.0, 1.0])
+            ] = np.array([beg_lin_vel, 0.0, 1.0])
 
         if self._skill_steps < total_beg_motion:
             return False, action_array
