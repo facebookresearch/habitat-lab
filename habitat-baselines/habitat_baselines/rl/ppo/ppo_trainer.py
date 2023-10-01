@@ -875,7 +875,10 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         self._agent = self._create_agent(None)
-        if self._agent.actor_critic.should_load_agent_state:
+        if (
+            self._agent.actor_critic.should_load_agent_state
+            and self.config.habitat_baselines.eval.should_load_ckpt
+        ):
             self._agent.load_state_dict(ckpt_dict)
 
         step_id = checkpoint_index
