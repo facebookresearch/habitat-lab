@@ -588,9 +588,12 @@ class AppStateFetch(AppState):
         fetch_state_names = {
             # FetchState.WAIT : "",
             FetchState.SEARCH: "searching for object",
+            FetchState.SEARCH_WAYPOINT: "searching for object",
             FetchState.PICK: "picking object",
             FetchState.BRING: "searching for human",
+            FetchState.BRING_WAYPOINT: "searching for human",
             FetchState.DROP: "dropping object",
+            FetchState.BEG_RESET: "Cannot pick up the object",
         }
         if fetch_state in fetch_state_names:
             status_str += f"spot: {fetch_state_names[fetch_state]}\n"

@@ -726,6 +726,70 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
 
 
 @registry.register_task_action
+class BaseVelLegAnimationMotionAction(BaseVelLegAnimationAction):
+    @property
+    def action_space(self):
+        lim = 20
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "base_motion": spaces.Box(
+                    shape=(3,), low=-lim, high=lim, dtype=np.float32
+                )
+            }
+        )
+
+    def update_base(self):
+        """
+        Update the base of the robot
+        """
+        # Get the control frequency
+        ctrl_freq = self._sim.ctrl_freq
+        # Get the current transformation
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        # Integrate to get target rigid state
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / ctrl_freq, rigid_state
+        )
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+        # Update the base
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
+
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel, move_leg = kwargs[
+            self._action_arg_prefix + "base_motion"
+        ]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._longitudinal_lin_speed
+
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, 0, ang_vel)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base()
+
+        if move_leg:
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = (
+                self._leg_data[cur_i][0:6]
+                + self.cur_articulated_agent.params.leg_init_params[6:]
+            )
+            self._play_i += int(self._play_i_perframe)
+
+
+@registry.register_task_action
 class ArmEEAction(ArticulatedAgentAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 

@@ -48,6 +48,7 @@ __all__ = [
     "ArmActionConfig",
     "BaseVelocityActionConfig",
     "BaseVelocityLegAnimationActionConfig",
+    "BaseVelocityLegAnimationMotionActionConfig",
     "HumanoidJointActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
@@ -271,6 +272,40 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
     type: str = "BaseVelLegAnimationAction"
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    lin_speed: float = 10.0
+    # The max angular speed of the robot
+    ang_speed: float = 10.0
+    # If we want to do sliding or not
+    allow_dyn_slide: bool = False
+    # If the condition of sliding includes the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # If we allow the robot to move back or not
+    allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+    # The safety distance to human
+    human_safe_dis: float = 0.5
+    leg_animation_checkpoint: str = (
+        "data/robots/spot_data/spot_walking_trajectory.csv"
+    )
+    play_i_perframe: int = 5
+    use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
+
+
+@dataclass
+class BaseVelocityLegAnimationMotionActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelLegAnimationMotionAction"
     # The max longitudinal and lateral linear speeds of the robot
     longitudinal_lin_speed: float = 10.0
     lateral_lin_speed: float = 10.0
@@ -1899,6 +1934,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity_leg_animation",
     node=BaseVelocityLegAnimationActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity_leg_animation_motion",
+    group="habitat/task/actions",
+    name="base_velocity_leg_animation_motion",
+    node=BaseVelocityLegAnimationMotionActionConfig,
 )
 cs.store(
     package="habitat.task.actions.base_velocity_non_cylinder",
