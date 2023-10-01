@@ -445,7 +445,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
     def _is_robot_beg_motion_done(self, env, act_space):
         """Generate robot begging motion"""
 
-        total_beg_motion = 50
+        total_beg_motion = 400
         steps_body_motion = 10
         beg_lin_vel = 0.0
         beg_pitch_vel = 10.0
