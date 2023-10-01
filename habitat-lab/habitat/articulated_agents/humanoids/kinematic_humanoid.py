@@ -135,7 +135,7 @@ class KinematicHumanoid(MobileManipulator):
 
     @property
     def base_rot(self) -> float:
-        return self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot)
+        return float(self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot))
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
