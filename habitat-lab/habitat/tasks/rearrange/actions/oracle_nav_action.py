@@ -14,7 +14,7 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns
+from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
@@ -113,7 +113,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            start_pos, _, _ = get_robot_spawns(
+            start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
                 self._config.spawn_max_dist_to_obj,

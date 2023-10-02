@@ -151,4 +151,4 @@ habitat:
       enable_physics: True
   dataset:
     #TODO: We need a real dataset here.
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz
