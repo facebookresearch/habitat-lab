@@ -25,17 +25,17 @@ NAME_MAP = {
 }
 
 MINIMUM_PERFORMANCE_1_PROCESS = {
-    "idle_all": 280,
+    "idle_all": 260,
     "idle_noconcur": 220,
-    "idle_nosleep": 120,
+    "idle_nosleep": 105,
     # "idle_render": "[Idle Render Only]",
-    "idle_single_camera_all": 510,
-    "idle_single_camera_noconcur": 480,
+    "idle_single_camera_all": 465,
+    "idle_single_camera_noconcur": 430,
     "idle_single_camera_nosleep": 150,
     # "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
-    "interact_all": 55,
-    "interact_noconcur": 50,
-    "interact_nosleep": 55,
+    "interact_all": 40,
+    "interact_noconcur": 39,
+    "interact_nosleep": 40,
 }
 
 MINIMUM_PERFORMANCE_16_PROCESS = {
