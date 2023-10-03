@@ -910,7 +910,7 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
             lin_pos_z = np.sign(lin_pos_z) if lin_pos_z != 0 else 0
             turn = np.sign(turn) if turn != 0 else 0
 
-        max_base_forward_delta = 0.05
+        max_base_forward_delta = 0.15
         max_turn_delta = 0.025
         num_steps = max(int(np.ceil(max([lin_pos_x / max_base_forward_delta, lin_pos_z / max_base_forward_delta, turn / max_turn_delta]))), 1)
         

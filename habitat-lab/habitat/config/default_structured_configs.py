@@ -1662,8 +1662,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 1920
-    height: int = 1080
-    hfov: int = 120  # horizontal field of view in degrees
+    height: int = 1088
+    hfov: int = 140  # horizontal field of view in degrees
 
 
 
