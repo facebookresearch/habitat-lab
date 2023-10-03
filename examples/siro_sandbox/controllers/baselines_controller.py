@@ -268,6 +268,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.object_interest_id = None
         self.rigid_obj_interest = None
         self._target_place_trans = None
+        # For the safe snap point visualization purpose
+        self.safe_pos = None
 
     # todo: make this non-public, since user code shouldn't be able to set arbitrary states
     @property
@@ -537,35 +539,43 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 sim=env._sim,
             )
 
+            # Assign safe_trans here for the visualization
+            self.safe_pos = safe_trans
+
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
                 )
 
+                finished_nav = True
+                step_terminate = False
+                is_accessible = False
                 if type_of_skill == "OracleNavPolicy":
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
                     # agent_trans = human_trans
-                    # Check if the distance to the target safe point
-                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                    # Lastly check if the agent can see the object or not
-                    cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                    # Check if (1) the agent can go to there and
-                    # (2) the view is not unoccluded or not
-                    is_accessible = navmesh_utils.is_accessible(
-                        sim=env._sim,
-                        point=obj_trans,
-                        height=ee_height,
-                        nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
-                    )
-                    # Finalize it
-                    finished_nav = (
-                        (rho < self._pick_dist_threshold and cast_ray)
-                        or step_terminate
-                        or not is_accessible
-                    )
+                    # Make sure that there is a safe snap point
+                    if safe_trans is not None:
+                        # Check if the distance to the target safe point
+                        rho, _ = self.get_cartesian_obj_coords(safe_trans)
+                        # Lastly check if the agent can see the object or not
+                        cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
+                        # Check if (1) the agent can go to there and
+                        # (2) the view is not unoccluded or not
+                        is_accessible = navmesh_utils.is_accessible(
+                            sim=env._sim,
+                            point=obj_trans,
+                            height=ee_height,
+                            nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
+                        )
+                        # Finalize it
+                        finished_nav = (
+                            (rho < self._pick_dist_threshold and cast_ray)
+                            or step_terminate
+                            or not is_accessible
+                        )
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":

@@ -44,12 +44,13 @@ def snap_point_is_occluded(
         if (
             raycast_results.has_hits()
             and raycast_results.hits[0].ray_distance < 1
-            and target_object_id is not None
+        ) and (
+            (
+                target_object_id is not None
+                and raycast_results.hits[0].object_id == target_object_id
+            )
+            or (raycast_results.hits[0].ray_distance >= 0.9)
         ):
-            if raycast_results.hits[0].object_id == target_object_id:
-                return False
-            continue
-        else:
             return False
     return True
 

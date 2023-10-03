@@ -389,11 +389,11 @@ class AppStateFetch(AppState):
                             self._held_target_obj_idx
                         ]
 
-        # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
-        #     obj_pos = (
-        #         self.state_machine_agent_ctrl.rigid_obj_interest.translation
-        #     )
-        #     self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
+        # Do vis on the real navigation target
+        if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
+            safe_pos = self.state_machine_agent_ctrl.safe_pos
+            if safe_pos is not None:
+                self._draw_circle(safe_pos, color=mn.Color3.red(), radius=0.25)
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -463,6 +463,15 @@ class AppStateFetch(AppState):
             position - box_offset,
             position + box_offset,
             color,
+        )
+
+    def _draw_circle(self, pos, color, radius):
+        num_segments = 24
+        self._sandbox_service.line_render.draw_circle(
+            pos,
+            radius,
+            color,
+            num_segments,
         )
 
     def _add_target_object_highlight_ring(
