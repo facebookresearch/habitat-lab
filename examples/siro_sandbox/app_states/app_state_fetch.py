@@ -653,11 +653,17 @@ class AppStateFetch(AppState):
     def _viz_fetcher(self, post_sim_update_dict):
         fetch_state = self.state_machine_agent_ctrl.current_state
 
-        if fetch_state == FetchState.SEARCH or fetch_state == FetchState.BRING:
+        if (
+            fetch_state == FetchState.SEARCH
+            or fetch_state == FetchState.BRING
+            or fetch_state == FetchState.SEARCH_WAYPOINT
+            or fetch_state == FetchState.BRING_WAYPOINT
+        ):
             fetcher_pos = self._get_state_machine_agent_translation()
             target_pos = (
                 self.state_machine_agent_ctrl.rigid_obj_interest.translation
                 if fetch_state == FetchState.SEARCH
+                or fetch_state == FetchState.SEARCH_WAYPOINT
                 else self._get_gui_agent_translation()
             )
             path_points = [fetcher_pos, target_pos]
