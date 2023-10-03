@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
-import gym.spaces as spaces
-
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.storage import Storage
 from habitat_baselines.rl.ppo.policy import Policy
@@ -50,15 +48,6 @@ class AgentAccessMgr(ABC):
         :param create_rollouts_fn: Override behavior for creating the
             rollout storage. Default behavior for this and the call signature is
             `default_create_rollouts`.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def policy_action_space(self) -> spaces.Space:
-        """
-        The action space the policy acts in. This can be different from the
-        environment action space for hierarchical policies.
         """
         raise NotImplementedError()
 

@@ -101,9 +101,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                     for k, v, in resume_state["state_dict"].items()
                 }
             )
-        self._policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
 
     @property
     def masks_shape(self):
@@ -183,10 +180,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.init_distributed(
                 find_unused_params=find_unused_params
             )
-
-    @property
-    def policy_action_space(self):
-        return self._policy_action_space
 
     def _create_policy(self) -> NetPolicy:
         """
