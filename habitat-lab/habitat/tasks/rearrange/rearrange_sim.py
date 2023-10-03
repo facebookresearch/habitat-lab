@@ -303,6 +303,8 @@ class RearrangeSim(HabitatSim):
             t_start = time.time()
             super().reconfigure(config, should_close_on_new_scene=False)
             self.add_perf_timing("super_reconfigure", t_start)
+            # The articulated object handles have changed.
+            self._start_art_states = {}
 
         if new_scene:
             self.agents_mgr.on_new_scene()
