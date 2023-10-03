@@ -97,8 +97,8 @@ class PolicyActionData:
 
 
 class Policy(abc.ABC):
-    def __init__(self):
-        pass
+    def __init__(self, action_space):
+        self._action_space = action_space
 
     @property
     def should_load_agent_state(self):
@@ -123,19 +123,12 @@ class Policy(abc.ABC):
         )
 
     @property
-    def policy_action_space(self) -> spaces.Space:
-        """
-        The action space the policy acts in. This can be different from the
-        environment action space for hierarchical policies.
-        """
-        raise NotImplementedError()
+    def policy_action_space_shape_lens(self) -> List[int]:
+        return [self._action_space]
 
     @property
-    def policy_action_space_shape_lens(self) -> List[int]:
-        """
-        A list with the dimensionality of action space of each of the agents.
-        """
-        raise NotImplementedError()
+    def policy_action_space(self) -> spaces.Space:
+        return self._action_space
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -167,11 +160,6 @@ class Policy(abc.ABC):
             if should_insert.item():
                 rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
                 prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
-
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
-        return env_action_space
 
     def _get_policy_components(self) -> List[nn.Module]:
         return []
@@ -268,7 +256,7 @@ class NetPolicy(nn.Module, Policy):
     def __init__(
         self, net, action_space, policy_config=None, aux_loss_config=None
     ):
-        super().__init__()
+        super().__init__(action_space)
         self.net = net
         self.dim_actions = get_num_actions(action_space)
         self.action_distribution: Union[CategoricalNet, GaussianNet]
@@ -301,14 +289,6 @@ class NetPolicy(nn.Module, Policy):
         self.aux_loss_modules = get_aux_modules(
             aux_loss_config, action_space, self.net
         )
-
-    @property
-    def policy_action_space_shape_lens(self):
-        return [self._action_space]
-
-    @property
-    def policy_action_space(self):
-        return self._action_space
 
     @property
     def hidden_state_shape(self):

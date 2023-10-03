@@ -93,11 +93,6 @@ class HighLevelPolicy(nn.Module):
     def parameters(self):
         return iter([nn.Parameter(torch.zeros((1,), device=self._device))])
 
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
-        return env_action_space
-
     def get_next_skill(
         self,
         observations,
