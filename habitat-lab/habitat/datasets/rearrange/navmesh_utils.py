@@ -44,13 +44,17 @@ def snap_point_is_occluded(
         if (
             raycast_results.has_hits()
             and raycast_results.hits[0].ray_distance < 1
-        ) and (
-            (
+        ):
+            if (
                 target_object_id is not None
                 and raycast_results.hits[0].object_id == target_object_id
-            )
-            or (raycast_results.hits[0].ray_distance >= 0.9)
-        ):
+            ) or raycast_results.hits[0].ray_distance > 0.9:
+                # we hit an allowed object (i.e., the target object), so not occluded
+                return False
+            # the ray hit a not-allowed object and is occluded
+            continue
+        else:
+            # ray hit nothing, so not occluded
             return False
     return True
 

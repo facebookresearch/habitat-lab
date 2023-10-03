@@ -537,6 +537,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 height=ee_height,
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
+                island_id=env._sim.largest_island_idx,
             )
 
             # Assign safe_trans here for the visualization
@@ -547,7 +548,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
                 )
-
                 finished_nav = True
                 step_terminate = False
                 is_accessible = False
@@ -555,7 +555,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
-                    # agent_trans = human_trans
                     # Make sure that there is a safe snap point
                     if safe_trans is not None:
                         # Check if the distance to the target safe point
@@ -569,6 +568,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                             point=obj_trans,
                             height=ee_height,
                             nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
+                            nav_island=env._sim.largest_island_idx,
                         )
                         # Finalize it
                         finished_nav = (
@@ -620,6 +620,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 height=ee_height,
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
+                island_id=env._sim.largest_island_idx,
             )
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
@@ -627,16 +628,21 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
                 )
+                finished_nav = True
+                step_terminate = False
+                is_accessible = False
                 if type_of_skill == "OracleNavPolicy":
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
-                    # agent_trans = human_trans
-                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                    cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                    finished_nav = (
-                        rho < self._pick_dist_threshold and cast_ray
-                    ) or step_terminate
+                    # Make sure that there is a safe snap point
+                    if safe_trans is not None:
+                        # agent_trans = human_trans
+                        rho, _ = self.get_cartesian_obj_coords(safe_trans)
+                        cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
+                        finished_nav = (
+                            rho < self._pick_dist_threshold and cast_ray
+                        ) or step_terminate
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
