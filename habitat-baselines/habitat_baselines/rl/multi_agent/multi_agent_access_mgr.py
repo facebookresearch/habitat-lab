@@ -400,29 +400,3 @@ class MultiAgentAccessMgr(AgentAccessMgr):
     @property
     def updater(self):
         return self._multi_updater
-
-    @property
-    def policy_action_space(self):
-        # TODO: Hack for discrete HL action spaces.
-        all_discrete = np.all(
-            [
-                isinstance(agent.policy_action_space, spaces.MultiDiscrete)
-                for agent in self._agents
-            ]
-        )
-        if all_discrete:
-            return spaces.MultiDiscrete(
-                tuple(
-                    [
-                        self._agents[agent_i].policy_action_space.n
-                        for agent_i in self._active_agents
-                    ]
-                )
-            )
-        else:
-            return spaces.Dict(
-                {
-                    agent_i: self._agents[agent_i].policy_action_space
-                    for agent_i in self._active_agents
-                }
-            )
