@@ -1389,6 +1389,7 @@ class HabitatSimV0Config(HabitatBaseConfig):
     allow_sliding: bool = True
     frustum_culling: bool = True
     enable_physics: bool = False
+    enable_hbao: bool = False
     physics_config_file: str = "./data/default.physics_config.json"
     # Possibly unstable optimization for extra performance
     # with concurrent rendering
