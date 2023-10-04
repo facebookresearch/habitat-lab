@@ -64,6 +64,9 @@ class HabitatEvaluator(Evaluator):
             device=device,
         )
 
+        hidden_state_lens = agent.actor_critic.hidden_state_shape_lens
+        action_space_lens = agent.actor_critic.policy_action_space_shape_lens
+
         prev_actions = torch.zeros(
             config.habitat_baselines.num_environments,
             *action_shape,
@@ -125,6 +128,13 @@ class HabitatEvaluator(Evaluator):
         ):
             current_episodes_info = envs.current_episodes()
 
+            space_lengths = {}
+            n_agents = len(config.habitat.simulator.agents)
+            if n_agents > 1:
+                space_lengths = {
+                    "index_len_recurrent_hidden_states": hidden_state_lens,
+                    "index_len_prev_actions": action_space_lens,
+                }
             with inference_mode():
                 action_data = agent.actor_critic.act(
                     batch,
@@ -132,6 +142,7 @@ class HabitatEvaluator(Evaluator):
                     prev_actions,
                     not_done_masks,
                     deterministic=False,
+                    **space_lengths,
                 )
                 if action_data.should_inserts is None:
                     test_recurrent_hidden_states = (

@@ -49,8 +49,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         aux_loss_config,
         agent_name: Optional[str],
     ):
-        super().__init__(action_space)
-
+        Policy.__init__(self, action_space)
+        nn.Module.__init__(self)
         self._action_space = action_space
         self._num_envs: int = num_envs
 
