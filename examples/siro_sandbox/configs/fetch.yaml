@@ -160,7 +160,8 @@ habitat:
       allow_sliding: True
 
   dataset:
-    data_path: "data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz"
+    # data_path: "data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz"
+    data_path: "data/datasets/floorplanner/rearrange/scratch/train/demo_25.json.gz"
 
 habitat_baselines:
   num_environments: 1
