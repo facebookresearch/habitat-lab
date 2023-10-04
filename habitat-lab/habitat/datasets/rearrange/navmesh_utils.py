@@ -23,7 +23,7 @@ def snap_point_is_occluded(
 
     :property target: The 3D position which should be unoccluded from the snap point.
     :property snap_point: The navmesh snap point under consideration.
-    :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
+    :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
     :property sim: The Simulator instance.
     :property granularity: The distance between raycast samples. Finer granularity is more accurate, but more expensive.
     :property target_object_id: An optional object id which should be ignored in occlusion check.
@@ -75,7 +75,7 @@ def unoccluded_navmesh_snap(
     Snap a point to the navmesh considering point visibilty via raycasting.
 
     :property pos: The 3D position to snap.
-    :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
+    :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
     :property pathfinder: The PathFinder defining the NavMesh to use.
     :property sim: The Simulator instance.
     :property target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when pos is an object's COM, that object should not occlude the point.
