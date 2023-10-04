@@ -490,6 +490,9 @@ class HierarchicalPolicy(nn.Module, Policy):
                     observations,
                     ll_rnn_hidden_states,
                     prev_actions,
+                    skill_name=[
+                        self._idx_to_name[new_skills[i]] for i in batch_ids
+                    ],
                 )
 
                 if self._has_ll_hidden_state:

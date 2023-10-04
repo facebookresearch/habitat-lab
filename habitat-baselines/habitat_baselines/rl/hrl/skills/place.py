@@ -49,7 +49,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
             )
         return is_done
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)

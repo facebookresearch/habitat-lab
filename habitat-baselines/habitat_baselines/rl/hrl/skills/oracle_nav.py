@@ -63,9 +63,15 @@ class OracleNavPolicy(NnSkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ):
         ret = super().on_enter(
-            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+            skill_arg,
+            batch_idx,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            skill_name,
         )
         self._was_running_on_prev_step = False
         return ret
@@ -112,7 +118,7 @@ class OracleNavPolicy(NnSkillPolicy):
 
         return ret
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         if len(skill_arg) == 2:
             search_target, _ = skill_arg
         elif len(skill_arg) == 3:

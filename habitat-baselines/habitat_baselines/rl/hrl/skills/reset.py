@@ -35,6 +35,7 @@ class ResetArmSkill(SkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         ret = super().on_enter(
             skill_arg,
@@ -42,6 +43,7 @@ class ResetArmSkill(SkillPolicy):
             observations,
             rnn_hidden_states,
             prev_actions,
+            skill_name,
         )
 
         self._initial_delta = (
@@ -50,7 +52,7 @@ class ResetArmSkill(SkillPolicy):
 
         return ret
 
-    def _parse_skill_arg(self, skill_arg: str):
+    def _parse_skill_arg(self, skill_name: str, skill_arg: str):
         return None
 
     @property
