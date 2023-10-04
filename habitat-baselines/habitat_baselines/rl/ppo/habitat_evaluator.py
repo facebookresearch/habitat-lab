@@ -51,7 +51,7 @@ class HabitatEvaluator(Evaluator):
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
 
         action_shape, discrete_actions = get_action_space_info(
-            agent.policy_action_space
+            agent.actor_critic.policy_action_space
         )
 
         current_episode_reward = torch.zeros(envs.num_envs, 1, device="cpu")

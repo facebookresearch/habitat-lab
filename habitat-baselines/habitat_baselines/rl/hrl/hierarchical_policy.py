@@ -49,7 +49,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         aux_loss_config,
         agent_name: Optional[str],
     ):
-        super().__init__()
+        super().__init__(action_space)
 
         self._action_space = action_space
         self._num_envs: int = num_envs
@@ -171,20 +171,17 @@ class HierarchicalPolicy(nn.Module, Policy):
     def eval(self):
         pass
 
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
+    @property
+    def policy_action_space(self):
         """
         Fetches the policy action space for learning. If we are learning the HL
         policy, it will return its custom action space for learning.
         """
         if self._has_ll_hidden_state or not self._has_hl_hidden_state:
             # The LL skill will take priority for the prev action.
-            return env_action_space
+            return self.policy_action_space
         else:
-            return self._high_level_policy.get_policy_action_space(
-                env_action_space
-            )
+            return self._high_level_policy.policy_action_space
 
     def extract_policy_info(
         self, action_data, infos, dones

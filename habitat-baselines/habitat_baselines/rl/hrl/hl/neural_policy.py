@@ -130,6 +130,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             )
         return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
 
+    @property
     def policy_action_space(self) -> spaces.Space:
         return spaces.Discrete(self._n_actions)
 

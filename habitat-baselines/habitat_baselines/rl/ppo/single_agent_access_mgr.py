@@ -145,9 +145,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         if create_rollouts_fn is None:
             create_rollouts_fn = self._create_storage
 
-        policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
+        policy_action_space = self._actor_critic.policy_action_space
         self._rollouts = create_rollouts_fn(
             num_envs=self._num_envs,
             env_spec=self._env_spec,
