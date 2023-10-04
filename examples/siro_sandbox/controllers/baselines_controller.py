@@ -203,7 +203,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
         self._pick_dist_threshold = PICK_DIST_THRESHOLD
         self._drop_dist_threshold = DROP_DIST_THRESHOLD
-        self._can_pick_for_ray_threshold = 0.3
+        self._can_pick_for_ray_threshold = 1.0
         # arm local ee location format: [up,right,front]
         self._local_place_target = [-0.05, 0.0, 0.25]
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
