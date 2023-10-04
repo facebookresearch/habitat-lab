@@ -38,7 +38,8 @@ def snap_point_is_occluded(
         ray = habitat_sim.geo.Ray()
         ray.origin = snap_point + mn.Vector3(0, cur_height, 0)
         cur_height -= granularity
-        ray.direction = target - ray.origin
+        # The ray is pointing from target to origin
+        ray.direction = ray.origin - target
         raycast_results = sim.cast_ray(ray)
         # distance of 1 is the displacement between the two points
         if (
