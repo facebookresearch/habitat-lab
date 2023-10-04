@@ -214,9 +214,8 @@ class SandboxDriver(GuiAppDriver):
 
         self._reset_environment()
 
-    def __del__(self):
-        if self.do_network_server:
-            terminate_server_process()
+    def close(self):
+        self._check_terminate_server()
 
     @property
     def do_network_server(self):
@@ -235,6 +234,10 @@ class SandboxDriver(GuiAppDriver):
             self._remote_gui_input = RemoteGuiInput(
                 self._interprocess_record, line_render
             )
+
+    def _check_terminate_server(self):
+        if self.do_network_server:
+            terminate_server_process()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore
@@ -942,3 +945,5 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
+
+    driver.close()
