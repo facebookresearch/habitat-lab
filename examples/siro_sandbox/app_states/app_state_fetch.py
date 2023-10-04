@@ -347,7 +347,6 @@ class AppStateFetch(AppState):
                             )
 
                         self._held_target_obj_idx = None
-
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
@@ -388,6 +387,43 @@ class AppStateFetch(AppState):
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
+
+        # Switch to the point nav with waypoints by keeping pressing "O" key
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state == FetchState.SEARCH
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_TIMEOUT_WAIT
+            or self.state_machine_agent_ctrl.current_state == FetchState.BRING
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_TIMEOUT_WAIT
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH
+                or self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_TIMEOUT_WAIT
+            ):
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.SEARCH_WAYPOINT
+                )
+            else:
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.BRING_WAYPOINT
+                )
+
+        if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_WAYPOINT
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_WAYPOINT
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_WAYPOINT
+            ):
+                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+            else:
+                self.state_machine_agent_ctrl.current_state = FetchState.BRING
 
         # Do vis on the real navigation target
         if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
@@ -606,7 +642,9 @@ class AppStateFetch(AppState):
             FetchState.BRING: "searching for human",
             FetchState.BRING_WAYPOINT: "searching for human",
             FetchState.DROP: "dropping object",
-            FetchState.BEG_RESET: "Cannot pick up the object",
+            FetchState.BEG_RESET: "cannot pick up the object",
+            FetchState.SEARCH_TIMEOUT_WAIT: "need help to search for object",
+            FetchState.BRING_TIMEOUT_WAIT: "need help to search for human",
         }
         if fetch_state in fetch_state_names:
             status_str += f"spot: {fetch_state_names[fetch_state]}\n"
@@ -666,7 +704,17 @@ class AppStateFetch(AppState):
                 or fetch_state == FetchState.SEARCH_WAYPOINT
                 else self._get_gui_agent_translation()
             )
-            path_points = [fetcher_pos, target_pos]
+            if self.state_machine_agent_ctrl.gt_path is not None and (
+                fetch_state == FetchState.SEARCH_WAYPOINT
+                or fetch_state == FetchState.BRING_WAYPOINT
+            ):
+                gt_path = [
+                    mn.Vector3(pt)
+                    for pt in self.state_machine_agent_ctrl.gt_path
+                ]
+                path_points = [fetcher_pos] + gt_path + [target_pos]
+            else:
+                path_points = [fetcher_pos, target_pos]
             floor_y = 0.0  # temp hack
             for pt in path_points:
                 pt.y = floor_y

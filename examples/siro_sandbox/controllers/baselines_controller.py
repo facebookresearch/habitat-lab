@@ -172,6 +172,8 @@ class FetchState(Enum):
     SEARCH_WAYPOINT = 7
     BRING_WAYPOINT = 8
     BEG_RESET = 9
+    SEARCH_TIMEOUT_WAIT = 10
+    BRING_TIMEOUT_WAIT = 11
 
 
 # The hyper-parameters for the state machine
@@ -191,6 +193,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.should_start_skill = False
         self.object_interest_id = None
         self.rigid_obj_interest = None
+        self._target_place_trans = None
         self.grasped_object_id = None
         self.grasped_object = None
         self._last_object_drop_info = None
@@ -214,6 +217,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._skill_steps = 0
         self._beg_state_lock = False
         self._robot_obj_T = None
+        self.safe_pos = None
+        self.gt_path = None
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -270,6 +275,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._target_place_trans = None
         # For the safe snap point visualization purpose
         self.safe_pos = None
+        self.gt_path = None
 
     # todo: make this non-public, since user code shouldn't be able to set arbitrary states
     @property
@@ -430,6 +436,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if found_path:
                 # Motify the path if found
                 obj_trans = path.points[1]
+                self.gt_path = path.points
 
         # Only take the goal object
         rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
@@ -596,7 +603,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     if step_terminate:
-                        self.current_state = FetchState.SEARCH_WAYPOINT
+                        self.current_state = FetchState.SEARCH_TIMEOUT_WAIT
                     elif not is_accessible:
                         self.current_state = FetchState.BEG_RESET
                     else:
@@ -667,6 +674,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     else:
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
+
+        elif self.current_state == FetchState.SEARCH_TIMEOUT_WAIT:
+            if self.should_start_skill:
+                # TODO: obs can be batched before
+                self.start_skill(obs, "nav_to_obj")
 
         elif self.current_state == FetchState.PICK:
             obj_trans = self.rigid_obj_interest.translation
@@ -755,7 +767,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             else:
                 if step_terminate:
-                    self.current_state = FetchState.BRING_WAYPOINT
+                    self.current_state = FetchState.BRING_TIMEOUT_WAIT
                 else:
                     self.current_state = FetchState.DROP
                 self._init_policy_input()
@@ -801,6 +813,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     self.current_state = FetchState.DROP
                 self._init_policy_input()
+
+        elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:
+            if self.should_start_skill:
+                # TODO: obs can be batched before
+                self.start_skill(obs, "nav_to_robot")
 
         elif self.current_state == FetchState.DROP:
             type_of_skill = self.defined_skills.place.skill_name
@@ -918,3 +935,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.counter_pick = 0
         self._policy_info = self._init_policy_input()
         self._target_place_trans = None
+        self._skill_steps = 0
+        self._beg_state_lock = False
+        self._robot_obj_T = None
+        self.safe_pos = None
+        self.gt_path = None
