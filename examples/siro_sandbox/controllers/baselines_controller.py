@@ -629,6 +629,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 sim=env._sim,
                 island_id=env._sim.largest_island_idx,
             )
+            self.safe_pos = safe_trans
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
