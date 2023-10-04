@@ -285,6 +285,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         prev_actions,
         masks,
         deterministic=False,
+        **kwargs,
     ):
         batch_size = masks.shape[0]
         masks_cpu = masks.cpu()
