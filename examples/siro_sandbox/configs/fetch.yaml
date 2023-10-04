@@ -31,8 +31,8 @@ defaults:
     - has_finished_oracle_nav
     - humanoid_detector_sensor
 
-  # We remove the oracle nav action for the agent_0
-  # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+  # We will need oracle_nav_action for when using the shorest path finder
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
 
   # Add one control action for robot motion
@@ -78,6 +78,18 @@ habitat:
         enable_rotation_check_for_dyn_slide: False
 
       agent_0_motion_control:
+        allow_dyn_slide: True
+        collision_threshold: 1e-5
+        navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
+        enable_lateral_move: False
+        # This longitudinal_lin_speed and ang_speed are used for training skills
+        longitudinal_lin_speed: 10.0
+        lateral_lin_speed: 10.0
+        ang_speed: 10.0
+        enable_rotation_check_for_dyn_slide: False
+
+      agent_0_oracle_nav_action:
+        type: OracleNavCoordAction
         allow_dyn_slide: True
         collision_threshold: 1e-5
         navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]

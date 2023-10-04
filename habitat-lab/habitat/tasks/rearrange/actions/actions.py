@@ -714,8 +714,10 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
             self.update_base(ang_vel != 0.0, fix_leg=False)
             cur_i = int(self._play_i % self._play_length_data)
             self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
+            offset = 0.01
             self._play_i += int(
-                self._play_i_perframe / (abs(longitudinal_lin_vel) / 10.0)
+                self._play_i_perframe
+                / ((abs(longitudinal_lin_vel) + offset) / 10.0)
             )
         else:
             self._play_i = 0

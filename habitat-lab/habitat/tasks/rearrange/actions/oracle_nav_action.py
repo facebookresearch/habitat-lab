@@ -12,6 +12,7 @@ from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
+    BaseVelLegAnimationAction,
     BaseVelNonCylinderAction,
     HumanoidJointAction,
 )
@@ -619,7 +620,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
 
 @registry.register_task_action
-class OracleNavCoordAction(OracleNavAction):
+class OracleNavCoordAction(BaseVelLegAnimationAction, OracleNavAction):  # type: ignore
     """
     An action that will convert the index of an entity (in the sense of
     `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
@@ -631,6 +632,10 @@ class OracleNavCoordAction(OracleNavAction):
 
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, task=task, **kwargs)
+        if self.motion_type == "base_velocity":
+            BaseVelLegAnimationAction.__init__(
+                self, *args, **kwargs, task=task
+            )
 
     @property
     def action_space(self):
@@ -676,9 +681,9 @@ class OracleNavCoordAction(OracleNavAction):
         ]
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
-        final_nav_targ, obj_targ_pos = self._get_target_for_coord(
-            nav_to_target_coord
-        )
+
+        final_nav_targ = nav_to_target_coord
+        obj_targ_pos = nav_to_target_coord
 
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
@@ -704,9 +709,11 @@ class OracleNavCoordAction(OracleNavAction):
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
 
-            dist_to_final_nav_targ = np.linalg.norm(
-                (final_nav_targ - robot_pos)[[0, 2]]
+            # We did geodesic distance here
+            dist_to_final_nav_targ = self._sim.geodesic_distance(
+                final_nav_targ, robot_pos
             )
+
             at_goal = (
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
@@ -731,7 +738,7 @@ class OracleNavCoordAction(OracleNavAction):
                     vel = [0, 0]
                     self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
-                return BaseVelAction.step(
+                return BaseVelLegAnimationAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
                 )
 

@@ -424,19 +424,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 policy_input["observations"]["obj_start_sensor"] = obj_goal_pos
             else:
                 policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
-        elif (
-            skill_name == "nav_to_obj_waypoint"
-            or skill_name == "nav_to_robot_waypoint"
-        ):
-            # Find the oracle path by using pathfinder
-            path = habitat_sim.ShortestPath()
-            path.requested_start = self.get_articulated_agent().base_pos
-            path.requested_end = obj_trans
-            found_path = env._sim.pathfinder.find_path(path)
-            if found_path:
-                # Motify the path if found
-                obj_trans = path.points[1]
-                self.gt_path = path.points
 
         # Only take the goal object
         rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
@@ -632,48 +619,31 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self.safe_pos = safe_trans
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
-                type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
                 )
+
+                # Check the termination conditions
                 finished_nav = True
-                step_terminate = False
-                is_accessible = False
-                if type_of_skill == "OracleNavPolicy":
-                    finished_nav = obs["agent_0_has_finished_oracle_nav"]
-                else:
-                    step_terminate = self._skill_steps >= max_skill_steps
-                    # Make sure that there is a safe snap point
-                    if safe_trans is not None:
-                        # agent_trans = human_trans
-                        rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                        cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                        finished_nav = (
-                            rho < self._pick_dist_threshold and cast_ray
-                        ) or step_terminate
+                # Make sure that there is a safe snap point
+                if safe_trans is not None:
+                    # agent_trans = human_trans
+                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
+                    cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
+                    finished_nav = rho < self._pick_dist_threshold and cast_ray
 
                 if not finished_nav:
-                    if type_of_skill == "NavSkillPolicy":
-                        action_array = self.force_apply_skill(
-                            obs, "nav_to_obj_waypoint", env, safe_trans
-                        )[0]
-                    elif type_of_skill == "OracleNavPolicy":
-                        action_ind_nav = find_action_range(
-                            act_space, "agent_0_oracle_nav_action"
-                        )
-                        action_array[
-                            action_ind_nav[0] : action_ind_nav[0] + 3
-                        ] = obj_trans
-                    else:
-                        raise ValueError(
-                            f"Skill {type_of_skill} not recognized."
-                        )
-
+                    action_ind_nav = find_action_range(
+                        act_space, "agent_0_oracle_nav_action"
+                    )
+                    action_array[
+                        action_ind_nav[0] : action_ind_nav[0] + 3
+                    ] = safe_trans
+                    self.gt_path = env.task.actions[
+                        "agent_0_oracle_nav_action"
+                    ]._path_to_point(safe_trans)
                 else:
-                    if step_terminate:
-                        self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
-                    else:
-                        self.current_state = FetchState.PICK
+                    self.current_state = FetchState.PICK
                     self._init_policy_input()
 
         elif self.current_state == FetchState.SEARCH_TIMEOUT_WAIT:
@@ -777,42 +747,22 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_robot")
-            type_of_skill = self.defined_skills.nav_to_robot.skill_name
-            max_skill_steps = self.defined_skills.nav_to_robot.max_skill_steps
-            step_terminate = self._skill_steps >= max_skill_steps
-            if type_of_skill == "OracleNavPolicy":
-                finished_nav = obs["agent_0_has_finished_oracle_nav"]
-            else:
-                # agent_trans = human_trans
-                rho, _ = self.get_cartesian_obj_coords(human_trans)
-                finished_nav = (
-                    rho < self._drop_dist_threshold or step_terminate
-                )
 
+            # Determinate the terminatin condition
+            rho, _ = self.get_cartesian_obj_coords(human_trans)
+            finished_nav = rho < self._drop_dist_threshold
             if not finished_nav:
-                # Keep gripper closed
-                if type_of_skill == "NavSkillPolicy":
-                    if self.should_start_skill:
-                        # TODO: obs can be batched before
-                        self.start_skill(obs, "nav_to_robot")
-                    action_array = self.force_apply_skill(
-                        obs, "nav_to_robot_waypoint", env, human_trans
-                    )[0]
-                elif type_of_skill == "OracleNavPolicy":
-                    action_ind_nav = find_action_range(
-                        act_space, "agent_0_oracle_nav_action"
-                    )
-                    action_array[
-                        action_ind_nav[0] : action_ind_nav[0] + 3
-                    ] = obj_trans
-                else:
-                    raise ValueError(f"Skill {type_of_skill} not recognized.")
-
+                action_ind_nav = find_action_range(
+                    act_space, "agent_0_oracle_nav_action"
+                )
+                action_array[
+                    action_ind_nav[0] : action_ind_nav[0] + 3
+                ] = human_trans
+                self.gt_path = env.task.actions[
+                    "agent_0_oracle_nav_action"
+                ]._path_to_point(human_trans)
             else:
-                if step_terminate:
-                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
-                else:
-                    self.current_state = FetchState.DROP
+                self.current_state = FetchState.DROP
                 self._init_policy_input()
 
         elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:

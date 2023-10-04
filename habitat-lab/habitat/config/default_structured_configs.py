@@ -407,6 +407,25 @@ class OracleNavActionConfig(ActionConfig):
     # A value of -1.0 means we will get as close to the object as possible.
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    # If the condition of sliding includes the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+    # The safety distance to human
+    human_safe_dis: float = 0.5
+    leg_animation_checkpoint: str = (
+        "data/robots/spot_data/spot_walking_trajectory.csv"
+    )
+    play_i_perframe: int = 5
+    use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 
 class HumanoidPickActionConfig(ActionConfig):
