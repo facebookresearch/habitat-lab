@@ -47,6 +47,11 @@ PICK_STEPS = 40
 IS_ACCESSIBLE_THRESHOLD = 1.25
 ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
 TOTAL_BEG_MOTION = 150  # This number cannot be smaller than 30
+LOCAL_PLACE_TARGET = [
+    -0.05,
+    0.0,
+    0.25,
+]  # Arm local ee location format: [up,right,front]
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -68,8 +73,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._pick_dist_threshold = PICK_DIST_THRESHOLD
         self._drop_dist_threshold = DROP_DIST_THRESHOLD
         self._can_pick_for_ray_threshold = 1.0
-        # arm local ee location format: [up,right,front]
-        self._local_place_target = [-0.05, 0.0, 0.25]
+        self._local_place_target = LOCAL_PLACE_TARGET
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
@@ -425,21 +429,33 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         candidate_trans = np.array(
                             [float("nan"), float("nan"), float("nan")]
                         )
-                        while np.sum(np.isnan(candidate_trans)) > 0:
+                        num_tries = 0
+                        max_tries = 25
+                        while (
+                            np.sum(np.isnan(candidate_trans)) > 0
+                            and num_tries < max_tries
+                        ):
                             candidate_trans = env._sim.pathfinder.get_random_navigable_point_near(
                                 circle_center=obj_trans,
                                 radius=search_radius,
                                 island_index=env._sim.largest_island_idx,
                             )
                             search_radius += 0.5
-                        target_trans = candidate_trans
+                            num_tries += 1
+
+                        if num_tries >= max_tries:
+                            # If we do not find a valid point within this many iterations,
+                            # we then just use the current human location
+                            target_trans = human_trans
+                        else:
+                            target_trans = candidate_trans
                         is_occluded = True
                         self.safe_pos = target_trans
 
                     # Check if the distance to the target safe point
                     rho, _ = self.get_cartesian_obj_coords(target_trans)
                     # Check if the agent can go there to pick up the object
-                    # Ideally, we do not want to the distance is too far
+                    # Ideally, we do not want the distance being too far away from the target
                     is_accessible = (
                         float(
                             np.linalg.norm(
