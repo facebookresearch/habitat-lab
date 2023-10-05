@@ -14,7 +14,6 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-USE_ORACLE_ACTION=
 #NOTE: this creates a new URDF with no accompanying ao_config to avoid skinning
 cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_no_skinning.urdf
 NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_no_skinning.urdf'"
@@ -51,46 +50,30 @@ do
 
     #NOTE: add '--render' for debug output
 
-    #TODO: different configs for different agent pairs. Can we make a single high-level config
-    # Humanoid pick
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_pick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_ORACLE"
-
-    # Humanoid oracle
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_nopick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK"
-
-    #Single agent robot
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
-
     #Single agent robot - multiple object and scene complexities
     for ix in "${!postfixes[@]}"; do
       python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_oracle_${postfixes[$ix]}$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "${ep_overrides[$ix]}"
     done
 
+    #Single agent robot
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
+
+
     # Humanoid oracle
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
+    # Humanoid oracle, no pick no skin
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_nopick_noskin_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK" "$NO_SKINNING"
 
-    #multi-agent robots
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_vel.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_vel_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
+    # Humanoid pick
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_pick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_ORACLE"
 
     #multi-agent robots
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
-    #multi-agent robot, human (no skinning)
-    #python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_vel_noskin_$i" "$NO_SKINNING"
-
     #multi-agent robot, human (+skinning)
-    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps 1 --n-procs "$j" --out-name test --render
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_vel.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_vel_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
-
-    #multi-agent robot, human (+skinning) + path actions
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
-    #stretch features:
-    #HSSD vs ReplicaCAD
-    #pick/place vs nav (requires calling skills)
-    #joints vs base control
-    #robot continuous control modes (backup vs no backup)
 
   done
 done
