@@ -18,7 +18,11 @@ defaults:
   - _self_
 
 
-
+habitat:
+  simulator:
+    agents:
+      agent_0:
+        joint_start_noise: 0.0
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"

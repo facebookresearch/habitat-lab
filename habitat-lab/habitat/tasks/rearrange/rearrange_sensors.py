@@ -133,8 +133,9 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
-
-        return self._polar_pos
+        # TODO: This is a hack. For some reason _polar_pos in overriden by the other
+        # agent.
+        return self._polar_pos.copy()
 
 
 @registry.register_sensor

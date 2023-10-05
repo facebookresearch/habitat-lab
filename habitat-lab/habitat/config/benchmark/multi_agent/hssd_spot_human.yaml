@@ -89,16 +89,16 @@ habitat:
         # For noncylinder navmesh action
         # If we allow the agent to do sliding
         allow_dyn_slide: True
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 10.0
 
       agent_1_oracle_nav_action:
         type: OracleNavAction
         motion_control: human_joints
         spawn_max_dist_to_obj: -1.0
         dist_thresh: 0.5
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 10.0
 
     robot_at_thresh: 3.0
   gym:
