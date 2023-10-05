@@ -296,7 +296,9 @@ class BaseVelocityLegAnimationActionConfig(ActionConfig):
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )
+    # The number of frames to skip per simulation step
     play_i_perframe: int = 5
+    # The first and the last frame to use for the animation in the checkpoint
     use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 
@@ -330,7 +332,9 @@ class BaseVelocityLegAnimationMotionActionConfig(ActionConfig):
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )
+    # The number of frames to skip per simulation step
     play_i_perframe: int = 5
+    # The first and the last frame to use for the animation in the checkpoint
     use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 
@@ -424,7 +428,9 @@ class OracleNavActionConfig(ActionConfig):
     leg_animation_checkpoint: str = (
         "data/robots/spot_data/spot_walking_trajectory.csv"
     )
+    # The number of frames to skip per simulation step
     play_i_perframe: int = 5
+    # The first and the last frame to use for the animation in the checkpoint
     use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 

@@ -73,8 +73,8 @@ def unoccluded_navmesh_snap(
     min_sample_dist: float = 0.5,
 ) -> Optional[mn.Vector3]:
     """
-    Snap a point to the navmesh considering point visibilty via raycasting.
-
+    Snap a point to the navmesh considering point visibilty via raycasting. In our demo, the position will be the target object location, the height will be the gripper's height. This function will return
+    the point that is not occluded from that point with the height of the gripper.
     :property pos: The 3D position to snap.
     :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
     :property pathfinder: The PathFinder defining the NavMesh to use.

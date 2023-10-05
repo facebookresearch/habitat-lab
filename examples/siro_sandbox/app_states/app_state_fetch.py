@@ -404,22 +404,22 @@ class AppStateFetch(AppState):
                 == FetchState.SEARCH_TIMEOUT_WAIT
             ):
                 self.state_machine_agent_ctrl.current_state = (
-                    FetchState.SEARCH_WAYPOINT
+                    FetchState.SEARCH_ORACLE_NAV
                 )
             else:
                 self.state_machine_agent_ctrl.current_state = (
-                    FetchState.BRING_WAYPOINT
+                    FetchState.BRING_ORACLE_NAV
                 )
 
         if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
             self.state_machine_agent_ctrl.current_state
-            == FetchState.SEARCH_WAYPOINT
+            == FetchState.SEARCH_ORACLE_NAV
             or self.state_machine_agent_ctrl.current_state
-            == FetchState.BRING_WAYPOINT
+            == FetchState.BRING_ORACLE_NAV
         ):
             if (
                 self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH_WAYPOINT
+                == FetchState.SEARCH_ORACLE_NAV
             ):
                 self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
             else:
@@ -637,10 +637,10 @@ class AppStateFetch(AppState):
         fetch_state_names = {
             # FetchState.WAIT : "",
             FetchState.SEARCH: "searching for object",
-            FetchState.SEARCH_WAYPOINT: "searching for object",
+            FetchState.SEARCH_ORACLE_NAV: "searching for object",
             FetchState.PICK: "picking object",
             FetchState.BRING: "searching for human",
-            FetchState.BRING_WAYPOINT: "searching for human",
+            FetchState.BRING_ORACLE_NAV: "searching for human",
             FetchState.DROP: "dropping object",
             FetchState.BEG_RESET: "cannot pick up the object",
             FetchState.SEARCH_TIMEOUT_WAIT: "need help to search for object",
@@ -694,19 +694,19 @@ class AppStateFetch(AppState):
         if (
             fetch_state == FetchState.SEARCH
             or fetch_state == FetchState.BRING
-            or fetch_state == FetchState.SEARCH_WAYPOINT
-            or fetch_state == FetchState.BRING_WAYPOINT
+            or fetch_state == FetchState.SEARCH_ORACLE_NAV
+            or fetch_state == FetchState.BRING_ORACLE_NAV
         ):
             fetcher_pos = self._get_state_machine_agent_translation()
             target_pos = (
                 self.state_machine_agent_ctrl.rigid_obj_interest.translation
                 if fetch_state == FetchState.SEARCH
-                or fetch_state == FetchState.SEARCH_WAYPOINT
+                or fetch_state == FetchState.SEARCH_ORACLE_NAV
                 else self._get_gui_agent_translation()
             )
             if self.state_machine_agent_ctrl.gt_path is not None and (
-                fetch_state == FetchState.SEARCH_WAYPOINT
-                or fetch_state == FetchState.BRING_WAYPOINT
+                fetch_state == FetchState.SEARCH_ORACLE_NAV
+                or fetch_state == FetchState.BRING_ORACLE_NAV
             ):
                 gt_path = [
                     mn.Vector3(pt)

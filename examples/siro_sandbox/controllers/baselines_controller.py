@@ -169,8 +169,8 @@ class FetchState(Enum):
     BRING = 4
     DROP = 5
     RESET_ARM_BEFORE_WAIT = 6
-    SEARCH_WAYPOINT = 7
-    BRING_WAYPOINT = 8
+    SEARCH_ORACLE_NAV = 7
+    BRING_ORACLE_NAV = 8
     BEG_RESET = 9
     SEARCH_TIMEOUT_WAIT = 10
     BRING_TIMEOUT_WAIT = 11
@@ -365,7 +365,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return global_T.translation
 
     def _check_obj_ray_to_ee(self, obj_trans, env):
-        """Cast a ray from theo object to the robot"""
+        """Cast a ray from the object to the robot"""
         ee_pos = (
             env._sim.get_agent_data(self._agent_idx)
             .articulated_agent.ee_transform()
@@ -597,7 +597,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
 
-        elif self.current_state == FetchState.SEARCH_WAYPOINT:
+        elif self.current_state == FetchState.SEARCH_ORACLE_NAV:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
@@ -743,7 +743,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.current_state = FetchState.DROP
                 self._init_policy_input()
 
-        elif self.current_state == FetchState.BRING_WAYPOINT:
+        elif self.current_state == FetchState.BRING_ORACLE_NAV:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_robot")
