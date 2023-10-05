@@ -46,7 +46,7 @@ DROP_DIST_THRESHOLD = 1.0
 PICK_STEPS = 40
 IS_ACCESSIBLE_THRESHOLD = 1.25
 ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
-TOTAL_BEG_MOTION = 300
+TOTAL_BEG_MOTION = 150
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
