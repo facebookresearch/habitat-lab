@@ -867,9 +867,7 @@ if __name__ == "__main__":
 
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
-            ] = HumanoidJointActionConfig(
-                agent_index=args.gui_controlled_agent_index
-            )
+            ] = HumanoidJointActionConfig()
 
     driver = SandboxDriver(
         args,
