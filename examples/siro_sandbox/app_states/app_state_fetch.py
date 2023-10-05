@@ -8,7 +8,7 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from controllers.baselines_controller import (
+from controllers.fetch_baselines_controller import (
     FetchBaselinesController,
     FetchState,
 )

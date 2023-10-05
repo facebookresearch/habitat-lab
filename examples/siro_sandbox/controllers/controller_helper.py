@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, List, Optional
 import numpy as np
 
 from .baselines_controller import (
-    FetchBaselinesController,
     MultiAgentBaselinesController,
     SingleAgentBaselinesController,
 )
 from .controller_abc import Controller
+from .fetch_baselines_controller import FetchBaselinesController
 from .gui_controller import GuiHumanoidController, GuiRobotController
 
 if TYPE_CHECKING:
