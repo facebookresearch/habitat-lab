@@ -290,7 +290,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
 
         # Only take the goal object
-        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
+        rho, phi = self.get_cartesian_obj_coords(obj_trans)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
         with torch.no_grad():
@@ -409,36 +409,54 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 finished_nav = True
                 step_terminate = False
                 is_accessible = False
+                is_occluded = True
                 if type_of_skill == "OracleNavPolicy":
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
+
                     # Make sure that there is a safe snap point
                     if safe_trans is not None:
-                        # Check if the distance to the target safe point
-                        rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                        # Lastly check if the agent can see the object or not
-                        cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                        # Check if (1) the agent can go to there and
-                        # (2) the view is not unoccluded or not
-                        is_accessible = navmesh_utils.is_accessible(
-                            sim=env._sim,
-                            point=obj_trans,
-                            height=ee_height,
-                            nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
-                            nav_island=env._sim.largest_island_idx,
+                        target_trans = safe_trans
+                        is_occluded = False
+                    else:
+                        # At least find snap point that is near the target obj_trans
+                        search_radius = IS_ACCESSIBLE_THRESHOLD
+                        candidate_trans = np.array(
+                            [float("nan"), float("nan"), float("nan")]
                         )
-                        # Finalize it
-                        finished_nav = (
-                            (rho < self._pick_dist_threshold and cast_ray)
-                            or step_terminate
-                            or not is_accessible
+                        while np.sum(np.isnan(candidate_trans)) > 0:
+                            candidate_trans = env._sim.pathfinder.get_random_navigable_point_near(
+                                circle_center=obj_trans,
+                                radius=search_radius,
+                                island_index=env._sim.largest_island_idx,
+                            )
+                            search_radius += 0.5
+                        target_trans = candidate_trans
+                        is_occluded = True
+                        self.safe_pos = target_trans
+
+                    # Check if the distance to the target safe point
+                    rho, _ = self.get_cartesian_obj_coords(target_trans)
+                    # Check if the agent can go there to pick up the object
+                    # Ideally, we do not want to the distance is too far
+                    is_accessible = (
+                        float(
+                            np.linalg.norm(
+                                np.array((target_trans - obj_trans))[[0, 2]]
+                            )
                         )
+                        < IS_ACCESSIBLE_THRESHOLD
+                    )
+                    # Finalize it. And the agent is still navigate to there even if it is not accessible
+                    finished_nav = (
+                        rho < self._pick_dist_threshold
+                    ) or step_terminate
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
                         action_array = self.force_apply_skill(
-                            obs, "nav_to_obj", env, safe_trans
+                            obs, "nav_to_obj", env, target_trans
                         )[0]
                     elif type_of_skill == "OracleNavPolicy":
                         action_ind_nav = find_action_range(
@@ -455,7 +473,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     if step_terminate:
                         self.current_state = FetchState.SEARCH_TIMEOUT_WAIT
-                    elif not is_accessible:
+                    elif not is_accessible or is_occluded:
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
