@@ -43,7 +43,6 @@ class FetchState(Enum):
 # The hyper-parameters for the state machine
 PICK_DIST_THRESHOLD = 1.0  # Can use 1.2
 DROP_DIST_THRESHOLD = 1.0
-PICK_STEPS = 40
 IS_ACCESSIBLE_THRESHOLD = 1.25
 ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
 TOTAL_BEG_MOTION = 150  # This number cannot be smaller than 30
@@ -52,6 +51,7 @@ LOCAL_PLACE_TARGET = [
     0.0,
     0.25,
 ]  # Arm local ee location format: [up,right,front]
+PICK_STEPS = 40
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
