@@ -484,6 +484,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self._ang_speed = self._config.ang_speed
         self._navmesh_offset = self._config.navmesh_offset
         self._enable_lateral_move = self._config.enable_lateral_move
+        self._human_safe_dis = self._config.human_safe_dis
 
     @property
     def action_space(self):
@@ -528,10 +529,18 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         end_pos = []
         for i in range(num_check_cylinder):
             pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
             # Sanitize the height
             pos[1] = 0.0
             cur_pos[i][1] = 0.0
             goal_pos[i][1] = 0.0
+            human_pos[1] = 0.0
+            if np.linalg.norm(pos - human_pos) < self._human_safe_dis:
+                human_robot_vec = pos - human_pos
+                human_robot_vec = human_robot_vec.normalized()
+                pos = pos + human_robot_vec * (
+                    self._human_safe_dis - np.linalg.norm(pos - human_pos)
+                )
             end_pos.append(pos)
 
         # Planar move distance clamped by NavMesh
@@ -705,8 +714,10 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
             self.update_base(ang_vel != 0.0, fix_leg=False)
             cur_i = int(self._play_i % self._play_length_data)
             self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
+            offset = 0.01
             self._play_i += int(
-                self._play_i_perframe / (abs(longitudinal_lin_vel) / 10.0)
+                self._play_i_perframe
+                / ((abs(longitudinal_lin_vel) + offset) / 10.0)
             )
         else:
             self._play_i = 0
@@ -714,6 +725,70 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
             )
+
+
+@registry.register_task_action
+class BaseVelLegAnimationMotionAction(BaseVelLegAnimationAction):
+    @property
+    def action_space(self):
+        lim = 20
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "base_motion": spaces.Box(
+                    shape=(3,), low=-lim, high=lim, dtype=np.float32
+                )
+            }
+        )
+
+    def update_base(self):
+        """
+        Update the base of the robot
+        """
+        # Get the control frequency
+        ctrl_freq = self._sim.ctrl_freq
+        # Get the current transformation
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        # Integrate to get target rigid state
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / ctrl_freq, rigid_state
+        )
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+        # Update the base
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
+
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel, move_leg = kwargs[
+            self._action_arg_prefix + "base_motion"
+        ]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._longitudinal_lin_speed
+
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, 0, ang_vel)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base()
+
+        if move_leg:
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = (
+                self._leg_data[cur_i][0:6]
+                + self.cur_articulated_agent.params.leg_init_params[6:]
+            )
+            self._play_i += int(self._play_i_perframe)
 
 
 @registry.register_task_action
