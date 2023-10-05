@@ -1,7 +1,7 @@
 version: 2.1
 gpu: &gpu
   machine:
-    image: ubuntu-2004-cuda-11.4:202110-01
+    image: linux-cuda-11:default
   resource_class: gpu.nvidia.medium
   environment:
     FPS_THRESHOLD: 900
@@ -207,7 +207,7 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat
               git lfs install
-              conda install -y gitpython
+              conda install -y gitpython git-lfs
               python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm --data-path habitat-sim/data/ --no-replace --no-prune
       - run:
           name: Run sim benchmark
