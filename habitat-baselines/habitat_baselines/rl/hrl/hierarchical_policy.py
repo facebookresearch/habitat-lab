@@ -179,7 +179,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         """
         if self._has_ll_hidden_state or not self._has_hl_hidden_state:
             # The LL skill will take priority for the prev action.
-            return self.policy_action_space
+            return super().policy_action_space
         else:
             return self._high_level_policy.policy_action_space
 

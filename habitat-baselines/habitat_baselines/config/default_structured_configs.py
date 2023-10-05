@@ -255,6 +255,9 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     pddl_action_names: Optional[List[str]] = None
     turn_power_x: float = 0.0
     turn_power_y: float = 0.0
+    # Additional skill data to be passed to the skill. Included so extending to
+    # new skills doesn't require adding new Hydra dataclass configs.
+    skill_data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

@@ -18,7 +18,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
@@ -195,7 +198,7 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
 
             # Place some distance away from the object.
-            start_pos, start_rot, was_fail = get_robot_spawns(
+            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 target_position=targ_pos,
                 rotation_perturbation_noise=self.get_base_angle_noise(
                     sim_info

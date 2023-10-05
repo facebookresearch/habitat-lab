@@ -446,11 +446,11 @@ def place_agent_at_dist_from_pos(
                 target_position, sim, navmesh_offset, agent=agent
             )
         else:
-            return place_robot_at_closest_point(
+            return _place_robot_at_closest_point(
                 target_position, sim, agent=agent
             )
     else:
-        return get_robot_spawns(
+        return _get_robot_spawns(
             target_position,
             rotation_perturbation_noise,
             distance_threshold,
@@ -461,7 +461,7 @@ def place_agent_at_dist_from_pos(
         )
 
 
-def place_robot_at_closest_point(
+def _place_robot_at_closest_point(
     target_position: np.ndarray,
     sim,
     agent: Optional[MobileManipulator] = None,
@@ -540,7 +540,7 @@ def place_robot_at_closest_point_with_navmesh(
     return agent_pos, desired_angle, False
 
 
-def get_robot_spawns(
+def _get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
@@ -565,6 +565,9 @@ def get_robot_spawns(
 
     :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
     """
+    assert (
+        distance_threshold > 0.0
+    ), f"Distance threshold must be positive, got {distance_threshold=}. You might want `place_agent_at_dist_from_pos` instead."
     if agent is None:
         agent = sim.articulated_agent
 
