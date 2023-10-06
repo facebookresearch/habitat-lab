@@ -141,7 +141,7 @@ class GuiNavigationHelper:
             visualize_path=visualize_path,
         )
 
-        return walk_dir, distance_multiplier, None
+        return walk_dir, distance_multiplier
 
     def _get_humanoid_walk_hints(
         self, target_pos, target_rot_quat, visualize_path=True
