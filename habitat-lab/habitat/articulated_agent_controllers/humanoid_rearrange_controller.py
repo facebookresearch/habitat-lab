@@ -219,7 +219,10 @@ class HumanoidRearrangeController:
                 forward_angle = 360 + forward_angle
 
             if np.abs(forward_angle) > self.min_angle_turn:
-                actual_angle_move = self.turning_step_amount
+                if target_rot is None:
+                    actual_angle_move = self.turning_step_amount
+                else:
+                    actual_angle_move = self.turning_step_amount * 5
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
                 new_angle = prev_angle + actual_angle_move * np.sign(
