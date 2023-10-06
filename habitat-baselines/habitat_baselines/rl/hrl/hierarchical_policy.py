@@ -45,13 +45,13 @@ class HierarchicalPolicy(nn.Module, Policy):
         full_config,
         observation_space: spaces.Space,
         action_space: ActionSpace,
+        orig_action_space: ActionSpace,
         num_envs: int,
         aux_loss_config,
         agent_name: Optional[str],
     ):
         Policy.__init__(self, action_space)
         nn.Module.__init__(self)
-        self._action_space = action_space
         self._num_envs: int = num_envs
 
         # Maps (skill idx -> skill)
@@ -61,10 +61,10 @@ class HierarchicalPolicy(nn.Module, Policy):
         # Can map multiple skills to the same underlying skill controller.
         self._skill_redirects: Dict[int, int] = {}
 
-        if "rearrange_stop" not in action_space.spaces:
+        if "rearrange_stop" not in orig_action_space.spaces:
             raise ValueError("Hierarchical policy requires the stop action")
         self._stop_action_idx, _ = find_action_range(
-            action_space, "rearrange_stop"
+            orig_action_space, "rearrange_stop"
         )
 
         self._pddl = self._create_pddl(full_config, config)
@@ -75,7 +75,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 if k not in config.hierarchical_policy.ignore_skills
             },
             observation_space,
-            action_space,
+            orig_action_space,
             full_config,
         )
         self._max_skill_rnn_layers = max(
@@ -102,7 +102,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             num_envs=num_envs,
             skill_name_to_idx=self._name_to_idx,
             observation_space=observation_space,
-            action_space=action_space,
+            action_space=orig_action_space,
             aux_loss_config=aux_loss_config,
             agent_name=agent_name,
         )
@@ -668,7 +668,8 @@ class HierarchicalPolicy(nn.Module, Policy):
             config=config.habitat_baselines.rl.policy[agent_name],
             full_config=config,
             observation_space=observation_space,
-            action_space=orig_action_space,
+            action_space=action_space,
+            orig_action_space=orig_action_space,
             num_envs=config.habitat_baselines.num_environments,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
             agent_name=agent_name,

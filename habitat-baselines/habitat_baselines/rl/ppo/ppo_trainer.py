@@ -867,8 +867,6 @@ class PPOTrainer(BaseRLTrainer):
                                         render_view.uuid
                                     )
 
-                    config.habitat.simulator.debug_render = True
-
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
 

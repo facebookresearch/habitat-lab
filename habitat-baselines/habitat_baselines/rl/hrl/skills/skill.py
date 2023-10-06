@@ -197,7 +197,7 @@ class SkillPolicy(Policy):
         for i, env_i in enumerate(batch_idx):
             if self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
-                    actions, log_info, skill_name[i], env_i, i
+                    new_actions, log_info, skill_name[i], env_i, i
                 )
         # Also terminate the skill if the HL policy wanted termination.
         is_skill_done |= hl_wants_skill_term
