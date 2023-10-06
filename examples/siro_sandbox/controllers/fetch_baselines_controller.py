@@ -426,20 +426,21 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     else:
                         # At least find snap point that is near the target obj_trans
                         search_radius = IS_ACCESSIBLE_THRESHOLD
-                        candidate_trans = np.array(
-                            [float("nan"), float("nan"), float("nan")]
-                        )
-                        num_tries = 0
+                        candidate_trans = np.array([float("nan")] * 3)
+                        # The following loop should try at most this amount
                         max_tries = 25
+                        num_tries = 0
                         while (
-                            np.sum(np.isnan(candidate_trans)) > 0
+                            np.isnan(candidate_trans).any()
                             and num_tries < max_tries
                         ):
+                            # The return of pathfinder is an array type
                             candidate_trans = env._sim.pathfinder.get_random_navigable_point_near(
                                 circle_center=obj_trans,
                                 radius=search_radius,
                                 island_index=env._sim.largest_island_idx,
                             )
+                            # Increase the search radius by this amount
                             search_radius += 0.5
                             num_tries += 1
 
