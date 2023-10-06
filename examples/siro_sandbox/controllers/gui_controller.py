@@ -231,7 +231,7 @@ class GuiHumanoidController(GuiController):
         self._is_picking = None
         self.iter_pose = 0
         self._obj_to_grasp = None
-        self._hint_target_rot = None
+        self._hint_target_dir = None
         # Disable collision between thrown object and the agents.
         # Both agents (robot and humanoid) have the collision group Robot.
         CollisionGroupHelper.set_mask_for_group(
@@ -288,7 +288,7 @@ class GuiHumanoidController(GuiController):
         cam_yaw=None,
         throw_vel=None,
         reach_pos=None,
-        target_rot=None,
+        target_dir=None,
     ):
         assert (
             throw_vel is None or do_drop is None
@@ -300,7 +300,7 @@ class GuiHumanoidController(GuiController):
         self._cam_yaw = cam_yaw
         self._hint_throw_vel = throw_vel
         self._hint_reach_pos = reach_pos
-        self._hint_target_rot = target_rot
+        self._hint_target_dir = target_dir
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -484,7 +484,7 @@ class GuiHumanoidController(GuiController):
             else self._hint_distance_multiplier
         )
         self._humanoid_controller.calculate_walk_pose(
-            relative_pos, distance_multiplier, self._hint_target_rot
+            relative_pos, distance_multiplier, self._hint_target_dir
         )
 
         # calculate_walk_pose has updated obj_transform_base.translation with

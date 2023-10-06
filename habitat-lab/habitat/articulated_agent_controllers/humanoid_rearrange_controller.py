@@ -165,7 +165,7 @@ class HumanoidRearrangeController:
         self,
         target_position: mn.Vector3,
         distance_multiplier=1.0,
-        target_rot=None,
+        target_dir=None,
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
@@ -184,10 +184,9 @@ class HumanoidRearrangeController:
 
         forward_V_orientation = forward_V
         # The angle we initially want to go to
-        if target_rot is not None:
-            new_angle = -float(target_rot.angle() * deg_per_rads) - 90
+        if target_dir is not None:
+            new_angle = np.arctan2(target_dir[2], target_dir[0]) * deg_per_rads
             new_angle = (new_angle + 180) % 360 - 180
-            new_angle = -new_angle
             if self.prev_orientation is not None:
                 prev_angle = (
                     np.arctan2(
@@ -195,10 +194,13 @@ class HumanoidRearrangeController:
                     )
                     * deg_per_rads
                 )
+            else:
+                prev_angle = None
+
             new_angle_walk = (
                 np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
             )
-            # new_angle = new_angle_walk
+
         else:
             new_angle = np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
             new_angle_walk = (
@@ -206,7 +208,7 @@ class HumanoidRearrangeController:
             )
 
         if self.prev_orientation is not None:
-            # If prev orrientation is None, transition to this position directly
+            # If prev orrientation is None, transition to this wposition directly
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[2], prev_orientation[0])
@@ -219,10 +221,10 @@ class HumanoidRearrangeController:
                 forward_angle = 360 + forward_angle
 
             if np.abs(forward_angle) > self.min_angle_turn:
-                if target_rot is None:
+                if target_dir is None:
                     actual_angle_move = self.turning_step_amount
                 else:
-                    actual_angle_move = self.turning_step_amount * 5
+                    actual_angle_move = self.turning_step_amount * 20
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
                 new_angle = prev_angle + actual_angle_move * np.sign(

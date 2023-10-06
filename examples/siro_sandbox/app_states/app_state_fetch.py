@@ -247,7 +247,7 @@ class AppStateFetch(AppState):
         (
             walk_dir,
             distance_multiplier,
-            target_rot_quat,
+            forward_dir,
         ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
             visualize_path=False
         )
@@ -282,7 +282,7 @@ class AppStateFetch(AppState):
             self._camera_helper.lookat_offset_yaw,
             throw_vel=throw_vel,
             reach_pos=reach_pos,
-            target_rot=target_rot_quat,
+            target_dir=forward_dir,
         )
 
     def _update_grasping_and_set_act_hints(self):
