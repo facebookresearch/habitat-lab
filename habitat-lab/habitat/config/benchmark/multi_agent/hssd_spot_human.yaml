@@ -10,7 +10,7 @@ defaults:
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
 
-  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/dataset/rearrangement: hssd
 
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
@@ -150,5 +150,4 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    #TODO: We need a real dataset here.
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/largeval_12s_1200epi_2obj.json.gz
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
