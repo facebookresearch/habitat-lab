@@ -114,7 +114,7 @@ class AppStateFetch(AppState):
 
     def _try_grasp_remote(self):
         assert not self._held_target_obj_idx
-
+        self._recent_reach_pos = None
         # todo: rename remote_gui_input
         remote_gui_input = self._sandbox_service.remote_gui_input
 
@@ -135,6 +135,7 @@ class AppStateFetch(AppState):
 
         found_obj_idx = None
         found_hand_idx = None
+        self._recent_reach_pos = None
 
         for i in range(len(self._target_obj_ids)):
             # object is already grasped by Spot
@@ -157,7 +158,7 @@ class AppStateFetch(AppState):
                     )
 
                     for key in self.get_grasp_keys_by_hand(hand_idx):
-                        if remote_button_input.get_key_down(key):
+                        if remote_button_input.get_key(key):
                             found_obj_idx = i
                             found_hand_idx = hand_idx
                             break
@@ -166,6 +167,12 @@ class AppStateFetch(AppState):
                 break
 
         if found_obj_idx is None:
+            # Track one of the hands
+            for hand_idx in range(num_hands):
+                hand_pos = hand_positions[hand_idx]
+                for key in self.get_grasp_keys_by_hand(hand_idx):
+                    if remote_button_input.get_key(key):
+                        self._recent_reach_pos = hand_pos
             return
 
         self._held_target_obj_idx = found_obj_idx
@@ -242,6 +249,7 @@ class AppStateFetch(AppState):
         if self._held_target_obj_idx is None:
             self._try_grasp_remote()
         else:
+            self._recent_reach_pos = None
             self._update_held_and_try_throw_remote()
 
         (
@@ -268,6 +276,9 @@ class AppStateFetch(AppState):
             reach_pos = self._get_target_object_position(
                 self._held_target_obj_idx
             )
+        elif self._recent_reach_pos:
+            # Track the state of the hand when trying to reach an object
+            reach_pos = self._recent_reach_pos
 
         grasp_object_id = None
         drop_pos = None
