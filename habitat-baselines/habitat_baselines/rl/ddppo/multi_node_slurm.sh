@@ -19,8 +19,8 @@
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
 
-MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
-export MAIN_ADDR
+MASTER_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
+export MASTER_ADDR
 
 set -x
 srun python -u -m habitat_baselines.run \

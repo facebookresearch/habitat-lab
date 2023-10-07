@@ -314,7 +314,7 @@ class ReportWorkerProcess(ProcessBase):
     def run(self):
         self.device = torch.device("cpu")
         if get_distrib_size()[2] > 1:
-            os.environ["MAIN_PORT"] = str(self.port)
+            os.environ["MASTER_PORT"] = str(self.port)
             init_distrib_slurm(backend="gloo")
             torch.distributed.barrier()
 

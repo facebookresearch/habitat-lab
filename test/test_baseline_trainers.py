@@ -78,7 +78,7 @@ def test_trainers(
     test_cfg_path, gpu2gpu, observation_transforms_overrides, mode
 ):
     # For testing with world_size=1
-    os.environ["MAIN_PORT"] = str(find_free_port())
+    os.environ["MASTER_PORT"] = str(find_free_port())
 
     test_cfg_cleaned_path = test_cfg_path.replace(
         "habitat-baselines/habitat_baselines/config/", ""
@@ -134,7 +134,7 @@ def test_ver_trainer(
     overlap_rollouts_and_learn,
 ):
     # For testing with world_size=1
-    os.environ["MAIN_PORT"] = str(find_free_port())
+    os.environ["MASTER_PORT"] = str(find_free_port())
     try:
         baselines_config = get_config(
             test_cfg_path,

@@ -265,7 +265,7 @@ def get_distrib_size() -> Tuple[int, int, int]:
 
 
 def get_main_addr() -> str:
-    return os.environ.get("MAIN_ADDR", DEFAULT_MAIN_ADDR)
+    return os.environ.get("MASTER_ADDR", DEFAULT_MAIN_ADDR)
 
 
 def init_distrib_slurm(
@@ -292,10 +292,10 @@ def init_distrib_slurm(
 
     local_rank, world_rank, world_size = get_distrib_size()
 
-    main_port = int(os.environ.get("MAIN_PORT", DEFAULT_PORT))
+    main_port = int(os.environ.get("MASTER_PORT", DEFAULT_PORT))
     if SLURM_JOBID is not None:
         main_port += int(SLURM_JOBID) % int(
-            os.environ.get("MAIN_PORT_RANGE", DEFAULT_PORT_RANGE)
+            os.environ.get("MASTER_PORT_RANGE", DEFAULT_PORT_RANGE)
         )
     main_addr = get_main_addr()
 

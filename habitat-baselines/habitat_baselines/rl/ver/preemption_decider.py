@@ -329,7 +329,7 @@ class PreemptionDeciderProcess(ProcessBase):
 
     def run(self):
         if self.world_size > 1:
-            os.environ["MAIN_PORT"] = str(self.port)
+            os.environ["MASTER_PORT"] = str(self.port)
             init_distrib_slurm(backend="gloo")
             torch.distributed.barrier()
 
