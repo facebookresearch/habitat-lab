@@ -557,6 +557,7 @@ class GoalSensorConfig(LabSensorConfig):
 @dataclass
 class NavGoalPointGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalPointGoalSensor"
+    goal_is_human: bool = False
 
 
 @dataclass
