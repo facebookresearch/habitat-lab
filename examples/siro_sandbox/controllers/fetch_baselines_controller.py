@@ -43,10 +43,15 @@ class FetchState(Enum):
 # The hyper-parameters for the state machine
 PICK_DIST_THRESHOLD = 1.0  # Can use 1.2
 DROP_DIST_THRESHOLD = 1.0
-PICK_STEPS = 40
 IS_ACCESSIBLE_THRESHOLD = 1.25
 ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
-TOTAL_BEG_MOTION = 300
+TOTAL_BEG_MOTION = 150  # This number cannot be smaller than 30
+LOCAL_PLACE_TARGET = [
+    -0.05,
+    0.0,
+    0.25,
+]  # Arm local ee location format: [up,right,front]
+PICK_STEPS = 40
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -68,8 +73,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._pick_dist_threshold = PICK_DIST_THRESHOLD
         self._drop_dist_threshold = DROP_DIST_THRESHOLD
         self._can_pick_for_ray_threshold = 1.0
-        # arm local ee location format: [up,right,front]
-        self._local_place_target = [-0.05, 0.0, 0.25]
+        self._local_place_target = LOCAL_PLACE_TARGET
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
         self._policy_info = self._init_policy_input()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
@@ -290,7 +294,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
 
         # Only take the goal object
-        rho, phi = self.get_geodesic_distance_obj_coords(obj_trans)
+        rho, phi = self.get_cartesian_obj_coords(obj_trans)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
         with torch.no_grad():
@@ -396,6 +400,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
                 island_id=env._sim.largest_island_idx,
+                target_object_id=self.object_interest_id,
             )
 
             # Assign safe_trans here for the visualization
@@ -409,36 +414,67 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 finished_nav = True
                 step_terminate = False
                 is_accessible = False
+                is_occluded = True
                 if type_of_skill == "OracleNavPolicy":
                     finished_nav = obs["agent_0_has_finished_oracle_nav"]
                 else:
                     step_terminate = self._skill_steps >= max_skill_steps
+
                     # Make sure that there is a safe snap point
                     if safe_trans is not None:
-                        # Check if the distance to the target safe point
-                        rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                        # Lastly check if the agent can see the object or not
-                        cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                        # Check if (1) the agent can go to there and
-                        # (2) the view is not unoccluded or not
-                        is_accessible = navmesh_utils.is_accessible(
-                            sim=env._sim,
-                            point=obj_trans,
-                            height=ee_height,
-                            nav_to_min_distance=IS_ACCESSIBLE_THRESHOLD,
-                            nav_island=env._sim.largest_island_idx,
+                        target_trans = safe_trans
+                        is_occluded = False
+                    else:
+                        # At least find snap point that is near the target obj_trans
+                        search_radius = IS_ACCESSIBLE_THRESHOLD
+                        candidate_trans = np.array([float("nan")] * 3)
+                        # The following loop should try at most this amount
+                        max_tries = 25
+                        num_tries = 0
+                        while (
+                            np.isnan(candidate_trans).any()
+                            and num_tries < max_tries
+                        ):
+                            # The return of pathfinder is an array type
+                            candidate_trans = env._sim.pathfinder.get_random_navigable_point_near(
+                                circle_center=obj_trans,
+                                radius=search_radius,
+                                island_index=env._sim.largest_island_idx,
+                            )
+                            # Increase the search radius by this amount
+                            search_radius += 0.5
+                            num_tries += 1
+
+                        if num_tries >= max_tries:
+                            # If we do not find a valid point within this many iterations,
+                            # we then just use the current human location
+                            target_trans = human_trans
+                        else:
+                            target_trans = candidate_trans
+                        is_occluded = True
+                        self.safe_pos = target_trans
+
+                    # Check if the distance to the target safe point
+                    rho, _ = self.get_cartesian_obj_coords(target_trans)
+                    # Check if the agent can go there to pick up the object
+                    # Ideally, we do not want the distance being too far away from the target
+                    is_accessible = (
+                        float(
+                            np.linalg.norm(
+                                np.array((target_trans - obj_trans))[[0, 2]]
+                            )
                         )
-                        # Finalize it
-                        finished_nav = (
-                            (rho < self._pick_dist_threshold and cast_ray)
-                            or step_terminate
-                            or not is_accessible
-                        )
+                        < IS_ACCESSIBLE_THRESHOLD
+                    )
+                    # Finalize it. And the agent is still navigate to there even if it is not accessible
+                    finished_nav = (
+                        rho < self._pick_dist_threshold
+                    ) or step_terminate
 
                 if not finished_nav:
                     if type_of_skill == "NavSkillPolicy":
                         action_array = self.force_apply_skill(
-                            obs, "nav_to_obj", env, safe_trans
+                            obs, "nav_to_obj", env, target_trans
                         )[0]
                     elif type_of_skill == "OracleNavPolicy":
                         action_ind_nav = find_action_range(
@@ -455,7 +491,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     if step_terminate:
                         self.current_state = FetchState.SEARCH_TIMEOUT_WAIT
-                    elif not is_accessible:
+                    elif not is_accessible or is_occluded:
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
@@ -479,22 +515,56 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
                 island_id=env._sim.largest_island_idx,
+                target_object_id=self.object_interest_id,
             )
             self.safe_pos = safe_trans
 
             if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
-                max_skill_steps = (
-                    self.defined_skills.nav_to_obj.max_skill_steps
-                )
-
                 # Check the termination conditions
                 finished_nav = True
                 # Make sure that there is a safe snap point
                 if safe_trans is not None:
-                    # agent_trans = human_trans
-                    rho, _ = self.get_cartesian_obj_coords(safe_trans)
-                    cast_ray = self._check_obj_ray_to_ee(obj_trans, env)
-                    finished_nav = rho < self._pick_dist_threshold and cast_ray
+                    target_trans = safe_trans
+                else:
+                    # At least find snap point that is near the target obj_trans
+                    search_radius = IS_ACCESSIBLE_THRESHOLD
+                    candidate_trans = np.array([float("nan")] * 3)
+                    # The following loop should try at most this amount
+                    max_tries = 25
+                    num_tries = 0
+                    while (
+                        np.isnan(candidate_trans).any()
+                        and num_tries < max_tries
+                    ):
+                        # The return of pathfinder is an array type
+                        candidate_trans = env._sim.pathfinder.get_random_navigable_point_near(
+                            circle_center=obj_trans,
+                            radius=search_radius,
+                            island_index=env._sim.largest_island_idx,
+                        )
+                        # Increase the search radius by this amount
+                        search_radius += 0.5
+                        num_tries += 1
+
+                    if num_tries >= max_tries:
+                        # If we do not find a valid point within this many iterations,
+                        # we then just use the current human location
+                        target_trans = human_trans
+                    else:
+                        target_trans = candidate_trans
+
+                    self.safe_pos = target_trans
+
+                rho, _ = self.get_cartesian_obj_coords(target_trans)
+                is_accessible = (
+                    float(
+                        np.linalg.norm(
+                            np.array((target_trans - obj_trans))[[0, 2]]
+                        )
+                    )
+                    < IS_ACCESSIBLE_THRESHOLD
+                )
+                finished_nav = rho < self._pick_dist_threshold
 
                 if not finished_nav:
                     action_ind_nav = find_action_range(
@@ -502,12 +572,15 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     )
                     action_array[
                         action_ind_nav[0] : action_ind_nav[0] + 3
-                    ] = safe_trans
+                    ] = target_trans
                     self.gt_path = env.task.actions[
                         "agent_0_oracle_nav_action"
-                    ]._path_to_point(safe_trans)
+                    ]._path_to_point(target_trans)
                 else:
-                    self.current_state = FetchState.PICK
+                    if not is_accessible:
+                        self.current_state = FetchState.BEG_RESET
+                    else:
+                        self.current_state = FetchState.PICK
                     self._init_policy_input()
 
         elif self.current_state == FetchState.SEARCH_TIMEOUT_WAIT:

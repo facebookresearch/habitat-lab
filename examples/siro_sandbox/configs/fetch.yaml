@@ -148,7 +148,7 @@ habitat:
     agents:
       agent_0:
         radius: 0.25
-        height: 1.8
+        height: 1.3
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:
@@ -240,7 +240,7 @@ habitat_baselines:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
               load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
-              max_skill_steps: 500
+              max_skill_steps: 750
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
 
@@ -248,7 +248,7 @@ habitat_baselines:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
               load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
-              max_skill_steps: 500
+              max_skill_steps: 750
               obs_skill_input_dim: 2
               pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
 
