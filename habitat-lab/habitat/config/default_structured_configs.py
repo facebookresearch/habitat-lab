@@ -267,6 +267,7 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     """
     type: str = "BaseVelNonCylinderAction"
     # The max longitudinal and lateral linear speeds of the robot
+    lin_speed: float = 10.0
     longitudinal_lin_speed: float = 10.0
     lateral_lin_speed: float = 10.0
     # The max angular speed of the robot
