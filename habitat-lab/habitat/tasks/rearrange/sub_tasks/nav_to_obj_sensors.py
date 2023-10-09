@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -296,3 +297,95 @@ class NavToObjSuccess(Measure):
                 task.should_end = True
             else:
                 self._metric = False
+
+
+@registry.register_measure
+class SocialNavReward(UsesArticulatedAgentInterface, Measure):
+    """
+    Reward that gives a continuous reward for the social navigation task.
+    """
+
+    cls_uuid: str = "social_nav_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavReward.cls_uuid
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        config = kwargs["config"]
+        # Get the config and setup the hyperparameters
+        self._config = config
+        self._sim = kwargs["sim"]
+        self._safe_dis_min = config.safe_dis_min
+        self._safe_dis_max = config.safe_dis_max
+        self._safe_dis_reward = config.safe_dis_reward
+        self._facing_human_dis = config.facing_human_dis
+        self._facing_human_reward = config.facing_human_reward
+        self._use_geo_distance = config.use_geo_distance
+        # Record the previous distance to human
+        self._prev_dist = -1.0
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+        self._prev_dist = -1.0
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = 0.0
+
+        # Get the pos
+        # TODO: better way to get the position of two agents
+        human_pos = observations["agent_1_localization_sensor"][:3]
+        robot_pos = observations["agent_0_localization_sensor"][:3]
+
+        # If we consider using geo distance
+        if self._use_geo_distance:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = np.array(robot_pos)
+            path.requested_end = human_pos
+            found_path = self._sim.pathfinder.find_path(path)
+
+        # Compute the distance between the robot and the human
+        if self._use_geo_distance and found_path:
+            dis = self._sim.geodesic_distance(robot_pos, human_pos)
+        else:
+            dis = np.linalg.norm(human_pos - robot_pos)
+
+        # Social nav reward three stage design
+        if dis >= self._safe_dis_min and dis < self._safe_dis_max:
+            # If the distance is within the safety interval
+            self._metric = self._safe_dis_reward
+        elif dis < self._safe_dis_min:
+            # If the distance is too samll
+            self._metric = dis - self._prev_dist
+        else:
+            # if the distance is too large
+            self._metric = self._prev_dist - dis
+
+        # Social nav reward for facing human
+        if dis < self._facing_human_dis and self._facing_human_reward != -1:
+            # Compute the vector from robot to human
+            vector_human_robot = human_pos - robot_pos
+            # Normalization
+            vector_human_robot = vector_human_robot / np.linalg.norm(
+                vector_human_robot
+            )
+            # Compute robot forward vector
+            # TODO: check agent_id here it is for robot zero
+            base_T = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.base_transformation
+            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+            # Dot product
+            self._metric += self._facing_human_reward * np.dot(
+                forward_robot.normalized(), vector_human_robot
+            )
+
+        if self._prev_dist < 0:
+            self._metric = 0.0
+
+        # Update the distance
+        self._prev_dist = dis  # type: ignore

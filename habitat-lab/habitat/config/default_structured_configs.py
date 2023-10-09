@@ -1107,6 +1107,28 @@ class CooperateSubgoalRewardConfig(PddlSubgoalReward):
 
 
 @dataclass
+class SocialNavReward(MeasurementConfig):
+    r"""
+    The reward for the social navigation tasks.
+    """
+    type: str = "SocialNavReward"
+    # The safety distance between the robot and the human
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    # If the safety distance is within the threshold, then
+    # the agent receives this amount of reward
+    safe_dis_reward: float = 2.0
+    # If the distance is below this threshold, the robot
+    # starts receiving an additional orientation reward
+    facing_human_dis: float = 3.0
+    # -1 means that there is no facing_human_reward
+    facing_human_reward: float = -1.0
+    # If we want to use geo distance to measure the distance
+    # between the robot and the human
+    use_geo_distance: bool = False
+
+
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -2235,6 +2257,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_cooperate_reward",
     node=RearrangeCooperateRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_reward",
+    group="habitat/task/measurements",
+    name="social_nav_reward",
+    node=SocialNavReward,
 )
 cs.store(
     package="habitat.task.measurements.did_agents_collide",
