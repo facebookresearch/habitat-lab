@@ -48,10 +48,6 @@ habitat_baselines:
   evaluate: False
 
   eval:
-    extra_sim_sensors:
-      third_rgb_sensor:
-        height: 224
-        width: 224
     should_load_ckpt: False
     video_option: ["disk"]
 

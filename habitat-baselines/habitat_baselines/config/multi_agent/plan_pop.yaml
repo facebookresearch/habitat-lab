@@ -1,0 +1,23 @@
+defaults:
+  - plan_pop
+  # Override the human to use a planner
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
+  - _self_
+
+habitat_baselines:
+  rl:
+    agent:
+      num_pool_agents_per_type: [1, 1]
+      agent_sample_interval: 20
+      force_partner_sample_idx: -1
+    policy:
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            # To set the `p` value in `Plan-Pop_p` set `plan_idx` to the corresponding value:
+            # Plan-Pop_1 -> 0
+            # Plan-Pop_2 -> 1
+            # Plan-Pop_3 -> 2
+            # Plan-Pop_4 -> 3
+            # For more details on planner options see `hl_planner.yaml`
+            plan_idx: 0
