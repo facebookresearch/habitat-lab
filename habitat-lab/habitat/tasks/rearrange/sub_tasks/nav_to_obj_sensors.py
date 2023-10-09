@@ -595,6 +595,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._val_dict["min_start_end_episode_step"] == float("inf")
             and self._enable_shortest_path_computation
         ):
+            # TODO: better way to check if there is an oracle_nav_randcoord_action for agent 1, human
             robot_to_human_min_step = task.actions[
                 "agent_1_oracle_nav_randcoord_action"
             ]._compute_robot_to_human_min_step(
