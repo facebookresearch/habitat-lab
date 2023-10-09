@@ -71,6 +71,7 @@ __all__ = [
     "RotDistToGoalMeasurementConfig",
     "PddlStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
+    "SocialNavStatsMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -866,6 +867,33 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
+
+
+@dataclass
+class SocialNavStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    Social nav stats computation
+    """
+    type: str = "SocialNavStats"
+    # Check if the human is inside the frame or not
+    check_human_in_frame: bool = False
+    # The safety distance
+    min_dis_human: float = 1.0
+    max_dis_human: float = 2.0
+    # The human id
+    human_id: int = 100
+    # The pixel needed
+    human_detect_pixel_threshold: int = 1000
+    # The total number of steps
+    total_steps: int = 1500
+    # If we want to compute the shortest path to human
+    enable_shortest_path_computation: bool = False
+    # The min distance for considering backup and yiled motions
+    dis_threshold_for_backup_yield: float = 1.5
+    # The min vel for considering yiled motion
+    min_abs_vel_for_yield: float = 1.0
+    # The dot product value for considering that the robot is facing human
+    robot_face_human_threshold: float = 0.5
 
 
 @dataclass
@@ -2329,6 +2357,12 @@ cs.store(
     group="habitat/task/measurements",
     name="nav_to_pos_succ",
     node=NavToPosSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_stats",
+    group="habitat/task/measurements",
+    name="social_nav_stats",
+    node=SocialNavStatsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_goal",
