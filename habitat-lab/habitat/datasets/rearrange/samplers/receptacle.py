@@ -940,6 +940,8 @@ def get_navigable_receptacles(
 
     :return: The list of heuristic passing Receptacle instances.
     """
+    # The receptacle should be unoccluded from this height
+    max_access_height = 1.3
     navigable_receptacles: List[Receptacle] = []
     for receptacle in receptacles:
         obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
@@ -969,7 +971,14 @@ def get_navigable_receptacles(
         corners_accessible = True
         corners_accessible = (
             sum(
-                is_accessible(sim, point, nav_to_min_distance, nav_island)
+                is_accessible(
+                    sim=sim,
+                    point=point,
+                    height=max_access_height,
+                    nav_to_min_distance=nav_to_min_distance,
+                    nav_island=nav_island,
+                    target_object_id=receptacle_obj.object_id,
+                )
                 for point in recep_points
             )
             >= 2

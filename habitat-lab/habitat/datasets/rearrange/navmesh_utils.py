@@ -10,6 +10,142 @@ from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
 
+def snap_point_is_occluded(
+    target: mn.Vector3,
+    snap_point: mn.Vector3,
+    height: float,
+    sim: habitat_sim.Simulator,
+    granularity: float = 0.2,
+    target_object_id: Optional[int] = None,
+) -> bool:
+    """
+    Uses raycasting to check whether a target is occluded given a navmesh snap point.
+
+    :property target: The 3D position which should be unoccluded from the snap point.
+    :property snap_point: The navmesh snap point under consideration.
+    :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
+    :property sim: The Simulator instance.
+    :property granularity: The distance between raycast samples. Finer granularity is more accurate, but more expensive.
+    :property target_object_id: An optional object id which should be ignored in occlusion check.
+
+    NOTE: If agent's eye height is known and only that height should be considered, provide eye height and granulatiry > height for fastest check.
+
+    :return: whether or not the target is considered occluded from the snap_point.
+    """
+    # start from the top, assuming the agent's eyes are not at the bottom.
+    cur_height = height
+    while cur_height > 0:
+        ray = habitat_sim.geo.Ray()
+        ray.origin = snap_point + mn.Vector3(0, cur_height, 0)
+        cur_height -= granularity
+        ray.direction = target - ray.origin
+        raycast_results = sim.cast_ray(ray)
+        # distance of 1 is the displacement between the two points
+        if (
+            raycast_results.has_hits()
+            and raycast_results.hits[0].ray_distance < 1
+        ):
+            if (
+                target_object_id is not None
+                and raycast_results.hits[0].object_id == target_object_id
+            ):
+                # we hit an allowed object (i.e., the target object), so not occluded
+                return False
+            # the ray hit a not-allowed object and is occluded
+            continue
+        else:
+            # ray hit nothing, so not occluded
+            return False
+    return True
+
+
+def unoccluded_navmesh_snap(
+    pos: mn.Vector3,
+    height: float,
+    pathfinder: habitat_sim.nav.PathFinder,
+    sim: habitat_sim.Simulator,
+    target_object_id: Optional[int] = None,
+    island_id: int = -1,
+    search_offset: float = 1.5,
+    test_batch_size: int = 20,
+    max_samples: int = 200,
+    min_sample_dist: float = 0.5,
+) -> Optional[mn.Vector3]:
+    """
+    Snap a point to the navmesh considering point visibilty via raycasting.
+
+    :property pos: The 3D position to snap.
+    :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
+    :property pathfinder: The PathFinder defining the NavMesh to use.
+    :property sim: The Simulator instance.
+    :property target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when pos is an object's COM, that object should not occlude the point.
+    :property island_id: Optionally restrict the search to a single navmesh island. Default -1 is the full navmesh.
+    :property search_offset: The additional radius to search for navmesh points around the target position. Added to the minimum distance from pos to navmesh.
+    :property test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
+    :property max_samples: The maximum number of attempts to sample navmesh points for the test batch.
+    :property min_sample_dist: The minimum allowed L2 distance between samples in the test batch.
+
+    NOTE: this function is based on smapling and does not guarantee the closest point.
+
+    :return: An approximation of the closest unoccluded snap point to pos or None if an unoccluded point could not be found.
+    """
+
+    # first try the closest snap point
+    snap_point = pathfinder.snap_point(pos, island_id)
+    is_occluded = snap_point_is_occluded(
+        target=pos,
+        snap_point=snap_point,
+        height=height,
+        sim=sim,
+        target_object_id=target_object_id,
+    )
+
+    # now sample and try different snap options
+    if is_occluded:
+        # distance to closest snap point is the absolute minimum
+        min_radius = (snap_point - pos).length()
+        # expand the search radius
+        search_radius = min_radius + search_offset
+
+        # gather a test batch
+        test_batch: List[Tuple[mn.Vector3, float]] = []
+        sample_count = 0
+        while len(test_batch) < test_batch_size and sample_count < max_samples:
+            sample = pathfinder.get_random_navigable_point_near(
+                circle_center=pos, radius=search_radius, island_index=island_id
+            )
+            reject = False
+            for batch_sample in test_batch:
+                if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
+                    reject = True
+                    break
+            if not reject:
+                test_batch.append(
+                    (sample, float(np.linalg.norm(sample - pos)))
+                )
+            sample_count += 1
+
+        # sort the test batch points by distance to the target
+        test_batch.sort(key=lambda s: s[1])
+
+        # find the closest unoccluded point in the test batch
+        for batch_sample in test_batch:
+            if not snap_point_is_occluded(
+                pos,
+                batch_sample[0],
+                height,
+                sim,
+                target_object_id=target_object_id,
+            ):
+                return batch_sample[0]
+
+        # unable to find an unoccluded point
+        return None
+
+    # the true closest snap point is unoccluded
+    return snap_point
+
+
 def is_collision(
     pathfinder: habitat_sim.nav.PathFinder,
     trans: mn.Matrix4,
@@ -377,23 +513,40 @@ def path_is_navigable_given_robot(
 def is_accessible(
     sim: habitat_sim.Simulator,
     point: mn.Vector3,
+    height: float,
     nav_to_min_distance: float,
-    nav_island: int,
+    nav_island: int = -1,
+    target_object_id: Optional[int] = None,
 ) -> bool:
     """
-    Return True if the point is within a threshold distance (in XZ plane) of the nearest navigable point on the selected island.
+    Return True if the point is within a threshold distance (in XZ plane) of the nearest unoccluded navigable point on the selected island.
 
     :param sim: Habitat Simulaton instance.
     :param point: The query point.
+    :property height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
     :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
-    :param nav_island: The NavMesh island on which to check accessibility. -1 is the full NavMesh.
+    :param nav_island: The NavMesh island on which to check accessibility. Default -1 is the full NavMesh.
+    :param target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when checking accessibility of an object's COM, that object should not occlude.
 
-    Note that this might not catch all edge cases since the nearest navigable point may be separated from the point by an obstacle.
+    TODO: target_object_id should be a list to correctly support ArticulatedObjects (e.g. the fridge body should not occlude the fridge drawer for this check.)
+
+    :return: Whether or not the point is accessible.
     """
     if nav_to_min_distance == -1:
         return True
 
-    snapped = sim.pathfinder.snap_point(point, island_index=nav_island)
+    snapped = unoccluded_navmesh_snap(
+        pos=point,
+        height=height,
+        pathfinder=sim.pathfinder,
+        sim=sim,
+        target_object_id=target_object_id,
+        island_id=nav_island,
+        search_offset=nav_to_min_distance,
+    )
+
+    if snapped is None:
+        return False
 
     horizontal_dist = float(
         np.linalg.norm(np.array((snapped - point))[[0, 2]])
