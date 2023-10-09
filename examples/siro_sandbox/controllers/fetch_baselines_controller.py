@@ -400,6 +400,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
                 island_id=env._sim.largest_island_idx,
+                target_object_id=self.object_interest_id,
             )
 
             # Assign safe_trans here for the visualization
@@ -514,6 +515,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 pathfinder=env._sim.pathfinder,
                 sim=env._sim,
                 island_id=env._sim.largest_island_idx,
+                target_object_id=self.object_interest_id,
             )
             self.safe_pos = safe_trans
 
