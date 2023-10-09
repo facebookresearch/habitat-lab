@@ -43,6 +43,7 @@ __all__ = [
     "CompassSensorConfig",
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
+    "HumanoidDetectorSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -360,6 +361,16 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     """
 
     type: str = "PointGoalWithGPSCompassSensor"
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Check if the human is in frame
+    """
+    type: str = "HumanoidDetectorSensor"
+    human_id: int = 100
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -1945,6 +1956,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="pointgoal_with_gps_compass_sensor",
     node=PointGoalWithGPSCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",
