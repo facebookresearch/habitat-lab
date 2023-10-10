@@ -214,6 +214,9 @@ class GuiHumanoidController(GuiController):
 
         self.ind = 0
 
+    def set_humanoid_controller(self, humanoid_controller):
+        self._humanoid_controller = humanoid_controller
+
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
 

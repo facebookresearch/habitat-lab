@@ -8,11 +8,12 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from controllers.baselines_controller import (
+from controllers.fetch_baselines_controller import (
     FetchBaselinesController,
     FetchState,
 )
 from controllers.gui_controller import GuiHumanoidController
+from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
@@ -73,6 +74,10 @@ class AppStateFetch(AppState):
             self._sandbox_service,
             self.get_gui_controlled_agent_index(),
             self._get_gui_agent_feet_height(),
+        )
+
+        self._avatar_switch_helper = GuiAvatarSwitchHelper(
+            self._sandbox_service, self._gui_agent_ctrl
         )
 
         # self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
@@ -339,24 +344,27 @@ class AppStateFetch(AppState):
                         self._gui_agent_ctrl._get_grasp_mgr().snap_idx
                     )
 
-                    assert throw_obj_id is not None
-                    self.state_machine_agent_ctrl.object_interest_id = (
-                        throw_obj_id
-                    )
-                    sim = self.get_sim()
-                    self.state_machine_agent_ctrl.rigid_obj_interest = (
-                        sim.get_rigid_object_manager().get_object_by_id(
+                    # The robot can only pick up the object if there is a throw_obj_id
+                    # throw_obj_id will be None if the users fast press and press again the sapce
+                    if throw_obj_id is not None:
+                        self.state_machine_agent_ctrl.object_interest_id = (
                             throw_obj_id
                         )
-                    )
-                    throw_vel = self._throw_helper.viz_and_get_humanoid_throw()
-                    if not disable_spot:
-                        self.state_machine_agent_ctrl.current_state = (
-                            FetchState.SEARCH
+                        sim = self.get_sim()
+                        self.state_machine_agent_ctrl.rigid_obj_interest = (
+                            sim.get_rigid_object_manager().get_object_by_id(
+                                throw_obj_id
+                            )
                         )
+                        throw_vel = (
+                            self._throw_helper.viz_and_get_humanoid_throw()
+                        )
+                        if not disable_spot:
+                            self.state_machine_agent_ctrl.current_state = (
+                                FetchState.SEARCH
+                            )
 
-                    self._held_target_obj_idx = None
-
+                        self._held_target_obj_idx = None
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
@@ -398,11 +406,48 @@ class AppStateFetch(AppState):
                             self._held_target_obj_idx
                         ]
 
-        # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
-        #     obj_pos = (
-        #         self.state_machine_agent_ctrl.rigid_obj_interest.translation
-        #     )
-        #     self._draw_box_in_pos(obj_pos, color=mn.Color3.blue())
+        # Switch to the point nav with waypoints by keeping pressing "O" key
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state == FetchState.SEARCH
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_TIMEOUT_WAIT
+            or self.state_machine_agent_ctrl.current_state == FetchState.BRING
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_TIMEOUT_WAIT
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH
+                or self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_TIMEOUT_WAIT
+            ):
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.SEARCH_ORACLE_NAV
+                )
+            else:
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.BRING_ORACLE_NAV
+                )
+
+        if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_ORACLE_NAV
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_ORACLE_NAV
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_ORACLE_NAV
+            ):
+                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+            else:
+                self.state_machine_agent_ctrl.current_state = FetchState.BRING
+
+        # Do vis on the real navigation target
+        if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
+            safe_pos = self.state_machine_agent_ctrl.safe_pos
+            if safe_pos is not None:
+                self._draw_circle(safe_pos, color=mn.Color3.red(), radius=0.25)
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -472,6 +517,15 @@ class AppStateFetch(AppState):
             position - box_offset,
             position + box_offset,
             color,
+        )
+
+    def _draw_circle(self, pos, color, radius):
+        num_segments = 24
+        self._sandbox_service.line_render.draw_circle(
+            pos,
+            radius,
+            color,
+            num_segments,
         )
 
     def _add_target_object_highlight_ring(
@@ -601,9 +655,14 @@ class AppStateFetch(AppState):
         fetch_state_names = {
             # FetchState.WAIT : "",
             FetchState.SEARCH: "searching for object",
+            FetchState.SEARCH_ORACLE_NAV: "searching for object",
             FetchState.PICK: "picking object",
             FetchState.BRING: "searching for human",
+            FetchState.BRING_ORACLE_NAV: "searching for human",
             FetchState.DROP: "dropping object",
+            FetchState.BEG_RESET: "cannot pick up the object",
+            FetchState.SEARCH_TIMEOUT_WAIT: "need help to search for object",
+            FetchState.BRING_TIMEOUT_WAIT: "need help to search for human",
         }
         if fetch_state in fetch_state_names:
             status_str += f"spot: {fetch_state_names[fetch_state]}\n"
@@ -650,14 +709,30 @@ class AppStateFetch(AppState):
     def _viz_fetcher(self, post_sim_update_dict):
         fetch_state = self.state_machine_agent_ctrl.current_state
 
-        if fetch_state == FetchState.SEARCH or fetch_state == FetchState.BRING:
+        if (
+            fetch_state == FetchState.SEARCH
+            or fetch_state == FetchState.BRING
+            or fetch_state == FetchState.SEARCH_ORACLE_NAV
+            or fetch_state == FetchState.BRING_ORACLE_NAV
+        ):
             fetcher_pos = self._get_state_machine_agent_translation()
             target_pos = (
                 self.state_machine_agent_ctrl.rigid_obj_interest.translation
                 if fetch_state == FetchState.SEARCH
+                or fetch_state == FetchState.SEARCH_ORACLE_NAV
                 else self._get_gui_agent_translation()
             )
-            path_points = [fetcher_pos, target_pos]
+            if self.state_machine_agent_ctrl.gt_path is not None and (
+                fetch_state == FetchState.SEARCH_ORACLE_NAV
+                or fetch_state == FetchState.BRING_ORACLE_NAV
+            ):
+                gt_path = [
+                    mn.Vector3(pt)
+                    for pt in self.state_machine_agent_ctrl.gt_path
+                ]
+                path_points = [fetcher_pos] + gt_path + [target_pos]
+            else:
+                path_points = [fetcher_pos, target_pos]
             floor_y = 0.0  # temp hack
             for pt in path_points:
                 pt.y = floor_y
@@ -701,6 +776,9 @@ class AppStateFetch(AppState):
             and self._held_target_obj_idx is None
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
+            self._avatar_switch_helper.switch_avatar()
 
         self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
