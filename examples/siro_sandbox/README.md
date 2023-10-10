@@ -1,4 +1,4 @@
-# Sandbox Tool 
+# Sandbox Tool
 
 ![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
 
@@ -31,7 +31,7 @@ habitat_baselines.eval.should_load_ckpt=False \
 ~habitat.task.measurements.agent_blame_measure
 ```
 
-<!-- 
+<!--
 July 18th: the commands below are commented-out because they are broken.
 
 * To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
