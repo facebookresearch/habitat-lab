@@ -33,6 +33,7 @@ defaults:
     - dist_to_goal
     - nav_to_pos_succ
     # For seek
+    - social_nav_seek_success
     - does_want_terminate
     - rearrange_nav_to_obj_success
     - bad_called_terminate
