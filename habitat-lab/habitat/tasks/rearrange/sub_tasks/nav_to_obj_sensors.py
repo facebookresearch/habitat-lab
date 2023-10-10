@@ -165,7 +165,7 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class DistToGoal(Measure):
+class DistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "dist_to_goal"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -186,7 +186,11 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
+            np.array(
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 
@@ -199,7 +203,7 @@ class DistToGoal(Measure):
 
 
 @registry.register_measure
-class RotDistToGoal(Measure):
+class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "rot_dist_to_goal"
 
     def __init__(self, *args, sim, **kwargs):
@@ -219,7 +223,7 @@ class RotDistToGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
         # Get the agent
-        robot = self._sim.articulated_agent
+        robot = self._sim.get_agent_data(self.agent_id).articulated_agent
         # Get the base transformation
         T = robot.base_transformation
         # Do transformation
@@ -440,9 +444,9 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             "step": 0,
             "step_after_found": 1,
             "dis": 0,
-            "dis_after_found ": 0,
-            "backup_count ": 0,
-            "yield_count ": 0,
+            "dis_after_found": 0,
+            "backup_count": 0,
+            "yield_count": 0,
         }
 
         # Robot's info
@@ -474,9 +478,9 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             "step": 0,
             "step_after_found": 1,
             "dis": 0,
-            "dis_after_found ": 0,
-            "backup_count ": 0,
-            "yield_count ": 0,
+            "dis_after_found": 0,
+            "backup_count": 0,
+            "yield_count": 0,
         }
 
         # Robot's info
@@ -759,10 +763,6 @@ class SocialNavSeekSuccess(Measure):
         if self._following_step >= self._following_step_succ_threshold:
             nav_pos_succ = True
 
-        called_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
-
         # If the robot needs to look at the target
         if self._config.must_look_at_targ:
             self._metric = (
@@ -770,10 +770,3 @@ class SocialNavSeekSuccess(Measure):
             )
         else:
             self._metric = nav_pos_succ
-
-        # If the robot needs to call stop to determine the success
-        if self._config.must_call_stop:
-            if called_stop:
-                task.should_end = True
-            else:
-                self._metric = False
