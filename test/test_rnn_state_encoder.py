@@ -87,8 +87,8 @@ def test_rnn_state_encoder():
                 )
 
                 assert (
-                    torch.norm(reference_outputs - outputs) < 0.001
+                    torch.linalg.norm(reference_outputs - outputs) < 0.001
                 ), "Failed on (T={}, N={})".format(T, N)
                 assert (
-                    torch.norm(reference_hiddens - out_hiddens) < 0.001
+                    torch.linalg.norm(reference_hiddens - out_hiddens) < 0.001
                 ), "Failed on (T={}, N={})".format(T, N)
