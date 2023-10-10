@@ -269,8 +269,8 @@ class AppStateFetch(AppState):
             visualize_path=False
         )
 
-        # If the humanoid is near enough to the VR user that it doesn't need to walk
-        # (distance_multiplier == 0.0), then try to reach to held object.
+        # Count number of steps since we stopped, this is to reduce jitter
+        # with IK
         if distance_multiplier == 0:
             self.count_tsteps_stop += 1
         else:
