@@ -172,6 +172,8 @@ class HumanoidRearrangeController:
 
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
+        :param target_dir: the position we should be looking at. If this is None, rotates the agent to face target_position
+        otherwise, it moves the agent towards target_position but facing target_dir. This is important for moving backwards.
         """
         deg_per_rads = 180.0 / np.pi
 

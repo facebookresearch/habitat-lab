@@ -177,10 +177,7 @@ class GuiNavigationHelper:
 
         if target_rot_quat is not None:
             # Get the forward direction
-            forward_gaze = target_rot_quat.transform_vector(
-                mn.Vector3(0, 0, 1)
-            )
-            forward_gaze.y = 0
+            forward_gaze = self._compute_forward_dir(target_rot_quat)
         return walk_dir, distance_multiplier, forward_gaze
 
     def _get_target_pos_from_ray_cast(self):
