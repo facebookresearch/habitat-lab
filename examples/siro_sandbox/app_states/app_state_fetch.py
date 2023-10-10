@@ -92,7 +92,6 @@ class AppStateFetch(AppState):
         return self._is_remote_active_toggle
 
     def on_environment_reset(self, episode_recorder_dict):
-        # cache the current episode and the initial agent states
         self._current_episode = self._sandbox_service.env.current_episode
         self._held_target_obj_idx = None
 
