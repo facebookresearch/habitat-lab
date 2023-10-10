@@ -35,6 +35,8 @@ RADIUS_FETCHER_NAV_PATH = 0.45
 
 RING_PULSE_SIZE = 0.05
 
+
+MIN_STEPS_STOP = 15
 disable_spot = False
 
 
@@ -86,6 +88,7 @@ class AppStateFetch(AppState):
         self._is_remote_active_toggle = (
             self._sandbox_service.args.remote_gui_mode
         )
+        self.count_tsteps_stop = 0
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -106,6 +109,7 @@ class AppStateFetch(AppState):
         )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self.count_tsteps_stop = 0
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -267,10 +271,16 @@ class AppStateFetch(AppState):
 
         # If the humanoid is near enough to the VR user that it doesn't need to walk
         # (distance_multiplier == 0.0), then try to reach to held object.
+        if distance_multiplier == 0:
+            self.count_tsteps_stop += 1
+        else:
+            self.count_tsteps_stop = 0
+
         reach_pos = None
         if (
             self._held_target_obj_idx is not None
             and distance_multiplier == 0.0
+            and self.count_tsteps_stop > MIN_STEPS_STOP
         ):
             # vr_root_pos, _ = self._sandbox_service.remote_gui_input.get_head_pose()
             # humanoid_pos = self._get_gui_agent_translation()
