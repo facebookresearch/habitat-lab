@@ -1,0 +1,59 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange/hab3_bench: multi_agent_bench
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity_humanoid
+  # For Spot observation space
+  - _self_
+
+
+habitat:
+  task:
+    actions:
+      agent_1_base_velocity:
+        agent_index: 1
+        type: BaseVelHumanoidAction
+
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_joint
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_other_agent_gps
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_humanoid_joint_sensor
+      - agent_1_other_agent_gps
+  simulator:
+    # Add Spot robot agents
+      agents:
+        agent_1:
+          articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+          articulated_agent_type: 'KinematicHumanoid'
+          rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+          motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"

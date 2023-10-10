@@ -1,0 +1,80 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange/: multi_agent_tidy_house
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+
+  - override /habitat/task/rearrange: multi_agent_tidy_house_base
+
+  # Uncomment this if you want to visualize third_rgb
+  # - override /habitat/simulator/sim_sensors@habitat.simulator.agents.agent_1.sim_sensors.head_depth_sensor: third_rgb_sensor
+
+  # For Spot observation space
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
+  - _self_
+
+
+habitat:
+  task:
+    measurements:
+      composite_success:
+        must_call_stop: False
+
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_joint
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_other_agent_gps
+      - agent_1_head_depth
+      - agent_1_does_want_terminate
+      - agent_0_does_want_terminate
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_humanoid_joint_sensor
+      - agent_1_other_agent_gps
+  simulator:
+    # Add Spot robot agents
+    agents:
+      agent_0:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+
+      agent_1:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    habitat_sim_v0:
+      allow_sliding: True
