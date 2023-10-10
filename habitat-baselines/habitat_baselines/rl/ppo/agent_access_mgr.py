@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.storage import Storage
@@ -42,7 +42,7 @@ class AgentAccessMgr(ABC):
 
     @property
     @abstractmethod
-    def masks_shape(self) -> int:
+    def masks_shape(self) -> Tuple:
         """
         Shape of the masks tensor.
         """

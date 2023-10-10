@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -103,7 +103,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             )
 
     @property
-    def masks_shape(self):
+    def masks_shape(self) -> Tuple:
         return (1,)
 
     @property

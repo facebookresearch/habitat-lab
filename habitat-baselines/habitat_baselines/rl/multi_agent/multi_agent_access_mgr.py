@@ -332,7 +332,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent.load_ckpt_state_dict(ckpt)
 
     @property
-    def masks_shape(self):
+    def masks_shape(self) -> Tuple:
         return (
             sum(self._agents[i].masks_shape[0] for i in self._active_agents),
         )
