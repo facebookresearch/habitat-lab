@@ -73,6 +73,7 @@ __all__ = [
     "PddlStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
     "SocialNavStatsMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -909,6 +910,26 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     min_abs_vel_for_yield: float = 1.0
     # The dot product value for considering that the robot is facing human
     robot_face_human_threshold: float = 0.5
+
+
+@dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Social nav seek success measurement
+    """
+    type: str = "SocialNavSeekSuccess"
+    # If the robot needs to look at the target
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+    # distance
+    following_step_succ_threshold: int = 800
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    need_to_face_human: bool = False
+    use_geo_distance: bool = False
+    facing_threshold: float = 0.5
 
 
 @dataclass
@@ -2384,6 +2405,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_stats",
     node=SocialNavStatsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_goal",

@@ -678,3 +678,102 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         # Update the counter
         if self._val_dict["has_found_human"]:
             self._val_dict["step_after_found"] += 1
+
+
+@registry.register_measure
+class SocialNavSeekSuccess(Measure):
+    """Social nav seek success meassurement"""
+
+    cls_uuid: str = "nav_seek_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavSeekSuccess.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        """Reset the metrics"""
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+        )
+        self._following_step = 0
+        self.update_metric(*args, task=task, **kwargs)
+
+    def __init__(self, *args, config, sim, **kwargs):
+        self._config = config
+        self._sim = sim
+
+        super().__init__(*args, config=config, **kwargs)
+        # Setup the parameters
+        self._following_step = 0
+        self._following_step_succ_threshold = (
+            config.following_step_succ_threshold
+        )
+        self._safe_dis_min = config.safe_dis_min
+        self._safe_dis_max = config.safe_dis_max
+        self._use_geo_distance = config.use_geo_distance
+        self._need_to_face_human = config.need_to_face_human
+        self._facing_threshold = config.facing_threshold
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Get the angle distance
+        angle_dist = task.measurements.measures[
+            RotDistToGoal.cls_uuid
+        ].get_metric()
+
+        # Get the positions of the human and the robot
+        # TODO: better way to get the observations
+        human_pos = observations["agent_1_localization_sensor"][:3]
+        robot_pos = observations["agent_0_localization_sensor"][:3]
+
+        # If we want to use the geo distance
+        if self._use_geo_distance:
+            dist = self._sim.geodesic_distance(robot_pos, human_pos)
+        else:
+            dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+
+        # Compute facing to human
+        vector_human_robot = human_pos - robot_pos
+        vector_human_robot = vector_human_robot / np.linalg.norm(
+            vector_human_robot
+        )
+        base_T = self._sim.get_agent_data(
+            0
+        ).articulated_agent.base_transformation
+        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
+        facing = (
+            np.dot(forward_robot.normalized(), vector_human_robot)
+            > self._facing_threshold
+        )
+
+        # Check if the agent follows the human within the safe distance
+        if (
+            dist >= self._safe_dis_min
+            and dist < self._safe_dis_max
+            and self._need_to_face_human
+            and facing
+        ):
+            self._following_step += 1
+
+        nav_pos_succ = False
+        if self._following_step >= self._following_step_succ_threshold:
+            nav_pos_succ = True
+
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
+        # If the robot needs to look at the target
+        if self._config.must_look_at_targ:
+            self._metric = (
+                nav_pos_succ and angle_dist < self._config.success_angle_dist
+            )
+        else:
+            self._metric = nav_pos_succ
+
+        # If the robot needs to call stop to determine the success
+        if self._config.must_call_stop:
+            if called_stop:
+                task.should_end = True
+            else:
+                self._metric = False
