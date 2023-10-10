@@ -363,8 +363,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.get_articulated_agent().sim_obj.transformation = target_trans
 
     def act(self, obs, env):
-        print("Step log:", self.current_state, self._skill_steps)
-
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
