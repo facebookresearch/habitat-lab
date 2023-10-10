@@ -113,15 +113,15 @@ habitat:
         lateral_lin_speed: 5.0
         ang_speed: 5.0
 
-      agent_1_base_velocity:
-        agent_index : 1
-      agent_1_rearrange_stop:
-        agent_index : 1
-      agent_1_pddl_apply_action:
-        agent_index : 1
+      # agent_1_base_velocity:
+      #   agent_index : 1
+      # agent_1_rearrange_stop:
+      #   agent_index : 1
+      # agent_1_pddl_apply_action:
+      #   agent_index : 1
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
-        agent_index : 1
+        ##agent_index : 1
         motion_control: human_joints
         lin_speed: 5.0
         ang_speed: 5.0
