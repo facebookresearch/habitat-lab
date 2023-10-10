@@ -557,8 +557,8 @@ class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
-class ShouldReplanSensorConfig(LabSensorConfig):
-    type: str = "ShouldReplanSensor"
+class AreAgentsWithinThresholdConfig(LabSensorConfig):
+    type: str = "AreAgentsWithinThreshold"
     x_len: Optional[float] = None
     y_len: Optional[float] = None
     agent_idx: int = 0
@@ -1079,8 +1079,8 @@ class NumAgentsCollideConfig(MeasurementConfig):
 
 
 @dataclass
-class CooperateSubgoalRewardConfig(PddlSubgoalReward):
-    type: str = "CooperateSubgoalReward"
+class RearrangeCooperateRewardConfig(PddlSubgoalReward):
+    type: str = "RearrangeCooperateReward"
     stage_sparse_reward: float = 1.0
     end_on_collide: bool = True
     # Positive penalty means give negative reward.
@@ -1993,10 +1993,10 @@ cs.store(
 )
 
 cs.store(
-    package="habitat.task.lab_sensors.should_replan",
+    package="habitat.task.lab_sensors.agents_within_threshold",
     group="habitat/task/lab_sensors",
-    name="should_replan",
-    node=ShouldReplanSensorConfig,
+    name="agents_within_threshold",
+    node=AreAgentsWithinThresholdConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",
@@ -2206,10 +2206,10 @@ cs.store(
     node=PddlSubgoalReward,
 )
 cs.store(
-    package="habitat.task.measurements.cooperate_subgoal_reward",
+    package="habitat.task.measurements.rearrange_cooperate_reward",
     group="habitat/task/measurements",
     name="cooperate_subgoal_reward",
-    node=CooperateSubgoalRewardConfig,
+    node=RearrangeCooperateRewardConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_agents_collide",

@@ -153,7 +153,7 @@ class MultiAgentGlobalPredicatesSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
-class ShouldReplanSensor(Sensor):
+class AreAgentsWithinThreshold(Sensor):
     """
     Returns if the agents are close to each other and about to collide, thus
     the agents should replan.
@@ -172,7 +172,7 @@ class ShouldReplanSensor(Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
-        return f"agent_{self._agent_idx}_should_replan"
+        return f"agent_{self._agent_idx}_agents_within_threshold"
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -202,7 +202,7 @@ class ShouldReplanSensor(Sensor):
 
 
 @registry.register_measure
-class CooperateSubgoalReward(PddlSubgoalReward):
+class RearrangeCooperateReward(PddlSubgoalReward):
     """
     `PddlSubgoalReward` adapted for 2 agent setups to penalize and
     potentially end the episode on agent collisions.
@@ -210,7 +210,7 @@ class CooperateSubgoalReward(PddlSubgoalReward):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return "cooperate_subgoal_reward"
+        return "rearrange_cooperate_reward"
 
     def __init__(self, *args, config, **kwargs):
         super().__init__(*args, config=config, **kwargs)

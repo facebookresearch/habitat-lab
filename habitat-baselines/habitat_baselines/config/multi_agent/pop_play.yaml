@@ -67,7 +67,7 @@ habitat_baselines:
       agent_0:
         hierarchical_policy:
           high_level_policy:
-            termination_obs_name: "should_replan"
+            termination_obs_name: "agents_within_threshold"
             add_arm_rest: False
             policy_input_keys:
               - "articulated_agent_arm_depth"
@@ -87,7 +87,7 @@ habitat_baselines:
         hierarchical_policy:
           high_level_policy:
 
-            termination_obs_name: "should_replan"
+            termination_obs_name: "agents_within_threshold"
             add_arm_rest: False
             policy_input_keys:
               - "head_depth"

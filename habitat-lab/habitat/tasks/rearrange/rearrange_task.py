@@ -184,7 +184,7 @@ class RearrangeTask(NavigationTask):
             agent_idx
         )
         if articulated_agent_start is None:
-            filter_func = None
+            filter_agent_position = None
             if self._min_distance_start_agents > 0.0:
                 # Force the agents to start a minimum distance apart.
                 prev_pose_agents = [
@@ -196,7 +196,7 @@ class RearrangeTask(NavigationTask):
                     for agent_indx_prev in range(agent_idx)
                 ]
 
-                def _filter_func(start_pos, start_rot):
+                def _filter_agent_position(start_pos, start_rot):
                     start_pos_2d = start_pos[[0, 2]]
                     prev_pos_2d = [
                         prev_pose_agent[[0, 2]]
@@ -210,12 +210,12 @@ class RearrangeTask(NavigationTask):
                     )
                     return np.all(distances > self._min_distance_start_agents)
 
-                filter_func = _filter_func
+                filter_agent_position = _filter_agent_position
             (
                 articulated_agent_pos,
                 articulated_agent_rot,
             ) = self._sim.set_articulated_agent_base_to_random_point(
-                agent_idx=agent_idx, filter_func=filter_func
+                agent_idx=agent_idx, filter_func=filter_agent_position
             )
             self._cache_articulated_agent_start(
                 (articulated_agent_pos, articulated_agent_rot), agent_idx

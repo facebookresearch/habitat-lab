@@ -406,6 +406,10 @@ class RearrangeSim(HabitatSim):
         filter_func: Optional[Callable[[np.ndarray, float], bool]] = None,
     ) -> Tuple[np.ndarray, float]:
         """
+        :param filter_func: If specified, takes as input the agent base
+            position and angle and returns if the sampling point should be
+            allowed (true for allowed, false for rejected).
+
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent

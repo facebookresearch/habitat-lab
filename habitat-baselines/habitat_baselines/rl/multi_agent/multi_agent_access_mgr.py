@@ -73,7 +73,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             lr_schedule_fn,
         )
         if self._pop_config.load_type1_pop_ckpts is not None:
-            self._load_ckpts(
+            self._load_type1_ckpts(
                 self._agents[self._agent_count_idxs[0] :],
                 self._pop_config.load_type1_pop_ckpts,
             )
@@ -92,7 +92,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         if config.habitat_baselines.evaluate:
             self._sample_active()
 
-    def _load_ckpts(self, agents, ckpt_paths):
+    def _load_type1_ckpts(self, agents, ckpt_paths):
+        """
+        Only loads checkpoints for the type 1 agents.
+        """
+
         if len(agents) != len(ckpt_paths):
             raise ValueError(
                 f"{len(agents)} in population, doesn't match number of requested ckpts {len(ckpt_paths)}"
@@ -109,6 +113,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent.init_distributed(find_unused_params)
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
+        """
+        Create the policy, updater, and storage components. These change if it
+        is multi-agent training or self-play training.
+        """
+
         if self._pop_config.self_play_batched:
             policy_cls: Type = SelfBatchedPolicy
             updater_cls: Type = SelfBatchedUpdater
@@ -118,9 +127,6 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             policy_cls = MultiPolicy
             updater_cls = MultiUpdater
             storage_cls = MultiStorage
-
-        # TODO(xavi to andrew): why do we call these functions? It seems they
-        # just create an empty class
 
         multi_policy = policy_cls.from_config(
             config,
