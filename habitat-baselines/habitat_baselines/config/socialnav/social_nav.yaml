@@ -76,7 +76,7 @@ hydra:
 
 habitat:
   task:
-    type: RearrangeCompositeTaskNavGoal-v0
+    type: RearrangePddlTask-v0 #RearrangeCompositeTaskNavGoal-v0
     lab_sensors:
       agent_1_should_replan:
         x_len: 2.0
@@ -95,11 +95,13 @@ habitat:
     success_reward: 10.0
     slack_reward: -0.01
     end_on_success: False
-    task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_solved
+    #task_spec: multi_agent_tidy_house_fp_2obj_human_prolong_move #multi_agent_tidy_house_solved
+    task_spec_base_path: benchmark/multi_agent/
+    task_spec: pddl/multi_agent_tidy_house
     pddl_domain_def: fp
     actions:
       agent_0_base_velocity:
-        #agent_index : 0
+        #agent_idx : 0
         allow_dyn_slide: True
         # There is a collision if the difference between the clamped NavMesh position and target position
         # is more than than collision_threshold for any point
@@ -115,14 +117,14 @@ habitat:
         ang_speed: 5.0
 
       # agent_1_base_velocity:
-      #   agent_index : 1
+      #   #agent_idx : 1
       # agent_1_rearrange_stop:
-      #   agent_index : 1
+      #   agent_idx : 1
       # agent_1_pddl_apply_action:
-      #   agent_index : 1
+      #   agent_idx : 1
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
-        ##agent_index : 1
+        #agent_idx : 1
         motion_control: human_joints
         lin_speed: 5.0
         ang_speed: 5.0
