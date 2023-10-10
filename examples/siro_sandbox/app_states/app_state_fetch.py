@@ -92,7 +92,9 @@ class AppStateFetch(AppState):
         return self._is_remote_active_toggle
 
     def on_environment_reset(self, episode_recorder_dict):
-        self._current_episode = self._sandbox_service.env.current_episode
+        self._current_episode = (
+            self._sandbox_service.episode_helper.current_episode
+        )
         self._held_target_obj_idx = None
 
         sim = self.get_sim()
