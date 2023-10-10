@@ -79,12 +79,10 @@ To change the task (like set table) that you train your skills on, you can chang
 
 ## Social Rearrangement
 
-To run multi-agent training with a Spot robot and humanoid on the social rearrangement task. 
+To run multi-agent training with a Spot robot and humanoid on the social rearrangement task.
 - Learn-Single: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml`
 - Learn-Pop with 8 humanoid policies during training: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]`
 - Plan-Pop-4: `python habitat_baselines/run.py --config-name=multi_agent/plan_pop.yaml habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=4`. To run Plan-Pop-p for other `p` values, set `habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx`.
 
-For zero-shot evaluate against the unseen agent population: 
+For zero-shot evaluate against the unseen agent population:
 - With planner-based collaborators: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=PATH_TO_CKPT.pth +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.select_random_goal=False +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=1` change `plan_idx` to be 1, 2, 3, or 4 to evaluate against the other 4 planner agents.
-
-

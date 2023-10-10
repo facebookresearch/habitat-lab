@@ -5,7 +5,7 @@
 import random
 from collections import deque
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 import gym.spaces as spaces
 import torch
