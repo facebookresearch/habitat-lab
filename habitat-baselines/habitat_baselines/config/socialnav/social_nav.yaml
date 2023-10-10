@@ -244,6 +244,13 @@ habitat_baselines:
     video_option: ["disk"]
 
   rl:
+    agent:
+      type: "MultiAgentAccessMgr"
+      num_agent_types: 2
+      num_active_agents_per_type: [1, 1]
+      num_pool_agents_per_type: [1, 1]
+      agent_sample_interval: 20
+      force_partner_sample_idx: -1
     policy:
       agent_1:
         hierarchical_policy:
