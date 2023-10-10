@@ -2208,7 +2208,7 @@ cs.store(
 cs.store(
     package="habitat.task.measurements.rearrange_cooperate_reward",
     group="habitat/task/measurements",
-    name="cooperate_subgoal_reward",
+    name="rearrange_cooperate_reward",
     node=RearrangeCooperateRewardConfig,
 )
 cs.store(
