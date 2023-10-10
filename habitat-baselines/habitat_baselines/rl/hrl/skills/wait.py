@@ -21,7 +21,7 @@ class WaitSkillPolicy(SkillPolicy):
         super().__init__(config, action_space, batch_size, True)
         self._wait_time = -1
 
-    def _parse_skill_arg(self, skill_arg: str) -> Any:
+    def _parse_skill_arg(self, skill_name: str, skill_arg: str) -> Any:
         self._wait_time = int(skill_arg[0])
         self._internal_log(f"Requested wait time {self._wait_time}")
 

@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
-
-import gym.spaces as spaces
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.storage import Storage
@@ -42,6 +40,14 @@ class AgentAccessMgr(ABC):
         """
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def masks_shape(self) -> Tuple:
+        """
+        Shape of the masks tensor.
+        """
+        raise NotImplementedError()
+
     @abstractmethod
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         """
@@ -50,15 +56,6 @@ class AgentAccessMgr(ABC):
         :param create_rollouts_fn: Override behavior for creating the
             rollout storage. Default behavior for this and the call signature is
             `default_create_rollouts`.
-        """
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def policy_action_space(self) -> spaces.Space:
-        """
-        The action space the policy acts in. This can be different from the
-        environment action space for hierarchical policies.
         """
         raise NotImplementedError()
 
@@ -128,15 +125,3 @@ class AgentAccessMgr(ABC):
         Called before a rollout is collected.
         """
         raise NotImplementedError()
-
-    @abstractmethod
-    def _create_storage(
-        self,
-        num_envs: int,
-        env_spec: EnvironmentSpec,
-        actor_critic: Policy,
-        policy_action_space: spaces.Space,
-        config: "DictConfig",
-        device,
-    ) -> Storage:
-        pass

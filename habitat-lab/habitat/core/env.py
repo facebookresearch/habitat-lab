@@ -143,6 +143,7 @@ class Env:
             for k, v in self._config.environment.iterator_options.items()
         }
         iter_option_dict["seed"] = self._config.seed
+
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )

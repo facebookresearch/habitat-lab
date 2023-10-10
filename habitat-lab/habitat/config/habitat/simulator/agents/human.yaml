@@ -1,17 +1,12 @@
 # @package habitat.simulator.agents.human
 radius: 0.3
-articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
 articulated_agent_type: 'KinematicHumanoid'
+motion_data_path: "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
 sim_sensors:
   head_rgb_sensor:
-    height: 128
-    width: 128
+    height: 224
+    width: 224
   head_depth_sensor:
-    height: 128
-    width: 128
-  arm_depth_sensor:
-    height: 128
-    width: 128
-  arm_rgb_sensor:
-    height: 128
-    width: 128
+    height: 224
+    width: 224

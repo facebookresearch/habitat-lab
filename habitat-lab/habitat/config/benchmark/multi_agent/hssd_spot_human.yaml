@@ -1,0 +1,153 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
+
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
+
+  - /habitat/dataset/rearrangement: hssd
+
+  - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+
+  - /habitat/task/measurements:
+    - pddl_success
+    - num_steps
+    - did_agents_collide
+    - num_agents_collide
+    - composite_stage_goals
+    - pddl_subgoal_reward
+    - rearrange_cooperate_reward
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - other_agent_gps
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_agents_within_threshold: agents_within_threshold
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
+  - _self_
+
+habitat:
+  task:
+    lab_sensors:
+      agent_0_agents_within_threshold:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 0
+      agent_1_agents_within_threshold:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 1
+    type: RearrangePddlTask-v0
+    reward_measure: rearrange_cooperate_reward
+    success_measure: pddl_success
+    success_reward: 10.0
+    min_distance_start_agents: 5.0
+    slack_reward: -0.0005
+    end_on_success: True
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+    measurements:
+      pddl_success:
+        must_call_stop: False
+      rearrange_cooperate_reward:
+        stage_sparse_reward: 5.0
+        end_on_collide: True
+        collide_penalty: 0.5
+    task_spec_base_path: benchmark/multi_agent/
+    task_spec: pddl/multi_agent_tidy_house
+    pddl_domain_def: fp
+    actions:
+      agent_0_arm_action:
+        grip_controller: MagicGraspAction
+      agent_0_base_velocity:
+        lin_speed: 40.0
+        ang_speed: 20.0
+
+      agent_0_oracle_nav_action:
+        type: OracleNavAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        lin_speed: 10.0
+        ang_speed: 10.0
+
+      agent_1_oracle_nav_action:
+        type: OracleNavAction
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1.0
+        dist_thresh: 0.5
+        lin_speed: 10.0
+        ang_speed: 10.0
+
+    robot_at_thresh: 3.0
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
+      - agent_0_agents_within_threshold
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_should_replan
+  environment:
+    max_episode_steps: 750
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - agent_0
+      - agent_1
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

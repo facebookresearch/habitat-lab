@@ -426,7 +426,121 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
         text_file.write(gfx_keyframe_str)
 
 
-def get_robot_spawns(
+def place_agent_at_dist_from_pos(
+    target_position: np.ndarray,
+    rotation_perturbation_noise: float,
+    distance_threshold: float,
+    sim,
+    num_spawn_attempts: int,
+    filter_colliding_states: bool,
+    agent: Optional[MobileManipulator] = None,
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
+):
+    """
+    Places the robot at closest point if distance_threshold is -1.0 otherwise
+    will place the robot at `distance_threshold` away.
+    """
+    if distance_threshold == -1.0:
+        if navmesh_offset is not None:
+            return place_robot_at_closest_point_with_navmesh(
+                target_position, sim, navmesh_offset, agent=agent
+            )
+        else:
+            return _place_robot_at_closest_point(
+                target_position, sim, agent=agent
+            )
+    else:
+        return _get_robot_spawns(
+            target_position,
+            rotation_perturbation_noise,
+            distance_threshold,
+            sim,
+            num_spawn_attempts,
+            filter_colliding_states,
+            agent=agent,
+        )
+
+
+def _place_robot_at_closest_point(
+    target_position: np.ndarray,
+    sim,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Gets the agent's position and orientation at the closest point to the target position.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    """
+    if agent is None:
+        agent = sim.articulated_agent
+
+    agent_pos = sim.safe_snap_point(target_position)
+    if not sim.is_point_within_bounds(target_position):
+        rearrange_logger.error(
+            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
+        )
+    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+
+    return agent_pos, desired_angle, False
+
+
+def place_robot_at_closest_point_with_navmesh(
+    target_position: np.ndarray,
+    sim,
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Gets the agent's position and orientation at the closest point to the target position.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    """
+    if agent is None:
+        agent = sim.articulated_agent
+
+    agent_pos = sim.safe_snap_point(target_position)
+    if not sim.is_point_within_bounds(target_position):
+        rearrange_logger.error(
+            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
+        )
+    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+
+    # Cache the initial location of the agent
+    cache_pos = agent.base_pos
+    # Make a copy of agent trans
+    trans = mn.Matrix4(agent.sim_obj.transformation)
+
+    # Set the base pos of the agent
+    trans.translation = agent_pos
+    # Project the nav pos
+    nav_pos_3d = [
+        np.array([xz[0], cache_pos[1], xz[1]]) for xz in navmesh_offset
+    ]
+    # Do transformation to get the location
+    center_pos_list = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+    for center_pos in center_pos_list:
+        # Update the transformation of the agent
+        trans.translation = center_pos
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        # Project the height
+        cur_pos = [np.array([xz[0], cache_pos[1], xz[2]]) for xz in cur_pos]
+
+        is_collision = False
+        for pos in cur_pos:
+            if not sim.pathfinder.is_navigable(pos):
+                is_collision = True
+                break
+
+        if not is_collision:
+            return (
+                np.array(center_pos),
+                agent.base_rot,
+                False,
+            )
+
+    return agent_pos, desired_angle, False
+
+
+def _get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
@@ -451,6 +565,9 @@ def get_robot_spawns(
 
     :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
     """
+    assert (
+        distance_threshold > 0.0
+    ), f"Distance threshold must be positive, got {distance_threshold=}. You might want `place_agent_at_dist_from_pos` instead."
     if agent is None:
         agent = sim.articulated_agent
 

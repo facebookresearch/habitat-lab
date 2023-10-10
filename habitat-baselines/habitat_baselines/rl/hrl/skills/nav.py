@@ -74,7 +74,7 @@ class NavSkillPolicy(NnSkillPolicy):
     ) -> torch.BoolTensor:
         return (self._did_want_done[batch_idx] > 0.0).to(masks.device)
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         targ_name, targ_idx = skill_arg[-2].split("|")
         return NavSkillPolicy.NavArgs(
             obj_idx=int(targ_idx), is_target=targ_name.startswith("TARGET")

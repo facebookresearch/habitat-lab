@@ -99,6 +99,7 @@ class NnSkillPolicy(SkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ):
         ret = super().on_enter(
             skill_arg,
@@ -106,6 +107,7 @@ class NnSkillPolicy(SkillPolicy):
             observations,
             rnn_hidden_states,
             prev_actions,
+            skill_name,
         )
         self._did_want_done *= 0.0
         return ret

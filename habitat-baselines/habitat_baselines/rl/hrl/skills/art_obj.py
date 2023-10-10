@@ -21,6 +21,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         result = super().on_enter(
             skill_arg,
@@ -28,6 +29,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             observations,
             rnn_hidden_states,
             prev_actions,
+            skill_name,
         )
         self._did_leave_start_zone = torch.zeros(
             self._batch_size, device=prev_actions.device
@@ -63,6 +65,6 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         is_not_holding = ~is_holding
         return is_not_holding & is_within_thresh & self._did_leave_start_zone
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[1].split("|")[1])

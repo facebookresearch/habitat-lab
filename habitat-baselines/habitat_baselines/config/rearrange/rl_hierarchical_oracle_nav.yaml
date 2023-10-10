@@ -10,6 +10,9 @@ defaults:
   - rl_hierarchical
   - /habitat/task/actions:
     - oracle_nav_action
+  - /habitat/task/lab_sensors:
+    # For the oracle navigation
+    - has_finished_oracle_nav
   - _self_
 
 habitat:
@@ -25,6 +28,7 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
+      - has_finished_oracle_nav
   simulator:
     habitat_sim_v0:
       allow_sliding: True

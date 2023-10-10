@@ -18,7 +18,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
@@ -141,10 +144,12 @@ class PddlRobotState:
             T = robot.base_transformation
             # Do transformation
             pos = T.inverted().transform_point(targ_pos)
-            # Compute distance
-            dist = np.linalg.norm(pos)
             # Project to 2D plane (x,y,z=0)
             pos[2] = 0.0
+
+            # Compute distance
+            dist = np.linalg.norm(pos)
+
             # Unit vector of the pos
             pos = pos.normalized()
             # Define the coordinate of the robot
@@ -193,7 +198,7 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
 
             # Place some distance away from the object.
-            start_pos, start_rot, was_fail = get_robot_spawns(
+            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 target_position=targ_pos,
                 rotation_perturbation_noise=self.get_base_angle_noise(
                     sim_info

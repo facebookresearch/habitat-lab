@@ -16,6 +16,7 @@ import numpy as np
 import torch
 from omegaconf import OmegaConf
 
+import habitat_baselines.rl.multi_agent  # noqa: F401.
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
@@ -353,11 +354,19 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             profiling_wrapper.range_push("compute actions")
+
+            # Obtain lenghts
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
             action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         profiling_wrapper.range_pop()  # compute actions
@@ -481,11 +490,18 @@ class PPOTrainer(BaseRLTrainer):
     def _update_agent(self):
         with inference_mode():
             step_batch = self._agent.rollouts.get_last_step()
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
+
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],
                 step_batch.get("recurrent_hidden_states", None),
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         self._agent.rollouts.compute_returns(
@@ -814,27 +830,42 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {"config": None}
 
+        if "config" not in ckpt_dict:
+            ckpt_dict["config"] = None
+
         config = self._get_resume_state_config_or_new_config(
             ckpt_dict["config"]
         )
-
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
         if len(self.config.habitat_baselines.eval.video_option) > 0:
-            agent_config = get_agent_config(config.habitat.simulator)
-            agent_sensors = agent_config.sim_sensors
-            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
-            with read_write(agent_sensors):
-                agent_sensors.update(extra_sensors)
-            with read_write(config):
-                if config.habitat.gym.obs_keys is not None:
-                    for render_view in extra_sensors.values():
-                        if render_view.uuid not in config.habitat.gym.obs_keys:
-                            config.habitat.gym.obs_keys.append(
+            n_agents = len(config.habitat.simulator.agents)
+            for agent_i in range(n_agents):
+                agent_name = config.habitat.simulator.agents_order[agent_i]
+                agent_config = get_agent_config(
+                    config.habitat.simulator, agent_i
+                )
+
+                agent_sensors = agent_config.sim_sensors
+                extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+                with read_write(agent_sensors):
+                    agent_sensors.update(extra_sensors)
+                with read_write(config):
+                    if config.habitat.gym.obs_keys is not None:
+                        for render_view in extra_sensors.values():
+                            if (
                                 render_view.uuid
-                            )
-                config.habitat.simulator.debug_render = True
+                                not in config.habitat.gym.obs_keys
+                            ):
+                                if n_agents > 1:
+                                    config.habitat.gym.obs_keys.append(
+                                        f"{agent_name}_{render_view.uuid}"
+                                    )
+                                else:
+                                    config.habitat.gym.obs_keys.append(
+                                        render_view.uuid
+                                    )
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
@@ -842,7 +873,10 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         self._agent = self._create_agent(None)
-        if self._agent.actor_critic.should_load_agent_state:
+        if (
+            self._agent.actor_critic.should_load_agent_state
+            and self.config.habitat_baselines.eval.should_load_ckpt
+        ):
             self._agent.load_state_dict(ckpt_dict)
 
         step_id = checkpoint_index

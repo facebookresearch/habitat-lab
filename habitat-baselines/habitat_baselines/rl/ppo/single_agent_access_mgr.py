@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -41,9 +41,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
-        resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done_fn: Callable[[], float],
+        resume_state: Optional[Dict[str, Any]] = None,
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
         agent_name=None,
     ):
@@ -101,9 +101,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                     for k, v, in resume_state["state_dict"].items()
                 }
             )
-        self._policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
+
+    @property
+    def masks_shape(self) -> Tuple:
+        return (1,)
 
     @property
     def nbuffers(self):
@@ -144,9 +145,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         if create_rollouts_fn is None:
             create_rollouts_fn = self._create_storage
 
-        policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
+        policy_action_space = self._actor_critic.policy_action_space
         self._rollouts = create_rollouts_fn(
             num_envs=self._num_envs,
             env_spec=self._env_spec,
@@ -174,9 +173,11 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
         return updater
 
-    @property
-    def policy_action_space(self):
-        return self._policy_action_space
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        if len(list(self._updater.parameters())) > 0:
+            self._updater.init_distributed(
+                find_unused_params=find_unused_params
+            )
 
     def _create_policy(self) -> NetPolicy:
         """

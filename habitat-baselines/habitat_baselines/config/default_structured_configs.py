@@ -255,6 +255,9 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     pddl_action_names: Optional[List[str]] = None
     turn_power_x: float = 0.0
     turn_power_y: float = 0.0
+    # Additional skill data to be passed to the skill. Included so extending to
+    # new skills doesn't require adding new Hydra dataclass configs.
+    skill_data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -360,6 +363,26 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     type: str = "SingleAgentAccessMgr"
+    ###############################
+    # Population play configuration
+    num_agent_types: int = 1
+    num_active_agents_per_type: List[int] = field(default_factory=lambda: [1])
+    num_pool_agents_per_type: List[int] = field(default_factory=lambda: [1])
+    agent_sample_interval: int = 20
+    force_partner_sample_idx: int = -1
+    # A value of -1 means not configured.
+    behavior_latent_dim: int = -1
+    # Configuration option for evaluating BDP. If True, then include all
+    # behavior agent IDs in the batch. If False, then we will randomly sample IDs.
+    force_all_agents: bool = False
+    discrim_reward_weight: float = 1.0
+    allow_self_play: bool = False
+    self_play_batched: bool = False
+    # If specified, this will load the policies for the type 1 population from
+    # the checkpoint file at the start of training. Used to independently train
+    # the type 1 population, and then train a seperate against this population.
+    load_type1_pop_ckpts: Optional[List[str]] = None
+    ###############################
 
 
 @dataclass

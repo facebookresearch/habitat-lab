@@ -288,7 +288,7 @@ class HumanoidJointActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
-    num_joints: int = 17
+    num_joints: int = 54
 
 
 @dataclass
@@ -549,6 +549,29 @@ class NavGoalPointGoalSensorConfig(LabSensorConfig):
 @dataclass
 class GlobalPredicatesSensorConfig(LabSensorConfig):
     type: str = "GlobalPredicatesSensor"
+
+
+@dataclass
+class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
+    type: str = "MultiAgentGlobalPredicatesSensor"
+
+
+@dataclass
+class AreAgentsWithinThresholdConfig(LabSensorConfig):
+    type: str = "AreAgentsWithinThreshold"
+    x_len: Optional[float] = None
+    y_len: Optional[float] = None
+    agent_idx: int = 0
+
+
+@dataclass
+class HasFinishedOracleNavSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class OtherAgentGpsConfig(LabSensorConfig):
+    type: str = "OtherAgentGps"
 
 
 @dataclass
@@ -1046,6 +1069,25 @@ class PddlSubgoalReward(MeasurementConfig):
 
 
 @dataclass
+class DidAgentsCollideConfig(MeasurementConfig):
+    type: str = "DidAgentsCollide"
+
+
+@dataclass
+class NumAgentsCollideConfig(MeasurementConfig):
+    type: str = "NumAgentsCollide"
+
+
+@dataclass
+class RearrangeCooperateRewardConfig(PddlSubgoalReward):
+    type: str = "RearrangeCooperateReward"
+    stage_sparse_reward: float = 1.0
+    end_on_collide: bool = True
+    # Positive penalty means give negative reward.
+    collide_penalty: float = 1.0
+
+
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -1186,6 +1228,10 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
+
+    # The minimum distance between the agents at start. If < 0
+    # there is no minimal distance
+    min_distance_start_agents: float = -1.0
     actions: Dict[str, ActionConfig] = MISSING
 
 
@@ -1703,6 +1749,7 @@ cs.store(
     name="oracle_nav_action",
     node=OracleNavActionConfig,
 )
+
 cs.store(
     package="habitat.task.actions.pddl_apply_action",
     group="habitat/task/actions",
@@ -1939,6 +1986,31 @@ cs.store(
     node=TargetStartGpsCompassSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.multi_agent_all_predicates",
+    group="habitat/task/lab_sensors",
+    name="multi_agent_all_predicates",
+    node=MultiAgentGlobalPredicatesSensorConfig,
+)
+
+cs.store(
+    package="habitat.task.lab_sensors.agents_within_threshold",
+    group="habitat/task/lab_sensors",
+    name="agents_within_threshold",
+    node=AreAgentsWithinThresholdConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_oracle_nav",
+    group="habitat/task/lab_sensors",
+    name="has_finished_oracle_nav",
+    node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.other_agent_gps",
+    group="habitat/task/lab_sensors",
+    name="other_agent_gps",
+    node=OtherAgentGpsConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
     group="habitat/task/lab_sensors",
     name="target_goal_gps_compass_sensor",
@@ -2132,6 +2204,24 @@ cs.store(
     group="habitat/task/measurements",
     name="pddl_subgoal_reward",
     node=PddlSubgoalReward,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_cooperate_reward",
+    group="habitat/task/measurements",
+    name="rearrange_cooperate_reward",
+    node=RearrangeCooperateRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_agents_collide",
+    group="habitat/task/measurements",
+    name="did_agents_collide",
+    node=DidAgentsCollideConfig,
+)
+cs.store(
+    package="habitat.task.measurements.num_agents_collide",
+    group="habitat/task/measurements",
+    name="num_agents_collide",
+    node=NumAgentsCollideConfig,
 )
 cs.store(
     package="habitat.task.measurements.pddl_success",

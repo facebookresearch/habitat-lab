@@ -30,7 +30,7 @@ class PickSkillPolicy(NnSkillPolicy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         return (is_holding * is_within_thresh).type(torch.bool)
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 

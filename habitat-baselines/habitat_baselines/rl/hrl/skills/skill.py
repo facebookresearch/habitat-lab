@@ -174,6 +174,9 @@ class SkillPolicy(Policy):
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
         ).cpu()
+        assert is_skill_done.shape == (
+            len(batch_idx),
+        ), f"Must return tensor of shape (batch_size,) but got tensor of shape {is_skill_done.shape}"
 
         cur_skill_step = self._cur_skill_step[batch_idx]
 
@@ -194,7 +197,7 @@ class SkillPolicy(Policy):
         for i, env_i in enumerate(batch_idx):
             if self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
-                    actions, log_info, skill_name[i], env_i, i
+                    new_actions, log_info, skill_name[i], env_i, i
                 )
         # Also terminate the skill if the HL policy wanted termination.
         is_skill_done |= hl_wants_skill_term
@@ -208,6 +211,7 @@ class SkillPolicy(Policy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name: List[str],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Passes in the data at the current `batch_idx`
@@ -222,7 +226,7 @@ class SkillPolicy(Policy):
                     f"Entering skill {self} with arguments {skill_arg[i]}"
                 )
             self._cur_skill_args[batch_idx] = self._parse_skill_arg(
-                skill_arg[i]
+                skill_name[i], skill_arg[i]
             )
 
         return (
@@ -301,7 +305,7 @@ class SkillPolicy(Policy):
         """
         return torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
-    def _parse_skill_arg(self, skill_arg: str) -> Any:
+    def _parse_skill_arg(self, skill_name: str, skill_arg: str) -> Any:
         """
         Parses the skill argument string identifier and returns parsed skill argument information.
         """
