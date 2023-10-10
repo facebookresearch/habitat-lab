@@ -7,15 +7,18 @@
 # Utilities built on top of Habitat-lab
 
 
-def get_agent_art_obj(sim, agent_idx):
+def get_articulated_agent(sim, agent_idx):
     assert agent_idx is not None
-    art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
-    return art_obj
+    return sim.agents_mgr[agent_idx].articulated_agent
+
+
+def get_agent_art_obj(sim, agent_idx):
+    articulated_agent = get_articulated_agent(sim, agent_idx)
+    return articulated_agent.sim_obj
 
 
 def get_agent_art_obj_transform(sim, agent_idx):
-    assert agent_idx is not None
-    art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
+    art_obj = get_agent_art_obj(sim, agent_idx)
     return art_obj.transformation
 
 
