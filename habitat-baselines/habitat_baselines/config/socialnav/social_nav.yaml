@@ -216,8 +216,8 @@ habitat:
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
-  updater_name: "PPO"
-  distrib_updater_name: "DDPPO"
+  updater_name: "HRLPPO"
+  distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
   eval_ckpt_path_dir: "data/checkpoints"
