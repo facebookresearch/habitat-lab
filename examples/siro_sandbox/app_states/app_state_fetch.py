@@ -17,11 +17,7 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-from hablab_utils import (
-    get_agent_art_obj_transform,
-    get_articulated_agent,
-    get_grasped_objects_idxs,
-)
+from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
@@ -54,7 +50,6 @@ class AppStateFetch(AppState):
         self._cam_transform = None
 
         self._current_episode = None
-        self._init_agent_states = None
         self._held_target_obj_idx = None
         self._held_hand_idx = None  # currently only used with remote_gui_input
         self._recent_reach_pos = None
@@ -100,20 +95,11 @@ class AppStateFetch(AppState):
         return len(self.get_sim().agents_mgr._all_agent_data)
 
     def on_environment_reset(self, episode_recorder_dict):
-        sim = self.get_sim()
-
         # cache the current episode and the initial agent states
         self._current_episode = self._sandbox_service.env.current_episode
-        self._init_agent_states = {}
-        for agent_idx in range(self.get_num_agents()):
-            articulated_agent = get_articulated_agent(sim, agent_idx)
-            self._init_agent_states[agent_idx] = (
-                articulated_agent.base_pos,
-                articulated_agent.base_rot,
-            )
-
         self._held_target_obj_idx = None
 
+        sim = self.get_sim()
         # temp_ids, _ = sim.get_targets()
         # self._target_obj_ids = [
         #     sim._scene_obj_ids[temp_id] for temp_id in temp_ids
@@ -764,25 +750,12 @@ class AppStateFetch(AppState):
             )
 
     def _reset_current_episode(self):
-        # save initial agent states
-        prev_init_agent_states = self._init_agent_states
-        self._init_agent_states = {}
-
         # reset current episode
         # env's current_episode setter will set internal attribute
         # _episode_from_iter_on_reset to False as a result reset
         # will be called without the episode changing
         self._sandbox_service.env.current_episode = self._current_episode
         self._sandbox_service.end_episode(do_reset=True)
-
-        # restore initial agent states
-        sim = self.get_sim()
-        for agent_idx in range(self.get_num_agents()):
-            articulated_agent = get_articulated_agent(sim, agent_idx)
-            prev_pos, prev_rot = prev_init_agent_states[agent_idx]
-            articulated_agent.base_pos = prev_pos
-            articulated_agent.base_rot = float(prev_rot)
-        self._init_agent_states = prev_init_agent_states
 
     def _set_next_episode(self):
         self._sandbox_service.end_episode(do_reset=True)
