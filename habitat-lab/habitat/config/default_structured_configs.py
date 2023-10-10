@@ -283,6 +283,8 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
 
 
 @dataclass
