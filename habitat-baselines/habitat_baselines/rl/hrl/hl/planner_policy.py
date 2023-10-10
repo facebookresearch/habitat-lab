@@ -217,7 +217,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             index_plan = plan_idx
         else:
             # Fix the plan to be the specified `plan_idx`.
-            index_plan = self._plan_idx
+            index_plan = self._plan_idx - 1
 
         possible_plans = [
             # Do nothing
@@ -275,8 +275,8 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
 
         if (~masks).sum() > 0:
             self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
-                low=self.low_plan[self._plan_idx],
-                high=self.high_plan[self._plan_idx] + 1,
+                low=self.low_plan[self._plan_idx - 1],
+                high=self.high_plan[self._plan_idx - 1] + 1,
                 size=[(~masks).int().sum().item()],
                 dtype=torch.int32,
             )

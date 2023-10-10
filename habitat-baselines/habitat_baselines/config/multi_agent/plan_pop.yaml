@@ -1,7 +1,7 @@
 defaults:
-  - plan_pop
+  - pop_play
   # Override the human to use a planner
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
   - _self_
 
 habitat_baselines:
@@ -15,9 +15,9 @@ habitat_baselines:
         hierarchical_policy:
           high_level_policy:
             # To set the `p` value in `Plan-Pop_p` set `plan_idx` to the corresponding value:
-            # Plan-Pop_1 -> 0
-            # Plan-Pop_2 -> 1
-            # Plan-Pop_3 -> 2
-            # Plan-Pop_4 -> 3
+            # Plan-Pop_1 -> 1
+            # Plan-Pop_2 -> 2
+            # Plan-Pop_3 -> 3
+            # Plan-Pop_4 -> 4
             # For more details on planner options see `hl_planner.yaml`
-            plan_idx: 0
+            plan_idx: 1

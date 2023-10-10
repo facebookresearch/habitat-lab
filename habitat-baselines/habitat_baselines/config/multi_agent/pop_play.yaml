@@ -30,11 +30,13 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+
+  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+
   num_environments: 32
   num_updates: -1
   total_num_steps: 1e8

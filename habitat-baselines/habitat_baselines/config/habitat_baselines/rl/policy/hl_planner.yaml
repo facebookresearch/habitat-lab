@@ -11,9 +11,9 @@ hierarchical_policy:
     # Whether the planner should re-run at every step.
     is_reactive: False
     # The index of which plan to take. Options:
-    # 0 for moving 1st object.
-    # 1 for moving 1st object, or 2nd object.
-    # 2 for moving 1st object, or 2nd object, or both objects.
-    # 3 for moving 1st object, or 2nd object, or both objects, or neither object.
+    # 1 for moving 1st object.
+    # 2 for moving 1st object, or 2nd object.
+    # 3 for moving 1st object, or 2nd object, or both objects.
+    # 4 for moving 1st object, or 2nd object, or both objects, or neither object.
     plan_idx: 1
   defined_skills: {}
