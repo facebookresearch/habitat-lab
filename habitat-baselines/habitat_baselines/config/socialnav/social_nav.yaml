@@ -98,7 +98,7 @@ habitat:
     pddl_domain_def: fp
     actions:
       agent_0_base_velocity:
-        agent_index : 0
+        #agent_index : 0
         allow_dyn_slide: True
         # There is a collision if the difference between the clamped NavMesh position and target position
         # is more than than collision_threshold for any point
