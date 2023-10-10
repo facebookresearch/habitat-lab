@@ -91,9 +91,6 @@ class AppStateFetch(AppState):
     def _is_remote_active(self):
         return self._is_remote_active_toggle
 
-    def get_num_agents(self):
-        return len(self.get_sim().agents_mgr._all_agent_data)
-
     def on_environment_reset(self, episode_recorder_dict):
         # cache the current episode and the initial agent states
         self._current_episode = self._sandbox_service.env.current_episode
