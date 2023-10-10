@@ -314,7 +314,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             )
         return (start_pos, np.array(obj_pos))
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         self.skill_done = False
         # TODO better way to handle this
         try:
@@ -406,9 +406,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                     vel = [0, 0]
                     self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
-                return BaseVelAction.step(
-                    self, *args, is_last_action=is_last_action, **kwargs
-                )
+                return BaseVelAction.step(self, *args, **kwargs)
 
             elif self.motion_type == "human_joints":
                 # Update the humanoid base
@@ -438,9 +436,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                     f"{self._action_arg_prefix}human_joints_trans"
                 ] = base_action
 
-                return HumanoidJointAction.step(
-                    self, *args, is_last_action=is_last_action, **kwargs
-                )
+                return HumanoidJointAction.step(self, *args, **kwargs)
             else:
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
@@ -580,21 +576,21 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             )
         return (start_pos, np.array(obj_pos))
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         max_tries = 10
         self.skill_done = False
 
         if self.coord_nav is None:
             self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
                 max_tries,
-                island_index=self._sim._largest_island_idx,
+                island_index=self._sim.largest_island_idx,
             )
 
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
         ] = self.coord_nav
-        kwargs["is_last_action"] = is_last_action
-        ret_val = super().step(*args, is_last_action, **kwargs)
+
+        ret_val = super().step(*args, **kwargs)
         if self.skill_done:
             self.coord_nav = None
 
