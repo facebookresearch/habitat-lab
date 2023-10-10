@@ -14,9 +14,7 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-#NOTE: this creates a new URDF with no accompanying ao_config to avoid skinning
-cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_no_skinning.urdf
-NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_no_skinning.urdf'"
+NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/hab3_bench_assets/humanoids/female_0/female_0_no_skinning.urdf'"
 
 TASK_SPEC="habitat.task.task_spec=rearrange_easy_fp"
 PDDL_DOMAIN_DEF="habitat.task.pddl_domain_def=fp"
