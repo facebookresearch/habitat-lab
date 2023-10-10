@@ -395,6 +395,8 @@ class PPOTrainer(BaseRLTrainer):
                 value_preds=action_data.values,
                 buffer_index=buffer_index,
                 should_inserts=action_data.should_inserts,
+                # TODO: a temp hack here to add the action data back
+                action_data=action_data,
             )
 
     def _collect_environment_result(self, buffer_index: int = 0):
