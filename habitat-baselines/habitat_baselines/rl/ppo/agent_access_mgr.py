@@ -40,6 +40,14 @@ class AgentAccessMgr(ABC):
         """
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def masks_shape(self) -> int:
+        """
+        Shape of the masks tensor.
+        """
+        raise NotImplementedError()
+
     @abstractmethod
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         """
