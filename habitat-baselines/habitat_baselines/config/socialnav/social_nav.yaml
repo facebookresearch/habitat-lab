@@ -258,6 +258,15 @@ habitat_baselines:
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:
+      # Add the action distribution
+      agent_0:
+        name: "PointNavResNetPolicy"
+        action_distribution_type: "gaussian"
+        action_dist:
+          use_log_std: True
+          clamp_std: True
+          std_init: -1.0
+          use_std_param: True
       agent_1:
         hierarchical_policy:
           high_level_policy:
