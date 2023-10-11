@@ -633,7 +633,6 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or lateral_lin_vel != 0.0
             or ang_vel != 0.0
         ):
-            # print("update base:", longitudinal_lin_vel, lateral_lin_vel, ang_vel)
             self.update_base(ang_vel != 0.0)
 
 

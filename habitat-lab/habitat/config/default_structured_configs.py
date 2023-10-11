@@ -373,7 +373,9 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     Check if the human is in frame
     """
     type: str = "HumanoidDetectorSensor"
+    # The default human id is 100
     human_id: int = 100
+    # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
 
 
@@ -1299,9 +1301,6 @@ class TaskConfig(HabitatBaseConfig):
     should_save_to_cache: bool = False
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
-    # TODO: additionak parameters for the social nav
-    sample_near_target_dis: float = -1.0
-    percentage_of_near_loc: float = 0.5
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     # Spawn parameters

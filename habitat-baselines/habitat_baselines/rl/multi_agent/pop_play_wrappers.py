@@ -69,7 +69,6 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "actions": self._unpack(self.actions, self.length_actions),
             "value_preds": self._unpack(self.values),
             "action_log_probs": self._unpack(self.action_log_probs),
-            # TODO: a hack here to split the length actions
             "take_actions": self._unpack(
                 self.take_actions, self.length_actions
             ),

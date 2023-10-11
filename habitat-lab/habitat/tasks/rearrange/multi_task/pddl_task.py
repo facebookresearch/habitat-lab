@@ -62,8 +62,6 @@ class PddlSocialNavTask(PddlTask):
         self.force_recep_to_name = None
         self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
         self._min_start_distance = config.min_start_distance
-        self._sample_near_target_dis = config.sample_near_target_dis
-        self._percentage_of_near_loc = config.percentage_of_near_loc
         # Robot will be the first agent
         # TODO: better way for doing this
         self.agent_id = 0
