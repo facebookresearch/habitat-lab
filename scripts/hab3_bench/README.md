@@ -10,6 +10,16 @@ INSERT CITATION HERE
 First install habitat-sim and habitat-lab with support for Bullet physics as described in the [installation section](https://github.com/facebookresearch/habitat-lab#installation) of Habitat-lab.
 
 - Download the benchmark assets from huggingface:
+Using habitat-sim:
+```
+# with conda install
+python -m habitat_sim.utils.datasets_download --uids hab3_bench_assets
+
+# with source
+python /path/to/habitat_sim/src_python/habitat_sim/utils/datasets_download.py --uids hab3_bench_assets
+```
+
+Or manually:
  ```
  # put the dataset wherever you want
  git clone https://huggingface.co/datasets/ai-habitat/hab3_bench_assets --username <your HF username> --password <your HF password>
@@ -23,4 +33,5 @@ First install habitat-sim and habitat-lab with support for Bullet physics as des
 Alternatively run customized benchmarks with scripts/hab3_bench/hab3_benchmark.py
 
 ### Interpreting the results
-User systems will likely not match exactly the reported benchmark which was conducted under the following conditions: TODO
+User systems will likely not match exactly the reported benchmark which was conducted under.
+TODO: addtional notes on the different settings
