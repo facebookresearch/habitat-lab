@@ -2,7 +2,7 @@
 
 defaults:
   #- /benchmark/rearrange: multi_agent_tidy_house_fp
-  - /benchmark/multi_agent: hssd_spot_human
+  - /benchmark/multi_agent: hssd_spot_human_social_nav
   - /habitat_baselines: habitat_baselines_rl_config_base
 
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
@@ -65,6 +65,8 @@ defaults:
   #- /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
   #- override /habitat/task/rearrange: multi_agent_tidy_house_base
+
+
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
   #- override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent #rgbd_head_rgbdp_arm_agent #rgbd_head_rgbd_arm_agent
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
