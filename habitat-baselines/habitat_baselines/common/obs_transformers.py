@@ -400,7 +400,7 @@ class PerspectiveProjection(CameraProjection):
         z = torch.full_like(x, self.f, dtype=torch.float)
         unproj_pts = torch.stack([x, y, z], dim=-1)
         # Project on unit shpere
-        unproj_pts /= torch.norm(unproj_pts, dim=-1, keepdim=True)
+        unproj_pts /= torch.linalg.norm(unproj_pts, dim=-1, keepdim=True)
         # All points in image are valid
         valid_mask = torch.full(unproj_pts.shape[:2], True, dtype=torch.bool)
 

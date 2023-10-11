@@ -45,7 +45,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         cur_resting_pos = observations[RelativeRestingPositionSensor.cls_uuid]
 
         did_leave_start_zone = (
-            torch.norm(
+            torch.linalg.vector_norm(
                 cur_resting_pos - self._episode_start_resting_pos, dim=-1
             )
             > self._config.start_zone_radius
@@ -54,7 +54,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             self._did_leave_start_zone, did_leave_start_zone
         )
 
-        cur_resting_dist = torch.norm(
+        cur_resting_dist = torch.linalg.vector_norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = cur_resting_dist < self._config.at_resting_threshold

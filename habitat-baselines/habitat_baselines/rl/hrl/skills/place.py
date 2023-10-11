@@ -35,7 +35,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
     ) -> torch.BoolTensor:
         # Is the agent not holding an object and is the end-effector at the
         # resting position?
-        rel_resting_pos = torch.norm(
+        rel_resting_pos = torch.linalg.vector_norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
