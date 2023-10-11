@@ -13,7 +13,7 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic #monolithic_nav
 
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed #hl_fixed_no_virtual_key
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed_social_nav #hl_fixed_no_virtual_key
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent #oracle_skills_ma_humanoid
 
   #- /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
