@@ -316,15 +316,10 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
 
     def step(self, *args, **kwargs):
         self.skill_done = False
-        # TODO better way to handle this
-        try:
-            nav_to_target_coord = kwargs[
-                self._action_arg_prefix + "oracle_nav_coord_action"
-            ]
-        except Exception:
-            nav_to_target_coord = kwargs[
-                self._action_arg_prefix + "oracle_nav_human_action"
-            ]
+        nav_to_target_coord = kwargs.get(
+            self._action_arg_prefix + "oracle_nav_coord_action",
+            self._action_arg_prefix + "oracle_nav_human_action",
+        )
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
@@ -513,8 +508,6 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
 
         vc = SimpleVelocityControlEnv()
 
-        # human_pos = human_pos_list[0]
-
         # Compute the step taken to reach the human
         robot_pos = np.array(base_T.translation)
         robot_pos[1] = human_pos[1]
@@ -564,7 +557,6 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             robot_pos = np.array(base_T.translation)
             step_taken += 1
 
-            # human_pos = human_pos_list[step_taken] if step_taken < len(human_pos_list) else human_pos_list[-1]
             robot_pos[1] = human_pos[1]
         return step_taken
 

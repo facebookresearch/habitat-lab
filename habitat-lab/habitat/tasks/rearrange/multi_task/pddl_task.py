@@ -16,7 +16,6 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import NavToInfo
-from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_task(name="RearrangePddlTask-v0")
@@ -51,7 +50,7 @@ class PddlTask(RearrangeTask):
 @registry.register_task(name="RearrangePddlSocialNavTask-v0")
 class PddlSocialNavTask(PddlTask):
     """
-    All tasks that mimic the compsite task but with navigation target
+    Social nav task based on PddlTask for training low-level policies under multi-agent setting
     """
 
     _nav_to_info: Optional[NavToInfo]
@@ -62,9 +61,6 @@ class PddlSocialNavTask(PddlTask):
         self.force_recep_to_name = None
         self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
         self._min_start_distance = config.min_start_distance
-        # Robot will be the first agent
-        # TODO: better way for doing this
-        self.agent_id = 0
 
     def _generate_snap_to_obj(self) -> int:
         # Snap the target object to the articulated_agent hand.
@@ -125,40 +121,27 @@ class PddlSocialNavTask(PddlTask):
         self._nav_to_info.nav_goal_pos = value
 
     def reset(self, episode: Episode):
-        # Process the nav position
-        self._nav_to_info = self._generate_nav_start_goal(
-            episode, force_idx=self.force_obj_to_idx
-        )
+        # Process the nav target
+        for agent_id in range(self._sim.num_articulated_agents):
+            self._nav_to_info = self._generate_nav_start_goal(
+                episode, force_idx=self.force_obj_to_idx
+            )
 
-        self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.base_pos = (
-            self._nav_to_info.articulated_agent_start_pos
-        )
-        self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.base_rot = (
-            self._nav_to_info.articulated_agent_start_angle
-        )
+            self._sim.get_agent_data(
+                agent_id
+            ).articulated_agent.base_pos = (
+                self._nav_to_info.articulated_agent_start_pos
+            )
+            self._sim.get_agent_data(
+                agent_id
+            ).articulated_agent.base_rot = (
+                self._nav_to_info.articulated_agent_start_angle
+            )
 
-        # Reset as usual
         super().reset(episode)
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )
-
-        # Snap the object
-        if self._nav_to_info.start_hold_obj_idx is not None:
-            if self._sim.get_agent_data(self.agent_id).grasp_mgr.is_grasped:
-                raise ValueError(
-                    f"Attempting to grasp {self._nav_to_info.start_hold_obj_idx} even though object is already grasped"
-                )
-            rearrange_logger.debug(
-                f"Forcing to grasp object {self._nav_to_info.start_hold_obj_idx}"
-            )
-            self._sim.get_agent_data(self.agent_id).grasp_mgr.snap_to_obj(
-                self._nav_to_info.start_hold_obj_idx, force=True
-            )
 
         if self._sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.
