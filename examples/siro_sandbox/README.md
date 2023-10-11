@@ -3,7 +3,7 @@
 ![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
 
 # Overview
-This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
+This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 # Known Issues
 * When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
@@ -63,7 +63,7 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 # Command-line Options
 
 ## App State and use cases
-Use `--app-state rearrange` (default) or any of `fetch`, `socialnav`, `free_camera` states. These correspond to the different use cases for the HITL tool. See corresponding `app_state_<state_name>.py` for moredetails.
+Use `--app-state rearrange` (default) or any of `fetch`, `socialnav`, `free_camera` states. These correspond to the different use cases for the HITL tool. See corresponding `app_state_<state_name>.py` for more details.
 
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
@@ -84,7 +84,7 @@ Add `--gui-controlled-agent-index` followed by the agent's index you want to con
 
 If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents. Update Aug 11: free camera is temporarily unsupported!
 
-Use `--lin-speed` and `--ang-speed` arguments to controll GUI-controlled agent's linear and angular speed respectively. For example, `--lin-speed 10 --ang-speed 10` to set both linear and angular speed to 10.
+Use `--lin-speed` and `--ang-speed` arguments to control GUI-controlled agent's linear and angular speed respectively. For example, `--lin-speed 10 --ang-speed 10` to set both linear and angular speed to 10.
 
 **Note:** Currently, only Spot and Humanoid agents can be policy-controlled (PDDL planner + oracle skills). If you want to test the free camera mode, omit `--gui-controlled-agent-index` argument.
 
