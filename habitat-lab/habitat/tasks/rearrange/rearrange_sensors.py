@@ -1147,8 +1147,11 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         found_human = False
-        # TODO: better way for this
-        panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
+        use_k = f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+        if use_k in observations:
+            panoptic = observations[use_k]
+        else:
+            return np.zeros(1, dtype=np.float32)
 
         if np.sum(panoptic == self._human_id) > self._human_pixel_threshold:
             found_human = True
