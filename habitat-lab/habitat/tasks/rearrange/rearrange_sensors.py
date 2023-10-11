@@ -1117,9 +1117,6 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
                 use_k = "oracle_nav_with_backing_up_action"
 
         if use_k not in self._task.actions:
-            # TODO: train low-level policies in multi-agent setting:
-            # When there is no oracle nav action for the agent
-            # it will always return False
             return np.array(False, dtype=np.float32)[..., None]
         else:
             nav_action = self._task.actions[use_k]
