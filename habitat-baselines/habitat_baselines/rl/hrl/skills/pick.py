@@ -23,14 +23,14 @@ class PickSkillPolicy(NnSkillPolicy):
     ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?
-        rel_resting_pos = torch.norm(
+        rel_resting_pos = torch.linalg.vector_norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         return (is_holding * is_within_thresh).type(torch.bool)
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 

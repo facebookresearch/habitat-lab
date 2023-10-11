@@ -21,6 +21,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         result = super().on_enter(
             skill_arg,
@@ -28,6 +29,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             observations,
             rnn_hidden_states,
             prev_actions,
+            skill_name,
         )
         self._did_leave_start_zone = torch.zeros(
             self._batch_size, device=prev_actions.device
@@ -43,7 +45,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         cur_resting_pos = observations[RelativeRestingPositionSensor.cls_uuid]
 
         did_leave_start_zone = (
-            torch.norm(
+            torch.linalg.vector_norm(
                 cur_resting_pos - self._episode_start_resting_pos, dim=-1
             )
             > self._config.start_zone_radius
@@ -52,7 +54,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             self._did_leave_start_zone, did_leave_start_zone
         )
 
-        cur_resting_dist = torch.norm(
+        cur_resting_dist = torch.linalg.vector_norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
         is_within_thresh = cur_resting_dist < self._config.at_resting_threshold
@@ -63,6 +65,6 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         is_not_holding = ~is_holding
         return is_not_holding & is_within_thresh & self._did_leave_start_zone
 
-    def _parse_skill_arg(self, skill_arg):
+    def _parse_skill_arg(self, skill_name: str, skill_arg):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[1].split("|")[1])

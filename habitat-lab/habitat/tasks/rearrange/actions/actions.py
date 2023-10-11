@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional
+from typing import Optional, cast
 
 import magnum as mn
 import numpy as np
@@ -72,23 +72,27 @@ class ArmAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        arm_controller_cls = eval(self._config.arm_controller)
+        arm_controller_cls = registry.get_task_action(
+            self._config.arm_controller
+        )
         self._sim: RearrangeSim = sim
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
 
         if self._config.grip_controller is not None:
-            grip_controller_cls = eval(self._config.grip_controller)
-            self.grip_ctrlr: Optional[
-                GripSimulatorTaskAction
-            ] = grip_controller_cls(*args, config=config, sim=sim, **kwargs)
+            grip_controller_cls = registry.get_task_action(
+                self._config.grip_controller
+            )
+            self.grip_ctrlr: Optional[GripSimulatorTaskAction] = cast(
+                GripSimulatorTaskAction,
+                grip_controller_cls(*args, config=config, sim=sim, **kwargs),
+            )
+            assert isinstance(self.grip_ctrlr, GripSimulatorTaskAction)
         else:
             self.grip_ctrlr = None
 
-        self.disable_grip = False
-        if "disable_grip" in config:
-            self.disable_grip = config["disable_grip"]
+        self.disable_grip = config.disable_grip
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
@@ -707,10 +711,10 @@ class HumanoidJointAction(ArticulatedAgentAction):
         # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
         return spaces.Dict(
             {
-                "human_joints_trans": spaces.Box(
+                f"{self._action_arg_prefix}human_joints_trans": spaces.Box(
                     shape=(4 * num_joints + num_dim_transform * 2,),
-                    low=-1,
-                    high=1,
+                    low=-np.inf,
+                    high=np.inf,
                     dtype=np.float32,
                 )
             }

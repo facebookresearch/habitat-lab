@@ -68,6 +68,8 @@ def _is_continuous(original_space: gym.Space) -> bool:
         return True
     if isinstance(original_space, EmptySpace):
         return False
+    if isinstance(original_space, spaces.Discrete):
+        return False
     if isinstance(original_space, Mapping):
         return any((_is_continuous(v) for v in original_space.values()))
     raise NotImplementedError(
@@ -104,6 +106,7 @@ def create_action_space(original_space: gym.Space) -> gym.Space:
     assert isinstance(
         original_space, Mapping
     ), f"The action space of the environment needs to be a Mapping, but was {original_space}"
+    first_k = list(original_space.keys())[0]
     if _is_continuous(original_space):
         low: List[float] = []
         high: List[float] = []
@@ -111,6 +114,10 @@ def create_action_space(original_space: gym.Space) -> gym.Space:
         return spaces.Box(
             low=np.array(low), high=np.array(high), dtype=np.float32
         )
+    elif len(original_space) == 1 and isinstance(
+        original_space[first_k], spaces.Discrete
+    ):
+        return spaces.Discrete(original_space[first_k].n)
     else:
         # discrete case. The ActionSpace class gives us the correct action size
         return spaces.Discrete(len(original_space))

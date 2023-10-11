@@ -1,0 +1,72 @@
+# @package habitat_baselines.rl.policy.hierarchical_policy.defined_skills
+# See `oracle_skills.yaml` for details.
+
+open_cab:
+  skill_name: "NoopSkillPolicy"
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["open_cab_by_name"]
+  ignore_grip: True
+
+open_fridge:
+  skill_name: "NoopSkillPolicy"
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["open_fridge_by_name"]
+  ignore_grip: True
+
+close_cab:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  force_end_on_timeout: False
+  pddl_action_names: ["close_cab_by_name"]
+  ignore_grip: True
+
+close_fridge:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  pddl_action_names: ["close_fridge_by_name"]
+  ignore_grip: True
+
+pick:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_start_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  ignore_grip: True
+
+place:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["obj_goal_sensor"]
+  max_skill_steps: 1
+  apply_postconds: True
+  force_end_on_timeout: False
+  ignore_grip: True
+
+wait:
+  skill_name: "WaitSkillPolicy"
+  max_skill_steps: -1
+  ignore_grip: True
+
+nav_to_obj:
+  skill_name: "NoopSkillPolicy"
+  obs_skill_inputs: ["goal_to_agent_gps_compass"]
+  max_skill_steps: 1
+  apply_postconds: False
+  force_end_on_timeout: False
+  obs_skill_input_dim: 2
+  pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
+  ignore_grip: True
+
+reset_arm:
+  skill_name: "NoopSkillPolicy"
+  max_skill_steps: 1
+  ignore_grip: True
+  force_end_on_timeout: False

@@ -97,12 +97,38 @@ class PolicyActionData:
 
 
 class Policy(abc.ABC):
-    def __init__(self):
-        pass
+    def __init__(self, action_space):
+        self._action_space = action_space
 
     @property
     def should_load_agent_state(self):
         return True
+
+    @property
+    def hidden_state_shape(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape is only supported in neural network policies"
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        raise NotImplementedError(
+            "hidden_state_shape_lens is only supported in neural network policies"
+        )
+
+    @property
+    def policy_action_space_shape_lens(self) -> List[int]:
+        return [self._action_space]
+
+    @property
+    def policy_action_space(self) -> spaces.Space:
+        return self._action_space
 
     @property
     def num_recurrent_layers(self) -> int:
@@ -119,10 +145,21 @@ class Policy(abc.ABC):
         you want to do RL with a frozen visual encoder.
         """
 
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
-        return env_action_space
+    def update_hidden_state(
+        self,
+        rnn_hxs: torch.Tensor,
+        prev_actions: torch.Tensor,
+        action_data: PolicyActionData,
+    ) -> None:
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
 
     def _get_policy_components(self) -> List[nn.Module]:
         return []
@@ -219,7 +256,8 @@ class NetPolicy(nn.Module, Policy):
     def __init__(
         self, net, action_space, policy_config=None, aux_loss_config=None
     ):
-        super().__init__()
+        Policy.__init__(self, action_space)
+        nn.Module.__init__(self)
         self.net = net
         self.dim_actions = get_num_actions(action_space)
         self.action_distribution: Union[CategoricalNet, GaussianNet]
@@ -252,6 +290,17 @@ class NetPolicy(nn.Module, Policy):
         self.aux_loss_modules = get_aux_modules(
             aux_loss_config, action_space, self.net
         )
+
+    @property
+    def hidden_state_shape(self):
+        return (
+            self.num_recurrent_layers,
+            self.recurrent_hidden_size,
+        )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self.recurrent_hidden_size]
 
     @property
     def recurrent_hidden_size(self) -> int:

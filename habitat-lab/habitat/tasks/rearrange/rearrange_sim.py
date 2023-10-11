@@ -303,6 +303,8 @@ class RearrangeSim(HabitatSim):
             t_start = time.time()
             super().reconfigure(config, should_close_on_new_scene=False)
             self.add_perf_timing("super_reconfigure", t_start)
+            # The articulated object handles have changed.
+            self._start_art_states = {}
 
         if new_scene:
             self.agents_mgr.on_new_scene()
@@ -404,6 +406,10 @@ class RearrangeSim(HabitatSim):
         filter_func: Optional[Callable[[np.ndarray, float], bool]] = None,
     ) -> Tuple[np.ndarray, float]:
         """
+        :param filter_func: If specified, takes as input the agent base
+            position and angle and returns if the sampling point should be
+            allowed (true for allowed, false for rejected).
+
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
@@ -640,9 +646,10 @@ class RearrangeSim(HabitatSim):
                 ao = ao_mgr.get_object_by_handle(aoi_handle)
                 if self._kinematic_mode:
                     ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                    # remove any existing motors when converting to kinematic AO
-                    for motor_id in ao.existing_joint_motor_ids:
-                        ao.remove_joint_motor(motor_id)
+                    # TODO: figure out if we should uncomment that @aclegg
+                    # # remove any existing motors when converting to kinematic AO
+                    # for motor_id in ao.existing_joint_motor_ids:
+                    #     ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
 
     def _create_recep_info(

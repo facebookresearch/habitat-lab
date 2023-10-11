@@ -174,7 +174,9 @@ class HumanoidRearrangeController:
                 np.arctan2(prev_orientation[0], prev_orientation[2])
                 * deg_per_rads
             )
+
             forward_angle = new_angle - prev_angle
+            forward_angle = (forward_angle + 180) % 360 - 180
             if np.abs(forward_angle) > self.min_angle_turn:
                 actual_angle_move = self.turning_step_amount
                 if abs(forward_angle) < actual_angle_move:

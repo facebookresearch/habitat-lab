@@ -82,6 +82,10 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
+        self._seed = self._sim.habitat_config.seed
+        self._min_distance_start_agents = (
+            self._config.min_distance_start_agents
+        )
         # TODO: this patch supports hab2 benchmark fixed states, but should be refactored w/ state caching for multi-agent
         if (
             hasattr(self._sim.habitat_config.agents, "main_agent")
@@ -180,11 +184,38 @@ class RearrangeTask(NavigationTask):
             agent_idx
         )
         if articulated_agent_start is None:
+            filter_agent_position = None
+            if self._min_distance_start_agents > 0.0:
+                # Force the agents to start a minimum distance apart.
+                prev_pose_agents = [
+                    np.array(
+                        self._sim.get_agent_data(
+                            agent_indx_prev
+                        ).articulated_agent.base_pos
+                    )
+                    for agent_indx_prev in range(agent_idx)
+                ]
+
+                def _filter_agent_position(start_pos, start_rot):
+                    start_pos_2d = start_pos[[0, 2]]
+                    prev_pos_2d = [
+                        prev_pose_agent[[0, 2]]
+                        for prev_pose_agent in prev_pose_agents
+                    ]
+                    distances = np.array(
+                        [
+                            np.linalg.norm(start_pos_2d - prev_pos_2d_i)
+                            for prev_pos_2d_i in prev_pos_2d
+                        ]
+                    )
+                    return np.all(distances > self._min_distance_start_agents)
+
+                filter_agent_position = _filter_agent_position
             (
                 articulated_agent_pos,
                 articulated_agent_rot,
             ) = self._sim.set_articulated_agent_base_to_random_point(
-                agent_idx=agent_idx
+                agent_idx=agent_idx, filter_func=filter_agent_position
             )
             self._cache_articulated_agent_start(
                 (articulated_agent_pos, articulated_agent_rot), agent_idx

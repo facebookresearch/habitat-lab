@@ -43,7 +43,7 @@ class KinematicHumanoid(MobileManipulator):
                 "third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
-                    attached_link_id=-1,
+                    attached_link_id=-2,
                 ),
             },
             arm_mtr_pos_gain=0.3,
@@ -135,7 +135,7 @@ class KinematicHumanoid(MobileManipulator):
 
     @property
     def base_rot(self) -> float:
-        return self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot)
+        return float(self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot))
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
