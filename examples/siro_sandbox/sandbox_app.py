@@ -28,6 +28,9 @@ from episode_helper import EpisodeHelper
 
 # from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
+from utils.gui.gui_application import GuiAppDriver, GuiApplication
+from utils.gui.gui_input import GuiInput
+from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from utils.serialize_utils import (
     NullRecorder,
     StepRecorder,
@@ -45,9 +48,6 @@ from habitat.config.default_structured_configs import (
     HumanoidJointActionConfig,
     ThirdRGBSensorConfig,
 )
-from habitat.gui.gui_application import GuiAppDriver, GuiApplication
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from habitat_baselines.config.default import get_config as get_baselines_config
 
 if TYPE_CHECKING:

@@ -7,9 +7,8 @@
 import magnum as mn
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.text_drawer import TextOnScreenAlignment
+from utils.gui.gui_input import GuiInput
+from utils.gui.text_drawer import TextOnScreenAlignment
 
 
 class AppStateFreeCamera(AppState):
