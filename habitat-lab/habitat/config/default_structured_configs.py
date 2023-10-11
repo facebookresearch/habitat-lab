@@ -913,6 +913,9 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     min_abs_vel_for_yield: float = 1.0
     # The dot product value for considering that the robot is facing human
     robot_face_human_threshold: float = 0.5
+    # Agent ids
+    robot_idx: int = 0
+    human_idx: int = 1
 
 
 @dataclass
@@ -933,6 +936,9 @@ class NavSeekSuccessMeasurementConfig(MeasurementConfig):
     need_to_face_human: bool = False
     use_geo_distance: bool = False
     facing_threshold: float = 0.5
+    # Set the agent ids
+    robot_idx: int = 0
+    human_idx: int = 1
 
 
 @dataclass
@@ -1193,6 +1199,9 @@ class SocialNavReward(MeasurementConfig):
     # If we want to use geo distance to measure the distance
     # between the robot and the human
     use_geo_distance: bool = False
+    # Set the id of the agent
+    robot_idx: int = 0
+    human_idx: int = 1
 
 
 @dataclass

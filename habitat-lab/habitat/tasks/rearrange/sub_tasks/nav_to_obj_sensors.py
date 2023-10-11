@@ -338,6 +338,8 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
         self._use_geo_distance = config.use_geo_distance
         # Record the previous distance to human
         self._prev_dist = -1.0
+        self._robot_idx = config.robot_idx
+        self._human_idx = config.human_idx
 
     def reset_metric(self, *args, **kwargs):
         self.update_metric(
@@ -350,9 +352,10 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
         self._metric = 0.0
 
         # Get the pos
-        # TODO: better way to get the position of two agents
-        human_pos = observations["agent_1_localization_sensor"][:3]
-        robot_pos = observations["agent_0_localization_sensor"][:3]
+        use_k_human = f"agent_{self._human_idx}_localization_sensor"
+        human_pos = observations[use_k_human][:3]
+        use_k_robot = f"agent_{self._robot_idx}_localization_sensor"
+        robot_pos = observations[use_k_robot][:3]
 
         # If we consider using geo distance
         if self._use_geo_distance:
@@ -387,7 +390,6 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
                 vector_human_robot
             )
             # Compute robot forward vector
-            # TODO: check agent_id here it is for robot zero
             base_T = self._sim.get_agent_data(
                 self.agent_id
             ).articulated_agent.base_transformation
@@ -436,6 +438,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         self._enable_shortest_path_computation = (
             self._config.enable_shortest_path_computation
         )
+        self._robot_idx = config.robot_idx
+        self._human_idx = config.human_idx
 
         # For the variable tracking
         self._val_dict = {
@@ -466,7 +470,6 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         return SocialNavStats.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
-        # TODO: check if the robot id is zero or not
         robot_pos = np.array(
             self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos
         )
@@ -515,9 +518,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
     def _check_human_frame(self, obs):
         if not self._check_human_in_frame:
             return True
-
-        # TODO: handle the case that there is no articulated_agent_arm_panoptic
-        panoptic = obs["agent_0_articulated_agent_arm_panoptic"]
+        use_k = f"agent_{self._robot_idx}_articulated_agent_arm_panoptic"
+        panoptic = obs[use_k]
         return (
             np.sum(panoptic == self._human_id) > self._human_detect_threshold
         )
@@ -539,12 +541,15 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Get the agent locations
-        # TODO: better way to get agent id
         robot_pos = np.array(
-            self._sim.get_agent_data(0).articulated_agent.base_pos
+            self._sim.get_agent_data(
+                self._robot_idx
+            ).articulated_agent.base_pos
         )
         human_pos = np.array(
-            self._sim.get_agent_data(1).articulated_agent.base_pos
+            self._sim.get_agent_data(
+                self._human_idx
+            ).articulated_agent.base_pos
         )
 
         # Store the human/robot position info
@@ -608,9 +613,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             self._val_dict["min_start_end_episode_step"] == float("inf")
             and self._enable_shortest_path_computation
         ):
-            # TODO: better way to check if there is an oracle_nav_randcoord_action for agent 1, human
+            use_k_human = (
+                f"agent_{self._human_idx}_oracle_nav_randcoord_action"
+            )
             robot_to_human_min_step = task.actions[
-                "agent_1_oracle_nav_randcoord_action"
+                use_k_human
             ]._compute_robot_to_human_min_step(
                 self._robot_init_trans, human_pos, self.human_pos_list
             )
@@ -721,6 +728,8 @@ class SocialNavSeekSuccess(Measure):
         self._use_geo_distance = config.use_geo_distance
         self._need_to_face_human = config.need_to_face_human
         self._facing_threshold = config.facing_threshold
+        self._robot_idx = config.robot_idx
+        self._human_idx = config.human_idx
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Get the angle distance
@@ -729,9 +738,10 @@ class SocialNavSeekSuccess(Measure):
         ].get_metric()
 
         # Get the positions of the human and the robot
-        # TODO: better way to get the observations
-        human_pos = observations["agent_1_localization_sensor"][:3]
-        robot_pos = observations["agent_0_localization_sensor"][:3]
+        use_k_human = f"agent_{self._human_idx}_localization_sensor"
+        human_pos = observations[use_k_human][:3]
+        use_k_robot = f"agent_{self._robot_idx}_localization_sensor"
+        robot_pos = observations[use_k_robot][:3]
 
         # If we want to use the geo distance
         if self._use_geo_distance:
