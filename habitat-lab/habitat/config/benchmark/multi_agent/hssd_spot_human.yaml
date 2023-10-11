@@ -126,7 +126,7 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
-      - agent_1_should_replan
+      - agent_1_agents_within_threshold
   environment:
     max_episode_steps: 750
   simulator:
