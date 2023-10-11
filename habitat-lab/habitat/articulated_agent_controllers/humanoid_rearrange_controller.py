@@ -113,21 +113,27 @@ class HumanoidRearrangeController:
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
+        self.hand_processed_data = {}
+        self._hand_names = ["left_hand", "right_hand"]
         ## Load hand data
-        if "left_hand" in walk_data:
-            self.hand_data = walk_data["left_hand"]
-            nposes = self.hand_data["pose_motion"]["transform_array"].shape[0]
-            self.vpose_info = self.hand_data["coord_info"].item()
-            self.hand_motion = Motion(
-                self.hand_data["pose_motion"]["joints_array"].reshape(
-                    nposes, -1, 4
-                ),
-                self.hand_data["pose_motion"]["transform_array"],
-                None,
-                1,
-            )
-        else:
-            self.hand_data = None
+        for hand_name in self._hand_names:
+            if hand_name in walk_data:
+                hand_data = walk_data[hand_name]
+                nposes = hand_data["pose_motion"]["transform_array"].shape[0]
+                self.vpose_info = hand_data["coord_info"].item()
+                hand_motion = Motion(
+                    hand_data["pose_motion"]["joints_array"].reshape(
+                        nposes, -1, 4
+                    ),
+                    hand_data["pose_motion"]["transform_array"],
+                    None,
+                    1,
+                )
+                self.hand_processed_data[hand_name] = self.build_ik_vectors(
+                    hand_motion
+                )
+            else:
+                self.hand_processed_data[hand_name] = None
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
         seconds_per_step = 1.0 / ctrl_freq
@@ -372,7 +378,48 @@ class HumanoidRearrangeController:
         xyz = findex * dist_per_bin + self.vpose_info["min"]
         return xyz
 
-    def _trilinear_interpolate_pose(self, position):
+    def build_ik_vectors(self, hand_motion):
+        rotations, translations, joints = [], [], []
+        for ind in range(len(hand_motion.poses)):
+            curr_transform = mn.Matrix4(hand_motion.poses[ind].root_transform)
+
+            quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+            joints.append(
+                np.array(hand_motion.poses[ind].joints).reshape(-1, 4)[
+                    None, ...
+                ]
+            )
+            rotations.append(
+                np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+            )
+            translations.append(
+                np.array(curr_transform.translation)[None, ...]
+            )
+
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
+        obj_transform = add_rot @ self.walk_motion.poses[0].root_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+        curr_transform = obj_transform
+        trans = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+        ).inverted()
+        curr_transform = trans @ obj_transform
+
+        quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+        joints.append(
+            np.array(self.stop_pose.joints).reshape(-1, 4)[None, ...]
+        )
+        rotations.append(
+            np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+        )
+        translations.append(np.array(curr_transform.translation)[None, ...])
+        return (joints, rotations, translations)
+
+    def _trilinear_interpolate_pose(self, position, hand_data):
+        joints, rotations, translations = hand_data
+
         def find_index_quant(minv, maxv, num_bins, value, interp=False):
             # Find the quantization bins where a given value falls
             # E.g. if we have 3 points, min=0, max=1, value=0.75, it
@@ -472,45 +519,6 @@ class HumanoidRearrangeController:
             for interp, data in zip(interp, coord_data)
         ]
 
-        rotations, translations, joints = [], [], []
-        for ind in range(len(self.hand_motion.poses)):
-            curr_transform = mn.Matrix4(
-                self.hand_motion.poses[ind].root_transform
-            )
-
-            quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
-            joints.append(
-                np.array(self.hand_motion.poses[ind].joints).reshape(-1, 4)[
-                    None, ...
-                ]
-            )
-            rotations.append(
-                np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
-            )
-            translations.append(
-                np.array(curr_transform.translation)[None, ...]
-            )
-
-        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
-
-        obj_transform = add_rot @ self.walk_motion.poses[0].root_transform
-        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-        curr_transform = obj_transform
-        trans = (
-            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
-            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
-        ).inverted()
-        curr_transform = trans @ obj_transform
-
-        quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
-        joints.append(
-            np.array(self.stop_pose.joints).reshape(-1, 4)[None, ...]
-        )
-        rotations.append(
-            np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
-        )
-        translations.append(np.array(curr_transform.translation)[None, ...])
-
         data_trans = np.concatenate(translations)
         data_rot = np.concatenate(rotations)
         data_joint = np.concatenate(joints)
@@ -524,34 +532,8 @@ class HumanoidRearrangeController:
         )
         return joint_list, transform
 
-    def calculate_reach_pose_2(self, ind):
-        coords = self.comp_values(ind)
-        curr_poses = self.hand_motion.poses[ind].joints
-        curr_transform = self.hand_motion.poses[ind].root_transform
-
-        self.obj_transform_offset = (
-            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
-            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
-            @ curr_transform
-        )
-
-        self.joint_pose = curr_poses
-        transform_obj = self.obj_transform_base
-
-        inv_T = (
-            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
-            @ mn.Matrix4.rotation_x(mn.Rad(-np.pi / 2.0))
-            @ self.obj_transform_base.inverted()
-        )
-
-        T = inv_T.inverted()
-
-        final_vec = T.transform_vector(mn.Vector3(coords))
-        final_coords = transform_obj.translation + final_vec
-        # print(curr_transform.translation)
-        return np.array(final_coords)
-
-    def calculate_reach_pose(self, obj_pos: mn.Vector3):
+    def calculate_reach_pose(self, obj_pos: mn.Vector3, index_hand=0):
+        hand_data = self.hand_processed_data[self._hand_names[index_hand]]
         root_pos = self.obj_transform_base.translation
         inv_T = (
             mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
@@ -561,7 +543,7 @@ class HumanoidRearrangeController:
         relative_pos = inv_T.transform_vector(obj_pos - root_pos)
 
         curr_poses, curr_transform = self._trilinear_interpolate_pose(
-            mn.Vector3(relative_pos)
+            mn.Vector3(relative_pos), hand_data
         )
 
         self.obj_transform_offset = (

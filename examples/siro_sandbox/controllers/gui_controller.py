@@ -291,6 +291,7 @@ class GuiHumanoidController(GuiController):
         cam_yaw=None,
         throw_vel=None,
         reach_pos=None,
+        hand_idx=None,
         target_dir=None,
     ):
         assert (
@@ -304,6 +305,7 @@ class GuiHumanoidController(GuiController):
         self._hint_throw_vel = throw_vel
         self._hint_reach_pos = reach_pos
         self._hint_target_dir = target_dir
+        self._hand_idx = hand_idx
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -510,7 +512,10 @@ class GuiHumanoidController(GuiController):
 
         if self._is_picking:
             reach_pos = self.update_pick_pose()
-            self._humanoid_controller.calculate_reach_pose(reach_pos)
+            hand_index = 0 if self._hand_idx is None else self._hand_idx
+            self._humanoid_controller.calculate_reach_pose(
+                reach_pos, index_hand=hand_index
+            )
 
         # elif not self._hint_walk_dir or np.linalg.norm(humancontroller_base_user_input) == 0:
         #     self._humanoid_controller.obj_transform_offset = mn.Matrix4()
