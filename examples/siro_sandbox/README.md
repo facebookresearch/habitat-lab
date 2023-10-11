@@ -6,12 +6,7 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 # Known Issues
-* The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See Snapshots section below for best results.
-* The skinned humanoid doesn't render correctly. If you prefer, you can hide it with `--hide-humanoid-in-gui`.
 * When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
-
-# Snapshots with examples of running the tool
-See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
 
 # Example commands
 ### GUI-controlled humanoid and learned-policy-controlled Spot
@@ -23,74 +18,40 @@ python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
+--app-state rearrange \
+--cfg multi_agent/pop_play.yaml \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
-~habitat.task.measurements.agent_blame_measure
+habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
+habitat.simulator.habitat_sim_v0.allow_sliding=False
 ```
 
-<!--
-July 18th: the commands below are commented-out because they are broken.
-
-* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
+* To launch GUI-controlled humanoid and trained-policy-controlled Spot, in HSSD run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-~habitat.task.measurements.agent_blame_measure
-```
-
-* To launch random-policy-controlled humanoid and Spot in [free camera mode](#gui-controlled-agents-and-free-camera-mode), run:
-```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-~habitat.task.measurements.agent_blame_measure
-```
-
-To use **trained**-policy-controlled agent(s) instead of random-policy-controlled:
-1. Download the pre-trained [checkpoint](https://drive.google.com/file/d/1swH5ZUgxe3xQn_k0s5OD7Ow6-mwCN_ic/view?usp=share_link) (150 updates).
-2.  Run two above commands with the following `--cfg-opts`:
-```
+--app-state rearrange \
+--cfg multi_agent/pop_play.yaml \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=True \
-habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
+habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
+habitat_baselines.eval_ckpt_path_dir='data/siro_checkpoints/human-spot-GTCoord-no-config.pth' \
+habitat.simulator.habitat_sim_v0.allow_sliding=False
 ```
--->
-
+Link to the checkpoint: [human-spot-GTCoord-no-config.pth](https://drive.google.com/file/d/16WAXyut6qfy2xN_TnAvgDEO1xdb59mvc/view?usp=drive_link).
 
 # Controls
+
 * See on-screen help text for common keyboard and mouse controls
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
-
-# Workaround to use a rigid-skeleton humanoid
-Following the default install instructions, a broken skinned humanoid is rendered. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning. `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
-
-Alternately, here's an older, outdated workaround where we revert to a rigid-skeleton humanoid. This workaround is worse than `--hide-humanoid-in-gui` because the rigid skeleton is also rendered into observations fed to policies, which is wrong, but we leave these steps here for reference:
-1. Make a copy (or symlink) of `female2_0.urdf`.
-    * `cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_rigid.urdf`
-2. Update or override your config. Your humanoid is probably either `main_agent` or `agent_1`.
-    * `habitat.simulator.agents.main_agent.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf`
-    * or `habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'`
-3. Run the sandbox app and you should now see a rigid-skeleton humanoid that animates properly.
 
 # Workaround for poor runtime perf on slower machines
 
@@ -102,7 +63,7 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 # Command-line Options
 
 ## App State and use cases
-Use `--app-state rearrange` (default) or `--app-state fetch`. These correspond to the different use cases for the HITL tool. See also `app_state_rearrange.py` and `app_state_fetch.py`.
+Use `--app-state rearrange` (default) or any of `fetch`, `socialnav`, `free_camera` states. These correspond to the different use cases for the HITL tool. See corresponding `app_state_<state_name>.py` for moredetails.
 
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
