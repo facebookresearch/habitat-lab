@@ -82,12 +82,15 @@ def requires_habitat_sim_with_bullet(callable_):
 
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
-    def __init__(self, args, config, gui_input, line_render, text_drawer):
+    def __init__(
+        self, args, config, gui_input, line_render, text_drawer, video_recorder
+    ):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
         self._args = args
         self._gui_input = gui_input
+        self._video_recorder = video_recorder
 
         line_render.set_line_width(3)
 
@@ -129,6 +132,8 @@ class SandboxDriver(GuiAppDriver):
 
         self._save_gfx_replay_keyframes: bool = args.save_gfx_replay_keyframes
         self._recording_keyframes: List[str] = []
+
+        self._enable_video_recording: bool = args.enable_video_recording
 
         self.ctrl_helper = ControllerHelper(
             self.gym_habitat_env, config, args, gui_input, self._step_recorder
@@ -446,6 +451,19 @@ class SandboxDriver(GuiAppDriver):
         ):
             self._save_recorded_keyframes_to_file()
 
+        # Start video recording
+        if self._gui_input.get_key_down(GuiInput.KeyNS.MINUS):
+            self._video_recorder.start_video_recording()
+
+        # Manually save recorded gfx-replay keyframes and/or video
+        if self._gui_input.get_key_down(GuiInput.KeyNS.EQUAL):
+            # Save the gfx-replay file
+            if self._save_gfx_replay_keyframes:
+                self._save_recorded_keyframes_to_file()
+            # Save the video
+            if self._enable_video_recording:
+                self._video_recorder.save_video()
+
         if self._args.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
             # hides all render instances with a filepath starting with
@@ -654,6 +672,12 @@ if __name__ == "__main__":
         help="Save recorded episode data to file. Use --save-filepath-base to specify the filepath base.",
     )
     parser.add_argument(
+        "--enable-video-recording",
+        action="store_true",
+        default=False,
+        help="Enable video recording. Press '-' to start recording, and '=' to save the video and close the app. Use --save-filepath-base to specify the filepath base.",
+    )
+    parser.add_argument(
         "--save-filepath-base",
         default=None,
         type=str,
@@ -729,6 +753,7 @@ if __name__ == "__main__":
         framebuffer_size,
         viewport_rect,
         args.use_batch_renderer,
+        video_output_path=args.save_filepath_base,
     )
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
@@ -877,6 +902,7 @@ if __name__ == "__main__":
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
+        app_renderer._video_recorder,
     )
 
     # sanity check if there are no agents with camera sensors
