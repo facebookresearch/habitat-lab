@@ -11,8 +11,8 @@ This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g.
 # Example commands
 ### GUI-controlled humanoid and learned-policy-controlled Spot
 
-* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, in HSSD run:
-```
+To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD, run:
+```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
@@ -29,7 +29,7 @@ habitat.simulator.habitat_sim_v0.allow_sliding=False
 ```
 
 * To launch GUI-controlled humanoid and trained-policy-controlled Spot, in HSSD run:
-```
+```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
@@ -45,7 +45,7 @@ habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
 habitat_baselines.eval_ckpt_path_dir='data/siro_checkpoints/human-spot-GTCoord-no-config.pth' \
 habitat.simulator.habitat_sim_v0.allow_sliding=False
 ```
-Link to the checkpoint: [human-spot-GTCoord-no-config.pth](https://drive.google.com/file/d/16WAXyut6qfy2xN_TnAvgDEO1xdb59mvc/view?usp=drive_link).
+Download [human-spot-GTCoord-no-config.pth](https://drive.google.com/file/d/16WAXyut6qfy2xN_TnAvgDEO1xdb59mvc/view?usp=drive_link) checkpoint and place it under data/siro_checkpoints/human-spot-GTCoord-no-config.pth.
 
 # Controls
 
@@ -63,7 +63,7 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 # Command-line Options
 
 ## App State and use cases
-Use `--app-state rearrange` (default) or any of `fetch`, `socialnav`, `free_camera` states. These correspond to the different use cases for the HITL tool. See corresponding `app_state_<state_name>.py` for more details.
+Use `--app-state rearrange` to run rearrange task in the sandbox app. Supported app states: `rearrange` (default), `fetch`, `socialnav`, `free_camera`. These correspond to the different use cases for the HITL tool (see corresponding implementations in `app_states/app_state_<state name>.py` files). Note, `free_camera` is special: it's not a "task" state, it's a state that lets the user control the camera instead of controlling an agent (useful for debugging and policies' behaviour visualisation). Also, `tutorial` is a special state that shows a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. Tutorial should be followed by the task app state (`rearrange`, `fetch` or `socialnav`) and is currently supported only for the rearrange task.
 
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
