@@ -55,10 +55,6 @@ habitat:
   task:
     type: RearrangePddlSocialNavTask-v0
     lab_sensors:
-      agent_1_should_replan:
-        x_len: 2.0
-        y_len: 1.5
-        agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
         goal_is_human: True
     min_start_distance: 4.0
@@ -96,7 +92,7 @@ habitat:
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
-      cooperate_subgoal_reward:
+      rearrange_cooperate_reward:
         end_on_collide: True
 
   environment:
@@ -118,7 +114,6 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
-      - agent_1_should_replan
   simulator:
     concur_render: True
     auto_sleep: True

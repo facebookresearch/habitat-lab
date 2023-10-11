@@ -1161,16 +1161,6 @@ class RearrangeCooperateRewardConfig(PddlSubgoalReward):
 
 
 @dataclass
-class DidAgentsCollideConfig(MeasurementConfig):
-    type: str = "DidAgentsCollide"
-
-
-@dataclass
-class NumAgentsCollideConfig(MeasurementConfig):
-    type: str = "NumAgentsCollide"
-
-
-@dataclass
 class CooperateSubgoalRewardConfig(PddlSubgoalReward):
     type: str = "CooperateSubgoalReward"
     stage_sparse_reward: float = 1.0
@@ -1865,13 +1855,6 @@ cs.store(
     group="habitat/task/actions",
     name="oracle_nav_action",
     node=OracleNavActionConfig,
-)
-
-cs.store(
-    package="habitat.task.actions.oracle_nav_with_backing_up_action",
-    group="habitat/task/actions",
-    name="oracle_nav_with_backing_up_action",
-    node=OracleNavWithBackingUpActionConfig,
 )
 cs.store(
     package="habitat.task.actions.pddl_apply_action",

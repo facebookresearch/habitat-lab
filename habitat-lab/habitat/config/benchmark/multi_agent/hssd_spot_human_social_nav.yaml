@@ -25,7 +25,7 @@ defaults:
     - num_agents_collide
     - composite_stage_goals
     - pddl_subgoal_reward
-    - cooperate_subgoal_reward
+    - rearrange_cooperate_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -37,19 +37,19 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - other_agent_gps
-  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
   - _self_
 
 habitat:
   task:
     lab_sensors:
 
-      agent_1_should_replan:
+      agent_1_agents_within_threshold:
         x_len: 2.0
         y_len: 1.5
         agent_idx: 1
     type: RearrangePddlTask-v0
-    reward_measure: cooperate_subgoal_reward
+    reward_measure: rearrange_cooperate_reward
     success_reward: 10.0
     min_distance_start_agents: 5.0
     slack_reward: -0.0005
@@ -57,7 +57,7 @@ habitat:
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
     measurements:
-      cooperate_subgoal_reward:
+      rearrange_cooperate_reward:
         stage_sparse_reward: 5.0
         end_on_collide: True
         collide_penalty: 0.5
@@ -102,7 +102,7 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
-      - agent_1_should_replan
+      - agent_1_agents_within_threshold
   environment:
     max_episode_steps: 750
   simulator:
