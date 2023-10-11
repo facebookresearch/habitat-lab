@@ -37,17 +37,14 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - other_agent_gps
-  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
+  #- /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
   - _self_
 
 habitat:
   task:
     lab_sensors:
-      agent_0_should_replan:
-        x_len: 2.0
-        y_len: 1.5
-        agent_idx: 0
+
       agent_1_should_replan:
         x_len: 2.0
         y_len: 1.5
@@ -104,7 +101,7 @@ habitat:
       - agent_0_localization_sensor
       - agent_0_has_finished_oracle_nav
       - agent_0_other_agent_gps
-      - agent_0_should_replan
+      #- agent_0_should_replan
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
