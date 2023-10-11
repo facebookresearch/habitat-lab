@@ -68,7 +68,6 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
-        # print("rho:", rho)
         return np.array([rho, -phi], dtype=np.float32)
 
 
