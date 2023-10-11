@@ -35,6 +35,8 @@ RADIUS_FETCHER_NAV_PATH = 0.45
 
 RING_PULSE_SIZE = 0.05
 
+
+MIN_STEPS_STOP = 15
 disable_spot = False
 
 
@@ -86,6 +88,7 @@ class AppStateFetch(AppState):
         self._is_remote_active_toggle = (
             self._sandbox_service.args.remote_gui_mode
         )
+        self.count_tsteps_stop = 0
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -106,6 +109,7 @@ class AppStateFetch(AppState):
         )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self.count_tsteps_stop = 0
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -119,7 +123,7 @@ class AppStateFetch(AppState):
 
     def _try_grasp_remote(self):
         assert not self._held_target_obj_idx
-
+        self._recent_reach_pos = None
         # todo: rename remote_gui_input
         remote_gui_input = self._sandbox_service.remote_gui_input
 
@@ -140,6 +144,7 @@ class AppStateFetch(AppState):
 
         found_obj_idx = None
         found_hand_idx = None
+        self._recent_reach_pos = None
 
         for i in range(len(self._target_obj_ids)):
             # object is already grasped by Spot
@@ -162,7 +167,7 @@ class AppStateFetch(AppState):
                     )
 
                     for key in self.get_grasp_keys_by_hand(hand_idx):
-                        if remote_button_input.get_key_down(key):
+                        if remote_button_input.get_key(key):
                             found_obj_idx = i
                             found_hand_idx = hand_idx
                             break
@@ -171,6 +176,12 @@ class AppStateFetch(AppState):
                 break
 
         if found_obj_idx is None:
+            # Track one of the hands
+            for hand_idx in range(num_hands):
+                hand_pos = hand_positions[hand_idx]
+                for key in self.get_grasp_keys_by_hand(hand_idx):
+                    if remote_button_input.get_key(key):
+                        self._recent_reach_pos = hand_pos
             return
 
         self._held_target_obj_idx = found_obj_idx
@@ -247,21 +258,29 @@ class AppStateFetch(AppState):
         if self._held_target_obj_idx is None:
             self._try_grasp_remote()
         else:
+            self._recent_reach_pos = None
             self._update_held_and_try_throw_remote()
 
         (
             walk_dir,
             distance_multiplier,
+            forward_dir,
         ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
             visualize_path=False
         )
 
-        # If the humanoid is near enough to the VR user that it doesn't need to walk
-        # (distance_multiplier == 0.0), then try to reach to held object.
+        # Count number of steps since we stopped, this is to reduce jitter
+        # with IK
+        if distance_multiplier == 0:
+            self.count_tsteps_stop += 1
+        else:
+            self.count_tsteps_stop = 0
+
         reach_pos = None
         if (
             self._held_target_obj_idx is not None
             and distance_multiplier == 0.0
+            and self.count_tsteps_stop > MIN_STEPS_STOP
         ):
             # vr_root_pos, _ = self._sandbox_service.remote_gui_input.get_head_pose()
             # humanoid_pos = self._get_gui_agent_translation()
@@ -272,6 +291,9 @@ class AppStateFetch(AppState):
             reach_pos = self._get_target_object_position(
                 self._held_target_obj_idx
             )
+        elif self._recent_reach_pos:
+            # Track the state of the hand when trying to reach an object
+            reach_pos = self._recent_reach_pos
 
         grasp_object_id = None
         drop_pos = None
@@ -286,6 +308,7 @@ class AppStateFetch(AppState):
             self._camera_helper.lookat_offset_yaw,
             throw_vel=throw_vel,
             reach_pos=reach_pos,
+            target_dir=forward_dir,
         )
 
     def _update_grasping_and_set_act_hints(self):

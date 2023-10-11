@@ -162,13 +162,18 @@ class HumanoidRearrangeController:
         self.calculate_walk_pose(target_position, distance_multiplier=0)
 
     def calculate_walk_pose(
-        self, target_position: mn.Vector3, distance_multiplier=1.0
+        self,
+        target_position: mn.Vector3,
+        distance_multiplier=1.0,
+        target_dir=None,
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
+        :param target_dir: the position we should be looking at. If this is None, rotates the agent to face target_position
+        otherwise, it moves the agent towards target_position but facing target_dir. This is important for moving backwards.
         """
         deg_per_rads = 180.0 / np.pi
 
@@ -179,10 +184,33 @@ class HumanoidRearrangeController:
         distance_to_walk = float(np.linalg.norm(forward_V))
         did_rotate = False
 
+        forward_V_orientation = forward_V
         # The angle we initially want to go to
-        new_angle = np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+        if target_dir is not None:
+            new_angle = np.arctan2(target_dir[2], target_dir[0]) * deg_per_rads
+            new_angle = (new_angle + 180) % 360 - 180
+            if self.prev_orientation is not None:
+                prev_angle = (
+                    np.arctan2(
+                        self.prev_orientation[2], self.prev_orientation[0]
+                    )
+                    * deg_per_rads
+                )
+            else:
+                prev_angle = None
+
+            new_angle_walk = (
+                np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            )
+
+        else:
+            new_angle = np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            new_angle_walk = (
+                np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            )
+
         if self.prev_orientation is not None:
-            # If prev orrientation is None, transition to this position directly
+            # If prev orrientation is None, transition to this wposition directly
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[2], prev_orientation[0])
@@ -195,7 +223,10 @@ class HumanoidRearrangeController:
                 forward_angle = 360 + forward_angle
 
             if np.abs(forward_angle) > self.min_angle_turn:
-                actual_angle_move = self.turning_step_amount
+                if target_dir is None:
+                    actual_angle_move = self.turning_step_amount
+                else:
+                    actual_angle_move = self.turning_step_amount * 20
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
                 new_angle = prev_angle + actual_angle_move * np.sign(
@@ -203,13 +234,20 @@ class HumanoidRearrangeController:
                 )
                 new_angle /= deg_per_rads
                 did_rotate = True
+                new_angle_walk = new_angle
             else:
                 new_angle = new_angle / deg_per_rads
-            forward_V = mn.Vector3(np.cos(new_angle), 0, np.sin(new_angle))
+                new_angle_walk = new_angle_walk / deg_per_rads
+            forward_V = mn.Vector3(
+                np.cos(new_angle_walk), 0, np.sin(new_angle_walk)
+            )
+            forward_V_orientation = mn.Vector3(
+                np.cos(new_angle), 0, np.sin(new_angle)
+            )
 
         forward_V = mn.Vector3(forward_V)
         forward_V = forward_V.normalized()
-        self.prev_orientation = forward_V
+        self.prev_orientation = forward_V_orientation
 
         # Step size according to the FPS
         step_size = int(self.walk_motion.fps / self.draw_fps)
@@ -264,8 +302,17 @@ class HumanoidRearrangeController:
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
+
+        # forward_V_norm = mn.Vector3(
+        #     [forward_V[2], forward_V[1], -forward_V[0]]
+        # )
+
         forward_V_norm = mn.Vector3(
-            [forward_V[2], forward_V[1], -forward_V[0]]
+            [
+                forward_V_orientation[2],
+                forward_V_orientation[1],
+                -forward_V_orientation[0],
+            ]
         )
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform_base.translation,
@@ -501,7 +548,7 @@ class HumanoidRearrangeController:
 
         final_vec = T.transform_vector(mn.Vector3(coords))
         final_coords = transform_obj.translation + final_vec
-        print(curr_transform.translation)
+        # print(curr_transform.translation)
         return np.array(final_coords)
 
     def calculate_reach_pose(self, obj_pos: mn.Vector3):
