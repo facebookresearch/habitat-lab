@@ -78,7 +78,7 @@ hydra:
 
 habitat:
   task:
-    type: RearrangePddlTask-v0 #RearrangeCompositeTaskNavGoal-v0
+    type: RearrangePddlSocialNavTask-v0 #RearrangePddlTask-v0 #RearrangeCompositeTaskNavGoal-v0
     lab_sensors:
       agent_1_should_replan:
         x_len: 2.0

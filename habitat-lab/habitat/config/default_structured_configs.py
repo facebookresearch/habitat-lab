@@ -1299,6 +1299,9 @@ class TaskConfig(HabitatBaseConfig):
     should_save_to_cache: bool = False
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
+    # TODO: additionak parameters for the social nav
+    sample_near_target_dis: float = -1.0
+    percentage_of_near_loc: float = 0.5
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     # Spawn parameters

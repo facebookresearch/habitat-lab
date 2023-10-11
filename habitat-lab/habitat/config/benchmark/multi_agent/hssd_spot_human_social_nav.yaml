@@ -20,7 +20,6 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
 
   - /habitat/task/measurements:
-    - pddl_success
     - num_steps
     - did_agents_collide
     - num_agents_collide
@@ -55,7 +54,6 @@ habitat:
         agent_idx: 1
     type: RearrangePddlTask-v0
     reward_measure: cooperate_subgoal_reward
-    success_measure: pddl_success
     success_reward: 10.0
     min_distance_start_agents: 5.0
     slack_reward: -0.0005
@@ -63,8 +61,6 @@ habitat:
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
     measurements:
-      pddl_success:
-        must_call_stop: False
       cooperate_subgoal_reward:
         stage_sparse_reward: 5.0
         end_on_collide: True
