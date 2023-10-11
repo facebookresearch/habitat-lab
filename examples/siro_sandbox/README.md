@@ -136,7 +136,7 @@ Use `--can-grasp-place-threshold` argument to set/change grasp/place area radius
 ## Disable episode end on collision
 In the multi agent tidy house task, episode is considered over when humanoid and robot agents collide. Sandbox app will crash in this case as the actions can't be executed if env episode is over. In this case, you may want too disable episode end on collision. It can be done by appending the following line to your `--cfg-opts`:
 ```
-habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
+habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
 ```
 
 ## Play episodes filter
