@@ -1104,17 +1104,8 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         if self.agent_id is not None:
             use_k = f"agent_{self.agent_id}_oracle_nav_action"
-            if (
-                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                in self._task.actions
-            ):
-                use_k = (
-                    f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                )
         else:
             use_k = "oracle_nav_action"
-            if "oracle_nav_with_backing_up_action" in self._task.actions:
-                use_k = "oracle_nav_with_backing_up_action"
 
         if use_k not in self._task.actions:
             return np.array(False, dtype=np.float32)[..., None]
