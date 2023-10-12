@@ -19,10 +19,16 @@ from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class HumanoidPickPolicy(NnSkillPolicy):
+    """
+    Skill to generate a humanoid picking motion. Moves the arm next to an object,
+    snaps the hand to the object and retracts.
+    """
+
     @dataclass
     class HumanoidPickActionArgs:
         """
         :property action_idx: The index of the oracle action we want to execute
+        :property grab_release: Whether we want to grab (1) or drop an object (0)
         """
 
         action_idx: int
@@ -50,9 +56,7 @@ class HumanoidPickPolicy(NnSkillPolicy):
         )
 
         action_name = "humanoid_pick_action"
-        self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, action_name
-        )
+        self._pick_ac_idx, _ = find_action_range(action_space, action_name)
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -116,13 +120,18 @@ class HumanoidPickPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-        finish_oracle_nav = observations[
+        finish_pick_action = observations[
             HasFinishedHumanoidPickSensor.cls_uuid
         ].cpu()
-        ret = finish_oracle_nav.to(torch.bool)[:, 0]
+        ret = finish_pick_action.to(torch.bool)[:, 0]
         return ret
 
     def _parse_skill_arg(self, skill_arg):
+        """
+        Parses the object or container we should be picking or placing to.
+        Uses the same parameters as oracle_nav.
+        :param skill_arg: a pddl predicate specifying which object the pick action should target
+        """
         if len(skill_arg) == 2:
             search_target, _ = skill_arg
         elif len(skill_arg) == 3:
@@ -164,7 +173,7 @@ class HumanoidPickPolicy(NnSkillPolicy):
             [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
         )
 
-        full_action[:, self._oracle_nav_ac_idx] = action_idxs
+        full_action[:, self._pick_ac_idx] = action_idxs
 
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
