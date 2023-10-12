@@ -24,6 +24,9 @@ class HumanoidPickPolicy(NnSkillPolicy):
     snaps the hand to the object and retracts.
     """
 
+    GRAB_ID = 1
+    RELEASE_ID = 0
+
     @dataclass
     class HumanoidPickActionArgs:
         """
@@ -148,7 +151,7 @@ class HumanoidPickPolicy(NnSkillPolicy):
             )
         match_i = self._all_entities.index(target)
 
-        return HumanoidPickPolicy.HumanoidPickActionArgs(match_i, 1)
+        return HumanoidPickPolicy.HumanoidPickActionArgs(match_i, self.GRAB_ID)
 
     @property
     def required_obs_keys(self):
@@ -198,4 +201,6 @@ class HumanoidPlacePolicy(HumanoidPickPolicy):
             )
         match_i = self._all_entities.index(target)
 
-        return HumanoidPickPolicy.HumanoidPickActionArgs(match_i, 0)
+        return HumanoidPickPolicy.HumanoidPickActionArgs(
+            match_i, self.RELEASE_ID
+        )
