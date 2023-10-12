@@ -7,6 +7,7 @@
 from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
+import torch
 
 from .baselines_controller import (
     MultiAgentBaselinesController,
@@ -154,6 +155,11 @@ class ControllerHelper:
                 action
                 for _, action in sorted(zip(controlled_agent_idxs, actions))
             ]
+
+            for i in range(len(actions)):
+                if isinstance(actions[i], torch.Tensor):
+                    actions[i] = actions[i].cpu()
+
             action = np.concatenate(actions, dtype=np.float32)
         else:
             raise ValueError(

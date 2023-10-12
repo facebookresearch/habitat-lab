@@ -13,7 +13,7 @@ import torch
 
 import habitat_sim
 from habitat.core.spaces import ActionSpace
-from habitat.datasets.rearrange import navmesh_utils
+from habitat.datasets.rearrange import navmesh_utils  # type: ignore
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat.tasks.utils import cartesian_to_polar
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -106,7 +106,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             dtype=torch.long if self._discrete_actions else torch.float,
         )
         rnn_hidden_states = torch.zeros(
-            self._num_envs, *self._agent.hidden_state_shape
+            self._num_envs, *self._agent.hidden_state_shape, device=self.device
         )
 
         policy_info = {
@@ -306,6 +306,14 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         rho, phi = self.get_cartesian_obj_coords(obj_trans)
         pos_sensor = np.array([rho, -phi])[None, ...]
         policy_input["observations"]["obj_start_gps_compass"] = pos_sensor
+
+        # sloppy; workaround for pytorch device complaint in skill.py
+        if "cur_batch_idx" in policy_input:
+            policy_input["cur_batch_idx"] = policy_input["cur_batch_idx"].cpu()
+        obs_dict = policy_input["observations"]
+        for key in obs_dict:
+            obs_dict[key] = obs_dict[key].to(self.device)
+
         with torch.no_grad():
             action_data = skill_walk.act(**policy_input)
         policy_input["rnn_hidden_states"] = action_data.rnn_hidden_states
