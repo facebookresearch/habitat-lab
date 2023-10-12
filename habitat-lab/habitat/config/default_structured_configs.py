@@ -48,6 +48,7 @@ __all__ = [
     "ArmActionConfig",
     "BaseVelocityActionConfig",
     "HumanoidJointActionConfig",
+    "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
@@ -288,6 +289,16 @@ class HumanoidJointActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
+    num_joints: int = 54
+
+
+@dataclass
+class HumanoidPickActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
+    type: str = "HumanoidPickAction"
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
     num_joints: int = 54
 
 
@@ -567,6 +578,11 @@ class AreAgentsWithinThresholdConfig(LabSensorConfig):
 @dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class HasFinishedHumanoidPickSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedHumanoidPickSensor"
 
 
 @dataclass
@@ -1720,6 +1736,12 @@ cs.store(
     node=HumanoidJointActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.humanoid_pick_action",
+    group="habitat/task/actions",
+    name="humanoid_pick_action",
+    node=HumanoidPickActionConfig,
+)
+cs.store(
     package="habitat.task.actions.velocity_control",
     group="habitat/task/actions",
     name="velocity_control",
@@ -2003,6 +2025,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_humanoid_pick",
+    group="habitat/task/lab_sensors",
+    name="has_finished_humanoid_pick",
+    node=HasFinishedHumanoidPickSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",
