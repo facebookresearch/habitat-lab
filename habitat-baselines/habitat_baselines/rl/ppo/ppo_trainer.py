@@ -389,13 +389,13 @@ class PPOTrainer(BaseRLTrainer):
 
         with g_timer.avg_time("trainer.obs_insert"):
             self._agent.rollouts.insert(
-                action_data,
                 next_recurrent_hidden_states=action_data.rnn_hidden_states,
                 actions=action_data.actions,
                 action_log_probs=action_data.action_log_probs,
                 value_preds=action_data.values,
                 buffer_index=buffer_index,
                 should_inserts=action_data.should_inserts,
+                action_data=action_data,
             )
 
     def _collect_environment_result(self, buffer_index: int = 0):
