@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from enum import Enum
 
 import magnum as mn
 import numpy as np
@@ -13,6 +14,11 @@ from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.tasks.rearrange.actions.actions import HumanoidJointAction
+
+
+class HandState(Enum):
+    APPROACHING = 0
+    RETRACTING = 1
 
 
 @registry.register_task_action
@@ -27,19 +33,19 @@ class HumanoidPickAction(HumanoidJointAction):
         )
 
         self._task = task
-        self._poss_entities = (
-            self._task.pddl_problem.get_ordered_entities_list()
-        )
+        self._entities = self._task.pddl_problem.get_ordered_entities_list()
         self._prev_ep_id = None
         self._targets = {}
         self.skill_done = False
-        self.hand_state = 0  # 0 for reset, 1 for approaching, 2 for retracting
+        self.hand_state = HandState.APPROACHING
+
+        self.dist_move_per_step = config.dist_move_per_step
+        self.dist_to_snap = config.dist_to_snap
+
         self.init_coord = mn.Vector3(
             0.2, 0.2, 0
         )  # Init coord with respect to the agent root pose.
         self.hand_pose_iter = 0
-        self.dist_move_per_step = 0.04
-        self.dist_to_snap = 0.02
 
     def lazy_inst_humanoid_controller(self, task, config):
         # Lazy instantiation of humanoid controller
@@ -82,14 +88,14 @@ class HumanoidPickAction(HumanoidJointAction):
         )
 
     def _get_coord_for_idx(self, object_target_idx):
-        pick_obj_entity = self._poss_entities[object_target_idx]
+        pick_obj_entity = self._entities[object_target_idx]
         obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
             pick_obj_entity
         )
         return obj_pos
 
     def get_scene_index_obj(self, object_target_idx):
-        pick_obj_entity = self._poss_entities[object_target_idx]
+        pick_obj_entity = self._entities[object_target_idx]
         entity_name = pick_obj_entity.name
         obj_id = self._task.pddl_problem.sim_info.obj_ids[entity_name]
         return self._sim.scene_obj_ids[obj_id]
@@ -103,7 +109,7 @@ class HumanoidPickAction(HumanoidJointAction):
             1
         ]
 
-        if object_pick_idx <= 0 or object_pick_idx > len(self._poss_entities):
+        if object_pick_idx <= 0 or object_pick_idx > len(self._entities):
             return
 
         object_coord = self._get_coord_for_idx(object_pick_idx)
@@ -122,7 +128,7 @@ class HumanoidPickAction(HumanoidJointAction):
         )
 
         should_rest = False
-        if self.hand_state == 0:  # Approaching
+        if self.hand_state == HandState.APPROACHING:  # Approaching
             # Only move the hand to object if has to drop or object is not grabbed
             if should_pick == 0 or self.cur_grasp_mgr.snap_idx is None:
                 new_hand_coord = (
@@ -136,8 +142,8 @@ class HumanoidPickAction(HumanoidJointAction):
                 )
                 dist_hand_obj = np.linalg.norm(object_coord - new_hand_coord)
                 if dist_hand_obj < self.dist_to_snap:
-                    # snap
-                    self.hand_state = 1
+                    # snap,
+                    self.hand_state = HandState.RETRACTING
                     if should_pick:
                         object_index = self.get_scene_index_obj(
                             object_pick_idx
@@ -165,7 +171,7 @@ class HumanoidPickAction(HumanoidJointAction):
             self.hand_pose_iter = max(0, self.hand_pose_iter - 1)
             dist_hand_init = np.linalg.norm(new_hand_coord - init_coord_world)
             if dist_hand_init < self.dist_to_snap:
-                self.hand_state = 0
+                self.hand_state = HandState.APPROACHING
                 self.skill_done = True
                 self.hand_pose_iter = 0
 

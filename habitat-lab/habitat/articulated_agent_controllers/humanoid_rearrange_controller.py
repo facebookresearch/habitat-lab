@@ -118,6 +118,13 @@ class HumanoidRearrangeController:
         ## Load hand data
         for hand_name in self._hand_names:
             if hand_name in walk_data:
+                # Hand data contains two keys, pose_motion and coord_info
+                # pose_motion: Contains information about each of the N poses.
+                #   joints_array: list of joints represented as quaternions for
+                #   each pose: (N * J) x 4.
+                #   transform_array: an offset transform matrix for every pose
+                # coord_info: dictionary specifying the bounds and number of bins used
+                #   to compute the target poses
                 hand_data = walk_data[hand_name]
                 nposes = hand_data["pose_motion"]["transform_array"].shape[0]
                 self.vpose_info = hand_data["coord_info"].item()
@@ -391,6 +398,15 @@ class HumanoidRearrangeController:
             return quat_tens / np.linalg.norm(quat_tens, axis=-1)[..., None]
 
         def inter_data(x_i, y_i, z_i, dat, is_quat=False):
+            """
+            General trilinear interpolation function. Performs trilinear interpolation,
+            normalizing the result if the values are repsented as quaternions (is_quat)
+            :param x_i, y_i, z_i: For the x,y,z dimensions, specifies the lower, upper, and normalized value
+            so that we can perform interpolation in 3 dimensions
+            :param data: the values we want to interpolate.
+            :param is_quat: used to normalize the value in case we are interpolating quaternions
+
+            """
             x0, y0, z0 = x_i[0], y_i[0], z_i[0]
             x1, y1, z1 = x_i[1], y_i[1], z_i[1]
             xd, yd, zd = x_i[2], y_i[2], z_i[2]

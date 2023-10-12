@@ -300,6 +300,10 @@ class HumanoidPickActionConfig(ActionConfig):
     type: str = "HumanoidPickAction"
     # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
     num_joints: int = 54
+    # The amount we should move on every call to humanoid pick action
+    dist_move_per_step: float = 0.04
+    # The distance at which we will snap/desnap an object, and start retracting the hand
+    dist_to_snap: float = 0.02
 
 
 @dataclass
