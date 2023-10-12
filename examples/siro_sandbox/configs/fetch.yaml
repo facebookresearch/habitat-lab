@@ -63,7 +63,7 @@ habitat:
         arm_joint_dimensionality: 7
         grasp_thresh_dist: 0.7
         disable_grip: False
-        delta_pos_limit: 0.20
+        delta_pos_limit: 0.10 # default value 0.20
         ee_ctrl_lim: 0.015
 
       agent_0_base_velocity:
@@ -72,8 +72,8 @@ habitat:
         navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
         enable_lateral_move: False
         # This longitudinal_lin_speed and ang_speed are used for training skills
-        longitudinal_lin_speed: 10.0
-        lateral_lin_speed: 10.0
+        longitudinal_lin_speed: 5.0 # default value 10.0
+        lateral_lin_speed: 5.0 # default value 10.0
         ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
 
@@ -95,8 +95,8 @@ habitat:
         navmesh_offset: [[0.0, 0.0], [0.275, 0.0]]
         enable_lateral_move: False
         # This longitudinal_lin_speed and ang_speed are used for training skills
-        longitudinal_lin_speed: 10.0
-        lateral_lin_speed: 10.0
+        longitudinal_lin_speed: 5.0 # default value 10.0
+        lateral_lin_speed: 5.0 # default value 10.0
         ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
 
