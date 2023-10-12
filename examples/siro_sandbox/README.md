@@ -8,44 +8,9 @@ This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g.
 # Known Issues
 * When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
 
-# Example commands
-### GUI-controlled humanoid and learned-policy-controlled Spot
-
-To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD, run:
-```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---gui-controlled-agent-index 1 \
---app-state rearrange \
---cfg multi_agent/pop_play.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
-habitat.simulator.habitat_sim_v0.allow_sliding=False
-```
-
-* To launch GUI-controlled humanoid and trained-policy-controlled Spot, in HSSD run:
-```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---gui-controlled-agent-index 1 \
---app-state rearrange \
---cfg multi_agent/pop_play.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=True \
-habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
-habitat_baselines.eval_ckpt_path_dir='data/siro_checkpoints/human-spot-GTCoord-no-config.pth' \
-habitat.simulator.habitat_sim_v0.allow_sliding=False
-```
-Download [human-spot-GTCoord-no-config.pth](https://drive.google.com/file/d/16WAXyut6qfy2xN_TnAvgDEO1xdb59mvc/view?usp=drive_link) checkpoint and place it under data/siro_checkpoints/human-spot-GTCoord-no-config.pth.
+# Example usage
+> [!NOTE]
+> Installation steps and example terminal commands coming soon!
 
 # Controls
 
