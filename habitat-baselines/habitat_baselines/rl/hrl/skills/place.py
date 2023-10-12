@@ -89,7 +89,8 @@ class PlaceSkillPolicy(PickSkillPolicy):
         # Overwrite the observation to let skill know now it is in the grasping step
         if self._config.use_pick_skill_as_place_skill:
             observations[IsHoldingSensor.cls_uuid] = torch.zeros(
-                observations[IsHoldingSensor.cls_uuid].shape
+                observations[IsHoldingSensor.cls_uuid].shape,
+                device=is_holding.device,
             )
 
         action = super()._internal_act(
