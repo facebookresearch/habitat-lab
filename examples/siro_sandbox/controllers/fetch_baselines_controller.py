@@ -51,6 +51,10 @@ LOCAL_PLACE_TARGET = [
     0.0,
     0.25,
 ]  # Arm local ee location format: [up,right,front]
+START_FETCH_OBJ_VEL_THRESHOLD = (
+    1.5  # The object velocity threshold to start to search for the object
+)
+START_FETCH_OBJ_DIS_THRESHOLD = 1.5  # The object distance to human threshold to start to search for the object
 PICK_STEPS = 40
 
 
@@ -362,11 +366,21 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Update the base
         self.get_articulated_agent().sim_obj.transformation = target_trans
 
+    def _start_fetch(self, human_pos, obj_pos):
+        """Start to fetch the object condition"""
+        return (
+            np.linalg.norm(self.rigid_obj_interest.linear_velocity)
+            < START_FETCH_OBJ_VEL_THRESHOLD
+            and float(np.linalg.norm(np.array((human_pos - obj_pos))[[0, 2]]))
+            > START_FETCH_OBJ_DIS_THRESHOLD
+        )
+
     def act(self, obs, env):
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_trans = env._sim.agents_mgr[
             1 - self._agent_idx
         ].articulated_agent.base_transformation.translation
+
         act_space = ActionSpace(
             {
                 action_name: space
@@ -404,7 +418,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Assign safe_trans here for the visualization
             self.safe_pos = safe_trans
 
-            if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
+            if self._start_fetch(human_trans, obj_trans):
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
@@ -517,7 +531,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             self.safe_pos = safe_trans
 
-            if np.linalg.norm(self.rigid_obj_interest.linear_velocity) < 1.5:
+            if self._start_fetch(human_trans, obj_trans):
                 # Check the termination conditions
                 finished_nav = True
                 # Make sure that there is a safe snap point
