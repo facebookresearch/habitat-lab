@@ -25,7 +25,6 @@ habitat:
   task:
     actions:
       agent_1_oracle_nav_action:
-        agent_index: 1
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
 
@@ -59,7 +58,6 @@ habitat:
     # Add Spot robot agents
     agents:
       agent_1:
-        articulated_agent_urdf: 'data/hab3_bench_assets/humanoids/female_0/female_0.urdf'
+        articulated_agent_urdf: 'data/hab3_bench_assets/humanoids/humanoid_data/female_2/female_2.urdf'
         articulated_agent_type: 'KinematicHumanoid'
-        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+        motion_data_path: 'data/hab3_bench_assets/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl'

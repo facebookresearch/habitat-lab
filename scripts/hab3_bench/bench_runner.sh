@@ -14,13 +14,13 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/hab3_bench_assets/humanoids/female_0/female_0_no_skinning.urdf'"
+# NO_SKINNING="habitat.simulator.agents.agent_1.articulated_agent_urdf='data/hab3_bench_assets/humanoids/female_0/female_0_no_skinning.urdf'"
 
-TASK_SPEC="habitat.task.task_spec=rearrange_easy_fp"
+TASK_SPEC="habitat.task.task_spec=tidy_house_2obj"
 PDDL_DOMAIN_DEF="habitat.task.pddl_domain_def=fp"
 
-REMOVE_ORACLE="~habitat.task.actions.oracle_nav_action"
-REMOVE_PICK="~habitat.task.actions.humanoid_pick_action"
+# REMOVE_ORACLE="~habitat.task.actions.oracle_nav_action"
+# REMOVE_PICK="~habitat.task.actions.humanoid_pick_action"
 
 #different datasets for different combinations of clutter objects (2,5,10) and scene complexity (small, medium, large)
 OBJ2_SMALL="habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz"
@@ -48,7 +48,7 @@ do
 
     #NOTE: add '--render' for debug output
 
-    #Single agent robot - multiple object and scene complexities
+    # Single agent robot - multiple object and scene complexities
     for ix in "${!postfixes[@]}"; do
       python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_oracle_${postfixes[$ix]}$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "${ep_overrides[$ix]}"
     done
@@ -60,17 +60,18 @@ do
     # Humanoid oracle
     python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
-    # Humanoid oracle, no pick no skin
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_nopick_noskin_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK" "$NO_SKINNING"
+    # TODO: uncomment soon
+    # # Humanoid oracle, no pick no skin
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_oracle_nopick_noskin_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_PICK" "$NO_SKINNING"
 
-    # Humanoid pick
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_pick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_ORACLE"
+    # # Humanoid pick
+    # python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "human_pick_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT" "$REMOVE_ORACLE"
 
     #multi-agent robots
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robots_oracle_$i" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
     #multi-agent robot, human (+skinning)
-    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_oracle_$i" "$TASK_SPEC" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
+    python scripts/hab3_bench/hab3_benchmark.py --cfg benchmark/rearrange/hab3_bench/spot_humanoid_oracle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "robot_human_oracle_$i" "$PDDL_DOMAIN_DEF" "$DATA_DEFAULT"
 
 
   done

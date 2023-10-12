@@ -16,9 +16,9 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
-    - has_finished_human_pick
+    # - has_finished_human_pick
   - /habitat/task/actions@habitat.task.actions.oracle_nav_action: oracle_nav_action
-  - /habitat/task/actions@habitat.task.actions.humanoid_pick_action: humanoid_pick_action
+  # - /habitat/task/actions@habitat.task.actions.humanoid_pick_action: humanoid_pick_action
   - override /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_depth_sensor: third_rgb_sensor
 
   # For Spot observation space
@@ -35,11 +35,10 @@ habitat:
   simulator:
     agents:
       main_agent:
-        articulated_agent_urdf: 'data/hab3_bench_assets/humanoids/female_0/female_0.urdf'
+        articulated_agent_urdf: 'data/hab3_bench_assets/humanoids/humanoid_data/female_2/female_2.urdf'
         articulated_agent_type: 'KinematicHumanoid'
-        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: 'data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl'
+        motion_data_path: 'data/hab3_bench_assets/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl'
         sim_sensors:
           head_depth_sensor:
-            height: 512
-            width: 512
+            height: 256
+            width: 256

@@ -1,7 +1,19 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange/: multi_agent_tidy_house
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/dataset/rearrangement: replica_cad
+
+  - /habitat/task/measurements:
+    - pddl_success
+    - num_steps
+    - did_agents_collide
+    - num_agents_collide
+    - composite_stage_goals
+    - pddl_subgoal_reward
+    - rearrange_cooperate_reward
+
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -14,23 +26,30 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
 
-  - override /habitat/task/rearrange: multi_agent_tidy_house_base
 
   # Uncomment this if you want to visualize third_rgb
-  # - override /habitat/simulator/sim_sensors@habitat.simulator.agents.agent_1.sim_sensors.head_depth_sensor: third_rgb_sensor
+  # - override /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1.sim_sensors.head_depth_sensor: third_rgb_sensor
 
   # For Spot observation space
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
-  - override /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: depth_head_agent
+
+
   - _self_
 
 
 habitat:
   task:
+    type: RearrangePddlTask-v0
+    reward_measure: rearrange_cooperate_reward
+    success_measure: pddl_success
     measurements:
-      composite_success:
+      pddl_success:
         must_call_stop: False
 
+    task_spec_base_path: benchmark/multi_agent/
+    task_spec: pddl/multi_agent_tidy_house
+    pddl_domain_def: fp
   gym:
     obs_keys:
       - agent_0_head_depth
@@ -59,6 +78,16 @@ habitat:
       - agent_1_other_agent_gps
   simulator:
     # Add Spot robot agents
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    concur_render: True
+    auto_sleep: True
+    # Add Spot robot agents
+    agents_order:
+      - agent_0
+      - agent_1
     agents:
       agent_0:
         radius: 0.25
@@ -78,3 +107,4 @@ habitat:
     step_physics: False
     habitat_sim_v0:
       allow_sliding: True
+      enable_physics: True
