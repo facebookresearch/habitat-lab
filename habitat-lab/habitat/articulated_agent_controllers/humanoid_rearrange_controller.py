@@ -297,6 +297,11 @@ class HumanoidRearrangeController:
         self.joint_pose = joint_pose
 
     def build_ik_vectors(self, hand_motion):
+        """
+        Given a hand_motion Motion file, containing different humanoid poses
+        to reach objects with the hand, builds a matrix fo joint angles, root offset translations and rotations
+        so that they can be easily interpolated when reaching poses.
+        """
         rotations, translations, joints = [], [], []
         for ind in range(len(hand_motion.poses)):
             curr_transform = mn.Matrix4(hand_motion.poses[ind].root_transform)
@@ -354,20 +359,17 @@ class HumanoidRearrangeController:
             value_norm = (value - minv) / (maxv - minv)
 
             index = value_norm * (num_bins - 1)
-            # lower = max(0, math.floor(index))
-            # upper = min(math.ceil(index), num_bins - 1)
 
-            lower2 = min(math.floor(index), num_bins - 1)
-            # lower = min(max(0, math.floor(index)), num_bins - 1)
+            lower = min(math.floor(index), num_bins - 1)
             upper = max(min(math.ceil(index), num_bins - 1), 0)
-            value_norm_t = index - lower2
-            if lower2 < 0:
+            value_norm_t = index - lower
+            if lower < 0:
                 min_poss_val = 0.0
-                lower2 = (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
-                value_norm_t = (index - lower2) / -lower2
-                lower2 = -1
+                lower = (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
+                value_norm_t = (index - lower) / -lower
+                lower = -1
 
-            return lower2, upper, value_norm_t
+            return lower, upper, value_norm_t
 
         def comp_inter(x_i, y_i, z_i):
             # Given an integer index from 0 to num_bins - 1

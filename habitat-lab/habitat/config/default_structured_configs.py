@@ -295,7 +295,7 @@ class HumanoidJointActionConfig(ActionConfig):
 @dataclass
 class HumanoidPickActionConfig(ActionConfig):
     r"""
-    In rearrangement tasks only, if the robot calls this action, the task will end.
+    In rearrangement tasks only. Config for humanoid to reach objects using IK. For now only contains the number of joints. May be extended with duration of action
     """
     type: str = "HumanoidPickAction"
     # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
