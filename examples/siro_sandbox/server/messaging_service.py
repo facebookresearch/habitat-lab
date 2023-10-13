@@ -27,7 +27,7 @@ class MessagingService:
         assert pos
         assert len(pos) == 3
 
-        if not "highlights" in self._message:
+        if "highlights" not in self._message:
             self._message["highlights"] = []
         self._message["highlights"].append(
             {"t": [pos[0], pos[1], pos[2]], "r": radius}
