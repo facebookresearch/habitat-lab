@@ -126,7 +126,7 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
-      - agent_1_should_replan
+      - agent_1_agents_within_threshold
   environment:
     max_episode_steps: 750
   simulator:
@@ -149,5 +149,8 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
       enable_physics: True
+    agents:
+      agent_0:
+        joint_start_noise: 0.0
   dataset:
     data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
