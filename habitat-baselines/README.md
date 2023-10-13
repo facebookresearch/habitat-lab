@@ -77,6 +77,14 @@ To change the task (like set table) that you train your skills on, you can chang
 
 # Multi-Agent
 
+## Social Navigation
+
+To run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets.
+- `python habitat_baselines/run.py --config-name=socialnav/social_nav.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=False`
+
+For evaluating the trained Spot robot's policy
+- `python habitat_baselines/run.py --config-name=socialnav/social_nav.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=/checkpoints/latest.pth habitat_baselines.eval.should_load_ckpt=True`
+
 ## Social Rearrangement
 
 To run multi-agent training with a Spot robot and humanoid on the social rearrangement task.
