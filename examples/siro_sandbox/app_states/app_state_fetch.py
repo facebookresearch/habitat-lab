@@ -514,10 +514,12 @@ class AppStateFetch(AppState):
             )
 
     def _get_target_object_position(self, target_obj_idx):
-        sim = self.get_sim()
-        rom = sim.get_rigid_object_manager()
-        object_id = self._target_obj_ids[target_obj_idx]
-        return rom.get_object_by_id(object_id).translation
+        return self._get_target_rigid_object(target_obj_idx).translation
+
+    def _get_target_object_bounding_box(self, target_obj_idx) -> mn.Range3D:
+        return self._get_target_rigid_object(
+            target_obj_idx
+        ).collision_shape_aabb
 
     def _get_target_object_positions(self):
         sim = self.get_sim()
@@ -557,14 +559,15 @@ class AppStateFetch(AppState):
             )
             # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
-        num_segments = 24
+        if self._sandbox_service.messaging_service:
+            # Radius is defined as half the largest bounding box extent.
+            bb: mn.Range3D = self._get_target_object_bounding_box(
+                target_obj_idx
+            )
+            radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
+            self._sandbox_service.messaging_service.add_highlight(pos, radius)
 
-        self._sandbox_service.line_render.draw_circle(
-            pos,
-            radius,
-            color,
-            num_segments,
-        )
+        self._draw_circle(pos, color, radius)
 
     def _viz_objects(self):
         # grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
