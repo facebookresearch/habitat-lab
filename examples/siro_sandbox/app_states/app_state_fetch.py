@@ -111,6 +111,10 @@ class AppStateFetch(AppState):
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.count_tsteps_stop = 0
 
+        self._sandbox_service.client_message_manager.change_humanoid_position(
+            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+        )
+
     def get_sim(self):
         return self._sandbox_service.sim
 
@@ -559,13 +563,15 @@ class AppStateFetch(AppState):
             )
             # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
-        if self._sandbox_service.messaging_service:
+        if self._sandbox_service.client_message_manager:
             # Radius is defined as half the largest bounding box extent.
             bb: mn.Range3D = self._get_target_object_bounding_box(
                 target_obj_idx
             )
             radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
-            self._sandbox_service.messaging_service.add_highlight(pos, radius)
+            self._sandbox_service.client_message_manager.add_highlight(
+                pos, radius
+            )
 
         self._draw_circle(pos, color, radius)
 

@@ -352,6 +352,9 @@ class SandboxDriver(GuiAppDriver):
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
+        if self.do_network_server:
+            self._remote_gui_input.on_reset()
+
         self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:

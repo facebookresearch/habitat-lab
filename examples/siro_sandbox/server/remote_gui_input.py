@@ -260,3 +260,6 @@ class RemoteGuiInput:
 
     def on_frame_end(self):
         self._gui_input.on_frame_end()
+
+    def on_reset(self):
+        self._recent_client_states.clear()

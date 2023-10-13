@@ -38,3 +38,10 @@ class ClientMessageManager:
         self._message["highlights"].append(
             {"t": [pos[0], pos[1], pos[2]], "r": radius}
         )
+
+    def change_humanoid_position(self, pos: List[float]) -> None:
+        r"""
+        Change the position of the humanoid.
+        Used to synchronize the humanoid position in the client when changing scene.
+        """
+        self._message["humanoidPosition"] = [pos[0], pos[1], pos[2]]
