@@ -379,7 +379,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
 
     def get_resume_state(self):
         return {
-            agent_i: agent.get_resume_state()
+            str(agent_i): agent.get_resume_state()
             for agent_i, agent in enumerate(self._agents)
         }
 

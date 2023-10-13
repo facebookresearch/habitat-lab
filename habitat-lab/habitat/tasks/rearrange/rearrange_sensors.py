@@ -1104,25 +1104,14 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         if self.agent_id is not None:
             use_k = f"agent_{self.agent_id}_oracle_nav_action"
-            if (
-                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                in self._task.actions
-            ):
-                use_k = (
-                    f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                )
         else:
             use_k = "oracle_nav_action"
-            if "oracle_nav_with_backing_up_action" in self._task.actions:
-                use_k = "oracle_nav_with_backing_up_action"
 
         if use_k not in self._task.actions:
-            raise ValueError(
-                f"HasFinishedOracleNavSensor needs the oracle nav action in the action space. Actions are currently {list(self._task.actions.keys())}"
-            )
-        nav_action = self._task.actions[use_k]
-
-        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+            return np.array(False, dtype=np.float32)[..., None]
+        else:
+            nav_action = self._task.actions[use_k]
+            return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
 
 
 @registry.register_sensor

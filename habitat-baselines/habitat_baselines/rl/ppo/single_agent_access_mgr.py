@@ -247,6 +247,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
+        # If there is nothing to load, then we return the empty dict
+        if self._updater.optimizer is None:
+            return {"state_dict": {}, "optim_state": {}}
         ret = {
             "state_dict": self._actor_critic.state_dict(),
             **self._updater.get_resume_state(),

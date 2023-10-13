@@ -11,7 +11,10 @@ from habitat_baselines.rl.hrl.skills.ll_nav import MoveSkillPolicy
 from habitat_baselines.rl.hrl.skills.nav import NavSkillPolicy
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.skills.noop import NoopSkillPolicy
-from habitat_baselines.rl.hrl.skills.oracle_nav import OracleNavPolicy
+from habitat_baselines.rl.hrl.skills.oracle_nav import (
+    OracleNavCoordPolicy,
+    OracleNavPolicy,
+)
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
 from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
 from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
@@ -26,6 +29,7 @@ __all__ = [
     "NavSkillPolicy",
     "NnSkillPolicy",
     "OracleNavPolicy",
+    "OracleNavCoordPolicy",
     "PickSkillPolicy",
     "PlaceSkillPolicy",
     "ResetArmSkill",

@@ -50,6 +50,7 @@ class HrlRolloutStorage(RolloutStorage):
         next_masks=None,
         buffer_index: int = 0,
         should_inserts: Optional[torch.BoolTensor] = None,
+        **kwargs,
     ):
         """
         The only key different from the base `RolloutStorage` is
