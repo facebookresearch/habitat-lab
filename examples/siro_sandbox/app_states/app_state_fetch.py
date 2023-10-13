@@ -560,11 +560,11 @@ class AppStateFetch(AppState):
             # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
         if self._sandbox_service.messaging_service:
-            # Radius is defined as the largest bounding box extent.
+            # Radius is defined as half the largest bounding box extent.
             bb: mn.Range3D = self._get_target_object_bounding_box(
                 target_obj_idx
             )
-            radius = max(bb.size_x(), bb.size_y(), bb.size_z())
+            radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
             self._sandbox_service.messaging_service.add_highlight(pos, radius)
 
         self._draw_circle(pos, color, radius)
