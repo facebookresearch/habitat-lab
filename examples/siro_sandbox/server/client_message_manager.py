@@ -7,7 +7,7 @@
 from typing import Dict, List
 
 
-class MessagingService:
+class ClientMessageManager:
     r"""
     Extends gfx-replay keyframes to include server messages to be interpreted by the client.
     """
@@ -19,6 +19,12 @@ class MessagingService:
         Add a field to this dict to send a message to the client at the end of the frame.
         """
         return self._message
+
+    def clear_message_dict(self) -> None:
+        r"""
+        Resets the message dict.
+        """
+        self._message = {}
 
     def add_highlight(self, pos: List[float], radius: float) -> None:
         r"""
@@ -32,11 +38,3 @@ class MessagingService:
         self._message["highlights"].append(
             {"t": [pos[0], pos[1], pos[2]], "r": radius}
         )
-
-    def add_message_to_keyframe(self, keyframe_obj) -> None:
-        r"""
-        Adds the server message to the specified keyframe.
-        Clears the server message.
-        """
-        keyframe_obj["message"] = self._message
-        self._message = {}

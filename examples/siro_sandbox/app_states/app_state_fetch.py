@@ -514,16 +514,12 @@ class AppStateFetch(AppState):
             )
 
     def _get_target_object_position(self, target_obj_idx):
-        sim = self.get_sim()
-        rom = sim.get_rigid_object_manager()
-        object_id = self._target_obj_ids[target_obj_idx]
-        return rom.get_object_by_id(object_id).translation
+        return self._get_target_rigid_object(target_obj_idx).translation
 
     def _get_target_object_bounding_box(self, target_obj_idx) -> mn.Range3D:
-        sim = self.get_sim()
-        rom = sim.get_rigid_object_manager()
-        object_id = self._target_obj_ids[target_obj_idx]
-        return rom.get_object_by_id(object_id).collision_shape_aabb
+        return self._get_target_rigid_object(
+            target_obj_idx
+        ).collision_shape_aabb
 
     def _get_target_object_positions(self):
         sim = self.get_sim()

@@ -61,8 +61,8 @@ from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
+from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
-from server.messaging_service import MessagingService
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
 
@@ -152,9 +152,9 @@ class SandboxDriver(GuiAppDriver):
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
 
-        self._messaging_service = None
+        self._client_message_manager = None
         if self.do_network_server:
-            self._messaging_service = MessagingService()
+            self._client_message_manager = ClientMessageManager()
 
         self._sandbox_service = SandboxService(
             args,
@@ -173,7 +173,7 @@ class SandboxDriver(GuiAppDriver):
             partial(self._set_cursor_style),
             self._episode_helper,
             partial(self._get_observation_as_debug_image),
-            self._messaging_service,
+            self._client_message_manager,
         )
 
         self._app_states: List[AppState]
@@ -534,7 +534,12 @@ class SandboxDriver(GuiAppDriver):
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]
-                self._messaging_service.add_message_to_keyframe(keyframe_obj)
+                # Insert server->client message into the keyframe
+                message = self._client_message_manager.get_message_dict()
+                if len(message) > 0:
+                    keyframe_obj["message"] = message
+                    self._client_message_manager.clear_message_dict()
+                # Send the keyframe
                 self._interprocess_record.send_keyframe_to_networking_thread(
                     keyframe_obj
                 )
