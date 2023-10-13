@@ -1751,12 +1751,6 @@ cs.store(
 )
 
 cs.store(
-    package="habitat.task.actions.oracle_nav_with_backing_up_action",
-    group="habitat/task/actions",
-    name="oracle_nav_with_backing_up_action",
-    node=OracleNavWithBackingUpActionConfig,
-)
-cs.store(
     package="habitat.task.actions.pddl_apply_action",
     group="habitat/task/actions",
     name="pddl_apply_action",
