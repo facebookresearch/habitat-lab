@@ -8,6 +8,7 @@ import websockets
 
 from . import multiprocessing_config
 from .frequency_limiter import FrequencyLimiter
+from .keyframe_utils import get_empty_keyframe, update_consolidated_keyframe
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -72,35 +73,43 @@ class Server:
 
         self._exit_event = exit_event
 
-        self._hack_first_keyframe = None
+        self._consolidated_keyframe = get_empty_keyframe()
+
+    def update_consolidated_keyframes(self, keyframes):
+        for inc_keyframe in keyframes:
+            update_consolidated_keyframe(
+                self._consolidated_keyframe, inc_keyframe
+            )
 
     async def send_keyframes(self, websocket):
-        did_send_hack_first_keyframe = False
+        needs_consolidated_keyframe = True
 
         while True:
             if self._exit_event and self._exit_event.is_set():
                 break
 
             # todo: refactor to support N clients
-            keyframes = self._interprocess_record.get_queued_keyframes()
+            inc_keyframes = self._interprocess_record.get_queued_keyframes()
 
-            if len(keyframes):
-                if not self._hack_first_keyframe:
-                    self._hack_first_keyframe = keyframes[0]
-                elif not did_send_hack_first_keyframe:
-                    # hack: resend first keyframe to new clients
-                    keyframes.insert(0, self._hack_first_keyframe)
-                did_send_hack_first_keyframe = True
+            if len(inc_keyframes):
+                # This client may be joining "late", after we've already simulated
+                # some frames. To handle this case, we send a consolidated keyframe as
+                # the very first keyframe for the new client. It captures all the
+                # previous incremental keyframes since the server started.
+                keyframes_to_send = inc_keyframes
+                if needs_consolidated_keyframe:
+                    keyframes_to_send = inc_keyframes.copy()
+                    keyframes_to_send.insert(0, self._consolidated_keyframe)
+                    needs_consolidated_keyframe = False
 
                 # Convert keyframes to JSON string
-                wrapper_obj = {"keyframes": keyframes}
+                wrapper_obj = {"keyframes": keyframes_to_send}
                 wrapper_json = json.dumps(wrapper_obj)
 
                 # note this awaits until the client OS has received the message
                 await websocket.send(wrapper_json)
-                # except Exception as e:
-                #     print(f"Error sending keyframe data: {e}")
-                #     break
+
+                self.update_consolidated_keyframes(inc_keyframes)
 
                 # limit how often we send
                 await self._send_frequency_limiter.limit_frequency_async()

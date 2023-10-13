@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import Any
+
+
+def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
+    """
+    A "consolidated" keyframe is several incremental keyframes merged together.
+    See duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
+    Note the simplification logic here: if an instance is created and then
+    later deleted, the latest consolidated keyframe won't have either the
+    creation, update, or deletion.
+    """
+    assert consolidated_keyframe is not None
+    assert inc_keyframe is not None
+
+    # append loads
+    if "loads" in inc_keyframe:
+        consolidated_keyframe["loads"] += inc_keyframe["loads"]
+
+    # add or update stateUpdates based on instanceKey
+    if "stateUpdates" in inc_keyframe:
+        for state_update in inc_keyframe["stateUpdates"]:
+            key = state_update["instanceKey"]
+            state = state_update["state"]
+            found = False
+            for con_state_update in consolidated_keyframe["stateUpdates"]:
+                if con_state_update["instanceKey"] == key:
+                    con_state_update["state"] = state
+                    found = True
+            if not found:
+                consolidated_keyframe["stateUpdates"].append(state_update)
+
+    # if "rigUpdates" in inc_keyframe:
+    #     for rig_update in inc_keyframe["rigUpdates"]:
+    #         id = rig_update["id"]
+    #         pose = rig_update["pose"]
+    #         found = False
+    #         for con_rig_update in consolidated_keyframe["rigUpdates"]:
+    #             if con_rig_update["id"] == id:
+    #                 con_rig_update["pose"] = pose
+    #                 found = True
+    #         if not found:
+    #             consolidated_keyframe["rigUpdates"].append(rig_update)
+
+    # append creations
+    if "creations" in inc_keyframe:
+        consolidated_keyframe["creations"] += inc_keyframe["creations"]
+
+    # if "rigCreations" in inc_keyframe:
+    #     consolidated_keyframe["rigCreations"] += inc_keyframe["rigCreations"]
+
+    # for a deletion, just remove all references to this instanceKey
+    if "deletions" in inc_keyframe:
+        inc_deletions = inc_keyframe["deletions"]
+
+        # remove creation
+        consolidated_keyframe["creations"] = [
+            entry
+            for entry in consolidated_keyframe["creations"]
+            if entry["instanceKey"] not in inc_deletions
+        ]
+
+        # remote stateUpdate
+        consolidated_keyframe["stateUpdates"] = [
+            entry
+            for entry in consolidated_keyframe["stateUpdates"]
+            if entry["instanceKey"] not in inc_deletions
+        ]
+
+    # todo: lights, userTransforms
+
+
+def get_empty_keyframe():
+    keyframe: Any = dict()
+    keyframe["loads"] = []
+    keyframe["creations"] = []
+    keyframe["rigCreations"] = []
+    keyframe["stateUpdates"] = []
+    keyframe["rigUpdates"] = []
+    keyframe["deletions"] = []
+    keyframe["lightsChanged"] = False
+    keyframe["lights"] = []
+    # todo: lights, userTransforms
+    return keyframe
