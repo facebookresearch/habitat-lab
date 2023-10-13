@@ -334,24 +334,23 @@ class AppStateFetch(AppState):
                     # The robot can only pick up the object if there is a throw_obj_id
                     # throw_obj_id will be None if the users fast press and press again the sapce
                     if throw_obj_id is not None:
-                        self.state_machine_agent_ctrl.object_interest_id = (
-                            throw_obj_id
-                        )
-                        sim = self.get_sim()
-                        self.state_machine_agent_ctrl.rigid_obj_interest = (
-                            sim.get_rigid_object_manager().get_object_by_id(
-                                throw_obj_id
-                            )
-                        )
                         throw_vel = (
                             self._throw_helper.viz_and_get_humanoid_throw()
                         )
-                        if not disable_spot:
-                            self.state_machine_agent_ctrl.current_state = (
-                                FetchState.SEARCH
+                        if throw_vel:
+                            self.state_machine_agent_ctrl.object_interest_id = (
+                                throw_obj_id
                             )
+                            sim = self.get_sim()
+                            self.state_machine_agent_ctrl.rigid_obj_interest = sim.get_rigid_object_manager().get_object_by_id(
+                                throw_obj_id
+                            )
+                            if not disable_spot:
+                                self.state_machine_agent_ctrl.current_state = (
+                                    FetchState.SEARCH
+                                )
 
-                        self._held_target_obj_idx = None
+                            self._held_target_obj_idx = None
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
@@ -431,10 +430,10 @@ class AppStateFetch(AppState):
                 self.state_machine_agent_ctrl.current_state = FetchState.BRING
 
         # Do vis on the real navigation target
-        if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
-            safe_pos = self.state_machine_agent_ctrl.safe_pos
-            if safe_pos is not None:
-                self._draw_circle(safe_pos, color=mn.Color3.red(), radius=0.25)
+        # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
+        #     safe_pos = self.state_machine_agent_ctrl.safe_pos
+        #     if safe_pos is not None:
+        #         self._draw_circle(safe_pos, color=mn.Color3.red(), radius=0.25)
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -642,14 +641,14 @@ class AppStateFetch(AppState):
         fetch_state_names = {
             # FetchState.WAIT : "",
             FetchState.SEARCH: "searching for object",
-            FetchState.SEARCH_ORACLE_NAV: "searching for object",
+            FetchState.SEARCH_ORACLE_NAV: "oracle nav to object",
             FetchState.PICK: "picking object",
             FetchState.BRING: "searching for human",
-            FetchState.BRING_ORACLE_NAV: "searching for human",
+            FetchState.BRING_ORACLE_NAV: "oracle nav to human",
             FetchState.DROP: "dropping object",
             FetchState.BEG_RESET: "cannot pick up the object",
-            FetchState.SEARCH_TIMEOUT_WAIT: "need help to search for object",
-            FetchState.BRING_TIMEOUT_WAIT: "need help to search for human",
+            FetchState.SEARCH_TIMEOUT_WAIT: "unable to reach object",
+            FetchState.BRING_TIMEOUT_WAIT: "unable to reach human",
         }
         if fetch_state in fetch_state_names:
             status_str += f"spot: {fetch_state_names[fetch_state]}\n"
