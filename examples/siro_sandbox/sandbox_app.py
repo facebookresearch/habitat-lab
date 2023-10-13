@@ -64,6 +64,7 @@ from sandbox_service import SandboxService
 from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
+from server.messaging_service import MessagingService
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
@@ -151,6 +152,10 @@ class SandboxDriver(GuiAppDriver):
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
 
+        self._messaging_service = None
+        if self.do_network_server:
+            self._messaging_service = MessagingService()
+
         self._sandbox_service = SandboxService(
             args,
             config,
@@ -168,6 +173,7 @@ class SandboxDriver(GuiAppDriver):
             partial(self._set_cursor_style),
             self._episode_helper,
             partial(self._get_observation_as_debug_image),
+            self._messaging_service,
         )
 
         self._app_states: List[AppState]
@@ -528,6 +534,7 @@ class SandboxDriver(GuiAppDriver):
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]
+                self._messaging_service.add_message_to_keyframe(keyframe_obj)
                 self._interprocess_record.send_keyframe_to_networking_thread(
                     keyframe_obj
                 )

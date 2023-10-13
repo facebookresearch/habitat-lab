@@ -557,14 +557,10 @@ class AppStateFetch(AppState):
             )
             # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
-        num_segments = 24
+        if self._sandbox_service.messaging_service:
+            self._sandbox_service.messaging_service.add_highlight(pos)
 
-        self._sandbox_service.line_render.draw_circle(
-            pos,
-            radius,
-            color,
-            num_segments,
-        )
+        self._draw_circle(pos, color, radius)
 
     def _viz_objects(self):
         # grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
