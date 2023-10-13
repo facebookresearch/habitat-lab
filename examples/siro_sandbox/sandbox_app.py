@@ -62,9 +62,9 @@ from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 from server.interprocess_record import InterprocessRecord
+from server.messaging_service import MessagingService
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
-from server.messaging_service import MessagingService
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (

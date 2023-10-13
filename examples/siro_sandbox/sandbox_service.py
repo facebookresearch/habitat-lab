@@ -25,7 +25,7 @@ class SandboxService:
         set_cursor_style,
         episode_helper,
         get_observation_as_debug_image,
-        messaging_service
+        messaging_service,
     ):
         self._args = args
         self._config = config
@@ -108,7 +108,7 @@ class SandboxService:
     @property
     def get_observation_as_debug_image(self):
         return self._get_observation_as_debug_image
-    
+
     @property
     def messaging_service(self):
         return self._messaging_service

@@ -518,7 +518,7 @@ class AppStateFetch(AppState):
         rom = sim.get_rigid_object_manager()
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id).translation
-    
+
     def _get_target_object_bounding_box(self, target_obj_idx) -> mn.Range3D:
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
@@ -565,7 +565,9 @@ class AppStateFetch(AppState):
 
         if self._sandbox_service.messaging_service:
             # Radius is defined as the largest bounding box extent.
-            bb: mn.Range3D = self._get_target_object_bounding_box(target_obj_idx)
+            bb: mn.Range3D = self._get_target_object_bounding_box(
+                target_obj_idx
+            )
             radius = max(bb.size_x(), bb.size_y(), bb.size_z())
             self._sandbox_service.messaging_service.add_highlight(pos, radius)
 

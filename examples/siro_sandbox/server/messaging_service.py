@@ -6,7 +6,8 @@
 
 from typing import Dict, List
 
-class MessagingService():
+
+class MessagingService:
     r"""
     Extends gfx-replay keyframes to include server messages to be interpreted by the client.
     """
@@ -28,7 +29,9 @@ class MessagingService():
 
         if not "highlights" in self._message:
             self._message["highlights"] = []
-        self._message["highlights"].append({"t": [pos[0], pos[1], pos[2]], "r": radius})
+        self._message["highlights"].append(
+            {"t": [pos[0], pos[1], pos[2]], "r": radius}
+        )
 
     def add_message_to_keyframe(self, keyframe_obj) -> None:
         r"""
