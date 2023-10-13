@@ -9,7 +9,7 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed_social_nav
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent
   - _self_
 

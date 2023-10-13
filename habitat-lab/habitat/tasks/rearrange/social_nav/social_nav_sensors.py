@@ -12,6 +12,9 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.rearrange.social_nav.utils import (
+    robot_human_vec_dot_product,
+)
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToGoal,
     NavToPosSucc,
@@ -93,20 +96,13 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
 
         # Social nav reward for facing human
         if dis < self._facing_human_dis and self._facing_human_reward != -1:
-            # Compute the vector from robot to human
-            vector_human_robot = human_pos - robot_pos
-            # Normalization
-            vector_human_robot = vector_human_robot / np.linalg.norm(
-                vector_human_robot
-            )
-            # Compute robot forward vector
             base_T = self._sim.get_agent_data(
                 self.agent_id
             ).articulated_agent.base_transformation
-            forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
             # Dot product
-            self._metric += self._facing_human_reward * np.dot(
-                forward_robot.normalized(), vector_human_robot
+            self._metric += (
+                self._facing_human_reward
+                * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             )
 
         if self._prev_dist < 0:
@@ -235,16 +231,11 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         )
 
     def _check_robot_facing_human(self, human_pos, robot_pos):
-        vector_human_robot = human_pos - robot_pos
-        vector_human_robot = vector_human_robot / np.linalg.norm(
-            vector_human_robot
-        )
         base_T = self._sim.get_agent_data(
-            0
+            self._robot_idx
         ).articulated_agent.sim_obj.transformation
-        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
         facing = (
-            np.dot(forward_robot.normalized(), vector_human_robot)
+            robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             > self._robot_face_human_threshold
         )
         return facing
@@ -460,16 +451,11 @@ class SocialNavSeekSuccess(Measure):
             dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
 
         # Compute facing to human
-        vector_human_robot = human_pos - robot_pos
-        vector_human_robot = vector_human_robot / np.linalg.norm(
-            vector_human_robot
-        )
         base_T = self._sim.get_agent_data(
             0
         ).articulated_agent.base_transformation
-        forward_robot = base_T.transform_vector(mn.Vector3(1, 0, 0))
         facing = (
-            np.dot(forward_robot.normalized(), vector_human_robot)
+            robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             > self._facing_threshold
         )
 

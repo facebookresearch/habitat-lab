@@ -1,6 +1,0 @@
-name: "HierarchicalPolicy"
-hierarchical_policy:
-  high_level_policy:
-    name: "FixedHighLevelPolicy"
-    add_arm_rest: True
-  defined_skills: {}

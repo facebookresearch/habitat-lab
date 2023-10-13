@@ -168,6 +168,8 @@ class OracleNavPolicy(NnSkillPolicy):
 
 
 class OracleNavCoordPolicy(OracleNavPolicy):
+    """The function produces a sequence of navigation targets and the oracle nav navigates to those targets"""
+
     @dataclass
     class OracleNavActionArgs:
         """
@@ -197,6 +199,7 @@ class OracleNavCoordPolicy(OracleNavPolicy):
             filtered_action_space,
             batch_size,
         )
+        # Random coordinate means that the navigation target is chosen randomly
         action_name = "oracle_nav_randcoord_action"
         self._oracle_nav_ac_idx, _ = find_action_range(
             action_space, action_name
@@ -229,6 +232,10 @@ class OracleNavCoordPolicy(OracleNavPolicy):
 
 
 class OracleNavHumanPolicy(OracleNavCoordPolicy):
+    """
+    Navigate to human's location using oracle nav
+    """
+
     @dataclass
     class OracleNavActionArgs:
         """

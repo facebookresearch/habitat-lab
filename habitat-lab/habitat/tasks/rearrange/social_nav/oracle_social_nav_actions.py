@@ -17,6 +17,9 @@ from habitat.tasks.rearrange.actions.oracle_nav_action import (
     OracleNavAction,
     SimpleVelocityControlEnv,
 )
+from habitat.tasks.rearrange.social_nav.utils import (
+    robot_human_vec_dot_product,
+)
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
 
@@ -24,12 +27,7 @@ from habitat.tasks.utils import get_angle
 @registry.register_task_action
 class OracleNavCoordAction(OracleNavAction):  # type: ignore
     """
-    An action that will convert the index of an entity (in the sense of
-    `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
-    robot to the closest navigable position to that entity. The entity index is
-    the index into the list of all available entities in the current scene. The
-    config flag motion_type indicates whether the low level action will be a base_velocity or
-    a joint control.
+    An action that comments the agent to navigate to a sequence of random navigation targets (or we call these targets (x,y) coordinates)
     """
 
     def __init__(self, *args, task, **kwargs):
@@ -52,10 +50,11 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         )
 
     def _get_target_for_coord(self, obj_pos):
+        """Get the targets by recording them in the dict"""
         precision = 0.25
-        pos_hash = np.around(obj_pos / precision, decimals=0) * precision
-        pos_hash = tuple(pos_hash)
-        if pos_hash not in self._targets:
+        pos_key = np.around(obj_pos / precision, decimals=0) * precision
+        pos_key = tuple(pos_key)
+        if pos_key not in self._targets:
             start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
@@ -65,9 +64,9 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                 True,
                 self.cur_articulated_agent,
             )
-            self._targets[pos_hash] = start_pos
+            self._targets[pos_key] = start_pos
         else:
-            start_pos = self._targets[pos_hash]
+            start_pos = self._targets[pos_key]
         if self.motion_type == "human_joints":
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
@@ -185,6 +184,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                 else:
                     self.humanoid_controller.calculate_stop_pose()
                     self.skill_done = True
+                # This line is important to reset the controller
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
@@ -232,6 +232,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         self.coord_nav = None
 
     def _find_path_given_start_end(self, start, end):
+        """Helper function to find the path given starting and end locations"""
         path = habitat_sim.ShortestPath()
         path.requested_start = start
         path.requested_end = end
@@ -241,27 +242,21 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         return path.points
 
     def _reach_human(self, robot_pos, human_pos, base_T):
-        # For computing facing to human
-        vector_human_robot = human_pos[[0, 2]] - robot_pos[[0, 2]]
-        vector_human_robot = vector_human_robot / np.linalg.norm(
-            vector_human_robot
+        """Check if the agent reaches the human or not"""
+        facing = (
+            robot_human_vec_dot_product(robot_pos, human_pos, base_T) > 0.5
         )
-        forward_robot = np.array(base_T.transform_vector(mn.Vector3(1, 0, 0)))[
-            [0, 2]
-        ]
-        forward_robot = forward_robot / np.linalg.norm(forward_robot)
-        facing = np.dot(forward_robot, vector_human_robot) > 0.5
 
         # Use geodesic distance here
         dis = self._sim.geodesic_distance(robot_pos, human_pos)
 
-        # np.linalg.norm((robot_pos - human_pos)[[0, 2]])
         return dis <= 2.0 and facing
 
     def _compute_robot_to_human_min_step(
         self, robot_trans, human_pos, human_pos_list
     ):
-        _vel_scale = 10.0
+        """The function to compute the minimum step to reach the goal"""
+        _vel_scale = self._config.lin_speed
 
         # Copy the robot transformation
         base_T = mn.Matrix4(robot_trans)
