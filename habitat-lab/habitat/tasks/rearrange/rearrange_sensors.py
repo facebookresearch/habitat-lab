@@ -1123,3 +1123,36 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         nav_action = self._task.actions[use_k]
 
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
+@registry.register_sensor
+class HasFinishedHumanoidPickSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_human_pick"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedHumanoidPickSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_humanoid_pick_action"
+        else:
+            use_k = "humanoid_pick_action"
+
+        nav_action = self._task.actions[use_k]
+
+        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]

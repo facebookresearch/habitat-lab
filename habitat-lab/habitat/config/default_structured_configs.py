@@ -48,6 +48,7 @@ __all__ = [
     "ArmActionConfig",
     "BaseVelocityActionConfig",
     "HumanoidJointActionConfig",
+    "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
@@ -289,6 +290,20 @@ class HumanoidJointActionConfig(ActionConfig):
     """
     type: str = "HumanoidJointAction"
     num_joints: int = 54
+
+
+@dataclass
+class HumanoidPickActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only. Config for humanoid to reach objects using IK. For now only contains the number of joints. May be extended with duration of action
+    """
+    type: str = "HumanoidPickAction"
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
+    num_joints: int = 54
+    # The amount we should move on every call to humanoid pick action
+    dist_move_per_step: float = 0.04
+    # The distance at which we will snap/desnap an object, and start retracting the hand
+    dist_to_snap: float = 0.02
 
 
 @dataclass
@@ -567,6 +582,11 @@ class AreAgentsWithinThresholdConfig(LabSensorConfig):
 @dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class HasFinishedHumanoidPickSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedHumanoidPickSensor"
 
 
 @dataclass
@@ -1720,6 +1740,12 @@ cs.store(
     node=HumanoidJointActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.humanoid_pick_action",
+    group="habitat/task/actions",
+    name="humanoid_pick_action",
+    node=HumanoidPickActionConfig,
+)
+cs.store(
     package="habitat.task.actions.velocity_control",
     group="habitat/task/actions",
     name="velocity_control",
@@ -2003,6 +2029,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_humanoid_pick",
+    group="habitat/task/lab_sensors",
+    name="has_finished_humanoid_pick",
+    node=HasFinishedHumanoidPickSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",

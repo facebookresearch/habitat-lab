@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import os
 import pickle as pkl
 
@@ -111,6 +112,35 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+
+        self.hand_processed_data = {}
+        self._hand_names = ["left_hand", "right_hand"]
+        ## Load hand data
+        for hand_name in self._hand_names:
+            if hand_name in walk_data:
+                # Hand data contains two keys, pose_motion and coord_info
+                # pose_motion: Contains information about each of the N poses.
+                #   joints_array: list of joints represented as quaternions for
+                #   each pose: (N * J) x 4.
+                #   transform_array: an offset transform matrix for every pose
+                # coord_info: dictionary specifying the bounds and number of bins used
+                #   to compute the target poses
+                hand_data = walk_data[hand_name]
+                nposes = hand_data["pose_motion"]["transform_array"].shape[0]
+                self.vpose_info = hand_data["coord_info"].item()
+                hand_motion = Motion(
+                    hand_data["pose_motion"]["joints_array"].reshape(
+                        nposes, -1, 4
+                    ),
+                    hand_data["pose_motion"]["transform_array"],
+                    None,
+                    1,
+                )
+                self.hand_processed_data[hand_name] = self.build_ik_vectors(
+                    hand_motion
+                )
+            else:
+                self.hand_processed_data[hand_name] = None
 
     def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
         """Set the speed of the humanoid according to the simulator speed"""
@@ -272,6 +302,197 @@ class HumanoidRearrangeController:
         )
         self.obj_transform_base = obj_transform_base @ rot_offset
         self.joint_pose = joint_pose
+
+    def build_ik_vectors(self, hand_motion):
+        """
+        Given a hand_motion Motion file, containing different humanoid poses
+        to reach objects with the hand, builds a matrix fo joint angles, root offset translations and rotations
+        so that they can be easily interpolated when reaching poses.
+        """
+        rotations, translations, joints = [], [], []
+        for ind in range(len(hand_motion.poses)):
+            curr_transform = mn.Matrix4(hand_motion.poses[ind].root_transform)
+
+            quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+            joints.append(
+                np.array(hand_motion.poses[ind].joints).reshape(-1, 4)[
+                    None, ...
+                ]
+            )
+            rotations.append(
+                np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+            )
+            translations.append(
+                np.array(curr_transform.translation)[None, ...]
+            )
+
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
+        obj_transform = add_rot @ self.walk_motion.poses[0].root_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+        curr_transform = obj_transform
+        trans = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+        ).inverted()
+        curr_transform = trans @ obj_transform
+
+        quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+        joints.append(
+            np.array(self.stop_pose.joints).reshape(-1, 4)[None, ...]
+        )
+        rotations.append(
+            np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+        )
+        translations.append(np.array(curr_transform.translation)[None, ...])
+        return (joints, rotations, translations)
+
+    def _trilinear_interpolate_pose(self, position, hand_data):
+        """
+        Given a 3D coordinate position, computes humanoid's joints, rotations and
+        translations to reach that position, doing trilinear interpolation.
+        """
+        joints, rotations, translations = hand_data
+
+        def find_index_quant(minv, maxv, num_bins, value, interp=False):
+            # Find the quantization bins where a given value falls
+            # E.g. if we have 3 points, min=0, max=1, value=0.75, it
+            # will fall between 1 and 2
+            if interp:
+                value = max(min(value, maxv), 0)
+            else:
+                value = max(min(value, maxv), minv)
+            value = min(value, maxv)
+            value_norm = (value - minv) / (maxv - minv)
+
+            index = value_norm * (num_bins - 1)
+
+            lower = min(math.floor(index), num_bins - 1)
+            upper = max(min(math.ceil(index), num_bins - 1), 0)
+            value_norm_t = index - lower
+            if lower < 0:
+                min_poss_val = 0.0
+                lower = (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
+                value_norm_t = (index - lower) / -lower
+                lower = -1
+
+            return lower, upper, value_norm_t
+
+        def comp_inter(x_i, y_i, z_i):
+            # Given an integer index from 0 to num_bins - 1
+            # on each dimension, compute the final index
+
+            if y_i < 0 or x_i < 0 or z_i < 0:
+                return -1
+            index = (
+                y_i
+                * self.vpose_info["num_bins"][0]
+                * self.vpose_info["num_bins"][2]
+                + x_i * self.vpose_info["num_bins"][2]
+                + z_i
+            )
+            return index
+
+        def normalize_quat(quat_tens):
+            # The last dimension contains the quaternion
+            return quat_tens / np.linalg.norm(quat_tens, axis=-1)[..., None]
+
+        def inter_data(x_i, y_i, z_i, dat, is_quat=False):
+            """
+            General trilinear interpolation function. Performs trilinear interpolation,
+            normalizing the result if the values are repsented as quaternions (is_quat)
+            :param x_i, y_i, z_i: For the x,y,z dimensions, specifies the lower, upper, and normalized value
+            so that we can perform interpolation in 3 dimensions
+            :param data: the values we want to interpolate.
+            :param is_quat: used to normalize the value in case we are interpolating quaternions
+
+            """
+            x0, y0, z0 = x_i[0], y_i[0], z_i[0]
+            x1, y1, z1 = x_i[1], y_i[1], z_i[1]
+            xd, yd, zd = x_i[2], y_i[2], z_i[2]
+            c000 = dat[comp_inter(x0, y0, z0)]
+            c001 = dat[comp_inter(x0, y0, z1)]
+            c010 = dat[comp_inter(x0, y1, z0)]
+            c011 = dat[comp_inter(x0, y1, z1)]
+            c100 = dat[comp_inter(x1, y0, z0)]
+            c101 = dat[comp_inter(x1, y0, z1)]
+            c110 = dat[comp_inter(x1, y1, z0)]
+            c111 = dat[comp_inter(x1, y1, z1)]
+
+            c00 = c000 * (1 - xd) + c100 * xd
+            c01 = c001 * (1 - xd) + c101 * xd
+            c10 = c010 * (1 - xd) + c110 * xd
+            c11 = c011 * (1 - xd) + c111 * xd
+
+            c0 = c00 * (1 - yd) + c10 * yd
+            c1 = c01 * (1 - yd) + c11 * yd
+
+            c = c0 * (1 - zd) + c1 * zd
+            if is_quat:
+                c = normalize_quat(c)
+
+            return c
+
+        relative_pos = position
+        x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
+        coord_diff = [x_diff, y_diff, z_diff]
+        coord_data = [
+            (
+                self.vpose_info["min"][ind_diff],
+                self.vpose_info["max"][ind_diff],
+                self.vpose_info["num_bins"][ind_diff],
+                coord_diff[ind_diff],
+            )
+            for ind_diff in range(3)
+        ]
+        # each value contains the lower, upper index and distance
+        interp = [False, False, True]
+        x_ind, y_ind, z_ind = [
+            find_index_quant(*data, interp)
+            for interp, data in zip(interp, coord_data)
+        ]
+
+        data_trans = np.concatenate(translations)
+        data_rot = np.concatenate(rotations)
+        data_joint = np.concatenate(joints)
+        res_joint = inter_data(x_ind, y_ind, z_ind, data_joint, is_quat=True)
+        res_trans = inter_data(x_ind, y_ind, z_ind, data_trans)
+        res_rot = inter_data(x_ind, y_ind, z_ind, data_rot, is_quat=True)
+        quat_rot = mn.Quaternion(mn.Vector3(res_rot[:3]), res_rot[-1])
+        joint_list = list(res_joint.reshape(-1))
+        transform = mn.Matrix4.from_(
+            quat_rot.to_matrix(), mn.Vector3(res_trans)
+        )
+        return joint_list, transform
+
+    def calculate_reach_pose(self, obj_pos: mn.Vector3, index_hand=0):
+        """
+        Updates the humanoid position to reach position obj_pos with the hand.
+        index_hand is 0 or 1 corresponding to the left or right hand
+        """
+        assert index_hand < 2
+        hand_name = self._hand_names[index_hand]
+        assert hand_name in self.hand_processed_data
+        hand_data = self.hand_processed_data[hand_name]
+        root_pos = self.obj_transform_base.translation
+        inv_T = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_x(mn.Rad(-np.pi / 2.0))
+            @ self.obj_transform_base.inverted()
+        )
+        relative_pos = inv_T.transform_vector(obj_pos - root_pos)
+
+        curr_poses, curr_transform = self._trilinear_interpolate_pose(
+            mn.Vector3(relative_pos), hand_data
+        )
+
+        self.obj_transform_offset = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+            @ curr_transform
+        )
+
+        self.joint_pose = curr_poses
 
     def get_pose(self):
         """
