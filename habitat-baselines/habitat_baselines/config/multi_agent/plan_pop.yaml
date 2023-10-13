@@ -1,7 +1,7 @@
 defaults:
   - pop_play
   # Override the human to use a planner
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
+  - override habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
   - _self_
 
 habitat_baselines:
