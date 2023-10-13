@@ -18,6 +18,11 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
 @dataclass
 class PlanNode:
+    """
+    Represents the info in the search problem to plan a path of high-level
+    actions to the goal.
+    """
+
     cur_pred_state: List[Predicate]
     parent: "PlanNode"
     depth: int
@@ -25,6 +30,13 @@ class PlanNode:
 
 
 class PlannerHighLevelPolicy(HighLevelPolicy):
+    """
+    High-level policy that will plan a sequence of objects to rearrange
+    actions. The `plan_idx` config parameter controls what sort of plan the
+    agent will execute. The agent can either rearrange 1 of the objects, or
+    both of the objects.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # This must match the predicate set in the `GlobalPredicatesSensor`.
