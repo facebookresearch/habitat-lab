@@ -44,7 +44,7 @@ class FetchState(Enum):
 PICK_DIST_THRESHOLD = 1.0  # Can use 1.2
 DROP_DIST_THRESHOLD = 1.0
 IS_ACCESSIBLE_THRESHOLD = 1.25
-ROBOT_BASE_HEIGHT = 0.59  # Default: 0.6043850
+ROBOT_BASE_HEIGHT = 0.53  # Default: 0.6043850
 TOTAL_BEG_MOTION = 150  # This number cannot be smaller than 30
 LOCAL_PLACE_TARGET = [
     -0.05,
