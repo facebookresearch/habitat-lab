@@ -139,6 +139,11 @@ class Server:
                 print(f"Error processing received pose data: {e}")
 
     async def serve(self, websocket):
+        # we only support one connected client at a time
+        if len(self._connected_clients) > 0:
+            await websocket.close()
+            return
+
         # Store the client connection object in the dictionary
         self._connected_clients[id(websocket)] = websocket
 
