@@ -504,6 +504,10 @@ class GuiHumanoidController(GuiController):
         # fixup is the difference between the movement allowed by step_filter
         # and the requested base movement.
         fixup = filtered_query_pos - target_query_pos
+
+        navmesh_to_floor_y_fixup = -0.17
+        fixup.y += navmesh_to_floor_y_fixup
+
         self._humanoid_controller.obj_transform_base.translation += fixup
 
         # TODO: remove the joint angles overwrite here
