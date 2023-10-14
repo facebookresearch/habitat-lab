@@ -26,14 +26,15 @@ from habitat_sim.physics import MotionType
 COLOR_GRASPABLE = mn.Color3(1, 0.75, 0)
 COLOR_GRASP_PREVIEW = mn.Color3(0.5, 1, 0)
 COLOR_FOCUS_OBJECT = mn.Color3(1, 1, 1)
-COLOR_FETCHER_NAV_PATH = mn.Color3(0, 153 / 255, 255 / 255)
+COLOR_FETCHER_NAV_PATH = mn.Color3(0, 160 / 255, 171 / 255)
+COLOR_FETCHER_ORACLE_NAV_PATH = mn.Color3(0, 153 / 255, 255 / 255)
 
-RADIUS_GRASPABLE = 0.2
-RADIUS_GRASP_PREVIEW = 0.35
-RADIUS_FOCUS_OBJECT = 0.15
+RADIUS_GRASPABLE = 0.15
+RADIUS_GRASP_PREVIEW = 0.15
+RADIUS_FOCUS_OBJECT = 0.2
 RADIUS_FETCHER_NAV_PATH = 0.45
 
-RING_PULSE_SIZE = 0.05
+RING_PULSE_SIZE = 0.03
 
 
 MIN_STEPS_STOP = 15
@@ -89,6 +90,7 @@ class AppStateFetch(AppState):
             self._sandbox_service.args.remote_gui_mode
         )
         self.count_tsteps_stop = 0
+        self._has_grasp_preview = False
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -152,31 +154,35 @@ class AppStateFetch(AppState):
         found_hand_idx = None
         self._recent_reach_pos = None
 
-        for i in range(len(self._target_obj_ids)):
-            # object is already grasped by Spot
-            if i in grasped_objects_idxs:
-                continue
+        self._has_grasp_preview = False
+        for hand_idx in range(num_hands):
+            hand_pos = hand_positions[hand_idx]
 
-            this_target_pos = self._get_target_object_position(i)
+            min_dist = grasp_threshold
+            min_i = None
+            for i in range(len(self._target_obj_ids)):
+                # object is already grasped by Spot
+                if i in grasped_objects_idxs:
+                    continue
 
-            for hand_idx in range(num_hands):
-                hand_pos = hand_positions[hand_idx]
-                if (this_target_pos - hand_pos).length() < grasp_threshold:
-                    # color = mn.Color3(0, 1, 0)  # green
-                    # box_half_size = 0.20
-                    # self._draw_box_in_pos(
-                    #     this_target_pos, color=color, box_half_size=box_half_size
-                    # )
-                    # show grasp
-                    self._add_target_object_highlight_ring(
-                        i, COLOR_GRASP_PREVIEW, radius=RADIUS_GRASP_PREVIEW
-                    )
+                this_target_pos = self._get_target_object_position(i)
 
-                    for key in self.get_grasp_keys_by_hand(hand_idx):
-                        if remote_button_input.get_key(key):
-                            found_obj_idx = i
-                            found_hand_idx = hand_idx
-                            break
+                dist = (this_target_pos - hand_pos).length()
+                if dist < min_dist:
+                    min_dist = dist
+                    min_i = i
+
+            if min_i is not None:
+                self._add_target_object_highlight_ring(
+                    min_i, COLOR_GRASP_PREVIEW, radius=RADIUS_GRASP_PREVIEW
+                )
+                self._has_grasp_preview = True
+
+                for key in self.get_grasp_keys_by_hand(hand_idx):
+                    if remote_button_input.get_key(key):
+                        found_obj_idx = min_i
+                        found_hand_idx = hand_idx
+                        break
 
             if found_obj_idx is not None:
                 break
@@ -336,6 +342,8 @@ class AppStateFetch(AppState):
         throw_vel = None
         reach_pos = None
 
+        self._has_grasp_preview = False
+
         if self._held_target_obj_idx is not None:
             if self._sandbox_service.gui_input.get_key(GuiInput.KeyNS.SPACE):
                 if self._recent_reach_pos:
@@ -412,6 +420,7 @@ class AppStateFetch(AppState):
                     self._add_target_object_highlight_ring(
                         min_i, COLOR_GRASP_PREVIEW, radius=RADIUS_GRASP_PREVIEW
                     )
+                    self._has_grasp_preview = True
 
                     if self._sandbox_service.gui_input.get_key_down(
                         GuiInput.KeyNS.SPACE
@@ -427,43 +436,6 @@ class AppStateFetch(AppState):
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
-
-        # Switch to the point nav with waypoints by keeping pressing "O" key
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O) and (
-            self.state_machine_agent_ctrl.current_state == FetchState.SEARCH
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.SEARCH_TIMEOUT_WAIT
-            or self.state_machine_agent_ctrl.current_state == FetchState.BRING
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.BRING_TIMEOUT_WAIT
-        ):
-            if (
-                self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH
-                or self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH_TIMEOUT_WAIT
-            ):
-                self.state_machine_agent_ctrl.current_state = (
-                    FetchState.SEARCH_ORACLE_NAV
-                )
-            else:
-                self.state_machine_agent_ctrl.current_state = (
-                    FetchState.BRING_ORACLE_NAV
-                )
-
-        if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
-            self.state_machine_agent_ctrl.current_state
-            == FetchState.SEARCH_ORACLE_NAV
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.BRING_ORACLE_NAV
-        ):
-            if (
-                self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH_ORACLE_NAV
-            ):
-                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
-            else:
-                self.state_machine_agent_ctrl.current_state = FetchState.BRING
 
         # Do vis on the real navigation target
         # if self.state_machine_agent_ctrl.current_state != FetchState.WAIT:
@@ -565,12 +537,14 @@ class AppStateFetch(AppState):
 
         if self._sandbox_service.client_message_manager:
             # Radius is defined as half the largest bounding box extent.
-            bb: mn.Range3D = self._get_target_object_bounding_box(
-                target_obj_idx
+            # bb: mn.Range3D = self._get_target_object_bounding_box(
+            #     target_obj_idx
+            # )
+            client_radius = (
+                radius  # max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
             )
-            radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
             self._sandbox_service.client_message_manager.add_highlight(
-                pos, radius
+                pos, client_radius
             )
 
         self._draw_circle(pos, color, radius)
@@ -588,10 +562,14 @@ class AppStateFetch(AppState):
             focus_obj_idx = self._target_obj_ids.index(tmp_id)
 
         if focus_obj_idx is None:
-            for i in range(len(self._target_obj_ids)):
-                self._add_target_object_highlight_ring(
-                    i, COLOR_GRASPABLE, radius=RADIUS_GRASPABLE, do_pulse=True
-                )
+            if not self._has_grasp_preview:
+                for i in range(len(self._target_obj_ids)):
+                    self._add_target_object_highlight_ring(
+                        i,
+                        COLOR_GRASPABLE,
+                        radius=RADIUS_GRASPABLE,
+                        do_pulse=True,
+                    )
         else:
             self._add_target_object_highlight_ring(
                 focus_obj_idx, COLOR_FOCUS_OBJECT, radius=RADIUS_FOCUS_OBJECT
@@ -749,26 +727,36 @@ class AppStateFetch(AppState):
                 or fetch_state == FetchState.SEARCH_ORACLE_NAV
                 else self._get_gui_agent_translation()
             )
-            if self.state_machine_agent_ctrl.gt_path is not None and (
+            is_oracle_nav = (
                 fetch_state == FetchState.SEARCH_ORACLE_NAV
                 or fetch_state == FetchState.BRING_ORACLE_NAV
-            ):
-                gt_path = [
-                    mn.Vector3(pt)
-                    for pt in self.state_machine_agent_ctrl.gt_path
-                ]
-                path_points = [fetcher_pos] + gt_path + [target_pos]
+            )
+            if is_oracle_nav:
+                if self.state_machine_agent_ctrl.gt_path:
+                    gt_path = [
+                        mn.Vector3(pt)
+                        for pt in self.state_machine_agent_ctrl.gt_path
+                    ]
+                    path_points = [fetcher_pos] + gt_path + [target_pos]
+                else:
+                    path_points = None
             else:
                 path_points = [fetcher_pos, target_pos]
-            floor_y = 0.0  # temp hack
-            for pt in path_points:
-                pt.y = floor_y
-            path_endpoint_radius = RADIUS_FETCHER_NAV_PATH
-            path_color = COLOR_FETCHER_NAV_PATH
 
-            self._sandbox_service.line_render.draw_path_with_endpoint_circles(
-                path_points, path_endpoint_radius, path_color
-            )
+            if path_points:
+                floor_y = 0.0  # temp hack
+                for pt in path_points:
+                    pt.y = floor_y
+                path_endpoint_radius = RADIUS_FETCHER_NAV_PATH
+                path_color = (
+                    COLOR_FETCHER_ORACLE_NAV_PATH
+                    if is_oracle_nav
+                    else COLOR_FETCHER_NAV_PATH
+                )
+
+                self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+                    path_points, path_endpoint_radius, path_color
+                )
 
         if not disable_spot:
             # sloppy: assume agent 0 and assume agent_0_articulated_agent_arm_depth obs key
@@ -782,6 +770,44 @@ class AppStateFetch(AppState):
                     2,  # scale
                 )
             )
+
+    def _update_fetcher(self):
+        # Switch to the point nav with waypoints by keeping pressing "O" key
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state == FetchState.SEARCH
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_TIMEOUT_WAIT
+            or self.state_machine_agent_ctrl.current_state == FetchState.BRING
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_TIMEOUT_WAIT
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH
+                or self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_TIMEOUT_WAIT
+            ):
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.SEARCH_ORACLE_NAV
+                )
+            else:
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.BRING_ORACLE_NAV
+                )
+
+        if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
+            self.state_machine_agent_ctrl.current_state
+            == FetchState.SEARCH_ORACLE_NAV
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.BRING_ORACLE_NAV
+        ):
+            if (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.SEARCH_ORACLE_NAV
+            ):
+                self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
+            else:
+                self.state_machine_agent_ctrl.current_state = FetchState.BRING
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
@@ -808,11 +834,13 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
             self._avatar_switch_helper.switch_avatar()
 
-        self._viz_fetcher(post_sim_update_dict)
-        self._viz_objects()
         if not self._paused:
             self._update_grasping_and_set_act_hints()
+            self._update_fetcher()
             self._sandbox_service.compute_action_and_step_env()
+
+        self._viz_fetcher(post_sim_update_dict)
+        self._viz_objects()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
