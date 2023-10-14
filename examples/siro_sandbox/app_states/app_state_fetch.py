@@ -477,17 +477,17 @@ class AppStateFetch(AppState):
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id)
 
-    def _reposition_object_height(self, target_obj_idx):
-        sim = self.get_sim()
-        rom = sim.get_rigid_object_manager()
-        object_id = self._target_obj_ids[target_obj_idx]
-        pos = rom.get_object_by_id(object_id).translation
-        height = pos[1]
-        # TODO: better way to handle the object's height when the robot drops the object
-        if height < 0.0:
-            rom.get_object_by_id(object_id).translation = mn.Vector3(
-                [pos[0], 0.0, pos[2]]
-            )
+    def _fix_physics_for_target_objects(self):
+        for i in range(len(self._target_obj_ids)):
+            rom_obj = self._get_target_rigid_object(i)
+            pos = rom_obj.translation
+            if pos.y < 0.0:
+                pos.y = 0
+                # beware rom_obj.translation.y = 0 doesn't work as you'd expect
+                rom_obj.translation = pos
+                vel = rom_obj.linear_velocity
+                vel.y = 0
+                rom_obj.linear_velocity = vel
 
     def _get_target_object_position(self, target_obj_idx):
         return self._get_target_rigid_object(target_obj_idx).translation
@@ -562,6 +562,7 @@ class AppStateFetch(AppState):
             focus_obj_idx = self._target_obj_ids.index(tmp_id)
 
         if focus_obj_idx is None:
+            # only show graspable objects if we aren't showing a grasp preview
             if not self._has_grasp_preview:
                 for i in range(len(self._target_obj_ids)):
                     self._add_target_object_highlight_ring(
@@ -574,18 +575,6 @@ class AppStateFetch(AppState):
             self._add_target_object_highlight_ring(
                 focus_obj_idx, COLOR_FOCUS_OBJECT, radius=RADIUS_FOCUS_OBJECT
             )
-            # Prevent the object from sinking to the floor
-            self._reposition_object_height(focus_obj_idx)
-
-            # # draw can grasp area
-            # can_grasp_position = mn.Vector3(this_target_pos)
-            # can_grasp_position[1] = self._get_gui_agent_feet_height()
-            # self._sandbox_service.line_render.draw_circle(
-            #     can_grasp_position,
-            #     self._can_grasp_place_threshold,
-            #     mn.Color3(255 / 255, 255 / 255, 0),
-            #     24,
-            # )
 
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
@@ -838,6 +827,7 @@ class AppStateFetch(AppState):
             self._update_grasping_and_set_act_hints()
             self._update_fetcher()
             self._sandbox_service.compute_action_and_step_env()
+            self._fix_physics_for_target_objects()
 
         self._viz_fetcher(post_sim_update_dict)
         self._viz_objects()
