@@ -54,7 +54,7 @@ LOCAL_PLACE_TARGET = [
 START_FETCH_OBJ_VEL_THRESHOLD = (
     1.5  # The object velocity threshold to start to search for the object
 )
-START_FETCH_OBJ_DIS_THRESHOLD = 1.5  # The object distance to human threshold to start to search for the object
+START_FETCH_OBJ_DIS_THRESHOLD = 0.8  # The object distance to human threshold to start to search for the object
 PICK_STEPS = 40
 
 
