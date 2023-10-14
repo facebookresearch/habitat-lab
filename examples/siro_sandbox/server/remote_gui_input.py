@@ -119,14 +119,14 @@ class RemoteGuiInput:
                     continue
                 if True:
                     self._gui_input._key_down.add(self._button_map[button])
-                    print(f"button {button} down")
+                    # print(f"button {button} down")
             for button in input_json["buttonUp"]:
                 if button not in self._button_map:
                     print(f"key {button} not mapped!")
                     continue
                 if True:
                     self._gui_input._key_up.add(self._button_map[button])
-                    print(f"button {button} up")
+                    # print(f"button {button} up")
 
             # code assumes dictionary<buttonId, bool>
             # for button in input_json["buttonDown"]:
