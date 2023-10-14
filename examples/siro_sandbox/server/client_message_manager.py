@@ -44,4 +44,4 @@ class ClientMessageManager:
         Change the position of the humanoid.
         Used to synchronize the humanoid position in the client when changing scene.
         """
-        self._message["humanoidPosition"] = [pos[0], pos[1], pos[2]]
+        self._message["teleportAvatarBasePosition"] = [pos[0], pos[1], pos[2]]
