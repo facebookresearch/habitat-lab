@@ -445,10 +445,7 @@ class SandboxDriver(GuiAppDriver):
 
     def _get_observation_as_debug_image(self, obs_key):
         def depth_to_rgb(obs):
-            converted_obs = np.concatenate(
-                [obs * 255.0 for _ in range(3)], axis=2
-            ).astype(np.uint8)
-            return converted_obs
+            return (np.repeat(obs * 255.0, 3, axis=-1)).astype(np.uint8)
 
         assert (
             obs_key in self._obs
