@@ -806,6 +806,11 @@ if __name__ == "__main__":
 
         agent_config = get_agent_config(sim_config=sim_config)
 
+        # temp hack (I couldn't figure out how to remove these via configs)
+        del agent_config.sim_sensors["arm_rgb_sensor"]
+        del agent_config.sim_sensors["head_rgb_sensor"]
+        del agent_config.sim_sensors["head_depth_sensor"]
+
         if show_debug_third_person:
             sim_config.debug_render = True
             agent_config.sim_sensors.update(
