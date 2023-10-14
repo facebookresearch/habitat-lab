@@ -111,9 +111,10 @@ class AppStateFetch(AppState):
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.count_tsteps_stop = 0
 
-        self._sandbox_service.client_message_manager.change_humanoid_position(
-            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
-        )
+        if self._sandbox_service.client_message_manager:
+            self._sandbox_service.client_message_manager.change_humanoid_position(
+                self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+            )
 
     def get_sim(self):
         return self._sandbox_service.sim
