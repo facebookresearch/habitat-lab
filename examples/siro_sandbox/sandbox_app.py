@@ -520,6 +520,7 @@ class SandboxDriver(GuiAppDriver):
                 (
                     "spot debug view",
                     self._get_observation_as_debug_image(obs_key),
+                    None,  # scale
                 )
             )
 

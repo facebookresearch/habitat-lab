@@ -772,6 +772,7 @@ class AppStateFetch(AppState):
                     self._sandbox_service.get_observation_as_debug_image(
                         "agent_0_articulated_agent_arm_depth"
                     ),
+                    2,  # scale
                 )
             )
 
