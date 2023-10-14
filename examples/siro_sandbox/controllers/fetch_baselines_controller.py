@@ -113,7 +113,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         }
         return {"ll_policy": policy_info}
 
-    def cancel_fetch(self):
+    def cancel_fetch(self, skip_reset_arm=False):
         if self.grasped_object:
             env = self._habitat_env
 
@@ -136,8 +136,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if (
             self.current_state == FetchState.PICK
             or self.current_state == FetchState.DROP
-            or self.current_state == FetchState.RESET_ARM_BEFORE_WAIT
-        ):
+        ) and not skip_reset_arm:
             self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
         else:
             self.current_state = FetchState.WAIT
@@ -626,10 +625,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     )
                     self.current_state = FetchState.BRING
                 if self._skill_steps >= max_skill_steps:
-                    self._get_grasp_mgr(env).desnap()
-                    self.grasped_object_id = None
-                    self.grasped_object = None
-                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                    self.cancel_fetch()
+                    # self._get_grasp_mgr(env).desnap()
+                    # self.grasped_object_id = None
+                    # self.grasped_object = None
+                    # self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -738,22 +738,24 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.grasped_object.motion_type = MotionType.DYNAMIC
 
                 if self.check_if_skill_done(obs, "place"):
-                    grasped_rigid_obj = self.grasped_object
-                    obj_bb = get_aabb(self.grasped_object_id, env._sim)
-                    self._last_object_drop_info = (
-                        grasped_rigid_obj,
-                        max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                    )
-                    self.grasped_object_id = None
-                    self.grasped_object = None
-                    self._target_place_trans = None
-                    self.current_state = FetchState.WAIT
+                    # grasped_rigid_obj = self.grasped_object
+                    # obj_bb = get_aabb(self.grasped_object_id, env._sim)
+                    # self._last_object_drop_info = (
+                    #     grasped_rigid_obj,
+                    #     max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
+                    # )
+                    # self.grasped_object_id = None
+                    # self.grasped_object = None
+                    # self._target_place_trans = None
+                    # self.current_state = FetchState.WAIT
+                    self.cancel_fetch(skip_reset_arm=True)
                 if self._skill_steps >= max_skill_steps:
-                    self._get_grasp_mgr(env).desnap()
-                    self.grasped_object_id = None
-                    self.grasped_object = None
-                    self._target_place_trans = None
-                    self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                    # self._get_grasp_mgr(env).desnap()
+                    # self.grasped_object_id = None
+                    # self.grasped_object = None
+                    # self._target_place_trans = None
+                    # self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
+                    self.cancel_fetch()
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -780,7 +782,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     mn.Matrix4(self._robot_obj_T)
                 )
                 self._robot_obj_T = None
-                self.current_state = FetchState.WAIT
+                self.cancel_fetch()
+                # self.current_state = FetchState.WAIT
 
         elif self.current_state == FetchState.RESET_ARM_BEFORE_WAIT:
             type_of_skill = self.defined_skills.place.skill_name
