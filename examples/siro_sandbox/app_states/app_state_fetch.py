@@ -535,7 +535,10 @@ class AppStateFetch(AppState):
             )
             # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
-        if self._sandbox_service.client_message_manager:
+        if (
+            self._sandbox_service.client_message_manager
+            and self._is_remote_active()
+        ):
             # Radius is defined as half the largest bounding box extent.
             # bb: mn.Range3D = self._get_target_object_bounding_box(
             #     target_obj_idx
