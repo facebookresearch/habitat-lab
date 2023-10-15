@@ -616,19 +616,16 @@ class AppStateFetch(AppState):
 
         controls_str: str = ""
         if not self._hide_gui_text:
-            controls_str += "ESC: exit\n"
+            controls_str += "H: show.hide help text\n"
             controls_str += "M: change scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
             if self._sandbox_service.args.remote_gui_mode:
-                controls_str += "T: toggle keyboard/VR\n"
+                controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
-            controls_str += "H: show.hide controls text\n"
             if not self._is_remote_active_toggle:
-                controls_str += "\nHumanoid controls\n"
                 controls_str += "Right-click: walk\n"
-                controls_str += "A, D: turn\n"
-                controls_str += "W, S: walk\n"
+                controls_str += "WASD: walk\n"
                 controls_str += get_grasp_release_controls_text()
 
         return controls_str
