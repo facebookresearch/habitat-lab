@@ -59,7 +59,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
 
         # We consider 4 possible plans, indexed from 0 to 3 which
         # correspond to moving no object (0), moving the first object (1),
-        # moving the second object (2), or moving the two objects (3). 
+        # moving the second object (2), or moving the two objects (3).  
         # Let the plans be stored in an array agent_plans.
         # When select_random_goal is False, the agent executed a plan indexed by plan_idx:
         # e.g. final_plan = agent_plans[plan_idx] 
