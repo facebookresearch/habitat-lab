@@ -16,4 +16,7 @@ hierarchical_policy:
     # 3 for moving 1st object, or 2nd object, or both objects.
     # 4 for moving 1st object, or 2nd object, or both objects, or neither object.
     plan_idx: 1
+    # Whether to randomly sample one of the plans, or always go with one of the plans indexed by `plan_idx`
+    select_random_goal: True
+    allow_other_place: False
   defined_skills: {}

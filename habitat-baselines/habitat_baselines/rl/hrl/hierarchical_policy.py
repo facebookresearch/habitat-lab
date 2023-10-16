@@ -18,8 +18,7 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
 )
 from habitat.tasks.rearrange.multi_task.pddl_sensors import PddlSuccess
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.hrl.hl import FixedHighLevelPolicy  # noqa: F401.
-from habitat_baselines.rl.hrl.hl import NeuralHighLevelPolicy  # noqa: F401.
+from habitat_baselines.rl.hrl.hl import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.hl import HighLevelPolicy
 from habitat_baselines.rl.hrl.skills import *  # noqa: F403,F401.
 from habitat_baselines.rl.hrl.skills import NoopSkillPolicy, SkillPolicy

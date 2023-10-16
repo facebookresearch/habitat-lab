@@ -14,6 +14,7 @@ from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 @dataclass
@@ -52,7 +53,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             [] for _ in range(self._num_envs)
         ]
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
-        self.plan_ids_batch = torch.zeros(self._num_envs, dtype=torch.int32)
+        self.gen_plan_ids_batch = torch.zeros(
+            self._num_envs, dtype=torch.int32
+        )
         self._plan_idx = self._config.plan_idx
         self._select_random_goal = self._config.select_random_goal
         assert self._plan_idx >= 0
@@ -79,7 +82,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         they match with the active environments
         """
         self._should_replan = self._should_replan[curr_envs_to_keep_active]
-        self.plan_ids_batch = self.plan_ids_batch[curr_envs_to_keep_active]
+        self.gen_plan_ids_batch = self.gen_plan_ids_batch[
+            curr_envs_to_keep_active
+        ]
         self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
 
     def create_hl_info(self):
@@ -231,10 +236,10 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         plans = full_plans[0]
         return plans
 
-    def _replan(self, pred_vals, plan_idx: int):
+    def _replan(self, pred_vals, gen_plan_idx: int):
         if self._select_random_goal:
             # We select a plan at random
-            index_plan = plan_idx
+            index_plan = gen_plan_idx
         else:
             # Fix the plan to be the specified `plan_idx`.
             index_plan = self._plan_idx - 1
@@ -258,10 +263,10 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
 
         return plans
 
-    def _get_plan_action(self, pred_vals, batch_idx: int, plan_idx: int):
+    def _get_plan_action(self, pred_vals, batch_idx: int, gen_plan_idx: int):
         if self._should_replan[batch_idx]:
             # Recompute the plan for this batch element.
-            self._plans[batch_idx] = self._replan(pred_vals, plan_idx)
+            self._plans[batch_idx] = self._replan(pred_vals, gen_plan_idx)
             self._next_sol_idxs[batch_idx] = 0
             if self._plans[batch_idx] is None:
                 return None
@@ -294,7 +299,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         immediate_end = torch.zeros(batch_size, dtype=torch.bool)
 
         if (~masks).sum() > 0:
-            self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
+            self.gen_plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
                 low=self.low_plan[self._plan_idx - 1],
                 high=self.high_plan[self._plan_idx - 1] + 1,
                 size=[(~masks).int().sum().item()],
@@ -304,9 +309,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan != 1.0:
                 continue
-            plan_idx = self.plan_ids_batch[batch_idx]
+            gen_plan_idx = self.gen_plan_ids_batch[batch_idx]
             cur_ac = self._get_plan_action(
-                all_pred_vals[batch_idx], batch_idx, plan_idx
+                all_pred_vals[batch_idx], batch_idx, gen_plan_idx
             )
             if cur_ac is not None:
                 next_skill[batch_idx] = self._skill_name_to_idx[cur_ac.name]
@@ -320,5 +325,5 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             next_skill,
             skill_args_data,
             immediate_end,
-            {"actions": next_skill},
+            PolicyActionData(),
         )
