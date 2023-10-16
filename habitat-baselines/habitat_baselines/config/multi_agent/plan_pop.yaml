@@ -9,15 +9,43 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_neural_multi_agent
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_neural_multi_agent
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_multi_agent
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
+    - all_predicates
   - _self_
 
-
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
+      - agent_0_agents_within_threshold
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_agents_within_threshold
+      - all_predicates
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
@@ -73,7 +101,6 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
-
             termination_obs_name: "agents_within_threshold"
             add_arm_rest: False
             policy_input_keys:
@@ -84,6 +111,7 @@ habitat_baselines:
               - "other_agent_gps"
               - "obj_start_sensor"
               - "obj_goal_sensor"
+              - "all_predicates"
             allowed_actions:
               - nav_to_goal
               - nav_to_obj
