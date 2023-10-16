@@ -158,7 +158,7 @@ class AppStateFetch(AppState):
             # Make the robot face toward the human
             self._make_robot_face_human(human_pos, robot_pos)
 
-    def on_environment_reset(self, episode_recorder_dict, scene_id=None):
+    def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
 
         sim = self.get_sim()
@@ -180,6 +180,11 @@ class AppStateFetch(AppState):
             self._sandbox_service.client_message_manager.change_humanoid_position(
                 self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
             )
+
+        # Get the scene id
+        scene_id = (
+            self._sandbox_service.episode_helper.current_episode.scene_id
+        )
 
         # Reset the location of the robot so that it is near human
         # Sloppy: should move this flag to other places

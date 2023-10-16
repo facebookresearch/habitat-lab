@@ -367,7 +367,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Update the base
         self.get_articulated_agent().sim_obj.transformation = target_trans
 
-    def _human_unblock_robot(self, human_pos, robot_pos, obj_pos):
+    def _is_human_giving_a_way_to_robot(self, human_pos, robot_pos, obj_pos):
         """Check if the human blocks the robot when the robot is near the target"""
         return (
             float(np.linalg.norm(np.array((human_pos - obj_pos))[[0, 2]]))
@@ -376,11 +376,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             > START_FETCH_ROBOT_DIS_THRESHOLD
         )
 
-    def _start_fetch(self, human_pos, robot_pos, obj_pos):
+    def _is_ok_to_start_fetch(self, human_pos, robot_pos, obj_pos):
         """Start to fetch the object condition"""
         return np.linalg.norm(
             self.rigid_obj_interest.linear_velocity
-        ) < START_FETCH_OBJ_VEL_THRESHOLD and self._human_unblock_robot(
+        ) < START_FETCH_OBJ_VEL_THRESHOLD and self._is_human_giving_a_way_to_robot(
             human_pos, robot_pos, obj_pos
         )
 
@@ -430,7 +430,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Assign safe_trans here for the visualization
             self.safe_pos = safe_trans
 
-            if self._start_fetch(human_trans, robot_trans, obj_trans):
+            if self._is_ok_to_start_fetch(human_trans, robot_trans, obj_trans):
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
@@ -523,7 +523,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
-                not self._human_unblock_robot(
+                not self._is_human_giving_a_way_to_robot(
                     human_trans, robot_trans, obj_trans
                 )
             )
@@ -550,7 +550,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             self.safe_pos = safe_trans
 
-            if self._start_fetch(human_trans, robot_trans, obj_trans):
+            if self._is_ok_to_start_fetch(human_trans, robot_trans, obj_trans):
                 # Check the termination conditions
                 finished_nav = True
                 # Make sure that there is a safe snap point
@@ -616,7 +616,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
-                not self._human_unblock_robot(
+                not self._is_human_giving_a_way_to_robot(
                     human_trans, robot_trans, obj_trans
                 )
             )
