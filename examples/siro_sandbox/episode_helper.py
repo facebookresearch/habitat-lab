@@ -2,12 +2,8 @@ class EpisodeHelper:
     def __init__(self, habitat_env):
         self._habitat_env = habitat_env
 
-        self._num_iter_episodes: int = len(self._habitat_env.episode_iterator.episodes)  # type: ignore
+        self._num_iter_episodes = float("inf") if habitat_env.episode_iterator.cycle else len(self._habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
-
-    @property
-    def num_iter_episodes(self):
-        return self._num_iter_episodes
 
     @property
     def num_episodes_done(self):
