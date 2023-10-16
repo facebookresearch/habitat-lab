@@ -92,6 +92,10 @@ class AppStateFetch(AppState):
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
 
+        # sloppy: set this private member so we get deterministic
+        # agent starting positions
+        self._sandbox_service.env.task._fixed_starting_position = True
+
     def _is_remote_active(self):
         return self._is_remote_active_toggle
 
@@ -611,13 +615,15 @@ class AppStateFetch(AppState):
         def get_grasp_release_controls_text():
             if self._held_target_obj_idx is not None:
                 return "Spacebar: throw\n"
-            else:
+            elif self._has_grasp_preview:
                 return "Spacebar: pick up\n"
+            else:
+                return ""
 
         controls_str: str = ""
         if not self._hide_gui_text:
             controls_str += "H: show.hide help text\n"
-            controls_str += "M: change scene\n"
+            controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
             if self._sandbox_service.args.remote_gui_mode:
@@ -803,8 +809,17 @@ class AppStateFetch(AppState):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._sandbox_service.end_episode(do_reset=True)
+        # use 1-5 keys to select certain episodes corresponding to our 5 scenes
+        num_fetch_scenes = 5
+        # hand-picked episodes from demo_25.json.gz
+        episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
+        for scene_idx in range(num_fetch_scenes):
+            key = GuiInput.KeyNS(GuiInput.KeyNS.ONE.value + scene_idx)
+            if self._sandbox_service.gui_input.get_key_down(key):
+                self._sandbox_service.episode_helper.set_next_episode_by_id(
+                    episode_id_by_scene_index[scene_idx]
+                )
+                self._sandbox_service.end_episode(do_reset=True)
 
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
