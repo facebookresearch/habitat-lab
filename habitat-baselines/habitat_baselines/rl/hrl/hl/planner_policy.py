@@ -62,16 +62,16 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
 
         # We consider 4 possible plans, indexed from 0 to 3 which
         # correspond to moving no object (0), moving the first object (1),
-        # moving the second object (2), or moving the two objects (3).  
+        # moving the second object (2), or moving the two objects (3).
         # Let the plans be stored in an array agent_plans.
         # When select_random_goal is False, the agent executed a plan indexed by plan_idx:
-        # e.g. final_plan = agent_plans[plan_idx] 
-        # When select_random_goal is True, the agent will select a plan at random, from  
+        # e.g. final_plan = agent_plans[plan_idx]
+        # When select_random_goal is True, the agent will select a plan at random, from
         # a subset specified by plan_idx as follows:
         # plan_index = randint(self.low_plan[plan_idx], self.high_plan[plan_idx])
         # final_final = agent_plans[plan_index].
-        # As such, plan_idx specifies whether the agent should always move the 
-        # same object (0), one of the two objects at random (1), one or two 
+        # As such, plan_idx specifies whether the agent should always move the
+        # same object (0), one of the two objects at random (1), one or two
         # objects at random (2) or one, two or none of the objects (3).
         self.low_plan = [1, 1, 1, 0]
         self.high_plan = [1, 2, 3, 3]
