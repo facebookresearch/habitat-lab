@@ -790,15 +790,23 @@ if __name__ == "__main__":
             ),
         )
 
+    # TextDrawer kwargs
+    display_font_size = 20
+    font_size_multiplier = (
+        gui_app_wrapper.framebuffer_size
+        * gui_app_wrapper.dpi_scaling
+        / gui_app_wrapper.window_size
+    ).max()
+    text_drawer_kwargs = {
+        "display_font_size": int(display_font_size * font_size_multiplier),
+        "relative_path_to_font": "./fonts/FuturaPT-Medium.ttf",  # default "./fonts/ProggyClean.ttf"
+    }
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size,
         viewport_rect,
         args.use_batch_renderer,
-        text_drawer_kwargs={
-            "display_font_size": 40,
-            "relative_path_to_font": "./fonts/FuturaPT-Medium.ttf",  # default "./fonts/ProggyClean.ttf"
-        },
+        text_drawer_kwargs=text_drawer_kwargs,
     )
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
