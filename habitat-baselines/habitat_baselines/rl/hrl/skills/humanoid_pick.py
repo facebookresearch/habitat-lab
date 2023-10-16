@@ -9,7 +9,7 @@ import torch
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
-    HasFinishedOracleNavSensor,
+    HasFinishedHumanoidPickSensor,
     IsHoldingSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
@@ -18,14 +18,24 @@ from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
-class OracleNavPolicy(NnSkillPolicy):
+class HumanoidPickPolicy(NnSkillPolicy):
+    """
+    Skill to generate a humanoid picking motion. Moves the arm next to an object,
+    snaps the hand to the object and retracts.
+    """
+
+    GRAB_ID = 1
+    RELEASE_ID = 0
+
     @dataclass
-    class OracleNavActionArgs:
+    class HumanoidPickActionArgs:
         """
         :property action_idx: The index of the oracle action we want to execute
+        :property grab_release: Whether we want to grab (1) or drop an object (0)
         """
 
         action_idx: int
+        grab_release: int
 
     def __init__(
         self,
@@ -48,9 +58,8 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
-        self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, "oracle_nav_action"
-        )
+        action_name = "humanoid_pick_action"
+        self._pick_ac_idx, _ = find_action_range(action_space, action_name)
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -65,6 +74,10 @@ class OracleNavPolicy(NnSkillPolicy):
         prev_actions,
         skill_name,
     ):
+        self._is_target_obj = None
+        self._targ_obj_idx = None
+        self._prev_angle = {}
+
         ret = super().on_enter(
             skill_arg,
             batch_idx,
@@ -110,15 +123,18 @@ class OracleNavPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-
-        finish_oracle_nav = observations[
-            HasFinishedOracleNavSensor.cls_uuid
+        finish_pick_action = observations[
+            HasFinishedHumanoidPickSensor.cls_uuid
         ].cpu()
-        ret = finish_oracle_nav.to(torch.bool)[:, 0]
-
+        ret = finish_pick_action.to(torch.bool)[:, 0]
         return ret
 
-    def _parse_skill_arg(self, skill_name: str, skill_arg):
+    def _parse_skill_arg(self, skill_arg):
+        """
+        Parses the object or container we should be picking or placing to.
+        Uses the same parameters as oracle_nav.
+        :param skill_arg: a pddl predicate specifying which object the pick action should target
+        """
         if len(skill_arg) == 2:
             search_target, _ = skill_arg
         elif len(skill_arg) == 3:
@@ -135,11 +151,11 @@ class OracleNavPolicy(NnSkillPolicy):
             )
         match_i = self._all_entities.index(target)
 
-        return OracleNavPolicy.OracleNavActionArgs(match_i)
+        return HumanoidPickPolicy.HumanoidPickActionArgs(match_i, self.GRAB_ID)
 
     @property
     def required_obs_keys(self):
-        ret = [HasFinishedOracleNavSensor.cls_uuid]
+        ret = [HasFinishedHumanoidPickSensor.cls_uuid]
         if self._should_keep_hold_state:
             ret.append(IsHoldingSensor.cls_uuid)
         return ret
@@ -160,115 +176,31 @@ class OracleNavPolicy(NnSkillPolicy):
             [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
         )
 
-        full_action[:, self._oracle_nav_ac_idx] = action_idxs
+        full_action[:, self._pick_ac_idx] = action_idxs
 
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
 
 
-class OracleNavCoordPolicy(OracleNavPolicy):
-    """The function produces a sequence of navigation targets and the oracle nav navigates to those targets"""
-
-    @dataclass
-    class OracleNavActionArgs:
-        """
-        :property action_idx: The index of the oracle action we want to execute
-        """
-
-        action_idx: int
-
-    def __init__(
-        self,
-        wrap_policy,
-        config,
-        action_space,
-        filtered_obs_space,
-        filtered_action_space,
-        batch_size,
-        pddl_domain_path,
-        pddl_task_path,
-        task_config,
-    ):
-        NnSkillPolicy.__init__(
-            self,
-            wrap_policy,
-            config,
-            action_space,
-            filtered_obs_space,
-            filtered_action_space,
-            batch_size,
-        )
-        # Random coordinate means that the navigation target is chosen randomly
-        action_name = "oracle_nav_randcoord_action"
-        self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, action_name
-        )
-
+class HumanoidPlacePolicy(HumanoidPickPolicy):
     def _parse_skill_arg(self, skill_arg):
-        return OracleNavCoordPolicy.OracleNavActionArgs(skill_arg)
+        if len(skill_arg) == 2:
+            search_target, _ = skill_arg
+        elif len(skill_arg) == 3:
+            _, search_target, _ = skill_arg
+        else:
+            raise ValueError(
+                f"Unexpected number of skill arguments in {skill_arg}"
+            )
 
-    def _internal_act(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        cur_batch_idx,
-        deterministic=False,
-    ):
-        full_action = torch.zeros(
-            (masks.shape[0], self._full_ac_size), device=masks.device
+        target = self._pddl_problem.get_entity(search_target)
+        if target is None:
+            raise ValueError(
+                f"Cannot find matching entity for {search_target}"
+            )
+        match_i = self._all_entities.index(target)
+
+        return HumanoidPickPolicy.HumanoidPickActionArgs(
+            match_i, self.RELEASE_ID
         )
-        action_idxs = torch.FloatTensor(
-            [self._cur_skill_args[i].action_idx for i in cur_batch_idx]
-        )
-
-        full_action[:, self._oracle_nav_ac_idx] = action_idxs
-
-        return PolicyActionData(
-            actions=full_action, rnn_hidden_states=rnn_hidden_states
-        )
-
-
-class OracleNavHumanPolicy(OracleNavCoordPolicy):
-    """
-    Navigate to human's location using oracle nav
-    """
-
-    @dataclass
-    class OracleNavActionArgs:
-        """
-        :property action_idx: The index of the oracle action we want to execute
-        """
-
-        action_idx: int
-
-    def __init__(
-        self,
-        wrap_policy,
-        config,
-        action_space,
-        filtered_obs_space,
-        filtered_action_space,
-        batch_size,
-        pddl_domain_path,
-        pddl_task_path,
-        task_config,
-    ):
-        NnSkillPolicy.__init__(
-            self,
-            wrap_policy,
-            config,
-            action_space,
-            filtered_obs_space,
-            filtered_action_space,
-            batch_size,
-        )
-        action_name = "oracle_nav_human_action"
-        self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, action_name
-        )
-
-    def _parse_skill_arg(self, skill_arg):
-        return OracleNavHumanPolicy.OracleNavActionArgs(skill_arg)

@@ -1,0 +1,182 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  # Config agent sensors
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
+  # Config agent hssd data
+  - /habitat/dataset/rearrangement: hssd
+  # Config agent action
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
+  # Config agent sensor
+  - /habitat/task/measurements:
+    - num_steps
+    - did_agents_collide
+    - num_agents_collide
+    - composite_stage_goals
+    - pddl_subgoal_reward
+    - rearrange_cooperate_reward
+    - articulated_agent_force
+    - force_terminate
+    - social_nav_reward
+    - object_to_goal_distance
+    - articulated_agent_colls
+    - rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    - social_nav_seek_success
+    - social_nav_stats
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - other_agent_gps
+    - humanoid_joint_sensor
+    - humanoid_detector_sensor
+    - has_finished_oracle_nav
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
+  - _self_
+
+habitat:
+  task:
+    lab_sensors:
+      agent_1_agents_within_threshold:
+        x_len: 2.0
+        y_len: 1.5
+        agent_idx: 1
+      agent_0_goal_to_agent_gps_compass:
+        goal_is_human: True
+    type: RearrangePddlSocialNavTask-v0
+    min_start_distance: 4.0
+    reward_measure: social_nav_reward
+    success_measure: nav_seek_success
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False
+    task_spec_base_path: benchmark/multi_agent/
+    task_spec: pddl/multi_agent_tidy_house
+    pddl_domain_def: fp
+    min_distance_start_agents: 5.0
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+
+    measurements:
+      rearrange_cooperate_reward:
+        stage_sparse_reward: 5.0
+        end_on_collide: True
+        collide_penalty: 0.5
+      force_terminate:
+        max_accum_force: -1
+        max_instant_force: -1
+
+    actions:
+      agent_0_base_velocity:
+        lin_speed: 40.0
+        allow_dyn_slide: True
+        # There is a collision if the difference between the clamped NavMesh position and target position
+        # is more than than collision_threshold for any point
+        collision_threshold: 1e-5
+        # The x and y locations of the clamped NavMesh position
+        navmesh_offset: [[0.0, 0.0], [0.225, 0.0]]
+        # If we allow the robot to move laterally
+        enable_lateral_move: False
+        # speed parameters
+        longitudinal_lin_speed: 5.0
+        lateral_lin_speed: 5.0
+        ang_speed: 5.0
+        enable_rotation_check_for_dyn_slide: False
+
+      agent_1_oracle_nav_action:
+        type: OracleNavAction
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1.0
+        dist_thresh: 0.5
+        lin_speed: 10.0
+        ang_speed: 10.0
+
+      agent_1_oracle_nav_randcoord_action:
+        type: OracleNavRandCoordAction
+        motion_control: human_joints
+        lin_speed: 5.0
+        ang_speed: 5.0
+
+    robot_at_thresh: 3.0
+
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_goal_to_agent_gps_compass
+      - agent_0_humanoid_detector_sensor
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+
+  environment:
+    max_episode_steps: 750
+
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - agent_0
+      - agent_1
+    agents:
+      agent_0:
+        radius: 0.25
+        height: 1.41
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+          arm_panoptic_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+        joint_start_noise: 0.0
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

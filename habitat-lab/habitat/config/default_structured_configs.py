@@ -43,11 +43,13 @@ __all__ = [
     "CompassSensorConfig",
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
+    "HumanoidDetectorSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
     "BaseVelocityActionConfig",
     "HumanoidJointActionConfig",
+    "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
@@ -71,6 +73,8 @@ __all__ = [
     "RotDistToGoalMeasurementConfig",
     "PddlStageGoalsMeasurementConfig",
     "NavToPosSuccMeasurementConfig",
+    "SocialNavStatsMeasurementConfig",
+    "NavSeekSuccessMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -265,6 +269,7 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     """
     type: str = "BaseVelNonCylinderAction"
     # The max longitudinal and lateral linear speeds of the robot
+    lin_speed: float = 10.0
     longitudinal_lin_speed: float = 10.0
     lateral_lin_speed: float = 10.0
     # The max angular speed of the robot
@@ -280,6 +285,8 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
 
 
 @dataclass
@@ -289,6 +296,20 @@ class HumanoidJointActionConfig(ActionConfig):
     """
     type: str = "HumanoidJointAction"
     num_joints: int = 54
+
+
+@dataclass
+class HumanoidPickActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only. Config for humanoid to reach objects using IK. For now only contains the number of joints. May be extended with duration of action
+    """
+    type: str = "HumanoidPickAction"
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
+    num_joints: int = 54
+    # The amount we should move on every call to humanoid pick action
+    dist_move_per_step: float = 0.04
+    # The distance at which we will snap/desnap an object, and start retracting the hand
+    dist_to_snap: float = 0.02
 
 
 @dataclass
@@ -359,6 +380,18 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     """
 
     type: str = "PointGoalWithGPSCompassSensor"
+
+
+@dataclass
+class HumanoidDetectorSensorConfig(LabSensorConfig):
+    r"""
+    Check if the human is in frame
+    """
+    type: str = "HumanoidDetectorSensor"
+    # The default human id is 100
+    human_id: int = 100
+    # How many pixels needed to consider that human is in frame
+    human_pixel_threshold: int = 1000
 
 
 @dataclass
@@ -544,6 +577,8 @@ class GoalSensorConfig(LabSensorConfig):
 @dataclass
 class NavGoalPointGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalPointGoalSensor"
+    goal_is_human: bool = False
+    human_agent_idx: int = 1
 
 
 @dataclass
@@ -567,6 +602,11 @@ class AreAgentsWithinThresholdConfig(LabSensorConfig):
 @dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
+class HasFinishedHumanoidPickSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedHumanoidPickSensor"
 
 
 @dataclass
@@ -869,6 +909,59 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class SocialNavStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    Social nav stats computation
+    """
+    type: str = "SocialNavStats"
+    # Check if the human is inside the frame or not
+    check_human_in_frame: bool = False
+    # The safety distance
+    min_dis_human: float = 1.0
+    max_dis_human: float = 2.0
+    # The human id
+    human_id: int = 100
+    # The pixel needed
+    human_detect_pixel_threshold: int = 1000
+    # The total number of steps
+    total_steps: int = 1500
+    # If we want to compute the shortest path to human
+    enable_shortest_path_computation: bool = False
+    # The min distance for considering backup and yiled motions
+    dis_threshold_for_backup_yield: float = 1.5
+    # The min vel for considering yiled motion
+    min_abs_vel_for_yield: float = 1.0
+    # The dot product value for considering that the robot is facing human
+    robot_face_human_threshold: float = 0.5
+    # Agent ids
+    robot_idx: int = 0
+    human_idx: int = 1
+
+
+@dataclass
+class NavSeekSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Social nav seek success measurement
+    """
+    type: str = "SocialNavSeekSuccess"
+    # If the robot needs to look at the target
+    must_look_at_targ: bool = True
+    must_call_stop: bool = True
+    # distance in radians.
+    success_angle_dist: float = 0.261799
+    # distance
+    following_step_succ_threshold: int = 800
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    need_to_face_human: bool = False
+    use_geo_distance: bool = False
+    facing_threshold: float = 0.5
+    # Set the agent ids
+    robot_idx: int = 0
+    human_idx: int = 1
+
+
+@dataclass
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation task only. The reward for rearrangement navigation.
@@ -1085,6 +1178,40 @@ class RearrangeCooperateRewardConfig(PddlSubgoalReward):
     end_on_collide: bool = True
     # Positive penalty means give negative reward.
     collide_penalty: float = 1.0
+
+
+@dataclass
+class CooperateSubgoalRewardConfig(PddlSubgoalReward):
+    type: str = "CooperateSubgoalReward"
+    stage_sparse_reward: float = 1.0
+    end_on_collide: bool = True
+    # Positive penalty means give negative reward.
+    collide_penalty: float = 1.0
+
+
+@dataclass
+class SocialNavReward(MeasurementConfig):
+    r"""
+    The reward for the social navigation tasks.
+    """
+    type: str = "SocialNavReward"
+    # The safety distance between the robot and the human
+    safe_dis_min: float = 1.0
+    safe_dis_max: float = 2.0
+    # If the safety distance is within the threshold, then
+    # the agent receives this amount of reward
+    safe_dis_reward: float = 2.0
+    # If the distance is below this threshold, the robot
+    # starts receiving an additional orientation reward
+    facing_human_dis: float = 3.0
+    # -1 means that there is no facing_human_reward
+    facing_human_reward: float = -1.0
+    # If we want to use geo distance to measure the distance
+    # between the robot and the human
+    use_geo_distance: bool = False
+    # Set the id of the agent
+    robot_idx: int = 0
+    human_idx: int = 1
 
 
 @dataclass
@@ -1720,6 +1847,12 @@ cs.store(
     node=HumanoidJointActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.humanoid_pick_action",
+    group="habitat/task/actions",
+    name="humanoid_pick_action",
+    node=HumanoidPickActionConfig,
+)
+cs.store(
     package="habitat.task.actions.velocity_control",
     group="habitat/task/actions",
     name="velocity_control",
@@ -1749,7 +1882,6 @@ cs.store(
     name="oracle_nav_action",
     node=OracleNavActionConfig,
 )
-
 cs.store(
     package="habitat.task.actions.pddl_apply_action",
     group="habitat/task/actions",
@@ -1870,6 +2002,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="pointgoal_with_gps_compass_sensor",
     node=PointGoalWithGPSCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_detector_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_detector_sensor",
+    node=HumanoidDetectorSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",
@@ -2003,6 +2141,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_humanoid_pick",
+    group="habitat/task/lab_sensors",
+    name="has_finished_humanoid_pick",
+    node=HasFinishedHumanoidPickSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",
@@ -2212,6 +2356,12 @@ cs.store(
     node=RearrangeCooperateRewardConfig,
 )
 cs.store(
+    package="habitat.task.measurements.social_nav_reward",
+    group="habitat/task/measurements",
+    name="social_nav_reward",
+    node=SocialNavReward,
+)
+cs.store(
     package="habitat.task.measurements.did_agents_collide",
     group="habitat/task/measurements",
     name="did_agents_collide",
@@ -2276,6 +2426,18 @@ cs.store(
     group="habitat/task/measurements",
     name="nav_to_pos_succ",
     node=NavToPosSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_stats",
+    group="habitat/task/measurements",
+    name="social_nav_stats",
+    node=SocialNavStatsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_seek_success",
+    group="habitat/task/measurements",
+    name="social_nav_seek_success",
+    node=NavSeekSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_goal",

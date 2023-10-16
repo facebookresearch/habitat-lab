@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
 from gym import spaces
 
@@ -34,6 +35,8 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         self._task = task
         self._sim = sim
         super().__init__(*args, task=task, **kwargs)
+        self._goal_is_human = kwargs["config"]["goal_is_human"]
+        self._human_agent_idx = kwargs["config"]["human_agent_idx"]
 
     def _get_uuid(self, *args, **kwargs):
         return NavGoalPointGoalSensor.cls_uuid
@@ -53,12 +56,18 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
+        # Make the goal to be the human location
+        if self._goal_is_human:
+            human_pos = self._sim.get_agent_data(
+                self._human_agent_idx
+            ).articulated_agent.base_pos
+            task.nav_goal_pos = np.array(human_pos)
 
         dir_vector = articulated_agent_T.inverted().transform_point(
             task.nav_goal_pos
         )
-        rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
+        rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
         return np.array([rho, -phi], dtype=np.float32)
 
 
@@ -158,7 +167,7 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class DistToGoal(Measure):
+class DistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "dist_to_goal"
 
     def __init__(self, *args, sim, config, task, **kwargs):
@@ -179,7 +188,11 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
+            np.array(
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 
@@ -192,7 +205,7 @@ class DistToGoal(Measure):
 
 
 @registry.register_measure
-class RotDistToGoal(Measure):
+class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
     cls_uuid: str = "rot_dist_to_goal"
 
     def __init__(self, *args, sim, **kwargs):
@@ -212,7 +225,7 @@ class RotDistToGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
         # Get the agent
-        robot = self._sim.articulated_agent
+        robot = self._sim.get_agent_data(self.agent_id).articulated_agent
         # Get the base transformation
         T = robot.base_transformation
         # Do transformation
