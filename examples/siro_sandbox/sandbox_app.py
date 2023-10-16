@@ -793,9 +793,9 @@ if __name__ == "__main__":
     # TextDrawer kwargs
     display_font_size = 20
     font_size_multiplier = (
-        gui_app_wrapper.framebuffer_size
+        mn.Vector2(gui_app_wrapper.framebuffer_size)
         * gui_app_wrapper.dpi_scaling
-        / gui_app_wrapper.window_size
+        / mn.Vector2(gui_app_wrapper.window_size)
     ).max()
     text_drawer_kwargs = {
         "display_font_size": int(display_font_size * font_size_multiplier),
