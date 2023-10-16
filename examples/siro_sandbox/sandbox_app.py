@@ -234,7 +234,8 @@ class SandboxDriver(GuiAppDriver):
             # How many frames we can simulate "ahead" of what keyframes have been sent.
             # A larger value increases lag on the client, while ensuring a more reliable
             # simulation rate in the presence of unreliable network comms.
-            max_steps_ahead = 3
+            # See also server.py max_send_rate
+            max_steps_ahead = 5
             self._interprocess_record = InterprocessRecord(max_steps_ahead)
             launch_server_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(

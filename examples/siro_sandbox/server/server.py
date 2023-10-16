@@ -68,7 +68,7 @@ class Server:
         # messages "one at a time" (waiting for confirmation of receipt from the
         # remote client OS), so there is probably no risk of overwhelming the
         # network connection bandwidth even when sending at a high rate.
-        max_send_rate = None  # or set None to not limit
+        max_send_rate = 10  # or set None to not limit
         self._send_frequency_limiter = FrequencyLimiter(max_send_rate)
 
         self._exit_event = exit_event
@@ -92,6 +92,15 @@ class Server:
             inc_keyframes = self._interprocess_record.get_queued_keyframes()
 
             if len(inc_keyframes):
+                # consolidate all inc keyframes into one inc_keyframe
+                tmp_con_keyframe = inc_keyframes[0]
+                if len(inc_keyframes) > 1:
+                    for i in range(1, len(inc_keyframes)):
+                        update_consolidated_keyframe(
+                            tmp_con_keyframe, inc_keyframes[i]
+                        )
+                    inc_keyframes = [tmp_con_keyframe]
+
                 # This client may be joining "late", after we've already simulated
                 # some frames. To handle this case, we send a consolidated keyframe as
                 # the very first keyframe for the new client. It captures all the

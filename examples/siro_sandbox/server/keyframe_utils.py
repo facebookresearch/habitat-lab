@@ -10,7 +10,7 @@ from typing import Any
 def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     """
     A "consolidated" keyframe is several incremental keyframes merged together.
-    See duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
+    See nearly duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
     Note the simplification logic here: if an instance is created and then
     later deleted, the latest consolidated keyframe won't have either the
     creation, update, or deletion.
@@ -18,12 +18,18 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     assert consolidated_keyframe is not None
     assert inc_keyframe is not None
 
+    def ensure_list(keyframe, key):
+        if key not in keyframe:
+            keyframe[key] = []
+
     # append loads
     if "loads" in inc_keyframe:
+        ensure_list(consolidated_keyframe, "loads")
         consolidated_keyframe["loads"] += inc_keyframe["loads"]
 
     # add or update stateUpdates based on instanceKey
     if "stateUpdates" in inc_keyframe:
+        ensure_list(consolidated_keyframe, "stateUpdates")
         for state_update in inc_keyframe["stateUpdates"]:
             key = state_update["instanceKey"]
             state = state_update["state"]
@@ -49,6 +55,7 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
 
     # append creations
     if "creations" in inc_keyframe:
+        ensure_list(consolidated_keyframe, "creations")
         consolidated_keyframe["creations"] += inc_keyframe["creations"]
 
     # if "rigCreations" in inc_keyframe:
@@ -57,20 +64,29 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     # for a deletion, just remove all references to this instanceKey
     if "deletions" in inc_keyframe:
         inc_deletions = inc_keyframe["deletions"]
+        for key in inc_deletions:
+            # If we find a corresponding creation in the con keyframe, we can remove
+            # the creation and otherwise skip this deletion. This logic ensures
+            # consolidated keyframes don't get bloated as many items are added
+            # and removed over time.
+            con_creations = consolidated_keyframe["creations"]
+            for entry in con_creations:
+                if entry["instanceKey"] == key:
+                    con_creations.remove(entry)
+                    found = True
+                    break
+            if not found:
+                # if we didn't find the creation, then we should still include the deletion
+                ensure_list(consolidated_keyframe, "deletions")
+                consolidated_keyframe["deletions"].append(key)
 
-        # remove creation
-        consolidated_keyframe["creations"] = [
-            entry
-            for entry in consolidated_keyframe["creations"]
-            if entry["instanceKey"] not in inc_deletions
-        ]
-
-        # remote stateUpdate
-        consolidated_keyframe["stateUpdates"] = [
-            entry
-            for entry in consolidated_keyframe["stateUpdates"]
-            if entry["instanceKey"] not in inc_deletions
-        ]
+        # remote stateUpdates for the deleted keys
+        if "stateUpdates" in consolidated_keyframe:
+            consolidated_keyframe["stateUpdates"] = [
+                entry
+                for entry in consolidated_keyframe["stateUpdates"]
+                if entry["instanceKey"] not in inc_deletions
+            ]
 
     # todo: lights, userTransforms
 
