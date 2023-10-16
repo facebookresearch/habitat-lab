@@ -666,6 +666,16 @@ class AppStateFetch(AppState):
         }
         if fetch_state in fetch_state_names:
             status_str += f"spot: {fetch_state_names[fetch_state]}\n"
+            if (
+                (
+                    fetch_state == FetchState.SEARCH
+                    or FetchState.SEARCH_ORACLE_NAV
+                )
+                and self.state_machine_agent_ctrl.human_block_robot_when_searching
+            ):
+                status_str = (
+                    f"{status_str[0:-1]} (please move away from the robot)"
+                )
 
         if self._paused:
             status_str += "\npaused\n"

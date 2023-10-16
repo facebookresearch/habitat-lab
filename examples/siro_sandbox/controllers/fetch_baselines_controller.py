@@ -92,6 +92,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._robot_obj_T = None
         self.safe_pos = None
         self.gt_path = None
+        self.human_block_robot_when_searching = False
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -366,15 +367,21 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Update the base
         self.get_articulated_agent().sim_obj.transformation = target_trans
 
-    def _start_fetch(self, human_pos, robot_pos, obj_pos):
-        """Start to fetch the object condition"""
-        return np.linalg.norm(
-            self.rigid_obj_interest.linear_velocity
-        ) < START_FETCH_OBJ_VEL_THRESHOLD and (
+    def _human_unblock_robot(self, human_pos, robot_pos, obj_pos):
+        """Check if the human blocks the robot when the robot is near the target"""
+        return (
             float(np.linalg.norm(np.array((human_pos - obj_pos))[[0, 2]]))
             > START_FETCH_OBJ_DIS_THRESHOLD
             or float(np.linalg.norm(np.array((human_pos - robot_pos))[[0, 2]]))
             > START_FETCH_ROBOT_DIS_THRESHOLD
+        )
+
+    def _start_fetch(self, human_pos, robot_pos, obj_pos):
+        """Start to fetch the object condition"""
+        return np.linalg.norm(
+            self.rigid_obj_interest.linear_velocity
+        ) < START_FETCH_OBJ_VEL_THRESHOLD and self._human_unblock_robot(
+            human_pos, robot_pos, obj_pos
         )
 
     def act(self, obs, env):
@@ -514,6 +521,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
 
+            # Check if the human blocks the robot when robot is near the target
+            self.human_block_robot_when_searching = (
+                not self._human_unblock_robot(
+                    human_trans, robot_trans, obj_trans
+                )
+            )
+
         elif self.current_state == FetchState.SEARCH_ORACLE_NAV:
             if self.should_start_skill:
                 # TODO: obs can be batched before
@@ -599,6 +613,13 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     else:
                         self.current_state = FetchState.PICK
                     self._init_policy_input()
+
+            # Check if the human blocks the robot when robot is near the target
+            self.human_block_robot_when_searching = (
+                not self._human_unblock_robot(
+                    human_trans, robot_trans, obj_trans
+                )
+            )
 
         elif self.current_state == FetchState.SEARCH_TIMEOUT_WAIT:
             if self.should_start_skill:
@@ -849,3 +870,4 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._robot_obj_T = None
         self.safe_pos = None
         self.gt_path = None
+        self.human_block_robot_when_searching = False
