@@ -363,7 +363,10 @@ class SandboxDriver(GuiAppDriver):
 
         # Reset all the app states
         for app_state in self._app_states:
-            app_state.on_environment_reset(self._episode_recorder_dict)
+            app_state.on_environment_reset(
+                self._episode_recorder_dict,
+                self._episode_helper.current_episode.scene_id,
+            )
 
         self._app_state_index = (
             0  # start from the first app state for each episode
