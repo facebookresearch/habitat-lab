@@ -18,6 +18,7 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
+    place_agent_at_dist_from_pos,
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
@@ -99,6 +100,8 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
+        self._target = {}
+        self._step = 0
         super().__init__(*args, task=task, **kwargs)
 
     def _get_sensor_type(self, *args, **kwargs):
@@ -117,8 +120,35 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
     def _get_positions(self) -> np.ndarray:
         raise NotImplementedError("Must override _get_positions")
 
+    def _get_target_for_idx(self, obj_pos, target_idx):
+        sample_distance = 1.5
+        print(target_idx)
+        start_pos, _, _ = place_agent_at_dist_from_pos(
+            np.array(obj_pos[target_idx]),
+            0.0,
+            sample_distance,
+            self._sim,
+            100,
+            1,
+            self._sim.get_agent_data(self.agent_id).articulated_agent,
+        )
+        # self._target[target_idx] = (start_pos, np.array(obj_pos))
+
+        return (start_pos, np.array(obj_pos))
+
     def get_observation(self, task, *args, **kwargs):
+        self._step += 1
+        print(self._step)
         pos = self._get_positions()
+        # try:
+        #     if not np.linalg.norm(kwargs["action"]["action_args"]["agent_0_base_vel"] - np.zeros(2)) < 0.01:
+        #         pos_0 = self._get_target_for_idx(pos, 0)[0]
+        #         pos_1 = self._get_target_for_idx(pos, 1)[0]
+        #         pos[0] = pos_0
+        #         pos[1] = pos_1
+        #         print("process pos")
+        # except:
+        #     print("no")
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
@@ -131,6 +161,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
 
+        print(" self._polar_pos", self._polar_pos)
         return self._polar_pos
 
 
@@ -780,6 +811,56 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
             "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
             "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
         }
+
+
+@registry.register_measure
+class CollisionsTerminate(UsesArticulatedAgentInterface, Measure):
+    """
+    Collision_ termination based on the number of collision
+    """
+
+    cls_uuid: str = "collision_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_scene_colls = self._config.max_scene_colls
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        collisions_info = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        scene_colls = collisions_info["robot_scene_colls"]
+        if self._max_scene_colls > 0 and scene_colls > self._max_scene_colls:
+            rearrange_logger.debug(
+                f"Scene collision threshold={self._max_scene_colls} exceeded with {scene_colls}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
 
 
 @registry.register_measure

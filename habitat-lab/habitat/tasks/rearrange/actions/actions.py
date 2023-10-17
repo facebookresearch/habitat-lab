@@ -356,6 +356,58 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
 
 
 @registry.register_task_action
+class ArmRelPosMaskKinematicAction(ArticulatedAgentAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        # clip from -1 to 1
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        target_arm_pos = (
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
+        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        self.cur_articulated_agent.fix_joint_values = set_arm_pos
+
+
+@registry.register_task_action
 class BaseVelAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
@@ -375,6 +427,7 @@ class BaseVelAction(ArticulatedAgentAction):
         self._lin_speed = self._config.lin_speed
         self._ang_speed = self._config.ang_speed
         self._allow_back = self._config.allow_back
+        self._gym_action_prefix = self._config.gym_action_prefix
 
     @property
     def action_space(self):
@@ -382,7 +435,7 @@ class BaseVelAction(ArticulatedAgentAction):
         return spaces.Dict(
             {
                 self._action_arg_prefix
-                + "base_vel": spaces.Box(
+                + self._gym_action_prefix: spaces.Box(
                     shape=(2,), low=-lim, high=lim, dtype=np.float32
                 )
             }
@@ -451,9 +504,17 @@ class BaseVelAction(ArticulatedAgentAction):
             )
 
     def step(self, *args, is_last_action, **kwargs):
-        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_vel, ang_vel = kwargs[
+            self._action_arg_prefix + self._gym_action_prefix
+        ]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        print(
+            "self._gym_action_prefix:",
+            self._gym_action_prefix,
+            self._lin_speed,
+            lin_vel,
+        )
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 

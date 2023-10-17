@@ -75,6 +75,7 @@ class PddlApplyAction(ArticulatedAgentAction):
                 apply_action = self._task.pddl_problem.actions[
                     action.name
                 ].clone()
+                # Step happens here
                 apply_action.set_param_values(param_values)
                 self._prev_action = apply_action
 
