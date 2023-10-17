@@ -116,11 +116,12 @@ class HumanoidRearrangeController:
         self.hand_processed_data = {}
         self._hand_names = ["left_hand", "right_hand"]
         ## Load hand data
+        self.vpose_info = {}
         for hand_name in self._hand_names:
             if hand_name in walk_data:
                 hand_data = walk_data[hand_name]
                 nposes = hand_data["pose_motion"]["transform_array"].shape[0]
-                self.vpose_info = hand_data["coord_info"].item()
+                self.vpose_info[hand_name] = hand_data["coord_info"].item()
                 hand_motion = Motion(
                     hand_data["pose_motion"]["joints_array"].reshape(
                         nposes, -1, 4
@@ -361,23 +362,6 @@ class HumanoidRearrangeController:
         ).flatten()
         return self.joint_pose + list(obj_trans_offset) + list(obj_trans_base)
 
-    def comp_values(self, index):
-        z_i = index % self.vpose_info["num_bins"][2]
-        x_i = (
-            int(index / self.vpose_info["num_bins"][2])
-            % self.vpose_info["num_bins"][0]
-        )
-        y_i = int(
-            index
-            / (self.vpose_info["num_bins"][0] * self.vpose_info["num_bins"][2])
-        )
-        findex = np.array([x_i, y_i, z_i])
-
-        dist = self.vpose_info["max"] - self.vpose_info["min"]
-        dist_per_bin = dist / (self.vpose_info["num_bins"] - 1)
-        xyz = findex * dist_per_bin + self.vpose_info["min"]
-        return xyz
-
     def build_ik_vectors(self, hand_motion):
         rotations, translations, joints = [], [], []
         for ind in range(len(hand_motion.poses)):
@@ -417,7 +401,9 @@ class HumanoidRearrangeController:
         translations.append(np.array(curr_transform.translation)[None, ...])
         return (joints, rotations, translations)
 
-    def _trilinear_interpolate_pose(self, position, hand_data):
+    def _trilinear_interpolate_pose(
+        self, position, hand_data, curr_pose_hand_name
+    ):
         joints, rotations, translations = hand_data
 
         def find_index_quant(minv, maxv, num_bins, value, interp=False):
@@ -455,9 +441,9 @@ class HumanoidRearrangeController:
                 return -1
             index = (
                 y_i
-                * self.vpose_info["num_bins"][0]
-                * self.vpose_info["num_bins"][2]
-                + x_i * self.vpose_info["num_bins"][2]
+                * self.vpose_info[curr_pose_hand_name]["num_bins"][0]
+                * self.vpose_info[curr_pose_hand_name]["num_bins"][2]
+                + x_i * self.vpose_info[curr_pose_hand_name]["num_bins"][2]
                 + z_i
             )
             return index
@@ -505,9 +491,9 @@ class HumanoidRearrangeController:
         coord_diff = [x_diff, y_diff, z_diff]
         coord_data = [
             (
-                self.vpose_info["min"][ind_diff],
-                self.vpose_info["max"][ind_diff],
-                self.vpose_info["num_bins"][ind_diff],
+                self.vpose_info[curr_pose_hand_name]["min"][ind_diff],
+                self.vpose_info[curr_pose_hand_name]["max"][ind_diff],
+                self.vpose_info[curr_pose_hand_name]["num_bins"][ind_diff],
                 coord_diff[ind_diff],
             )
             for ind_diff in range(3)
@@ -533,7 +519,8 @@ class HumanoidRearrangeController:
         return joint_list, transform
 
     def calculate_reach_pose(self, obj_pos: mn.Vector3, index_hand=0):
-        hand_data = self.hand_processed_data[self._hand_names[index_hand]]
+        hand_name = self._hand_names[index_hand]
+        hand_data = self.hand_processed_data[hand_name]
         root_pos = self.obj_transform_base.translation
         inv_T = (
             mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
@@ -543,7 +530,7 @@ class HumanoidRearrangeController:
         relative_pos = inv_T.transform_vector(obj_pos - root_pos)
 
         curr_poses, curr_transform = self._trilinear_interpolate_pose(
-            mn.Vector3(relative_pos), hand_data
+            mn.Vector3(relative_pos), hand_data, hand_name
         )
 
         self.obj_transform_offset = (
