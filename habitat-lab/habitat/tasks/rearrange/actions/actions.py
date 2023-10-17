@@ -679,6 +679,17 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
                     time_i += 1
                 first_row = False
 
+    def _input_not_nan(self, longitudinal_lin_vel, lateral_lin_vel, ang_vel):
+        """Check if the input is nan or not"""
+        if (
+            np.isnan(longitudinal_lin_vel)
+            or np.isnan(lateral_lin_vel)
+            or np.isnan(ang_vel)
+        ):
+            return False
+        else:
+            return True
+
     def step(self, *args, **kwargs):
         lateral_lin_vel = 0.0
         if self._enable_lateral_move:
@@ -710,6 +721,8 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
             longitudinal_lin_vel != 0.0
             or lateral_lin_vel != 0.0
             or ang_vel != 0.0
+        ) and self._input_not_nan(
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel
         ):
             self.update_base(ang_vel != 0.0, fix_leg=False)
             cur_i = int(self._play_i % self._play_length_data)
