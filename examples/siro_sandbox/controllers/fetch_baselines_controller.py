@@ -54,8 +54,12 @@ LOCAL_PLACE_TARGET = [
 START_FETCH_OBJ_VEL_THRESHOLD = (
     1.5  # The object velocity threshold to start to search for the object
 )
-START_FETCH_OBJ_DIS_THRESHOLD = 0.8  # The object distance to human threshold to start to search for the object
-START_FETCH_ROBOT_DIS_THRESHOLD = 1.0  # The robot distance to human threshold to start to search for the object
+START_FETCH_OBJ_DIS_THRESHOLD = (
+    1.8  # if the human is too close to the object, they block Spot
+)
+START_FETCH_ROBOT_DIS_THRESHOLD = (
+    1.8  # if the human is too close to Spot, they block Spot
+)
 PICK_STEPS = 40
 
 
