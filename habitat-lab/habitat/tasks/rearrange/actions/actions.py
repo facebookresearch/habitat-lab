@@ -717,6 +717,8 @@ class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
         )
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
+        # Sloppy: this is a sloppy fix since the NaN issue is from policy
+        # so we need to trace back
         if (
             longitudinal_lin_vel != 0.0
             or lateral_lin_vel != 0.0
