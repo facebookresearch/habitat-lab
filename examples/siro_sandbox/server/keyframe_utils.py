@@ -70,6 +70,7 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
             # consolidated keyframes don't get bloated as many items are added
             # and removed over time.
             con_creations = consolidated_keyframe["creations"]
+            found = False
             for entry in con_creations:
                 if entry["instanceKey"] == key:
                     con_creations.remove(entry)
