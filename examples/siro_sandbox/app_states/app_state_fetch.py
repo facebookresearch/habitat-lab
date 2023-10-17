@@ -744,6 +744,33 @@ class AppStateFetch(AppState):
 
         return controls_str
 
+    def _get_spot_status_text(self):
+        spot_status_text = ""
+        fetch_state = self.state_machine_agent_ctrl.current_state
+
+        if (
+            (fetch_state == FetchState.SEARCH or FetchState.SEARCH_ORACLE_NAV)
+            and self.state_machine_agent_ctrl.human_block_robot_when_searching
+        ):
+            spot_status_text = "spot: blocked by human\n"
+        else:
+            fetch_state_names = {
+                # FetchState.WAIT : "",
+                FetchState.SEARCH: "searching for object",
+                FetchState.SEARCH_ORACLE_NAV: "oracle nav to object",
+                FetchState.PICK: "picking object",
+                FetchState.BRING: "searching for human",
+                FetchState.BRING_ORACLE_NAV: "oracle nav to human",
+                FetchState.DROP: "dropping object",
+                FetchState.BEG_RESET: "cannot pick up the object",
+                FetchState.SEARCH_TIMEOUT_WAIT: "unable to reach object",
+                FetchState.BRING_TIMEOUT_WAIT: "unable to reach human",
+            }
+            if fetch_state in fetch_state_names:
+                spot_status_text = f"spot: {fetch_state_names[fetch_state]}\n"
+
+        return spot_status_text
+
     def _get_status_text(self):
         status_str = ""
 
@@ -759,31 +786,7 @@ class AppStateFetch(AppState):
                 else "human control: keyboard\n"
             )
 
-        fetch_state = self.state_machine_agent_ctrl.current_state
-        fetch_state_names = {
-            # FetchState.WAIT : "",
-            FetchState.SEARCH: "searching for object",
-            FetchState.SEARCH_ORACLE_NAV: "oracle nav to object",
-            FetchState.PICK: "picking object",
-            FetchState.BRING: "searching for human",
-            FetchState.BRING_ORACLE_NAV: "oracle nav to human",
-            FetchState.DROP: "dropping object",
-            FetchState.BEG_RESET: "cannot pick up the object",
-            FetchState.SEARCH_TIMEOUT_WAIT: "unable to reach object",
-            FetchState.BRING_TIMEOUT_WAIT: "unable to reach human",
-        }
-        if fetch_state in fetch_state_names:
-            status_str += f"spot: {fetch_state_names[fetch_state]}\n"
-            if (
-                (
-                    fetch_state == FetchState.SEARCH
-                    or FetchState.SEARCH_ORACLE_NAV
-                )
-                and self.state_machine_agent_ctrl.human_block_robot_when_searching
-            ):
-                status_str = (
-                    f"{status_str[0:-1]} (please move away from the robot)"
-                )
+        status_str += self._get_spot_status_text()
 
         if self._paused:
             status_str += "\npaused\n"
