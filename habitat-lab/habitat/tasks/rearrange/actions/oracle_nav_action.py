@@ -267,6 +267,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 else:
                     self.humanoid_controller.calculate_stop_pose()
                     self.skill_done = True
+
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[

@@ -483,6 +483,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         for skill_id, (batch_ids, dat) in grouped_skills.items():
             # TODO: either change name of the function or assign actions somewhere
             # else. Updating actions in should_terminate is counterintuitive
+
             (
                 self._cur_call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],
@@ -496,6 +497,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 ],
             )
             actions[batch_ids] += new_actions
+
         return self._cur_call_high_level, bad_should_terminate, actions
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):

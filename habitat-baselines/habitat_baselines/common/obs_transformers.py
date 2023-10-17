@@ -1225,6 +1225,7 @@ def get_active_obs_transforms(
                 )
             obs_transform = obs_trans_cls.from_config(obs_transform_config)
             active_obs_transforms.append(obs_transform)
+
     return active_obs_transforms
 
 
