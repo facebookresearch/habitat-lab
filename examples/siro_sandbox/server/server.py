@@ -68,7 +68,7 @@ class Server:
         # messages "one at a time" (waiting for confirmation of receipt from the
         # remote client OS), so there is probably no risk of overwhelming the
         # network connection bandwidth even when sending at a high rate.
-        max_send_rate = 10  # or set None to not limit
+        max_send_rate = None  # 10  # or set None to not limit
         self._send_frequency_limiter = FrequencyLimiter(max_send_rate)
 
         self._exit_event = exit_event
