@@ -156,15 +156,18 @@ class Server:
         # Store the client connection object in the dictionary
         self._connected_clients[id(websocket)] = websocket
 
+        print(f"Connection from client {websocket.remote_address}!")
+
         if self._exit_event and self._exit_event.is_set():
             await websocket.close()  # not sure if this is correct
             return
 
         try:
-            print(f"waiting for message from client {id(websocket)}")
+            print("Waiting for ready message from client...")
             message = await websocket.recv()
 
             if message == "client ready!":
+                print("Client is ready!")
                 # await self.send_keyframes(websocket)
 
                 # Start the tasks concurrently using asyncio.gather
