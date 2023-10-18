@@ -356,8 +356,6 @@ class SandboxDriver(GuiAppDriver):
         if self.do_network_server:
             self._remote_gui_input.clear_history()
 
-        self.ctrl_helper.on_environment_reset()
-
         if self._save_episode_record:
             self._reset_episode_recorder()
 
@@ -366,6 +364,9 @@ class SandboxDriver(GuiAppDriver):
             app_state.on_environment_reset(
                 self._episode_recorder_dict,
             )
+
+        # Call resetting the controller after the app reset since the human action requires to get a human base pos
+        self.ctrl_helper.on_environment_reset()
 
         self._app_state_index = (
             0  # start from the first app state for each episode
