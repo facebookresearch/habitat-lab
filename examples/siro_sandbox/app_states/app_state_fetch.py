@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import List
+
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -126,14 +128,16 @@ class AppStateFetch(AppState):
         # agent starting positions
         self._sandbox_service.env.task._fixed_starting_position = True
 
-    def _get_curr_navmesh_3d(self):
+    def _get_curr_navmesh_3d(self) -> List[mn.Vector3]:
         """Returns an array of vertex data for the triangulated NavMesh polys"""
         largest_island_index = get_largest_island_index(
             self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
         )
-        return self.get_sim().pathfinder.build_navmesh_vertices(
+        pts = self.get_sim().pathfinder.build_navmesh_vertices(
             largest_island_index
         )
+        # It is np.array, but we do type conversion here
+        return [mn.Vector3(pt) for pt in pts]
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
