@@ -365,7 +365,8 @@ class SandboxDriver(GuiAppDriver):
                 self._episode_recorder_dict,
             )
 
-        # Call resetting the controller after the app reset since the human action requires to get a human base pos
+        # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
+        # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
         self.ctrl_helper.on_environment_reset()
 
         self._app_state_index = (

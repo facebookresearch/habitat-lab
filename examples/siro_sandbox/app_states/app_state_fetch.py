@@ -234,10 +234,10 @@ class AppStateFetch(AppState):
             ).articulated_agent.base_pos = human_pos
         # Make agents look at each other
         self._make_agent_face_target(
-            human_pos, 1 - self.get_gui_controlled_agent_index()
+            human_pos, self.state_machine_agent_ctrl._agent_idx
         )
         self._make_agent_face_target(
-            robot_pos, self.get_gui_controlled_agent_index()
+            robot_pos, 1 - self.state_machine_agent_ctrl._agent_idx
         )
 
     def get_sim(self):
