@@ -1,0 +1,22 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "PlannerHighLevelPolicy"
+    # Timeout condition for the planning algorithm.
+    max_search_depth: 8
+    # Whether the planner should re-run at every step.
+    is_reactive: False
+    # The index of which plan to take. Options:
+    # 1 for moving 1st object.
+    # 2 for moving 1st object, or 2nd object.
+    # 3 for moving 1st object, or 2nd object, or both objects.
+    # 4 for moving 1st object, or 2nd object, or both objects, or neither object.
+    plan_idx: 1
+    # Whether to randomly sample one of the plans, or always go with one of the plans indexed by `plan_idx`
+    select_random_goal: True
+    allow_other_place: False
+  defined_skills: {}

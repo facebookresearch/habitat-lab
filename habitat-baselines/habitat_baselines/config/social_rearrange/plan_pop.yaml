@@ -1,0 +1,160 @@
+# @package _global_
+
+defaults:
+  - /benchmark/multi_agent: hssd_spot_human
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_neural_multi_agent
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_planner
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_multi_agent
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent
+  - /habitat/task/lab_sensors:
+    # For the oracle navigation
+    - has_finished_oracle_nav
+    - all_predicates
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
+      - agent_0_agents_within_threshold
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_agents_within_threshold
+      - all_predicates
+habitat_baselines:
+  verbose: False
+  trainer_name: "ddppo"
+  updater_name: "HRLPPO"
+  distrib_updater_name: "HRLDDPPO"
+  torch_gpu_id: 0
+  video_fps: 30
+
+  num_environments: 32
+  num_updates: -1
+  total_num_steps: 1e8
+  log_interval: 1
+  num_checkpoints: 10
+  force_torch_single_threaded: True
+  eval_keys_to_include_in_name: ['pddl_success']
+  load_resume_state_config: False
+  rollout_storage_name: "HrlRolloutStorage"
+
+  evaluate: False
+
+  eval:
+    should_load_ckpt: False
+    video_option: ["disk"]
+
+  rl:
+    agent:
+      type: "MultiAgentAccessMgr"
+      num_agent_types: 2
+      num_active_agents_per_type: [1, 1]
+      num_pool_agents_per_type: [1, 1]
+      agent_sample_interval: 20
+      force_partner_sample_idx: -1
+    policy:
+      agent_0:
+        hierarchical_policy:
+          high_level_policy:
+            termination_obs_name: "agents_within_threshold"
+            add_arm_rest: False
+            policy_input_keys:
+              - "articulated_agent_arm_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            termination_obs_name: "agents_within_threshold"
+            add_arm_rest: False
+            policy_input_keys:
+              - "head_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "all_predicates"
+            allowed_actions:
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+              - nav_to_receptacle_by_name
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1500
+
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 1
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.0001
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+
+    ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
+      pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
+      pretrained_encoder: False
+      # Whether the visual encoder backbone will be trained.
+      train_encoder: True
+      # Whether to reset the critic linear layer
+      reset_critic: False
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2

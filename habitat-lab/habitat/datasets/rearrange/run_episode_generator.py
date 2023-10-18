@@ -383,8 +383,7 @@ if __name__ == "__main__":
         # Simulator has been initialized and SceneDataset is populated
         if args.list:
             # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
-            mm = ep_gen.sim.metadata_mediator
-            print_metadata_mediator(mm)
+            print_metadata_mediator(ep_gen)
         else:
             import time
 

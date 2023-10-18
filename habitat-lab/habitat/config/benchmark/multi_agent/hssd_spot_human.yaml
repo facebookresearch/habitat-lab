@@ -149,5 +149,8 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
       enable_physics: True
+    agents:
+      agent_0:
+        joint_start_noise: 0.0
   dataset:
     data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

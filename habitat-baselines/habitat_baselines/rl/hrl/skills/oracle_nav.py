@@ -165,3 +165,110 @@ class OracleNavPolicy(NnSkillPolicy):
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
+
+
+class OracleNavCoordPolicy(OracleNavPolicy):
+    """The function produces a sequence of navigation targets and the oracle nav navigates to those targets"""
+
+    @dataclass
+    class OracleNavActionArgs:
+        """
+        :property action_idx: The index of the oracle action we want to execute
+        """
+
+        action_idx: int
+
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space,
+        filtered_obs_space,
+        filtered_action_space,
+        batch_size,
+        pddl_domain_path,
+        pddl_task_path,
+        task_config,
+    ):
+        NnSkillPolicy.__init__(
+            self,
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+        )
+        # Random coordinate means that the navigation target is chosen randomly
+        action_name = "oracle_nav_randcoord_action"
+        self._oracle_nav_ac_idx, _ = find_action_range(
+            action_space, action_name
+        )
+
+    def _parse_skill_arg(self, skill_arg):
+        return OracleNavCoordPolicy.OracleNavActionArgs(skill_arg)
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        full_action = torch.zeros(
+            (masks.shape[0], self._full_ac_size), device=masks.device
+        )
+        action_idxs = torch.FloatTensor(
+            [self._cur_skill_args[i].action_idx for i in cur_batch_idx]
+        )
+
+        full_action[:, self._oracle_nav_ac_idx] = action_idxs
+
+        return PolicyActionData(
+            actions=full_action, rnn_hidden_states=rnn_hidden_states
+        )
+
+
+class OracleNavHumanPolicy(OracleNavCoordPolicy):
+    """
+    Navigate to human's location using oracle nav
+    """
+
+    @dataclass
+    class OracleNavActionArgs:
+        """
+        :property action_idx: The index of the oracle action we want to execute
+        """
+
+        action_idx: int
+
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space,
+        filtered_obs_space,
+        filtered_action_space,
+        batch_size,
+        pddl_domain_path,
+        pddl_task_path,
+        task_config,
+    ):
+        NnSkillPolicy.__init__(
+            self,
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+        )
+        action_name = "oracle_nav_human_action"
+        self._oracle_nav_ac_idx, _ = find_action_range(
+            action_space, action_name
+        )
+
+    def _parse_skill_arg(self, skill_arg):
+        return OracleNavHumanPolicy.OracleNavActionArgs(skill_arg)
