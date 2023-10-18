@@ -80,17 +80,17 @@ To change the task (like set table) that you train your skills on, you can chang
 ## Social Navigation
 
 To run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets.
-- `python habitat_baselines/run.py --config-name=socialnav/social_nav.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=False`
+- `python habitat_baselines/run.py --config-name=social_nav/social_nav.yaml`
 
 For evaluating the trained Spot robot's policy
-- `python habitat_baselines/run.py --config-name=socialnav/social_nav.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=/checkpoints/latest.pth habitat_baselines.eval.should_load_ckpt=True`
+- `python habitat_baselines/run.py --config-name=social_nav/social_nav.yaml habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=/checkpoints/latest.pth habitat_baselines.eval.should_load_ckpt=True`
 
 ## Social Rearrangement
 
 To run multi-agent training with a Spot robot and humanoid on the social rearrangement task.
-- Learn-Single: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml`
-- Learn-Pop with 8 humanoid policies during training: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]`
-- Plan-Pop-4: `python habitat_baselines/run.py --config-name=multi_agent/plan_pop.yaml habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=4`. To run Plan-Pop-p for other `p` values, set `habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx`.
+- Learn-Single: `python habitat_baselines/run.py --config-name=social_rearrange/pop_play.yaml`
+- Learn-Pop with 8 humanoid policies during training: `python habitat_baselines/run.py --config-name=social_rearrange/pop_play.yaml habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]`
+- Plan-Pop-4: `python habitat_baselines/run.py --config-name=social_rearrange/plan_pop.yaml habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=4`. To run Plan-Pop-p for other `p` values, set `habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx`.
 
 For zero-shot evaluate against the unseen agent population:
-- With planner-based collaborators: `python habitat_baselines/run.py --config-name=multi_agent/pop_play.yaml habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=PATH_TO_CKPT.pth +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.select_random_goal=False +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=1` change `plan_idx` to be 1, 2, 3, or 4 to evaluate against the other 4 planner agents.
+- With planner-based collaborators: `python habitat_baselines/run.py --config-name=social_rearrange/pop_play.yaml habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=PATH_TO_CKPT.pth +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.select_random_goal=False +habitat_baselines.rl.policy.agent_1.hierarchical_policy.high_level_policy.plan_idx=1` change `plan_idx` to be 1, 2, 3, or 4 to evaluate against the other 4 planner agents.

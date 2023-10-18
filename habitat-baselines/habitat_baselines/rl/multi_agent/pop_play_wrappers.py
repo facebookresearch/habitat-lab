@@ -23,9 +23,14 @@ class MultiAgentPolicyActionData(PolicyActionData):
     Information returned from the `Policy.act` method representing the
     information from multiple agent's action. This class is needed to store
     actions of multiple agents together
-    :property length_actions: List containing, for every agent, the size of their action space.
-    :property length_rnn_hidden_states: List containing for every agent the dimensionality of the rnn hidden state.
-    :property num_agents: The number of agents represented in this PolicyActionData
+    :property length_actions: List containing, for every agent, the size of
+        their high-level action space.
+    :property length_take_actions: List containing, for every agent, the size
+        of their low-level action space.
+    :property length_rnn_hidden_states: List containing for every agent the
+        dimensionality of the rnn hidden state.
+    :property num_agents: The number of agents represented in this
+        `PolicyActionData`.
     """
 
     rnn_hidden_states: torch.Tensor
@@ -39,6 +44,7 @@ class MultiAgentPolicyActionData(PolicyActionData):
     # Indices
     length_rnn_hidden_states: Optional[torch.Tensor] = None
     length_actions: Optional[torch.Tensor] = None
+    length_take_actions: Optional[torch.Tensor] = None
     num_agents: Optional[int] = 1
 
     def _unpack(self, tensor_to_unpack, unpack_lengths=None):
@@ -70,13 +76,29 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "value_preds": self._unpack(self.values),
             "action_log_probs": self._unpack(self.action_log_probs),
             "take_actions": self._unpack(
-                self.take_actions, self.length_actions
+                self.take_actions, self.length_take_actions
             ),
             # This is numpy array and must be split differently.
             "should_inserts": np.split(
                 self.should_inserts, self.num_agents, axis=-1
             ),
         }
+
+
+def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
+    ret: List[Dict] = []
+    for agent_i, ac in enumerate(inputs):
+        if ac is None:
+            continue
+        for env_i, env_d in enumerate(ac):
+            if len(ret) <= env_i:
+                ret.append(
+                    {add_agent_prefix(k, agent_i): v for k, v in env_d.items()}
+                )
+            else:
+                for k, v in env_d.items():
+                    ret[env_i][add_agent_prefix(k, agent_i)] = v
+    return ret
 
 
 class MultiPolicy(Policy):
@@ -183,6 +205,15 @@ class MultiPolicy(Policy):
 
         action_dims = split_index_dict["index_len_prev_actions"]
 
+        # We need to split the `take_actions` if they are being assigned from
+        # `actions`. This will be the case if `take_actions` hasn't been
+        # assigned, like in a monolithic policy where there is no policy
+        # hierarchicy.
+        if any(ac.take_actions is None for ac in agent_actions):
+            length_take_actions = action_dims
+        else:
+            length_take_actions = None
+
         def _maybe_cat(get_dat, feature_dims, dtype):
             all_dat = [get_dat(ac) for ac in agent_actions]
             # Replace any None with dummy data.
@@ -237,6 +268,7 @@ class MultiPolicy(Policy):
             ),
             length_rnn_hidden_states=rnn_hidden_lengths,
             length_actions=action_dims,
+            length_take_actions=length_take_actions,
             num_agents=n_agents,
         )
 
@@ -538,19 +570,3 @@ class MultiUpdater(Updater):
     @classmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
         return MultiUpdater()
-
-
-def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
-    ret: List[Dict] = []
-    for agent_i, ac in enumerate(inputs):
-        if ac is None:
-            continue
-        for env_i, env_d in enumerate(ac):
-            if len(ret) <= env_i:
-                ret.append(
-                    {add_agent_prefix(k, agent_i): v for k, v in env_d.items()}
-                )
-            else:
-                for k, v in env_d.items():
-                    ret[env_i][add_agent_prefix(k, agent_i)] = v
-    return ret
