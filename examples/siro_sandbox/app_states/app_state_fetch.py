@@ -129,7 +129,7 @@ class AppStateFetch(AppState):
         self._sandbox_service.env.task._fixed_starting_position = True
 
     def _get_curr_navmesh_3d(self) -> List[mn.Vector3]:
-        """Returns an array of vertex data for the triangulated NavMesh polys"""
+        """Returns a list of vertex data for the triangulated NavMesh polys"""
         largest_island_index = get_largest_island_index(
             self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
         )
