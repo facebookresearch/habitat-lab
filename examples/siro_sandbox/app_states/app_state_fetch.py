@@ -48,24 +48,24 @@ RANDOM_AGENT_LOCATION_RESET = False
 # Sloppy: hardcore location of the robot and human
 FIX_AGENT_INIT_POS = {
     "data/fpss/scenes-uncluttered/102344193.scene_instance.json": (
-        [1.23993, -5.26795],
-        [0.777329, -4.32627],
+        [-1.8878, -5.14189],
+        [-5.84479, -4.75223],
     ),
     "data/fpss/scenes-uncluttered/102344280.scene_instance.json": (
-        [5.07665, 0.285393],
-        [7.49259, 3.15031],
+        [-1.4465, 1.36246],
+        [-7.46346, 1.5259],
     ),
     "data/fpss/scenes-uncluttered/102817200.scene_instance.json": (
-        [-7.36523, -1.46389],
-        [-6.391, -0.312697],
+        [-6.77723, -11.9282],
+        [-6.40974, -7.65545],
     ),
     "data/fpss/scenes-uncluttered/103997424_171030444.scene_instance.json": (
-        [-7.69423, -8.96804],
-        [-8.17851, -7.43931],
+        [-11.8683, -6.15889],
+        [-17.2134, -8.89483],
     ),
     "data/fpss/scenes-uncluttered/103997541_171030615.scene_instance.json": (
-        [-13.0185, 8.61184],
-        [-12.9749, 10.4968],
+        [-10.7404, 0.634613],
+        [-11.9156, -4.56228],
     ),
 }
 
@@ -128,11 +128,14 @@ class AppStateFetch(AppState):
     def _is_remote_active(self):
         return self._is_remote_active_toggle
 
-    def _make_robot_face_human(self, human_pos, robot_pos):
-        relative_target = human_pos - robot_pos
+    def _make_agent_face_target(self, target_pos, idx):
+        agent_pos = (
+            self.get_sim().get_agent_data(idx).articulated_agent.base_pos
+        )
+        relative_target = target_pos - agent_pos
         angle_to_object = get_angle_to_pos(relative_target)
         self.get_sim().get_agent_data(
-            1 - self.get_gui_controlled_agent_index()
+            idx
         ).articulated_agent.base_rot = angle_to_object
 
     def _make_robot_near_human(self, human_pos):
@@ -156,7 +159,9 @@ class AppStateFetch(AppState):
                 1 - self.get_gui_controlled_agent_index()
             ).articulated_agent.base_pos = robot_pos
             # Make the robot face toward the human
-            self._make_robot_face_human(human_pos, robot_pos)
+            self._make_agent_face_target(
+                human_pos, 1 - self.get_gui_controlled_agent_index()
+            )
 
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
@@ -227,8 +232,13 @@ class AppStateFetch(AppState):
             self.get_sim().get_agent_data(
                 self.get_gui_controlled_agent_index()
             ).articulated_agent.base_pos = human_pos
-            # Make robot look at human
-            self._make_robot_face_human(human_pos, robot_pos)
+        # Make agents look at each other
+        self._make_agent_face_target(
+            human_pos, 1 - self.get_gui_controlled_agent_index()
+        )
+        self._make_agent_face_target(
+            robot_pos, self.get_gui_controlled_agent_index()
+        )
 
     def get_sim(self):
         return self._sandbox_service.sim
