@@ -128,8 +128,17 @@ class AppStateFetch(AppState):
         # agent starting positions
         self._sandbox_service.env.task._fixed_starting_position = True
 
+    def _viz_navmesh(self):
+        """Plot the navmesh vis"""
+        pts = self._get_curr_navmesh_3d()
+        color = mn.Color3(0, 153 / 255, 255 / 255)
+        radius = 0.45
+        self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+            pts, radius, color
+        )
+
     def _get_curr_navmesh_3d(self) -> List[mn.Vector3]:
-        """Returns a list of vertex data for the triangulated NavMesh polys"""
+        """Return a list of vertex data for the triangulated NavMesh polys"""
         largest_island_index = get_largest_island_index(
             self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
         )
