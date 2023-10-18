@@ -130,12 +130,29 @@ class AppStateFetch(AppState):
 
     def _viz_navmesh(self):
         """Plot the navmesh vis"""
+        # Get the points
         pts = self._get_curr_navmesh_3d()
         color = mn.Color3(0, 153 / 255, 255 / 255)
-        radius = 0.45
-        self._sandbox_service.line_render.draw_path_with_endpoint_circles(
-            pts, radius, color
-        )
+        radius = 0.0
+        # Make sure three points form a triangulated navmesh
+        assert len(pts) % 3 == 0
+        # Loop over all the points
+        for i in range(0, len(pts), 3):
+            # Form a triangulated navmesh
+            plot_pts = [pts[j] for j in range(i, i + 3)]
+            # Form the last edge
+            plot_pts += [plot_pts[0]]
+            # Get the new height
+            new_plot_pts = []
+            # Adjust the height
+            np.random.seed(i)
+            height = plot_pts[0][1] + np.random.uniform()
+            for pt in plot_pts:
+                new_plot_pts.append(mn.Vector3([pt[0], height, pt[2]]))
+            # Plot the navmesh
+            self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+                new_plot_pts, radius, color
+            )
 
     def _get_curr_navmesh_3d(self) -> List[mn.Vector3]:
         """Return a list of vertex data for the triangulated NavMesh polys"""
