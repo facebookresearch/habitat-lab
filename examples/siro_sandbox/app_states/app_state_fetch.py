@@ -19,6 +19,7 @@ from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
 from habitat.tasks.rearrange.utils import get_angle_to_pos
@@ -124,6 +125,15 @@ class AppStateFetch(AppState):
         # sloppy: set this private member so we get deterministic
         # agent starting positions
         self._sandbox_service.env.task._fixed_starting_position = True
+
+    def _get_curr_navmesh_3d(self):
+        """Returns an array of vertex data for the triangulated NavMesh polys"""
+        largest_island_index = get_largest_island_index(
+            self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
+        )
+        return self.get_sim().pathfinder.build_navmesh_vertices(
+            largest_island_index
+        )
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
