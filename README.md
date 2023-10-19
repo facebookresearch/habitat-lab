@@ -24,11 +24,17 @@ Towards this goal, Habitat-Lab is designed to support the following features:
 Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator. For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
 
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
+
 <p align="center">
   <video height="400">
-   <source src="res/video/composite.mp4" type="video/mp4">  
+   <source src="res/video/composite.mov">  
   </video>
 </p>
+
+<figure class="video_container">
+  <iframe src="res/video/composite.mov" frameborder="0" allowfullscreen="true"> 
+</iframe>
+</figure>
 
 ---
 
