@@ -320,7 +320,7 @@ def test_multi_agent_trainer(
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             "habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz",
-            "habitat.simulator.agents.agent_1.articulated_agent_urdf=data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl",
+            "habitat.simulator.agents.agent_1.articulated_agent_urdf=data/hab3_bench_assets/humanoids/female_0/female_0.urdf",
             "habitat.simulator.agents.agent_1.motion_data_path=data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl",
             "habitat.dataset.scenes_dir=data/hab3_bench_assets/hab3-hssd/",
         ],
