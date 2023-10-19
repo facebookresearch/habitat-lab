@@ -15,6 +15,7 @@ class EpisodeHelper:
 
     @property
     def num_iter_episodes(self):
+        """Returns the number of episodes in the iterator. If the iterator is cyclic, returns infinity."""
         return (
             self._num_iter_episodes
             if not self._episode_iterator_cycle
