@@ -75,7 +75,8 @@ python -u -m habitat_baselines.run \
 
 To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.
 
-# Multi-Agent
+# Habitat-3.0 Multi-Agent Training
+First download the necessary data with `python -m habitat_sim.utils.datasets_download --uids hssd-hab hab3-episodes habitat_humanoids hab3_bench_assets`.
 
 ## Social Navigation
 

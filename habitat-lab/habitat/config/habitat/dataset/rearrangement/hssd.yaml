@@ -7,4 +7,4 @@ defaults:
 type: RearrangeDataset-v0
 split: train
 data_path: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
-scenes_dir: "data/scene_datasets/fphab"
+scenes_dir: "data/scene_datasets/hssd-hab"
