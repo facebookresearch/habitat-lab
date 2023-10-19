@@ -27,7 +27,7 @@ Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim
 
 <p align="center">
   <img src="res/img/habitat3.gif" height="400">
-   
+
 </p>
 
 ---
