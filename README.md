@@ -16,25 +16,19 @@ Habitat-Lab is a modular high-level library for end-to-end development in embodi
 
 Towards this goal, Habitat-Lab is designed to support the following features:
 
-- **Flexible Task Definition**: allows users to train agents in a wide variety of single and multi-agent tasks (e.g. navigation, rearrangement, instruction following, question answering, human following), as well as define novel tasks.
-- **Diverse Embodied Agents**: configure and instantiate a diverse set of embodied agents, including commercial robotd and humanoids, specifying their sensors and capabilities.
+- **Flexible Task Definitions**: allows users to train agents in a wide variety of single and multi-agent tasks (e.g. navigation, rearrangement, instruction following, question answering, human following), as well as define novel tasks.
+- **Diverse Embodied Agents**: configure and instantiate a diverse set of embodied agents, including commercial robots and humanoids, specifying their sensors and capabilities.
 - **Training and Evaluating agents**: providing algorithms for single and multi-agent training (via imitation or reinforcement learning, or no learning at all as in SensePlanAct pipelines), as well as tools to benchmark their performance on the defined tasks using standard metrics.
-- **Human in the loop interaction**: providing a framework for humans to interact with the simulation, to either collect embodied data or interact with the trained agents.
+- **Human in the loop interaction**: providing a framework for humans to interact with the simulator, enabling to collect embodied data or interact with trained agents.
 
 Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator. For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
 
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
 
 <p align="center">
-  <video height="400">
-   <source src="res/video/composite.mov">
-  </video>
+  <img src="res/img/habitat3.gif" height="400">
+   
 </p>
-
-<figure class="video_container">
-  <iframe src="res/video/composite.mov" frameborder="0" allowfullscreen="true">
-</iframe>
-</figure>
 
 ---
 
