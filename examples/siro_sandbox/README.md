@@ -36,6 +36,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --app-state rearrange \
 --cfg social_rearrange/pop_play.yaml \
 --cfg-opts \
+habitat.environment.iterator_options.cycle=False \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
