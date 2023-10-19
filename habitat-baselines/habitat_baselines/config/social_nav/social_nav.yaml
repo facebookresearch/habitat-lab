@@ -31,7 +31,7 @@ habitat_baselines:
   log_interval: 10
   num_checkpoints: 100
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['composite_success']
+  eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 

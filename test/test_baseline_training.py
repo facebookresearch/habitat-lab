@@ -40,7 +40,13 @@ except ImportError:
 def setup_function(test_trainers):
     # Download the needed datasets
     data_downloader.main(
-        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+        [
+            "--uids",
+            "rearrange_task_assets",
+            "hab3_bench_assets",
+            "--no-replace",
+            "--no-prune",
+        ]
     )
 
 
@@ -293,9 +299,9 @@ def test_hrl(config_path, policy_type, skill_type, mode):
 @pytest.mark.parametrize(
     "config_path",
     [
-        ("social_rearrange/pop_play.yaml",),
-        ("social_rearrange/plan_pop.yaml",),
-        ("social_nav/social_nav.yaml",),
+        "social_rearrange/pop_play.yaml",
+        "social_rearrange/plan_pop.yaml",
+        "social_nav/social_nav.yaml",
     ],
 )
 def test_multi_agent_trainer(
@@ -314,6 +320,9 @@ def test_multi_agent_trainer(
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             "habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz",
+            "habitat.simulator.agents.agent_1.articulated_agent_urdf=data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl",
+            "habitat.simulator.agents.agent_1.motion_data_path=data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl",
+            "habitat.dataset.scenes_dir=data/hab3_bench_assets/hab3-hssd/",
         ],
     )
 

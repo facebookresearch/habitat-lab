@@ -768,10 +768,8 @@ if __name__ == "__main__":
 
         # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
-            if "composite_success" in task_config.measurements:
-                task_config.measurements.composite_success.must_call_stop = (
-                    False
-                )
+            if "pddl_success" in task_config.measurements:
+                task_config.measurements.pddl_success.must_call_stop = False
             if "rearrange_nav_to_obj_success" in task_config.measurements:
                 task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
                     False
