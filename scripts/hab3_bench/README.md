@@ -28,7 +28,7 @@ Or manually:
  ```
 
 - Run the benchmark: bash scripts/hab3_bench/bench_runner.sh
-- Plot the results: python scripts/hab3_bench/plot_bench.py
+- Plot the results: python scripts/hab3_bench/h3_plot_bench.py
 
 Alternatively run customized benchmarks with scripts/hab3_bench/hab3_benchmark.py
 
