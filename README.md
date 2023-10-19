@@ -93,7 +93,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```
       conda install habitat-sim withbullet -c conda-forge -c aihabitat
       ```
-      Note, for certain features, such as multi-agent support, or human in the loop interaction, you may need to install `aihabitat-nightly`. See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
+      Note, for newer features added after the most recent release, you may need to install `aihabitat-nightly`. See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
 
 1. **pip install habitat-lab stable version**.
 
