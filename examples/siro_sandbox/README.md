@@ -1,6 +1,9 @@
 # Sandbox Tool
 
-![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
+<p align="center">
+  <img src="../../res/img/hitl_tool.gif" height=400>
+</p>
+
 
 # Overview
 This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
@@ -9,8 +12,40 @@ This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g.
 * When using HSSD scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
 
 # Example usage
-> [!NOTE]
-> Installation steps and example terminal commands coming soon!
+
+## Installation
+1. Clone Habitat-lab [main branch](https://github.com/facebookresearch/habitat-lab).
+1. Install Habitat-lab using [instructions](https://github.com/facebookresearch/habitat-lab#installation).
+1. Install Habitat-sim [main branch](https://github.com/facebookresearch/habitat-sim).
+    * [Build from source](https://github.com/facebookresearch/habitat-sim/blob/main/BUILD_FROM_SOURCE.md), or install the [conda packages](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages).
+        * Be sure to include Bullet physics, e.g. `python setup.py install --bullet`.
+1. Download required assets:
+    ```bash
+    python -m habitat_sim.utils.datasets_download \
+    --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
+    --data-path data/
+    ```
+
+## Launch commands
+
+### GUI-controlled humanoid and learned-policy-controlled Spot
+To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD, run:
+```bash
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--gui-controlled-agent-index 1 \
+--app-state rearrange \
+--cfg social_rearrange/pop_play.yaml \
+--cfg-opts \
+habitat.environment.iterator_options.cycle=False \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False \
+habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
+habitat.simulator.habitat_sim_v0.allow_sliding=False
+```
 
 # Controls
 
