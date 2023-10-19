@@ -84,4 +84,4 @@ habitat:
       enable_physics: True
 
   dataset:
-    data_path: data/hab3_bench_assets/episode_datasets/small_small.json.gz
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
