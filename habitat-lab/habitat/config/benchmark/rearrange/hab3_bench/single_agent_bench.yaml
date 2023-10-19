@@ -10,6 +10,7 @@ defaults:
     - num_steps
     - composite_stage_goals
     - pddl_subgoal_reward
+    - move_objects_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
