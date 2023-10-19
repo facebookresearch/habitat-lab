@@ -12,27 +12,40 @@
 Habitat-Lab
 ==============================
 
-Habitat-Lab is a modular high-level library for end-to-end development in embodied AI --
-defining embodied AI tasks (e.g. navigation, rearrangement, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in SensePlanAct pipelines), and benchmarking their performance on the defined tasks using standard metrics.
+Habitat-Lab is a modular high-level library for end-to-end development in embodied AI. It is designed to train agents to perform a wide variety of embodied AI tasks in indoor environments, as well as develop agents that can interact with humans in performing these tasks.
+
+Towards this goal, Habitat-Lab is designed to support the following features:
+
+- **Flexible task definitions**: allowing users to train agents in a wide variety of single and multi-agent tasks (e.g. navigation, rearrangement, instruction following, question answering, human following), as well as define novel tasks.
+- **Diverse embodied agents**: configuring and instantiating a diverse set of embodied agents, including commercial robots and humanoids, specifying their sensors and capabilities.
+- **Training and evaluating agents**: providing algorithms for single and multi-agent training (via imitation or reinforcement learning, or no learning at all as in SensePlanAct pipelines), as well as tools to benchmark their performance on the defined tasks using standard metrics.
+- **Human in the loop interaction**: providing a framework for humans to interact with the simulator, enabling to collect embodied data or interact with trained agents.
 
 Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator. For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
 
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
+
 <p align="center">
-  <img src="res/img/habitat_compressed.gif"  height="400">
+  <img src="res/img/habitat3.gif" height="400">
+
 </p>
 
 ---
 
 ## Table of contents
-   1. [Citing Habitat](#citing-habitat)
-   1. [Installation](#installation)
-   1. [Testing](#testing)
-   1. [Documentation](#documentation)
-   1. [Docker Setup](#docker-setup)
-   1. [Datasets](#datasets)
-   1. [Baselines](#baselines)
-   1. [License](#license)
+- [Habitat-Lab](#habitat-lab)
+  - [Table of contents](#table-of-contents)
+  - [Citing Habitat](#citing-habitat)
+  - [Installation](#installation)
+  - [Testing](#testing)
+  - [Debugging an environment issue](#debugging-an-environment-issue)
+  - [Documentation](#documentation)
+  - [Docker Setup](#docker-setup)
+    - [Questions?](#questions)
+  - [Datasets](#datasets)
+  - [Baselines](#baselines)
+  - [ROS-X-Habitat](#ros-x-habitat)
+  - [License](#license)
 
 
 ## Citing Habitat
