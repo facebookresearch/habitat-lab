@@ -290,6 +290,70 @@ def test_hrl(config_path, policy_type, skill_type, mode):
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
 )
+@pytest.mark.parametrize(
+    "config_path",
+    [
+        ("social_rearrange/pop_play.yaml",),
+        ("social_rearrange/plan_pop.yaml",),
+        ("social_nav/social_nav.yaml",),
+    ],
+)
+def test_multi_agent_trainer(
+    config_path: str,
+):
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    # Setup the training
+    config = get_config(
+        config_path,
+        [
+            "habitat_baselines.num_updates=2",
+            "habitat_baselines.rl.ppo.num_mini_batch=1",
+            "habitat_baselines.num_environments=1",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            "habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz",
+        ],
+    )
+
+    with read_write(config):
+        agent_config = get_agent_config(config.habitat.simulator)
+        # Changing the visual observation size for speed
+        for sim_sensor_config in agent_config.sim_sensors.values():
+            sim_sensor_config.update({"height": 64, "width": 64})
+
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
+    torch.backends.cudnn.deterministic = True
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
+        torch.set_num_threads(1)
+
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
+    trainer = trainer_init(config)
+
+    # Train
+    trainer.train()
+    # Training should complete without raising an error.
+
+
+@pytest.mark.skipif(
+    int(os.environ.get("TEST_BASELINE_SMALL", 0)) == 0,
+    reason="Full training tests did not run. Need `export TEST_BASELINE_SMALL=1",
+)
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
 @pytest.mark.skipif(
     not pygame_installed, reason="pygame sub-module not installed"
 )
