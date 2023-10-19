@@ -6,7 +6,7 @@ Habitat also supports humanoid avatars. These avatars are represented as articul
 You can download the humanoid avatar by running:
 
 ```
-python -m habitat_sim.utils.datasets_download --uids humanoid_data  --data-path data/
+python -m habitat_sim.utils.datasets_download --uids habitat_humanoids  --data-path data/
 ```
 
 From the home directory.
