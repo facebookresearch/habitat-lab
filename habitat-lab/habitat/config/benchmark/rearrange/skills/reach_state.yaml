@@ -2,12 +2,13 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/task: task_config_base
+
   - /habitat/simulator: rearrange_sim
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
-  - /habitat/task/rearrange/actions: fetch_suction_arm
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
-  - /habitat/dataset/rearrangement: replica_cad
+
+  - /habitat/task: task_config_base
+  - /habitat/task/rearrange/actions: fetch_suction_arm
   - /habitat/task/measurements:
     - end_effector_to_rest_distance
     - rearrange_reach_success
@@ -16,6 +17,8 @@ defaults:
   - /habitat/task/lab_sensors:
     - joint_sensor
     - relative_resting_pos_sensor
+
+  - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
 habitat:

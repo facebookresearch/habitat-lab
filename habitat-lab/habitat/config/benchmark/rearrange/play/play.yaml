@@ -1,17 +1,20 @@
 # @package _global_
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/task: task_config_base
+
   - /habitat/simulator: rearrange_sim
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
+
+  - /habitat/task: task_config_base
   - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty
-  - /habitat/dataset/rearrangement: replica_cad
   - /habitat/task/measurements:
     - articulated_agent_force
     - zero
   - /habitat/task/lab_sensors:
     - joint_sensor
+
+  - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
 # Config for empty task to explore the scene.

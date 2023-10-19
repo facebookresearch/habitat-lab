@@ -1,0 +1,7 @@
+# @package habitat.simulator.agents.fetch_no_wheels
+defaults:
+  - fetch@_here_
+  - _self_
+
+articulated_agent_type: FetchRobotNoWheels
+articulated_agent_urdf: data/robots/hab_fetch/robots/fetch_no_base.urdf

@@ -1,7 +1,11 @@
 # @package habitat.simulator.agents.human
+defaults:
+  - agent_base
+  - _self_
+
 radius: 0.3
-articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
 articulated_agent_type: 'KinematicHumanoid'
+articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
 motion_data_path: "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
 sim_sensors:
   head_rgb_sensor:
