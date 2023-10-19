@@ -83,6 +83,5 @@ habitat:
       allow_sliding: True
       enable_physics: True
 
-
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
+    data_path: data/hab3_bench_assets/episode_datasets/small_small.json.gz

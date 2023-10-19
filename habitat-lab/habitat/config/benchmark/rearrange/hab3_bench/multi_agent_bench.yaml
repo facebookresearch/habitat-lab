@@ -108,3 +108,5 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
       enable_physics: True
+  dataset:
+    data_path: data/hab3_bench_assets/episode_datasets/small_small.json.gz
