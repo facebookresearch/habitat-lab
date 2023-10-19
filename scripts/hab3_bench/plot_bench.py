@@ -71,12 +71,13 @@ def plot(name_map, savename, set_title, base_name):
 # plot rearrange benchmark numbers
 name_list = [
     ("robot_human_oracle", "[Robot-Human Oracle Paths]"),
-    ("robot_human_vel", "[Robot-Human Vel]"),
+    ("robots_oracle", "[Robots Oracle]"),
+    # ("robot_human_vel", "[Robot-Human Vel]"),
     ("human_oracle", "[Human Oracle]"),
-    ("human_pick", "[Human Pick]"),
-    ("human_oracle_nopick", "[Human Oracle (no pick)]"),
+    # ("human_pick", "[Human Pick]"),
+    # ("human_oracle_nopick", "[Human Oracle (no pick)]"),
     # ("robot_human_vel_noskin", "[Robot-Human Vel No Skin]"),
-    ("robots_vel", "[2 Robots Vel]"),
+    # ("robots_vel", "[2 Robots Vel]"),
     ("robot_oracle", "[Robot Oracle]"),
 ]
 
