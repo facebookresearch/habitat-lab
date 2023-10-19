@@ -1,6 +1,9 @@
 # Sandbox Tool
 
-![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
+<p align="center">
+  <img src="../../res/img/hitl_tool.gif" height=400>
+</p>
+
 
 # Overview
 This is a 3D interactive GUI app for testing various pieces of Habitat 3.0, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
