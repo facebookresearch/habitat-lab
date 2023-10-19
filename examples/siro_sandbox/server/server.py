@@ -115,10 +115,14 @@ class Server:
                 wrapper_obj = {"keyframes": keyframes_to_send}
                 wrapper_json = json.dumps(wrapper_obj)
 
-                # note this awaits until the client OS has received the message
-                await websocket.send(wrapper_json)
-
+                # after we've converted our keyfrajmes to send to json, update
+                # our consolidated keyframe
                 self.update_consolidated_keyframes(inc_keyframes)
+
+                # note this awaits until the client OS has received the message
+                # beware this will raise an exception on disconnect, which is caught in
+                # the calling function, serve()
+                await websocket.send(wrapper_json)
 
                 # limit how often we send
                 await self._send_frequency_limiter.limit_frequency_async()
