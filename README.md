@@ -53,9 +53,8 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
 ```
 @misc{puig2023habitat3,
-      title={Habitat 3.0: A Co-Habitat for Humans, Avatars and Robots
-},
-      author={Xavi Puig and Eric Undersander and Andrew Szot and Mikael Dallaire Cote and Ruslan Partsey and Jimmy Yang and Ruta Desai and Alexander William Clegg and Michal Hlavac and Tiffany Min and Theo Gervet and Vladimír Vondruš and Vincent-Pierre Berges and John Turner and Oleksandr Maksymets and Zsolt Kira and Mrinal Kalakrishnan and Jitendra Malik and Devendra Singh Chaplot and Unnat Jain and Dhruv Batra and Akshara Rai and Roozbeh Mottaghi},
+      title  = {Habitat 3.0: A Co-Habitat for Humans, Avatars and Robots},
+      author = {Xavi Puig and Eric Undersander and Andrew Szot and Mikael Dallaire Cote and Ruslan Partsey and Jimmy Yang and Ruta Desai and Alexander William Clegg and Michal Hlavac and Tiffany Min and Theo Gervet and Vladimír Vondruš and Vincent-Pierre Berges and John Turner and Oleksandr Maksymets and Zsolt Kira and Mrinal Kalakrishnan and Jitendra Malik and Devendra Singh Chaplot and Unnat Jain and Dhruv Batra and Akshara Rai and Roozbeh Mottaghi},
       year={2023},
       eprint={},
       archivePrefix={arXiv},
@@ -94,7 +93,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```
       conda install habitat-sim withbullet -c conda-forge -c aihabitat
       ```
-      See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
+      Note, for newer features added after the most recent release, you may need to install `aihabitat-nightly`. See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
 
 1. **pip install habitat-lab stable version**.
 
