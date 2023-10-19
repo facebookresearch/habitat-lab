@@ -155,6 +155,8 @@ TEST_CFG_PATHS = list(
 NO_TEST_CONFIGS = [
     "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/single_agent_bench.yaml",
     "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/multi_agent_bench.yaml",
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml",
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/spot_oracle.yaml",
 ]
 for config_file_name in NO_TEST_CONFIGS:
     TEST_CFG_PATHS.remove(config_file_name)
