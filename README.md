@@ -26,7 +26,7 @@ Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
 
 <p align="center">
-  <img src="res/img/habitat3.gif" height="400">
+  <img src="res/img/habitat_compressed.gif" height="400">
 
 </p>
 
