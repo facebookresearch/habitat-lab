@@ -646,10 +646,9 @@ class RearrangeSim(HabitatSim):
                 ao = ao_mgr.get_object_by_handle(aoi_handle)
                 if self._kinematic_mode:
                     ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                    # TODO: figure out if we should uncomment that @aclegg
-                    # # remove any existing motors when converting to kinematic AO
-                    # for motor_id in ao.existing_joint_motor_ids:
-                    #     ao.remove_joint_motor(motor_id)
+                    # remove any existing motors when converting to kinematic AO
+                    for motor_id in ao.existing_joint_motor_ids:
+                        ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
 
     def _create_recep_info(

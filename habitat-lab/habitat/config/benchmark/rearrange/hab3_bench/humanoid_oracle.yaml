@@ -1,0 +1,44 @@
+# @package _global_
+
+defaults:
+
+  - /benchmark/rearrange/hab3_bench: single_agent_bench
+
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
+    - has_finished_oracle_nav
+    # - has_finished_human_pick
+  - /habitat/task/actions@habitat.task.actions.oracle_nav_action: oracle_nav_action
+  # - /habitat/task/actions@habitat.task.actions.humanoid_pick_action: humanoid_pick_action
+  - override /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_depth_sensor: third_rgb_sensor
+
+  # For Spot observation space
+  - _self_
+
+
+
+habitat:
+  task:
+    actions:
+      oracle_nav_action:
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1
+  simulator:
+    agents:
+      main_agent:
+        articulated_agent_urdf: 'data/hab3_bench_assets/humanoids/female_0/female_0.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        motion_data_path: 'data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl'
+        sim_sensors:
+          head_depth_sensor:
+            height: 256
+            width: 256

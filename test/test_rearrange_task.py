@@ -146,15 +146,23 @@ def test_pddl():
     )
 
 
-@pytest.mark.parametrize(
-    "test_cfg_path",
-    list(
-        glob(
-            "habitat-lab/habitat/config/benchmark/rearrange/**/*.yaml",
-            recursive=True,
-        ),
+TEST_CFG_PATHS = list(
+    glob(
+        "habitat-lab/habitat/config/benchmark/rearrange/**/*.yaml",
+        recursive=True,
     ),
 )
+NO_TEST_CONFIGS = [
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/single_agent_bench.yaml",
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/multi_agent_bench.yaml",
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/spot_spot_oracle.yaml",
+    "habitat-lab/habitat/config/benchmark/rearrange/hab3_bench/spot_oracle.yaml",
+]
+for config_file_name in NO_TEST_CONFIGS:
+    TEST_CFG_PATHS.remove(config_file_name)
+
+
+@pytest.mark.parametrize("test_cfg_path", TEST_CFG_PATHS)
 def test_rearrange_tasks(test_cfg_path):
     """
     Iterates through all the Habitat Rearrangement tasks.

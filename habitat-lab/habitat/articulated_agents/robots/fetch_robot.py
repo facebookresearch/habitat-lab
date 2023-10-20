@@ -10,6 +10,7 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
 )
+from habitat_sim.physics import MotionType
 
 
 class FetchRobot(MobileManipulator):
@@ -105,13 +106,17 @@ class FetchRobot(MobileManipulator):
         super().update()
         # Fix the head.
         self._set_joint_pos(self.head_rot_jid, 0)
-        self._set_motor_pos(self.head_rot_jid, 0)
         self._set_joint_pos(self.head_tilt_jid, np.pi / 2)
-        self._set_motor_pos(self.head_tilt_jid, np.pi / 2)
         # Fix the back
         fix_back_val = 0.15
         self._set_joint_pos(self.back_joint_id, fix_back_val)
-        self._set_motor_pos(self.back_joint_id, fix_back_val)
+
+        # set joint motors if dynamic
+        mt = self.sim_obj.motion_type
+        if mt == MotionType.DYNAMIC:
+            self._set_motor_pos(self.head_rot_jid, 0)
+            self._set_motor_pos(self.head_tilt_jid, np.pi / 2)
+            self._set_motor_pos(self.back_joint_id, fix_back_val)
 
 
 class FetchRobotNoWheels(FetchRobot):

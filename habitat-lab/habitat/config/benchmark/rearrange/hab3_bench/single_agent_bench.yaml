@@ -1,0 +1,87 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/task/measurements:
+    - pddl_success
+    - num_steps
+    - composite_stage_goals
+    - pddl_subgoal_reward
+    - move_objects_reward
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+
+  # - /habitat/task/actions:
+  #   - base_velocity
+  # For Spot observation space
+
+  - _self_
+
+
+habitat:
+
+  task:
+    type: RearrangePddlTask-v0
+    task_spec: tidy_house_2obj
+    pddl_domain_def: fp
+    reward_measure: move_obj_reward
+    success_measure: pddl_success
+    success_reward: 100.0
+    end_on_success: True
+    constraint_violation_ends_episode: False
+    measurements:
+      pddl_success:
+        must_call_stop: False
+
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    concur_render: True
+    auto_sleep: True
+    # Add Spot robot agents
+    agents:
+      main_agent:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          head_depth_sensor:
+            height: 128
+            width: 128
+
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+
+  dataset:
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
