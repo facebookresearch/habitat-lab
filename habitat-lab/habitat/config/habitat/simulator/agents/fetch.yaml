@@ -1,0 +1,9 @@
+# @package habitat.simulator.agents.fetch
+defaults:
+  - agent_base
+  - _self_
+
+radius: 0.3
+articulated_agent_type: FetchRobot
+articulated_agent_urdf: data/robots/hab_fetch/robots/hab_fetch.urdf
+ik_arm_urdf: data/robots/hab_fetch/robots/fetch_onlyarm.urdf

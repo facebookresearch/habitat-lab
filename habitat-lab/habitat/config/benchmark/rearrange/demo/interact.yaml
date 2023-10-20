@@ -2,11 +2,15 @@
 
 defaults:
   - /habitat: habitat_config_base
+
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
-  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_no_wheels
+
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
+
+  - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
 habitat:
@@ -50,8 +54,6 @@ habitat:
         is_set_start_state: True
         start_position: [-1.2, 0.158, 0.29]
         start_rotation: [0.0, 0.999657, 0.0, -0.0261769]
-        articulated_agent_type: FetchRobotNoWheels
-        articulated_agent_urdf: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
     habitat_sim_v0:
       enable_physics: True
   dataset:

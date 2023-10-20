@@ -1,7 +1,11 @@
 # @package habitat.simulator.agents.stretch
+defaults:
+  - agent_base
+  - _self_
+
 radius: 0.3
-articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
 articulated_agent_type: "StretchRobot"
+articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
 sim_sensors:
   head_rgb_sensor:
     height: 640
