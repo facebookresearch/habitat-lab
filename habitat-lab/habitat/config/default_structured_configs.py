@@ -1003,6 +1003,7 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     min_dist_reward_exploration: float = 3.0
     location_decimal: str = "round_1"  # round_half
     use_simple_angle_diff: bool = False
+    agents_collision_penality: float = -1.0
 
 
 @dataclass

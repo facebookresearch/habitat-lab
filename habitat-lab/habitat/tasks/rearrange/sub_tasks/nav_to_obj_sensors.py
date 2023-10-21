@@ -133,6 +133,9 @@ class NavToObjReward(RearrangeReward):
         self._visit_loc = {}
         self._visit_loc_i = 0
         self._use_simple_angle_diff = self._config.use_simple_angle_diff
+        self._agents_collision_penality = (
+            self._config.agents_collision_penality
+        )
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
@@ -255,6 +258,12 @@ class NavToObjReward(RearrangeReward):
 
             reward += self._config.angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
+
+        # Collision penality to human added here
+        if self._agents_collision_penality != -1:
+            reward -= self._agents_collision_penality * float(
+                task.measurements.measures["did_collide"].get_metric()
+            )
 
         self._metric += reward
 
