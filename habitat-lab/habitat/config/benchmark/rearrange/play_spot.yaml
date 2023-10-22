@@ -64,16 +64,30 @@ habitat:
             width: 640
             hfov: 47
           arm_depth_sensor:
-            height: 224
-            width: 171
-            hfov: 55
+            height: 240
+            width: 320
+            hfov: 60
+            min_depth: 0.0
+            max_depth: 1.7
           arm_panoptic_sensor:
-            height: 224
-            width: 171
-            hfov: 55
+            height: 240
+            width: 320
+            hfov: 60
+          head_stereo_right_depth_sensor:
+            height: 212
+            width: 120
+            hfov: 58
+            min_depth: 0.0
+            max_depth: 3.5
+          head_stereo_left_depth_sensor:
+            height: 212
+            width: 120
+            hfov: 58
+            min_depth: 0.0
+            max_depth: 3.5
     habitat_sim_v0:
       enable_physics: True
     kinematic_mode: True
   dataset:
-    #data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    #data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz

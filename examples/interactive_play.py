@@ -78,6 +78,7 @@ try:
 except ImportError:
     pygame = None
 
+# python examples/interactive_play.py --never-end --disable-inverse-kinematics
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play_spot.yaml"  # play_spot
@@ -156,16 +157,32 @@ def get_input_vel_ctlr(
         # Base control
         if keys[pygame.K_j]:
             # Left
-            base_action = [0, 0, 1] # TODO: make sure it can also support base velocity with 2 dimension
+            base_action = [
+                0,
+                0,
+                1,
+            ]  # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_l]:
             # Right
-            base_action = [0, 0, -1] # TODO: make sure it can also support base velocity with 2 dimension
+            base_action = [
+                0,
+                0,
+                -1,
+            ]  # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_k]:
             # Back
-            base_action = [-1, 0, 0] # TODO: make sure it can also support base velocity with 2 dimension
+            base_action = [
+                -1,
+                0,
+                0,
+            ]  # TODO: make sure it can also support base velocity with 2 dimension
         elif keys[pygame.K_i]:
             # Forward
-            base_action = [1, 0, 0] # TODO: make sure it can also support base velocity with 2 dimension
+            base_action = [
+                1,
+                0,
+                0,
+            ]  # TODO: make sure it can also support base velocity with 2 dimension
 
         if arm_action_space.shape[0] == 7:
             # Velocity control. A different key for each joint
@@ -512,7 +529,9 @@ def play_env(env, args, config):
         print("ee_pos:", ee_pos)
         print("local_ee_pos:", local_ee_pos)
 
-        local_base_move = last_tras.inverted().transform_point(env._sim.articulated_agent.base_transformation.translation)
+        local_base_move = last_tras.inverted().transform_point(
+            env._sim.articulated_agent.base_transformation.translation
+        )
 
         print("local_base_move:", local_base_move)
 
