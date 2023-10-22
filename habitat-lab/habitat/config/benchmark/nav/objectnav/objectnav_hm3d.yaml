@@ -12,6 +12,7 @@ habitat:
     max_episode_steps: 500
 
   simulator:
+    scene_dataset: data/scene_datasets/hm3d_v0.2/hm3d_annotated_basis.scene_dataset_config.json
     turn_angle: 30
     tilt_angle: 30
     action_space_config: "v1"

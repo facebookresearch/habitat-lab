@@ -87,6 +87,8 @@ class InstanceImageGoal(ObjectGoal):
         default=None, validator=not_none_validator
     )
     object_surface_area: Optional[float] = None
+    language_description: str = ""
+
 
 
 @registry.register_sensor
@@ -137,7 +139,11 @@ class InstanceImageGoalSensor(RGBSensor):
             .image_goals[0]
             .image_dimensions
         )
-        return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8)
+        # return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8), 
+        return spaces.Dict({
+            "img": spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8),
+            "language_description": spaces.Text(min_length=0, max_length=200),
+        }) 
 
     def _add_sensor(
         self, img_params: InstanceImageParameters, sensor_uuid: str
@@ -220,7 +226,10 @@ class InstanceImageGoalSensor(RGBSensor):
         self._current_image_goal = self._get_instance_image_goal(img_params)
         self._current_episode_id = episode_uniq_id
 
-        return self._current_image_goal
+        return {
+            "img": self._current_image_goal,
+            "language_description": None
+        }
 
 
 @registry.register_sensor

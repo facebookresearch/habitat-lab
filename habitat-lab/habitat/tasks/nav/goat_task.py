@@ -73,20 +73,12 @@ class MultiGoalSensor(Sensor):
         return SensorTypes.TEXT
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        max_tasks = 5
-        max_landmarks = 20
+        max_tasks = 10
         max_semantic_classes = 1000
 
         goal_dict = {
-            "task_type": spaces.Text(min_length=0, max_length=30),
-            "semantic_id": spaces.Box(low=0, high=max_semantic_classes),
-            "target": spaces.Text(min_length=0, max_length=30),
-            "landmarks": spaces.Tuple(
-                [
-                    spaces.Text(min_length=0, max_length=30)
-                    for _ in range(max_landmarks)
-                ]
-            ),
+            "category": spaces.Text(min_length=0, max_length=50),
+            "description": spaces.Text(min_length=0, max_length=120),
             "image": self._sim.sensor_suite.observation_spaces.spaces[
                 self._rgb_sensor_uuid
             ],
@@ -98,8 +90,8 @@ class MultiGoalSensor(Sensor):
         spec = habitat_sim.CameraSensorSpec()
         spec.uuid = sensor_uuid
         spec.sensor_type = habitat_sim.SensorType.COLOR
-        spec.resolution = img_params.image_dimensions
-        spec.hfov = img_params.hfov
+        spec.resolution = img_params['image_dimensions']
+        spec.hfov = img_params['hfov']
         spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
         self._sim.add_sensor(spec)
 
@@ -112,8 +104,8 @@ class MultiGoalSensor(Sensor):
                 sensor_states={
                     **agent_state.sensor_states,
                     sensor_uuid: SixDOFPose(
-                        position=np.array(img_params.position),
-                        rotation=quaternion_from_coeff(img_params.rotation),
+                        position=np.array(img_params['position']),
+                        rotation=quaternion_from_coeff(img_params['rotation']),
                     ),
                 },
             ),
@@ -131,12 +123,12 @@ class MultiGoalSensor(Sensor):
             if s.uuid != sensor_uuid
         ]
 
-    def get_image_goal(self, episode, goal_idx):
+    def get_image_goal(self, episode, goal_idx, img_goal_id):
         episode_uniq_id = f"{episode.scene_id} {episode.episode_id} {goal_idx}"
         if episode_uniq_id == self._current_episode_id:
             return self._current_image_goal
-        img_params = episode.goals[goal_idx][0].image_goals[
-            episode.tasks[goal_idx]["goal_image_id"]
+        img_params = episode.goals[goal_idx][0]["image_goals"][
+            img_goal_id
         ]
 
         sensor_uuid = f"{self.cls_uuid}_sensor"
@@ -166,50 +158,27 @@ class MultiGoalSensor(Sensor):
             )
             return None
 
-        # if not isinstance(episode.goals[0], ObjectGoal):
-        #     logger.error(
-        #         f"First goal should be ObjectGoal, episode {episode.episode_id}."
-        #     )
-        #     return None
-
         goals, vocabulary = [], []
-        for goal_idx, task in enumerate(episode.tasks):
-            goal = {
-                "type": task["task_type"],
-            }
+        for goal_idx, goal_val in enumerate(episode.tasks):
+            
+            goal = {}
 
-            if task["task_type"] == "objectnav":
-                goal["target"] = task["object_category"]
-            elif task["task_type"] == "languagenav":
-                if "llm_response" in task.keys():
-                    target = task["llm_response"]["target"]
-                    landmarks = task["llm_response"]["landmark"]
-                    if target in landmarks:
-                        landmarks.remove(target)
+            if goal_val[1] == "image":
+                goal["category"] = episode.goals[goal_idx][0]["object_category"]
+                img_goal_id = goal_val[-1]
+                goal["image"] = self.get_image_goal(episode, goal_idx, img_goal_id)
+            else:
+                goal["image"] = None
+            
+            if goal_val[1] == "description":
+                goal["category"] = episode.goals[goal_idx][0]["object_category"]
+                goal["description"] = episode.goals[goal_idx][0]["lang_desc"]
+            else:
+                goal["description"] = None
+            
+            if goal_val[1] == "object":
+                goal["category"] = episode.goals[goal_idx][0][0]["object_category"]
 
-                    if "wall" in landmarks:
-                        landmarks.remove("wall")  # unhelpful landmark
-
-                    target = "_".join(target.split())
-                    landmarks = [
-                        "_".join(landmark.split()) for landmark in landmarks
-                    ]
-                    goal["landmarks"] = landmarks
-                    goal["target"] = target
-                else:
-                    goal["target"] = task["object_category"]
-
-            elif task["task_type"] == "imagenav":
-                goal["target"] = task["object_category"]
-                goal["image"] = self.get_image_goal(episode, goal_idx)
-
-            if goal["target"] not in vocabulary:
-                vocabulary.append(goal["target"])
-            if "landmarks" in goal:
-                if goal["landmarks"] not in vocabulary:
-                    vocabulary += goal["landmarks"]
-
-            goal["semantic_id"] = vocabulary.index(goal["target"]) + 1
             goals.append(goal)
         return goals
 
@@ -239,14 +208,14 @@ class GoatEpisode(NavigationEpisode):
             if ep["task_type"] == "objectnav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_category']}"
 
-            elif ep["task_type"] == "imagenav":
+            elif ep["task_type"] in ["imagenav", "languagenav"]:
                 sid = os.path.basename(self.scene_id)
                 for x in [".glb", ".basis"]:
                     sid = sid[: -len(x)] if sid.endswith(x) else sid
                 goal_key = f"{sid}_{ep['goal_object_id']}"
 
-            elif ep["task_type"] == "languagenav":
-                goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
+            # elif ep["task_type"] == "languagenav":
+            #     goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
 
             goals_keys[ep["task_type"]].append(goal_key)
 
@@ -260,14 +229,14 @@ class GoatEpisode(NavigationEpisode):
             if ep["task_type"] == "objectnav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_category']}"
 
-            elif ep["task_type"] == "imagenav":
+            elif ep["task_type"] in ["imagenav", "languagenav"]:
                 sid = os.path.basename(self.scene_id)
                 for x in [".glb", ".basis"]:
                     sid = sid[: -len(x)] if sid.endswith(x) else sid
                 goal_key = f"{sid}_{ep['goal_object_id']}"
 
-            elif ep["task_type"] == "languagenav":
-                goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
+            # elif ep["task_type"] == "languagenav":
+            #     goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
 
             goals_keys.append(goal_key)
 

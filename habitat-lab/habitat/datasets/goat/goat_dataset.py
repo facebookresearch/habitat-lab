@@ -162,21 +162,8 @@ class GoatDatasetV1(PointNavDatasetV1):
         if "goals" not in deserialized:
             deserialized = self.dedup_goals(deserialized)
 
-        for sub_task_type, sub_task_goals in deserialized["goals"].items():
-            self.goals[sub_task_type] = {}
-            for k, v in sub_task_goals.items():
-                if sub_task_type == "objectnav":
-                    self.goals[sub_task_type][k] = [
-                        self.__deserialize_objectnav_goal(g) for g in v
-                    ]
-                elif sub_task_type == "languagenav":
-                    self.goals[sub_task_type][k] = [
-                        self.__deserialize_languagenav_goal(g) for g in v
-                    ]
-                elif sub_task_type == "imagenav":
-                    self.goals[sub_task_type][k] = [
-                        self.__deserialize_imagenav_goal(v)
-                    ]
+
+        self.goals = deserialized["goals"]
 
         for i, composite_episode in enumerate(deserialized["episodes"]):
             composite_episode["goals"] = []
@@ -193,17 +180,24 @@ class GoatDatasetV1(PointNavDatasetV1):
                     ]
 
                 composite_episode.scene_id = os.path.join(
-                    scenes_dir, composite_episode.scene_id
+                    scenes_dir, "", composite_episode.scene_id
                 )
 
             composite_episode.goals = []
-            for goal_key, task in zip(
-                composite_episode.goals_keys_with_sequence(),
-                composite_episode.tasks,
-            ):
-                # composite_episode.goals[task_type] = {}
-                task_type = task["task_type"]
-                # for goal_key in goal_keys:
-                composite_episode.goals.append(self.goals[task_type][goal_key])
+
+            for goal in composite_episode.tasks:
+                goal_type = goal[1]
+                goal_category = goal[0]
+                goal_inst_id = goal[2]
+
+                dset_same_cat_goals = [x for x in self.goals.values() if x[0]['object_category'] == goal_category]
+
+                assert len(dset_same_cat_goals) == 1, f"more than 1 goal categories for {goal_category}"
+
+                if goal_type == "object":
+                    composite_episode.goals.append(dset_same_cat_goals)
+                else:
+                    goal_inst = [x for x in dset_same_cat_goals[0] if x['object_id'] == goal_inst_id]
+                    composite_episode.goals.append(goal_inst)
 
             self.episodes.append(composite_episode)  # type: ignore [attr-defined]

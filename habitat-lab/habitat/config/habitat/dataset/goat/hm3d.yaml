@@ -4,5 +4,5 @@ defaults:
   - _self_
 
 type: Goat-v1
-split: train
-data_path: data/datasets/goat/hm3d/v0.5_easier/{split}/{split}.json.gz
+split: val_seen
+data_path: data/datasets/goat_openvocab/hm3d/v0.1.1/{split}/{split}.json.gz

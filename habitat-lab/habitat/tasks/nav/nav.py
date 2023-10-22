@@ -1078,13 +1078,15 @@ class GOATTopDownMap(TopDownMap):
     def _draw_goals_view_points(self, episode):
         if self._config.draw_view_points:
             for super_goals in episode.goals:
+                if type(super_goals[0]) != dict:
+                    super_goals = super_goals[0]
                 for goal in super_goals:
-                    if self._is_on_same_floor(goal.position[1]):
+                    if self._is_on_same_floor(goal["position"][1]):
                         try:
-                            if goal.view_points is not None:
-                                for view_point in goal.view_points:
+                            if goal["view_points"] is not None:
+                                for view_point in goal["view_points"]:
                                     self._draw_point(
-                                        view_point.agent_state.position,
+                                        view_point["agent_state"]["position"],
                                         maps.MAP_VIEW_POINT_INDICATOR,
                                     )
                         except AttributeError:
@@ -1094,11 +1096,13 @@ class GOATTopDownMap(TopDownMap):
         if self._config.draw_goal_positions:
 
             for super_goals in episode.goals:
+                if type(super_goals[0]) != dict:
+                    super_goals = super_goals[0]
                 for goal in super_goals:
-                    if self._is_on_same_floor(goal.position[1]):
+                    if self._is_on_same_floor(goal['position'][1]):
                         try:
                             self._draw_point(
-                                goal.position, maps.MAP_TARGET_POINT_INDICATOR
+                                goal['position'], maps.MAP_TARGET_POINT_INDICATOR
                             )
                         except AttributeError:
                             pass
@@ -1281,42 +1285,53 @@ class GOATDistanceToSubGoal(DistanceToGoal):
     def __init__(
         self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
-        self.goal_change = False
-        self.ctr = 0
         super().__init__(sim, config, **kwargs)
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._metric = None
 
-        # TODO: remove ctr hack
-        self.ctr = 0  # to update goal one timestep after calling stop
-        self.current_goal_idx = 0
-
         kwargs["task"].num_tasks = len(kwargs["observations"]["multigoal"])
         kwargs["task"].current_task_idx = 0
         kwargs["task"].update_goal = False
+        self.force_metric_update = False
 
         if self._distance_to == "VIEW_POINTS":
             self.update_goal_viewpoints(episode)
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
 
-    def update_goal_viewpoints(self, episode):
-        self._episode_view_points = [
-            view_point.agent_state.position
-            for goal in getattr(episode, self._goals_attr)[
-                self.current_goal_idx
-            ]
-            for view_point in goal.view_points
-        ]
+    def update_goal_viewpoints(self, episode, current_goal_idx=0):
+
+        self._episode_view_points = []
+
+        try:
+            for goal in getattr(episode, self._goals_attr)[current_goal_idx]:
+                if type(goal) == dict:
+                    for vp in goal["view_points"]:
+                        self._episode_view_points.append(
+                            vp['agent_state']['position']
+                        )
+                else:
+                    if type(goal[0]) != dict:
+                        for g in goal[0]:
+                            for vp in g["view_points"]:
+                                self._episode_view_points.append(
+                                    vp['agent_state']['position']
+                                )
+                    else:
+                        for vp in goal[0]["view_points"]:
+                            self._episode_view_points.append(
+                                vp['agent_state']['position']
+                            )
+        except Exception as e:
+            print(e)
+            import pdb;pdb.set_trace()
+
 
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        # print("Goal change", self.goal_change)
-        # print("Update goal", kwargs["task"].update_goal)
-        # print('-------------')
-        # if self.current_goal_idx != kwargs["task"].current_task_idx:
+
         if self._distance_from == "END_EFFECTOR":
             current_position = self.get_end_effector_position()
         else:
@@ -1325,26 +1340,8 @@ class GOATDistanceToSubGoal(DistanceToGoal):
         if self._previous_position is not None:
             recent_position_didnt_change = np.allclose(self._previous_position, current_position, atol=1e-4)
 
-        if self.goal_change:
-            # if self.ctr >= 1:
-            self.current_goal_idx = kwargs["task"].current_task_idx
-            print(
-                "Updating goal (viewpoints); new current_task_idx:",
-                self.current_goal_idx,
-            )
-            recent_position_didnt_change = False
-            self.update_goal_viewpoints(episode)
-            self.goal_change = False
-
-
-        if kwargs["task"].update_goal:
-            self.goal_change = True
-            kwargs["task"].update_goal = False
-
-        if self._previous_position is None or not recent_position_didnt_change:
+        if self._previous_position is None or not recent_position_didnt_change or self.force_metric_update:
             episode_cache = None
-            # if self.goal_change:
-            #     episode_cache = None
             if self._distance_to == "EUCLIDEAN_POINT":
                 distance_to_target = min(
                     [
@@ -1366,9 +1363,7 @@ class GOATDistanceToSubGoal(DistanceToGoal):
                     episode_cache,
                 )
             elif self._distance_to == "VIEW_POINTS":
-                distance_to_target = self._sim.geodesic_distance(
-                    current_position, self._episode_view_points, episode_cache
-                )
+                distance_to_target = self._sim.geodesic_distance(current_position, self._episode_view_points, episode_cache)
             else:
                 logger.error(
                     f"Non valid distance_to parameter was provided: {self._distance_to }"
@@ -1379,6 +1374,24 @@ class GOATDistanceToSubGoal(DistanceToGoal):
                 current_position[2],
             )
             self._metric = distance_to_target
+
+            # if distance_to_target < 0.26:
+            #     import pdb;pdb.set_trace()
+
+            if self.force_metric_update:
+                self.force_metric_update = False
+    
+        if kwargs["task"].update_goal:
+            kwargs["task"].current_task_idx += 1
+            print(
+                "Updating goal (viewpoints); new current_task_idx:",
+                kwargs["task"].current_task_idx,
+            )
+
+            self.force_metric_update = True
+            self.update_goal_viewpoints(episode, kwargs["task"].current_task_idx)
+            kwargs["task"].update_goal = False
+            
 
 
 @registry.register_measure
@@ -1605,7 +1618,6 @@ class GOATSubTaskStopAction(StopAction):
         ``step``.
         """
         if task.current_task_idx != task.num_tasks - 1:
-            task.current_task_idx += 1
             task.is_stop_called = False
             task.update_goal = True
         else:
