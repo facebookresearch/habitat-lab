@@ -1247,9 +1247,9 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
 
             if self._config.is_robot_nav_target_for_human:
                 """The navigation target is robot"""
-                self.coord_nav = self._sim.get_agent_data(
-                    0
-                ).articulated_agent.base_pos
+                self.coord_nav = np.array(
+                    self._sim.get_agent_data(0).articulated_agent.base_pos
+                )
             else:
                 self.coord_nav = (
                     self._sim.pathfinder.get_random_navigable_point(
