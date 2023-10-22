@@ -346,9 +346,13 @@ class SocialNavReward(Measure):
         # )
         self._metric = 0.0
 
-        collision_metric = task.measurements.measures[
-            "robot_collisions"
-        ].get_metric()["robot_scene_colls"]
+        try:
+            collision_metric = task.measurements.measures[
+                "robot_collisions"
+            ].get_metric()["robot_scene_colls"]
+        except Exception:
+            collision_metric = False
+
         if self._previous_collision != collision_metric:
             self._metric -= self._config.force_pen
 

@@ -1244,10 +1244,19 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         if self.coord_nav is None:
             if self._config.control_seed:
                 self._sim.seed(self.random_seed_counter)
-            self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
-                max_tries,
-                island_index=self._sim._largest_island_idx,
-            )
+
+            if self._config.is_robot_nav_target_for_human:
+                """The navigation target is robot"""
+                self.coord_nav = self._sim.get_agent_data(
+                    0
+                ).articulated_agent.base_pos
+            else:
+                self.coord_nav = (
+                    self._sim.pathfinder.get_random_navigable_point(
+                        max_tries,
+                        island_index=self._sim._largest_island_idx,
+                    )
+                )
             self.random_seed_counter += 1
 
         kwargs[
@@ -1255,7 +1264,9 @@ class OracleNavRandCoordAction(OracleNavCoordAction):
         ] = self.coord_nav
         kwargs["is_last_action"] = is_last_action
         ret_val = super().step(*args, is_last_action, **kwargs)
-        if self.skill_done:
+
+        # Always for the human to find the robot. Here we force the human to navigate to the robot
+        if self.skill_done or self._config.is_robot_nav_target_for_human:
             self.coord_nav = None
 
         try:

@@ -333,6 +333,8 @@ class OracleNavActionConfig(ActionConfig):
 
     # Define the flag to control the seed
     control_seed: bool = False
+    # Set the robot as the navigation target for human
+    is_robot_nav_target_for_human: bool = False
 
 
 @dataclass
