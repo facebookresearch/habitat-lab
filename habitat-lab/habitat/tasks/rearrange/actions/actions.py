@@ -170,6 +170,11 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
 
     @property
     def action_space(self):
+        assert self._config.arm_joint_dimensionality == len(
+            self._config.arm_joint_mask
+        ) or self._config.arm_joint_dimensionality == int(
+            np.sum(self._config.arm_joint_mask)
+        )
         return spaces.Box(
             shape=(self._config.arm_joint_dimensionality,),
             low=-1,
@@ -182,15 +187,20 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._delta_pos_limit
 
-        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        processed_delta_pos = np.zeros(len(self._arm_joint_mask))
+
         src_idx = 0
         tgt_idx = 0
         for mask in self._arm_joint_mask:
             if mask == 0:
                 tgt_idx += 1
-                src_idx += 1
+                # Check if the effective size of action is the same as arm_joint_dimensionality
+                if self._config.arm_joint_dimensionality == len(
+                    self._config.arm_joint_mask
+                ):
+                    src_idx += 1
                 continue
-            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            processed_delta_pos[tgt_idx] = delta_pos[src_idx]
             tgt_idx += 1
             src_idx += 1
 
@@ -198,7 +208,7 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         # clip the motor joints first here to prevent the arm from being unstable.
         min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
         target_arm_pos = (
-            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+            processed_delta_pos + self.cur_articulated_agent.arm_motor_pos
         )
         set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
 

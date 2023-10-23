@@ -207,6 +207,29 @@ def get_input_vel_ctlr(
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
 
+        elif arm_action_space.shape[0] == 4:
+            # Velocity control. A different key for each joint
+            # This is for Spot robot which a user can only control the effective arm in the real robot
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
+
         elif arm_action_space.shape[0] == 10:
             # Velocity control. A different key for each joint
             if keys[pygame.K_q]:
