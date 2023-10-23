@@ -13,9 +13,9 @@ arm_action:
   arm_joint_dimensionality: 4
   grasp_thresh_dist: 0.15
   disable_grip: False
-  delta_pos_limit: 0.0125
+  delta_pos_limit: 0.0872665
   ee_ctrl_lim: 0.015
-  gaze_distance_range: [0.01, 0.3]
+  gaze_distance_range: [0.3, 0.75]
   center_cone_angle_threshold: 20.0
   center_cone_vector: [0.0, 1.0, 0.0]
 base_velocity_non_cylinder:
