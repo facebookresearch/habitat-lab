@@ -1183,7 +1183,7 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         cmin, cmax = np.where(cols)[0][[0, -1]]
         return rmin, rmax, cmin, cmax
 
-    def get_observation(self, observations, episode, *args, **kwargs):
+    def get_observation(self, observations, episode, task, *args, **kwargs):
         # Get a correct observation space
         if self.agent_id is None:
             target_key = "articulated_agent_arm_panoptic"
@@ -1202,8 +1202,14 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             and img_seg.shape[1] == self._width
         )
 
-        # Get the target from sim
-        tgt_idx = self._sim.scene_obj_ids[int(self._sim.get_targets()[0])]
+        # Check if task has the attribute of the abs_targ_idx
+        assert hasattr(task, "abs_targ_idx")
+
+        # Get the target from sim, and ensure that the index is offset
+        tgt_idx = (
+            self._sim.scene_obj_ids[task.abs_targ_idx]
+            + self._sim.habitat_config.object_ids_start
+        )
         tgt_mask = (img_seg == tgt_idx).astype(int)
 
         # Get the bounding box
