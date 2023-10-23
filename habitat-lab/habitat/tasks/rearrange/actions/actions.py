@@ -29,6 +29,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
+from habitat_sim.physics import MotionType
 
 
 @registry.register_task_action
@@ -146,9 +147,13 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
         # The actual joint positions
         self._sim: RearrangeSim
-        self.cur_articulated_agent.arm_motor_pos = (
-            delta_pos + self.cur_articulated_agent.arm_motor_pos
-        )
+        if (
+            self.cur_articulated_agent.sim_obj.motion_type
+            == MotionType.DYNAMIC
+        ):
+            self.cur_articulated_agent.arm_motor_pos = (
+                delta_pos + self.cur_articulated_agent.arm_motor_pos
+            )
 
 
 @registry.register_task_action

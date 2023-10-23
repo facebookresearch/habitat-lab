@@ -312,13 +312,16 @@ class Manipulator(ArticulatedAgentInterface):
 
     def set_gripper_target_state(self, gripper_state: float) -> None:
         """Set the gripper motors to a desired symmetric state of the gripper [0,1] -> [open, closed]"""
-        for i, jidx in enumerate(self.params.gripper_joints):
-            delta = (
-                self.params.gripper_closed_state[i]
-                - self.params.gripper_open_state[i]
-            )
-            target = self.params.gripper_open_state[i] + delta * gripper_state
-            self._set_motor_pos(jidx, target)
+        if self.sim_obj.motion_type == MotionType.DYNAMIC:
+            for i, jidx in enumerate(self.params.gripper_joints):
+                delta = (
+                    self.params.gripper_closed_state[i]
+                    - self.params.gripper_open_state[i]
+                )
+                target = (
+                    self.params.gripper_open_state[i] + delta * gripper_state
+                )
+                self._set_motor_pos(jidx, target)
 
     def close_gripper(self) -> None:
         """Set gripper to the close state"""
@@ -418,9 +421,9 @@ class Manipulator(ArticulatedAgentInterface):
     def arm_motor_pos(self, ctrl: List[float]) -> None:
         """Set the desired target of the arm joint motors."""
         self._validate_arm_ctrl_input(ctrl)
-
-        for i, jidx in enumerate(self.params.arm_joints):
-            self._set_motor_pos(jidx, ctrl[i])
+        if self.sim_obj.motion_type == MotionType.DYNAMIC:
+            for i, jidx in enumerate(self.params.arm_joints):
+                self._set_motor_pos(jidx, ctrl[i])
 
     @property
     def arm_motor_forces(self) -> np.ndarray:
