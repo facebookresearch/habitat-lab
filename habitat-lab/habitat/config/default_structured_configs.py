@@ -249,6 +249,7 @@ class ArmActionConfig(ActionConfig):
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
+    auto_grasp: bool = False
 
 
 @dataclass
