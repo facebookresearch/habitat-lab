@@ -694,7 +694,7 @@ def add_perf_timing_func(name: Optional[str] = None):
     return perf_time
 
 
-def get_camera_transform(cur_articulated_agent):
+def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
     """Get the camera transformation"""
     if isinstance(cur_articulated_agent, SpotRobot):
         cam_info = cur_articulated_agent.params.cameras[
@@ -712,18 +712,24 @@ def get_camera_transform(cur_articulated_agent):
     # Get the camera offset transformation
     offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
     cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
-
     return cam_trans
 
 
-def angle_between(v1, v2):
+def angle_between(
+    v1: Tuple[mn.Vector3, np.ndarray, List],
+    v2: Tuple[mn.Vector3, np.ndarray, List],
+) -> float:
     """Angle (in radians) between two vectors"""
     cosine = np.clip(np.dot(v1, v2), -1.0, 1.0)
     object_angle = np.arccos(cosine)
     return object_angle
 
 
-def get_camera_object_angle(cam_T, obj_pos, center_cone_vector):
+def get_camera_object_angle(
+    cam_T: mn.Matrix4,
+    obj_pos: Tuple[mn.Vector3, np.ndarray, List],
+    center_cone_vector: Tuple[mn.Vector3, np.ndarray, List],
+) -> float:
     """Calculates angle between camera line-of-sight and given global position"""
     # Get object location in camera frame
     cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
