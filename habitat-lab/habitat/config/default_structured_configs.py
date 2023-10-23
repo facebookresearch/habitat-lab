@@ -810,6 +810,8 @@ class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
 @dataclass
 class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
+    if_consider_gaze_angle: bool = False
+    center_cone_vector: Optional[List[float]] = None
 
 
 @dataclass
