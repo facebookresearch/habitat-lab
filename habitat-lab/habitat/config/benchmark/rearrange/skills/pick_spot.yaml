@@ -11,11 +11,14 @@ defaults:
 # We overwrite the sensor to ensure the dimension is correct
 habitat:
   task:
+    measurements:
+      end_effector_to_object_distance:
+        if_consider_gaze_angle: True
+        center_cone_vector: [0.0, 1.0, 0.0]
     lab_sensors:
       arm_depth_bbox_sensor:
         height: 240
         width: 228
-
   simulator:
     agents:
       main_agent:

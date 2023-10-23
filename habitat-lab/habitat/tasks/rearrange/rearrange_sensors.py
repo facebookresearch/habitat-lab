@@ -21,6 +21,8 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
+    get_camera_object_angle,
+    get_camera_transform,
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
@@ -602,6 +604,11 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
+        assert (
+            self._config.center_cone_vector is not None
+            if self._config.if_consider_gaze_angle
+            else True
+        )
         super().__init__(**kwargs)
 
     @staticmethod
@@ -623,6 +630,18 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
         target_pos = scene_pos[idxs]
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
+
+        if self._config.if_consider_gaze_angle:
+            # Get the camera transformation
+            cam_T = get_camera_transform(
+                self._sim.get_agent_data(self.agent_id).articulated_agent
+            )
+            # Get angle between (normalized) location and the vector that the camera should
+            # look at
+            obj_angle = get_camera_object_angle(
+                cam_T, target_pos[0], self._config.center_cone_vector
+            )
+            distances += obj_angle
 
         self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
