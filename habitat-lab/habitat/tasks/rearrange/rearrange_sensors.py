@@ -1145,3 +1145,71 @@ class HasFinishedHumanoidPickSensor(UsesArticulatedAgentInterface, Sensor):
         nav_action = self._task.actions[use_k]
 
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
+@registry.register_sensor
+class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
+    """Bounding box sensor to check if the object is in frame"""
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._height = config.height
+        self._width = config.width
+
+    def _get_uuid(self, *args, **kwargs):
+        return "arm_depth_bbox_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        return rmin, rmax, cmin, cmax
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_panoptic"
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+            )
+            assert target_key in observations
+
+        img_seg = observations[target_key]
+
+        # Check the size of the observation
+        assert (
+            img_seg.shape[0] == self._height
+            and img_seg.shape[1] == self._width
+        )
+
+        # Get the target from sim
+        tgt_idx = self._sim.scene_obj_ids[int(self._sim.get_targets()[0])]
+        tgt_mask = (img_seg == tgt_idx).astype(int)
+
+        # Get the bounding box
+        bbox = np.zeros(tgt_mask.shape)
+        if np.sum(tgt_mask) != 0:
+            rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
+            bbox[rmin:rmax, cmin:cmax] = 1.0
+
+        return bbox

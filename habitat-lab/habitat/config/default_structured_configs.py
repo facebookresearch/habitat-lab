@@ -44,6 +44,7 @@ __all__ = [
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
+    "ArmDepthBBoxSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -392,6 +393,16 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     human_id: int = 100
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
+
+
+@dataclass
+class ArmDepthBBoxSensorConfig(LabSensorConfig):
+    r"""
+    Bounding box sensor to check if the object is in frame
+    """
+    type: str = "ArmDepthBBoxSensor"
+    height: int = 480
+    width: int = 640
 
 
 @dataclass
@@ -2035,6 +2046,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="humanoid_detector_sensor",
     node=HumanoidDetectorSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_depth_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_depth_bbox_sensor",
+    node=ArmDepthBBoxSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",
