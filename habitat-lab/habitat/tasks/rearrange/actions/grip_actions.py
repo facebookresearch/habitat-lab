@@ -183,10 +183,14 @@ class GazeGraspAction(MagicGraspAction):
         self.center_cone_vector = mn.Vector3(
             config.center_cone_vector
         ).normalized()
+        self.auto_grasp = config.auto_grasp
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(1,), high=1.0, low=-1.0)
+        if self.auto_grasp:
+            return None
+        else:
+            return spaces.Box(shape=(1,), high=1.0, low=-1.0)
 
     @staticmethod
     def angle_between(v1, v2):
@@ -266,8 +270,9 @@ class GazeGraspAction(MagicGraspAction):
             )
 
         height, width = panoptic_img.shape[:2]
+        # Note that panoptic_img is a 3D array
         center_obj_id = (
-            panoptic_img[height // 2, width // 2]
+            panoptic_img[height // 2, width // 2, 0]
             - self._sim.habitat_config.object_ids_start
         )
 
@@ -311,6 +316,10 @@ class GazeGraspAction(MagicGraspAction):
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
+        if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
+            self._grasp()
+            return
+
         if grip_action is None:
             return
 
