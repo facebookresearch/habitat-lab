@@ -1,7 +1,24 @@
 # @package _global_
 defaults:
   - play
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_head_rgbdp_arm_agent
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - _self_
+
+# We overwrite the sensor to ensure the dimension is correct
+habitat:
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 240
+            width: 228
+            hfov: 60
+            min_depth: 0.0
+            max_depth: 1.7

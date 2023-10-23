@@ -1473,6 +1473,20 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadStereoLeftDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_left_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class HeadStereoRightDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_right_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "head_panoptic"
     width: int = 256
@@ -1952,6 +1966,19 @@ cs.store(
     name="head_depth_sensor",
     node=HeadDepthSensorConfig,
 )
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_stereo_right_depth_sensor",
+    node=HeadStereoRightDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_stereo_left_depth_sensor",
+    node=HeadStereoLeftDepthSensorConfig,
+)
+
 
 cs.store(
     group="habitat/simulator/sim_sensors",
