@@ -24,3 +24,7 @@ habitat:
       arm_action:
         center_cone_vector: [0.0, 1.0, 0.0]
         auto_grasp: True
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
