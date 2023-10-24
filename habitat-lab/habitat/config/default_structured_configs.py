@@ -1571,6 +1571,7 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
+    joint_that_can_control: Optional[List[int]] = None
     # Hard-code the robot joint start. `joint_start_noise` still applies.
     joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: Optional[str] = None
