@@ -19,17 +19,3 @@ habitat:
       arm_depth_bbox_sensor:
         height: 240
         width: 228
-  simulator:
-    agents:
-      main_agent:
-        sim_sensors:
-          arm_rgb_sensor:
-            height: 480
-            width: 640
-            hfov: 47
-          arm_depth_sensor:
-            height: 240
-            width: 228
-            hfov: 60
-            min_depth: 0.0
-            max_depth: 1.7
