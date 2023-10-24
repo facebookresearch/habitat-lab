@@ -22,8 +22,10 @@ habitat:
         width: 228
     actions:
       arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
         center_cone_vector: [0.0, 1.0, 0.0]
         auto_grasp: True
+        should_clip: True
   simulator:
     kinematic_mode: True
     ac_freq_ratio: 1
