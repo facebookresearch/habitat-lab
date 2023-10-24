@@ -797,6 +797,7 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         articulated_agent_force, _, overall_force = self._task.get_coll_forces(
             self.agent_id
         )
+
         if self._count_obj_collisions:
             self._cur_force = overall_force
         else:
@@ -960,16 +961,18 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         self._task = task
         self._force_pen = self._config.force_pen
         self._max_force_pen = self._config.max_force_pen
+        self._count_coll_pen = self._config.count_coll_pen
+        self._max_count_colls = self._config.max_count_colls
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                RobotForce.cls_uuid,
-                ForceTerminate.cls_uuid,
-            ],
-        )
+        self._prev_count_coll = 0
+
+        target_measure = [RobotForce.cls_uuid, ForceTerminate.cls_uuid]
+        if self._want_count_coll():
+            target_measure.append(RobotCollisions.cls_uuid)
+
+        task.measurements.check_measure_dependencies(self.uuid, target_measure)
 
         self.update_metric(
             *args,
@@ -982,13 +985,20 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
 
+        # For force collision reward (userful for dynamic simulation)
         reward += self._get_coll_reward()
 
+        # For count-based collision reward and termination (userful for kinematic simulation)
+        if self._want_count_coll():
+            reward += self._get_count_coll_reward()
+
+        # For hold constraint violation
         if self._sim.get_agent_data(
             self.agent_id
         ).grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.constraint_violate_pen
 
+        # For force termination
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
@@ -1010,6 +1020,39 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
                 self._max_force_pen,
             ),
         )
+        return reward
+
+    def _want_count_coll(self):
+        """Check if we want to consider penality from count-based collisions"""
+        return self._count_coll_pen != -1 or self._max_count_colls != -1
+
+    def _get_count_coll_reward(self):
+        """Count-based collision reward"""
+        reward = 0
+
+        count_coll_metric = self._task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ]
+        cur_total_colls = count_coll_metric.get_metric()["total_collisions"]
+
+        # Check the step collision
+        if (
+            self._count_coll_pen != -1.0
+            and cur_total_colls - self._prev_count_coll > 0
+        ):
+            reward -= self._count_coll_pen
+
+        # Check the max count collision
+        if (
+            self._max_count_colls != -1.0
+            and cur_total_colls > self._max_count_colls
+        ):
+            reward -= self._config.count_coll_end_pen
+            self._task.should_end = True
+
+        # update the counter
+        self._prev_count_coll = cur_total_colls
+
         return reward
 
 

@@ -891,6 +891,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -996,6 +999,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1067,6 +1073,9 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1094,6 +1103,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1141,6 +1153,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
