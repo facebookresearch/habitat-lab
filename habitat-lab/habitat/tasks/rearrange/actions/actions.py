@@ -115,7 +115,9 @@ class ArmAction(ArticulatedAgentAction):
     def step(self, *args, **kwargs):
         arm_action = kwargs[self._action_arg_prefix + "arm_action"]
         self.arm_ctrlr.step(arm_action)
-        if self.grip_ctrlr is not None and not self.disable_grip:
+        if self.grip_ctrlr is not None and self._config.auto_grasp:
+            self.grip_ctrlr.step(None)
+        elif self.grip_ctrlr is not None and not self.disable_grip:
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
 
