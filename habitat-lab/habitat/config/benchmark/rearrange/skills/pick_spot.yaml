@@ -14,6 +14,8 @@ habitat:
       end_effector_to_object_distance:
         if_consider_gaze_angle: True
         center_cone_vector: [0.0, 1.0, 0.0]
+      pick_success:
+        ee_resting_success_threshold: -1.0
     lab_sensors:
       arm_depth_bbox_sensor:
         height: 240
