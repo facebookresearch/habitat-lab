@@ -323,6 +323,9 @@ class NavPickRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
