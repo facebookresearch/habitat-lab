@@ -1100,6 +1100,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+
+    :property ee_resting_success_threshold: -1 if we do not consider resetting the arm to the resting location
     """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
