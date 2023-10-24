@@ -44,6 +44,8 @@ habitat:
         should_clip: True
     success_reward: 10.0
     slack_reward: -0.01
+    spawn_max_dist_to_obj: 2.0
+    base_angle_noise: 0.523599
   simulator:
     kinematic_mode: True
     ac_freq_ratio: 1
