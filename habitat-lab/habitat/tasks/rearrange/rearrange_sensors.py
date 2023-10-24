@@ -631,6 +631,11 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
+        # Ensure the gripper maintains a desirable distance
+        distances = abs(
+            distances - self._config.desire_distance_between_gripper_object
+        )
+
         if self._config.if_consider_gaze_angle:
             # Get the camera transformation
             cam_T = get_camera_transform(

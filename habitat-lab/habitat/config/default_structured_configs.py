@@ -812,6 +812,7 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
     if_consider_gaze_angle: bool = False
     center_cone_vector: Optional[List[float]] = None
+    desire_distance_between_gripper_object: float = 0.0
 
 
 @dataclass
