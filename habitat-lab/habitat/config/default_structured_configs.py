@@ -414,7 +414,7 @@ class SpotHeadStereoDepthSensorConfig(LabSensorConfig):
     """
     type: str = "SpotHeadStereoDepthSensor"
     height: int = 240
-    width: int = 240
+    width: int = 228
 
 
 @dataclass
