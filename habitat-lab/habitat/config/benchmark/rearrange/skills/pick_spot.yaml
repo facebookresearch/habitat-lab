@@ -12,8 +12,8 @@ habitat:
   gym:
     obs_keys:
       - articulated_agent_arm_depth
-      # - head_stereo_left_depth_sensor
-      # - head_stereo_right_depth_sensor
+      - head_stereo_left_depth
+      - head_stereo_right_depth
       - arm_depth_bbox_sensor
       - joint
   task:
