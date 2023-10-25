@@ -47,7 +47,7 @@ class SpotHeadStereoDepthSensor(UsesArticulatedAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Assert Spot's mobile gaze policy input
-        require_sensors = ["head_stereo_left_depth", "head_stereo_right_depth"]
+        require_sensors = ["head_stereo_right_depth", "head_stereo_left_depth"]
         if self.agent_id is None:
             target_key = require_sensors
         else:
