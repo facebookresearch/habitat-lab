@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import abc
-import math
 import time
 
 import magnum as mn
@@ -132,7 +131,9 @@ class GuiApplication(InputHandlerApplication):
         self._app_renderer = None
         self._sim_time = None
         self._target_sps = target_sps
-        self._debug_sps = 0.0
+        self._frame_count = 0
+        self._recent_frame_time = time.time()
+        self._recent_fps = None
 
     def get_sim_input(self):
         return self._sim_input
@@ -154,56 +155,33 @@ class GuiApplication(InputHandlerApplication):
             self.exit(0)
 
     def draw_event(self):
-        # tradeoff between responsiveness and simulation speed
-        max_sim_updates_per_render = 1
+        # update fps
+        self._frame_count += 1
+        current_time = time.time()
+        time_elapsed = current_time - self._recent_frame_time
+        if time_elapsed >= 1.0:
+            self._recent_fps = self._frame_count / time_elapsed
+            self._frame_count = 0
+            self._recent_frame_time = current_time
 
         sim_dt = 1 / self._target_sps
 
-        curr_time = time.time()
-        if self._sim_time is None:
-            num_sim_updates = 1
-            self._sim_time = curr_time
-            self._last_draw_event_time = curr_time
-            self._debug_counter = 0
-            self._debug_timer = curr_time
-        else:
-            elapsed_since_last_sim_update = curr_time - self._sim_time
-            num_sim_updates = int(
-                math.floor(elapsed_since_last_sim_update / sim_dt)
+        post_sim_update_dict = self._driver.sim_update(sim_dt)
+        self._sim_input.on_frame_end()
+        self._post_sim_update(post_sim_update_dict)
+        self._app_renderer.post_sim_update(post_sim_update_dict)
+
+        # todo: limit to _target_sps
+
+        if self._recent_fps:
+            self._app_renderer._text_drawer.add_text(
+                f"FPS: {self._recent_fps:.1f}",
+                TextOnScreenAlignment.BOTTOM_LEFT,
+                text_delta_y=20,
             )
-            num_sim_updates = min(num_sim_updates, max_sim_updates_per_render)
-            self._debug_counter += num_sim_updates
-            self._sim_time += sim_dt * num_sim_updates
 
-            # don't let sim time fall too far behind
-            if (
-                curr_time - self._sim_time
-                > sim_dt * max_sim_updates_per_render
-            ):
-                self._sim_time = (
-                    curr_time - sim_dt * max_sim_updates_per_render
-                )
-
-            self._last_draw_event_time = curr_time
-            if self._debug_counter >= 10:
-                elapsed = curr_time - self._debug_timer
-                self._debug_sps = self._debug_counter / elapsed
-                self._debug_timer = curr_time
-                self._debug_counter = 0
-
-        for _ in range(num_sim_updates):
-            post_sim_update_dict = self._driver.sim_update(sim_dt)
-            self._sim_input.on_frame_end()
-            self._post_sim_update(post_sim_update_dict)
-            self._app_renderer.post_sim_update(post_sim_update_dict)
-
-        self._app_renderer._text_drawer.add_text(
-            f"SPS: {self._debug_sps:.1f}",
-            TextOnScreenAlignment.BOTTOM_LEFT,
-            text_delta_y=20,
-        )
-
-        render_dt = 1 / 60.0  # todo: drive correctly
+        render_dt = sim_dt
+        # todo: get rid of did_render (we should always render)
         did_render = self._app_renderer.render_update(render_dt)
 
         # todo: also update when mouse moves
