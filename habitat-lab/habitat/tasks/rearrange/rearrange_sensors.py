@@ -208,6 +208,7 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        self._arm_joint_mask = config.arm_joint_mask
 
     def _get_uuid(self, *args, **kwargs):
         return "joint"
@@ -216,6 +217,8 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
+        if config.arm_joint_mask is not None:
+            assert config.dimensionality == np.sum(config.arm_joint_mask)
         return spaces.Box(
             shape=(config.dimensionality,),
             low=np.finfo(np.float32).min,
@@ -223,11 +226,19 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
+    def _get_mask_joint(self, joints_pos):
+        """Select the joint location"""
+        mask_joints_pos = []
+        for i in range(len(self._arm_joint_mask)):
+            if self._arm_joint_mask[i]:
+                mask_joints_pos.append(joints_pos[i])
+        return mask_joints_pos
+
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.arm_joint_pos
-        return np.array(joints_pos, dtype=np.float32)
+        return np.array(self._get_mask_joint(joints_pos), dtype=np.float32)
 
 
 @registry.register_sensor

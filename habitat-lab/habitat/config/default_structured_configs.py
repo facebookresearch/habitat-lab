@@ -484,6 +484,7 @@ class JointSensorConfig(LabSensorConfig):
     """
     type: str = "JointSensor"
     dimensionality: int = 7
+    arm_joint_mask: Optional[List[int]] = None
 
 
 @dataclass
