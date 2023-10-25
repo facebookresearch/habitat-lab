@@ -19,6 +19,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.multi_task.pddl_task
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
+    import habitat.tasks.rearrange.robot_specific_sensors
     import habitat.tasks.rearrange.social_nav.oracle_social_nav_actions
     import habitat.tasks.rearrange.social_nav.social_nav_sensors
     import habitat.tasks.rearrange.social_nav.social_nav_task

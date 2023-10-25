@@ -45,6 +45,7 @@ __all__ = [
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
+    "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -404,6 +405,16 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
     type: str = "ArmDepthBBoxSensor"
     height: int = 480
     width: int = 640
+
+
+@dataclass
+class SpotHeadStereoDepthSensorConfig(LabSensorConfig):
+    r"""
+    For Spot only. Sensor fusion for inputs of Spot stereo pair depth sensor
+    """
+    type: str = "SpotHeadStereoDepthSensor"
+    height: int = 240
+    width: int = 240
 
 
 @dataclass
@@ -2075,6 +2086,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
+    group="habitat/task/lab_sensors",
+    name="spot_head_stereo_depth_sensor",
+    node=SpotHeadStereoDepthSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",

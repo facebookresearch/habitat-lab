@@ -1229,6 +1229,8 @@ class HasFinishedHumanoidPickSensor(UsesArticulatedAgentInterface, Sensor):
 class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
     """Bounding box sensor to check if the object is in frame"""
 
+    cls_uuid: str = "arm_depth_bbox_sensor"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -1236,7 +1238,7 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._width = config.width
 
     def _get_uuid(self, *args, **kwargs):
-        return "arm_depth_bbox_sensor"
+        return ArmDepthBBoxSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
