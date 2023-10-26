@@ -66,7 +66,7 @@ DEFAULT_POSE_PATH = (
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
-DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+DEFAULT_CFG_PATH = "social_rearrange/pop_play.yaml"
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -550,7 +550,7 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
     )
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG_PATH)
     parser.add_argument(
         "--cfg-opts",
         nargs="*",
