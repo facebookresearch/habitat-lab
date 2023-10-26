@@ -238,7 +238,9 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
         joints_pos = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.arm_joint_pos
-        return np.array(self._get_mask_joint(joints_pos), dtype=np.float32)
+        if self._arm_joint_mask is not None:
+            joints_pos = self._get_mask_joint(joints_pos)
+        return np.array(joints_pos, dtype=np.float32)
 
 
 @registry.register_sensor
