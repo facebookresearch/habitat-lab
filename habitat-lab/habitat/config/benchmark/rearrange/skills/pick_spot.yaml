@@ -50,6 +50,7 @@ habitat:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
         center_cone_vector: [0.0, 1.0, 0.0]
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
         auto_grasp: True
         should_clip: True
     success_reward: 10.0

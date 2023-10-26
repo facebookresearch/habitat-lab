@@ -169,6 +169,12 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._delta_pos_limit = self._config.delta_pos_limit
         self._arm_joint_mask = self._config.arm_joint_mask
+        self._arm_joint_limit = self._config.arm_joint_limit
+        if self._arm_joint_limit is not None:
+            assert (
+                len(self._arm_joint_limit)
+                == self._config.arm_joint_dimensionality
+            )
 
     @property
     def action_space(self):
@@ -187,6 +193,7 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
     def _get_processed_action(self, delta_pos, simulation_mode="dynamic"):
         """Assign the delta pos actions into a correct joint location"""
         processed_delta_pos = np.zeros(len(self._arm_joint_mask))
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
 
         src_idx = 0
         tgt_idx = 0
@@ -200,12 +207,17 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
                     src_idx += 1
                 continue
             processed_delta_pos[tgt_idx] = delta_pos[src_idx]
+
+            # Set the new limits if needed
+            if self._arm_joint_limit is not None:
+                min_limit[tgt_idx] = self._arm_joint_limit[src_idx][0]
+                max_limit[tgt_idx] = self._arm_joint_limit[src_idx][1]
+
             tgt_idx += 1
             src_idx += 1
 
         # Clip the action. Although habitat_sim will prevent the motor from exceeding limits,
         # clip the motor joints first here to prevent the arm from being unstable.
-        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
         if simulation_mode == "dynamic":
             cur_arm_pos = self.cur_articulated_agent.arm_motor_pos
         elif simulation_mode == "kinematic":
@@ -313,6 +325,7 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         self._delta_pos_limit = self._config.delta_pos_limit
         self._should_clip = self._config.get("should_clip", True)
         self._arm_joint_mask = self._config.arm_joint_mask
+        self._arm_joint_limit = self._config.arm_joint_limit
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
@@ -349,6 +362,7 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
             src_idx += 1
 
         min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+
         set_arm_pos = (
             expanded_delta_pos + self.cur_articulated_agent.arm_motor_pos
         )

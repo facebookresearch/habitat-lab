@@ -232,6 +232,7 @@ class ArmActionConfig(ActionConfig):
 
     :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
     :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property arm_joint_limit: If the user specify the joint limits. The dimension needs to be the same as arm_joint_dimensionality. Format: [[min_limit, max_limit]]
     :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
     :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
     :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
@@ -241,6 +242,7 @@ class ArmActionConfig(ActionConfig):
     grip_controller: Optional[str] = None
     arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
+    arm_joint_limit: Optional[List[float]] = None
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
     delta_pos_limit: float = 0.0125
