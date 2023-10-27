@@ -1300,4 +1300,4 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
             bbox[rmin:rmax, cmin:cmax] = 1.0
 
-        return bbox
+        return np.float32(bbox)
