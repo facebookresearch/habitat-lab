@@ -48,6 +48,10 @@ def test_sandbox_driver(
         "habitat.simulator.agents.agent_1.articulated_agent_urdf=data/hab3_bench_assets/humanoids/female_0/female_0.urdf",
         "habitat.dataset.scenes_dir=data/hab3_bench_assets/hab3-hssd/scenes",
         "habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz",
+        # fix agents position
+        "habitat.seed=1856",
+        "habitat.simulator.seed=1856",
+        "+habitat.simulator.overfit=True",
     ]
     default_config = get_baselines_config(config_path, config_opts)
     override_config(config=default_config, args=default_args)
@@ -65,7 +69,11 @@ def test_sandbox_driver(
         line_render=app_renderer._replay_renderer.debug_line_render(0),
         text_drawer=app_renderer._text_drawer,
     )
-    sim_dt = 1 / default_args.target_sps
-    post_sim_update_dict = sandbox_driver.sim_update(dt=sim_dt)  # noqa: F841
 
-    # TODO: assert post_sim_update_dict
+    sim_dt = 1 / default_args.target_sps
+    post_sim_update_dict = sandbox_driver.sim_update(dt=sim_dt)
+
+    with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "r") as f:
+        expected_keyframe = f.read()
+
+    assert post_sim_update_dict["keyframes"][0] == expected_keyframe
