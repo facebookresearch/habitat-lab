@@ -35,7 +35,6 @@ def test_sandbox_driver(
             "--never-end",
         ]
     )
-    default_args._gui_controlled_agent_index = 1
 
     # get default config
     config_path = DEFAULT_CFG_PATH
