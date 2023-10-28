@@ -1,7 +1,5 @@
 import os
-from unittest.mock import patch
 
-import magnum as mn
 import pytest
 from sandbox_app import (
     DEFAULT_CFG_PATH,
@@ -10,21 +8,24 @@ from sandbox_app import (
     override_config,
 )
 from utils.gui.gui_input import GuiInput
-from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 
 from habitat_baselines.config.default import get_config as get_baselines_config
+
+
+class DummyClass:
+    def __getattr__(self, attr):
+        # Define a default method that does nothing
+        def dummy_method(*args, **kwargs):
+            pass
+
+        return dummy_method
 
 
 @pytest.mark.skipif(
     not os.path.exists("data/hab3_bench_assets"),
     reason="This test requires hab3_bench_assets assets.",
 )
-@patch("utils.gui.replay_gui_app_renderer.ReplayRenderer", spec=True)
-@patch("utils.gui.replay_gui_app_renderer.ImageFramebufferDrawer", spec=True)
-@patch("utils.gui.replay_gui_app_renderer.TextDrawer", spec=True)
-def test_sandbox_driver(
-    mock_replay_renderer, mock_image_framebuffer_drawer, mock_text_drawer
-):
+def test_sandbox_driver():
     # get default args
     sandbox_app_args_parser = get_sandbox_app_args_parser()
     default_args = sandbox_app_args_parser.parse_args(
@@ -56,18 +57,18 @@ def test_sandbox_driver(
     default_config = get_baselines_config(config_path, config_opts)
     override_config(config=default_config, args=default_args)
 
-    app_renderer = ReplayGuiAppRenderer(
-        window_size=mn.Vector2i(default_args.width, default_args.height)
-    )
-
     gui_input = GuiInput()
+
+    # mock text drawer and line renderer
+    dummy_text_drawer = DummyClass()
+    dummy_line_renderer = DummyClass()
 
     sandbox_driver = SandboxDriver(
         args=default_args,
         config=default_config,
         gui_input=gui_input,
-        line_render=app_renderer._replay_renderer.debug_line_render(0),
-        text_drawer=app_renderer._text_drawer,
+        line_render=dummy_line_renderer,
+        text_drawer=dummy_text_drawer,
     )
 
     sim_dt = 1 / default_args.target_sps
