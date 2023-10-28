@@ -5,4 +5,4 @@ defaults:
 
 type: Goat-v1
 split: val_seen
-data_path: data/datasets/goat_openvocab/hm3d/v0.1.1/{split}/{split}.json.gz
+data_path: data/datasets/goat_openvocab/hm3d/v0.1.2_fixed/{split}/{split}.json.gz
