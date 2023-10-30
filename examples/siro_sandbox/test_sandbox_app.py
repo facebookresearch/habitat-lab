@@ -89,4 +89,8 @@ def test_sandbox_driver():
     with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "r") as f:
         expected_keyframe = f.read()
 
+    # if for some reason you need to update the expected keyframe, uncomment the following lines
+    # with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "w") as f:
+    #     f.write(post_sim_update_keyframe_0)
+
     assert post_sim_update_keyframe_0 == expected_keyframe
