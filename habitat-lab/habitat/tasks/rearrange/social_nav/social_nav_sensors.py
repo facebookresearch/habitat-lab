@@ -126,6 +126,7 @@ class SocialNavReward(RearrangeReward):
             DidAgentsCollide._get_uuid()
         ].get_metric()
         if did_collide:
+            task.should_end = True
             social_nav_reward -= self._collide_penalty
 
         self._metric += social_nav_reward
@@ -476,18 +477,16 @@ class SocialNavSeekSuccess(Measure):
         base_T = self._sim.get_agent_data(
             0
         ).articulated_agent.base_transformation
-        facing = (
-            robot_human_vec_dot_product(robot_pos, human_pos, base_T)
-            > self._facing_threshold
-        )
+        if self._need_to_face_human:
+            facing = (
+                robot_human_vec_dot_product(robot_pos, human_pos, base_T)
+                > self._facing_threshold
+            )
+        else:
+            facing = True
 
         # Check if the agent follows the human within the safe distance
-        if (
-            dist >= self._safe_dis_min
-            and dist < self._safe_dis_max
-            and self._need_to_face_human
-            and facing
-        ):
+        if dist >= self._safe_dis_min and dist < self._safe_dis_max and facing:
             self._following_step += 1
 
         nav_pos_succ = False

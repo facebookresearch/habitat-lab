@@ -83,9 +83,15 @@ habitat:
         max_accum_force: -1
         max_instant_force: -1
       social_nav_reward:
+        facing_human_reward: 0.01
         count_coll_pen: 0.01
         max_count_colls: 1000
         count_coll_end_pen: 1.0
+      social_nav_seek_success:
+        must_look_at_targ: False
+        following_step_succ_threshold: 500
+        need_to_face_human: True
+
     actions:
       agent_0_base_velocity:
         lin_speed: 40.0
