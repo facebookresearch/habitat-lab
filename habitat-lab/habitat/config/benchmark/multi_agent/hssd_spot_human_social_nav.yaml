@@ -61,6 +61,9 @@ habitat:
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
         goal_is_human: True
+      humanoid_detector_sensor:
+        return_image: True
+        is_return_image_bbox: True
     type: RearrangePddlSocialNavTask-v0
     min_start_distance: 4.0
     reward_measure: social_nav_reward

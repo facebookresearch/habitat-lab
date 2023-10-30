@@ -556,7 +556,11 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         if use_k in observations:
             panoptic = observations[use_k]
         else:
-            if not self._return_image:
+            if self._return_image:
+                return np.zeros(
+                    (self._height, self._width, 1), dtype=np.float32
+                )
+            else:
                 return np.zeros(1, dtype=np.float32)
 
         if self._return_image:
