@@ -1,3 +1,4 @@
+import json
 import os
 
 import pytest
@@ -74,7 +75,18 @@ def test_sandbox_driver():
     sim_dt = 1 / default_args.target_sps
     post_sim_update_dict = sandbox_driver.sim_update(dt=sim_dt)
 
+    post_sim_update_keyframe_0 = post_sim_update_dict["keyframes"][0]
+
+    # the first keyframe should create and pose at least one render asset instance
+    post_sim_update_keyframe_0_obj = json.loads(post_sim_update_keyframe_0)
+    assert (
+        post_sim_update_keyframe_0_obj["keyframe"]
+        and post_sim_update_keyframe_0_obj["keyframe"]["loads"]
+        and post_sim_update_keyframe_0_obj["keyframe"]["creations"]
+        and post_sim_update_keyframe_0_obj["keyframe"]["stateUpdates"]
+    )
+
     with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "r") as f:
         expected_keyframe = f.read()
 
-    assert post_sim_update_dict["keyframes"][0] == expected_keyframe
+    assert post_sim_update_keyframe_0 == expected_keyframe
