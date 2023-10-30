@@ -87,7 +87,7 @@ def test_sandbox_driver():
     )
 
     with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "r") as f:
-        expected_keyframe = f.read()
+        expected_keyframe = f.read().strip()
 
     # if for some reason you need to update the expected keyframe, uncomment the following lines
     # with open("examples/siro_sandbox/test_sandbox_app_keyframe.txt", "w") as f:
