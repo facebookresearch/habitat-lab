@@ -24,8 +24,6 @@ defaults:
     - num_steps
     - did_agents_collide
     - num_agents_collide
-    - composite_stage_goals
-    - pddl_subgoal_reward
     - force_terminate
     - social_nav_reward
     - object_to_goal_distance
@@ -49,6 +47,7 @@ defaults:
     - humanoid_detector_sensor
     - has_finished_oracle_nav
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_spot_head_stereo_depth_sensor: spot_head_stereo_depth_sensor
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
   - _self_
 
@@ -128,7 +127,7 @@ habitat:
   gym:
     obs_keys:
       - agent_0_articulated_agent_arm_depth
-      - agent_0_goal_to_agent_gps_compass
+      - agent_0_spot_head_stereo_depth_sensor
       - agent_0_humanoid_detector_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
