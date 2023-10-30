@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
   # Config agent sensors
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: spot_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
@@ -19,17 +19,16 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
   # Config agent sensor
   - /habitat/task/measurements:
+    - articulated_agent_force
+    - articulated_agent_colls
     - num_steps
     - did_agents_collide
     - num_agents_collide
     - composite_stage_goals
     - pddl_subgoal_reward
-    - rearrange_cooperate_reward
-    - articulated_agent_force
     - force_terminate
     - social_nav_reward
     - object_to_goal_distance
-    - articulated_agent_colls
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
@@ -77,14 +76,13 @@ habitat:
     constraint_violation_drops_object: True
 
     measurements:
-      rearrange_cooperate_reward:
-        stage_sparse_reward: 5.0
-        end_on_collide: True
-        collide_penalty: 0.5
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
-
+      social_nav_reward:
+        count_coll_pen: 0.01
+        max_count_colls: 1000
+        count_coll_end_pen: 1.0
     actions:
       agent_0_base_velocity:
         lin_speed: 40.0
@@ -150,26 +148,6 @@ habitat:
     agents_order:
       - agent_0
       - agent_1
-    agents:
-      agent_0:
-        radius: 0.25
-        height: 1.41
-        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
-        articulated_agent_type: "SpotRobot"
-        sim_sensors:
-          arm_rgb_sensor:
-            height: 480
-            width: 640
-            hfov: 47
-          arm_depth_sensor:
-            height: 224
-            width: 171
-            hfov: 55
-          arm_panoptic_sensor:
-            height: 224
-            width: 171
-            hfov: 55
-        joint_start_noise: 0.0
 
     kinematic_mode: True
     ac_freq_ratio: 1

@@ -397,6 +397,11 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     human_id: int = 100
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
+    # Image based or binary based
+    return_image: bool = False
+    # This number is based on the arm depth image
+    height: int = 240
+    width: int = 228
 
 
 @dataclass
@@ -1264,6 +1269,15 @@ class SocialNavReward(MeasurementConfig):
     # Set the id of the agent
     robot_idx: int = 0
     human_idx: int = 1
+    constraint_violate_pen: float = 10.0
+    force_pen: float = 0.0
+    max_force_pen: float = 1.0
+    force_end_pen: float = 10.0
+    # Collision based penality for kinematic simulation
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
+    collide_penalty: float = 1.0
 
 
 @dataclass

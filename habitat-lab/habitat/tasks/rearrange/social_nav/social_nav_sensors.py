@@ -12,6 +12,8 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.rearrange.multi_agent_sensors import DidAgentsCollide
+from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.social_nav.utils import (
     robot_human_vec_dot_product,
 )
@@ -26,7 +28,8 @@ BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_measure
-class SocialNavReward(UsesArticulatedAgentInterface, Measure):
+# class SocialNavReward(UsesArticulatedAgentInterface, Measure):
+class SocialNavReward(RearrangeReward):
     """
     Reward that gives a continuous reward for the social navigation task.
     """
@@ -49,20 +52,30 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
         self._facing_human_dis = config.facing_human_dis
         self._facing_human_reward = config.facing_human_reward
         self._use_geo_distance = config.use_geo_distance
+        self._collide_penalty = config.collide_penalty
         # Record the previous distance to human
         self._prev_dist = -1.0
         self._robot_idx = config.robot_idx
         self._human_idx = config.human_idx
 
-    def reset_metric(self, *args, **kwargs):
-        self.update_metric(
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._prev_dist = -1.0
+        super().reset_metric(
             *args,
+            episode=episode,
+            task=task,
+            observations=observations,
             **kwargs,
         )
-        self._prev_dist = -1.0
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = 0.0
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
 
         # Get the pos
         use_k_human = f"agent_{self._human_idx}_localization_sensor"
@@ -83,16 +96,17 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
         else:
             dis = np.linalg.norm(human_pos - robot_pos)
 
+        social_nav_reward = 0.0
         # Social nav reward three stage design
         if dis >= self._safe_dis_min and dis < self._safe_dis_max:
             # If the distance is within the safety interval
-            self._metric = self._safe_dis_reward
+            social_nav_reward += self._safe_dis_reward
         elif dis < self._safe_dis_min:
             # If the distance is too samll
-            self._metric = dis - self._prev_dist
+            social_nav_reward += dis - self._prev_dist
         else:
             # if the distance is too large
-            self._metric = self._prev_dist - dis
+            social_nav_reward += self._prev_dist - dis
 
         # Social nav reward for facing human
         if dis < self._facing_human_dis and self._facing_human_reward != -1:
@@ -100,13 +114,22 @@ class SocialNavReward(UsesArticulatedAgentInterface, Measure):
                 self.agent_id
             ).articulated_agent.base_transformation
             # Dot product
-            self._metric += (
+            social_nav_reward += (
                 self._facing_human_reward
                 * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             )
 
         if self._prev_dist < 0:
-            self._metric = 0.0
+            social_nav_reward = 0.0
+
+        # Collision detection for two agents
+        did_collide = task.measurements.measures[
+            DidAgentsCollide._get_uuid()
+        ].get_metric()
+        if did_collide:
+            social_nav_reward -= self._collide_penalty
+
+        self._metric += social_nav_reward
 
         # Update the distance
         self._prev_dist = dis  # type: ignore
@@ -488,6 +511,9 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         self._sim = sim
         self._human_id = config.human_id
         self._human_pixel_threshold = config.human_pixel_threshold
+        self._return_image = config.return_image
+        self._height = config.height
+        self._width = config.width
 
     def _get_uuid(self, *args, **kwargs):
         return "humanoid_detector_sensor"
@@ -496,12 +522,24 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(1,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
+        if config.return_image:
+            return spaces.Box(
+                shape=(
+                    config.height,
+                    config.width,
+                    1,
+                ),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
+        else:
+            return spaces.Box(
+                shape=(1,),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
 
     def get_observation(self, observations, episode, *args, **kwargs):
         found_human = False
@@ -509,12 +547,19 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         if use_k in observations:
             panoptic = observations[use_k]
         else:
-            return np.zeros(1, dtype=np.float32)
+            if not self._return_image:
+                return np.zeros(1, dtype=np.float32)
 
-        if np.sum(panoptic == self._human_id) > self._human_pixel_threshold:
-            found_human = True
-
-        if found_human:
-            return np.ones(1, dtype=np.float32)
+        if self._return_image:
+            return (panoptic == self._human_id).astype(np.float32)
         else:
-            return np.zeros(1, dtype=np.float32)
+            if (
+                np.sum(panoptic == self._human_id)
+                > self._human_pixel_threshold
+            ):
+                found_human = True
+
+            if found_human:
+                return np.ones(1, dtype=np.float32)
+            else:
+                return np.zeros(1, dtype=np.float32)
