@@ -512,6 +512,7 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         self._human_id = config.human_id
         self._human_pixel_threshold = config.human_pixel_threshold
         self._return_image = config.return_image
+        self._is_return_image_bbox = config.is_return_image_bbox
         self._height = config.height
         self._width = config.width
 
@@ -541,6 +542,14 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
                 dtype=np.float32,
             )
 
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        return rmin, rmax, cmin, cmax
+
     def get_observation(self, observations, episode, *args, **kwargs):
         found_human = False
         use_k = f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
@@ -551,7 +560,16 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
                 return np.zeros(1, dtype=np.float32)
 
         if self._return_image:
-            return (panoptic == self._human_id).astype(np.float32)
+            tgt_mask = np.float32(panoptic == self._human_id)
+            if self._is_return_image_bbox:
+                # Get the bounding box
+                bbox = np.zeros(tgt_mask.shape)
+                if np.sum(tgt_mask) != 0:
+                    rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
+                    bbox[rmin:rmax, cmin:cmax] = 1.0
+                return np.float32(bbox)
+            else:
+                return tgt_mask
         else:
             if (
                 np.sum(panoptic == self._human_id)
