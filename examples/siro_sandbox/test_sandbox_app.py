@@ -53,7 +53,7 @@ def test_sandbox_driver():
         # fix agents position
         "habitat.seed=1856",
         "habitat.simulator.seed=1856",
-        "+habitat.simulator.overfit=True",
+        "+habitat.simulator.fixed_agent_starting_pose=True",
     ]
     default_config = get_baselines_config(config_path, config_opts)
     override_config(config=default_config, args=default_args)
