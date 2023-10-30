@@ -28,7 +28,6 @@ BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_measure
-# class SocialNavReward(UsesArticulatedAgentInterface, Measure):
 class SocialNavReward(RearrangeReward):
     """
     Reward that gives a continuous reward for the social navigation task.
