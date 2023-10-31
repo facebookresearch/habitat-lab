@@ -417,8 +417,9 @@ class BaseVelAction(ArticulatedAgentAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
-        # Offset the base
-        end_pos -= self.cur_articulated_agent.params.base_offset
+        # Offset the base if the base height is different between end_pos and the current state
+        if end_pos[1] != rigid_state.translation[1]:
+            end_pos -= self.cur_articulated_agent.params.base_offset
 
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
