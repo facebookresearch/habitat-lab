@@ -401,9 +401,6 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     return_image: bool = False
     # Is the return image bounding box or not
     is_return_image_bbox: bool = False
-    # This number is based on the arm depth image
-    height: int = 240
-    width: int = 228
 
 
 @dataclass

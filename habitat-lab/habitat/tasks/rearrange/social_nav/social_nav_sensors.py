@@ -505,14 +505,33 @@ class SocialNavSeekSuccess(Measure):
 @registry.register_sensor
 class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(config=config)
         self._sim = sim
         self._human_id = config.human_id
         self._human_pixel_threshold = config.human_pixel_threshold
         self._return_image = config.return_image
         self._is_return_image_bbox = config.is_return_image_bbox
-        self._height = config.height
-        self._width = config.width
+
+        # Check the observation size
+        arm_panoptic_shape = None
+        head_depth_shape = None
+        for key in self._sim.sensor_suite.observation_spaces.spaces:
+            if "articulated_agent_arm_panoptic" in key:
+                arm_panoptic_shape = (
+                    self._sim.sensor_suite.observation_spaces.spaces[key].shape
+                )
+            if "head_depth" in key:
+                head_depth_shape = (
+                    self._sim.sensor_suite.observation_spaces.spaces[key].shape
+                )
+
+        # Set the correct size
+        if arm_panoptic_shape is not None:
+            self._height = arm_panoptic_shape[0]
+            self._width = arm_panoptic_shape[1]
+        else:
+            self._height = head_depth_shape[0]
+            self._width = head_depth_shape[1]
+        super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
         return "humanoid_detector_sensor"
@@ -524,8 +543,8 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
         if config.return_image:
             return spaces.Box(
                 shape=(
-                    config.height,
-                    config.width,
+                    self._height,
+                    self._width,
                     1,
                 ),
                 low=np.finfo(np.float32).min,
