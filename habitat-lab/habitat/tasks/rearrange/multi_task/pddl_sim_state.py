@@ -20,6 +20,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 )
 from habitat.tasks.rearrange.utils import (
     place_agent_at_dist_from_pos,
+    random_place_agent,
     rearrange_logger,
 )
 
@@ -196,7 +197,6 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
-
             # Place some distance away from the object.
             start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 target_position=targ_pos,
@@ -213,6 +213,19 @@ class PddlRobotState:
             )
             agent_data.articulated_agent.base_pos = start_pos
             agent_data.articulated_agent.base_rot = start_rot
+            # The second attemp should just place the robot at the random location
+            if was_fail:
+                start_pos, start_rot, was_fail = random_place_agent(
+                    sim=sim,
+                    num_spawn_attempts=sim_info.num_spawn_attempts,
+                    filter_colliding_states=self.get_filter_colliding_states(
+                        sim_info
+                    ),
+                    agent=agent_data.articulated_agent,
+                )
+                agent_data.articulated_agent.base_pos = start_pos
+                agent_data.articulated_agent.base_rot = start_rot
+
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 

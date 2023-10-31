@@ -453,14 +453,34 @@ def place_agent_at_dist_from_pos(
             )
     else:
         return _get_robot_spawns(
-            target_position,
             rotation_perturbation_noise,
             distance_threshold,
             sim,
             num_spawn_attempts,
             filter_colliding_states,
+            target_position,
             agent=agent,
         )
+
+
+def random_place_agent(
+    sim,
+    num_spawn_attempts: int,
+    filter_colliding_states: bool,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Places the robot randomly
+    """
+    return _get_robot_spawns(
+        0.0,
+        float("inf"),
+        sim,
+        num_spawn_attempts,
+        filter_colliding_states,
+        None,
+        agent=agent,
+    )
 
 
 def _place_robot_at_closest_point(
@@ -543,12 +563,12 @@ def place_robot_at_closest_point_with_navmesh(
 
 
 def _get_robot_spawns(
-    target_position: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
     sim,
     num_spawn_attempts: int,
     filter_colliding_states: bool,
+    target_position: Optional[np.ndarray] = None,
     agent: Optional[MobileManipulator] = None,
 ) -> Tuple[mn.Vector3, float, bool]:
     """
@@ -556,13 +576,13 @@ def _get_robot_spawns(
     This does NOT set the position or angle of the robot, even if a place is
     successful.
 
-    :param target_position: The position of the target. This point is not
-        necessarily on the navmesh.
     :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
     :param distance_threshold: The maximum distance from the target.
     :param sim: The RearrangeSimulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param filter_colliding_states: Whether or not to filter out states in which the robot is colliding with the scene. If True, runs discrete collision detection, otherwise returns the sampled state without checking.
+    :param target_position: The position of the target. This point is not
+        necessarily on the navmesh. If it is none, we do random sampling
     :param agent: The agent to get the state for. If not specified, defaults to the simulator's articulated agent.
 
     :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
@@ -574,20 +594,31 @@ def _get_robot_spawns(
         agent = sim.articulated_agent
 
     start_rotation = agent.base_rot
-    start_position = agent.base_pos
+    start_position = mn.Vector3(agent.base_pos)
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         # Place within `distance_threshold` of the object.
-        agent.base_pos = sim.pathfinder.get_random_navigable_point_near(
-            target_position,
-            distance_threshold,
-            island_index=sim.largest_island_idx,
-        )
+        if target_position is None:
+            proposed_pos = sim.pathfinder.get_random_navigable_point(
+                max_tries=num_spawn_attempts,
+                island_index=sim.largest_island_idx,
+            )
+            target_position = proposed_pos
+        else:
+            proposed_pos = sim.pathfinder.get_random_navigable_point_near(
+                target_position,
+                distance_threshold,
+                island_index=sim.largest_island_idx,
+            )
         # get_random_navigable_point_near() can return NaNs for start_position.
-        # We want to make sure that the generated start_position is valid
-        if np.isnan(agent.base_pos).any():
+        # We want to make sure that the generated start_position is valid.
+        # We do not assign proposed_pos right after getting random point since this will cause
+        # the issue of robot transformation, and cannot be reverted back by assigning non-nan pos
+        if np.isnan(proposed_pos).any():
             continue
+
+        agent.base_pos = proposed_pos
 
         # get the horizontal distance (XZ planar projection) to the target position
         hor_disp = agent.base_pos - target_position
