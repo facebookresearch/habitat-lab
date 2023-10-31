@@ -621,7 +621,7 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
             self._config.center_cone_vector is not None
             if self._config.if_consider_gaze_angle
             else True
-        )
+        ), "Want to consider grasping gaze angle but a target center_cone_vector is not provided in the config."
         super().__init__(**kwargs)
 
     @staticmethod

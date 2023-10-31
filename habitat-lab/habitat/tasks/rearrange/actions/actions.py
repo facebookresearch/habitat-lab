@@ -201,6 +201,12 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
             if mask == 0:
                 tgt_idx += 1
                 # Check if the effective size of action is the same as arm_joint_dimensionality
+                # The reason for this check is that we have two options to control the arm:
+                # option 1: if arm_joint_dimensionality is the same as arm_joint_mask, it means that
+                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the same length/size
+                # option 2: if arm_joint_dimensionality is different from arm_joint_mask, it means that
+                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the differet length/size
+                # Based on these, we increase the src_idx by 1 to correctly assign the value to the right index
                 if self._config.arm_joint_dimensionality == len(
                     self._config.arm_joint_mask
                 ):

@@ -824,8 +824,14 @@ class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
 @dataclass
 class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
+    # Normally, we compute the L2 distance between the gripper and the object. However,
+    # sometimes we also want to make sure that the gripper is facing the object with a right angle/orientation.
+    # For instance, the gripper could face vertically on top of the object.
     if_consider_gaze_angle: bool = False
+    # The vector that the camera's line of sight should be when grasping the object.
     center_cone_vector: Optional[List[float]] = None
+    # Normally, you want the L2 distance between the gripper and the object as small as possible.
+    # However, there are cases where you want to constrain the distance to be close to a specific value.
     desire_distance_between_gripper_object: float = 0.0
 
 
