@@ -427,8 +427,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             else:
                 # agent_trans = human_trans
                 rho, _ = self.get_cartesian_obj_coords(human_trans)
-                socnav_termination_dis = 0.5
-                finished_nav = rho < socnav_termination_dis or step_terminate
+                finished_nav = step_terminate
 
             if not finished_nav:
                 # Keep gripper closed
