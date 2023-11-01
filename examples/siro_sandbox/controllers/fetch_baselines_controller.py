@@ -67,7 +67,7 @@ START_FETCH_OBJ_DIS_THRESHOLD = (
 START_FETCH_ROBOT_DIS_THRESHOLD = (
     1.8  # if the human is too close to Spot, they block Spot
 )
-FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5  # setting it to float("inf") make the point nav disable in FOLLOW state
+FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
 PICK_STEPS = 40
 
 
@@ -439,7 +439,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 human_robot_geo_dis
                 > FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV
                 and not bool(human_in_frame)
-            ):
+            ) and self.defined_skills.nav_to_robot.hybrid_approach:
                 target_pddl_skill = "nav_to_obj"
                 # Robot is too far away from the human and robot cannot see the human, we should use point nav.
                 # Here we init the point nav policy

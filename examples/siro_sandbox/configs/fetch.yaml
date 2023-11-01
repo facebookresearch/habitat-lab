@@ -246,12 +246,16 @@ habitat_baselines:
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
 
+            # Load the social nav policy
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
               load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
               obs_skill_input_dim: 2
               pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
+              # A toggle if we want to use a "hybrid" approach social nav that
+              # consists of point nav and social nav. The default is False
+              hybrid_approach: True
 
       agent_1:
         hierarchical_policy:
