@@ -41,7 +41,7 @@ class FetchState(Enum):
     FOLLOW = 12
 
 
-class FOLLOWSTATEPOLICY(Enum):
+class FollowStatePolicy(Enum):
     IDLE = 1
     POINT_NAV = 2
     SOCIAL_NAV = 3
@@ -106,7 +106,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.gt_path = None
         self.human_block_robot_when_searching = False
         # Flag for controlling either point nav or social nav to use in FOLLOW state
-        self._follow_state_policy_chosen = FOLLOWSTATEPOLICY.IDLE
+        self._follow_state_policy_chosen = FollowStatePolicy.IDLE
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -400,10 +400,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
     def act(self, obs, env):
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
-        human_trans = env._sim.agents_mgr[
+        human_pos = env._sim.agents_mgr[
             1 - self._agent_idx
         ].articulated_agent.base_transformation.translation
-        robot_trans = env._sim.agents_mgr[
+        robot_pos = env._sim.agents_mgr[
             self._agent_idx
         ].articulated_agent.base_transformation.translation
 
@@ -431,14 +431,14 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # social nav. This allows us to effectively find and follow the human
             if self.should_start_skill:
                 human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
-                    robot_trans, human_trans
+                    robot_pos, human_pos
                 )
 
                 self.start_skill(obs, "nav_to_robot")
 
-            # First get the geo distance between the robot and the human and if the robot can see human
+            # First get the geo distance between the robot and the human and check if the robot can see human
             human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
-                robot_trans, human_trans
+                robot_pos, human_pos
             )
             human_in_frame = self._batch_and_apply_transforms([obs])[
                 "humanoid_detector_sensor"
@@ -449,70 +449,58 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 and not bool(human_in_frame)
             ):
                 target_pddl_skill = "nav_to_obj"
-                # Robot is too far away from the human and not in frame, we should we point nav. Here we init the point nav policy
+                # Robot is too far away from the human and robot cannot see the human, we should use point nav.
+                # Here we init the point nav policy
                 if (
-                    self._follow_state_policy_chosen == FOLLOWSTATEPOLICY.IDLE
+                    self._follow_state_policy_chosen == FollowStatePolicy.IDLE
                     or self._follow_state_policy_chosen
-                    == FOLLOWSTATEPOLICY.SOCIAL_NAV
+                    == FollowStatePolicy.SOCIAL_NAV
                 ):
                     self.start_skill(obs, target_pddl_skill)
                     self._follow_state_policy_chosen = (
-                        FOLLOWSTATEPOLICY.POINT_NAV
+                        FollowStatePolicy.POINT_NAV
                     )
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
-                max_skill_steps = (
-                    self.defined_skills.nav_to_obj.max_skill_steps
-                )
             else:
                 target_pddl_skill = "nav_to_robot"
-                # Robot is close enough or robot can see human, we should we social nav. Here we init the social nav policy
+                # Robot is close enough or robot can see human, we should use social nav.
+                # Here we init the social nav policy
                 if (
-                    self._follow_state_policy_chosen == FOLLOWSTATEPOLICY.IDLE
+                    self._follow_state_policy_chosen == FollowStatePolicy.IDLE
                     or self._follow_state_policy_chosen
-                    == FOLLOWSTATEPOLICY.POINT_NAV
+                    == FollowStatePolicy.POINT_NAV
                 ):
                     self.start_skill(obs, target_pddl_skill)
                     self._follow_state_policy_chosen = (
-                        FOLLOWSTATEPOLICY.SOCIAL_NAV
+                        FollowStatePolicy.SOCIAL_NAV
                     )
                 type_of_skill = self.defined_skills.nav_to_robot.skill_name
-                max_skill_steps = (
-                    self.defined_skills.nav_to_robot.max_skill_steps
-                )
-            step_terminate = self._skill_steps >= max_skill_steps
 
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
+
+            if type_of_skill == "NavSkillPolicy":
+                action_array = self.force_apply_skill(
+                    obs, target_pddl_skill, env, human_pos
+                )[0]
+
+            elif type_of_skill == "OracleNavPolicy":
+                action_ind_nav = find_action_range(
+                    act_space, "agent_0_oracle_nav_action"
+                )
+                action_array[
+                    action_ind_nav[0] : action_ind_nav[0] + 3
+                ] = human_pos
             else:
-                # agent_trans = human_trans
-                rho, _ = self.get_cartesian_obj_coords(human_trans)
-                finished_nav = step_terminate
-
-            if not finished_nav:
-                # Keep gripper closed
-                if type_of_skill == "NavSkillPolicy":
-                    action_array = self.force_apply_skill(
-                        obs, target_pddl_skill, env, human_trans
-                    )[0]
-
-                elif type_of_skill == "OracleNavPolicy":
-                    action_ind_nav = find_action_range(
-                        act_space, "agent_0_oracle_nav_action"
-                    )
-                    action_array[
-                        action_ind_nav[0] : action_ind_nav[0] + 3
-                    ] = human_trans
-                else:
-                    raise ValueError(f"Skill {type_of_skill} not recognized.")
-
-            else:
-                self.current_state = FetchState.WAIT
-                self._init_policy_input()
+                raise ValueError(f"Skill {type_of_skill} not recognized.")
 
         elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
+                # We init the policy here since FOLLOW state is followed by SEARCH state
+                self._init_policy_input()
+
             obj_trans = self.rigid_obj_interest.translation
 
             # Get gripper height
@@ -533,7 +521,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Assign safe_trans here for the visualization
             self.safe_pos = safe_trans
 
-            if self._is_ok_to_start_fetch(human_trans, robot_trans, obj_trans):
+            if self._is_ok_to_start_fetch(human_pos, robot_pos, obj_trans):
                 type_of_skill = self.defined_skills.nav_to_obj.skill_name
                 max_skill_steps = (
                     self.defined_skills.nav_to_obj.max_skill_steps
@@ -575,7 +563,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         if num_tries >= max_tries:
                             # If we do not find a valid point within this many iterations,
                             # we then just use the current human location
-                            target_trans = human_trans
+                            target_trans = human_pos
                         else:
                             target_trans = candidate_trans
                         is_occluded = True
@@ -627,7 +615,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
                 not self._is_human_giving_a_way_to_robot(
-                    human_trans, robot_trans, obj_trans
+                    human_pos, robot_pos, obj_trans
                 )
             )
 
@@ -653,7 +641,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             )
             self.safe_pos = safe_trans
 
-            if self._is_ok_to_start_fetch(human_trans, robot_trans, obj_trans):
+            if self._is_ok_to_start_fetch(human_pos, robot_pos, obj_trans):
                 # Check the termination conditions
                 finished_nav = True
                 # Make sure that there is a safe snap point
@@ -683,7 +671,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     if num_tries >= max_tries:
                         # If we do not find a valid point within this many iterations,
                         # we then just use the current human location
-                        target_trans = human_trans
+                        target_trans = human_pos
                     else:
                         target_trans = candidate_trans
 
@@ -720,7 +708,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
                 not self._is_human_giving_a_way_to_robot(
-                    human_trans, robot_trans, obj_trans
+                    human_pos, robot_pos, obj_trans
                 )
             )
 
@@ -789,8 +777,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
-                # agent_trans = human_trans
-                rho, _ = self.get_cartesian_obj_coords(human_trans)
+                rho, _ = self.get_cartesian_obj_coords(human_pos)
                 finished_nav = (
                     rho < self._drop_dist_threshold or step_terminate
                 )
@@ -802,7 +789,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         # TODO: obs can be batched before
                         self.start_skill(obs, "nav_to_obj")
                     action_array = self.force_apply_skill(
-                        obs, "nav_to_obj", env, human_trans
+                        obs, "nav_to_obj", env, human_pos
                     )[0]
 
                 elif type_of_skill == "OracleNavPolicy":
@@ -828,7 +815,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 self.start_skill(obs, "nav_to_obj")
 
             # Determinate the terminatin condition
-            rho, _ = self.get_cartesian_obj_coords(human_trans)
+            rho, _ = self.get_cartesian_obj_coords(human_pos)
             finished_nav = rho < self._drop_dist_threshold
             if not finished_nav:
                 action_ind_nav = find_action_range(
@@ -836,10 +823,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 )
                 action_array[
                     action_ind_nav[0] : action_ind_nav[0] + 3
-                ] = human_trans
+                ] = human_pos
                 self.gt_path = env.task.actions[
                     "agent_0_oracle_nav_action"
-                ]._path_to_point(human_trans)
+                ]._path_to_point(human_pos)
             else:
                 self.current_state = FetchState.DROP
                 self._init_policy_input()
