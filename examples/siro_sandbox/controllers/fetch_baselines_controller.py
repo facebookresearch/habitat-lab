@@ -410,7 +410,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if self._beg_state_lock:
             self.current_state = FetchState.BEG_RESET
 
-        if self.current_state == FetchState.SEARCH:
+        if self.current_state == FetchState.WAIT:
+            # Doing the social nav tasks when in the wait state
+            pass
+        elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
