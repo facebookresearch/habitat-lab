@@ -257,8 +257,6 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     turn_power_y: float = 0.0
     # The flag for using pick skill as the place skill
     use_pick_skill_as_place_skill: bool = False
-    # The flag for switching between point nav and social nav
-    hybrid_approach: bool = False
 
 
 @dataclass

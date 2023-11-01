@@ -620,6 +620,11 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
     )
+    parser.add_argument(
+        "--disable-hybrid-social-nav",
+        action="store_true",
+        help="If specified, does not use the hybrid social nav design that consists of point nav and social nav. Only use social nav policy purely.",
+    )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
         "--cfg-opts",

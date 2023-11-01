@@ -73,7 +73,13 @@ PICK_STEPS = 40
 
 class FetchBaselinesController(SingleAgentBaselinesController):
     def __init__(
-        self, agent_idx, is_multi_agent, config, gym_env, habitat_env
+        self,
+        agent_idx,
+        is_multi_agent,
+        config,
+        gym_env,
+        habitat_env,
+        hybrid_social_nav,
     ):
         self._current_state = FetchState.WAIT
         self.should_start_skill = False
@@ -87,6 +93,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._thrown_object_collision_group = CollisionGroups.UserGroup7
         self.counter_pick = 0
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
+        self._hybrid_social_nav = hybrid_social_nav
         self._pick_dist_threshold = PICK_DIST_THRESHOLD
         self._drop_dist_threshold = DROP_DIST_THRESHOLD
         self._can_pick_for_ray_threshold = 1.0
@@ -439,7 +446,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 human_robot_geo_dis
                 > FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV
                 and not bool(human_in_frame)
-            ) and self.defined_skills.nav_to_robot.hybrid_approach:
+            ) and self._hybrid_social_nav:
                 target_pddl_skill = "nav_to_obj"
                 # Robot is too far away from the human and robot cannot see the human, we should use point nav.
                 # Here we init the point nav policy
