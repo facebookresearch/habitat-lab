@@ -423,19 +423,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if self.current_state == FetchState.WAIT:
             self.current_state = FetchState.FOLLOW
             self._init_policy_input()
-
-        if self.current_state == FetchState.FOLLOW:
+        elif self.current_state == FetchState.FOLLOW:
             # This is the following state, in which the robot tries to follow the human
-            # There are two cases here. When the human is far away from the robot, we use
-            # normal point nav, and when the human is close enough, we switch to the
-            # social nav. This allows us to effectively find and follow the human
-            if self.should_start_skill:
-                human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
-                    robot_pos, human_pos
-                )
-
-                self.start_skill(obs, "nav_to_robot")
-
+            # There are two cases here. When the human is far away from the robot and robot cannot see the human,
+            # we use normal point nav, and when the human is close enough or robot can see the human,
+            # we switch to the social nav. This allows us to effectively find and follow the human
             # First get the geo distance between the robot and the human and check if the robot can see human
             human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
                 robot_pos, human_pos
