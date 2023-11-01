@@ -38,6 +38,7 @@ class FetchState(Enum):
     BEG_RESET = 9
     SEARCH_TIMEOUT_WAIT = 10
     BRING_TIMEOUT_WAIT = 11
+    FOLLOW = 12
 
 
 # The hyper-parameters for the state machine
@@ -411,8 +412,48 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self.current_state = FetchState.BEG_RESET
 
         if self.current_state == FetchState.WAIT:
-            # Doing the social nav tasks when in the wait state
-            pass
+            self.current_state = FetchState.FOLLOW
+            self._init_policy_input()
+
+        if self.current_state == FetchState.FOLLOW:
+            # Doing social nav when being in the wait state
+            if self.should_start_skill:
+                self.start_skill(obs, "nav_to_robot")
+            type_of_skill = self.defined_skills.nav_to_robot.skill_name
+            max_skill_steps = self.defined_skills.nav_to_robot.max_skill_steps
+            step_terminate = self._skill_steps >= max_skill_steps
+            if type_of_skill == "OracleNavPolicy":
+                finished_nav = obs["agent_0_has_finished_oracle_nav"]
+            else:
+                # agent_trans = human_trans
+                rho, _ = self.get_cartesian_obj_coords(human_trans)
+                socnav_termination_dis = 0.5
+                finished_nav = rho < socnav_termination_dis or step_terminate
+
+            if not finished_nav:
+                # Keep gripper closed
+                if type_of_skill == "NavSkillPolicy":
+                    # if self.should_start_skill:
+                    #     # TODO: obs can be batched before
+                    #     self.start_skill(obs, "nav_to_robot")
+                    action_array = self.force_apply_skill(
+                        obs, "nav_to_robot", env, human_trans
+                    )[0]
+
+                elif type_of_skill == "OracleNavPolicy":
+                    action_ind_nav = find_action_range(
+                        act_space, "agent_0_oracle_nav_action"
+                    )
+                    action_array[
+                        action_ind_nav[0] : action_ind_nav[0] + 3
+                    ] = human_trans
+                else:
+                    raise ValueError(f"Skill {type_of_skill} not recognized.")
+
+            else:
+                self.current_state = FetchState.WAIT
+                self._init_policy_input()
+
         elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
                 # TODO: obs can be batched before
@@ -686,9 +727,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         elif self.current_state == FetchState.BRING:
             if self.should_start_skill:
                 # TODO: obs can be batched before
-                self.start_skill(obs, "nav_to_robot")
-            type_of_skill = self.defined_skills.nav_to_robot.skill_name
-            max_skill_steps = self.defined_skills.nav_to_robot.max_skill_steps
+                self.start_skill(obs, "nav_to_obj")
+            type_of_skill = self.defined_skills.nav_to_obj.skill_name
+            max_skill_steps = self.defined_skills.nav_to_obj.max_skill_steps
             step_terminate = self._skill_steps >= max_skill_steps
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
@@ -704,9 +745,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 if type_of_skill == "NavSkillPolicy":
                     if self.should_start_skill:
                         # TODO: obs can be batched before
-                        self.start_skill(obs, "nav_to_robot")
+                        self.start_skill(obs, "nav_to_obj")
                     action_array = self.force_apply_skill(
-                        obs, "nav_to_robot", env, human_trans
+                        obs, "nav_to_obj", env, human_trans
                     )[0]
 
                 elif type_of_skill == "OracleNavPolicy":
@@ -729,7 +770,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         elif self.current_state == FetchState.BRING_ORACLE_NAV:
             if self.should_start_skill:
                 # TODO: obs can be batched before
-                self.start_skill(obs, "nav_to_robot")
+                self.start_skill(obs, "nav_to_obj")
 
             # Determinate the terminatin condition
             rho, _ = self.get_cartesian_obj_coords(human_trans)
@@ -751,7 +792,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:
             if self.should_start_skill:
                 # TODO: obs can be batched before
-                self.start_skill(obs, "nav_to_robot")
+                self.start_skill(obs, "nav_to_obj")
 
         elif self.current_state == FetchState.DROP:
             type_of_skill = self.defined_skills.place.skill_name

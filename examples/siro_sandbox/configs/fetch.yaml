@@ -249,8 +249,8 @@ habitat_baselines:
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
-              max_skill_steps: 750
+              load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
+              max_skill_steps: 10000000000
               obs_skill_input_dim: 2
               pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
 
