@@ -67,7 +67,7 @@ START_FETCH_OBJ_DIS_THRESHOLD = (
 START_FETCH_ROBOT_DIS_THRESHOLD = (
     1.8  # if the human is too close to Spot, they block Spot
 )
-FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
+FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5  # setting it to float("inf") make the point nav disable in FOLLOW state
 PICK_STEPS = 40
 
 
