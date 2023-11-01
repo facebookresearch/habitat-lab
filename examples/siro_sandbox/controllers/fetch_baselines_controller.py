@@ -41,6 +41,12 @@ class FetchState(Enum):
     FOLLOW = 12
 
 
+class FOLLOWSTATEPOLICY(Enum):
+    IDLE = 1
+    POINT_NAV = 2
+    SOCIAL_NAV = 3
+
+
 # The hyper-parameters for the state machine
 PICK_DIST_THRESHOLD = 1.0  # Can use 1.2
 DROP_DIST_THRESHOLD = 1.0
@@ -61,6 +67,7 @@ START_FETCH_OBJ_DIS_THRESHOLD = (
 START_FETCH_ROBOT_DIS_THRESHOLD = (
     1.8  # if the human is too close to Spot, they block Spot
 )
+FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
 PICK_STEPS = 40
 
 
@@ -98,6 +105,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.safe_pos = None
         self.gt_path = None
         self.human_block_robot_when_searching = False
+        # Flag for controlling either point nav or social nav to use in FOLLOW state
+        self._follow_state_policy_chosen = FOLLOWSTATEPOLICY.IDLE
 
     def _init_policy_input(self):
         prev_actions = torch.zeros(
@@ -416,12 +425,62 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self._init_policy_input()
 
         if self.current_state == FetchState.FOLLOW:
-            # Doing social nav when being in the wait state
+            # This is the following state, in which the robot tries to follow the human
+            # There are two cases here. When the human is far away from the robot, we use
+            # normal point nav, and when the human is close enough, we switch to the
+            # social nav. This allows us to effectively find and follow the human
             if self.should_start_skill:
+                human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
+                    robot_trans, human_trans
+                )
+
                 self.start_skill(obs, "nav_to_robot")
-            type_of_skill = self.defined_skills.nav_to_robot.skill_name
-            max_skill_steps = self.defined_skills.nav_to_robot.max_skill_steps
+
+            # First get the geo distance between the robot and the human and if the robot can see human
+            human_robot_geo_dis = self._habitat_env._sim.geodesic_distance(
+                robot_trans, human_trans
+            )
+            human_in_frame = self._batch_and_apply_transforms([obs])[
+                "humanoid_detector_sensor"
+            ]
+            if (
+                human_robot_geo_dis
+                > FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV
+                and not bool(human_in_frame)
+            ):
+                target_pddl_skill = "nav_to_obj"
+                # Robot is too far away from the human and not in frame, we should we point nav. Here we init the point nav policy
+                if (
+                    self._follow_state_policy_chosen == FOLLOWSTATEPOLICY.IDLE
+                    or self._follow_state_policy_chosen
+                    == FOLLOWSTATEPOLICY.SOCIAL_NAV
+                ):
+                    self.start_skill(obs, target_pddl_skill)
+                    self._follow_state_policy_chosen = (
+                        FOLLOWSTATEPOLICY.POINT_NAV
+                    )
+                type_of_skill = self.defined_skills.nav_to_obj.skill_name
+                max_skill_steps = (
+                    self.defined_skills.nav_to_obj.max_skill_steps
+                )
+            else:
+                target_pddl_skill = "nav_to_robot"
+                # Robot is close enough or robot can see human, we should we social nav. Here we init the social nav policy
+                if (
+                    self._follow_state_policy_chosen == FOLLOWSTATEPOLICY.IDLE
+                    or self._follow_state_policy_chosen
+                    == FOLLOWSTATEPOLICY.POINT_NAV
+                ):
+                    self.start_skill(obs, target_pddl_skill)
+                    self._follow_state_policy_chosen = (
+                        FOLLOWSTATEPOLICY.SOCIAL_NAV
+                    )
+                type_of_skill = self.defined_skills.nav_to_robot.skill_name
+                max_skill_steps = (
+                    self.defined_skills.nav_to_robot.max_skill_steps
+                )
             step_terminate = self._skill_steps >= max_skill_steps
+
             if type_of_skill == "OracleNavPolicy":
                 finished_nav = obs["agent_0_has_finished_oracle_nav"]
             else:
@@ -432,11 +491,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if not finished_nav:
                 # Keep gripper closed
                 if type_of_skill == "NavSkillPolicy":
-                    # if self.should_start_skill:
-                    #     # TODO: obs can be batched before
-                    #     self.start_skill(obs, "nav_to_robot")
                     action_array = self.force_apply_skill(
-                        obs, "nav_to_robot", env, human_trans
+                        obs, target_pddl_skill, env, human_trans
                     )[0]
 
                 elif type_of_skill == "OracleNavPolicy":
