@@ -109,6 +109,7 @@ class ControllerHelper:
                             config,
                             self._gym_habitat_env,
                             self._env,
+                            args.enable_hybrid_social_nav,
                         )
                     )
                 else:
