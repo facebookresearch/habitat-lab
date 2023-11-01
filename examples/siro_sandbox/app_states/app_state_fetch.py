@@ -906,6 +906,7 @@ class AppStateFetch(AppState):
             or self.state_machine_agent_ctrl.current_state == FetchState.BRING
             or self.state_machine_agent_ctrl.current_state
             == FetchState.BRING_TIMEOUT_WAIT
+            or self.state_machine_agent_ctrl.current_state == FetchState.FOLLOW
         ):
             if (
                 self.state_machine_agent_ctrl.current_state
@@ -916,9 +917,17 @@ class AppStateFetch(AppState):
                 self.state_machine_agent_ctrl.current_state = (
                     FetchState.SEARCH_ORACLE_NAV
                 )
-            else:
+            elif (
+                self.state_machine_agent_ctrl.current_state == FetchState.BRING
+                or self.state_machine_agent_ctrl.current_state
+                == FetchState.BRING_TIMEOUT_WAIT
+            ):
                 self.state_machine_agent_ctrl.current_state = (
                     FetchState.BRING_ORACLE_NAV
+                )
+            else:
+                self.state_machine_agent_ctrl.current_state = (
+                    FetchState.FOLLOW_ORACLE
                 )
 
         if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
@@ -926,14 +935,21 @@ class AppStateFetch(AppState):
             == FetchState.SEARCH_ORACLE_NAV
             or self.state_machine_agent_ctrl.current_state
             == FetchState.BRING_ORACLE_NAV
+            or self.state_machine_agent_ctrl.current_state
+            == FetchState.FOLLOW_ORACLE
         ):
             if (
                 self.state_machine_agent_ctrl.current_state
                 == FetchState.SEARCH_ORACLE_NAV
             ):
                 self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
-            else:
+            elif (
+                self.state_machine_agent_ctrl.current_state
+                == FetchState.BRING_ORACLE_NAV
+            ):
                 self.state_machine_agent_ctrl.current_state = FetchState.BRING
+            else:
+                self.state_machine_agent_ctrl.current_state = FetchState.FOLLOW
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):

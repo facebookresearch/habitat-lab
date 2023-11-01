@@ -39,6 +39,7 @@ class FetchState(Enum):
     SEARCH_TIMEOUT_WAIT = 10
     BRING_TIMEOUT_WAIT = 11
     FOLLOW = 12
+    FOLLOW_ORACLE = 13
 
 
 class FollowStatePolicy(Enum):
@@ -430,6 +431,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if self.current_state == FetchState.WAIT:
             self.current_state = FetchState.FOLLOW
             self._init_policy_input()
+
         elif self.current_state == FetchState.FOLLOW:
             # This is the following state, in which the robot tries to follow the human
             # There are two cases here. When the human is far away from the robot and robot cannot see the human,
@@ -492,6 +494,23 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 ] = human_pos
             else:
                 raise ValueError(f"Skill {type_of_skill} not recognized.")
+
+        elif self.current_state == FetchState.FOLLOW_ORACLE:
+            # This is the oracle navigation state, in which the robot follows the human
+            # using oracle navigation.
+            if self.should_start_skill:
+                # TODO: obs can be batched before
+                self.start_skill(obs, "nav_to_obj")
+
+            action_ind_nav = find_action_range(
+                act_space, "agent_0_oracle_nav_action"
+            )
+            action_array[action_ind_nav[0] : action_ind_nav[0] + 3] = human_pos
+            self.gt_path = env.task.actions[
+                "agent_0_oracle_nav_action"
+            ]._path_to_point(human_pos)
+            # Sanitize the policy input even thought we did not call that here
+            self._init_policy_input()
 
         elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
