@@ -63,8 +63,9 @@ class TextDrawer:
         self._max_display_text_chars = max_display_text_chars
 
         # Glyphs we need to render everything
-        # Using 3 * 256 as a size of the GlyphCache, to fit larger font size
-        self._glyph_cache = text.GlyphCache(mn.Vector2i(3 * 256))
+        # Using(1024, 768) as a size of the GlyphCache, to fit larger font size
+        # Ideal size for the GPU is of power-of-two in at least one dimension
+        self._glyph_cache = text.GlyphCache((1024, 768))
         self._display_font.fill_glyph_cache(
             self._glyph_cache,
             string.ascii_lowercase
