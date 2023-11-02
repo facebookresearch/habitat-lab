@@ -58,13 +58,16 @@ from app_states.app_state_abc import AppState
 from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_rearrange import AppStateRearrange
-from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
+
+from examples.siro_sandbox.app_states.app_state_socialnav_study import (
+    AppStateSocialNav,
+)
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
