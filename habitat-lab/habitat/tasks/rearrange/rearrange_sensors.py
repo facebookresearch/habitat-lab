@@ -7,7 +7,9 @@
 from collections import defaultdict, deque
 from typing import Any, Optional
 
+import magnum as mn
 import numpy as np
+import quaternion
 from gym import spaces
 
 from habitat.core.embodied_task import Measure
@@ -23,6 +25,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import quaternion_from_coeff
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -1145,11 +1148,26 @@ class CameraPoseSensor(Sensor):
         self,
         observations,
         *args: Any,
+        task,
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
-        return self._sim._sensors[
-            "head_rgb"
-        ]._sensor_object.node.transformation
+        start_trans = np.eye(4)
+        start_pos = task._robot_start_position
+        start_pos[1] = 0
+        start_rot = quaternion.as_rotation_matrix(
+            quaternion_from_coeff(task._robot_start_rotation)
+        )
+        start_trans[:3, :3] = start_rot
+        start_trans[:3, 3] = start_pos
+        start_trans = mn.Matrix4(start_trans)
+        agent_trans = self._sim._default_agent.scene_node.transformation
+        return (
+            start_trans.inverted()
+            @ agent_trans
+            @ self._sim._sensors[
+                "head_depth"
+            ]._sensor_object.node.transformation
+        )
 
 
 @registry.register_measure
