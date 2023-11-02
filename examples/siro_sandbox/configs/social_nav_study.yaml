@@ -1,0 +1,4 @@
+# @package _global_
+
+defaults:
+  - fetch@_here_
