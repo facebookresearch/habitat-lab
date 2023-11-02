@@ -417,8 +417,11 @@ class BaseVelAction(ArticulatedAgentAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
-        # Offset the base if the base height is different between end_pos and the current state
-        if end_pos[1] != rigid_state.translation[1]:
+        # try_step may fail, in which case it simply returns the start argument
+        did_try_step_fail = end_pos == rigid_state.translation
+        if not did_try_step_fail:
+            # If try_step succeeded, it snapped our start position to the navmesh
+            # We should apply the base offset
             end_pos -= self.cur_articulated_agent.params.base_offset
 
         target_trans = mn.Matrix4.from_(
