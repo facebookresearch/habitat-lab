@@ -182,7 +182,9 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and ee_to_rest_distance < self._config.ee_resting_success_threshold
+            and (
+                ee_to_rest_distance < self._config.ee_resting_success_threshold
+                or self._config.ee_resting_success_threshold == -1.0
+            )
         )
-
         self._prev_ee_pos = observations["ee_pos"]

@@ -341,6 +341,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "articulated_agent_urdf",
                 "articulated_agent_type",
                 "joint_start_noise",
+                "joint_that_can_control",
                 "motion_data_path",
                 "ik_arm_urdf",
                 "grasp_managers",

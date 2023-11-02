@@ -44,6 +44,8 @@ __all__ = [
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
+    "ArmDepthBBoxSensorConfig",
+    "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -230,6 +232,7 @@ class ArmActionConfig(ActionConfig):
 
     :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
     :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property arm_joint_limit: If the user specify the joint limits. The dimension needs to be the same as arm_joint_dimensionality. Format: [[min_limit, max_limit]]
     :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
     :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
     :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
@@ -239,6 +242,7 @@ class ArmActionConfig(ActionConfig):
     grip_controller: Optional[str] = None
     arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
+    arm_joint_limit: Optional[List[float]] = None
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
     delta_pos_limit: float = 0.0125
@@ -248,6 +252,7 @@ class ArmActionConfig(ActionConfig):
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
+    auto_grasp: bool = False
 
 
 @dataclass
@@ -395,6 +400,26 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ArmDepthBBoxSensorConfig(LabSensorConfig):
+    r"""
+    Bounding box sensor to check if the object is in frame
+    """
+    type: str = "ArmDepthBBoxSensor"
+    height: int = 480
+    width: int = 640
+
+
+@dataclass
+class SpotHeadStereoDepthSensorConfig(LabSensorConfig):
+    r"""
+    For Spot only. Sensor fusion for inputs of Spot stereo pair depth sensor
+    """
+    type: str = "SpotHeadStereoDepthSensor"
+    height: int = 240
+    width: int = 228
+
+
+@dataclass
 class ObjectGoalSensorConfig(LabSensorConfig):
     r"""
     For Object Navigation tasks only. Generates a discrete observation containing
@@ -472,6 +497,7 @@ class JointSensorConfig(LabSensorConfig):
     """
     type: str = "JointSensor"
     dimensionality: int = 7
+    arm_joint_mask: Optional[List[int]] = None
 
 
 @dataclass
@@ -798,6 +824,15 @@ class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
 @dataclass
 class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
+    # Normally, we compute the L2 distance between the gripper and the object. However,
+    # sometimes we also want to make sure that the gripper is facing the object with a right angle/orientation.
+    # For instance, the gripper could face vertically on top of the object.
+    if_consider_gaze_angle: bool = False
+    # The vector that the camera's line of sight should be when grasping the object.
+    center_cone_vector: Optional[List[float]] = None
+    # Normally, you want the L2 distance between the gripper and the object as small as possible.
+    # However, there are cases where you want to constrain the distance to be close to a specific value.
+    desire_distance_between_gripper_object: float = 0.0
 
 
 @dataclass
@@ -877,6 +912,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -982,6 +1020,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1053,6 +1094,9 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1080,12 +1124,17 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+
+    :property ee_resting_success_threshold: -1 if we do not consider resetting the arm to the resting location
     """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
@@ -1125,6 +1174,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1473,6 +1525,20 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadStereoLeftDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_left_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class HeadStereoRightDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_right_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "head_panoptic"
     width: int = 256
@@ -1525,6 +1591,7 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
+    joint_that_can_control: Optional[List[int]] = None
     # Hard-code the robot joint start. `joint_start_noise` still applies.
     joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: Optional[str] = None
@@ -1955,6 +2022,19 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="head_stereo_right_depth_sensor",
+    node=HeadStereoRightDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_stereo_left_depth_sensor",
+    node=HeadStereoLeftDepthSensorConfig,
+)
+
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="head_rgb_sensor",
     node=HeadRGBSensorConfig,
 )
@@ -2008,6 +2088,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="humanoid_detector_sensor",
     node=HumanoidDetectorSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_depth_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_depth_bbox_sensor",
+    node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
+    group="habitat/task/lab_sensors",
+    name="spot_head_stereo_depth_sensor",
+    node=SpotHeadStereoDepthSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",

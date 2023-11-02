@@ -177,15 +177,23 @@ def tile_images(render_obs_images: List[np.ndarray]) -> np.ndarray:
     max_height = render_obs_images[0].shape[0]
     cur_y = 0.0
     # Arrange the images in columns with the largest image to the left.
-    col = []
+    col = []  # type: ignore
     for im in render_obs_images[1:]:
-        if cur_y + im.shape[0] <= max_height:
+        # Check if the images in the same column have the same width
+        if_same_width_in_the_same_col = True
+        if len(col) > 0:
+            if_same_width_in_the_same_col = col[-1].shape[1] == im.shape[1]
+
+        if cur_y + im.shape[0] <= max_height and if_same_width_in_the_same_col:
+            # Add more images on that column
             col.append(im)
             cur_y += im.shape[0]
         else:
+            # Start to move to the next new column
             img_cols.append(col)
             col = [im]
             cur_y = im.shape[0]
+
     img_cols.append(col)
     col_widths = [max(col_ele.shape[1] for col_ele in col) for col in img_cols]
     # Get the total width of all the columns put together.
@@ -233,6 +241,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     ), "Expected at least one visual sensor enabled."
 
     shapes_are_equal = len(set(x.shape for x in render_obs_images)) == 1
+
     if not shapes_are_equal:
         render_frame = tile_images(render_obs_images)
     else:
