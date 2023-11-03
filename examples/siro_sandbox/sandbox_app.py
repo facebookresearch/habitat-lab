@@ -606,6 +606,12 @@ if __name__ == "__main__":
         help="Vertical resolution of the window.",
     )
     parser.add_argument(
+        "--display-font-size",
+        default=40,
+        type=int,
+        help="Font size for text displayed in the GUI app.",
+    )
+    parser.add_argument(
         "--gui-controlled-agent-index",
         type=int,
         default=None,
@@ -806,7 +812,7 @@ if __name__ == "__main__":
         )
 
     # TextDrawer kwargs
-    display_font_size = 40
+    display_font_size = args.display_font_size
     font_size_multiplier = (
         mn.Vector2(gui_app_wrapper.framebuffer_size)
         * gui_app_wrapper.dpi_scaling
