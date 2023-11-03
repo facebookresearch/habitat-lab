@@ -843,8 +843,10 @@ class AppStateFetch(AppState):
         if (
             fetch_state == FetchState.SEARCH
             or fetch_state == FetchState.BRING
+            or fetch_state == FetchState.FOLLOW
             or fetch_state == FetchState.SEARCH_ORACLE_NAV
             or fetch_state == FetchState.BRING_ORACLE_NAV
+            or fetch_state == FetchState.FOLLOW_ORACLE
         ):
             fetcher_pos = self._get_state_machine_agent_translation()
             target_pos = (
@@ -856,6 +858,7 @@ class AppStateFetch(AppState):
             is_oracle_nav = (
                 fetch_state == FetchState.SEARCH_ORACLE_NAV
                 or fetch_state == FetchState.BRING_ORACLE_NAV
+                or fetch_state == FetchState.FOLLOW_ORACLE
             )
             if is_oracle_nav:
                 if self.state_machine_agent_ctrl.gt_path:
