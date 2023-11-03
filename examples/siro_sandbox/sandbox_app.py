@@ -205,6 +205,7 @@ class SandboxDriver(GuiAppDriver):
                 AppStateSocialNavStudy(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
         elif args.app_state == "free_camera":
@@ -624,6 +625,11 @@ if __name__ == "__main__":
         "--enable-hybrid-social-nav",
         action="store_true",
         help="If specified, we use a hybrid social nav design that consists of point nav and social nav. Otherwise, we only use social nav policy purely.",
+    )
+    parser.add_argument(
+        "--oracle-follow-human",
+        action="store_true",
+        help="If specified, we use the oracle to follow human.",
     )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(

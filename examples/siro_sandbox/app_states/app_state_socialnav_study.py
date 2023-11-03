@@ -8,6 +8,7 @@ import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
+from controllers.fetch_baselines_controller import FetchState
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
@@ -21,9 +22,11 @@ class AppStateSocialNavStudy(AppState):
         self,
         sandbox_service,
         gui_agent_ctrl,
+        robot_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
         self._gui_agent_ctrl = gui_agent_ctrl
+        self._state_machine_robot_ctrl = robot_agent_ctrl
 
         # cache items from config; config is expensive to access at runtime
         config = self._sandbox_service.config
@@ -83,6 +86,7 @@ class AppStateSocialNavStudy(AppState):
 
         drop_pos = None
         grasp_object_id = None
+        reach_pos = None
 
         if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
@@ -146,6 +150,8 @@ class AppStateSocialNavStudy(AppState):
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
+                        # reach towards this position until spacebar is released
+                        reach_pos = self._get_target_object_position(min_i)
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -168,6 +174,7 @@ class AppStateSocialNavStudy(AppState):
             grasp_object_id,
             drop_pos,
             self._camera_helper.lookat_offset_yaw,
+            reach_pos=reach_pos,
         )
 
     def _get_target_object_position(self, target_obj_idx):
@@ -408,6 +415,21 @@ class AppStateSocialNavStudy(AppState):
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
+    def _check_update_robot_state(self):
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O):
+            current_state = self._state_machine_robot_ctrl.current_state
+            if current_state == FetchState.FOLLOW:
+                self._state_machine_robot_ctrl.current_state = (
+                    FetchState.FOLLOW_ORACLE
+                )
+            elif current_state == FetchState.FOLLOW_ORACLE:
+                self._state_machine_robot_ctrl.current_state = (
+                    FetchState.FOLLOW
+                )
+            else:
+                # do nothing
+                pass
+
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
             self._sandbox_service.end_episode()
@@ -422,6 +444,7 @@ class AppStateSocialNavStudy(AppState):
         if self._env_episode_active():
             self._update_task()
             self._update_grasping_and_set_act_hints()
+            self._check_update_robot_state()
             self._sandbox_service.compute_action_and_step_env()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)

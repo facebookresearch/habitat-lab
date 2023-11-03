@@ -101,24 +101,36 @@ class ControllerHelper:
                 )
             self.controllers.append(gui_agent_controller)
             if is_multi_agent:
-                if args.app_state == "fetch":
+                if (
+                    args.app_state == "fetch"
+                    or args.app_state == "socialnav_study"
+                ):
                     self.controllers.append(
                         FetchBaselinesController(
-                            0 if self._gui_controlled_agent_index == 1 else 1,
-                            is_multi_agent,
-                            config,
-                            self._gym_habitat_env,
-                            self._env,
-                            args.enable_hybrid_social_nav,
+                            agent_idx=(
+                                0
+                                if self._gui_controlled_agent_index == 1
+                                else 1
+                            ),
+                            is_multi_agent=is_multi_agent,
+                            config=config,
+                            gym_env=self._gym_habitat_env,
+                            habitat_env=self._env,
+                            hybrid_social_nav=args.enable_hybrid_social_nav,
+                            oracle_follow=args.oracle_follow_human,
                         )
                     )
                 else:
                     self.controllers.append(
                         SingleAgentBaselinesController(
-                            0 if self._gui_controlled_agent_index == 1 else 1,
-                            is_multi_agent,
-                            config,
-                            self._gym_habitat_env,
+                            agent_idx=(
+                                0
+                                if self._gui_controlled_agent_index == 1
+                                else 1
+                            ),
+                            is_multi_agent=is_multi_agent,
+                            config=config,
+                            gym_habitat_env=self._gym_habitat_env,
                         )
                     )
 
