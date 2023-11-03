@@ -430,7 +430,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         if self.current_state == FetchState.WAIT:
             self.current_state = FetchState.FOLLOW
-            self._init_policy_input()
+            self._policy_info = self._init_policy_input()
 
         elif self.current_state == FetchState.FOLLOW:
             # This is the following state, in which the robot tries to follow the human
@@ -510,14 +510,14 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 "agent_0_oracle_nav_action"
             ]._path_to_point(human_pos)
             # Sanitize the policy input even thought we did not call that here
-            self._init_policy_input()
+            self._policy_info = self._init_policy_input()
 
         elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
                 # We init the policy here since FOLLOW state is followed by SEARCH state
-                self._init_policy_input()
+                self._policy_info = self._init_policy_input()
 
             obj_trans = self.rigid_obj_interest.translation
 
@@ -628,7 +628,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
-                    self._init_policy_input()
+                    self._policy_info = self._init_policy_input()
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -721,7 +721,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
-                    self._init_policy_input()
+                    self._policy_info = self._init_policy_input()
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -825,7 +825,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.current_state = FetchState.BRING_TIMEOUT_WAIT
                 else:
                     self.current_state = FetchState.DROP
-                self._init_policy_input()
+                self._policy_info = self._init_policy_input()
 
         elif self.current_state == FetchState.BRING_ORACLE_NAV:
             if self.should_start_skill:
@@ -847,7 +847,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 ]._path_to_point(human_pos)
             else:
                 self.current_state = FetchState.DROP
-                self._init_policy_input()
+                self._policy_info = self._init_policy_input()
 
         elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:
             if self.should_start_skill:
