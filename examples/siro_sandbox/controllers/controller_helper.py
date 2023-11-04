@@ -117,7 +117,7 @@ class ControllerHelper:
                             gym_env=self._gym_habitat_env,
                             habitat_env=self._env,
                             hybrid_social_nav=args.enable_hybrid_social_nav,
-                            oracle_follow=args.oracle_follow_human,
+                            use_oracle_follow=args.oracle_follow_human,
                         )
                     )
                 else:
