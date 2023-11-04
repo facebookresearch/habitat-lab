@@ -13,7 +13,7 @@ from habitat.core.dataset import Episode, EpisodeIterator
 class EpisodeHelper:
     def __init__(self, habitat_env: habitat.Env) -> None:
         self._habitat_env: habitat.Env = habitat_env
-        self._episode_iterator: EpisodeIterator = habitat_env.episode_iterator
+        self._episode_iterator: EpisodeIterator = habitat_env.episode_iterator  # type: ignore
         self._num_iter_episodes: Union[int, float] = (
             len(self._episode_iterator.episodes)
             if not self._episode_iterator.cycle
