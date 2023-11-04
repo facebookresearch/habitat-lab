@@ -109,6 +109,7 @@ habitat:
         end_on_collide: False
 
     constraint_violation_drops_object: False
+    robot_at_thresh: 2.0
 
   environment:
     max_episode_steps: 1000
