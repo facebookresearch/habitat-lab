@@ -137,7 +137,15 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.gym_habitat_env, config, args, gui_input, self._step_recorder
+            gym_habitat_env=self.gym_habitat_env,
+            config=config,
+            args=args,
+            gui_input=gui_input,
+            recorder=self._step_recorder,
+            use_fetch_baselines_controller=(
+                args.app_state == "fetch"
+                or args.app_state == "socialnav_study"
+            ),
         )
 
         self._debug_images = args.debug_images

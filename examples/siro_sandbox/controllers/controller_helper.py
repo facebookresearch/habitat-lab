@@ -33,22 +33,23 @@ class ControllerHelper:
         args,
         gui_input,
         recorder,
+        use_fetch_baselines_controller,
     ):
         self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
         self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env  # type: ignore
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
         self.n_agents: int = len(self._env._sim.agents_mgr)  # type: ignore[attr-defined]
+        if self.n_agents > 2:
+            raise ValueError("ControllerHelper only supports 1 or 2 agents.")
+
+        is_multi_agent: bool = self.n_agents > 1
         self.n_user_controlled_agents: int = (
             0 if self._gui_controlled_agent_index is None else 1
         )
         self.n_policy_controlled_agents: int = (
             self.n_agents - self.n_user_controlled_agents
         )
-        is_multi_agent: bool = self.n_agents > 1
-
-        if self.n_agents > 2:
-            raise ValueError("ControllerHelper only supports 1 or 2 agents.")
 
         self.controllers: List[Controller] = []
         if self.n_agents == self.n_policy_controlled_agents:
@@ -101,10 +102,7 @@ class ControllerHelper:
                 )
             self.controllers.append(gui_agent_controller)
             if is_multi_agent:
-                if (
-                    args.app_state == "fetch"
-                    or args.app_state == "socialnav_study"
-                ):
+                if use_fetch_baselines_controller:
                     self.controllers.append(
                         FetchBaselinesController(
                             agent_idx=(
@@ -138,14 +136,25 @@ class ControllerHelper:
         if self._gui_controlled_agent_index is None:
             return None
 
+        # if there is gui controlled agent
+        # its controller will always be the first one in the list
         return self.controllers[0]
 
     def get_policy_driven_agent_controller(self) -> Optional[Controller]:
+        # if there is no gui controlled agent the policy driven agent controller
+        # will always be one and only one in the controllers list
+        # either SingleAgentBaselinesController or MultiAgentBaselinesController
+        # depending on the number of agents
         if self._gui_controlled_agent_index is None:
             return self.controllers[0]
-
-        # This is pretty hacky
-        return self.controllers[1]
+        # if there is gui controlled agent (its controller is always the first one in the list)
+        # the policy driven agent controller will be the second one in the list
+        elif len(self.controllers) == 2:
+            return self.controllers[1]
+        # otherwise, we are in single agent case with gui controlled agent
+        # and there is no policy driven agent controller
+        else:
+            return None
 
     def get_gui_controlled_agent_index(self) -> Optional[int]:
         return self._gui_controlled_agent_index
