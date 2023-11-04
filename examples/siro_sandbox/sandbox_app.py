@@ -635,7 +635,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--oracle-follow-human",
         action="store_true",
-        help="If specified, we use the oracle to follow human.",
+        help="If true, use an oracle pointnav policy to follow the human. If false, use a learned social-nav policy.",
     )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
