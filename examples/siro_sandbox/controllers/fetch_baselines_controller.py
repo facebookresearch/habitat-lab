@@ -509,8 +509,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self.gt_path = env.task.actions[
                 "agent_0_oracle_nav_action"
             ]._path_to_point(human_pos)
-            # Sanitize the policy input even thought we did not call that here
-            self._policy_info = self._init_policy_input()
 
         elif self.current_state == FetchState.SEARCH:
             if self.should_start_skill:
