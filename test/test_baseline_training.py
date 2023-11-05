@@ -328,9 +328,12 @@ def test_multi_agent_trainer(
 
     with read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
-        # Changing the visual observation size for speed
-        for sim_sensor_config in agent_config.sim_sensors.values():
-            sim_sensor_config.update({"height": 64, "width": 64})
+        # Changing the visual observation size for speed. However,
+        # social nav has a specific sensor that is designed for real robot,
+        # which cannot change the sensor size
+        if "social_nav" not in config_path:
+            for sim_sensor_config in agent_config.sim_sensors.values():
+                sim_sensor_config.update({"height": 64, "width": 64})
 
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
