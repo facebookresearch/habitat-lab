@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - pop_play_kinematic_oracle_spot
+  - pbt
   - /habitat_baselines/rl/auxiliary_losses: bdp_discrim
   - override /habitat_baselines/rl/agent: bdp
   - _self_

@@ -4,10 +4,12 @@ This is the code for "Adaptive Coordination in Social Embodied Rearrangement".
 <p align="center">
     <img width="85%" src="https://github.com/facebookresearch/habitat-lab/raw/social-eai/teaser_fig.png">
     <br />
-    <a href="">[Paper]</a>
+    <a href="https://arxiv.org/abs/2306.00087">[Paper]</a>
 </p>
 
 **Note that this README only describes the details specific to "Adaptive Coordination in Social Embodied Rearrangement". For general details on Habitat, please see [the Habitat website](https://aihabitat.org) which includes tutorials, documentation, and examples.**
+
+Check out [Habitat 3.0](https://aihabitat.org/habitat3/). Habitat 3.0 includes extends the functionality and tasks in this paper to include humanoid simulation, human-in-the-loop evaluation, more collaborative tasks, and more! Habitat 3.0 is actively maintained in the `main` branch of this repo.
 
 ## Installation
 Install instructions for Linux using `conda`.
@@ -19,7 +21,7 @@ Install instructions for Linux using `conda`.
     - `pip install -e habitat-baselines`
 
 # Running
-All below commands are currently for Tidy House task. All other tasks and baselines will be added soon. For updates on the code release, please email andrewszot1@gmail.com.
+All below commands are currently for Tidy House task. Run from the `habitat-baselines` directory.
 
 - BDP: `python habitat_baselines/run.py --config-name=social_eai/bdp.yaml`
 - PBT: `python habitat_baselines/run.py --config-name=social_eai/pbt.yaml`
