@@ -60,9 +60,11 @@ habitat:
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
         goal_is_human: True
+      # Defien the human detector
       humanoid_detector_sensor:
-        return_image: True
-        is_return_image_bbox: True
+        # If the human detector function is image or binary flag
+        return_image: False
+        is_return_image_bbox: False
     type: RearrangePddlSocialNavTask-v0
     min_start_distance: 4.0
     reward_measure: social_nav_reward
@@ -78,14 +80,17 @@ habitat:
     constraint_violation_drops_object: True
 
     measurements:
+      # We do kinemantic simulation here, so no dynamic force
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
+      # Define the social nav reward
       social_nav_reward:
         facing_human_reward: 0.01
         count_coll_pen: 0.01
         max_count_colls: 1000
         count_coll_end_pen: 1.0
+      # Define the social nav seek success
       social_nav_seek_success:
         must_look_at_targ: False
         following_step_succ_threshold: 500
@@ -108,6 +113,7 @@ habitat:
         ang_speed: 5.0
         enable_rotation_check_for_dyn_slide: False
 
+      # Human random walking action
       agent_1_oracle_nav_action:
         type: OracleNavAction
         motion_control: human_joints
@@ -157,6 +163,7 @@ habitat:
       - agent_0
       - agent_1
 
+    # We use the kinematic mode to train the real world social nav policy
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
