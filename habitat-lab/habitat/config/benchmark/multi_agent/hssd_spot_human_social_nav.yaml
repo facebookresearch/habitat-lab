@@ -51,6 +51,13 @@ defaults:
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
   - _self_
 
+# This yaml is designed specifically for learning a social nav policy for the Boston Dynamics Spot robot.
+# The major changes compared to the base yaml are the following:
+# (1) obs_keys: we ensure these observations can be obtained from the real robot (Spot)
+# (2) social_nav_reward: social nav reward considers collisions based on a kinematic simulation
+# (3) actions: Spot controls the base linear and angualr velocity
+# (4) simulator: we simulate the environment via the kinematic mode to facilitate sim2real transfer
+
 habitat:
   task:
     lab_sensors:
