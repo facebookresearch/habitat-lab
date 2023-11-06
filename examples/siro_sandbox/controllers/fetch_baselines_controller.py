@@ -100,7 +100,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._can_pick_for_ray_threshold = 1.0
         self._local_place_target = LOCAL_PLACE_TARGET
         super().__init__(agent_idx, is_multi_agent, config, gym_env)
-        self._policy_info = self._init_policy_input()
+        self._policy_info = self._get_policy_info()
         self.defined_skills = self._config.habitat_baselines.rl.policy[
             self._agent_name
         ].hierarchical_policy.defined_skills
@@ -116,7 +116,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Flag for controlling either point nav or social nav to use in FOLLOW state
         self._follow_state_policy_chosen = FollowStatePolicy.IDLE
 
-    def _init_policy_input(self):
+    def _get_policy_info(self):
         prev_actions = torch.zeros(
             self._num_envs,
             *self._action_shape,
@@ -430,7 +430,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
         if self.current_state == FetchState.WAIT:
             self.current_state = FetchState.FOLLOW
-            self._policy_info = self._init_policy_input()
+            self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.FOLLOW:
             # This is the following state, in which the robot tries to follow the human
@@ -515,7 +515,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
                 # We init the policy here since FOLLOW state is followed by SEARCH state
-                self._policy_info = self._init_policy_input()
+                self._policy_info = self._get_policy_info()
 
             obj_trans = self.rigid_obj_interest.translation
 
@@ -626,7 +626,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
-                    self._policy_info = self._init_policy_input()
+                    self._policy_info = self._get_policy_info()
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -719,7 +719,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                         self.current_state = FetchState.BEG_RESET
                     else:
                         self.current_state = FetchState.PICK
-                    self._policy_info = self._init_policy_input()
+                    self._policy_info = self._get_policy_info()
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -823,7 +823,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.current_state = FetchState.BRING_TIMEOUT_WAIT
                 else:
                     self.current_state = FetchState.DROP
-                self._policy_info = self._init_policy_input()
+                self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.BRING_ORACLE_NAV:
             if self.should_start_skill:
@@ -845,7 +845,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 ]._path_to_point(human_pos)
             else:
                 self.current_state = FetchState.DROP
-                self._policy_info = self._init_policy_input()
+                self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:
             if self.should_start_skill:
@@ -858,7 +858,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if type_of_skill == "PlaceSkillPolicy":
                 if self.should_start_skill:
                     # TODO: obs can be batched before
-                    self._policy_info = self._init_policy_input()
+                    self._policy_info = self._get_policy_info()
                     self.start_skill(obs, "place")
                 if self._target_place_trans is None:  # type: ignore
                     self._target_place_trans = self.get_place_loc(env, self._local_place_target)  # type: ignore
@@ -924,7 +924,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if type_of_skill == "PlaceSkillPolicy":
                 if self.should_start_skill:
                     # TODO: obs can be batched before
-                    self._policy_info = self._init_policy_input()
+                    self._policy_info = self._get_policy_info()
                     self.start_skill(obs, "place")
                 if self._target_place_trans is None:  # type: ignore
                     self._target_place_trans = self.get_ee_loc(env)  # type: ignore
@@ -969,7 +969,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.grasped_object = None
         self._last_object_drop_info = None
         self.counter_pick = 0
-        self._policy_info = self._init_policy_input()
+        self._policy_info = self._get_policy_info()
         self._target_place_trans = None
         self._skill_steps = 0
         self._beg_state_lock = False
