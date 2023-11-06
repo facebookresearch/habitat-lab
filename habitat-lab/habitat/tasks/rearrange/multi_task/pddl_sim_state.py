@@ -11,6 +11,9 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
 from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -228,6 +231,15 @@ class PddlRobotState:
 
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
+
+            # Record the robot's transformation if we are using "PddlSocialNavTask"
+            # We cannot import PddlSocialNavTask here since that will cause a circular dependency
+            if hasattr(sim_info.env, "initial_robot_trans") and not isinstance(
+                agent_data.articulated_agent, KinematicHumanoid
+            ):
+                sim_info.env.initial_robot_trans = (
+                    agent_data.articulated_agent.base_transformation
+                )
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
             agent_data.grasp_mgr.update_object_to_grasp()

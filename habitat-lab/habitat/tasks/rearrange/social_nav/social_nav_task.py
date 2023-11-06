@@ -30,6 +30,7 @@ class PddlSocialNavTask(PddlTask):
         self.force_recep_to_name = None
         self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
         self._min_start_distance = config.min_start_distance
+        self._initial_robot_trans = None
 
     def _generate_snap_to_obj(self) -> int:
         # Snap the target object to the articulated_agent hand.
@@ -88,6 +89,14 @@ class PddlSocialNavTask(PddlTask):
     @nav_goal_pos.setter
     def nav_goal_pos(self, value):
         self._nav_to_info.nav_goal_pos = value
+
+    @property
+    def initial_robot_trans(self):
+        return self._initial_robot_trans
+
+    @initial_robot_trans.setter
+    def initial_robot_trans(self, value):
+        self._initial_robot_trans = value
 
     def reset(self, episode: Episode):
         # Process the nav target

@@ -9,6 +9,9 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -22,7 +25,11 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToPosSucc,
     RotDistToGoal,
 )
-from habitat.tasks.rearrange.utils import UsesArticulatedAgentInterface
+from habitat.tasks.rearrange.utils import (
+    UsesArticulatedAgentInterface,
+    batch_transform_point,
+)
+from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
 
@@ -602,3 +609,49 @@ class HumanoidDetectorSensor(UsesArticulatedAgentInterface, Sensor):
                 return np.ones(1, dtype=np.float32)
             else:
                 return np.zeros(1, dtype=np.float32)
+
+
+@registry.register_sensor
+class InitialGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Get the relative distance to the initial starting location of the robot
+    """
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return "initial_gps_compass_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(2,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, task, *args, **kwargs):
+        agent_data = self._sim.get_agent_data(self.agent_id).articulated_agent
+        agent_pos = np.array(agent_data.base_pos)
+        init_articulated_agent_T = task.initial_robot_trans
+
+        # Do not support human relative GPS
+        if init_articulated_agent_T is None or isinstance(
+            agent_data, KinematicHumanoid
+        ):
+            return np.zeros(2, dtype=np.float32)
+        else:
+            rel_pos = batch_transform_point(
+                np.array([agent_pos]),
+                init_articulated_agent_T.inverted(),
+                np.float32,
+            )
+            rho, phi = cartesian_to_polar(rel_pos[0][0], rel_pos[0][1])
+            init_rel_pos = np.array([rho, -phi], dtype=np.float32)
+
+            return init_rel_pos

@@ -63,6 +63,7 @@ __all__ = [
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
+    "InitialGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
@@ -650,6 +651,14 @@ class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
     """
     type: str = "TargetStartGpsCompassSensor"
+
+
+@dataclass
+class InitialGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the relative distance to the initial starting location of the agent in 2D polar coordinates.
+    """
+    type: str = "InitialGpsCompassSensor"
 
 
 @dataclass
@@ -2227,6 +2236,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_start_gps_compass_sensor",
     node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.initial_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="initial_gps_compass_sensor",
+    node=InitialGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.multi_agent_all_predicates",
