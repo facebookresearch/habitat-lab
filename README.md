@@ -19,6 +19,7 @@ Install instructions for Linux using `conda`.
 - `cd` into this directory:
     - `pip install -e habitat-lab`
     - `pip install -e habitat-baselines`
+- `cd` into the `habitat-baselines` directory and run `python -m habitat_sim.utils.datasets_download --uids rearrange_task_assets` to download the data.
 
 # Running
 All below commands are currently for Tidy House task. Run from the `habitat-baselines` directory.

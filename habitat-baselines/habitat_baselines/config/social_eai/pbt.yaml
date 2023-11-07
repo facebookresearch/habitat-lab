@@ -15,7 +15,6 @@ defaults:
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat/task/measurements:
     - composite_subgoal_reward
-    - runtime_perf_stats
   - /habitat/task/lab_sensors:
     - multi_agent_all_predicates
     - other_agent_gps
