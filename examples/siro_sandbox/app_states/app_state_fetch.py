@@ -185,6 +185,7 @@ class AppStateFetch(AppState):
             self._sandbox_service.client_message_manager.change_humanoid_position(
                 self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
             )
+            self._sandbox_service.client_message_manager.signal_episode_change()
 
         # Get the scene id
         scene_id = (
