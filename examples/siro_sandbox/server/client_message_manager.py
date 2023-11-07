@@ -46,8 +46,8 @@ class ClientMessageManager:
         """
         self._message["teleportAvatarBasePosition"] = [pos[0], pos[1], pos[2]]
 
-    def signal_episode_change(self) -> None:
+    def signal_scene_change(self) -> None:
         r"""
-        Signals the client that the episode is being changed during this frame.
+        Signals the client that the scene is being changed during this frame.
         """
-        self._message["episodeChanged"] = True
+        self._message["sceneChanged"] = True
