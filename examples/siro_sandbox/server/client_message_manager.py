@@ -45,3 +45,9 @@ class ClientMessageManager:
         Used to synchronize the humanoid position in the client when changing scene.
         """
         self._message["teleportAvatarBasePosition"] = [pos[0], pos[1], pos[2]]
+
+    def signal_scene_change(self) -> None:
+        r"""
+        Signals the client that the scene is being changed during this frame.
+        """
+        self._message["sceneChanged"] = True
