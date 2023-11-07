@@ -1,19 +1,9 @@
 # @package _global_
 
 defaults:
+  # benchmark (task + simulator + dataset) related defaults:
   - /benchmark/rearrange: multi_agent_tidy_house_fp_spot_humanoid
-  - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - /habitat_baselines/rl/agent: pop_play
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
-    - add_virtual_keys_base
-  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
-    - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
-
   - /habitat/task/measurements:
     - composite_subgoal_reward
   - /habitat/task/lab_sensors:
@@ -30,17 +20,30 @@ defaults:
     - other_agent_gps
     - has_finished_oracle_nav
     - humanoid_detector_sensor
-
-  # We will need oracle_nav_action for when using the shorest path finder
+  # needed for the shortest path finder
   - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
-
-  # Add one control action for robot motion
+  # add control action for robot motion
   - /habitat/task/actions@habitat.task.actions.agent_0_motion_control: base_velocity_leg_animation_motion
 
-  # For Spot observation space
+  # baselines (algorithms used to control the agents) related defaults:
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/agent: pop_play  # multi agent access manager
+  # agent 0
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
+  # agent 1
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+
+  # overrides
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
   - override /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_leg_animation
+
   - _self_
 
 habitat:
@@ -65,7 +68,6 @@ habitat:
         disable_grip: False
         delta_pos_limit: 0.10 # default value 0.20
         ee_ctrl_lim: 0.015
-
       agent_0_base_velocity:
         allow_dyn_slide: True
         collision_threshold: 1e-5
@@ -76,7 +78,6 @@ habitat:
         lateral_lin_speed: 7.5 # default value 10.0
         ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
-
       agent_0_motion_control:
         allow_dyn_slide: True
         collision_threshold: 1e-5
@@ -87,7 +88,6 @@ habitat:
         lateral_lin_speed: 10.0
         ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
-
       agent_0_oracle_nav_action:
         type: OracleNavCoordAction
         allow_dyn_slide: True
@@ -99,7 +99,6 @@ habitat:
         lateral_lin_speed: 7.5 # default value 10.0
         ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
-
       agent_1_oracle_nav_action:
         type: OracleNavAction
         motion_control: human_joints
@@ -107,17 +106,14 @@ habitat:
     measurements:
       cooperate_subgoal_reward:
         end_on_collide: False
-
     constraint_violation_drops_object: False
-    robot_at_thresh: 2.0
-
   environment:
     max_episode_steps: 1000
     iterator_options:
       max_scene_repeat_steps: -1
+      cycle: False
   gym:
     obs_keys:
-      # - agent_0_head_depth
       - agent_0_articulated_agent_arm_depth
       - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
@@ -130,24 +126,7 @@ habitat:
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
       - agent_0_humanoid_detector_sensor
-      # - agent_0_has_finished_oracle_nav
-      # - agent_0_should_replan
-      # - agent_1_head_depth
-      # - agent_1_relative_resting_position
-      # - agent_1_obj_start_sensor
-      # - agent_1_obj_goal_sensor
-      # - agent_1_obj_start_gps_compass
-      # - agent_1_obj_goal_gps_compass
-      # - agent_1_is_holding
-      # - agent_1_ee_pos
-      # - agent_1_localization_sensor
-      # - agent_1_humanoid_joint_sensor
-      # - agent_1_other_agent_gps
-      # - agent_1_has_finished_oracle_nav
-      # - agent_1_should_replan
-
   simulator:
-    # Add Spot robot agents
     agents:
       agent_0:
         radius: 0.25
@@ -173,20 +152,14 @@ habitat:
     step_physics: True
     habitat_sim_v0:
       allow_sliding: True
-
   dataset:
-    # data_path: "data/datasets/floorplanner/rearrange/scratch/test/largetest_10s_500epi_2obj.json.gz"
     data_path: "data/datasets/floorplanner/rearrange/scratch/train/demo_25.json.gz"
 
 habitat_baselines:
   num_environments: 1
-
   evaluate: True
-
   eval:
     should_load_ckpt: False
-    # video_option: ["disk"]
-
   rl:
     agent:
       num_pool_agents_per_type: [1, 8]
@@ -209,17 +182,14 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
-
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
-
             pick:
               skill_name: "PickSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
               load_ckpt_file: "data/models/pick_latest.pth"
               max_skill_steps: 250
               obs_skill_input_dim: 3
-
             place:
               skill_name: "PlaceSkillPolicy"
               # We can swtich between if we want to use pick skill to replace place skill
@@ -234,8 +204,6 @@ habitat_baselines:
               use_pick_skill_as_place_skill: True
               max_skill_steps: 250
               obs_skill_input_dim: 3
-
-
             # Note that the pddl_action_names for nav_to_obj and nav_to_robot cannot contain
             # the action_names from each other. Otherwise, the planner will only call the
             # latest skill definition
@@ -246,7 +214,6 @@ habitat_baselines:
               max_skill_steps: 750
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
-
             # Load the social nav policy
             nav_to_robot:
               skill_name: "NavSkillPolicy"
@@ -254,7 +221,6 @@ habitat_baselines:
               load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
               obs_skill_input_dim: 2
               pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
-
       agent_1:
         hierarchical_policy:
           high_level_policy:
@@ -281,7 +247,6 @@ habitat_baselines:
               max_skill_steps: 300
               stop_thresh: 0.00001
               apply_postconds: False
-
     ddppo:
       # Whether to reset the critic linear layer
       reset_critic: False

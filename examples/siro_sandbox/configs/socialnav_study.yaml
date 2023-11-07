@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - base_rearrange_humanoid_spot
+  # socialnav study specific defaults overrides:
+  # (placeholder for future overrides)
+
+# socialnav study specific config overrides:
+habitat:
+  task:
+    robot_at_thresh: 2.0
