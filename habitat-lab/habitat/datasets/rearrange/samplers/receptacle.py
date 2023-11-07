@@ -754,6 +754,9 @@ def find_receptacles(
         obj = ao_mgr.get_object_by_handle(obj_handle)
         # TODO: no way to get filepath from AO currently. Add this API.
         source_template_file = ""
+        creation_attr = obj.creation_attributes
+        if creation_attr is not None:
+            source_template_file = creation_attr.file_directory
         user_attr = obj.user_attributes
         receptacles.extend(
             parse_receptacles_from_user_config(
