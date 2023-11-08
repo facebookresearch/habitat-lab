@@ -50,26 +50,40 @@ ROBOT_SPAWN_NEAR_HUMAN_DIS = 5.0
 # Randomly reset the location of the robot or human
 RANDOM_AGENT_LOCATION_RESET = False
 # Sloppy: hardcore location of the robot and human
+# Note that you do not have to provide the orientation information
+# since both agents will automatically look at each other
 FIX_AGENT_INIT_POS = {
     "data/fpss/scenes-uncluttered/102344193.scene_instance.json": (
-        [-1.8878, -5.14189],
-        [-5.84479, -4.75223],
+        # Scene 1: human stands near the bed and the robot blocked the room door.
+        # So the human needs to walk out of room and will observe how Spot avoid collision.
+        # This showcases the social nav policy
+        [0.773143, -4.09137],
+        [1.53322, -1.53417],
     ),
     "data/fpss/scenes-uncluttered/102344280.scene_instance.json": (
+        # Scene 2: human stands in the kitchen + living room area. Just showcase the scene
         [-1.4465, 1.36246],
         [-7.46346, 1.5259],
     ),
     "data/fpss/scenes-uncluttered/102817200.scene_instance.json": (
-        [-6.77723, -11.9282],
-        [-6.40974, -7.65545],
+        # Scene 3: human stands in the living room with lots of furniture (sofa, cluter, etc),
+        # and it is easier to trigger Spot begging motion.
+        # This showcases the pick policy/begging motions
+        [-3.63359, -8.33051],
+        [-1.03828, -7.71454],
     ),
     "data/fpss/scenes-uncluttered/103997424_171030444.scene_instance.json": (
-        [-11.8683, -6.15889],
-        [-17.2134, -8.89483],
+        # Scene 4: human stands near the shelf in which he/she can put the object on
+        # multiple surfaces of the shelf, and at the beginning, human is able to
+        # see robot come to find him/herself. This showcases the pick policy
+        [-14.3757, -10.0978],
+        [-18.5925, -12.9898],
     ),
     "data/fpss/scenes-uncluttered/103997541_171030615.scene_instance.json": (
-        [-10.7404, 0.634613],
-        [-11.9156, -4.56228],
+        # Scene 5: human passes a long hallway to reach the target and get
+        # the object. This showcases the social nav policy
+        [-10.84, 5.24],
+        [-10.86, 8.18],
     ),
 }
 
