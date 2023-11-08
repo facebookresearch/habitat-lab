@@ -59,12 +59,15 @@ class SocialNavReward(RearrangeReward):
         self._facing_human_reward = config.facing_human_reward
         self._toward_human_reward = config.toward_human_reward
         self._near_human_bonus = config.near_human_bonus
+        self._explore_reward = config.explore_reward
         self._use_geo_distance = config.use_geo_distance
         self._collide_penalty = config.collide_penalty
         # Record the previous distance to human
         self._prev_dist = -1.0
         self._robot_idx = config.robot_idx
         self._human_idx = config.human_idx
+        # Add exploration reward dictionary tracker
+        self._visited_pos = set()
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._prev_dist = -1.0
@@ -75,6 +78,8 @@ class SocialNavReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
+        # Reset the location visit tracker for the agent
+        self._visited_pos = set()
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         super().update_metric(
@@ -104,8 +109,10 @@ class SocialNavReward(RearrangeReward):
         else:
             dis = np.linalg.norm(human_pos - robot_pos)
 
+        # Start social nav reward
         social_nav_reward = 0.0
-        # Social nav reward three stage design
+
+        # Componet 1: Social nav reward three stage design
         if dis >= self._safe_dis_min and dis < self._safe_dis_max:
             # If the distance is within the safety interval
             social_nav_reward += self._safe_dis_reward
@@ -119,7 +126,7 @@ class SocialNavReward(RearrangeReward):
             self._config.toward_human_reward * social_nav_reward
         )
 
-        # Social nav reward for facing human
+        # Componet 2: Social nav reward for facing human
         if dis < self._facing_human_dis and self._facing_human_reward != -1:
             base_T = self._sim.get_agent_data(
                 self.agent_id
@@ -130,7 +137,7 @@ class SocialNavReward(RearrangeReward):
                 * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             )
 
-        # Social nav reward bonus for getting closer to human
+        # Componet 3: Social nav reward bonus for getting closer to human
         if (
             dis < self._facing_human_dis
             and self._facing_human_reward != -1
@@ -138,10 +145,30 @@ class SocialNavReward(RearrangeReward):
         ):
             social_nav_reward += self._near_human_bonus
 
+        # Componet 4: Social nav reward for exploration
+        # There is no exploration reward once the agent finds the human
+        # round off float to nearest 0.5 in python
+        robot_pos_key = (
+            round(robot_pos[0] * 2) / 2,
+            round(robot_pos[2] * 2) / 2,
+        )
+        social_nav_stats = task.measurements.measures[
+            SocialNavStats.cls_uuid
+        ].get_metric()
+        if (
+            self._explore_reward != -1
+            and robot_pos_key not in self._visited_pos
+            and social_nav_stats is not None
+            and not social_nav_stats["has_found_human"]
+        ):
+            self._visited_pos.add(robot_pos_key)
+            # Give the reward if the agent visits the new location
+            social_nav_reward += self._explore_reward
+
         if self._prev_dist < 0:
             social_nav_reward = 0.0
 
-        # Collision detection for two agents
+        # Componet 5: Collision detection for two agents
         did_collide = task.measurements.measures[
             DidAgentsCollide._get_uuid()
         ].get_metric()

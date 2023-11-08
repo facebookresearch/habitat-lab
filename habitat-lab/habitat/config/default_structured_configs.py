@@ -1278,6 +1278,8 @@ class SocialNavReward(MeasurementConfig):
     toward_human_reward: float = 1.0
     # -1 means that there is no near_human_bonus
     near_human_bonus: float = -1.0
+    # -1 means that there is no exploration reward
+    explore_reward: float = -1.0
     # If we want to use geo distance to measure the distance
     # between the robot and the human
     use_geo_distance: bool = False
