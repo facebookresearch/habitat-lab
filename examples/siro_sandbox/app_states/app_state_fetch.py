@@ -49,7 +49,7 @@ disable_spot = False
 ROBOT_SPAWN_NEAR_HUMAN_DIS = 5.0
 # Randomly reset the location of the robot or human
 RANDOM_AGENT_LOCATION_RESET = False
-# Sloppy: hardcore location of the robot and human
+# Sloppy: hardcode location of the robot and human
 # Note that you do not have to provide the orientation information
 # since both agents will automatically look at each other
 FIX_AGENT_INIT_POS = {
