@@ -57,6 +57,8 @@ class SocialNavReward(RearrangeReward):
         self._safe_dis_reward = config.safe_dis_reward
         self._facing_human_dis = config.facing_human_dis
         self._facing_human_reward = config.facing_human_reward
+        self._toward_human_reward = config.toward_human_reward
+        self._near_human_bonus = config.near_human_bonus
         self._use_geo_distance = config.use_geo_distance
         self._collide_penalty = config.collide_penalty
         # Record the previous distance to human
@@ -113,6 +115,9 @@ class SocialNavReward(RearrangeReward):
         else:
             # if the distance is too large
             social_nav_reward += self._prev_dist - dis
+        social_nav_reward = (
+            self._config.toward_human_reward * social_nav_reward
+        )
 
         # Social nav reward for facing human
         if dis < self._facing_human_dis and self._facing_human_reward != -1:
@@ -124,6 +129,14 @@ class SocialNavReward(RearrangeReward):
                 self._facing_human_reward
                 * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
             )
+
+        # Social nav reward bonus for getting closer to human
+        if (
+            dis < self._facing_human_dis
+            and self._facing_human_reward != -1
+            and self._near_human_bonus != -1
+        ):
+            social_nav_reward += self._near_human_bonus
 
         if self._prev_dist < 0:
             social_nav_reward = 0.0

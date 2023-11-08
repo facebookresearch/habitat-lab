@@ -354,6 +354,9 @@ class OracleNavActionConfig(ActionConfig):
     allow_back: bool = True
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+    # For social nav training only. It controls the distance threshold
+    # between the robot and the human and decide if the human wants to walk or not
+    human_stop_and_walk_to_robot_distance_threshold: float = -1.0
 
 
 # -----------------------------------------------------------------------------
@@ -1271,6 +1274,10 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     # -1 means that there is no facing_human_reward
     facing_human_reward: float = -1.0
+    # toward_human_reward defualt is 1.0
+    toward_human_reward: float = 1.0
+    # -1 means that there is no near_human_bonus
+    near_human_bonus: float = -1.0
     # If we want to use geo distance to measure the distance
     # between the robot and the human
     use_geo_distance: bool = False

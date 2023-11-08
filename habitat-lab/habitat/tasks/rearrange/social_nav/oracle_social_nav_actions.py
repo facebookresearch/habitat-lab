@@ -341,6 +341,37 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         if self.skill_done:
             self.coord_nav = None
 
+        # If the robot is nearby, the human starts to walk, otherwise, the human
+        # just stops there and waits for robot to find it
+        if self._config.human_stop_and_walk_to_robot_distance_threshold != -1:
+            assert (
+                len(self._sim.agents_mgr) == 2
+            ), "Does not support more than two agents when you want human to stop and walk based on the distance to the robot"
+            robot_id = int(1 - self._agent_index)
+            robot_pos = self._sim.get_agent_data(
+                robot_id
+            ).articulated_agent.base_pos
+            human_pos = self.cur_articulated_agent.base_pos
+            dis = self._sim.geodesic_distance(robot_pos, human_pos)
+            # The human needs to stop and wait for robot to come if the distance is too larget
+            if (
+                dis
+                > self._config.human_stop_and_walk_to_robot_distance_threshold
+            ):
+                self.humanoid_controller.set_framerate_for_linspeed(
+                    0.0, 0.0, self._sim.ctrl_freq
+                )
+            # The human needs to walk otherwise
+            else:
+                speed = np.random.uniform(
+                    self._config.lin_speed / 5.0, self._config.lin_speed
+                )
+                lin_speed = speed
+                ang_speed = speed
+                self.humanoid_controller.set_framerate_for_linspeed(
+                    lin_speed, ang_speed, self._sim.ctrl_freq
+                )
+
         try:
             kwargs["task"].measurements.measures[
                 "social_nav_stats"
