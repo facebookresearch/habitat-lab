@@ -5,6 +5,8 @@ defaults:
   # socialnav study specific defaults overrides:
   # (placeholder for future overrides)
 
+  - _self_
+
 # socialnav study specific config overrides:
 habitat:
   task:

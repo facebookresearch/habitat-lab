@@ -5,5 +5,7 @@ defaults:
   # fetch specific defaults overrides:
   # (placeholder for future overrides)
 
+  - _self_
+
 # fetch specific config overrides:
 # (placeholder for future overrides)
