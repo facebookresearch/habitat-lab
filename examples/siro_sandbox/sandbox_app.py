@@ -58,7 +58,7 @@ from app_states.app_state_abc import AppState
 from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_rearrange import AppStateRearrange
-from app_states.app_state_socialnav import AppStateSocialNav
+from app_states.app_state_socialnav_study import AppStateSocialNavStudy
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
@@ -137,7 +137,15 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.gym_habitat_env, config, args, gui_input, self._step_recorder
+            gym_habitat_env=self.gym_habitat_env,
+            config=config,
+            args=args,
+            gui_input=gui_input,
+            recorder=self._step_recorder,
+            use_fetch_baselines_controller=(
+                args.app_state == "fetch"
+                or args.app_state == "socialnav_study"
+            ),
         )
 
         self._debug_images = args.debug_images
@@ -200,11 +208,12 @@ class SandboxDriver(GuiAppDriver):
                         self.ctrl_helper.get_gui_agent_controller(),
                     ),
                 )
-        elif args.app_state == "socialnav":
+        elif args.app_state == "socialnav_study":
             self._app_states = [
-                AppStateSocialNav(
+                AppStateSocialNavStudy(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
         elif args.app_state == "free_camera":
@@ -605,6 +614,12 @@ if __name__ == "__main__":
         help="Vertical resolution of the window.",
     )
     parser.add_argument(
+        "--display-font-size",
+        default=40,
+        type=int,
+        help="Font size for text displayed in the GUI app.",
+    )
+    parser.add_argument(
         "--gui-controlled-agent-index",
         type=int,
         default=None,
@@ -624,6 +639,11 @@ if __name__ == "__main__":
         "--enable-hybrid-social-nav",
         action="store_true",
         help="If specified, we use a hybrid social nav design that consists of point nav and social nav. Otherwise, we only use social nav policy purely.",
+    )
+    parser.add_argument(
+        "--oracle-follow-human",
+        action="store_true",
+        help="If true, use an oracle pointnav policy to follow the human. If false, use a learned social-nav policy.",
     )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
@@ -800,7 +820,7 @@ if __name__ == "__main__":
         )
 
     # TextDrawer kwargs
-    display_font_size = 40
+    display_font_size = args.display_font_size
     font_size_multiplier = (
         mn.Vector2(gui_app_wrapper.framebuffer_size)
         * gui_app_wrapper.dpi_scaling

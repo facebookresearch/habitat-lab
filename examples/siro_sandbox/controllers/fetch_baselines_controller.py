@@ -81,6 +81,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         gym_env,
         habitat_env,
         hybrid_social_nav,
+        use_oracle_follow,
     ):
         self._current_state = FetchState.WAIT
         self.should_start_skill = False
@@ -95,6 +96,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.counter_pick = 0
         self._habitat_env: habitat.Env = habitat_env  # type: ignore
         self._hybrid_social_nav = hybrid_social_nav
+        self._use_oracle_follow = use_oracle_follow
         self._pick_dist_threshold = PICK_DIST_THRESHOLD
         self._drop_dist_threshold = DROP_DIST_THRESHOLD
         self._can_pick_for_ray_threshold = 1.0
@@ -429,7 +431,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             self.current_state = FetchState.BEG_RESET
 
         if self.current_state == FetchState.WAIT:
-            self.current_state = FetchState.FOLLOW
+            self.current_state = (
+                FetchState.FOLLOW
+                if not self._use_oracle_follow
+                else FetchState.FOLLOW_ORACLE
+            )
             self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.FOLLOW:
