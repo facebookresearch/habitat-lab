@@ -216,6 +216,14 @@ class SandboxDriver(GuiAppDriver):
                     self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
+            if args.show_tutorial:
+                self._app_states.insert(
+                    0,
+                    AppStateTutorial(
+                        self._sandbox_service,
+                        self.ctrl_helper.get_gui_agent_controller(),
+                    ),
+                )
         elif args.app_state == "free_camera":
             self._app_states = [AppStateFreeCamera(self._sandbox_service)]
         else:
@@ -381,6 +389,13 @@ class SandboxDriver(GuiAppDriver):
         self._app_state_index = (
             0  # start from the first app state for each episode
         )
+        # if show_tutorial enabled we show the tutorial once - before the first episode
+        if (
+            self._args.show_tutorial
+            and self._episode_helper.num_episodes_done > 0
+        ):
+            self._app_state_index += 1
+
         self._app_state = self._app_states[self._app_state_index]
         self._app_state.on_enter(
             prev_state=self._get_prev_app_state(),
@@ -728,7 +743,7 @@ if __name__ == "__main__":
         "--show-tutorial",
         action="store_true",
         default=False,
-        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+        help="Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.",
     )
     parser.add_argument(
         "--hide-humanoid-in-gui",
@@ -776,9 +791,12 @@ if __name__ == "__main__":
             "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
         )
 
-    if args.show_tutorial and args.app_state != "rearrange":
+    if args.show_tutorial and args.app_state not in {
+        "rearrange",
+        "socialnav_study",
+    }:
         raise ValueError(
-            "--show-tutorial is only supported for --app-state=rearrange"
+            "--show-tutorial is only supported for --app-state=rearrange and --app-state=socialnav_study"
         )
 
     if args.remote_gui_mode and args.app_state != "fetch":
