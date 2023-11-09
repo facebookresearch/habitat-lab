@@ -68,8 +68,11 @@ START_FETCH_OBJ_DIS_THRESHOLD = (
 START_FETCH_ROBOT_DIS_THRESHOLD = (
     1.8  # if the human is too close to Spot, they block Spot
 )
+# The distance between the robot and the human to switch from point nav to social nav
 FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
 PICK_STEPS = 40
+# The distance between the robot and the human to consider termination of FOLLOW state
+ROBOT_CLOSE_TO_HUMAN_DIS = 2.0
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -120,8 +123,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self.human_block_robot_when_searching = False
         # Flag for controlling either point nav or social nav to use in FOLLOW state
         self._follow_state_policy_chosen = FollowStatePolicy.IDLE
-        # the position we tried to navigate to in the last act() (or None)
-        self._recent_nav_pos = None
+        self._prev_human_pos = None
+        self._prev_human_rot = None
+        self._finished_follow = False
 
     def _get_policy_info(self):
         prev_actions = torch.zeros(
@@ -447,10 +451,37 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         human_pos = env._sim.agents_mgr[
             1 - self._agent_idx
         ].articulated_agent.base_transformation.translation
+        human_rot = env._sim.agents_mgr[
+            1 - self._agent_idx
+        ].articulated_agent.base_rot
         robot_pos = env._sim.agents_mgr[
             self._agent_idx
         ].articulated_agent.base_transformation.translation
 
+        # Check if the human walks or rotates
+        is_human_walk = (
+            np.linalg.norm(
+                np.array((self._prev_human_pos - human_pos))[[0, 2]]
+            )
+            > 0.01
+            if self._prev_human_pos is not None
+            else False
+        )
+        is_human_rotate = (
+            (
+                (np.abs(float(self._prev_human_rot - human_rot)) + np.pi)
+                % (2.0 * np.pi)
+                - np.pi
+            )
+            > 0.01
+            if self._prev_human_rot is not None
+            else False
+        )
+        is_human_move = is_human_walk or is_human_rotate
+        if is_human_move:
+            self._finished_follow = False
+
+        # Setup the action space
         act_space = ActionSpace(
             {
                 action_name: space
@@ -464,12 +495,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         if self._beg_state_lock:
             self.current_state = FetchState.BEG_RESET
 
+        # Start the state machine
         if self.current_state == FetchState.WAIT:
-            self.current_state = (
-                FetchState.FOLLOW
-                if not self._use_oracle_follow
-                else FetchState.FOLLOW_ORACLE
-            )
+            if not self._finished_follow:
+                self.current_state = FetchState.FOLLOW
             self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.FOLLOW:
@@ -517,25 +546,34 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     )
                 type_of_skill = self.defined_skills.nav_to_robot.skill_name
 
-            if type_of_skill == "OracleNavPolicy":
-                finished_nav = obs["agent_0_has_finished_oracle_nav"]
+            # Check if we can safely terminate the follow policy
+            # We consider termination of FOLLOW state if
+            # (1) the human does not move, and
+            # (2) the robot is already close enough to the human
+            if (
+                not is_human_move
+                and human_robot_geo_dis < ROBOT_CLOSE_TO_HUMAN_DIS
+            ):
+                self._finished_follow = True
 
-            if type_of_skill == "NavSkillPolicy":
-                action_array = self.force_apply_skill(
-                    obs, target_pddl_skill, env, human_pos
-                )[0]
-                self._recent_nav_pos = human_pos
+            if not self._finished_follow:
+                if type_of_skill == "NavSkillPolicy":
+                    action_array = self.force_apply_skill(
+                        obs, target_pddl_skill, env, human_pos
+                    )[0]
 
-            elif type_of_skill == "OracleNavPolicy":
-                action_ind_nav = find_action_range(
-                    act_space, "agent_0_oracle_nav_action"
-                )
-                action_array[
-                    action_ind_nav[0] : action_ind_nav[0] + 3
-                ] = human_pos
-                self._recent_nav_pos = human_pos
+                elif type_of_skill == "OracleNavPolicy":
+                    action_ind_nav = find_action_range(
+                        act_space, "agent_0_oracle_nav_action"
+                    )
+                    action_array[
+                        action_ind_nav[0] : action_ind_nav[0] + 3
+                    ] = human_pos
+                else:
+                    raise ValueError(f"Skill {type_of_skill} not recognized.")
             else:
-                raise ValueError(f"Skill {type_of_skill} not recognized.")
+                self.current_state = FetchState.WAIT
+                self._policy_info = self._get_policy_info()
 
         elif self.current_state == FetchState.FOLLOW_ORACLE:
             # This is the oracle navigation state, in which the robot follows the human
@@ -1000,6 +1038,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Make sure the height is consistents
         self._set_height()
 
+        # Record the human pos
+        self._prev_human_pos = human_pos
+        self._prev_human_rot = human_rot
+
         return action_array
 
     @property
@@ -1052,4 +1094,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._robot_obj_T = None
         self.safe_pos = None
         self.human_block_robot_when_searching = False
-        self._recent_nav_pos = None
+        self._prev_human_pos = None
+        self._prev_human_rot = None
+        self._finished_follow = False
