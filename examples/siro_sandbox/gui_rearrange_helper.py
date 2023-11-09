@@ -14,6 +14,12 @@ from habitat.gui.gui_input import GuiInput
 
 
 class GuiRearrangeHelper:
+    """Helper class for the Rearrange task.
+
+    Encapsulates grasping and visualization logic and is shared between
+    AppStateRearrange and AppStateSocialNavStudy app state classes.
+    """
+
     def __init__(
         self,
         sandbox_service,
