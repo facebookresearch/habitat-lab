@@ -87,7 +87,7 @@ class GuiRearrangeHelper:
 
         self._nav_helper.on_environment_reset()
 
-    def update_grasping_and_set_act_hints(self):
+    def _update_grasping_and_set_act_hints(self):
         end_radius = self._obj_succ_thresh
 
         drop_pos = None
@@ -183,7 +183,7 @@ class GuiRearrangeHelper:
             reach_pos=reach_pos,
         )
 
-    def update_task(self):
+    def _update_task(self):
         end_radius = self._obj_succ_thresh
 
         grasped_objects_idxs = get_grasped_objects_idxs(
@@ -233,6 +233,10 @@ class GuiRearrangeHelper:
                     mn.Color3(255 / 255, 255 / 255, 0),
                     24,
                 )
+
+    def update(self):
+        self._update_task()
+        self._update_grasping_and_set_act_hints()
 
     def get_sim(self):
         return self._sandbox_service.sim

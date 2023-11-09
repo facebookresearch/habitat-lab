@@ -217,8 +217,7 @@ class AppStateRearrange(AppState):
             self._sandbox_service.end_episode(do_reset=True)
 
         if self._env_episode_active():
-            self._rearrange_helper.update_task()
-            self._rearrange_helper.update_grasping_and_set_act_hints()
+            self._rearrange_helper.update()
             self._sandbox_service.compute_action_and_step_env()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
