@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import warnings
+
 import numpy as np
 from gym import spaces
 
@@ -62,6 +64,10 @@ class SpotHeadStereoDepthSensor(UsesArticulatedAgentInterface, Sensor):
                 agent_do_not_have = True
 
         if agent_do_not_have:
+            warnings.warn(
+                "You are using SpotHeadStereoDepthSensor but you do not provide head_stereo_right_depth and head_stereo_right_depth."
+                "We return an all zero image."
+            )
             return np.float32(np.zeros((self._height, self._width, 1)))
 
         # Combine two images

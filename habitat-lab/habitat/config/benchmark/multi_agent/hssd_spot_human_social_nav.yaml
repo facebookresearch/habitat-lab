@@ -80,7 +80,7 @@ habitat:
     slack_reward: -0.01
     end_on_success: False
     task_spec_base_path: benchmark/multi_agent/
-    task_spec: pddl/multi_agent_tidy_house
+    task_spec: pddl/multi_agent_social_nav
     pddl_domain_def: fp
     min_distance_start_agents: 5.0
     constraint_violation_ends_episode: False

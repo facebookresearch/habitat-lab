@@ -9,6 +9,9 @@ from typing import Optional, cast
 
 import numpy as np
 
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
@@ -117,6 +120,7 @@ class PddlSocialNavTask(PddlTask):
             )
 
         super().reset(episode)
+
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )
@@ -130,5 +134,11 @@ class PddlSocialNavTask(PddlTask):
             )
 
         self._sim.maybe_update_articulated_agent()
+
+        # Get the agent initial base transformation
+        for agent_id in range(self._sim.num_articulated_agents):
+            target_agent = self._sim.get_agent_data(agent_id).articulated_agent
+            if not isinstance(target_agent, KinematicHumanoid):
+                self.initial_robot_trans = target_agent.base_transformation
 
         return self._get_observations(episode)

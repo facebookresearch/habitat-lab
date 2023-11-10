@@ -11,9 +11,6 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.articulated_agents.humanoids.kinematic_humanoid import (
-    KinematicHumanoid,
-)
 from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -23,7 +20,6 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 )
 from habitat.tasks.rearrange.utils import (
     place_agent_at_dist_from_pos,
-    random_place_agent,
     rearrange_logger,
 )
 
@@ -216,30 +212,9 @@ class PddlRobotState:
             )
             agent_data.articulated_agent.base_pos = start_pos
             agent_data.articulated_agent.base_rot = start_rot
-            # The second attemp should just place the robot at the random location
-            if was_fail:
-                start_pos, start_rot, was_fail = random_place_agent(
-                    sim=sim,
-                    num_spawn_attempts=sim_info.num_spawn_attempts,
-                    filter_colliding_states=self.get_filter_colliding_states(
-                        sim_info
-                    ),
-                    agent=agent_data.articulated_agent,
-                )
-                agent_data.articulated_agent.base_pos = start_pos
-                agent_data.articulated_agent.base_rot = start_rot
 
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
-
-            # Record the robot's transformation if we are using "PddlSocialNavTask"
-            # We cannot import PddlSocialNavTask here since that will cause a circular dependency
-            if hasattr(sim_info.env, "initial_robot_trans") and not isinstance(
-                agent_data.articulated_agent, KinematicHumanoid
-            ):
-                sim_info.env.initial_robot_trans = (
-                    agent_data.articulated_agent.base_transformation
-                )
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
             agent_data.grasp_mgr.update_object_to_grasp()
