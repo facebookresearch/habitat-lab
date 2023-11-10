@@ -196,6 +196,7 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
+
             # Place some distance away from the object.
             start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 target_position=targ_pos,
@@ -212,7 +213,6 @@ class PddlRobotState:
             )
             agent_data.articulated_agent.base_pos = start_pos
             agent_data.articulated_agent.base_rot = start_rot
-
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 
