@@ -19,6 +19,7 @@ from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
 from habitat.tasks.rearrange.utils import get_angle_to_pos
@@ -163,6 +164,27 @@ class AppStateFetch(AppState):
                 human_pos, 1 - self.get_gui_controlled_agent_index()
             )
 
+    def _get_navmesh_triangle_vertices(self):
+        """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
+        largest_island_index = get_largest_island_index(
+            self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
+        )
+        pts = self.get_sim().pathfinder.build_navmesh_vertices(
+            largest_island_index
+        )
+        assert len(pts) > 0
+        assert len(pts) % 3 == 0
+        assert len(pts[0]) == 3
+        navmesh_fixup_y = -0.17  # sloppy
+        return [
+            (
+                float(point[0]),
+                float(point[1]) + navmesh_fixup_y,
+                float(point[2]),
+            )
+            for point in pts
+        ]
+
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
 
@@ -180,12 +202,6 @@ class AppStateFetch(AppState):
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.count_tsteps_stop = 0
-
-        if self._sandbox_service.client_message_manager:
-            self._sandbox_service.client_message_manager.change_humanoid_position(
-                self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
-            )
-            self._sandbox_service.client_message_manager.signal_scene_change()
 
         # Get the scene id
         scene_id = (
@@ -240,6 +256,14 @@ class AppStateFetch(AppState):
         self._make_agent_face_target(
             robot_pos, 1 - self.state_machine_agent_ctrl._agent_idx
         )
+
+        client_message_manager = self._sandbox_service.client_message_manager
+        if client_message_manager:
+            client_message_manager.change_humanoid_position(human_pos)
+            client_message_manager.signal_scene_change()
+            client_message_manager.update_navmesh_triangles(
+                self._get_navmesh_triangle_vertices()
+            )
 
     def get_sim(self):
         return self._sandbox_service.sim

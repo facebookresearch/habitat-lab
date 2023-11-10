@@ -51,3 +51,16 @@ class ClientMessageManager:
         Signals the client that the scene is being changed during this frame.
         """
         self._message["sceneChanged"] = True
+
+    def update_navmesh_triangles(self, triangle_vertices):
+        r"""
+        Send a navmesh. triangle_vertices should be a list of vertices, 3 per triangle.
+        Each vertex should be a 3-tuple or similar Iterable of floats.
+        """
+        assert len(triangle_vertices) > 0
+        assert len(triangle_vertices) % 3 == 0
+        assert len(triangle_vertices[0]) == 3
+        # flatten to a list of floats for more efficient serialization
+        self._message["navmeshVertices"] = [
+            component for sublist in triangle_vertices for component in sublist
+        ]
