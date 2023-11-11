@@ -63,6 +63,7 @@ __all__ = [
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
+    "InitialGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
@@ -353,6 +354,9 @@ class OracleNavActionConfig(ActionConfig):
     allow_back: bool = True
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+    # For social nav training only. It controls the distance threshold
+    # between the robot and the human and decide if the human wants to walk or not
+    human_stop_and_walk_to_robot_distance_threshold: float = -1.0
 
 
 # -----------------------------------------------------------------------------
@@ -397,6 +401,10 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     human_id: int = 100
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
+    # Image based or binary based
+    return_image: bool = False
+    # Is the return image bounding box or not
+    is_return_image_bbox: bool = False
 
 
 @dataclass
@@ -646,6 +654,14 @@ class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
     """
     type: str = "TargetStartGpsCompassSensor"
+
+
+@dataclass
+class InitialGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the relative distance to the initial starting location of the agent in 2D polar coordinates.
+    """
+    type: str = "InitialGpsCompassSensor"
 
 
 @dataclass
@@ -1258,12 +1274,27 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     # -1 means that there is no facing_human_reward
     facing_human_reward: float = -1.0
+    # toward_human_reward defualt is 1.0
+    toward_human_reward: float = 1.0
+    # -1 means that there is no near_human_bonus
+    near_human_bonus: float = -1.0
+    # -1 means that there is no exploration reward
+    explore_reward: float = -1.0
     # If we want to use geo distance to measure the distance
     # between the robot and the human
     use_geo_distance: bool = False
     # Set the id of the agent
     robot_idx: int = 0
     human_idx: int = 1
+    constraint_violate_pen: float = 10.0
+    force_pen: float = 0.0
+    max_force_pen: float = 1.0
+    force_end_pen: float = 10.0
+    # Collision based penality for kinematic simulation
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
+    collide_penalty: float = 1.0
 
 
 @dataclass
@@ -2214,6 +2245,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_start_gps_compass_sensor",
     node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.initial_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="initial_gps_compass_sensor",
+    node=InitialGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.multi_agent_all_predicates",

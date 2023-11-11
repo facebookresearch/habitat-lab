@@ -579,15 +579,18 @@ def _get_robot_spawns(
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         # Place within `distance_threshold` of the object.
-        agent.base_pos = sim.pathfinder.get_random_navigable_point_near(
+        propose_position = sim.pathfinder.get_random_navigable_point_near(
             target_position,
             distance_threshold,
             island_index=sim.largest_island_idx,
         )
         # get_random_navigable_point_near() can return NaNs for start_position.
+        # If we assign nan position into agent.base_pos, we cannot revert it back
         # We want to make sure that the generated start_position is valid
-        if np.isnan(agent.base_pos).any():
+        if np.isnan(propose_position).any():
             continue
+
+        agent.base_pos = propose_position
 
         # get the horizontal distance (XZ planar projection) to the target position
         hor_disp = agent.base_pos - target_position

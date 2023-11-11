@@ -42,6 +42,7 @@ habitat_baselines:
       third_rgb_sensor:
         height: 224
         width: 171
+
     should_load_ckpt: True
     video_option: ["disk"]
 
