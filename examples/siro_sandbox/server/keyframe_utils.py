@@ -22,6 +22,10 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
         if key not in keyframe:
             keyframe[key] = []
 
+    def ensure_dict(keyframe, key):
+        if key not in keyframe:
+            keyframe[key] = {}
+
     # append loads
     if "loads" in inc_keyframe:
         ensure_list(consolidated_keyframe, "loads")
@@ -88,6 +92,20 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
                 for entry in consolidated_keyframe["stateUpdates"]
                 if entry["instanceKey"] not in inc_deletions
             ]
+
+    if "message" in inc_keyframe:
+        inc_message = inc_keyframe["message"]
+        # add/update these messages
+        for message_key in [
+            "teleportAvatarBasePosition",
+            "sceneChanged",
+            "navmeshVertices",
+        ]:
+            if message_key in inc_message:
+                ensure_dict(consolidated_keyframe, "message")
+                consolidated_keyframe["message"][message_key] = inc_message[
+                    message_key
+                ]
 
     # todo: lights, userTransforms
 
