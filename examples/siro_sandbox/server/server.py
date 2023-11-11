@@ -59,6 +59,30 @@ def create_ssl_context():
 
 
 class Server:
+    """
+    This class handles client connections, including sending a stream of keyframes and
+    receiving a stream of client states.
+
+    When the server has no clients, async check_keyframe_queue runs continuously (an
+    infinite loop with an asyncio.sleep(0.02) on each iteration). Its main job is
+    to extract keyframes from the multiprocess queue and consolidate them into
+    self._consolidated_keyframe.
+
+    When the server has a client, check_keyframe_queue will also send each incremental
+    keyframe to the client.
+
+    Also when the server has a client, async receive_client_states will run continuously.
+    `async for message in websocket` runs until the websocket closes, essentially
+    awaiting each incoming message.
+
+    These continuously-running async methods are run via the asyncio event loop (see
+    server_main).
+
+    A network error (e.g. closed socket) will result in an exception handled either in
+    check_keyframe_queue or serve (the caller of receive_client_states). The error is
+    handled identically in either case.
+    """
+
     def __init__(self, interprocess_record, exit_event):
         self._connected_clients = {}  # Dictionary to store connected clients
 
@@ -74,6 +98,8 @@ class Server:
         self._exit_event = exit_event
 
         self._consolidated_keyframe = get_empty_keyframe()
+        self._waiting_for_client_ready = False
+        self._needs_consolidated_keyframe = False
 
     def update_consolidated_keyframes(self, keyframes):
         for inc_keyframe in keyframes:
@@ -81,62 +107,7 @@ class Server:
                 self._consolidated_keyframe, inc_keyframe
             )
 
-    async def send_keyframes(self, websocket):
-        needs_consolidated_keyframe = True
-
-        while True:
-            if self._exit_event and self._exit_event.is_set():
-                break
-
-            # todo: refactor to support N clients
-            inc_keyframes = self._interprocess_record.get_queued_keyframes()
-
-            if len(inc_keyframes):
-                # consolidate all inc keyframes into one inc_keyframe
-                tmp_con_keyframe = inc_keyframes[0]
-                if len(inc_keyframes) > 1:
-                    for i in range(1, len(inc_keyframes)):
-                        update_consolidated_keyframe(
-                            tmp_con_keyframe, inc_keyframes[i]
-                        )
-                    inc_keyframes = [tmp_con_keyframe]
-
-                # This client may be joining "late", after we've already simulated
-                # some frames. To handle this case, we send a consolidated keyframe as
-                # the very first keyframe for the new client. It captures all the
-                # previous incremental keyframes since the server started.
-                keyframes_to_send = inc_keyframes
-                if needs_consolidated_keyframe:
-                    keyframes_to_send = inc_keyframes.copy()
-                    keyframes_to_send.insert(0, self._consolidated_keyframe)
-                    needs_consolidated_keyframe = False
-
-                # Convert keyframes to JSON string
-                wrapper_obj = {"keyframes": keyframes_to_send}
-                wrapper_json = json.dumps(wrapper_obj)
-
-                # after we've converted our keyfrajmes to send to json, update
-                # our consolidated keyframe
-                self.update_consolidated_keyframes(inc_keyframes)
-
-                # note this awaits until the client OS has received the message
-                # beware this will raise an exception on disconnect, which is caught in
-                # the calling function, serve()
-                await websocket.send(wrapper_json)
-
-                # limit how often we send
-                await self._send_frequency_limiter.limit_frequency_async()
-
-            else:
-                await asyncio.sleep(
-                    0.02
-                )  # todo: think about how best to do this
-
-            # todo: don't send a message more often than 1.0 / maxSendRate
-
-            # todo: don't busy loop here
-
-    async def receive_avatar_pose(self, websocket):
+    async def receive_client_states(self, websocket):
         async for message in websocket:
             try:
                 # Parse the received message as a JSON object
@@ -151,14 +122,87 @@ class Server:
             except Exception as e:
                 print(f"Error processing received pose data: {e}")
 
+    async def check_keyframe_queue(self):
+        # this runs continuously even when there is no client connection
+        while True:
+            inc_keyframes = self._interprocess_record.get_queued_keyframes()
+
+            if len(inc_keyframes):
+                # consolidate all inc keyframes into one inc_keyframe
+                tmp_con_keyframe = inc_keyframes[0]
+                if len(inc_keyframes) > 1:
+                    for i in range(1, len(inc_keyframes)):
+                        update_consolidated_keyframe(
+                            tmp_con_keyframe, inc_keyframes[i]
+                        )
+                    inc_keyframes = [tmp_con_keyframe]
+
+                wrapper_json = None
+                if (
+                    self.has_connection()
+                    and not self._waiting_for_client_ready
+                ):
+                    # This client may be joining "late", after we've already simulated
+                    # some frames. To handle this case, we send a consolidated keyframe as
+                    # the very first keyframe for the new client. It captures all the
+                    # previous incremental keyframes since the server started.
+                    keyframes_to_send = inc_keyframes
+                    if self._needs_consolidated_keyframe:
+                        keyframes_to_send = inc_keyframes.copy()
+                        keyframes_to_send.insert(
+                            0, self._consolidated_keyframe
+                        )
+                        self._needs_consolidated_keyframe = False
+
+                    # Convert keyframes to JSON string
+                    wrapper_obj = {"keyframes": keyframes_to_send}
+                    wrapper_json = json.dumps(wrapper_obj)
+
+                # after we've converted our keyfrajmes to send to json, update
+                # our consolidated keyframe
+                self.update_consolidated_keyframes(inc_keyframes)
+
+                if (
+                    self.has_connection()
+                    and not self._waiting_for_client_ready
+                ):
+                    websocket_id = list(self._connected_clients.keys())[0]
+                    websocket = self._connected_clients[websocket_id]
+                    try:
+                        # This will raise an exception if the connection is broken,
+                        # e.g. if the server lost its network connection.
+                        await websocket.send(wrapper_json)
+                    except Exception as e:
+                        print(f"error sending to client: {e}")
+                        self.handle_disconnect()
+
+                # limit how often we send
+                await self._send_frequency_limiter.limit_frequency_async()
+
+            await asyncio.sleep(0.02)
+
+    def has_connection(self):
+        return len(self._connected_clients) > 0
+
+    def handle_disconnect(self):
+        if len(self._connected_clients) == 0:
+            return
+        assert len(self._connected_clients) == 1
+        websocket_id = list(self._connected_clients.keys())[0]
+        websocket = self._connected_clients[websocket_id]
+        print(f"Closed connection to client  {websocket.remote_address}")
+        del self._connected_clients[websocket_id]
+
     async def serve(self, websocket):
         # we only support one connected client at a time
-        if len(self._connected_clients) > 0:
+        if self.has_connection():
             await websocket.close()
             return
 
         # Store the client connection object in the dictionary
         self._connected_clients[id(websocket)] = websocket
+        self._waiting_for_client_ready = True
+        self._needs_consolidated_keyframe = True
 
         print(f"Connection from client {websocket.remote_address}!")
 
@@ -172,26 +216,20 @@ class Server:
 
             if message == "client ready!":
                 print("Client is ready!")
-                # await self.send_keyframes(websocket)
-
-                # Start the tasks concurrently using asyncio.gather
-                await asyncio.gather(
-                    self.send_keyframes(websocket),
-                    self.receive_avatar_pose(websocket),
-                )
-
+                self._waiting_for_client_ready = False
+                # On disconnect, receive_client_states will either terminate normally
+                # or raise an exception (this depends on how cleanly the client closes
+                # the connection). We handle either case in the finally block below.
+                await self.receive_client_states(websocket)
             else:
                 raise RuntimeError(
                     f"unexpected message from client: {message}"
                 )
 
         except Exception as e:
-            # todo: not sure if we need to close websocket connection (most errors
-            # correspond to a closed connection anyway, but maybe not all?)
-            print(f"error serving client: {e}")
+            print(f"error receiving from client: {e}")
         finally:
-            # Remove the client connection from the dictionary when it disconnects
-            del self._connected_clients[id(websocket)]
+            self.handle_disconnect()
 
 
 def server_main(interprocess_record, exit_event):
@@ -208,11 +246,15 @@ def server_main(interprocess_record, exit_event):
         server_lambda, "0.0.0.0", 8888, ssl=ssl_context
     )
 
+    check_keyframe_queue_task = asyncio.ensure_future(
+        server_obj.check_keyframe_queue()
+    )
+
     asyncio.get_event_loop().run_until_complete(start_server)
     print("Server started on server thread. Waiting for clients...")
     while not (exit_event and exit_event.is_set()):
         asyncio.get_event_loop().run_until_complete(
             asyncio.sleep(1.0)
         )  # todo: investigate what sleep duration does here
-
+    check_keyframe_queue_task.cancel()
     print("server_main finished")

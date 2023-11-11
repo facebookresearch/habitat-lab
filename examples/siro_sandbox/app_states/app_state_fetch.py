@@ -1002,11 +1002,19 @@ class AppStateFetch(AppState):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
-        # toggle remote/local on keypress, if not holding anything
+        # toggle remote/local under certain conditions:
+        # - must not be holding anything
+        # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T)
-            and self._sandbox_service.args.remote_gui_mode
+            self._sandbox_service.args.remote_gui_mode
             and self._held_target_obj_idx is None
+            and (
+                self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T)
+                or (
+                    not self._is_remote_active_toggle
+                    and self._sandbox_service.remote_gui_input.get_gui_input().get_any_key_down()
+                )
+            )
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle
 
