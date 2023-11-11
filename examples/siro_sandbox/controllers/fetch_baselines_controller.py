@@ -73,6 +73,8 @@ FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
 PICK_STEPS = 40
 # The distance between the robot and the human to consider termination of FOLLOW state
 ROBOT_CLOSE_TO_HUMAN_DIS = 2.0
+# This distance/rotation threshold is used to determine whether the human is moving
+DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING = 0.01
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -463,7 +465,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             np.linalg.norm(
                 np.array((self._prev_human_pos - human_pos))[[0, 2]]
             )
-            > 0.01
+            > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
             if self._prev_human_pos is not None
             else False
         )
@@ -473,11 +475,27 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 % (2.0 * np.pi)
                 - np.pi
             )
-            > 0.01
+            > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
             if self._prev_human_rot is not None
             else False
         )
-        is_human_move = is_human_walk or is_human_rotate
+
+        return is_human_walk or is_human_rotate
+
+    def act(self, obs, env):
+        # hack: assume we want to navigate to agent (1 - self._agent_idx)
+        human_pos = env._sim.agents_mgr[
+            1 - self._agent_idx
+        ].articulated_agent.base_transformation.translation
+        human_rot = env._sim.agents_mgr[
+            1 - self._agent_idx
+        ].articulated_agent.base_rot
+        robot_pos = env._sim.agents_mgr[
+            self._agent_idx
+        ].articulated_agent.base_transformation.translation
+
+        # Check if the human is moving or not
+        is_human_move = self._is_human_moving(human_pos, human_rot, robot_pos)
         if is_human_move:
             self._finished_follow = False
 
