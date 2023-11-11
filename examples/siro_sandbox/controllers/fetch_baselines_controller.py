@@ -150,6 +150,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         }
         return {"ll_policy": policy_info}
 
+    def change_state(self, next_state):
+        """A helpful function for handling state change"""
+        self.current_state = next_state
+        self._policy_info = self._get_policy_info()
+
     def cancel_fetch(self, skip_reset_arm=False):
         if self.grasped_object:
             env = self._habitat_env
@@ -516,8 +521,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         # Start the state machine
         if self.current_state == FetchState.WAIT:
             if not self._finished_follow:
-                self.current_state = FetchState.FOLLOW
-            self._policy_info = self._get_policy_info()
+                self.change_state(FetchState.FOLLOW)
+            else:
+                self.change_state(FetchState.WAIT)
 
         elif self.current_state == FetchState.FOLLOW:
             # This is the following state, in which the robot tries to follow the human
@@ -590,8 +596,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 else:
                     raise ValueError(f"Skill {type_of_skill} not recognized.")
             else:
-                self.current_state = FetchState.WAIT
-                self._policy_info = self._get_policy_info()
+                self.change_state(FetchState.WAIT)
 
         elif self.current_state == FetchState.FOLLOW_ORACLE:
             # This is the oracle navigation state, in which the robot follows the human
@@ -719,12 +724,11 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     if step_terminate:
-                        self.current_state = FetchState.SEARCH_TIMEOUT_WAIT
+                        self.change_state(FetchState.SEARCH_TIMEOUT_WAIT)
                     elif not is_accessible or is_occluded:
-                        self.current_state = FetchState.BEG_RESET
+                        self.change_state(FetchState.BEG_RESET)
                     else:
-                        self.current_state = FetchState.PICK
-                    self._policy_info = self._get_policy_info()
+                        self.change_state(FetchState.PICK)
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -813,10 +817,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
                 else:
                     if not is_accessible:
-                        self.current_state = FetchState.BEG_RESET
+                        self.change_state(FetchState.BEG_RESET)
                     else:
-                        self.current_state = FetchState.PICK
-                    self._policy_info = self._get_policy_info()
+                        self.change_state(FetchState.PICK)
 
             # Check if the human blocks the robot when robot is near the target
             self.human_block_robot_when_searching = (
@@ -857,10 +860,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.current_state = FetchState.BRING
                 if self._skill_steps >= max_skill_steps:
                     self.cancel_fetch()
-                    # self._get_grasp_mgr(env).desnap()
-                    # self.grasped_object_id = None
-                    # self.grasped_object = None
-                    # self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
             else:
                 if self.counter_pick < PICK_STEPS:
                     self.counter_pick += 1
@@ -912,10 +911,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
             else:
                 if step_terminate:
-                    self.current_state = FetchState.BRING_TIMEOUT_WAIT
+                    self.change_state(FetchState.BRING_TIMEOUT_WAIT)
                 else:
-                    self.current_state = FetchState.DROP
-                self._policy_info = self._get_policy_info()
+                    self.change_state(FetchState.DROP)
 
         elif self.current_state == FetchState.BRING_ORACLE_NAV:
             nav_goal_pos = self._get_bring_nav_goal(env, human_pos)
@@ -935,8 +933,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 ] = nav_goal_pos
                 self._recent_nav_pos = nav_goal_pos
             else:
-                self.current_state = FetchState.DROP
-                self._policy_info = self._get_policy_info()
+                self.change_state(FetchState.DROP)
 
         elif self.current_state == FetchState.BRING_TIMEOUT_WAIT:
             if self.should_start_skill:
@@ -969,23 +966,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.grasped_object.motion_type = MotionType.DYNAMIC
 
                 if self.check_if_skill_done(obs, "place"):
-                    # grasped_rigid_obj = self.grasped_object
-                    # obj_bb = get_aabb(self.grasped_object_id, env._sim)
-                    # self._last_object_drop_info = (
-                    #     grasped_rigid_obj,
-                    #     max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
-                    # )
-                    # self.grasped_object_id = None
-                    # self.grasped_object = None
-                    # self._target_place_trans = None
-                    # self.current_state = FetchState.WAIT
                     self.cancel_fetch(skip_reset_arm=True)
                 if self._skill_steps >= max_skill_steps:
-                    # self._get_grasp_mgr(env).desnap()
-                    # self.grasped_object_id = None
-                    # self.grasped_object = None
-                    # self._target_place_trans = None
-                    # self.current_state = FetchState.RESET_ARM_BEFORE_WAIT
                     self.cancel_fetch()
             else:
                 if self.counter_pick < PICK_STEPS:
@@ -1014,7 +996,6 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 )
                 self._robot_obj_T = None
                 self.cancel_fetch()
-                # self.current_state = FetchState.WAIT
 
         elif self.current_state == FetchState.RESET_ARM_BEFORE_WAIT:
             type_of_skill = self.defined_skills.place.skill_name
