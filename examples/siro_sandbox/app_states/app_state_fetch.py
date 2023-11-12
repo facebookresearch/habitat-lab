@@ -30,11 +30,14 @@ COLOR_GRASP_PREVIEW = mn.Color3(0.5, 1, 0)
 COLOR_FOCUS_OBJECT = mn.Color3(1, 1, 1)
 COLOR_FETCHER_NAV_PATH = mn.Color3(0, 160 / 255, 171 / 255)
 COLOR_FETCHER_ORACLE_NAV_PATH = mn.Color3(0, 153 / 255, 255 / 255)
+COLOR_PLACE_GOAL = mn.Color3(255 / 255, 0, 220 / 255)
 
 RADIUS_GRASPABLE = 0.15
 RADIUS_GRASP_PREVIEW = 0.15
 RADIUS_FOCUS_OBJECT = 0.2
 RADIUS_FETCHER_NAV_PATH = 0.45
+RADIUS_PLACE_GOAL = 0.25
+RADIUS_PLACE_GOAL_PREVIEW = 0.15
 
 RING_PULSE_SIZE = 0.03
 
@@ -675,24 +678,19 @@ class AppStateFetch(AppState):
         self, target_obj_idx, color, radius, do_pulse=False
     ):
         pos = self._get_target_object_position(target_obj_idx)
+        self._add_target_highlight_ring(pos, color, radius, do_pulse)
 
+    def _add_target_highlight_ring(self, pos, color, radius, do_pulse=False):
         if do_pulse:
             radius += (
                 self._sandbox_service.get_anim_fraction() * RING_PULSE_SIZE
             )
-            # color = mn.Color4(color.r, color.g, color.b, 1.0 - self._sandbox_service.get_anim_fraction())
 
         if (
             self._sandbox_service.client_message_manager
             and self._is_remote_active()
         ):
-            # Radius is defined as half the largest bounding box extent.
-            # bb: mn.Range3D = self._get_target_object_bounding_box(
-            #     target_obj_idx
-            # )
-            client_radius = (
-                radius  # max(bb.size_x(), bb.size_y(), bb.size_z()) / 2
-            )
+            client_radius = radius
             self._sandbox_service.client_message_manager.add_highlight(
                 pos, client_radius
             )
@@ -863,54 +861,34 @@ class AppStateFetch(AppState):
         return lookat
 
     def _viz_fetcher(self, post_sim_update_dict):
-        fetch_state = self.state_machine_agent_ctrl.current_state
-
-        if (
-            fetch_state == FetchState.SEARCH
-            or fetch_state == FetchState.BRING
-            or fetch_state == FetchState.FOLLOW
-            or fetch_state == FetchState.SEARCH_ORACLE_NAV
-            or fetch_state == FetchState.BRING_ORACLE_NAV
-            or fetch_state == FetchState.FOLLOW_ORACLE
-        ):
+        nav_goal_pos = self.state_machine_agent_ctrl.get_nav_goal()
+        if nav_goal_pos:
             fetcher_pos = self._get_state_machine_agent_translation()
-            target_pos = (
-                self.state_machine_agent_ctrl.rigid_obj_interest.translation
-                if fetch_state == FetchState.SEARCH
-                or fetch_state == FetchState.SEARCH_ORACLE_NAV
-                else self._get_gui_agent_translation()
-            )
-            is_oracle_nav = (
-                fetch_state == FetchState.SEARCH_ORACLE_NAV
-                or fetch_state == FetchState.BRING_ORACLE_NAV
-                or fetch_state == FetchState.FOLLOW_ORACLE
-            )
-            if is_oracle_nav:
-                if self.state_machine_agent_ctrl.gt_path:
-                    gt_path = [
-                        mn.Vector3(pt)
-                        for pt in self.state_machine_agent_ctrl.gt_path
-                    ]
-                    path_points = [fetcher_pos] + gt_path + [target_pos]
-                else:
-                    path_points = None
+            if self.state_machine_agent_ctrl.is_oracle_nav():
+                # sloppy: we assume _nav_helper uses RADIUS_FETCHER_NAV_PATH and COLOR_FETCHER_ORACLE_NAV_PATH
+                self._nav_helper.find_and_viz_path(fetcher_pos, nav_goal_pos)
             else:
-                path_points = [fetcher_pos, target_pos]
 
-            if path_points:
-                floor_y = 0.0  # temp hack
-                for pt in path_points:
-                    pt.y = floor_y
-                path_endpoint_radius = RADIUS_FETCHER_NAV_PATH
-                path_color = (
-                    COLOR_FETCHER_ORACLE_NAV_PATH
-                    if is_oracle_nav
-                    else COLOR_FETCHER_NAV_PATH
-                )
+                def move_to_ground_plane(pos):
+                    ground_y = 0.17
+                    return mn.Vector3(pos[0], ground_y, pos[2])
 
+                path_points = [
+                    move_to_ground_plane(fetcher_pos),
+                    move_to_ground_plane(nav_goal_pos),
+                ]
                 self._sandbox_service.line_render.draw_path_with_endpoint_circles(
-                    path_points, path_endpoint_radius, path_color
+                    path_points,
+                    RADIUS_FETCHER_NAV_PATH,
+                    COLOR_FETCHER_NAV_PATH,
                 )
+
+        if self.state_machine_agent_ctrl.user_place_goal_pos is not None:
+            self._add_target_highlight_ring(
+                self.state_machine_agent_ctrl.user_place_goal_pos,
+                COLOR_PLACE_GOAL,
+                RADIUS_PLACE_GOAL,
+            )
 
         if not disable_spot:
             # sloppy: assume agent 0 and assume agent_0_articulated_agent_arm_depth obs key
@@ -926,29 +904,26 @@ class AppStateFetch(AppState):
             )
 
     def _update_fetcher(self):
+        fetcher_state = self.state_machine_agent_ctrl.current_state
+
         # Switch to the point nav with waypoints by keeping pressing "O" key
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.O) and (
-            self.state_machine_agent_ctrl.current_state == FetchState.SEARCH
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.SEARCH_TIMEOUT_WAIT
-            or self.state_machine_agent_ctrl.current_state == FetchState.BRING
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.BRING_TIMEOUT_WAIT
-            or self.state_machine_agent_ctrl.current_state == FetchState.FOLLOW
+            fetcher_state == FetchState.SEARCH
+            or fetcher_state == FetchState.SEARCH_TIMEOUT_WAIT
+            or fetcher_state == FetchState.BRING
+            or fetcher_state == FetchState.BRING_TIMEOUT_WAIT
+            or fetcher_state == FetchState.FOLLOW
         ):
             if (
-                self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH
-                or self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH_TIMEOUT_WAIT
+                fetcher_state == FetchState.SEARCH
+                or fetcher_state == FetchState.SEARCH_TIMEOUT_WAIT
             ):
                 self.state_machine_agent_ctrl.current_state = (
                     FetchState.SEARCH_ORACLE_NAV
                 )
             elif (
-                self.state_machine_agent_ctrl.current_state == FetchState.BRING
-                or self.state_machine_agent_ctrl.current_state
-                == FetchState.BRING_TIMEOUT_WAIT
+                fetcher_state == FetchState.BRING
+                or fetcher_state == FetchState.BRING_TIMEOUT_WAIT
             ):
                 self.state_machine_agent_ctrl.current_state = (
                     FetchState.BRING_ORACLE_NAV
@@ -959,25 +934,40 @@ class AppStateFetch(AppState):
                 )
 
         if self._sandbox_service.gui_input.get_key_up(GuiInput.KeyNS.O) and (
-            self.state_machine_agent_ctrl.current_state
-            == FetchState.SEARCH_ORACLE_NAV
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.BRING_ORACLE_NAV
-            or self.state_machine_agent_ctrl.current_state
-            == FetchState.FOLLOW_ORACLE
+            fetcher_state == FetchState.SEARCH_ORACLE_NAV
+            or fetcher_state == FetchState.BRING_ORACLE_NAV
+            or fetcher_state == FetchState.FOLLOW_ORACLE
         ):
-            if (
-                self.state_machine_agent_ctrl.current_state
-                == FetchState.SEARCH_ORACLE_NAV
-            ):
+            if fetcher_state == FetchState.SEARCH_ORACLE_NAV:
                 self.state_machine_agent_ctrl.current_state = FetchState.SEARCH
-            elif (
-                self.state_machine_agent_ctrl.current_state
-                == FetchState.BRING_ORACLE_NAV
-            ):
+            elif fetcher_state == FetchState.BRING_ORACLE_NAV:
                 self.state_machine_agent_ctrl.current_state = FetchState.BRING
             else:
                 self.state_machine_agent_ctrl.current_state = FetchState.FOLLOW
+
+        # let the user specify a place goal pos, with a few caveats:
+        # * don't interfere with grasping
+        # * Spot must have an object of interest and can't be already dropping (placing)
+        if (
+            not self._has_grasp_preview
+            and self.state_machine_agent_ctrl.object_interest_id is not None
+            and self.state_machine_agent_ctrl.current_state != FetchState.DROP
+        ):
+            hit_info = self.cast_ray(self._sandbox_service.gui_input.mouse_ray)
+            if hit_info:
+                goal_pos = hit_info.point
+                self._add_target_highlight_ring(
+                    goal_pos,
+                    COLOR_PLACE_GOAL,
+                    RADIUS_PLACE_GOAL_PREVIEW,
+                    do_pulse=True,
+                )
+                if self._sandbox_service.gui_input.get_key(
+                    GuiInput.KeyNS.SPACE
+                ):
+                    self.state_machine_agent_ctrl.user_place_goal_pos = (
+                        goal_pos
+                    )
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
@@ -1036,6 +1026,38 @@ class AppStateFetch(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+    def cast_ray(self, ray):
+        if not ray:
+            return None
+
+        # special logic for raycasts originating from above the ceiling
+        ceiling_y = 2.0
+        if ray.origin.y >= ceiling_y:
+            if ray.direction.y >= 0:
+                return None
+
+            # hack move ray below ceiling (todo: base this on humanoid agent base y, so that it works in multi-floor homes)
+            if ray.origin.y < ceiling_y:
+                return None
+
+            dist_to_raycast_start_y = (
+                ray.origin.y - ceiling_y
+            ) / -ray.direction.y
+            assert dist_to_raycast_start_y >= 0
+            adjusted_origin = (
+                ray.origin + ray.direction * dist_to_raycast_start_y
+            )
+            ray.origin = adjusted_origin
+
+        # reference code for casting a ray into the scene
+        raycast_results = self.get_sim().cast_ray(ray=ray)
+        if not raycast_results.has_hits():
+            return None
+
+        hit_info = raycast_results.hits[0]
+
+        return hit_info
 
     def is_app_state_done(self):
         # terminal neverending app state
