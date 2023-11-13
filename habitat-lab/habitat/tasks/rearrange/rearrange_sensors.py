@@ -1593,7 +1593,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
                 self._after_found_human_times
                 / (self._total_step - self._has_found_human_step)
             )
-            if self._has_found_human_step != 0
+            if (self._total_step - self._has_found_human_step) != 0
             else 0.0
         )
 
