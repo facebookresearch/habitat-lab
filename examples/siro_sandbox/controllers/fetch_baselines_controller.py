@@ -451,20 +451,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         else:
             return human_pos
 
-    def act(self, obs, env):
-        self._recent_nav_pos = None
-
-        # hack: assume we want to navigate to agent (1 - self._agent_idx)
-        human_pos = env._sim.agents_mgr[
-            1 - self._agent_idx
-        ].articulated_agent.base_transformation.translation
-        human_rot = env._sim.agents_mgr[
-            1 - self._agent_idx
-        ].articulated_agent.base_rot
-        robot_pos = env._sim.agents_mgr[
-            self._agent_idx
-        ].articulated_agent.base_transformation.translation
-
+    def _is_human_moving(self, human_pos, human_rot, robot_pos):
         # Check if the human walks or rotates
         is_human_walk = (
             np.linalg.norm(
@@ -488,6 +475,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return is_human_walk or is_human_rotate
 
     def act(self, obs, env):
+        self._recent_nav_pos = None
         # hack: assume we want to navigate to agent (1 - self._agent_idx)
         human_pos = env._sim.agents_mgr[
             1 - self._agent_idx
