@@ -1588,6 +1588,15 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             ).articulated_agent.sim_obj.transformation
         )
 
+        follow_human_steps_ratio_after_first_encounter_normalized_by_first_time_found_human = (
+            (
+                self._after_found_human_times
+                / (self._total_step - self._has_found_human_step)
+            )
+            if self._has_found_human_step != 0
+            else 0.0
+        )
+
         self._metric = {
             "human_goal_x": self._update_human_pos_x,
             "human_goal_y": self._update_human_pos_y,
@@ -1611,8 +1620,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
             "follow_human_steps_after_frist_encounter": self._after_found_human_times,
             "follow_human_steps_ratio_after_frist_encounter": self._after_found_human_times
             / (self._total_step - self._min_start_end_episode_step),
-            "follow_human_steps_ratio_after_first_encounter_normalized_by_first_time_found_human": self._after_found_human_times
-            / (self._total_step - self._has_found_human_step),
+            "follow_human_steps_ratio_after_first_encounter_normalized_by_first_time_found_human": follow_human_steps_ratio_after_first_encounter_normalized_by_first_time_found_human,
             # The ones we use to report in the paper only based on the distance condition
             "first_encounter_spl_dis": first_encounter_spl_dis,
             "frist_ecnounter_steps_dis": self._has_found_human_step_dis,
