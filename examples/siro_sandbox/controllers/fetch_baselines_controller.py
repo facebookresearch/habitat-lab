@@ -128,6 +128,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._prev_human_pos = None
         self._prev_human_rot = None
         self._finished_follow = False
+        # the position we tried to navigate to in the last act() (or None)
+        self._recent_nav_pos = None
 
     def _get_policy_info(self):
         prev_actions = torch.zeros(
@@ -1084,3 +1086,4 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._prev_human_pos = None
         self._prev_human_rot = None
         self._finished_follow = False
+        self._recent_nav_pos = None
