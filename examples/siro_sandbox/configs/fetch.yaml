@@ -9,3 +9,7 @@ defaults:
 
 # fetch specific config overrides:
 # (placeholder for future overrides)
+habitat:
+  environment:
+    iterator_options:
+      cycle: True
