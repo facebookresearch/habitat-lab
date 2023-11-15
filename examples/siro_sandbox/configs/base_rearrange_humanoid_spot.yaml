@@ -64,7 +64,7 @@ habitat:
         arm_controller: "ArmRelPosMaskKinematicAction"
         arm_joint_mask: [1,1,0,1,1,1,1]
         arm_joint_dimensionality: 7
-        grasp_thresh_dist: 0.25
+        grasp_thresh_dist: 0.475 # Eric selects number 0.25; the original value is 0.7
         disable_grip: False
         delta_pos_limit: 0.10 # default value 0.20
         ee_ctrl_lim: 0.015
