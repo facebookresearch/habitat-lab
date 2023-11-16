@@ -19,6 +19,7 @@ from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
 from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
+import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.text_drawer import TextOnScreenAlignment
@@ -31,6 +32,7 @@ COLOR_FOCUS_OBJECT = mn.Color3(1, 1, 1)
 COLOR_FETCHER_NAV_PATH = mn.Color3(0, 160 / 255, 171 / 255)
 COLOR_FETCHER_ORACLE_NAV_PATH = mn.Color3(0, 153 / 255, 255 / 255)
 COLOR_PLACE_GOAL = mn.Color3(255 / 255, 0, 220 / 255)
+COLOR_PLACE_GOAL_INVALID = mn.Color3(255 / 255, 0, 0)
 
 RADIUS_GRASPABLE = 0.15
 RADIUS_GRASP_PREVIEW = 0.15
@@ -38,6 +40,7 @@ RADIUS_FOCUS_OBJECT = 0.2
 RADIUS_FETCHER_NAV_PATH = 0.45
 RADIUS_PLACE_GOAL = 0.25
 RADIUS_PLACE_GOAL_PREVIEW = 0.15
+RADIUS_PLACE_GOAL_INVALID = 0.03
 
 RING_PULSE_SIZE = 0.03
 
@@ -138,6 +141,7 @@ class AppStateFetch(AppState):
         )
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
+        self._remote_place_goal_counter = 0
 
         # sloppy: set this private member so we get deterministic
         # agent starting positions
@@ -801,17 +805,23 @@ class AppStateFetch(AppState):
         ):
             spot_status_text = "spot: blocked by human\n"
         else:
+            place_goal_desc = (
+                "target"
+                if self.state_machine_agent_ctrl.user_place_goal_pos
+                is not None
+                else "human"
+            )
             fetch_state_names = {
                 # FetchState.WAIT : "",
                 FetchState.SEARCH: "searching for object",
                 FetchState.SEARCH_ORACLE_NAV: "oracle nav to object",
                 FetchState.PICK: "picking object",
-                FetchState.BRING: "searching for human",
-                FetchState.BRING_ORACLE_NAV: "oracle nav to human",
+                FetchState.BRING: f"navigating to {place_goal_desc}",
+                FetchState.BRING_ORACLE_NAV: f"oracle nav to {place_goal_desc}",
                 FetchState.DROP: "dropping object",
                 FetchState.BEG_RESET: "cannot pick up the object",
                 FetchState.SEARCH_TIMEOUT_WAIT: "unable to reach object",
-                FetchState.BRING_TIMEOUT_WAIT: "unable to reach human",
+                FetchState.BRING_TIMEOUT_WAIT: f"unable to reach {place_goal_desc}",
             }
             if fetch_state in fetch_state_names:
                 spot_status_text = f"spot: {fetch_state_names[fetch_state]}\n"
@@ -917,6 +927,95 @@ class AppStateFetch(AppState):
                 )
             )
 
+    def _update_place_goal(self):
+        # let the user specify a place goal pos, with a few caveats:
+        # * don't interfere with grasping
+        # * Spot must have an object of interest and can't be already dropping (placing)
+        do_allow_place = (
+            not self._has_grasp_preview
+            and self.state_machine_agent_ctrl.object_interest_id is not None
+            and self.state_machine_agent_ctrl.current_state != FetchState.DROP
+        )
+        if not do_allow_place:
+            return
+
+        ray = None
+        do_place = False
+        if self._is_remote_active():
+            hold_threshold = 30  # number of frames before placement starts
+            is_either_hand_pressed = False
+            remote_gui_input = self._sandbox_service.remote_gui_input
+            remote_button_input = remote_gui_input.get_gui_input()
+
+            num_hands = 2
+            for hand_idx in range(num_hands):
+                is_pressed = False
+                is_released = False
+                for key in self.get_grasp_keys_by_hand(hand_idx):
+                    if remote_button_input.get_key(key):
+                        is_pressed = True
+                    elif remote_button_input.get_key_up(key):
+                        is_released = True
+                        break
+
+                if is_pressed:
+                    self._remote_place_goal_counter += 1
+                    is_either_hand_pressed = True
+
+                do_preview = False
+                if self._remote_place_goal_counter >= hold_threshold:
+                    if is_pressed:
+                        do_preview = True
+                    elif is_released:
+                        do_place = True
+
+                if do_preview or do_place:
+                    hand_pos, hand_rotation = remote_gui_input.get_hand_pose(
+                        hand_idx
+                    )
+                    if hand_pos is None or hand_rotation is None:
+                        return
+
+                    ray_dir = hand_rotation.transform_vector(
+                        mn.Vector3(0, 0, 1)
+                    )
+                    # sloppy: start ray a short distance out from controller, because
+                    # otherwise the ray is often hitting the humanoid. Todo: have
+                    # raycast ignore humanoid.
+                    ray_start_offset = 0.5
+                    ray_origin = hand_pos + ray_dir * ray_start_offset
+                    ray = habitat_sim.geo.Ray(ray_origin, ray_dir)
+                    break
+
+            if not is_either_hand_pressed:
+                self._remote_place_goal_counter = 0
+
+        else:
+            ray = self._sandbox_service.gui_input.mouse_ray
+            do_place = self._sandbox_service.gui_input.get_key(
+                GuiInput.KeyNS.SPACE
+            )
+
+        if not ray:
+            return
+
+        hit_info = self.cast_ray(ray)
+        if hit_info:
+            y_threshold = 0.5
+            # don't allow placement on non-horizontal surfaces
+            is_valid = hit_info.normal.y >= y_threshold
+            goal_pos = hit_info.point
+            self._add_target_highlight_ring(
+                goal_pos,
+                COLOR_PLACE_GOAL if is_valid else COLOR_PLACE_GOAL_INVALID,
+                RADIUS_PLACE_GOAL_PREVIEW
+                if is_valid
+                else RADIUS_PLACE_GOAL_INVALID,
+                do_pulse=is_valid,
+            )
+            if do_place and is_valid:
+                self.state_machine_agent_ctrl.user_place_goal_pos = goal_pos
+
     def _update_fetcher(self):
         fetcher_state = self.state_machine_agent_ctrl.current_state
 
@@ -959,29 +1058,7 @@ class AppStateFetch(AppState):
             else:
                 self.state_machine_agent_ctrl.current_state = FetchState.FOLLOW
 
-        # let the user specify a place goal pos, with a few caveats:
-        # * don't interfere with grasping
-        # * Spot must have an object of interest and can't be already dropping (placing)
-        if (
-            not self._has_grasp_preview
-            and self.state_machine_agent_ctrl.object_interest_id is not None
-            and self.state_machine_agent_ctrl.current_state != FetchState.DROP
-        ):
-            hit_info = self.cast_ray(self._sandbox_service.gui_input.mouse_ray)
-            if hit_info:
-                goal_pos = hit_info.point
-                self._add_target_highlight_ring(
-                    goal_pos,
-                    COLOR_PLACE_GOAL,
-                    RADIUS_PLACE_GOAL_PREVIEW,
-                    do_pulse=True,
-                )
-                if self._sandbox_service.gui_input.get_key(
-                    GuiInput.KeyNS.SPACE
-                ):
-                    self.state_machine_agent_ctrl.user_place_goal_pos = (
-                        goal_pos
-                    )
+        self._update_place_goal()
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
