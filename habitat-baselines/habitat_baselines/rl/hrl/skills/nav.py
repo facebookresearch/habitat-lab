@@ -63,7 +63,7 @@ class NavSkillPolicy(NnSkillPolicy):
                     replace_sensor = TargetStartGpsCompassSensor.cls_uuid
                 ret_obs[NavGoalPointGoalSensor.cls_uuid][i] = observations[
                     replace_sensor
-                ][i]
+                ][i, :2]
         return ret_obs
 
     def _get_multi_sensor_index(self, batch_idx):

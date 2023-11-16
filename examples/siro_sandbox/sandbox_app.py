@@ -17,8 +17,9 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+import json
 from datetime import datetime
-from functools import wraps
+from functools import partial, wraps
 from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import magnum as mn
@@ -57,13 +58,18 @@ from app_states.app_state_abc import AppState
 from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_rearrange import AppStateRearrange
-from app_states.app_state_socialnav import AppStateSocialNav
+from app_states.app_state_socialnav_study import AppStateSocialNavStudy
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
+from server.client_message_manager import ClientMessageManager
+from server.interprocess_record import InterprocessRecord
+from server.remote_gui_input import RemoteGuiInput
+from server.server import launch_server_process, terminate_server_process
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    # "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+    "data/humanoids/humanoid_data/male_1/male_1_motion_data_smplx.pkl"
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
@@ -131,7 +137,15 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.gym_habitat_env, config, args, gui_input, self._step_recorder
+            gym_habitat_env=self.gym_habitat_env,
+            config=config,
+            args=args,
+            gui_input=gui_input,
+            recorder=self._step_recorder,
+            use_fetch_baselines_controller=(
+                args.app_state == "fetch"
+                or args.app_state == "socialnav_study"
+            ),
         )
 
         self._debug_images = args.debug_images
@@ -141,13 +155,20 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
+        self._check_init_server(line_render)
+
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
+
+        self._client_message_manager = None
+        if self.do_network_server:
+            self._client_message_manager = ClientMessageManager()
 
         self._sandbox_service = SandboxService(
             args,
             config,
             gui_input,
+            self._remote_gui_input,
             line_render,
             text_drawer,
             lambda: self._viz_anim_fraction,
@@ -157,8 +178,10 @@ class SandboxDriver(GuiAppDriver):
             self._step_recorder,
             lambda: self._get_recent_metrics(),
             local_end_episode,
-            lambda: self._set_cursor_style,
+            partial(self._set_cursor_style),
             self._episode_helper,
+            partial(self._get_observation_as_debug_image),
+            self._client_message_manager,
         )
 
         self._app_states: List[AppState]
@@ -167,6 +190,7 @@ class SandboxDriver(GuiAppDriver):
                 AppStateFetch(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
         elif args.app_state == "rearrange":
@@ -184,13 +208,22 @@ class SandboxDriver(GuiAppDriver):
                         self.ctrl_helper.get_gui_agent_controller(),
                     ),
                 )
-        elif args.app_state == "socialnav":
+        elif args.app_state == "socialnav_study":
             self._app_states = [
-                AppStateSocialNav(
+                AppStateSocialNavStudy(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
+                    self.ctrl_helper.get_policy_driven_agent_controller(),
                 )
             ]
+            if args.show_tutorial:
+                self._app_states.insert(
+                    0,
+                    AppStateTutorial(
+                        self._sandbox_service,
+                        self.ctrl_helper.get_gui_agent_controller(),
+                    ),
+                )
         elif args.app_state == "free_camera":
             self._app_states = [AppStateFreeCamera(self._sandbox_service)]
         else:
@@ -203,6 +236,32 @@ class SandboxDriver(GuiAppDriver):
         self._app_state = None
 
         self._reset_environment()
+
+    def close(self):
+        self._check_terminate_server()
+
+    @property
+    def do_network_server(self):
+        return self._args.remote_gui_mode
+
+    def _check_init_server(self, line_render):
+        self._remote_gui_input = None
+        self._interprocess_record = None
+        if self.do_network_server:
+            # How many frames we can simulate "ahead" of what keyframes have been sent.
+            # A larger value increases lag on the client, while ensuring a more reliable
+            # simulation rate in the presence of unreliable network comms.
+            # See also server.py max_send_rate
+            max_steps_ahead = 5
+            self._interprocess_record = InterprocessRecord(max_steps_ahead)
+            launch_server_process(self._interprocess_record)
+            self._remote_gui_input = RemoteGuiInput(
+                self._interprocess_record, line_render
+            )
+
+    def _check_terminate_server(self):
+        if self.do_network_server:
+            terminate_server_process()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore
@@ -311,18 +370,32 @@ class SandboxDriver(GuiAppDriver):
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
-        self.ctrl_helper.on_environment_reset()
+        if self.do_network_server:
+            self._remote_gui_input.clear_history()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
 
         # Reset all the app states
         for app_state in self._app_states:
-            app_state.on_environment_reset(self._episode_recorder_dict)
+            app_state.on_environment_reset(
+                self._episode_recorder_dict,
+            )
+
+        # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
+        # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
+        self.ctrl_helper.on_environment_reset()
 
         self._app_state_index = (
             0  # start from the first app state for each episode
         )
+        # if show_tutorial enabled we show the tutorial once - before the first episode
+        if (
+            self._args.show_tutorial
+            and self._episode_helper.num_episodes_done > 0
+        ):
+            self._app_state_index += 1
+
         self._app_state = self._app_states[self._app_state_index]
         self._app_state.on_enter(
             prev_state=self._get_prev_app_state(),
@@ -402,8 +475,28 @@ class SandboxDriver(GuiAppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
+    def _get_observation_as_debug_image(self, obs_key):
+        def depth_to_rgb(obs):
+            return (np.repeat(obs * 255.0, 3, axis=-1)).astype(np.uint8)
+
+        assert (
+            obs_key in self._obs
+        ), f"Observation {obs_key} not found in list of available observations {list(self._obs.keys())}"
+
+        debug_image = np.flipud(
+            depth_to_rgb(self._obs[obs_key])
+            if "depth" in obs_key
+            else self._obs[obs_key]
+        )
+
+        return debug_image
+
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
+        post_sim_update_dict["debug_images"] = []
+
+        if self._remote_gui_input:
+            self._remote_gui_input.update()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -461,24 +554,32 @@ class SandboxDriver(GuiAppDriver):
 
         post_sim_update_dict["keyframes"] = keyframes
 
-        def depth_to_rgb(obs):
-            converted_obs = np.concatenate(
-                [obs * 255.0 for _ in range(3)], axis=2
-            ).astype(np.uint8)
-            return converted_obs
+        for obs_key in self._debug_images:
+            post_sim_update_dict["debug_images"].append(
+                (
+                    "spot debug view",
+                    self._get_observation_as_debug_image(obs_key),
+                    None,  # scale
+                )
+            )
 
-        # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self._obs.keys())), (
-            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self._obs.keys())))} "
-            f"not in available sensors ids: {list(self._obs.keys())}"
-        )
-        debug_images = (
-            depth_to_rgb(self._obs[k]) if "depth" in k else self._obs[k]
-            for k in self._debug_images
-        )
-        post_sim_update_dict["debug_images"] = [
-            np.flipud(image) for image in debug_images
-        ]
+        if self._remote_gui_input:
+            self._remote_gui_input.on_frame_end()
+
+        if self.do_network_server:
+            for keyframe_json in keyframes:
+                obj = json.loads(keyframe_json)
+                assert "keyframe" in obj
+                keyframe_obj = obj["keyframe"]
+                # Insert server->client message into the keyframe
+                message = self._client_message_manager.get_message_dict()
+                if len(message) > 0:
+                    keyframe_obj["message"] = message
+                    self._client_message_manager.clear_message_dict()
+                # Send the keyframe
+                self._interprocess_record.send_keyframe_to_networking_thread(
+                    keyframe_obj
+                )
 
         return post_sim_update_dict
 
@@ -535,6 +636,12 @@ if __name__ == "__main__":
         help="Vertical resolution of the window.",
     )
     parser.add_argument(
+        "--display-font-size",
+        default=40,
+        type=int,
+        help="Font size for text displayed in the GUI app.",
+    )
+    parser.add_argument(
         "--gui-controlled-agent-index",
         type=int,
         default=None,
@@ -549,6 +656,16 @@ if __name__ == "__main__":
         "--disable-inverse-kinematics",
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
+    )
+    parser.add_argument(
+        "--enable-hybrid-social-nav",
+        action="store_true",
+        help="If specified, we use a hybrid social nav design that consists of point nav and social nav. Otherwise, we only use social nav policy purely.",
+    )
+    parser.add_argument(
+        "--oracle-follow-human",
+        action="store_true",
+        help="If true, use an oracle pointnav policy to follow the human. If false, use a learned social-nav policy.",
     )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
@@ -633,7 +750,7 @@ if __name__ == "__main__":
         "--show-tutorial",
         action="store_true",
         default=False,
-        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+        help="Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.",
     )
     parser.add_argument(
         "--hide-humanoid-in-gui",
@@ -681,9 +798,12 @@ if __name__ == "__main__":
             "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
         )
 
-    if args.show_tutorial and args.app_state != "rearrange":
+    if args.show_tutorial and args.app_state not in {
+        "rearrange",
+        "socialnav_study",
+    }:
         raise ValueError(
-            "--show-tutorial is only supported for --app-state=rearrange"
+            "--show-tutorial is only supported for --app-state=rearrange and --app-state=socialnav_study"
         )
 
     if args.remote_gui_mode and args.app_state != "fetch":
@@ -724,11 +844,23 @@ if __name__ == "__main__":
             ),
         )
 
+    # TextDrawer kwargs
+    display_font_size = args.display_font_size
+    font_size_multiplier = (
+        mn.Vector2(gui_app_wrapper.framebuffer_size)
+        * gui_app_wrapper.dpi_scaling
+        / mn.Vector2(gui_app_wrapper.window_size)
+    ).max()
+    text_drawer_kwargs = {
+        "display_font_size": int(display_font_size * font_size_multiplier),
+        "relative_path_to_font": "./fonts/FuturaPT-Medium.ttf",  # default "./fonts/ProggyClean.ttf"
+    }
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size,
         viewport_rect,
         args.use_batch_renderer,
+        text_drawer_kwargs=text_drawer_kwargs,
     )
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
@@ -740,6 +872,11 @@ if __name__ == "__main__":
         gym_obs_keys = habitat_config.gym.obs_keys
 
         agent_config = get_agent_config(sim_config=sim_config)
+
+        # temp hack (I couldn't figure out how to remove these via configs)
+        del agent_config.sim_sensors["arm_rgb_sensor"]
+        del agent_config.sim_sensors["head_rgb_sensor"]
+        del agent_config.sim_sensors["head_depth_sensor"]
 
         if show_debug_third_person:
             sim_config.debug_render = True
@@ -889,3 +1026,5 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
+
+    driver.close()

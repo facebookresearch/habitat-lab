@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import csv
+import os
 from typing import Optional
 
 import magnum as mn
@@ -391,7 +393,7 @@ class BaseVelAction(ArticulatedAgentAction):
         self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
         self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
 
-    def update_base(self):
+    def update_base(self, fix_leg=False):
         ctrl_freq = self._sim.ctrl_freq
 
         before_trans_state = self._capture_articulated_agent_state()
@@ -407,9 +409,12 @@ class BaseVelAction(ArticulatedAgentAction):
         end_pos = self._sim.step_filter(
             rigid_state.translation, target_rigid_state.translation
         )
-        # Offset the base if the base height is different between end_pos
-        # and the current state
-        if end_pos[1] != rigid_state.translation[1]:
+
+        # try_step may fail, in which case it simply returns the start argument
+        did_try_step_fail = end_pos == rigid_state.translation
+        if not did_try_step_fail:
+            # If try_step succeeded, it snapped our start position to the navmesh
+            # We should apply the base offset
             end_pos -= self.cur_articulated_agent.params.base_offset
 
         target_trans = mn.Matrix4.from_(
@@ -435,7 +440,7 @@ class BaseVelAction(ArticulatedAgentAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
+        if self.cur_articulated_agent._base_type == "leg" and fix_leg:
             # Fix the leg joints
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
@@ -482,6 +487,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self._ang_speed = self._config.ang_speed
         self._navmesh_offset = self._config.navmesh_offset
         self._enable_lateral_move = self._config.enable_lateral_move
+        self._human_safe_dis = self._config.human_safe_dis
 
     @property
     def action_space(self):
@@ -526,10 +532,18 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         end_pos = []
         for i in range(num_check_cylinder):
             pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
             # Sanitize the height
             pos[1] = 0.0
             cur_pos[i][1] = 0.0
             goal_pos[i][1] = 0.0
+            human_pos[1] = 0.0
+            if np.linalg.norm(pos - human_pos) < self._human_safe_dis:
+                human_robot_vec = pos - human_pos
+                human_robot_vec = human_robot_vec.normalized()
+                pos = pos + human_robot_vec * (
+                    self._human_safe_dis - np.linalg.norm(pos - human_pos)
+                )
             end_pos.append(pos)
 
         # Planar move distance clamped by NavMesh
@@ -555,7 +569,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         else:
             return False, target_trans
 
-    def update_base(self, if_rotation):
+    def update_base(self, if_rotation, fix_leg=False):
         """
         Update the base of the robot
         if_rotation: if the robot is rotating or not
@@ -594,7 +608,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
+        if self.cur_articulated_agent._base_type == "leg" and fix_leg:
             # Fix the leg joints
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
@@ -632,6 +646,167 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or ang_vel != 0.0
         ):
             self.update_base(ang_vel != 0.0)
+
+
+@registry.register_task_action
+class BaseVelLegAnimationAction(BaseVelNonCylinderAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._checkpoint = self._config.get("leg_animation_checkpoint")
+        self._use_range = self._config.get("use_range")
+        assert os.path.exists(self._checkpoint) == 1
+        self._leg_data = {}  # type: ignore
+        self._load_animation()
+        self._play_i = 0
+        self._play_length_data = len(self._leg_data)
+        self._play_i_perframe = self._config.get("play_i_perframe")
+
+    def _load_animation(self):
+        first_row = True
+        time_i = 0
+        with open(self._checkpoint, newline="") as csvfile:
+            leg_motion_reader = csv.reader(
+                csvfile, delimiter=" ", quotechar="|"
+            )
+            for row in leg_motion_reader:
+                if not first_row:
+                    if (
+                        time_i >= self._use_range[0]
+                        and time_i < self._use_range[1]
+                    ):
+                        joint_angs = row[0].split(",")[1:13]
+                        joint_angs = [float(i) for i in joint_angs]
+                        self._leg_data[
+                            time_i - self._use_range[0]
+                        ] = joint_angs
+                    time_i += 1
+                first_row = False
+
+    def _input_not_nan(self, longitudinal_lin_vel, lateral_lin_vel, ang_vel):
+        """Check if the input is nan or not"""
+        if (
+            np.isnan(longitudinal_lin_vel)
+            or np.isnan(lateral_lin_vel)
+            or np.isnan(ang_vel)
+        ):
+            return False
+        else:
+            return True
+
+    def step(self, *args, **kwargs):
+        lateral_lin_vel = 0.0
+        if self._enable_lateral_move:
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+        else:
+            longitudinal_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+
+        longitudinal_lin_vel = (
+            np.clip(longitudinal_lin_vel, -1, 1) * self._longitudinal_lin_speed
+        )
+        lateral_lin_vel = (
+            np.clip(lateral_lin_vel, -1, 1) * self._lateral_lin_speed
+        )
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
+        if not self._allow_back:
+            longitudinal_lin_vel = np.maximum(longitudinal_lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(
+            longitudinal_lin_vel, 0, -lateral_lin_vel
+        )
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        # Sloppy: this is a sloppy fix since the NaN issue is from policy
+        # so we need to trace back
+        if (
+            longitudinal_lin_vel != 0.0
+            or lateral_lin_vel != 0.0
+            or ang_vel != 0.0
+        ) and self._input_not_nan(
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel
+        ):
+            self.update_base(ang_vel != 0.0, fix_leg=False)
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = self._leg_data[cur_i]
+            offset = 0.01
+            self._play_i += int(
+                self._play_i_perframe
+                / ((abs(longitudinal_lin_vel) + offset) / 10.0)
+            )
+        else:
+            self._play_i = 0
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
+
+
+@registry.register_task_action
+class BaseVelLegAnimationMotionAction(BaseVelLegAnimationAction):
+    @property
+    def action_space(self):
+        lim = 20
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "base_motion": spaces.Box(
+                    shape=(3,), low=-lim, high=lim, dtype=np.float32
+                )
+            }
+        )
+
+    def update_base(self):
+        """
+        Update the base of the robot
+        """
+        # Get the control frequency
+        ctrl_freq = self._sim.ctrl_freq
+        # Get the current transformation
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        # Integrate to get target rigid state
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / ctrl_freq, rigid_state
+        )
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+        # Update the base
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
+
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel, move_leg = kwargs[
+            self._action_arg_prefix + "base_motion"
+        ]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._longitudinal_lin_speed
+
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, 0, ang_vel)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base()
+
+        if move_leg:
+            cur_i = int(self._play_i % self._play_length_data)
+            self.cur_articulated_agent.leg_joint_pos = (
+                self._leg_data[cur_i][0:6]
+                + self.cur_articulated_agent.params.leg_init_params[6:]
+            )
+            self._play_i += int(self._play_i_perframe)
 
 
 @registry.register_task_action
@@ -763,3 +938,55 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+
+@registry.register_task_action
+class ArmRelPosMaskKinematicAction(ArticulatedAgentAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        # clip from -1 to 1
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        target_arm_pos = (
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
+        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        self.cur_articulated_agent.fix_joint_values = set_arm_pos

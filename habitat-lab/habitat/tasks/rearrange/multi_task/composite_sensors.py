@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import math
 from typing import List
 
 import numpy as np
@@ -323,3 +324,66 @@ class SocialNavReward(Measure):
 
         distance = np.linalg.norm(position_human - position_robot)
         self._metric = -distance
+
+
+@registry.register_measure
+class ExplorationReward(Measure):
+    """
+    Reward that gives a continuous reward on the social navigation task.
+    """
+
+    cls_uuid: str = "exploration_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ExplorationReward.cls_uuid
+
+    def __init__(self, *args, config, sim, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        self._config = config
+        self._sim = sim
+        self._visit_loc_round_half = {}
+        self._visit_loc_round_0 = {}
+        self._visit_loc_round_1 = {}
+
+    def reset_metric(self, *args, **kwargs):
+        self._visit_loc_round_half = {}
+        self._visit_loc_round_0 = {}
+        self._visit_loc_round_1 = {}
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def round_to_nearest(self, n):
+        if n - math.floor(n) < 0.5:
+            return math.floor(n)
+        return math.ceil(n)
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
+            :3
+        ]
+        x_pos = round(position_robot[0], 1)
+        y_pos = round(position_robot[2], 1)
+        robot_pos_encoding = (x_pos, y_pos)
+        if robot_pos_encoding not in self._visit_loc_round_1:
+            self._visit_loc_round_1[robot_pos_encoding] = 0
+
+        x_pos = int(position_robot[0])
+        y_pos = int(position_robot[2])
+        robot_pos_encoding = (x_pos, y_pos)
+        if robot_pos_encoding not in self._visit_loc_round_0:
+            self._visit_loc_round_0[robot_pos_encoding] = 0
+
+        x_pos = self.round_to_nearest(position_robot[0])
+        y_pos = self.round_to_nearest(position_robot[2])
+        robot_pos_encoding = (x_pos, y_pos)
+        if robot_pos_encoding not in self._visit_loc_round_half:
+            self._visit_loc_round_half[robot_pos_encoding] = 0
+
+        self._metric = {}
+        self._metric["round_half"] = len(self._visit_loc_round_half)
+        self._metric["round_0"] = len(self._visit_loc_round_0)
+        self._metric["round_1"] = len(self._visit_loc_round_1)

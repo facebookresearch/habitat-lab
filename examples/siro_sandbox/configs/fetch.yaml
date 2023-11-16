@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - base_rearrange_humanoid_spot
+  # fetch specific defaults overrides:
+  # (placeholder for future overrides)
+
+  - _self_
+
+# fetch specific config overrides:
+# (placeholder for future overrides)
+habitat:
+  environment:
+    iterator_options:
+      cycle: True

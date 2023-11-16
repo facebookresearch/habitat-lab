@@ -478,21 +478,35 @@ class RearrangeSim(HabitatSim):
             navmesh_path = osp.join(
                 base_dir, "navmeshes", scene_name + ".navmesh"
             )
+
+            agent_config = None
+            if hasattr(self.habitat_config.agents, "agent_0"):
+                agent_config = self.habitat_config.agents.agent_0
+            elif hasattr(self.habitat_config.agents, "main_agent"):
+                agent_config = self.habitat_config.agents.main_agent
+            else:
+                raise ValueError(f"Cannot find agent parameters.")
+
             # If we cannot load the navmesh, try generarting navmesh on the fly.
+            need_regenerate = False
             if osp.exists(navmesh_path):
                 self.pathfinder.load_nav_mesh(navmesh_path)
-                print(f"Loaded navmesh from {navmesh_path}")
+                # There is a mismatch fot the agent height
+                if (
+                    abs(
+                        self.pathfinder.nav_mesh_settings.agent_height
+                        - agent_config.height
+                    )
+                    >= 0.01
+                ):
+                    need_regenerate = True
             else:
+                need_regenerate = True
+
+            if need_regenerate:
                 navmesh_settings = NavMeshSettings()
                 navmesh_settings.set_defaults()
 
-                agent_config = None
-                if hasattr(self.habitat_config.agents, "agent_0"):
-                    agent_config = self.habitat_config.agents.agent_0
-                elif hasattr(self.habitat_config.agents, "main_agent"):
-                    agent_config = self.habitat_config.agents.main_agent
-                else:
-                    raise ValueError(f"Cannot find agent parameters.")
                 navmesh_settings.agent_radius = agent_config.radius
                 navmesh_settings.agent_height = agent_config.height
                 navmesh_settings.agent_max_climb = agent_config.max_climb
@@ -501,6 +515,9 @@ class RearrangeSim(HabitatSim):
                 self.recompute_navmesh(self.pathfinder, navmesh_settings)
                 os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
                 self.pathfinder.save_nav_mesh(navmesh_path)
+                print(f"Regernerate navmesh")
+            else:
+                print(f"Loaded navmesh from {navmesh_path}")
 
         # NOTE: allowing indoor islands only
         self._largest_island_idx = get_largest_island_index(

@@ -10,7 +10,7 @@ import numpy as np
 import habitat_sim
 from habitat.gui.gui_application import GuiAppRenderer
 from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
-from habitat.gui.text_drawer import TextDrawer
+from habitat.gui.text_drawer import TextDrawer, TextOnScreenAlignment
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
@@ -51,6 +51,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
+        camera_sensor_spec.near = 0.2
+        camera_sensor_spec.far = 50.0
 
         cfg.sensor_specifications = [camera_sensor_spec]
         cfg.gpu_device_id = 0  # todo
@@ -67,7 +69,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             else ReplayRenderer.create_classic_replay_renderer(cfg)
         )
 
-        self._debug_images = []
+        self._debug_images = None
         self._need_render = True
 
         im_framebuffer_drawer_kwargs = im_framebuffer_drawer_kwargs or {}
@@ -94,8 +96,11 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         for keyframe in keyframes:
             self._replay_renderer.set_environment_keyframe(env_index, keyframe)
 
-        if "debug_images" in post_sim_update_dict:
-            self._debug_images = post_sim_update_dict["debug_images"]
+        self._debug_images = (
+            post_sim_update_dict["debug_images"]
+            if "debug_images" in post_sim_update_dict
+            else None
+        )
 
     def unproject(self, viewport_pos):
         return self._replay_renderer.unproject(0, viewport_pos)
@@ -117,14 +122,64 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
-        # arrange debug images on right side of frame, tiled down from the top
-        dest_y = self.window_size.y
-        for image in self._debug_images:
-            im_height, im_width, _ = image.shape
-            self._image_drawer.draw(
-                image, self.window_size.x - im_width, dest_y - im_height
-            )
-            dest_y -= im_height
+        if self._debug_images:
+
+            def upscale_image(image, scale):
+                import torch  # lazy import
+
+                assert isinstance(scale, int) and scale > 1
+                if isinstance(image, np.ndarray):
+                    return np.repeat(
+                        np.repeat(image, scale, axis=0), scale, axis=1
+                    )
+                # Check if the image is a PyTorch tensor
+                elif isinstance(image, torch.Tensor):
+                    return torch.repeat_interleave(
+                        torch.repeat_interleave(image, scale, dim=0),
+                        scale,
+                        dim=1,
+                    )
+                # If the image is neither a numpy array nor a PyTorch tensor, raise an assertion error
+                else:
+                    raise AssertionError(
+                        "Input image should be either a numpy array or a PyTorch tensor"
+                    )
+
+            # apply scales
+            scaled_titled_images = []
+            for i in range(len(self._debug_images)):
+                title, src_image, scale = self._debug_images[i]
+                if scale is not None and scale != 1:
+                    tup = (title, upscale_image(src_image, scale))
+                else:
+                    tup = (title, src_image)
+                scaled_titled_images.append(tup)
+
+            max_im_width = max(
+                scaled_titled_images, key=lambda tup: tup[1].shape[1]
+            )[1].shape[1]
+
+            # arrange debug images on right side of frame, tiled down from the top
+            dest_y = self.window_size.y
+            for title, image in scaled_titled_images:
+                im_height, im_width, _ = image.shape
+
+                # add_text y convention is: top = 0, bottom = -self.window_size.y
+                text_pos_y = -(self.window_size.y - dest_y)
+                text_pos_x = self.window_size.x - max_im_width
+                self._text_drawer.add_text(
+                    title,
+                    TextOnScreenAlignment.TOP_LEFT,
+                    text_pos_x,
+                    text_pos_y,
+                )
+
+                text_pad_y = 40
+                screen_x = self.window_size.x - im_width
+                screen_y = dest_y - im_height - text_pad_y
+                self._image_drawer.draw(image, screen_x, screen_y)
+
+                dest_y -= im_height + text_pad_y
 
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
         mn.gl.default_framebuffer.bind()

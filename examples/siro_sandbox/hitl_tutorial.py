@@ -30,8 +30,8 @@ TEXT_SCENE_OVERVIEW: str = (
 TEXT_ROBOT_FOCUS: str = (
     "This is your robot assistant.\nIt will help you accomplish your tasks.\n"
 )
-TEXT_AVATAR_FOCUS: str = "This is your avatar.\nYou will now gain control."
-TEXT_HELP: str = "Spacebar: Skip"
+TEXT_AVATAR_FOCUS: str = "You will now gain control of your avatar."
+TEXT_HELP: str = "Q: Skip \nSpacebar: Skip to the next stage of the tutorial"
 
 
 class ObjectAnimation:
