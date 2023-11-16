@@ -72,11 +72,11 @@ START_FETCH_ROBOT_DIS_THRESHOLD = (
 FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
 PICK_STEPS = 40
 # The distance between the robot and the human to consider termination of FOLLOW state
-ROBOT_CLOSE_TO_HUMAN_DIS = 2.0
+ROBOT_CLOSE_TO_HUMAN_DIS = 2.5
 # This distance/rotation threshold is used to determine whether the human is moving
-DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING = 0.01
+DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING = 0.03
 # The number of steps to consider human is not moving. The larger the number is, the more social nav behavior is
-NUM_CONSECUTIVE_STOPPING_STEPS_THRESHOLD = 100
+NUM_CONSECUTIVE_STOPPING_STEPS_THRESHOLD = 8
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -469,20 +469,20 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             if self._prev_human_pos is not None
             else False
         )
-        is_human_rotate = (
-            (
-                (np.abs(float(self._prev_human_rot - human_rot)) + np.pi)
-                % (2.0 * np.pi)
-                - np.pi
-            )
-            > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
-            if self._prev_human_rot is not None
-            else False
-        )
 
-        human_in_this_frame_is_stopping = not (
-            is_human_walk or is_human_rotate
-        )
+        # not currently used
+        # is_human_rotate = (
+        #     (
+        #         (np.abs(float(self._prev_human_rot - human_rot)) + np.pi)
+        #         % (2.0 * np.pi)
+        #         - np.pi
+        #     )
+        #     > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
+        #     if self._prev_human_rot is not None
+        #     else False
+        # )
+
+        human_in_this_frame_is_stopping = not (is_human_walk)
 
         if human_in_this_frame_is_stopping:
             # Human in this frame is stopping. Then we increase the counter
