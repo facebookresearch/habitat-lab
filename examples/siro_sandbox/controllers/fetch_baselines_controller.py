@@ -63,10 +63,10 @@ START_FETCH_OBJ_VEL_THRESHOLD = (
     1.5  # The object velocity threshold to start to search for the object
 )
 START_FETCH_OBJ_DIS_THRESHOLD = (
-    1.8  # if the human is too close to the object, they block Spot
+    1.0  # if the human is too close to the object, they block Spot
 )
 START_FETCH_ROBOT_DIS_THRESHOLD = (
-    1.8  # if the human is too close to Spot, they block Spot
+    1.0  # if the human is too close to Spot, they block Spot
 )
 # The distance between the robot and the human to switch from point nav to social nav
 FOLLOW_SWITCH_GEO_DIS_FOR_POINT_SOCIAL_NAV = 2.5
