@@ -75,6 +75,8 @@ PICK_STEPS = 40
 ROBOT_CLOSE_TO_HUMAN_DIS = 2.0
 # This distance/rotation threshold is used to determine whether the human is moving
 DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING = 0.01
+# The number of steps to consider human is not moving. The larger the number is, the more social nav behavior is
+NUM_CONSECUTIVE_STOPPING_STEPS_THRESHOLD = 100
 
 
 class FetchBaselinesController(SingleAgentBaselinesController):
@@ -130,6 +132,8 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._finished_follow = False
         # the position we tried to navigate to in the last act() (or None)
         self._recent_nav_pos = None
+        # Number of consecutive steps to consider human is stopping
+        self._num_consecutive_stopping_steps = 0
 
     def _get_policy_info(self):
         prev_actions = torch.zeros(
@@ -454,7 +458,9 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             return human_pos
 
     def _is_human_moving(self, human_pos, human_rot, robot_pos):
-        # Check if the human walks or rotates
+        # Check if the human walks or rotates;
+        # human needs to stop at least certain steps to consider that
+        # human is not moving
         is_human_walk = (
             np.linalg.norm(
                 np.array((self._prev_human_pos - human_pos))[[0, 2]]
@@ -474,7 +480,23 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             else False
         )
 
-        return is_human_walk or is_human_rotate
+        human_in_this_frame_is_stopping = not (
+            is_human_walk or is_human_rotate
+        )
+
+        if human_in_this_frame_is_stopping:
+            # Human in this frame is stopping. Then we increase the counter
+            self._num_consecutive_stopping_steps += 1
+        else:
+            # Human in this frame is moving. Then we reset the counter
+            self._num_consecutive_stopping_steps = 0
+
+        # If human stops at least certain number of times, then we consider
+        # human is stopping
+        return (
+            self._num_consecutive_stopping_steps
+            <= NUM_CONSECUTIVE_STOPPING_STEPS_THRESHOLD
+        )
 
     def act(self, obs, env):
         self._recent_nav_pos = None
@@ -1087,3 +1109,5 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         self._prev_human_rot = None
         self._finished_follow = False
         self._recent_nav_pos = None
+        # Number of consecutive steps to consider human is stopping
+        self._num_consecutive_stopping_steps = 0
