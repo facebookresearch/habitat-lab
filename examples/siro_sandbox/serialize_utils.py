@@ -16,6 +16,8 @@ from typing import Any, List
 import magnum as mn
 import numpy as np
 
+import habitat_sim
+
 
 def unpickle_vector3(data):
     return mn.Vector3(data)
@@ -26,8 +28,38 @@ def pickle_vector3(obj):
     return unpickle_vector3, (pickled_data,)
 
 
+def unpickle_vector2i(data):
+    return mn.Vector2i(data)
+
+
+def pickle_vector2i(obj):
+    pickled_data = list(obj)
+    return unpickle_vector2i, (pickled_data,)
+
+
+def unpickle_matrix4(data):
+    return mn.Matrix4(data)
+
+
+def pickle_matrix4(obj):
+    pickled_data = [list(column_tuple) for column_tuple in obj]
+    return unpickle_matrix4, (pickled_data,)
+
+
+def unpickle_ray(data):
+    return habitat_sim.geo.Ray(data[0], data[1])
+
+
+def pickle_ray(obj):
+    pickled_data = [list(obj.origin), list(obj.direction)]
+    return unpickle_ray, (pickled_data,)
+
+
 # fix for unpickable type; run once at startup
 copyreg.pickle(mn.Vector3, pickle_vector3)
+copyreg.pickle(mn.Vector2i, pickle_vector2i)
+copyreg.pickle(mn.Matrix4, pickle_matrix4)
+copyreg.pickle(habitat_sim.geo.Ray, pickle_ray)
 
 
 def convert_to_json_friendly(obj):

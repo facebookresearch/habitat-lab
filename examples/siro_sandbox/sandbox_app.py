@@ -608,6 +608,176 @@ def _parse_debug_third_person(args, framebuffer_size):
     return do_show, width, height
 
 
+# todo: move all MultiprocessDriverWrapper-related code (below) to separate file
+import threading
+
+# This import is needed to register pickle functions for types, even though we don't
+# reference it here.
+import serialize_utils  # noqa: F401
+from server import multiprocessing_config
+from server.multiprocessing_config import Queue
+
+
+class DummyClass:
+    def __getattr__(self, attr):
+        # Define a default method that does nothing
+        def dummy_method(*args, **kwargs):
+            pass
+
+        return dummy_method
+
+
+class MyInterprocessRecord:
+    def __init__(self):
+        self.post_sim_update_dict_queue = Queue()
+        self.sim_input_queue = Queue()
+
+
+class MultiprocessDriverWrapper(GuiAppDriver):
+    """
+    This is a wrapper intended to be used with SandboxDriver (or any GuiAppDriver).
+    It creates a separate "sim process" to run the driver, with the goal to overlap
+    (1) sim-updating and (2) rendering in ReplayGuiAppRenderer (used by GuiApplication).
+
+    "sim-updating" here refers to everything that SandboxDriver does: AppState logic,
+    habitat-lab model inference, habitat-sim simulation-stepping, habitat-sim rendering,
+    etc. "rendering in ReplayGuiAppRenderer" refers to rendering the main HITL tool
+    viewport. Note that sim-updating is currently much more expensive than rendering
+    in ReplayGuiAppRenderer, so the runtime bottleneck is currently the sim process.
+
+    A note about OpenGL and rendering: it is generally unsafe to use OpenGL in multiple
+    threads in the same process (habitat-sim does it by carefully protecting and
+    sharing the OpenGL context). However, MultiprocessDriverWrapper completely avoids
+    this complexity because we are spawning a separate *process*.
+
+    Let's review how a GuiApplication frame is executed with MultiprocessDriverWrapper:
+    1. We have a "main" process and a "sim" process (spawned in
+        MultiprocessDriverWrapper.__init__).
+    2. Interprocess comms here are (a) a sim_input_queue for pushing GuiInput from the
+        main process to the sim process, and (b) a post_sim_update_dict_queue for
+        pushing gfx-replay keyframes and other sim outputs from the sim process to
+        the main process.
+    3. At startup, MultiprocessDriverWrapper pushes an empty/dummy GuiInput to
+        sim_input_queue.
+    4. The sim process initializes (sim_process_main), including constructing a
+        SandboxDriver.
+    5. sim_process_main will enter its core loop. It will immediately get its first
+        GuiInput from sim_input_queue, do a single sim update, and push a single
+        post_sim_update_dict. It will then block and wait for another GuiInput.
+    6. On the main process, every frame starts with GuiApplication.draw_event. At this
+        point, the latest GuiInput has been updated on the main process due to other
+        GuiApplication callbacks that ran earlier based on OS input events.
+    7. Here, we call into MultiprocessDriverWrapper.sim_update. We push the latest
+        GuiInput immediately. Then we block and wait for a new post_sim_update_dict
+        from the sim process. Here, a side note: the order of these two may feel
+        conceptually wrong; a new post_sim_update_dict should *already* be available,
+        so why should we first push a new GuiInput? Empirically, we get a much better
+        speedup doing things in this order. One explanation is that pushing/getting on
+        python multiprocess queues is actually quite slow (due to required
+        serialization), so somehow doing things in this order prevents a stall on the
+        sim process.
+    8. On the main process, the post_sim_update_dict is returned to GuiApplication
+        and eventually used for rendering in ReplayGuiAppRenderer. Meanwhile, on the
+        sim process, the next sim update is executing concurrently.
+    """
+
+    def __init__(self, args, config, gui_input):
+        # multiprocessing.dummy.Process is actually a thread and requires special logic
+        # to terminate it.
+        self._exit_event: Any = (
+            threading.Event() if multiprocessing_config.use_dummy else None
+        )
+
+        # This code is untested with dummy multiprocessing. I anticipate problems with
+        # using OpenGL on 2+ threads in the same process. We probably just can't
+        # support using MultiprocessDriverWrapper with dummy multiprocessing (which
+        # is fine; dummy multiprocessing is more for debugging).
+        assert not multiprocessing_config.use_dummy
+
+        self._interprocess_record = MyInterprocessRecord()
+
+        self._server_process = multiprocessing_config.Process(
+            target=self.sim_process_main,
+            args=(args, config, self._interprocess_record, self._exit_event),
+        )
+        self._server_process.start()
+
+        self._main_process_gui_input = gui_input
+
+        self._interprocess_record.sim_input_queue.put(
+            self._main_process_gui_input
+        )
+
+    @classmethod
+    def sim_process_main(cls, args, config, interprocess_record, exit_event):
+        pass
+
+        sim_gui_input = GuiInput()
+
+        # todo: figure out text-drawing and line-rendering. Unlike the single-threaded
+        # case, we can't directly share ReplayGuiAppRenderer's TextDrawer and
+        # DebugLineRenderer. For now, these dummy classes will allow SandboxDriver
+        # to run without error, but text and debug lines won't be rendered.
+        dummy_text_drawer = DummyClass()
+        dummy_line_renderer = DummyClass()
+        # todo: the user/caller of MultiprocessDriverWrapper should pass in a factory
+        # method or similar to construct their preferred GuiAppDriver.
+        # MultiprocessDriverWrapper and SandboxDriver shouldn't be tightly coupled.
+        wrapped_driver = SandboxDriver(
+            args,
+            config,
+            sim_gui_input,
+            dummy_text_drawer,
+            dummy_line_renderer,
+        )
+
+        while True:
+            if exit_event and exit_event.is_set():
+                break
+
+            latest_gui_input = interprocess_record.sim_input_queue.get(
+                block=True
+            )
+
+            sim_gui_input.shallow_copy_from(latest_gui_input)
+
+            sim_dt = 1 / 30.0  # todo: get correct sim_dt
+            post_sim_update_dict = wrapped_driver.sim_update(sim_dt)
+
+            # If you get a runtime error about "unable to pickle", it is probably
+            # a magnum object in the dict. See serialize_utils where we are manually
+            # adding pickle support to selected magnum types like Vector3.
+            interprocess_record.post_sim_update_dict_queue.put(
+                post_sim_update_dict
+            )
+
+    def sim_update(self, sim_dt):
+        # this is GuiInput for the next sim update; the current sim update should already be in progress
+        self._interprocess_record.sim_input_queue.put(
+            self._main_process_gui_input
+        )
+
+        post_sim_update_dict = (
+            self._interprocess_record.post_sim_update_dict_queue.get(
+                block=True
+            )
+        )
+
+        return post_sim_update_dict
+
+    # todo: call this correctly at shutdown. See also our calls to terminate_server_process
+    # for a reference for how to clean up a child process.
+    def close(self):
+        if multiprocessing_config.use_dummy:
+            assert self._exit_event
+            self._exit_event.set()
+            self._exit_event = None
+        else:
+            assert self._server_process
+            self._server_process.terminate()
+            self._server_process = None
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1001,13 +1171,22 @@ if __name__ == "__main__":
                 agent_index=args.gui_controlled_agent_index
             )
 
-    driver = SandboxDriver(
-        args,
-        config,
-        gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
-        app_renderer._text_drawer,
-    )
+    # todo: hook up to a command-line arg or config, and make multiprocessing the
+    # default (assuming we're happy with its robustness)
+    use_multiprocess_for_driver = True
+    driver: Any = None
+    if use_multiprocess_for_driver:
+        driver = MultiprocessDriverWrapper(
+            args, config, gui_app_wrapper.get_sim_input()
+        )
+    else:
+        driver = SandboxDriver(
+            args,
+            config,
+            gui_app_wrapper.get_sim_input(),
+            app_renderer._replay_renderer.debug_line_render(0),
+            app_renderer._text_drawer,
+        )
 
     # sanity check if there are no agents with camera sensors
     if (

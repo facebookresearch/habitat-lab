@@ -25,6 +25,19 @@ class GuiInput:
         self._mouse_scroll_offset = 0
         self._mouse_ray = None
 
+    def shallow_copy_from(self, other):
+        self._key_held = other._key_held
+        self._mouse_button_held = other._mouse_button_held
+        self._mouse_position = other._mouse_position
+
+        self._key_down = other._key_down
+        self._key_up = other._key_up
+        self._mouse_button_down = other._mouse_button_down
+        self._mouse_button_up = other._mouse_button_up
+        self._relative_mouse_position = other._relative_mouse_position
+        self._mouse_scroll_offset = other._mouse_scroll_offset
+        self._mouse_ray = other._mouse_ray
+
     def validate_key(key):
         assert isinstance(key, Application.KeyEvent.Key)
 
