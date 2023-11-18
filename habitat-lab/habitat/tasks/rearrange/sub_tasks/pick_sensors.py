@@ -145,7 +145,11 @@ class RearrangePickReward(RearrangeReward):
             base_to_object_distance = task.measurements.measures[
                 BaseToObjectDistance.cls_uuid
             ].get_metric()
-            if base_to_object_distance > self._config.too_far_away_dis:
+            if (
+                base_to_object_distance is not None
+                and base_to_object_distance[str(task.targ_idx)]
+                > self._config.too_far_away_dis
+            ):
                 self._task.should_end = True
                 self._metric -= self._config.too_far_away_pen
                 return
