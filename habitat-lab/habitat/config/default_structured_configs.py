@@ -852,6 +852,13 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class BaseToObjectDistanceMeasurementConfig(MeasurementConfig):
+    """L2 distance between the base and the object"""
+
+    type: str = "BaseToObjectDistance"
+
+
+@dataclass
 class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
     """
     Rearrangement only. Distance between current end effector position
@@ -1127,6 +1134,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property drop_obj_should_end: If true, the task will end if the robot drops the object.
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    :property too_far_away_dis: default: -1. If it is positive, then we terminate the episode if the robot distance to object is above this value.
+    :property too_far_away_pen: If the robot is too far away, then we terminate the episode by giving the penality.
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -1143,6 +1152,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    too_far_away_dis: float = -1.0
+    too_far_away_pen: float = 1.0
 
 
 @dataclass
@@ -2375,6 +2386,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_object_distance",
     node=EndEffectorToObjectDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.base_to_object_distance",
+    group="habitat/task/measurements",
+    name="base_to_object_distance",
+    node=BaseToObjectDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_rest_distance",

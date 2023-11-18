@@ -665,6 +665,44 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
 
 
 @registry.register_measure
+class BaseToObjectDistance(UsesArticulatedAgentInterface, Measure):
+    """
+    Gets the distance between the base and all current target object COMs.
+    """
+
+    cls_uuid: str = "base_to_object_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return BaseToObjectDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+        base_pos = np.array(
+            (
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )
+        )
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = np.array(scene_pos[idxs])
+        distances = np.linalg.norm(
+            target_pos[:, [0, 2]] - base_pos[[0, 2]], ord=2, axis=-1
+        )
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
+
+
+@registry.register_measure
 class EndEffectorToRestDistance(Measure):
     """
     Distance between current end effector position and position where end effector rests within the robot body.

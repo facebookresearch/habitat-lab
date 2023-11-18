@@ -8,6 +8,7 @@
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
+    BaseToObjectDistance,
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
@@ -138,6 +139,16 @@ class RearrangePickReward(RearrangeReward):
             self._prev_picked = cur_picked
             self.cur_dist = -1
             return
+
+        if self._config.too_far_away_dis != -1:
+            # Robot is too far away from the target
+            base_to_object_distance = task.measurements.measures[
+                BaseToObjectDistance.cls_uuid
+            ].get_metric()
+            if base_to_object_distance > self._config.too_far_away_dis:
+                self._task.should_end = True
+                self._metric -= self._config.too_far_away_pen
+                return
 
         self._prev_picked = cur_picked
 
