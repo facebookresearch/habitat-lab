@@ -1422,6 +1422,7 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    spawn_max_dist_to_obj_delta: float = 0.02
     # Factor to shrink the receptacle sampling volume when predicates place
     # objects on top of receptacles.
     recep_place_shrink_factor: float = 0.8
