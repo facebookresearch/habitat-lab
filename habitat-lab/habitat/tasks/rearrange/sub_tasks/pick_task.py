@@ -39,6 +39,9 @@ class RearrangePickTaskV1(RearrangeTask):
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts
         self._filter_colliding_states = self._config.filter_colliding_states
+        self._spawn_max_dist_to_obj_delta = (
+            self._config.spawn_max_dist_to_obj_delta
+        )
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -61,14 +64,20 @@ class RearrangePickTaskV1(RearrangeTask):
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
 
-        start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
-            targ_pos,
-            self._base_angle_noise,
-            self._spawn_max_dist_to_obj,
-            sim,
-            self._num_spawn_attempts,
-            self._filter_colliding_states,
-        )
+        was_fail = True
+        try_to_put_agent_i = 0
+
+        while was_fail and try_to_put_agent_i < self._num_spawn_attempts:
+            start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
+                targ_pos,
+                self._base_angle_noise,
+                self._spawn_max_dist_to_obj
+                + try_to_put_agent_i * self._spawn_max_dist_to_obj_delta,
+                sim,
+                self._num_spawn_attempts,
+                self._filter_colliding_states,
+            )
+            try_to_put_agent_i += 1
 
         if was_fail:
             rearrange_logger.error(
