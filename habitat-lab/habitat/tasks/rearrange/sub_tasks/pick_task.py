@@ -14,6 +14,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import (
     place_agent_at_dist_from_pos,
     rearrange_logger,
+    set_agent_base_via_obj_trans,
 )
 
 
@@ -117,8 +118,7 @@ class RearrangePickTaskV1(RearrangeTask):
         sel_idx = self._sample_idx(sim)
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        sim.articulated_agent.base_pos = start_pos
-        sim.articulated_agent.base_rot = start_rot
+        set_agent_base_via_obj_trans(start_pos, start_rot, sim)
 
         self._targ_idx = sel_idx
 

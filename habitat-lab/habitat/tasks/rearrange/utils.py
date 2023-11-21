@@ -542,6 +542,21 @@ def place_robot_at_closest_point_with_navmesh(
     return agent_pos, desired_angle, False
 
 
+def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, sim):
+    """Set the agent's base position and rotation via object transformation"""
+    trans = (
+        position
+        - sim.articulated_agent.sim_obj.transformation.transform_vector(
+            sim.articulated_agent.params.base_offset
+        )
+    )
+    quat = mn.Quaternion.rotation(
+        mn.Rad(rotation), mn.Vector3(0, 1, 0)
+    ).to_matrix()
+    target_trans = mn.Matrix4.from_(quat, trans)
+    sim.articulated_agent.sim_obj.transformation = target_trans
+
+
 def _get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
@@ -590,21 +605,22 @@ def _get_robot_spawns(
         if np.isnan(propose_position).any():
             continue
 
-        agent.base_pos = propose_position
-
         # get the horizontal distance (XZ planar projection) to the target position
-        hor_disp = agent.base_pos - target_position
+        hor_disp = propose_position - target_position
         hor_disp[1] = 0
-        target_distance = hor_disp.length()
+        target_distance = np.linalg.norm(hor_disp)
 
         if target_distance > distance_threshold:
             continue
 
         # Face the robot towards the object.
-        relative_target = target_position - agent.base_pos
+        relative_target = target_position - propose_position
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        agent.base_rot = angle_to_object + rotation_noise
+        angle_to_object += rotation_noise
+
+        # Set the agent position and rotation
+        set_agent_base_via_obj_trans(propose_position, angle_to_object, sim)
 
         is_feasible_state = True
         if filter_colliding_states:
@@ -621,12 +637,10 @@ def _get_robot_spawns(
             is_feasible_state = details.robot_scene_colls == 0
 
         if is_feasible_state:
-            propsed_pos = agent.base_pos
-            proposed_rot = agent.base_rot
             # found a feasbile state: reset state and return proposed stated
             agent.base_pos = start_position
             agent.base_rot = start_rotation
-            return propsed_pos, proposed_rot, False
+            return propose_position, angle_to_object, False
 
     # failure to sample a feasbile state: reset state and return initial conditions
     agent.base_pos = start_position
