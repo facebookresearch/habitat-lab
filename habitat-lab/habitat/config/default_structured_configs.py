@@ -54,6 +54,7 @@ __all__ = [
     "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
+    "SelectBaseOrArmActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
     "IsHoldingSensorConfig",
@@ -357,6 +358,14 @@ class OracleNavActionConfig(ActionConfig):
     # For social nav training only. It controls the distance threshold
     # between the robot and the human and decide if the human wants to walk or not
     human_stop_and_walk_to_robot_distance_threshold: float = -1.0
+
+
+@dataclass
+class SelectBaseOrArmActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
+    type: str = "SelectBaseOrArmAction"
 
 
 # -----------------------------------------------------------------------------
@@ -1985,6 +1994,12 @@ cs.store(
     group="habitat/task/actions",
     name="rearrange_stop",
     node=RearrangeStopActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.a_selection_of_base_or_arm",
+    group="habitat/task/actions",
+    name="a_selection_of_base_or_arm",
+    node=SelectBaseOrArmActionConfig,
 )
 cs.store(
     package="habitat.task.actions.answer",
