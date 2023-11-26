@@ -5,10 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import numpy as np
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
     BaseToObjectDistance,
+    EEPositionSensor,
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
@@ -152,6 +155,22 @@ class RearrangePickReward(RearrangeReward):
             ):
                 self._task.should_end = True
                 self._metric -= self._config.too_far_away_pen
+                return
+
+        if self._config.non_desire_ee_local_pos_dis != -1:
+            # Robot moves the arm to non-desire location
+            assert (
+                self._config.non_desire_ee_local_pos is not None
+            ), "Please provide non_desire_ee_local_pos given non_desire_ee_local_pos_dis is non-negative"
+            ee_local_pos = observations[EEPositionSensor.cls_uuid]
+            distance = np.linalg.norm(
+                np.array(ee_local_pos)
+                - np.array(self._config.non_desire_ee_local_pos)
+            )
+            if distance < self._config.non_desire_ee_local_pos_dis:
+                # The robot's EE is too closed to the non-desire ee pos
+                self._task.should_end = True
+                self._metric -= self._config.non_desire_ee_local_pos_pen
                 return
 
         self._prev_picked = cur_picked

@@ -1136,6 +1136,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
     :property too_far_away_dis: default: -1. If it is positive, then we terminate the episode if the robot distance to object is above this value.
     :property too_far_away_pen: If the robot is too far away, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos_dis: default: -1. If positive, we terminate the episode if the robot moves the arm below this threshold
+    :property non_desire_ee_local_pos_pen: If the robot moves the arm there, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos: If given, we do not want the robot to move the arm there
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -1154,6 +1157,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     count_coll_end_pen: float = 1.0
     too_far_away_dis: float = -1.0
     too_far_away_pen: float = 1.0
+    non_desire_ee_local_pos_dis: float = -1.0
+    non_desire_ee_local_pos_pen: float = 1.0
+    non_desire_ee_local_pos: Optional[List[float]] = None
 
 
 @dataclass
