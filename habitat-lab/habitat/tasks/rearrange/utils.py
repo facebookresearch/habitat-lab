@@ -542,19 +542,16 @@ def place_robot_at_closest_point_with_navmesh(
     return agent_pos, desired_angle, False
 
 
-def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, sim):
+def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, agent):
     """Set the agent's base position and rotation via object transformation"""
-    trans = (
-        position
-        - sim.articulated_agent.sim_obj.transformation.transform_vector(
-            sim.articulated_agent.params.base_offset
-        )
+    trans = position - agent.sim_obj.transformation.transform_vector(
+        agent.params.base_offset
     )
     quat = mn.Quaternion.rotation(
         mn.Rad(rotation), mn.Vector3(0, 1, 0)
     ).to_matrix()
     target_trans = mn.Matrix4.from_(quat, trans)
-    sim.articulated_agent.sim_obj.transformation = target_trans
+    agent.sim_obj.transformation = target_trans
 
 
 def _get_robot_spawns(
@@ -620,7 +617,7 @@ def _get_robot_spawns(
         angle_to_object += rotation_noise
 
         # Set the agent position and rotation
-        set_agent_base_via_obj_trans(propose_position, angle_to_object, sim)
+        set_agent_base_via_obj_trans(propose_position, angle_to_object, agent)
 
         is_feasible_state = True
         if filter_colliding_states:
