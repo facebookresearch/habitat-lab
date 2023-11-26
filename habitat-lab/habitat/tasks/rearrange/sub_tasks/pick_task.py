@@ -118,7 +118,9 @@ class RearrangePickTaskV1(RearrangeTask):
         sel_idx = self._sample_idx(sim)
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        set_agent_base_via_obj_trans(start_pos, start_rot, sim)
+        set_agent_base_via_obj_trans(
+            start_pos, start_rot, sim.articulated_agent
+        )
 
         self._targ_idx = sel_idx
 
