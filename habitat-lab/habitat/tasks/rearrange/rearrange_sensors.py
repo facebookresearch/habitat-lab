@@ -1146,33 +1146,11 @@ class CameraPoseSensor(Sensor):
 
     def get_observation(
         self,
-        observations,
         *args: Any,
-        task,
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
-        start_trans = np.eye(4)
-        start_pos = task._robot_start_position
-
-        # agent = self._sim.articulated_agent
-        # sim_obj = agent.sim_obj
-
-        # # let's use the bbox of wheel joints to determine the base position
-        # wheel_joint = agent.params.wheel_joints[0]
-        # wheel_node = sim_obj.get_link_scene_node(wheel_joint)
-        # wheel_joint_base = (
-        #     wheel_node.transformation[3][1] + wheel_node.cumulative_bb.min[1]
-        # )
-        start_pos[1] = 0  # wheel_joint_base
-        start_rot = quaternion.as_rotation_matrix(
-            quaternion_from_coeff(task._robot_start_rotation)
-        )
-        start_trans[:3, :3] = start_rot
-        start_trans[:3, 3] = start_pos
-        start_trans = mn.Matrix4(start_trans)
         return (
-            start_trans.inverted()
-            @ self._sim._sensors[
+            self._sim._sensors[
                 "head_depth"
             ]._sensor_object.node.absolute_transformation()
         )
