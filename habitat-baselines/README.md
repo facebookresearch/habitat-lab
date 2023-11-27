@@ -82,18 +82,18 @@ First download the necessary data with `python -m habitat_sim.utils.datasets_dow
 
 In the social navigation task, a robot is tasked with finding and following a human. The goal is to train a neural network policy that takes the input of (1) Spot's arm depth image, (2) the humanoid detector sensor, and (3) Spot's depth stereo cameras, and outputs the linear and angular velocities.
 
-# Observation
+### Observation
 The observation of the social nav policy is defined under `habitat.gym.obs_keys` with the prefix of `agent_0` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. In this yaml, `agent_0_articulated_agent_arm_depth` is the robot's arm depth camera, and `agent_0_humanoid_detector_sensor` is a humanoid detector that returns either a human's segmentation or bounding box given an arm RGB camera. For `humanoid_detector_sensor`, please see `HumanoidDetectorSensorConfig` in `habitat-lab/habitat/config/default_structured_configs.py` to learn more about how to configure the sensor (e.g., do you want the return to be bounding box or segmentation). Finally, `agent_0_spot_head_stereo_depth_sensor` is a Spot's body stereo depth image.
 
 Note that if you want to add more or use other observation sensors, you can do that by adding sensors into `habitat.gym.obs_keys`. For example, you can provide a humanoid GPS to a policy's input by adding `agent_0_nav_goal_sensor` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`. Notice that the observation key in `habitat.gym.obs_keys` must be a subset of sensors in `/habitat/task/lab_sensors`. Finally, another example would be adding an arm RGB sensor. You can do that by adding `agent_0_articulated_agent_arm_rgb` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`.
 
-# Action
+### Action
 The action space of the social nav policy is defined under `/habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. The action consists of linear and angular velocities. You can learn more about the hyperparameters for this action under `BaseVelocityNonCylinderActionConfig` in `habitat-lab/habitat/config/default_structured_configs.py`.
 
-# Reward
+### Reward
 The reward function of the social nav policy is defined in `social_nav_reward`. It encourages the robot to find the human as soon as possible while maintaining a safe distance from the human after finding a human. You can learn more about the hyperparameters for this reward function under `SocialNavReward` in `habitat-lab/habitat/config/default_structured_configs.py`.
 
-# Command
+### Command
 We provide a checkpoint. To reproduce this, run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets (please make sure the `tensorboard_dir`, `video_dir`, `checkpoint_folder`, `eval_ckpt_path_dir` are the paths you want):
 
 ```bash
@@ -214,7 +214,7 @@ Average episode social_nav_stats.yield_ratio: 0.0192
 Average episode num_agents_collide: 0.7020
 ```
 
-# Checkpoint
+### Checkpoint
 
 We release a [checkpoint](https://arxiv.org/abs/2106.14405) based on the above command.
 
