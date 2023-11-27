@@ -150,6 +150,9 @@ It is expected to observe the following reward training (learning) curve:
 we have the following training wall clock time versus reward:
 ![Social Nav Reward Trianing Curve versus Time](/res/img/habitat3_social_nav_training_reward_time.png)
 
+We have the following training FPS:
+![Social Nav Trianing FPS](/res/img/habitat3_social_nav_training_fps.png)
+
 For evaluating the trained Spot robot's policy based on 500 episodes, run (please make sure `video_dir` and `eval_ckpt_path_dir` are the paths you want and the checkpoint is there):
 
 ```bash
