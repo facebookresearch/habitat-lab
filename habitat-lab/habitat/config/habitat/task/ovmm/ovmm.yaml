@@ -55,6 +55,7 @@ defaults:
     - is_holding_sensor
     - ovmm_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
+    - all_object_segmentation_sensor
   - _self_
 
 type: OVMMNavToObjTask-v0
@@ -68,6 +69,7 @@ constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
 base_angle_noise: 0.2618 # 15 degrees
 receptacle_categories_file: data/objects/hssd-receptacles.csv
+object_categories_file: data/objects/object_categories.csv
 actions:
   arm_action:
     type: "ArmAction"
