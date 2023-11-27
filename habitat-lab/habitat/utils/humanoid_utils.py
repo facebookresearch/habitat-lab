@@ -206,7 +206,7 @@ if __name__ == "__main__":
     # trans: N x 3, specifying the root translation on each of the N poses
     # poses: N x (J*3 + 1) * 3: containing the root rotation, as well as the rotation for each
     # of the 21 joints
-    motion_file = "/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/data/mdm_data/back3_sample02_rep01.npz"  # motion_to_convert (npz)
+    motion_file = "data/humanoids/humanoid_data/walk_motion/CMU_10_04_stageii.npz"  # motion_to_convert (npz)
     files = glob.glob(motion_file)
     for in_path in files:
         convert_helper = MotionConverterSMPLX(
@@ -214,5 +214,5 @@ if __name__ == "__main__":
         )
         convert_helper.convert_motion_file(
             motion_path=in_path,
-            output_path=in_path.replace(".npz", "_new_file"),
+            output_path=in_path.replace(".npz", ""),
         )

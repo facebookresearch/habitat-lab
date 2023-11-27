@@ -10,7 +10,12 @@ import pickle as pkl
 
 import magnum as mn
 import numpy as np
-from humanoid_base_controller import HumanoidBaseController, Motion, Pose
+
+from habitat.articulated_agent_controllers import (
+    HumanoidBaseController,
+    Motion,
+    Pose,
+)
 
 MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
 TURNING_STEP_AMOUNT = (
@@ -37,7 +42,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         base_offset=(0, 0.9, 0),
     ):
         self.obj_transform_base = mn.Matrix4()
-        super.__init__(draw_fps, base_offset)
+        super().__init__(draw_fps, base_offset)
 
         self.min_angle_turn = MIN_ANGLE_TURN
         self.turning_step_amount = TURNING_STEP_AMOUNT
