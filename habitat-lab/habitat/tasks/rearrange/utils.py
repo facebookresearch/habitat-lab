@@ -751,3 +751,20 @@ def get_camera_object_angle(
     # look at
     obj_angle = angle_between(cam_obj_pos, center_cone_vector)
     return obj_angle
+
+
+def get_camera_lookat_relative_to_vertial_line(
+    agent,
+) -> float:
+    """Get the camera looking angles to a vertical line to the ground"""
+    # Get the camera transformation
+    cam_T = get_camera_transform(agent)
+    # Get the camera position
+    camera_pos = cam_T.translation
+    # Cast a ray from the camera location to the ground
+    vertical_dir = mn.Vector3(camera_pos[0], 0, camera_pos[2])
+    # A true vertical line to the ground
+    local_vertical_dir = mn.Vector3([0.0, 1.0, 0.0])
+    # Get angle between location and the vector
+    angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
+    return angle

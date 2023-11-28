@@ -18,7 +18,10 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    get_camera_lookat_relative_to_vertial_line,
+    rearrange_logger,
+)
 
 
 @registry.register_measure
@@ -171,6 +174,28 @@ class RearrangePickReward(RearrangeReward):
                 # The robot's EE is too closed to the non-desire ee pos
                 self._task.should_end = True
                 self._metric -= self._config.non_desire_ee_local_pos_pen
+                return
+
+        if self._config.camera_looking_down_angle != -1:
+            # Get angle
+            angle = get_camera_lookat_relative_to_vertial_line(
+                self._sim.articulated_agent
+            )
+            # Get the bbox keys
+            get_bbox_keys = [k for k in observations if "bbox" in k]
+            # Check if there is target obejct in frame
+            is_there_an_target_in_bbox = True
+            if len(get_bbox_keys) != 0:
+                is_there_an_target_in_bbox = (
+                    np.sum(observations[get_bbox_keys[0]]) > 0
+                )
+            if (
+                angle < self._config.camera_looking_down_angle
+                and not is_there_an_target_in_bbox
+            ):
+                # The robot is looking down too much when there is no object in the frame
+                self._task.should_end = True
+                self._metric -= self._config.camera_looking_down_pen
                 return
 
         self._prev_picked = cur_picked

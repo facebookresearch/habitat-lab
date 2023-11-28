@@ -1148,6 +1148,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property non_desire_ee_local_pos_dis: default: -1. If positive, we terminate the episode if the robot moves the arm below this threshold
     :property non_desire_ee_local_pos_pen: If the robot moves the arm there, then we terminate the episode by giving the penality.
     :property non_desire_ee_local_pos: If given, we do not want the robot to move the arm there
+    :property camera_looking_down_angle: default: -1. If positive, we check the robot camera looking angle to the ground
+    :property camera_looking_down_pen: If the robot camera looking angle is too small (the robot looks down), we terminate the episode and with this much penality
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -1169,6 +1171,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     non_desire_ee_local_pos_dis: float = -1.0
     non_desire_ee_local_pos_pen: float = 1.0
     non_desire_ee_local_pos: Optional[List[float]] = None
+    camera_looking_down_angle: float = -1.0
+    camera_looking_down_pen: float = 1.0
 
 
 @dataclass
