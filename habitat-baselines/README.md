@@ -91,10 +91,10 @@ Note that if you want to add more or use other observation sensors, you can do t
 The action space of the social nav policy is defined under `/habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. The action consists of linear and angular velocities. You can learn more about the hyperparameters for this action under `BaseVelocityNonCylinderActionConfig` in `habitat-lab/habitat/config/default_structured_configs.py`.
 
 ### Reward
-The reward function of the social nav policy is defined in `social_nav_reward`. It encourages the robot to find the human as soon as possible while maintaining a safe distance from the human after finding a human. You can learn more about the hyperparameters for this reward function under `SocialNavReward` in `habitat-lab/habitat/config/default_structured_configs.py`.
+The reward function of the social nav policy is defined in `social_nav_reward`. It encourages the robot to find the human as soon as possible while maintaining a safe distance from the human after finding the human. You can learn more about the hyperparameters for this reward function under `SocialNavReward` in `habitat-lab/habitat/config/default_structured_configs.py`.
 
 ### Command
-We provide a checkpoint. To reproduce this, run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets (please make sure the `tensorboard_dir`, `video_dir`, `checkpoint_folder`, `eval_ckpt_path_dir` are the paths you want):
+We have released a [checkpoint](https://huggingface.co/datasets/ai-habitat/hab3_episodes/tree/main/checkpoint) based on the below command. To reproduce this, run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets (please make sure the `tensorboard_dir`, `video_dir`, `checkpoint_folder`, `eval_ckpt_path_dir` are the paths you want):
 
 ```bash
 python -u -m habitat_baselines.run \
@@ -216,11 +216,6 @@ Average episode social_nav_stats.backup_ratio: 0.1889
 Average episode social_nav_stats.yield_ratio: 0.0192
 Average episode num_agents_collide: 0.7020
 ```
-
-### Checkpoint
-
-We have released a [checkpoint](https://huggingface.co/datasets/ai-habitat/hab3_episodes/tree/main/checkpoint) based on the above command.
-
 
 ## Social Rearrangement
 
