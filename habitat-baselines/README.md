@@ -139,7 +139,7 @@ python -u -m habitat_baselines.run \
 ```
 
 It is expected to observe the following reward training (learning) curve:
-![Social Nav Reward Trianing Curve](/res/img/habitat3_social_nav_training_reward.png) In addition, under the following slurm job batch script setting:
+![Social Nav Reward Training Curve](/res/img/habitat3_social_nav_training_reward.png) In addition, under the following slurm job batch script setting:
 ```bash
 #SBATCH --gres gpu:4
 #SBATCH --cpus-per-task 10
@@ -148,10 +148,10 @@ It is expected to observe the following reward training (learning) curve:
 #SBATCH --mem-per-cpu=6GB
 ```
 we have the following training wall clock time versus reward:
-![Social Nav Reward Trianing Curve versus Time](/res/img/habitat3_social_nav_training_reward_time.png)
+![Social Nav Reward Training Curve versus Time](/res/img/habitat3_social_nav_training_reward_time.png)
 
 We have the following training FPS:
-![Social Nav Trianing FPS](/res/img/habitat3_social_nav_training_fps.png)
+![Social Nav Training FPS](/res/img/habitat3_social_nav_training_fps.png)
 
 For evaluating the trained Spot robot's policy based on 500 episodes, run (please make sure `video_dir` and `eval_ckpt_path_dir` are the paths you want and the checkpoint is there):
 
@@ -165,7 +165,7 @@ python -u -m habitat_baselines.run \
     habitat_baselines.num_environments=12 \
     habitat_baselines.video_dir=video_social_nav \
     habitat_baselines.checkpoint_folder=checkpoints_social_nav \
-    habitat_baselines.eval_ckpt_path_dir=checkpoints_social_nav/latest.pth \
+    habitat_baselines.eval_ckpt_path_dir=checkpoints_social_nav/social_nav_latest.pth \
     habitat.task.actions.agent_0_base_velocity.longitudinal_lin_speed=10.0 \
     habitat.task.actions.agent_0_base_velocity.ang_speed=10.0 \
     habitat.task.actions.agent_0_base_velocity.allow_dyn_slide=True \
@@ -201,15 +201,15 @@ python -u -m habitat_baselines.run \
     habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor.width=1920
 ```
 
-It is expected to get the following numbers or something similar after running the evaluation:
+The evaluation is expected to produce values similar to those below:
 
 ```bash
 Average episode social_nav_reward: 1.8821
 Average episode social_nav_stats.has_found_human: 0.9020
 Average episode social_nav_stats.found_human_rate_after_encounter_over_epi: 0.6423
 Average episode social_nav_stats.found_human_rate_over_epi: 0.4275
-Average episode social_nav_stats.frist_ecnounter_steps: 376.0420
-Average episode social_nav_stats.follow_human_steps_after_frist_encounter: 398.6340
+Average episode social_nav_stats.first_encounter_steps: 376.0420
+Average episode social_nav_stats.follow_human_steps_after_first_encounter: 398.6340
 Average episode social_nav_stats.avg_robot_to_human_after_encounter_dis_over_epi: 1.4969
 Average episode social_nav_stats.avg_robot_to_human_dis_over_epi: 3.6885
 Average episode social_nav_stats.backup_ratio: 0.1889
@@ -219,7 +219,7 @@ Average episode num_agents_collide: 0.7020
 
 ### Checkpoint
 
-We release a [checkpoint](https://arxiv.org/abs/2106.14405) based on the above command.
+We have released a [checkpoint](https://huggingface.co/datasets/ai-habitat/hab3_episodes/tree/main/checkpoint) based on the above command.
 
 
 ## Social Rearrangement
