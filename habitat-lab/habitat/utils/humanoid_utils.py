@@ -11,7 +11,7 @@ import magnum as mn
 import numpy as np
 import pybullet as p
 
-joint_names = [
+smplx_body_joint_names = [
     "pelvis",
     "left_hip",
     "right_hip",
@@ -69,7 +69,7 @@ class MotionConverterSMPLX:
     def __init__(self, urdf_path):
         self.index_joint_map = {
             joint_name: index_joint
-            for index_joint, joint_name in enumerate(joint_names)
+            for index_joint, joint_name in enumerate(smplx_body_joint_names)
         }
         self.pc_id = p.connect(p.DIRECT)
         self.human_bullet_id = p.loadURDF(urdf_path)

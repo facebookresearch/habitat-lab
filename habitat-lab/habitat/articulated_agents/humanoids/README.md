@@ -55,6 +55,18 @@ The [SequentialPoseController](../../articulated_agent_controllers/seq_pose_cont
 python -m pytest test/test_humanoid.py:test_humanoid_seqpose_controller
 ```
 
-We also provide [a script]() to convert motion from a SMPL-X format to a file that can be played in our controller.
+We also provide [a script](../../../habitat/utils/humanoid_utils.py) to convert motion from a SMPL-X format to a file that can be played in our controller. You can run it as follows:
+
+```python
+PATH_TO_URDF = "data/humanoids/humanoid_data/female_2/female_2.urdf"
+PATH_TO_MOTION_NPZ = "data/humanoids/humanoid_data/walk_motion/CMU_10_04_stageii.npz"
+convert_helper = MotionConverterSMPLX(urdf_path=PATH_TO_URDF)
+convert_helper.convert_motion_file(
+    motion_path=PATH_TO_MOTION_NPZ,
+    output_path=PATH_TO_MOTION_NPZ.replace(".npz", ""),
+)
+```
+
+Where `PATH_TO_MOTION_NPZ` contains the motion in SMPL-X format (e.g. from AMASS or [Motion Diffusion Models](https://github.com/GuyTevet/motion-diffusion-model)), and the output file will be a `.pkl` that can be input to the SequentialPoseController.
 
 ## Creating new humanoids

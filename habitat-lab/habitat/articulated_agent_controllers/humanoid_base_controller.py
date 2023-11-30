@@ -49,17 +49,17 @@ class Motion:
 class HumanoidBaseController:
     """
     Generic class to replay SMPL-X motions
-        :param draw_fps: the FPS at which we should be advancing the pose.
+        :param motion_fps: the FPS at which we should be playing the motion.
         :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
         self,
-        draw_fps=30,
+        motion_fps=30,
         base_offset=(0, 0.9, 0),
     ):
         self.base_offset = mn.Vector3(base_offset)
-        self.draw_fps = draw_fps
+        self.motion_fps = motion_fps
 
         # These two matrices store the global transformation of the base
         # as well as the transformation caused by the walking gait

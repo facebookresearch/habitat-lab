@@ -31,18 +31,18 @@ class HumanoidRearrangeController(HumanoidBaseController):
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions
         :param walk_pose_path: file containing the walking poses we care about.
-        :param draw_fps: the FPS at which we should be advancing the pose.
+        :param motion_fps: the FPS at which we should be advancing the pose.
         :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
         self,
         walk_pose_path,
-        draw_fps=30,
+        motion_fps=30,
         base_offset=(0, 0.9, 0),
     ):
         self.obj_transform_base = mn.Matrix4()
-        super().__init__(draw_fps, base_offset)
+        super().__init__(motion_fps, base_offset)
 
         self.min_angle_turn = MIN_ANGLE_TURN
         self.turning_step_amount = TURNING_STEP_AMOUNT
@@ -68,7 +68,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
             walk_data["stop_pose"]["joints"].reshape(-1),
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
-        self.draw_fps = draw_fps
+        self.motion_fps = motion_fps
         self.dist_per_step_size = (
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
@@ -110,7 +110,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         seconds_per_step = 1.0 / ctrl_freq
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
-        self.draw_fps = self.walk_motion.fps / frames_per_step
+        self.motion_fps = self.walk_motion.fps / frames_per_step
         rotate_amount = ang_speed * seconds_per_step
         rotate_amount = rotate_amount * 180.0 / np.pi
         self.turning_step_amount = rotate_amount
@@ -181,7 +181,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.prev_orientation = forward_V
 
         # Step size according to the FPS
-        step_size = int(self.walk_motion.fps / self.draw_fps)
+        step_size = int(self.walk_motion.fps / self.motion_fps)
 
         if did_rotate:
             # When we rotate, we allow some movement

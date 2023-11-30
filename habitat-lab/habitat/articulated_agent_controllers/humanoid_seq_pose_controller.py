@@ -18,25 +18,25 @@ from habitat.articulated_agent_controllers import (
 class HumanoidSeqPoseController(HumanoidBaseController):
     """
     Humanoid Seq Pose Controller, replays a sequence of humanoid poses.
-        :param walk_pose_path: file containing the walking poses we care about.
-        :param draw_fps: the FPS at which we should be advancing the pose.
+        :param motion_pose_path: file containing the motion poses we want to play.
+        :param motion_fps: the FPS at which we should be advancing the pose.
         :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
         self,
-        walk_pose_path="/Users/xavierpuig/Desktop/sample03_rep02.npz",
-        draw_fps=30,
+        motion_pose_path,
+        motion_fps=30,
         base_offset=(0, 0.9, 0),
     ):
-        super().__init__(draw_fps, base_offset)
+        super().__init__(motion_fps, base_offset)
 
-        if not os.path.isfile(walk_pose_path):
+        if not os.path.isfile(motion_pose_path):
             raise RuntimeError(
-                f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data."
+                f"Path does {motion_pose_path} not exist. Reach out to the paper authors to obtain this data."
             )
 
-        motion_info = np.load(walk_pose_path, allow_pickle=True)
+        motion_info = np.load(motion_pose_path, allow_pickle=True)
         motion_info = motion_info["pose_motion"]
         self.humanoid_motion = Motion(
             motion_info["joints_array"],

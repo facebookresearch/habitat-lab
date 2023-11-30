@@ -160,7 +160,7 @@ def test_humanoid_controller(humanoid_name):
     """Test the humanoid controller"""
 
     # loading the physical scene
-    produce_debug_video = True
+    produce_debug_video = False
     num_steps = 100
     cfg_settings = default_sim_settings.copy()
     cfg_settings["scene"] = "NONE"
@@ -328,7 +328,7 @@ def test_humanoid_seqpose_controller(humanoid_name):
     """Test the humanoid controller"""
 
     # loading the physical scene
-    produce_debug_video = True
+    produce_debug_video = False
     num_steps = 1000
     cfg_settings = default_sim_settings.copy()
     cfg_settings["scene"] = "NONE"
