@@ -90,15 +90,14 @@ class MotionConverterSMPLX:
         Converts a single pose from SMPL-X format to Habitat format. The input pose assumes that
         character faces +X and Z is up.
         The output pose is converted so that the character faces -Z and +Y is up.
-        Args:
-            root_translation: The global pose translation, measured as the position of the pelvis
-            root_orientation: The global root orientation in axis-angle format
-            pose_joints: Array of num_joints * 3 elements where pose_joints[i*3:(i+1)*3] contains the rotation of the
+            :param root_translation: The global pose translation, measured as the position of the pelvis
+            :param root_orientation: The global root orientation in axis-angle format
+            :param pose_joints: Array of num_joints * 3 elements where pose_joints[i*3:(i+1)*3] contains the rotation of the
                          ith joint, in axis-angle format.
-        Returns:
-            root_translation:
-            root_rotation:
-            new_pose:
+
+            :return: root_translation
+            :return: root_rotation
+            :return: new_pose
         """
 
         axis_angle_root_rotation_vec = mn.Vector3(root_orientation)
@@ -161,6 +160,8 @@ class MotionConverterSMPLX:
         """
         Convert a npz file containing a SMPL-X motion into a file of rotations
         that can be played in Habitat
+            :param motion_path: path to the npz file containing a SMPL-X motion.
+            :param output_path: output path where to save the pkl file with the converted motion
         """
         content_motion = np.load(motion_path, allow_pickle=True)
 

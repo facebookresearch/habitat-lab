@@ -50,7 +50,7 @@ class HumanoidBaseController:
     """
     Generic class to replay SMPL-X motions
         :param motion_fps: the FPS at which we should be playing the motion.
-        :base_offset: what is the offset between the root of the character and their feet.
+        :param base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(

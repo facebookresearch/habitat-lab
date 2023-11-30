@@ -20,7 +20,7 @@ class HumanoidSeqPoseController(HumanoidBaseController):
     Humanoid Seq Pose Controller, replays a sequence of humanoid poses.
         :param motion_pose_path: file containing the motion poses we want to play.
         :param motion_fps: the FPS at which we should be advancing the pose.
-        :base_offset: what is the offset between the root of the character and their feet.
+        :param base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
@@ -44,43 +44,58 @@ class HumanoidSeqPoseController(HumanoidBaseController):
             motion_info["displacement"],
             motion_info["fps"],
         )
-        self.walk_mocap_frame = 0
+        self.motion_frame = 0
         self.ref_pose = mn.Matrix4()
         self.first_pose = mn.Matrix4(
             self.humanoid_motion.poses[0].root_transform
         )
+        self.step_size = int(self.humanoid_motion.fps / self.motion_fps)
 
-    def reset(self, base_transformation) -> None:
+    def reset(self, base_transformation: mn.Matrix4) -> None:
         """Reset the joints on the human. (Put in rest state)"""
         super().reset(base_transformation)
-        self.walk_mocap_frame = 0
+        self.motion_frame = 0
 
         # The first pose of the motion file will be set at base_transformation
         self.ref_pose = base_transformation
 
-        self.calculate_pose_mdm()
+        self.calculate_pose()
 
-    def next_pose(self, cycle=False):
+    def next_pose(self, cycle=False) -> None:
+        """
+        Move to the next pose in the motion sequence
+            :param cycle: boolean indicating whether we should stop or cycle when reaching the last pose
+        """
+
         if cycle:
-            self.walk_mocap_frame = (
-                self.walk_mocap_frame + 1
+            self.motion_frame = (
+                self.motion_frame + self.step_size
             ) % self.humanoid_motion.num_poses
         else:
-            self.walk_mocap_frame = min(
-                self.walk_mocap_frame + 1, self.humanoid_motion.num_poses - 1
+            self.motion_frame = min(
+                self.motion_frame + 1, self.humanoid_motion.num_poses - 1
             )
 
-    def prev_pose(self, cycle=False):
+    def prev_pose(self, cycle=False) -> None:
+        """
+        Move to the previous pose in the motion sequence
+            :param cycle: boolean indicating whether we should stop or cycle when reaching the first pose
+        """
+
         if cycle:
-            self.walk_mocap_frame = (
-                self.walk_mocap_frame - 1
+            self.motion_frame = (
+                self.motion_frame - self.step_size
             ) % self.humanoid_motion.num_poses
         else:
-            self.walk_mocap_frame = max(0, self.walk_mocap_frame - 1)
+            self.motion_frame = max(0, self.motion_frame - 1)
 
-    def calculate_pose_mdm(self):
+    def calculate_pose(self, advance_pose=False) -> None:
+        """
+        Set the joint transforms according to the current frame
+            :param advance_pose: whether this function should move to the next pose
+        """
         curr_transform = mn.Matrix4(
-            self.humanoid_motion.poses[self.walk_mocap_frame].root_transform
+            self.humanoid_motion.poses[self.motion_frame].root_transform
         )
         curr_transform.translation = (
             curr_transform.translation
@@ -90,9 +105,9 @@ class HumanoidSeqPoseController(HumanoidBaseController):
         curr_transform.translation = curr_transform.translation - mn.Vector3(
             0, 0.9, 0
         )
-        curr_poses = self.humanoid_motion.poses[self.walk_mocap_frame].joints
+        curr_poses = self.humanoid_motion.poses[self.motion_frame].joints
         self.obj_transform_offset = curr_transform
         self.joint_pose = curr_poses
-        self.walk_mocap_frame = (
-            self.walk_mocap_frame + self.humanoid_motion.fps
-        ) % self.humanoid_motion.num_poses
+
+        if advance_pose:
+            self.next_pose()

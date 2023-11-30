@@ -402,7 +402,7 @@ def test_humanoid_seqpose_controller(humanoid_name):
         step_count = 0
         humanoid_controller.reset(base_trans)
         while step_count < num_steps:
-            humanoid_controller.calculate_pose_mdm()
+            humanoid_controller.calculate_pose()
             humanoid_controller.next_pose(cycle=True)
             new_pose = humanoid_controller.get_pose()
 
