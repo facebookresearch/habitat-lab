@@ -9,6 +9,9 @@ import magnum as mn
 import numpy as np
 
 
+# TODO: The implementation here assumes a SMPLX representation of humanoids
+# where all joints are representated as quaternions. In future PRs we need
+# to abstract this class to support other kinds of joints.
 class Pose:
     def __init__(self, joints_quat, root_transform):
         """
