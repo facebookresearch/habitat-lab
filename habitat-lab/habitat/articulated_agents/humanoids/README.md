@@ -44,7 +44,7 @@ The [HumanoidRearrangeController](../../articulated_agent_controllers/humanoid_r
 ```
 python -m pytest test/test_humanoid.py:test_humanoid_controller
 ```
-Which will generate a sequence of a human walking in an empty plane.
+This will generate an animation of a human walking on an empty plane.
 
 ### SequentialPoseController
 
