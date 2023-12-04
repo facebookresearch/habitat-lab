@@ -48,7 +48,7 @@ This will generate an animation of a human walking on an empty plane.
 
 ### SequentialPoseController
 
-The [SequentialPoseController](../../articulated_agent_controllers/seq_pose_controller.py), designed to replay a pre-saved motion data file either coming from motion capture or a motion generation model. You can test the controller by running:
+The [SequentialPoseController](../../articulated_agent_controllers/seq_pose_controller.py), designed to replay a pre-computed motion data file feed-forward. For example, such motions could originate from motion capture, an animation system, or a motion generation model. You can test the controller by running:
 
 
 ```
