@@ -68,5 +68,3 @@ convert_helper.convert_motion_file(
 ```
 
 Where `PATH_TO_MOTION_NPZ` contains the motion in SMPL-X format (e.g. from AMASS or [Motion Diffusion Models](https://github.com/GuyTevet/motion-diffusion-model)), and the output file will be a `.pkl` that can be input to the SequentialPoseController.
-
-## Creating new humanoids
