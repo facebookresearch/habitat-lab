@@ -39,7 +39,7 @@ While you can control the humanoid avatars by directly setting joint rotations, 
 
 ### HumanoidRearrangeController
 
-The [HumanoidRearrangeController](../../articulated_agent_controllers/humanoid_rearrange_controller.py) controller, designed to drive the humanoid to navigate around a scene, or pick and place objects. This controller is used for the Social Navigation and Social Rearrangement tasks. It allows to generate walking motions, that drive the agent to a particular object position, and reaching motions, which change the agent pose so that the right or left hand reach a specific coordinate. You can test the controller by running:
+The [HumanoidRearrangeController](../../articulated_agent_controllers/humanoid_rearrange_controller.py) controller, designed to drive the humanoid to navigate around a scene, or pick and place objects. This controller is used for the Social Navigation and Social Rearrangement tasks. It allows generation of walk cycle animations, that drive the agent to particular object positions, and reaching motions, which change the agent pose so that the right or left hand reaches a specific realtive position. You can test the controller by running:
 
 ```
 python -m pytest test/test_humanoid.py:test_humanoid_controller
@@ -48,7 +48,7 @@ This will generate an animation of a human walking on an empty plane.
 
 ### SequentialPoseController
 
-The [SequentialPoseController](../../articulated_agent_controllers/seq_pose_controller.py), designed to replay a pre-saved motion data file either coming from motion capture or a motion generation model. You can test the controller by running:
+The [SequentialPoseController](../../articulated_agent_controllers/seq_pose_controller.py), designed to replay a pre-computed motion data file feed-forward. For example, such motions could originate from motion capture, an animation system, or a motion generation model. You can test the controller by running:
 
 
 ```
