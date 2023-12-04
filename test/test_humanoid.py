@@ -15,7 +15,10 @@ from omegaconf import DictConfig
 import habitat.articulated_agents.humanoids.kinematic_humanoid as kinematic_humanoid
 import habitat_sim
 import habitat_sim.agent
-from habitat.articulated_agent_controllers import HumanoidRearrangeController
+from habitat.articulated_agent_controllers import (
+    HumanoidRearrangeController,
+    HumanoidSeqPoseController,
+)
 
 default_sim_settings = {
     # settings shared by example.py and benchmark.py
@@ -315,3 +318,126 @@ def test_gym_humanoid():
     hab_gym.step(hab_gym.action_space.sample())
     hab_gym.render("rgb_array")
     hab_gym.close()
+
+
+@pytest.mark.parametrize(
+    "humanoid_name",
+    ["female_2"],
+)
+def test_humanoid_seqpose_controller(humanoid_name):
+    """Test the humanoid controller"""
+
+    # loading the physical scene
+    produce_debug_video = False
+    num_steps = 1000
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["enable_physics"] = True
+
+    observations = []
+    hab_cfg = make_cfg(cfg_settings)
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        obj_template_mgr = sim.get_object_template_manager()
+        rigid_obj_mgr = sim.get_rigid_object_manager()
+
+        # setup the camera for debug video (looking at 0,0,0)
+        sim.agents[0].scene_node.translation = [0.0, 0.0, 2.0]
+
+        # add a ground plane
+        cube_handle = obj_template_mgr.get_template_handles("cubeSolid")[0]
+        cube_template_cpy = obj_template_mgr.get_template_by_handle(
+            cube_handle
+        )
+        cube_template_cpy.scale = np.array([5.0, 0.2, 5.0])
+        obj_template_mgr.register_template(cube_template_cpy)
+        ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
+        ground_plane.translation = [0.0, -0.2, 0.0]
+        ground_plane.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        # compute a navmesh on the ground plane
+        navmesh_settings = habitat_sim.NavMeshSettings()
+        navmesh_settings.set_defaults()
+        navmesh_settings.include_static_objects = True
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.navmesh_visualization = True
+
+        # add the humanoid to the world via the wrapper
+        humanoid_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}.urdf"
+        walk_pose_path = f"data/humanoids/humanoid_data/{humanoid_name}/{humanoid_name}_motion_data_smplx.pkl"
+
+        agent_config = DictConfig(
+            {
+                "articulated_agent_urdf": humanoid_path,
+                "motion_data_path": walk_pose_path,
+            }
+        )
+        if not osp.exists(humanoid_path):
+            pytest.skip(f"No humanoid file {humanoid_path}")
+        kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
+        kin_humanoid.reconfigure()
+        kin_humanoid.update()
+        assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
+
+        # set base ground position from navmesh
+        # NOTE: because the navmesh floats above the collision geometry we should see a pop/settle with dynamics and no fixed base
+        target_base_pos = sim.pathfinder.snap_point(
+            kin_humanoid.sim_obj.translation
+        )
+        kin_humanoid.base_pos = target_base_pos
+        assert kin_humanoid.base_pos == target_base_pos
+        observations += simulate(sim, 0.01, produce_debug_video)
+
+        # Test controller
+        motion_path = (
+            "data/humanoids/humanoid_data/walk_motion/CMU_10_04_stageii.pkl"
+        )
+
+        if not osp.exists(motion_path):
+            pytest.skip(
+                f"No motion file {motion_path}. You can create this file by using humanoid_utils.py"
+            )
+        humanoid_controller = HumanoidSeqPoseController(motion_path)
+
+        base_trans = kin_humanoid.base_transformation
+        step_count = 0
+        humanoid_controller.reset(base_trans)
+        while step_count < num_steps:
+            humanoid_controller.calculate_pose()
+            humanoid_controller.next_pose(cycle=True)
+            new_pose = humanoid_controller.get_pose()
+
+            new_joints = new_pose[:-16]
+            new_pos_transform_base = new_pose[-16:]
+            new_pos_transform_offset = new_pose[-32:-16]
+
+            # When the array is all 0, this indicates we are not setting
+            # the human joint
+            if np.array(new_pos_transform_offset).sum() != 0:
+                vecs_base = [
+                    mn.Vector4(new_pos_transform_base[i * 4 : (i + 1) * 4])
+                    for i in range(4)
+                ]
+                vecs_offset = [
+                    mn.Vector4(new_pos_transform_offset[i * 4 : (i + 1) * 4])
+                    for i in range(4)
+                ]
+                new_transform_offset = mn.Matrix4(*vecs_offset)
+                new_transform_base = mn.Matrix4(*vecs_base)
+                kin_humanoid.set_joint_transform(
+                    new_joints, new_transform_offset, new_transform_base
+                )
+                observations += simulate(sim, 0.0001, produce_debug_video)
+
+            step_count += 1
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_humanoid_wrapper",
+                open_vid=True,
+            )

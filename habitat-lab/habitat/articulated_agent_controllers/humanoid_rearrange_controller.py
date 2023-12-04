@@ -11,43 +11,11 @@ import pickle as pkl
 import magnum as mn
 import numpy as np
 
-
-class Pose:
-    def __init__(self, joints_quat, root_transform):
-        """
-        Contains a single humanoid pose
-            :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
-            :param root_transform: Matrix4 with the root trasnform.
-        """
-        self.joints = list(joints_quat)
-        self.root_transform = root_transform
-
-
-class Motion:
-    """
-    Contains a sequential motion, corresponding to a sequence of poses
-        :param joints_quat_array: num_poses x num_joints x 4 array, containing the join orientations
-        :param transform_array: num_poses x 4 x 4 array, containing the root transform
-        :param displacement: on each pose, how much forward displacement was there?
-            Used to measure how many poses we should advance to move a cerain amount
-        :param fps: the FPS at which the motion was recorded
-    """
-
-    def __init__(self, joints_quat_array, transform_array, displacement, fps):
-        num_poses = joints_quat_array.shape[0]
-        self.num_poses = num_poses
-        poses = []
-        for index in range(num_poses):
-            pose = Pose(
-                joints_quat_array[index].reshape(-1),
-                mn.Matrix4(transform_array[index]),
-            )
-            poses.append(pose)
-
-        self.poses = poses
-        self.fps = fps
-        self.displacement = displacement
-
+from habitat.articulated_agent_controllers import (
+    HumanoidBaseController,
+    Motion,
+    Pose,
+)
 
 MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
 TURNING_STEP_AMOUNT = (
@@ -59,24 +27,26 @@ DIST_TO_STOP = (
 )
 
 
-class HumanoidRearrangeController:
+class HumanoidRearrangeController(HumanoidBaseController):
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions
         :param walk_pose_path: file containing the walking poses we care about.
-        :param draw_fps: the FPS at which we should be advancing the pose.
+        :param motion_fps: the FPS at which we should be advancing the pose.
         :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
         self,
         walk_pose_path,
-        draw_fps=30,
+        motion_fps=30,
         base_offset=(0, 0.9, 0),
     ):
+        self.obj_transform_base = mn.Matrix4()
+        super().__init__(motion_fps, base_offset)
+
         self.min_angle_turn = MIN_ANGLE_TURN
         self.turning_step_amount = TURNING_STEP_AMOUNT
         self.threshold_rotate_not_move = THRESHOLD_ROTATE_NOT_MOVE
-        self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
             raise RuntimeError(
@@ -98,17 +68,10 @@ class HumanoidRearrangeController:
             walk_data["stop_pose"]["joints"].reshape(-1),
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
-        self.draw_fps = draw_fps
+        self.motion_fps = motion_fps
         self.dist_per_step_size = (
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
-
-        # These two matrices store the global transformation of the base
-        # as well as the transformation caused by the walking gait
-        # We initialize them to identity
-        self.obj_transform_offset = mn.Matrix4()
-        self.obj_transform_base = mn.Matrix4()
-        self.joint_pose = []
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
@@ -147,19 +110,11 @@ class HumanoidRearrangeController:
         seconds_per_step = 1.0 / ctrl_freq
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
-        self.draw_fps = self.walk_motion.fps / frames_per_step
+        self.motion_fps = self.walk_motion.fps / frames_per_step
         rotate_amount = ang_speed * seconds_per_step
         rotate_amount = rotate_amount * 180.0 / np.pi
         self.turning_step_amount = rotate_amount
         self.threshold_rotate_not_move = rotate_amount
-
-    def reset(self, base_transformation) -> None:
-        """Reset the joints on the human. (Put in rest state)"""
-        self.obj_transform_offset = mn.Matrix4()
-        self.obj_transform_base = base_transformation
-        self.prev_orientation = base_transformation.transform_vector(
-            mn.Vector3(1.0, 0.0, 0.0)
-        )
 
     def calculate_stop_pose(self):
         """
@@ -226,7 +181,7 @@ class HumanoidRearrangeController:
         self.prev_orientation = forward_V
 
         # Step size according to the FPS
-        step_size = int(self.walk_motion.fps / self.draw_fps)
+        step_size = int(self.walk_motion.fps / self.motion_fps)
 
         if did_rotate:
             # When we rotate, we allow some movement
@@ -493,16 +448,3 @@ class HumanoidRearrangeController:
         )
 
         self.joint_pose = curr_poses
-
-    def get_pose(self):
-        """
-        Obtains the controller joints, offset and base transform in a vectorized form so that it can be passed
-        as an argument to HumanoidJointAction
-        """
-        obj_trans_offset = np.asarray(
-            self.obj_transform_offset.transposed()
-        ).flatten()
-        obj_trans_base = np.asarray(
-            self.obj_transform_base.transposed()
-        ).flatten()
-        return self.joint_pose + list(obj_trans_offset) + list(obj_trans_base)
