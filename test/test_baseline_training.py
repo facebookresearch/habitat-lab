@@ -93,14 +93,6 @@ def setup_function(test_trainers):
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange/skills=pick_spot",
-            ],
-        ),
-        (
-            "rearrange/rl_skill.yaml",
-            3,
-            [
-                "habitat.dataset.split=minival",
                 "benchmark/rearrange/skills=nav_to_obj",
             ],
         ),
