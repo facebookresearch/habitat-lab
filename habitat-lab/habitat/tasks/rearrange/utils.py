@@ -542,6 +542,18 @@ def place_robot_at_closest_point_with_navmesh(
     return agent_pos, desired_angle, False
 
 
+def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, agent):
+    """Set the agent's base position and rotation via object transformation"""
+    position = position - agent.sim_obj.transformation.transform_vector(
+        agent.params.base_offset
+    )
+    quat = mn.Quaternion.rotation(
+        mn.Rad(rotation), mn.Vector3(0, 1, 0)
+    ).to_matrix()
+    target_trans = mn.Matrix4.from_(quat, position)
+    agent.sim_obj.transformation = target_trans
+
+
 def _get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
@@ -579,32 +591,37 @@ def _get_robot_spawns(
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         # Place within `distance_threshold` of the object.
-        propose_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position,
-            distance_threshold,
-            island_index=sim.largest_island_idx,
+        candidate_navmesh_position = (
+            sim.pathfinder.get_random_navigable_point_near(
+                target_position,
+                distance_threshold,
+                island_index=sim.largest_island_idx,
+            )
         )
         # get_random_navigable_point_near() can return NaNs for start_position.
         # If we assign nan position into agent.base_pos, we cannot revert it back
         # We want to make sure that the generated start_position is valid
-        if np.isnan(propose_position).any():
+        if np.isnan(candidate_navmesh_position).any():
             continue
 
-        agent.base_pos = propose_position
-
         # get the horizontal distance (XZ planar projection) to the target position
-        hor_disp = agent.base_pos - target_position
+        hor_disp = candidate_navmesh_position - target_position
         hor_disp[1] = 0
-        target_distance = hor_disp.length()
+        target_distance = np.linalg.norm(hor_disp)
 
         if target_distance > distance_threshold:
             continue
 
         # Face the robot towards the object.
-        relative_target = target_position - agent.base_pos
+        relative_target = target_position - candidate_navmesh_position
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        agent.base_rot = angle_to_object + rotation_noise
+        angle_to_object += rotation_noise
+
+        # Set the agent position and rotation
+        set_agent_base_via_obj_trans(
+            candidate_navmesh_position, angle_to_object, agent
+        )
 
         is_feasible_state = True
         if filter_colliding_states:
@@ -621,12 +638,10 @@ def _get_robot_spawns(
             is_feasible_state = details.robot_scene_colls == 0
 
         if is_feasible_state:
-            propsed_pos = agent.base_pos
-            proposed_rot = agent.base_rot
             # found a feasbile state: reset state and return proposed stated
             agent.base_pos = start_position
             agent.base_rot = start_rotation
-            return propsed_pos, proposed_rot, False
+            return candidate_navmesh_position, angle_to_object, False
 
     # failure to sample a feasbile state: reset state and return initial conditions
     agent.base_pos = start_position
@@ -740,3 +755,20 @@ def get_camera_object_angle(
     # look at
     obj_angle = angle_between(cam_obj_pos, center_cone_vector)
     return obj_angle
+
+
+def get_camera_lookat_relative_to_vertial_line(
+    agent,
+) -> float:
+    """Get the camera looking angles to a vertical line to the ground"""
+    # Get the camera transformation
+    cam_T = get_camera_transform(agent)
+    # Get the camera position
+    camera_pos = cam_T.translation
+    # Cast a ray from the camera location to the ground
+    vertical_dir = mn.Vector3(camera_pos[0], 0, camera_pos[2])
+    # A true vertical line to the ground
+    local_vertical_dir = mn.Vector3([0.0, 1.0, 0.0])
+    # Get angle between location and the vector
+    angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
+    return angle

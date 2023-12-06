@@ -54,6 +54,7 @@ __all__ = [
     "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
+    "SelectBaseOrArmActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
     "IsHoldingSensorConfig",
@@ -357,6 +358,14 @@ class OracleNavActionConfig(ActionConfig):
     # For social nav training only. It controls the distance threshold
     # between the robot and the human and decide if the human wants to walk or not
     human_stop_and_walk_to_robot_distance_threshold: float = -1.0
+
+
+@dataclass
+class SelectBaseOrArmActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
+    type: str = "SelectBaseOrArmAction"
 
 
 # -----------------------------------------------------------------------------
@@ -852,6 +861,13 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class BaseToObjectDistanceMeasurementConfig(MeasurementConfig):
+    """L2 distance between the base and the object"""
+
+    type: str = "BaseToObjectDistance"
+
+
+@dataclass
 class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
     """
     Rearrangement only. Distance between current end effector position
@@ -1127,6 +1143,13 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property drop_obj_should_end: If true, the task will end if the robot drops the object.
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    :property max_target_distance: default: -1. If it is positive, then we terminate the episode if the robot distance to object is above this value.
+    :property max_target_distance_pen: If the robot is too far away, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos_dis: default: -1. If positive, we terminate the episode if the robot moves the arm below this threshold
+    :property non_desire_ee_local_pos_pen: If the robot moves the arm there, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos: If given, we do not want the robot to move the arm there
+    :property camera_looking_down_angle: default: -1. If positive, we check the robot camera looking angle to the ground
+    :property camera_looking_down_pen: If the robot camera looking angle is too small (the robot looks down), we terminate the episode and with this much penality
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -1143,6 +1166,13 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    max_target_distance: float = -1.0
+    max_target_distance_pen: float = 1.0
+    non_desire_ee_local_pos_dis: float = -1.0
+    non_desire_ee_local_pos_pen: float = 1.0
+    non_desire_ee_local_pos: Optional[List[float]] = None
+    camera_looking_down_angle: float = -1.0
+    camera_looking_down_pen: float = 1.0
 
 
 @dataclass
@@ -1411,6 +1441,7 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    spawn_max_dist_to_obj_delta: float = 0.02
     # Factor to shrink the receptacle sampling volume when predicates place
     # objects on top of receptacles.
     recep_place_shrink_factor: float = 0.8
@@ -1969,6 +2000,12 @@ cs.store(
     node=RearrangeStopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.a_selection_of_base_or_arm",
+    group="habitat/task/actions",
+    name="a_selection_of_base_or_arm",
+    node=SelectBaseOrArmActionConfig,
+)
+cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",
@@ -2375,6 +2412,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_object_distance",
     node=EndEffectorToObjectDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.base_to_object_distance",
+    group="habitat/task/measurements",
+    name="base_to_object_distance",
+    node=BaseToObjectDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_rest_distance",

@@ -1,6 +1,8 @@
 # @package _global_
 defaults:
   - pick
+  - /habitat/task/measurements:
+    - base_to_object_distance
   - /habitat/task/lab_sensors:
     - arm_depth_bbox_sensor
     - spot_head_stereo_depth_sensor

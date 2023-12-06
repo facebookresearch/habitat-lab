@@ -16,6 +16,7 @@ import habitat.articulated_agents.robots.spot_robot as spot_robot
 import habitat.articulated_agents.robots.stretch_robot as stretch_robot
 import habitat_sim
 import habitat_sim.agent
+from habitat.tasks.rearrange.utils import set_agent_base_via_obj_trans
 
 default_sim_settings = {
     # settings shared by example.py and benchmark.py
@@ -350,6 +351,16 @@ def test_fetch_robot_wrapper(fixed_base):
         fetch.arm_motor_pos = np.zeros(len(fetch.params.arm_joints))
         observations += simulate(sim, 1.0, produce_debug_video)
 
+        # set base ground position using object transformation approach
+        target_base_pos = sim.pathfinder.snap_point(fetch.sim_obj.translation)
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        for target_base_rot in target_base_rots:
+            set_agent_base_via_obj_trans(
+                target_base_pos, target_base_rot, fetch
+            )
+            assert fetch.base_pos == target_base_pos
+            assert fetch.base_rot == pytest.approx(target_base_rot, 0.001)
+
         # set base ground position from navmesh
         # NOTE: because the navmesh floats above the collision geometry we should see a pop/settle with dynamics and no fixed base
         target_base_pos = sim.pathfinder.snap_point(fetch.sim_obj.translation)
@@ -601,8 +612,17 @@ def test_spot_robot_wrapper(fixed_base):
         # set the motor angles
         spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
 
-        # set base ground position from navmesh
+        # set base ground position using object transformation approach
         target_base_pos = sim.pathfinder.snap_point(spot.sim_obj.translation)
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        for target_base_rot in target_base_rots:
+            set_agent_base_via_obj_trans(
+                target_base_pos, target_base_rot, spot
+            )
+            assert spot.base_pos == target_base_pos
+            assert spot.base_rot == pytest.approx(target_base_rot, 0.001)
+
+        # set base ground position from navmesh
         spot.base_pos = target_base_pos
         assert spot.base_pos == target_base_pos
         observations += simulate(sim, 1.0, produce_debug_video)
@@ -738,6 +758,18 @@ def test_stretch_robot_wrapper(fixed_base):
         stretch.reconfigure()
         stretch.update()
         assert stretch.get_robot_sim_id() == 1  # 0 is the ground plane
+
+        # set base ground position using object transformation approach
+        target_base_pos = sim.pathfinder.snap_point(
+            stretch.sim_obj.translation
+        )
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        for target_base_rot in target_base_rots:
+            set_agent_base_via_obj_trans(
+                target_base_pos, target_base_rot, stretch
+            )
+            assert stretch.base_pos == target_base_pos
+            assert stretch.base_rot == pytest.approx(target_base_rot, 0.001)
 
         # set base ground position from navmesh
         target_base_pos = sim.pathfinder.snap_point(

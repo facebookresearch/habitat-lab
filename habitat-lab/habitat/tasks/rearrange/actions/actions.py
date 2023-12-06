@@ -68,6 +68,35 @@ class RearrangeStopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
+class SelectBaseOrArmAction(SimulatorTaskAction):
+    """This is useful if we do not allow base and arm to move at the same time"""
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.select_arm = True
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                "a_selection_of_base_or_arm": spaces.Box(
+                    shape=(1,),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def step(self, task, *args, **kwargs):
+        select_arm = kwargs.get("a_selection_of_base_or_arm", [1.0])
+        if select_arm[0] > 0.0:
+            self.select_arm = True
+        else:
+            self.select_arm = False
+
+
+@registry.register_task_action
 class ArmAction(ArticulatedAgentAction):
     """An arm control and grip control into one action space."""
 
@@ -77,6 +106,7 @@ class ArmAction(ArticulatedAgentAction):
             self._config.arm_controller
         )
         self._sim: RearrangeSim = sim
+        self._task = kwargs["task"]
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
@@ -114,12 +144,21 @@ class ArmAction(ArticulatedAgentAction):
 
     def step(self, *args, **kwargs):
         arm_action = kwargs[self._action_arg_prefix + "arm_action"]
-        self.arm_ctrlr.step(arm_action)
-        if self.grip_ctrlr is not None and self._config.auto_grasp:
-            self.grip_ctrlr.step(None)
-        elif self.grip_ctrlr is not None and not self.disable_grip:
-            grip_action = kwargs[self._action_arg_prefix + "grip_action"]
-            self.grip_ctrlr.step(grip_action)
+
+        # Check if we can apply the arm action given a_selection_of_base_or_arm action.
+        # This is useful if we do not allow base and arm to move at the same time
+        if (
+            "a_selection_of_base_or_arm" in self._task.actions
+            and not self._task.actions["a_selection_of_base_or_arm"].select_arm
+        ):
+            return
+        else:
+            self.arm_ctrlr.step(arm_action)
+            if self.grip_ctrlr is not None and self._config.auto_grasp:
+                self.grip_ctrlr.step(None)
+            elif self.grip_ctrlr is not None and not self.disable_grip:
+                grip_action = kwargs[self._action_arg_prefix + "grip_action"]
+                self.grip_ctrlr.step(grip_action)
 
 
 @registry.register_task_action
@@ -511,6 +550,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
+        self._task = kwargs["task"]
         self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
         self.base_vel_ctrl.controlling_lin_vel = True
         self.base_vel_ctrl.lin_vel_is_local = True
@@ -646,6 +686,14 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             )
 
     def step(self, *args, **kwargs):
+        # Check if we can apply the base action given a_selection_of_base_or_arm action.
+        # This is useful if we do not allow base and arm to move at the same time
+        if (
+            "a_selection_of_base_or_arm" in self._task.actions
+            and self._task.actions["a_selection_of_base_or_arm"].select_arm
+        ):
+            return
+
         lateral_lin_vel = 0.0
         if self._enable_lateral_move:
             longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[

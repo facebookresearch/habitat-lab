@@ -14,6 +14,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import (
     place_agent_at_dist_from_pos,
     rearrange_logger,
+    set_agent_base_via_obj_trans,
 )
 
 
@@ -39,6 +40,9 @@ class RearrangePickTaskV1(RearrangeTask):
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts
         self._filter_colliding_states = self._config.filter_colliding_states
+        self._spawn_max_dist_to_obj_delta = (
+            self._config.spawn_max_dist_to_obj_delta
+        )
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -61,14 +65,20 @@ class RearrangePickTaskV1(RearrangeTask):
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
 
-        start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
-            targ_pos,
-            self._base_angle_noise,
-            self._spawn_max_dist_to_obj,
-            sim,
-            self._num_spawn_attempts,
-            self._filter_colliding_states,
-        )
+        was_fail = True
+        spawn_attempt_count = 0
+
+        while was_fail and spawn_attempt_count < self._num_spawn_attempts:
+            start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
+                targ_pos,
+                self._base_angle_noise,
+                self._spawn_max_dist_to_obj
+                + spawn_attempt_count * self._spawn_max_dist_to_obj_delta,
+                sim,
+                self._num_spawn_attempts,
+                self._filter_colliding_states,
+            )
+            spawn_attempt_count += 1
 
         if was_fail:
             rearrange_logger.error(
@@ -108,8 +118,9 @@ class RearrangePickTaskV1(RearrangeTask):
         sel_idx = self._sample_idx(sim)
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        sim.articulated_agent.base_pos = start_pos
-        sim.articulated_agent.base_rot = start_rot
+        set_agent_base_via_obj_trans(
+            start_pos, start_rot, sim.articulated_agent
+        )
 
         self._targ_idx = sel_idx
 
