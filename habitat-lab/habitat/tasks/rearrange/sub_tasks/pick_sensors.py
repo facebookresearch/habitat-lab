@@ -146,7 +146,7 @@ class RearrangePickReward(RearrangeReward):
             self.cur_dist = -1
             return
 
-        if self._config.too_far_away_dis != -1:
+        if self._config.max_target_distance != -1:
             # Robot is too far away from the target
             base_to_object_distance = task.measurements.measures[
                 BaseToObjectDistance.cls_uuid
@@ -154,10 +154,10 @@ class RearrangePickReward(RearrangeReward):
             if (
                 base_to_object_distance is not None
                 and base_to_object_distance[str(task.targ_idx)]
-                > self._config.too_far_away_dis
+                > self._config.max_target_distance
             ):
                 self._task.should_end = True
-                self._metric -= self._config.too_far_away_pen
+                self._metric -= self._config.max_target_distance_pen
                 return
 
         if self._config.non_desire_ee_local_pos_dis != -1:
