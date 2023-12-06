@@ -392,8 +392,8 @@ class GazeGraspAction(MagicGraspAction):
         self._task._picked_object_idx = self._sim.scene_obj_ids.index(
             snap_obj_idx
         )
-        if np.sum(obj_seg) > 0:
-            self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
+        #if np.sum(obj_seg) > 0:
+        self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
 
     def _grasp(self):
         if self._oracle_snap:
