@@ -407,7 +407,7 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidDetectorSensor"
     # The default human id is 100
-    human_id: int = 100
+    human_id: int = 10000
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
     # Image based or binary based
