@@ -66,7 +66,7 @@ DEFAULT_POSE_PATH = (
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
-DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+DEFAULT_CFG_PATH = "social_rearrange/pop_play.yaml"
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -514,7 +514,7 @@ def _parse_debug_third_person(args, framebuffer_size):
     return do_show, width, height
 
 
-if __name__ == "__main__":
+def get_sandbox_app_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--target-sps",
@@ -550,7 +550,7 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
     )
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG_PATH)
     parser.add_argument(
         "--cfg-opts",
         nargs="*",
@@ -682,66 +682,10 @@ if __name__ == "__main__":
         help="Observer mode, where the humanoid follows the VR headset pose provided by remote_gui_input",
     )
 
-    args = parser.parse_args()
-    if (
-        args.save_gfx_replay_keyframes or args.save_episode_record
-    ) and not args.save_filepath_base:
-        raise ValueError(
-            "--save-gfx-replay-keyframes and/or --save-episode-record flags are enabled, "
-            "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
-        )
+    return parser
 
-    if args.show_tutorial and args.app_state != "rearrange":
-        raise ValueError(
-            "--show-tutorial is only supported for --app-state=rearrange"
-        )
 
-    if args.remote_gui_mode and args.app_state != "fetch":
-        raise ValueError(
-            "--remote-gui-mode is only supported for fetch app-state"
-        )
-
-    if (
-        args.app_state == "free_camera"
-        and args.gui_controlled_agent_index is not None
-    ):
-        raise ValueError(
-            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
-        )
-
-    glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"
-    glfw_config.size = (args.width, args.height)
-    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
-    # on Mac Retina displays, this will be 2x the window size
-    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
-
-    (
-        show_debug_third_person,
-        debug_third_person_width,
-        debug_third_person_height,
-    ) = _parse_debug_third_person(args, framebuffer_size)
-
-    viewport_rect = None
-    if show_debug_third_person:
-        # adjust main viewport to leave room for the debug third-person camera on the right
-        assert framebuffer_size.x > debug_third_person_width
-        viewport_rect = mn.Range2Di(
-            mn.Vector2i(0, 0),
-            mn.Vector2i(
-                framebuffer_size.x - debug_third_person_width,
-                framebuffer_size.y,
-            ),
-        )
-
-    # note this must be created after GuiApplication due to OpenGL stuff
-    app_renderer = ReplayGuiAppRenderer(
-        framebuffer_size,
-        viewport_rect,
-        args.use_batch_renderer,
-    )
-
-    config = get_baselines_config(args.cfg, args.cfg_opts)
+def override_config(config, args, show_debug_third_person=False):
     with habitat.config.read_write(config):  # type: ignore
         habitat_config = config.habitat
         env_config = habitat_config.environment
@@ -876,6 +820,75 @@ if __name__ == "__main__":
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig()
+
+
+if __name__ == "__main__":
+    args_parser = get_sandbox_app_args_parser()
+    args = args_parser.parse_args()
+    if (
+        args.save_gfx_replay_keyframes or args.save_episode_record
+    ) and not args.save_filepath_base:
+        raise ValueError(
+            "--save-gfx-replay-keyframes and/or --save-episode-record flags are enabled, "
+            "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
+        )
+
+    if args.show_tutorial and args.app_state != "rearrange":
+        raise ValueError(
+            "--show-tutorial is only supported for --app-state=rearrange"
+        )
+
+    if args.remote_gui_mode and args.app_state != "fetch":
+        raise ValueError(
+            "--remote-gui-mode is only supported for fetch app-state"
+        )
+
+    if (
+        args.app_state == "free_camera"
+        and args.gui_controlled_agent_index is not None
+    ):
+        raise ValueError(
+            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
+        )
+
+    glfw_config = Application.Configuration()
+    glfw_config.title = "Sandbox App"
+    glfw_config.size = (args.width, args.height)
+    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
+    # on Mac Retina displays, this will be 2x the window size
+    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
+    (
+        show_debug_third_person,
+        debug_third_person_width,
+        debug_third_person_height,
+    ) = _parse_debug_third_person(args, framebuffer_size)
+
+    viewport_rect = None
+    if show_debug_third_person:
+        # adjust main viewport to leave room for the debug third-person camera on the right
+        assert framebuffer_size.x > debug_third_person_width
+        viewport_rect = mn.Range2Di(
+            mn.Vector2i(0, 0),
+            mn.Vector2i(
+                framebuffer_size.x - debug_third_person_width,
+                framebuffer_size.y,
+            ),
+        )
+
+    # note this must be created after GuiApplication due to OpenGL stuff
+    app_renderer = ReplayGuiAppRenderer(
+        framebuffer_size,
+        viewport_rect,
+        args.use_batch_renderer,
+    )
+
+    config = get_baselines_config(args.cfg, args.cfg_opts)
+    override_config(
+        config=config,
+        args=args,
+        show_debug_third_person=show_debug_third_person,
+    )
 
     driver = SandboxDriver(
         args,
