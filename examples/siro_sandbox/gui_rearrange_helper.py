@@ -8,9 +8,9 @@ import magnum as mn
 import numpy as np
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
-from hablab_utils import get_grasped_objects_idxs
+from utils.hablab_utils import get_grasped_objects_idxs
 
-from habitat.gui.gui_input import GuiInput
+from utils.gui.gui_input import GuiInput
 
 
 class GuiRearrangeHelper:

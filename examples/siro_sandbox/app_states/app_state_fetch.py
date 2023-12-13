@@ -17,12 +17,12 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-from hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
+from utils.hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
 
 import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.text_drawer import TextOnScreenAlignment
+from utils.gui.gui_input import GuiInput
+from utils.gui.text_drawer import TextOnScreenAlignment
 from habitat.tasks.rearrange.utils import get_angle_to_pos
 from habitat_sim.physics import MotionType
 

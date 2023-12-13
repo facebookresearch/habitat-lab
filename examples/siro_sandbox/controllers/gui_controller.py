@@ -10,7 +10,7 @@ import magnum as mn
 import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
-from habitat.gui.gui_input import GuiInput
+from utils.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (

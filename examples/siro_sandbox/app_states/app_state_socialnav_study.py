@@ -9,10 +9,10 @@ from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
 from controllers.fetch_baselines_controller import FetchState
 from gui_rearrange_helper import GuiRearrangeHelper
-from hablab_utils import get_agent_art_obj_transform
+from utils.hablab_utils import get_agent_art_obj_transform
 
-from habitat.gui.gui_input import GuiInput
-from habitat.gui.text_drawer import TextOnScreenAlignment
+from utils.gui.gui_input import GuiInput
+from utils.gui.text_drawer import TextOnScreenAlignment
 
 
 class AppStateSocialNavStudy(AppState):

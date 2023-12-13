@@ -8,9 +8,9 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.gui.gui_application import GuiAppRenderer
-from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
-from habitat.gui.text_drawer import TextDrawer, TextOnScreenAlignment
+from utils.gui.gui_application import GuiAppRenderer
+from utils.gui.image_framebuffer_drawer import ImageFramebufferDrawer
+from utils.gui.text_drawer import TextDrawer, TextOnScreenAlignment
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
