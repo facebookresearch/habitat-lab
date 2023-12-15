@@ -127,16 +127,37 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             env_spec.observation_space, actor_critic, config
         )
         ppo_cfg = config.habitat_baselines.rl.ppo
-        rollouts = baseline_registry.get_storage(
-            config.habitat_baselines.rollout_storage_name
-        )(
-            numsteps=ppo_cfg.num_steps,
-            num_envs=num_envs,
-            observation_space=obs_space,
-            action_space=policy_action_space,
-            actor_critic=actor_critic,
-            is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-        )
+
+        # If the roll-out storage name is for multi-agent and there is agent_0, agent_1,
+        # we use different roll-out storage for each agent.
+        if (
+            "rollout_storage_name_multi_agent" in config.habitat_baselines
+            and self.agent_name != "main_agent"
+        ):
+            agent_idx = int(self.agent_name.split("_")[-1])
+            rollouts = baseline_registry.get_storage(
+                config.habitat_baselines.rollout_storage_name_multi_agent[
+                    agent_idx
+                ]
+            )(
+                numsteps=ppo_cfg.num_steps,
+                num_envs=num_envs,
+                observation_space=obs_space,
+                action_space=policy_action_space,
+                actor_critic=actor_critic,
+                is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+            )
+        else:
+            rollouts = baseline_registry.get_storage(
+                config.habitat_baselines.rollout_storage_name
+            )(
+                numsteps=ppo_cfg.num_steps,
+                num_envs=num_envs,
+                observation_space=obs_space,
+                action_space=policy_action_space,
+                actor_critic=actor_critic,
+                is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+            )
         rollouts.to(device)
         return rollouts
 
