@@ -140,7 +140,6 @@ def decimate(
                 extent_max = math.max(extent_max, pos)
 
             dim = extent_max - extent_min
-            # print(f"dim: {dim}")
 
             target_size0 = 0.1
             target_count0 = 1000
@@ -155,24 +154,6 @@ def decimate(
             )
             total_target_tris += target_count
             target = target_count / triangle_count
-
-            # total_area = 0.0
-            # indices = scaled_mesh.indices
-            # positions = scaled_mesh.attribute(trade.MeshAttribute.POSITION)
-            # for j in range(triangle_count):
-            #     # This is stupidly slow, wth python?!
-            #     a: Vector3 = positions[indices[j*3 + 0]]
-            #     b: Vector3 = positions[indices[j*3 + 1]]
-            #     c: Vector3 = positions[indices[j*3 + 2]]
-
-            #     # Triangle area is half of the cross product of its two vectors
-            #     total_area += math.cross(b - a, c - a).length()*0.5
-
-            # # Simplify & optimize the *untransformed* mesh based on the triangle area
-            # # calculated on the *transformed* mesh. (Simplifying and exporting the
-            # # transformed mesh would mean it gets transformed by the scene again when
-            # # viewed, which is wrong.)
-            # target = the_magic_constant/(triangle_count/total_area)
 
             # Running the simplifier only if simplification is actually desired
             if target < 1.0:
@@ -195,7 +176,6 @@ def decimate(
             total_simplified_tris += decimated_mesh.index_count // 3
 
             # Stats
-            # print("Mesh {} tri count / area: {:10.1f}; target: {:1.4f}; result: {:1.4f}".format(i, triangle_count/total_area, target, decimated_mesh.index_count/mesh.index_count))
             size_before += len(mesh.index_data) + len(mesh.vertex_data)
             size_after += len(decimated_mesh.index_data) + len(
                 decimated_mesh.vertex_data
@@ -205,18 +185,6 @@ def decimate(
 
         # Add it to the converter, preserve its name
         converter.add(decimated_mesh, name=importer.mesh_name(i))
-
-    # print("Mesh size reduction: {:.1f}K -> {:.1f}K ({:.2f}%)".format(size_before/1000, size_after/1000, 100*size_after/size_before))
-
-    # if total_simplified_tris > 3000:
-    #     key = '/objects/' if '/objects/' in input else '/fp-models/'
-    #     parts = input.split(key)
-    #     assert len(parts) == 2
-    #     object_partial_filepath = parts[1]
-    #     # print(input)
-    #     print("https://huggingface.co/datasets/fpss/fphab/blob/main/objects/" + object_partial_filepath)
-    #     print(f"source: {total_source_tris}, target: {total_target_tris}, actual: {total_simplified_tris}, num_meshes: {num_meshes}")
-    #     print("")
 
     # Import all images, resize them, and put them to the output. This does Basis
     # conversion as well, so may take time. Use -v to see more info.
