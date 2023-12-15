@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-from typing import List, Dict
+from typing import Dict
 
-from magnum import *
+from magnum import Matrix4, MeshPrimitive, Vector3
 from magnum import math, meshtools, scenetools, trade
 
 # Scene conversion plugins need access to image conversion plugins
@@ -20,40 +20,50 @@ scene_converter_manager.register_external_manager(image_converter_manager)
 # capability of image passthrough without re-encoding, so the images have to be
 # decoded to RGBA and then encoded back, which causes a slight quality loss
 # every time.
-importer_manager.metadata('BasisImporter').configuration['format'] = 'RGBA8'
-basis_configuration = image_converter_manager.metadata('BasisImageConverter').configuration
-basis_configuration['y_flip'] = False
-basis_configuration['mip_gen'] = True
-basis_configuration['mip_smallest_dimension'] = 4
-basis_configuration['threads'] = 0
+importer_manager.metadata("BasisImporter").configuration["format"] = "RGBA8"
+basis_configuration = image_converter_manager.metadata(
+    "BasisImageConverter"
+).configuration
+basis_configuration["y_flip"] = False
+basis_configuration["mip_gen"] = True
+basis_configuration["mip_smallest_dimension"] = 4
+basis_configuration["threads"] = 0
 
 # Import / export plugins
-importer = importer_manager.load_and_instantiate('AnySceneImporter')
-converter = scene_converter_manager.load_and_instantiate('AnySceneConverter')
+importer = importer_manager.load_and_instantiate("AnySceneImporter")
+converter = scene_converter_manager.load_and_instantiate("AnySceneConverter")
 
 # Image resizer. Size is picked for each image individually in order to avoid
 # upsampling but still target power-of-two textures.
-resizer = image_converter_manager.load_and_instantiate('StbResizeImageConverter')
+resizer = image_converter_manager.load_and_instantiate(
+    "StbResizeImageConverter"
+)
 
 # Meshoptimizer. Options set individually for each mesh.
-meshoptimizer = trade.SceneConverterManager().load_and_instantiate('MeshOptimizerSceneConverter')
+meshoptimizer = trade.SceneConverterManager().load_and_instantiate(
+    "MeshOptimizerSceneConverter"
+)
 
 # Meshoptimizer defaults. You might want to play with these, see plugin docs
 # for more info: https://doc.magnum.graphics/magnum/classMagnum_1_1Trade_1_1MeshOptimizerSceneConverter.html
 # This might be too harsh if you want to preserve fine details
-meshoptimizer.configuration['simplifyTargetError'] = 1.0e-1
+meshoptimizer.configuration["simplifyTargetError"] = 1.0e-1
 # Can avoid a certain kind of artifacts
 # meshoptimizer.configuration['simplifyLockBorder'] = True
 # Decimation factor. Smaller values decimate more, larger less.
-the_magic_constant = 42*42*4
+the_magic_constant = 42 * 42 * 4
 
 # glTF converter defaults. This makes it work with quantized inputs, however
 # decimation will un-quantize again.
-converter.configuration['textureCoordinateYFlipInMaterial'] = False
-converter.configuration['imageConverter'] = 'PngImageConverter' # 'BasisKtxImageConverter'
+converter.configuration["textureCoordinateYFlipInMaterial"] = False
+converter.configuration[
+    "imageConverter"
+] = "PngImageConverter"  # 'BasisKtxImageConverter'
 
-def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=True):
 
+def decimate(
+    input, output, quiet=None, verbose=None, sloppy=False, simplify=True
+):
     if quiet:
         importer.flags |= trade.ImporterFlags.QUIET
         converter.flags |= trade.SceneConverterFlags.QUIET
@@ -75,10 +85,15 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
     # treated equally to non-quantized.
     scene = importer.scene(0)
     mesh_assignments = scene.field(trade.SceneField.MESH)
-    mesh_transformations = scenetools.absolute_field_transformations3d(scene, trade.SceneField.MESH)
+    mesh_transformations = scenetools.absolute_field_transformations3d(
+        scene, trade.SceneField.MESH
+    )
     max_mesh_scaling: Dict[int, Vector3] = {}
     for mesh_id, transformation in zip(mesh_assignments, mesh_transformations):
-        max_mesh_scaling[mesh_id] = math.max(max_mesh_scaling.get(mesh_id, Vector3(0.0)), math.abs(transformation.scaling()))
+        max_mesh_scaling[mesh_id] = math.max(
+            max_mesh_scaling.get(mesh_id, Vector3(0.0)),
+            math.abs(transformation.scaling()),
+        )
 
     # Go through all meshes and decimate them
     size_before = 0
@@ -91,7 +106,9 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
 
         # Transform the mesh to its max scale in the scene. For quantized meshes
         # this expands the position attribute to a floating-point Vector3.
-        scaled_mesh = meshtools.transform3d(mesh, Matrix4.scaling(max_mesh_scaling.get(i, Vector3(1.0))))
+        scaled_mesh = meshtools.transform3d(
+            mesh, Matrix4.scaling(max_mesh_scaling.get(i, Vector3(1.0)))
+        )
 
         # Calculate total triangle area of the *transformed* mesh. You might want
         # to fiddle with this heuristics, another option is calculating the mesh
@@ -100,17 +117,20 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
             if not scaled_mesh.is_indexed:
                 converter.end_file()
                 importer.close()
-                assert False, "i didn't bother with index-less variant for the heuristics, sorry"
+                assert (
+                    False
+                ), "i didn't bother with index-less variant for the heuristics, sorry"
             if scaled_mesh.primitive != MeshPrimitive.TRIANGLES:
                 converter.end_file()
                 importer.close()
-                assert False, "i didn't bother with non-triangle meshes either, sorry"
-            triangle_count = scaled_mesh.index_count//3
+                assert (
+                    False
+                ), "i didn't bother with non-triangle meshes either, sorry"
+            triangle_count = scaled_mesh.index_count // 3
             total_source_tris += triangle_count
 
         # Perform decimation only if there's actually something, heh
         if simplify and triangle_count > 0:
-
             # get scaled bounding box
             positions = scaled_mesh.attribute(trade.MeshAttribute.POSITION)
             extent_min = Vector3(positions[0])
@@ -127,8 +147,12 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
             target_size1 = 1.0
             target_count1 = 5000
             size = (dim.x + dim.y + dim.z) / 3
-            lerp_fraction = math.lerp_inverted(target_size0, target_size1, size)
-            target_count = math.lerp(target_count0, target_count1, lerp_fraction)
+            lerp_fraction = math.lerp_inverted(
+                target_size0, target_size1, size
+            )
+            target_count = math.lerp(
+                target_count0, target_count1, lerp_fraction
+            )
             total_target_tris += target_count
             target = target_count / triangle_count
 
@@ -152,26 +176,30 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
 
             # Running the simplifier only if simplification is actually desired
             if target < 1.0:
-                meshoptimizer.configuration['simplify'] = simplify
+                meshoptimizer.configuration["simplify"] = simplify
                 # You might want to enable this if the non-sloppy simplification fails
                 # to reach the target by a wide margin
-                meshoptimizer.configuration['simplifySloppy'] = sloppy  # temp
-                meshoptimizer.configuration['simplifyTargetIndexCountThreshold'] = target
+                meshoptimizer.configuration["simplifySloppy"] = sloppy  # temp
+                meshoptimizer.configuration[
+                    "simplifyTargetIndexCountThreshold"
+                ] = target
                 decimated_mesh = meshoptimizer.convert(mesh)
 
             # If simplification isn't desired or if it caused the mesh to disappear, run
             # just the nondestructive optimizations
             if target >= 1.0 or decimated_mesh.vertex_count == 0:
-                meshoptimizer.configuration['simplify'] = False
-                meshoptimizer.configuration['simplifySloppy'] = False
+                meshoptimizer.configuration["simplify"] = False
+                meshoptimizer.configuration["simplifySloppy"] = False
                 decimated_mesh = meshoptimizer.convert(mesh)
 
-            total_simplified_tris += decimated_mesh.index_count//3
+            total_simplified_tris += decimated_mesh.index_count // 3
 
             # Stats
             # print("Mesh {} tri count / area: {:10.1f}; target: {:1.4f}; result: {:1.4f}".format(i, triangle_count/total_area, target, decimated_mesh.index_count/mesh.index_count))
             size_before += len(mesh.index_data) + len(mesh.vertex_data)
-            size_after += len(decimated_mesh.index_data) + len(decimated_mesh.vertex_data)
+            size_after += len(decimated_mesh.index_data) + len(
+                decimated_mesh.vertex_data
+            )
         else:
             decimated_mesh = mesh
 
@@ -196,13 +224,19 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
         image = importer.image2d(i)
         # Resize the image to nearest smaller power of two square, but at least 4x4
         # and at most 256x256
-        nearest_smaller_power_of_two = math.clamp(1 << math.log2(image.size.min()), 4, 256)
-        resizer.configuration['size'] = '{0} {0}'.format(nearest_smaller_power_of_two)
+        nearest_smaller_power_of_two = math.clamp(
+            1 << math.log2(image.size.min()), 4, 256
+        )
+        resizer.configuration["size"] = "{0} {0}".format(
+            nearest_smaller_power_of_two
+        )
         converter.add(resizer.convert(image), importer.image2d_name(i))
 
     # Add whatever else is there in the input file (materials, textures...) except
     # the things we're adding ourselves
-    converter.add_importer_contents(importer, ~(trade.SceneContents.MESHES|trade.SceneContents.IMAGES2D))
+    converter.add_importer_contents(
+        importer, ~(trade.SceneContents.MESHES | trade.SceneContents.IMAGES2D)
+    )
 
     # And ... done!
     converter.end_file()
@@ -210,18 +244,17 @@ def decimate(input, output, quiet=None, verbose=None, sloppy=False, simplify=Tru
 
     return (total_source_tris, total_target_tris, total_simplified_tris)
 
-def main():
 
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input')
-    parser.add_argument('output')
-    parser.add_argument('-q', '--quiet', action='store_true')
-    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument("input")
+    parser.add_argument("output")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
     decimate(args.input, args.output, quiet=args.quiet, verbose=args.verbose)
 
+
 if __name__ == "__main__":
     main()
-
-

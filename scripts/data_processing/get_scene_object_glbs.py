@@ -31,13 +31,17 @@ def file_is_scene_config(filepath: str) -> bool:
     """
     return filepath.endswith(".scene_instance.json")
 
-def file_is_glb(filepath:str)->bool:
+
+def file_is_glb(filepath: str) -> bool:
     """
     Return whether or not the file is a glb.
     """
     return filepath.endswith(".glb")
 
-def find_files(root_dir: str, discriminator: Callable[[str], bool]) -> List[str]:
+
+def find_files(
+    root_dir: str, discriminator: Callable[[str], bool]
+) -> List[str]:
     """
     Recursively find all filepaths under a root directory satisfying a particular constraint as defined by a discriminator function.
 
@@ -62,11 +66,14 @@ def find_files(root_dir: str, discriminator: Callable[[str], bool]) -> List[str]
             filepaths.append(entry_path)
     return filepaths
 
+
 def get_model_ids_from_scene_instance_json(filepath: str) -> List[str]:
     """
     Scrape a list of all unique model ids from the scene instance file.
     """
-    assert filepath.endswith(".scene_instance.json"), "Must be a scene instance JSON."
+    assert filepath.endswith(
+        ".scene_instance.json"
+    ), "Must be a scene instance JSON."
 
     model_ids = []
 
@@ -76,7 +83,9 @@ def get_model_ids_from_scene_instance_json(filepath: str) -> List[str]:
             for obj_inst in scene_conf["object_instances"]:
                 model_ids.append(obj_inst["template_name"])
         else:
-            print("No object instances field detected, are you sure this is scene instance file?")
+            print(
+                "No object instances field detected, are you sure this is scene instance file?"
+            )
 
     print(f" {filepath} has {len(model_ids)} object instances.")
     model_ids = list(set(model_ids))
@@ -109,7 +118,9 @@ def process_model(args):
         )
     except:
         try:
-            print(f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation).")
+            print(
+                f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation)."
+            )
             source_tris, target_tris, simplified_tris = decimate.decimate(
                 job.source_path, job.dest_path, quiet=True, decimate=False
             )
@@ -119,7 +130,9 @@ def process_model(args):
             result["status"] = "error"
             return result
 
-    print(f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}")
+    print(
+        f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
+    )
 
     result = {
         "source_tris": source_tris,
@@ -141,7 +154,9 @@ def process_model(args):
 
     with lock:
         counter.value += 1
-        print(f"{counter.value} out of {total_models} models have been processed so far")
+        print(
+            f"{counter.value} out of {total_models} models have been processed so far"
+        )
 
     return result
 
@@ -158,9 +173,9 @@ def simplify_models(jobs: List[Job]):
 
     # Initialize counter and lock
     manager = Manager()
-    counter = manager.Value('i', 0)
+    counter = manager.Value("i", 0)
     lock = manager.Lock()
-    
+
     total_models = len(jobs)
 
     # Pair up the model paths with the counter and lock
@@ -196,11 +211,15 @@ def simplify_models(jobs: List[Job]):
         print(f"Skipped {total_skipped} files.")
     if total_error > 0:
         print(f"Skipped {total_error} files due to processing errors.")
-    print(f"Reduced total vertex count from {total_source_tris} to {total_simplified_tris}")
+    print(
+        f"Reduced total vertex count from {total_source_tris} to {total_simplified_tris}"
+    )
     print(f"Without black list: {total_simplified_tris - black_list_tris}")
-    print(f"Without gray and black list: {total_simplified_tris - black_list_tris - gray_list_tris}")
+    print(
+        f"Without gray and black list: {total_simplified_tris - black_list_tris - gray_list_tris}"
+    )
 
-    for (i, curr_list) in enumerate([black_list, gray_list]):
+    for i, curr_list in enumerate([black_list, gray_list]):
         print("")
         print("black list" if i == 0 else "gray list" + " = [")
         for item in curr_list:
@@ -214,21 +233,25 @@ def find_model_paths_in_scenes(fphab_root_dir, scene_ids) -> List[str]:
     configs = find_files(config_root_dir, file_is_scene_config)
     obj_root_dir = os.path.join(fphab_root_dir, "objects")
     glb_files = find_files(obj_root_dir, file_is_glb)
-    render_glbs = [f for f in glb_files if (".collider" not in f and ".filteredSupportSurface" not in f)]
+    render_glbs = [
+        f
+        for f in glb_files
+        if (".collider" not in f and ".filteredSupportSurface" not in f)
+    ]
 
     for filepath in configs:
-        #these should be removed, but screen them for now
+        # these should be removed, but screen them for now
         if "orig" in filepath:
             print(f"Skipping alleged 'original' instance file {filepath}")
             continue
         for scene_id in scene_ids:
-            #NOTE: add the extension back here to avoid partial matches
-            if scene_id+".scene_instance.json" in filepath:
+            # NOTE: add the extension back here to avoid partial matches
+            if scene_id + ".scene_instance.json" in filepath:
                 print(f"filepath '{filepath}' matches scene_id '{scene_id}'")
                 model_ids = get_model_ids_from_scene_instance_json(filepath)
                 for model_id in model_ids:
                     for render_glb in render_glbs:
-                        if model_id+".glb" in render_glb:
+                        if model_id + ".glb" in render_glb:
                             if "part" in render_glb and "part" not in model_id:
                                 continue
                             model_filepaths.add(render_glb)
@@ -258,7 +281,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     # Force input paths to have a trailing slash
     if args.fphab_root_dir[-1] != "/":
         args.fp_models_root_dir += "/"
@@ -284,7 +307,8 @@ def main():
         if "decomposed" not in scene_model:
             job = Job()
             source_path = os.path.join(args.fp_models_root_dir, rel_path)
-            parts = source_path.split("/objects/"
+            parts = source_path.split(
+                "/objects/"
             )  # Remove 'objects/' from path
             job.source_path = os.path.join(parts[0], parts[1])
             assert len(parts) == 2
@@ -319,6 +343,7 @@ def main():
         jobs.append(job)
 
     simplify_models(jobs)
+
 
 if __name__ == "__main__":
     main()
