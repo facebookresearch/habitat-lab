@@ -75,10 +75,8 @@ class RemoteGuiInput:
 
         hand_json = hands_json[hand_idx]
         pos_json = hand_json["position"]
-        # pos = mn.Vector3(pos_json["_x"], pos_json["_y"], pos_json["_z"])
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = hand_json["rotation"]
-        # rot_quat = mn.Quaternion(mn.Vector3(rot_json["_x"], rot_json["_y"], rot_json["_z"]), rot_json["_w"])
         rot_quat = mn.Quaternion(
             mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
         )
@@ -119,14 +117,12 @@ class RemoteGuiInput:
                     continue
                 if True:
                     self._gui_input._key_down.add(self._button_map[button])
-                    # print(f"button {button} down")
             for button in input_json["buttonUp"]:
                 if button not in self._button_map:
                     print(f"key {button} not mapped!")
                     continue
                 if True:
                     self._gui_input._key_up.add(self._button_map[button])
-                    # print(f"button {button} up")
 
             # code assumes dictionary<buttonId, bool>
             # for button in input_json["buttonDown"]:

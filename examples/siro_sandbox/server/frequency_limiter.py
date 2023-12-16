@@ -8,14 +8,14 @@ import asyncio
 import time
 
 class FrequencyLimiter:
-    def __init__(self, desired_frequency):
-        self.desired_frequency = desired_frequency
-        self.desired_period = (
-            1 / desired_frequency if desired_frequency else None
+    def __init__(self, desired_frequency: float) -> None:
+        self.desired_frequency: float = desired_frequency
+        self.desired_period: float = (
+            1.0 / desired_frequency if desired_frequency else None
         )
-        self.last_execution_time = time.time()
+        self.last_execution_time: float = time.time()
 
-    def limit_frequency(self):
+    def limit_frequency(self) -> None:
         if not self.desired_period:
             return
 
@@ -31,7 +31,7 @@ class FrequencyLimiter:
 
         self.last_execution_time = time.time()
 
-    async def limit_frequency_async(self):
+    async def limit_frequency_async(self) -> None:
         if not self.desired_period:
             return
 
@@ -42,11 +42,5 @@ class FrequencyLimiter:
         # Delay the loop execution if needed
         if remaining_time > 0:
             await asyncio.sleep(remaining_time)
-
-        # current_time = time.time()
-        # elapsed_time = current_time - self.last_execution_time
-        # remaining_time = self.desired_period - elapsed_time
-        # if remaining_time > 0:
-        #     time.sleep(remaining_time)
 
         self.last_execution_time = time.time()

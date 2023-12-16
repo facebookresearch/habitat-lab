@@ -58,7 +58,6 @@ def create_ssl_context():
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     certfile = "./examples/siro_sandbox/self_signed.pem"
     keyfile = "./examples/siro_sandbox/private.key"
-    # see instructions for generating these files: https://docs.google.com/document/d/1hXuStZKNJafxLQVgl2zy2kyEf8Nke-bYogaPuHYT_M4/edit#bookmark=id.jva9nto0xpbe
     assert os.path.exists(certfile) and os.path.exists(keyfile)
     ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile)
     return ssl_context
@@ -164,7 +163,7 @@ class Server:
                     wrapper_obj = {"keyframes": keyframes_to_send}
                     wrapper_json = json.dumps(wrapper_obj)
 
-                # after we've converted our keyfrajmes to send to json, update
+                # after we've converted our keyframes to send to json, update
                 # our consolidated keyframe
                 self.update_consolidated_keyframes(inc_keyframes)
 
