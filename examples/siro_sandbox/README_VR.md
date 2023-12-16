@@ -18,13 +18,16 @@ As it stands, the VR integration can only be used with the `fetch` app state. In
   - [Unity Data Folder](#unity-data-folder)
     - [Dataset Processing](#dataset-processing)
       - [Installation](#installation-1)
-    - [Importing Data Into Unity](#importing-data-into-unity)
+      - [Usage](#usage)
+      - [Importing Data Into Unity](#importing-data-into-unity)
   - [Connection](#connection)
   - [Server Controls](#server-controls)
   - [Troubleshooting](#troubleshooting)
     - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
     - [Connection Issues](#connection-issues)
     - [Slow Performance](#slow-performance)
+  - [Other information](#other-information)
+    - [Serving HTTPS content from your local machine](#serving-https-content-from-your-local-machine)
 
 
 ## Installation
@@ -174,3 +177,43 @@ See [troubleshooting notes](#connection-issues) is connection fails.
 * If using a laptop, make sure that power is connected.
 * If running on a busy network, consider using the wifi hotspot on your phone or a separate router.
 * Performance is poor on Quest Pro. Consider using smaller scenes, or increasing mesh simplification aggressiveness in the dataset processing tool. See [decimate.py](../../scripts/unity_dataset_processing/decimate.py).
+
+## Other information
+
+### Serving HTTPS content from your local machine
+
+Note: This is not required for using the native Unity app.
+
+Note: Quest's browser (and probably all browsers) will only load WebXR experiences if served as a secure (HTTPS) web page. Luckily for us, this includes self-signed HTTPS.
+
+1. install openssl on your OS if necessary.
+
+1. generate private.key
+```
+openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048
+```
+
+1. generate temp.csr
+```
+openssl req -new -key private.key -out temp.csr
+```
+
+1. generate self_signed.pem
+* There are several prompts for info like country and organization. You can press return to use defaults for all of these.
+```
+openssl x509 -req -days 365 -in temp.csr -signkey private.key -out self_signed.pem -outform PEM
+```
+
+1. Launch your HTTPS server in a folder that you want to serve
+```
+openssl s_server -accept 8443 -cert self_signed.pem -key private.key -WWW
+```
+
+1. Test on the same machine
+* Browse to https://0.0.0.0:8443/example.html
+* In Chrome and other browsers, you will have to navigate past a "Your connection is not private" warning but it will otherwise work.
+
+1. Test on another machine on the same local network (same router)
+* First, make sure that your firewall is configured to allow the the connection to port 8443.
+* Find your *private* IP address, e.g. `hostname -I`
+* From the other machine, browse to https://IP:8443/example.html

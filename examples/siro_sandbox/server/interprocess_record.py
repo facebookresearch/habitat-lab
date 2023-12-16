@@ -9,7 +9,7 @@ import queue
 from .multiprocessing_config import Queue, Semaphore
 
 class InterprocessRecord:
-    def __init__(self, max_steps_ahead):
+    def __init__(self, max_steps_ahead: int):
         self.keyframe_queue = Queue()
         self.client_state_queue = Queue()
         self.step_semaphore = Semaphore(max_steps_ahead)
