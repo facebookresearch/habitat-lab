@@ -42,7 +42,8 @@ The system is composed of the following components:
 |---|---|
 | `habitat-sim` | Use the `main` branch. Bullet is required. |
 | `habitat-lab` | This specific `habitat-lab` version must be installed. See [instructions](../../README.md#installation). The `main` branch is currently incompatible. |
-| [HSSD](https://huggingface.co/datasets/hssd/hssd-hab) | Tested on `0d81c8e31`. Location is expected to be `data/fpss`. |
+| [hssd-hab](https://huggingface.co/datasets/hssd/hssd-hab) | Location is expected to be `data/fpss`. |
+| [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for dataset processing. |
 | [habitat_humanoids](https://huggingface.co/datasets/ai-habitat/habitat_humanoids) | TODO: Instructions and additional data |
 | [NN Weights](TODO) | Copy the files to `data/models`. |
 | [Spot animation data](TODO) | Copy the files to `data/robots/spot_data/`. |
@@ -100,7 +101,7 @@ This step requires [Magnum](https://github.com/mosra/magnum) data processing too
 
 It is recommended that you create a new `conda` environment so that it can be reused in the future without interfering with Habitat.
 
-1. Get the latest `magnum-tools` from [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml). Extract in a convenient location.
+1. Get the latest `magnum-tools` from [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml). Extract to a convenient location.
 2. Create a new `conda` environment:
 ```
 conda create --name magnum python=3.10
@@ -115,7 +116,18 @@ conda create --name magnum python=3.10
    * `conda activate magnum`
    * `python -c "from magnum import math, meshtools, scenetools, trade"`
 
-### Importing Data Into Unity
+#### Usage
+
+Example command:
+
+```
+python get_scene_object_glbs.py \
+--fphab-root-dir path_to/hssd-hab/ \
+--fp-models-root-dir path_to/hssd-models/ \
+--scenes 102344193 102344280 102817200 103997424_171030444 103997541_171030615
+```
+
+#### Importing Data Into Unity
 
 In Unity, use `Tools/Update Data Folder`. From the dialog window, select the data folder that was produced by the script (defaults: `data/hitl_simplified`) and apply. The resources will be imported into Unity.
 
