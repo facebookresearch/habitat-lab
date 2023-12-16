@@ -153,7 +153,7 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
   dataset:
-    data_path: "data/datasets/floorplanner/rearrange/scratch/train/demo_25.json.gz"
+    data_path: "data/datasets/floorplanner/rearrange/scratch/train/hitl_vr_sample_episodes.json.gz"
 
 habitat_baselines:
   num_environments: 1

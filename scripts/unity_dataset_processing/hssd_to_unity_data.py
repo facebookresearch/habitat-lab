@@ -14,7 +14,6 @@ from typing import Callable, List, Set
 import decimate
 
 OUTPUT_DIR = "data/hitl_simplified/data/"
-FPHAB_DIR_NAME = "fpss"
 OMIT_BLACK_LIST = False
 OMIT_GRAY_LIST = False
 
@@ -227,11 +226,11 @@ def simplify_models(jobs: List[Job]):
         print("]")
 
 
-def find_model_paths_in_scenes(fphab_root_dir, scene_ids) -> List[str]:
+def find_model_paths_in_scenes(hssd_hab_root_dir, scene_ids) -> List[str]:
     model_filepaths: Set[str] = set()
-    config_root_dir = os.path.join(fphab_root_dir, "scenes-uncluttered")
+    config_root_dir = os.path.join(hssd_hab_root_dir, "scenes-uncluttered")
     configs = find_files(config_root_dir, file_is_scene_config)
-    obj_root_dir = os.path.join(fphab_root_dir, "objects")
+    obj_root_dir = os.path.join(hssd_hab_root_dir, "objects")
     glb_files = find_files(obj_root_dir, file_is_glb)
     render_glbs = [
         f
@@ -264,14 +263,14 @@ def main():
         description="Get all .glb render asset files associated with a given scene."
     )
     parser.add_argument(
-        "--fphab-root-dir",
+        "--hssd-hab-root-dir",
         type=str,
-        help="Path to HSSD SceneDataset root directory containing 'fphab-uncluttered.scene_dataset_config.json'.",
+        help="Path to the hssd-hab root directory containing 'hssd-hab-uncluttered.scene_dataset_config.json'.",
     )
     parser.add_argument(
-        "--fp-models-root-dir",
+        "--hssd-models-root-dir",
         type=str,
-        help="Path to fp-models root directory.",
+        help="Path to hssd-models root directory.",
     )
     parser.add_argument(
         "--scenes",
@@ -283,42 +282,46 @@ def main():
     args = parser.parse_args()
 
     # Force input paths to have a trailing slash
-    if args.fphab_root_dir[-1] != "/":
-        args.fp_models_root_dir += "/"
-    if args.fphab_root_dir[-1] != "/":
-        args.fp_models_root_dir += "/"
+    if args.hssd_hab_root_dir[-1] != "/":
+        args.hssd_hab_root_dir += "/"
+    if args.hssd_models_root_dir[-1] != "/":
+        args.hssd_models_root_dir += "/"
 
     jobs: List[Job] = []
     scene_ids = list(dict.fromkeys(args.scenes)) if args.scenes else []
+
+    # Define relative directory for the dataset
+    # E.g. data/scene_datasets/hssd-hab -> scene_datasets/hssd-hab
+    hssd_hab_rel_dir = str(args.hssd_hab_root_dir)[len("data/") :]
 
     # Add stages
     for scene_id in scene_ids:
         rel_path = os.path.join("stages", scene_id + ".glb")
         job = Job()
-        job.source_path = os.path.join(args.fphab_root_dir, rel_path)
-        job.dest_path = os.path.join(OUTPUT_DIR, FPHAB_DIR_NAME, rel_path)
+        job.source_path = os.path.join(args.hssd_hab_root_dir, rel_path)
+        job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
         job.simplify = False
         jobs.append(job)
 
     # Add all models contained in the scenes
-    scene_models = find_model_paths_in_scenes(args.fphab_root_dir, scene_ids)
+    scene_models = find_model_paths_in_scenes(args.hssd_hab_root_dir, scene_ids)
     for scene_model in scene_models:
-        rel_path = scene_model[len(args.fphab_root_dir) :]
+        rel_path = scene_model[len(args.hssd_hab_root_dir) :]
         if "decomposed" not in scene_model:
             job = Job()
-            source_path = os.path.join(args.fp_models_root_dir, rel_path)
+            source_path = os.path.join(args.hssd_models_root_dir, rel_path)
             parts = source_path.split(
                 "/objects/"
             )  # Remove 'objects/' from path
             job.source_path = os.path.join(parts[0], parts[1])
             assert len(parts) == 2
-            job.dest_path = os.path.join(OUTPUT_DIR, FPHAB_DIR_NAME, rel_path)
+            job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
             job.simplify = False
             jobs.append(job)
         else:
             job = Job()
-            job.source_path = os.path.join(args.fphab_root_dir, rel_path)
-            job.dest_path = os.path.join(OUTPUT_DIR, FPHAB_DIR_NAME, rel_path)
+            job.source_path = os.path.join(args.hssd_hab_root_dir, rel_path)
+            job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
             job.simplify = False
             jobs.append(job)
 

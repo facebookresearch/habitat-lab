@@ -56,33 +56,33 @@ RANDOM_AGENT_LOCATION_RESET = False
 # Note that you do not have to provide the orientation information
 # since both agents will automatically look at each other
 FIX_AGENT_INIT_POS = {
-    "data/fpss/scenes-uncluttered/102344193.scene_instance.json": (
+    "data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json": (
         # Scene 1: human stands near the bed and the robot blocked the room door.
         # So the human needs to walk out of room and will observe how Spot avoid collision.
         # This showcases the social nav policy
         [0.773143, -4.09137],
         [1.53322, -1.53417],
     ),
-    "data/fpss/scenes-uncluttered/102344280.scene_instance.json": (
+    "data/scene_datasets/hssd-hab/scenes-uncluttered/102344280.scene_instance.json": (
         # Scene 2: human stands in the kitchen + living room area. Just showcase the scene
         [-1.4465, 1.36246],
         [-7.46346, 1.5259],
     ),
-    "data/fpss/scenes-uncluttered/102817200.scene_instance.json": (
-        # Scene 3: human stands in the living room with lots of furniture (sofa, cluter, etc),
+    "data/scene_datasets/hssd-hab/scenes-uncluttered/102817200.scene_instance.json": (
+        # Scene 3: human stands in the living room with lots of furniture (sofa, clutter, etc),
         # and it is easier to trigger Spot begging motion.
         # This showcases the pick policy/begging motions
         [-3.63359, -8.33051],
         [-1.03828, -7.71454],
     ),
-    "data/fpss/scenes-uncluttered/103997424_171030444.scene_instance.json": (
+    "data/scene_datasets/hssd-hab/scenes-uncluttered/103997424_171030444.scene_instance.json": (
         # Scene 4: human stands near the shelf in which he/she can put the object on
         # multiple surfaces of the shelf, and at the beginning, human is able to
         # see robot come to find him/herself. This showcases the pick policy
         [-14.3757, -10.0978],
         [-18.5925, -12.9898],
     ),
-    "data/fpss/scenes-uncluttered/103997541_171030615.scene_instance.json": (
+    "data/scene_datasets/hssd-hab/scenes-uncluttered/103997541_171030615.scene_instance.json": (
         # Scene 5: human passes a long hallway to reach the target and get
         # the object. This showcases the social nav policy
         [-10.84, 5.24],
@@ -1067,7 +1067,7 @@ class AppStateFetch(AppState):
 
         # use 1-5 keys to select certain episodes corresponding to our 5 scenes
         num_fetch_scenes = 5
-        # hand-picked episodes from demo_25.json.gz
+        # hand-picked episodes from hitl_vr_sample_episodes.json.gz
         episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
         for scene_idx in range(num_fetch_scenes):
             key = GuiInput.KeyNS(GuiInput.KeyNS.ONE.value + scene_idx)

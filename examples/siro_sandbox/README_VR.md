@@ -45,11 +45,12 @@ The system is composed of the following components:
 |---|---|
 | `habitat-sim` | Use the `main` branch. Bullet is required. |
 | `habitat-lab` | This specific `habitat-lab` version must be installed. See [instructions](../../README.md#installation). The `main` branch is currently incompatible. |
-| [hssd-hab](https://huggingface.co/datasets/hssd/hssd-hab) | Location is expected to be `data/fpss`. |
+| Datasets | `python -m habitat_sim.utils.datasets_download --uids habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/` |
 | [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for dataset processing. |
 | [habitat_humanoids](https://huggingface.co/datasets/ai-habitat/habitat_humanoids) | TODO: Instructions and additional data |
 | [NN Weights](TODO) | Copy the files to `data/models`. |
 | [Spot animation data](TODO) | Copy the files to `data/robots/spot_data/`. |
+| [Episodes](TODO) | Put `hitl_vr_sample_episodes.json.gz` in `data/episodes`. Do not extract. |
 | `websockets` | `pip install websockets` |
 
 #### Client
@@ -125,14 +126,14 @@ Example command:
 
 ```
 python get_scene_object_glbs.py \
---fphab-root-dir path_to/hssd-hab/ \
---fp-models-root-dir path_to/hssd-models/ \
+--hssd-hab-root-dir path_to/hssd-hab/ \
+--hssd-models-root-dir path_to/hssd-models/ \
 --scenes 102344193 102344280 102817200 103997424_171030444 103997541_171030615
 ```
 
 #### Importing Data Into Unity
 
-In Unity, use `Tools/Update Data Folder`. From the dialog window, select the data folder that was produced by the script (defaults: `data/hitl_simplified`) and apply. The resources will be imported into Unity.
+In Unity, use `Tools/Update Data Folder...`. From the dialog window, copy the path to the generated `data/hitl_simplified/data` in the `External Data Path` field. The resources will be imported into Unity.
 
 After this step, you may deploy the application to your headset. See [instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md).
 

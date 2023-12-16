@@ -1,5 +1,5 @@
 ---
-    dataset_path: "data/fpss/hssd-hab-uncluttered.scene_dataset_config.json"
+    dataset_path: "data/scene_datasets/hssd-hab/hssd-hab-uncluttered.scene_dataset_config.json"
     additional_object_paths:
     - data/objects/ycb/configs/
     scene_sets:

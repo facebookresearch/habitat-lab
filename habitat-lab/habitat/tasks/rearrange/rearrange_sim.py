@@ -469,8 +469,8 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
 
-            if "fpss" in ep_info.scene_id.split("/"):
-                # For FP scenes, we use different path structure than for other scenes.
+            if "hssd-hab/" in ep_info.scene_id.split("/"):
+                # For HSSD scenes, we use different path structure than for other scenes.
                 base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
             else:
                 base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
