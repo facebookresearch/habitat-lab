@@ -43,7 +43,7 @@ habitat.environment.iterator_options.cycle=False \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type='[1,1]' \
+habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] \
 habitat.simulator.habitat_sim_v0.allow_sliding=False
 ```
 

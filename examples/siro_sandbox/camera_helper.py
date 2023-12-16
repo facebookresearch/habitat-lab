@@ -8,6 +8,7 @@ from typing import Tuple
 
 import magnum as mn
 import numpy as np
+
 from utils.gui.gui_input import GuiInput
 
 
@@ -43,6 +44,10 @@ class CameraHelper:
         self._lookat_pos = None
         self._cam_transform = None
         self._gui_input = gui_input
+
+    @property
+    def first_person_mode(self):
+        return self._first_person_mode
 
     def _camera_pitch_and_yaw_wasd_control(self):
         # update yaw and pitch using ADIK keys

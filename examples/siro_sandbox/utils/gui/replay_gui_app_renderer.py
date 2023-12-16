@@ -52,6 +52,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
+        camera_sensor_spec.near = 0.2
+        camera_sensor_spec.far = 50.0
 
         cfg.sensor_specifications = [camera_sensor_spec]
         cfg.gpu_device_id = 0  # todo

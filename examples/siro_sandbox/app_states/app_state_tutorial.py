@@ -6,6 +6,7 @@
 
 from app_states.app_state_abc import AppState
 from hitl_tutorial import Tutorial, generate_tutorial
+
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 
@@ -61,6 +62,10 @@ class AppStateTutorial(AppState):
 
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
             self._tutorial.skip_stage()
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.Q):
+            while not self._tutorial.is_completed():
+                self._tutorial.skip_stage()
 
         if self._tutorial.is_completed():
             self._tutorial.stop_animations()

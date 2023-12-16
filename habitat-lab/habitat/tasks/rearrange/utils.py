@@ -250,6 +250,19 @@ def get_ao_link_aabb(
     return link_bb
 
 
+def get_aabb(obj_id, sim, transformed=False):
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
+    obj_node = obj.root_scene_node
+    obj_bb = obj_node.cumulative_bb
+    if transformed:
+        obj_bb = habitat_sim.geo.get_transformed_bb(
+            obj_node.cumulative_bb, obj_node.transformation
+        )
+    return obj_bb
+
+
 def euler_to_quat(rpy):
     rot = quaternion.from_euler_angles(rpy)
     rot = mn.Quaternion(mn.Vector3(rot.vec), rot.w)
