@@ -361,7 +361,7 @@ class AppStateFetch(AppState):
                 hand_pos = hand_positions[hand_idx]
                 for key in self.get_grasp_keys_by_hand(hand_idx):
                     if remote_button_input.get_key(key):
-                        # Hand indx/pos before we grab anything
+                        # Hand index/pos before we grab anything
                         self._recent_reach_pos = hand_pos
                         self._recent_hand_idx = hand_idx
             return
@@ -544,7 +544,7 @@ class AppStateFetch(AppState):
                     )
 
                     # The robot can only pick up the object if there is a throw_obj_id
-                    # throw_obj_id will be None if the users fast press and press again the sapce
+                    # throw_obj_id will be None if the users fast press and press again the space
                     if throw_obj_id is not None:
                         throw_vel = (
                             self._throw_helper.viz_and_get_humanoid_throw()

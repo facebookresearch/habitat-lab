@@ -74,7 +74,7 @@ PICK_STEPS = 40
 # The distance between the robot and the human to consider termination of FOLLOW state
 ROBOT_CLOSE_TO_HUMAN_DIS = 2.5
 # This distance/rotation threshold is used to determine whether the human is moving
-DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING = 0.03
+DISTANCE_ROTATION_THRESHOLD_HUMAN_MOVING = 0.03
 # The number of steps to consider human is not moving. The larger the number is, the more social nav behavior is
 NUM_CONSECUTIVE_STOPPING_STEPS_THRESHOLD = 8
 
@@ -252,7 +252,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         return rho, phi
 
     def get_geodesic_distance_obj_coords(self, obj_trans):
-        # Make sure the point is a navigatable waypoint
+        # Make sure the point is a navigable waypoint
         obj_trans = self._habitat_env._sim.safe_snap_point(obj_trans)  # type: ignore
         _, phi = self.get_cartesian_obj_coords(obj_trans)
         rho = self._habitat_env._sim.geodesic_distance(
@@ -264,10 +264,10 @@ class FetchBaselinesController(SingleAgentBaselinesController):
 
     def check_if_skill_done(self, observations, skill_name):
         """Check if the skill is done"""
-        ll_skil = self._agent.actor_critic._skills[  # type: ignore
+        ll_skill = self._agent.actor_critic._skills[  # type: ignore
             self._agent.actor_critic._name_to_idx[skill_name]  # type: ignore
         ]
-        return ll_skil._is_skill_done(
+        return ll_skill._is_skill_done(
             self._batch_and_apply_transforms([observations])
         )
 
@@ -340,7 +340,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 None, ...
             ]
             if self._use_pick_skill_as_place_skill:
-                # Reporpose pick skill for place
+                # Repurpose pick skill for place
                 policy_input["observations"]["obj_start_sensor"] = obj_goal_pos
             else:
                 policy_input["observations"]["obj_goal_sensor"] = obj_goal_pos
@@ -406,7 +406,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         )
         end_pos = rigid_state.translation
         end_pos[1] = ROBOT_BASE_HEIGHT
-        # Get the traget transformation based on the target rigid state
+        # Get the target transformation based on the target rigid state
         target_trans = mn.Matrix4.from_(
             rigid_state.rotation.to_matrix(),
             end_pos,
@@ -465,7 +465,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
             np.linalg.norm(
                 np.array((self._prev_human_pos - human_pos))[[0, 2]]
             )
-            > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
+            > DISTANCE_ROTATION_THRESHOLD_HUMAN_MOVING
             if self._prev_human_pos is not None
             else False
         )
@@ -477,7 +477,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
         #         % (2.0 * np.pi)
         #         - np.pi
         #     )
-        #     > DISTANCE_ROTATION_TRESHOLD_HUMAN_MOVING
+        #     > DISTANCE_ROTATION_THRESHOLD_HUMAN_MOVING
         #     if self._prev_human_rot is not None
         #     else False
         # )
@@ -933,7 +933,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # TODO: obs can be batched before
                 self.start_skill(obs, "nav_to_obj")
 
-            # Determinate the terminatin condition
+            # Determinate the terminating condition
             rho, _ = self.get_cartesian_obj_coords(nav_goal_pos)
             finished_nav = rho < self._drop_dist_threshold
             if not finished_nav:
@@ -996,7 +996,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                     self.get_articulated_agent().sim_obj.transformation
                 )
 
-            # Since we do not apply the skill, so we need to incease the step counter
+            # Since we do not apply the skill, so we need to increase the step counter
             self._skill_steps += 1
             is_done, action_array = self._is_robot_beg_motion_done(
                 env, act_space
@@ -1046,7 +1046,7 @@ class FetchBaselinesController(SingleAgentBaselinesController):
                 # rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._last_object_drop_info = None
 
-        # Make sure the height is consistents
+        # Make sure the height is consistent
         self._set_height()
 
         # Record the human pos
