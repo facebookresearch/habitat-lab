@@ -101,14 +101,17 @@ class MotionConverterSMPLX:
         """
 
         axis_angle_root_rotation_vec = mn.Vector3(root_orientation)
-        root_trans = mn.Vector3(root_translation)
-        axis_angle_root_rotation_angl = mn.Rad(
-            axis_angle_root_rotation_vec.length()
-        )
-        root_T = self.final_rotation_correction * mn.Quaternion.rotation(
-            axis_angle_root_rotation_angl,
-            axis_angle_root_rotation_vec.normalized(),
-        )
+        if axis_angle_root_rotation_vec.length() > 0:
+            root_trans = mn.Vector3(root_translation)
+            axis_angle_root_rotation_angl = mn.Rad(
+                axis_angle_root_rotation_vec.length()
+            )
+            root_T = self.final_rotation_correction * mn.Quaternion.rotation(
+                axis_angle_root_rotation_angl,
+                axis_angle_root_rotation_vec.normalized(),
+            )
+        else:
+            root_T = self.final_rotation_correction
         root_rotation = root_T.to_matrix()
         root_translation = self.final_rotation_correction.transform_vector(
             root_trans
@@ -132,9 +135,8 @@ class MotionConverterSMPLX:
                     f"Error: {joint_type} is not a supported joint type"
                 )
 
-            if pose_joint_index is None:
-                Ql = [0, 0, 0, 1]
-            else:
+            Ql = [0, 0, 0, 1]
+            if pose_joint_index is not None:
                 pose_joint_indices = slice(
                     pose_joint_index * 3, pose_joint_index * 3 + 3
                 )
@@ -144,15 +146,16 @@ class MotionConverterSMPLX:
                     axis_angle_rotation = mn.Vector3(
                         pose_joints[pose_joint_indices]
                     )
-                    axis_angle_rotation_ang = mn.Rad(
-                        axis_angle_rotation.length()
-                    )
-                    Q = mn.Quaternion.rotation(
-                        axis_angle_rotation_ang,
-                        axis_angle_rotation.normalized(),
-                    )
-                    Ql = list(Q.vector) + [float(Q.scalar)]
-
+                    if axis_angle_rotation.length() > 0:
+                        axis_angle_rotation_ang = mn.Rad(
+                            axis_angle_rotation.length()
+                        )
+                        Q = mn.Quaternion.rotation(
+                            axis_angle_rotation_ang,
+                            axis_angle_rotation.normalized(),
+                        )
+                        Ql = list(Q.vector) + [float(Q.scalar)]
+                        
             new_pose += list(Ql)
         return root_translation, root_rotation, new_pose
 
@@ -164,7 +167,10 @@ class MotionConverterSMPLX:
             :param output_path: output path where to save the pkl file with the converted motion
         """
         content_motion = np.load(motion_path, allow_pickle=True)
-
+        if "mocap_frame_rate" in content_motion:
+            fps = content_motion["mocap_frame_rate"]
+        elif "frame_rate" in content_motion:
+            fps = content_motion["frame_rate"]
         pose_info = {
             "trans": content_motion["trans"],
             "root_orient": content_motion["root_orient"],
@@ -190,7 +196,7 @@ class MotionConverterSMPLX:
             "joints_array": joints_array,
             "transform_array": transform_array,
             "displacement": None,
-            "fps": 1,
+            "fps": fps,
         }
         content_motion = {
             "pose_motion": walk_motion,
