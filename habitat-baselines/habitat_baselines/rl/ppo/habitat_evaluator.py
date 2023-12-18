@@ -64,6 +64,26 @@ class HabitatEvaluator(Evaluator):
             device=device,
         )
 
+        transformer_based_policy = False
+        # TODO: hack here to make sure it is runable for mobile gaze with transformers
+        if (
+            "main_agent" in config.habitat_baselines.rl.policy
+            and "transformer_config"
+            in config.habitat_baselines.rl.policy.main_agent
+        ):
+            test_recurrent_hidden_states = torch.zeros(
+                (
+                    8,
+                    2,
+                    2,
+                    24,
+                    0,
+                    32,
+                ),
+                device=device,
+            )
+            transformer_based_policy = True
+
         hidden_state_lens = agent.actor_critic.hidden_state_shape_lens
         action_space_lens = agent.actor_critic.policy_action_space_shape_lens
 
@@ -79,6 +99,9 @@ class HabitatEvaluator(Evaluator):
             device=device,
             dtype=torch.bool,
         )
+        if transformer_based_policy:
+            not_done_masks = not_done_masks.unsqueeze(-1)
+
         stats_episodes: Dict[
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
@@ -145,9 +168,26 @@ class HabitatEvaluator(Evaluator):
                     **space_lengths,
                 )
                 if action_data.should_inserts is None:
-                    test_recurrent_hidden_states = (
-                        action_data.rnn_hidden_states
-                    )
+                    if transformer_based_policy:
+                        if 0 in test_recurrent_hidden_states.shape:
+                            # empty in the begining
+                            test_recurrent_hidden_states = (
+                                action_data.rnn_hidden_states.unsqueeze(-2)
+                            )
+                        else:
+                            test_recurrent_hidden_states = torch.cat(
+                                (
+                                    test_recurrent_hidden_states,
+                                    action_data.rnn_hidden_states.unsqueeze(
+                                        -2
+                                    ),
+                                ),
+                                -2,
+                            )
+                    else:
+                        test_recurrent_hidden_states = (
+                            action_data.rnn_hidden_states
+                        )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
                     agent.actor_critic.update_hidden_state(
@@ -191,11 +231,25 @@ class HabitatEvaluator(Evaluator):
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
 
-            not_done_masks = torch.tensor(
-                [[not done] for done in dones],
-                dtype=torch.bool,
-                device="cpu",
-            ).repeat(1, *agent.masks_shape)
+            # TODO: better way to handle this
+            if transformer_based_policy:
+                temp_masks = torch.tensor(
+                    [[not done] for done in dones],
+                    dtype=torch.bool,
+                    device="cpu",
+                ).repeat(1, *agent.masks_shape)
+                temp_masks = temp_masks.T
+                not_done_masks = torch.cat(
+                    (not_done_masks[:, :, 0].to("cpu").T, temp_masks), axis=0
+                )
+                not_done_masks = not_done_masks.T
+                not_done_masks = not_done_masks.unsqueeze(-1)
+            else:
+                not_done_masks = torch.tensor(
+                    [[not done] for done in dones],
+                    dtype=torch.bool,
+                    device="cpu",
+                ).repeat(1, *agent.masks_shape)
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device="cpu"

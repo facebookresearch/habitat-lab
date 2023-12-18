@@ -134,9 +134,30 @@ class MultiPolicy(Policy):
         """
         Stack the hidden states of all the policies in the active population.
         """
-        hidden_shapes = np.stack(
-            [policy.hidden_state_shape for policy in self._active_policies]
-        )
+        # TODO: figure out a better way to handle the shape
+        # This is used when do multi-agent training
+        # self._active_storages
+        # Check if the hidden state has the same shape
+        shapes = [
+            policy.hidden_state_shape for policy in self._active_policies
+        ]
+        shape_0 = shapes[0]
+        is_same_shape = True
+        for shape in range(1, len(shapes)):
+            if shape != shape_0:
+                is_same_shape = False
+                break
+
+        if is_same_shape:
+            hidden_shapes = np.stack(
+                [policy.hidden_state_shape for policy in self._active_policies]
+            )
+        else:
+            # This is only works for the transformer policy
+            hidden_shapes = np.array(
+                [(8, 2, 2, 24, 0, 32), (8, 2, 2, 24, 0, 0)]
+            )
+
         # We do max because some policies may be non-neural
         # And will have a hidden state of [0, hidden_dim]
         max_hidden_shape = hidden_shapes.max(0)
