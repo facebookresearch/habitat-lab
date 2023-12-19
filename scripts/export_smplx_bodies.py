@@ -186,6 +186,20 @@ def get_origin_from_matrix(M):
 
     return origin_xml_node
 
+def get_origin_from_bone(bone):
+    global multiplier
+    M = bone.matrix_local
+    translation = bone.matrix_local.to_translation(
+    ) - bone.parent.matrix_local.to_translation()
+
+    translation = translation/multiplier
+
+    origin_xml_node = ET.Element('origin')
+    origin_xml_node.set("rpy", "0 0 0")
+    origin_xml_node.set("xyz", ORIGIN_NODE_FORMAT.format(
+        translation.x, translation.y, translation.z))
+
+    return origin_xml_node
 
 def create_bone_link(this_bone):
     global counter
@@ -224,7 +238,7 @@ def create_bone_link(this_bone):
     limit_node = ET.fromstring(BASE_LIMIT_NODE_STR)
     joint.append(limit_node)
 
-    origin_xml_node = get_origin_from_matrix(this_relative_matrix)
+    origin_xml_node = get_origin_from_bone(this_bone)
 
     joint.append(origin_xml_node)
     joints.append(joint)
@@ -355,14 +369,17 @@ def walk_armature(this_bone, handler):
         walk_armature(child, handler)
 
 
-def export_urdf(filename, settings):
+def smplx_export_urdf(filename, settings):
     global LINK_NAME_FORMAT, JOINT_NAME_FORMAT, ob, root_bone, links, joints, multiplier
     counter = 0
     links = []
     joints = []
     if "multiplier" in settings:
         multiplier = settings["multiplier"]
-    ob = settings.get("armature", bpy.data.objects['Armature'])
+    if 'armature' in settings:
+        ob = settings['armature']
+    else:
+        ob = bpy.data.objects['Armature']
     # find the root bone, there can be only one
     root_bone = None
 
@@ -466,6 +483,22 @@ class BlenderArgumentParser(argparse.ArgumentParser):
 
         return super().parse_args(args=parsed_args)
 
+def setup_bones():
+    bpy.types.Bone.xml_link_name = bpy.props.StringProperty(name="URDF xml link name", default="unset")
+    bpy.types.Bone.body_segment_mass = bpy.props.FloatProperty(name="URDF body segment mass", default=5.0)
+    bpy.types.Bone.ixx = bpy.props.FloatProperty(name="Inertia value XX", default=1.0)
+    bpy.types.Bone.iyy = bpy.props.FloatProperty(name="Inertia value YY", default=1.0)
+    bpy.types.Bone.izz = bpy.props.FloatProperty(name="Inertia value ZZ", default=1.0)
+    bpy.types.Bone.ixy = bpy.props.FloatProperty(name="Inertia value XY", default=0.0)
+    bpy.types.Bone.ixz = bpy.props.FloatProperty(name="Inertia value XZ", default=0.0)
+    bpy.types.Bone.iyz = bpy.props.FloatProperty(name="Inertia value YZ", default=0.0)	
+    bpy.types.EditBone.body_segment_mass = bpy.props.FloatProperty(name="URDF body segment mass", default=5.0 )
+    bpy.types.EditBone.ixx = bpy.props.FloatProperty(name="Inertia value XX", default=1.0)
+    bpy.types.EditBone.iyy = bpy.props.FloatProperty(name="Inertia value YY", default=1.0)
+    bpy.types.EditBone.izz = bpy.props.FloatProperty(name="Inertia value ZZ", default=1.0)
+    bpy.types.EditBone.ixy = bpy.props.FloatProperty(name="Inertia value XY", default=0.0)
+    bpy.types.EditBone.ixz = bpy.props.FloatProperty(name="Inertia value XZ", default=0.0)
+    bpy.types.EditBone.iyz = bpy.props.FloatProperty(name="Inertia value YZ", default=0.0)
 
 def main():
     parser = BlenderArgumentParser()
@@ -496,7 +529,6 @@ def main():
     display = False  # TODO delete
     index_body = 0
     genders = ["neutral", "male", "female"]
-    num_textures_gender = 4
     cleanup()
     for index, curr_body_info in enumerate(body_info):
         index_body = index
@@ -515,18 +547,11 @@ def main():
             texture = curr_body_info["texture"]
         else:
             if gender != "neutral":
-                texture = "{}{}_albedo.jpg".format(
-                    gender, (index_body % num_textures_gender) + 1
-                )
-                if gender == "female" and (
-                    index_body % num_textures_gender
-                ) in [2, 4]:
+                
+                if gender == "female":
                     texture = "smplx_texture_f_alb.png"
-                if (
-                    gender == "male"
-                    and (index_body % num_textures_gender) == 4
-                ):
-                    texture = "male5_albedo.jpg"
+                else:
+                    texture = "smplx_texture_m_alb.png"
                 bpy.context.window_manager.smplx_tool.smplx_texture = texture
                 bpy.ops.object.smplx_set_texture()
 
@@ -588,6 +613,7 @@ def main():
         fbx_names.append(fbx_path)
 
     # Import FBX and export URDF
+    fbx_names = ["/Users/xavierpuig/Documents/Projects/test_smplx_blender/habitat/habitat-lab/data/versioned_data/habitat_humanoids/avatar_0/avatar_0.fbx"]
     if export_urdf:
         for fbx_name in fbx_names:
             cleanup()
@@ -595,7 +621,17 @@ def main():
             bpy.ops.import_scene.fbx(
                 filepath=fbx_name, automatic_bone_orientation=True
             )
-            bpy.ops.export_armature.urdf(filepath=urdf_name)
+            armature_object = None
+            for obj in bpy.context.selected_objects:
+                if obj.type == 'ARMATURE':
+                    armature_object = obj
+                    break
+            if armature_object == None:
+                print("No armature is selected.")
+            setup_bones()
+            bpy.ops.object.mode_set(mode='OBJECT')
+            smplx_export_urdf(urdf_name, {'armature': armature_object})
+            
 
 
 if __name__ == "__main__":
