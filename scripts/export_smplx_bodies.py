@@ -85,7 +85,7 @@ def smplx_export_gltf(filepath):
 
     # Remove all shape keys except newly added one
     bpy.context.object.active_shape_key_index = 0
-    for count in range(0, num_shape_keys):
+    for _ in range(0, num_shape_keys):
         bpy.ops.object.shape_key_remove(all=False)
 
     # Model (skeleton and skinned mesh) needs to have rotation of (90, 0, 0) when exporting so that it will have rotation (0, 0, 0) when imported into Unity
@@ -370,7 +370,7 @@ def walk_armature(this_bone, handler):
 
 
 def smplx_export_urdf(filename, settings):
-    global LINK_NAME_FORMAT, JOINT_NAME_FORMAT, ob, root_bone, links, joints, multiplier
+    global LINK_NAME_FORMAT, JOINT_NAME_FORMAT, ob, root_bone, links, joints, multiplier, counter
     counter = 0
     links = []
     joints = []
@@ -379,7 +379,10 @@ def smplx_export_urdf(filename, settings):
     if "armature" in settings:
         ob = settings["armature"]
     else:
-        ob = bpy.data.objects["Armature"]
+        if "Armature" in bpy.data.objects:
+            ob = bpy.data.objects["Armature"]
+        else:
+            raise Exception("The selected object has no armature")
     # find the root bone, there can be only one
     root_bone = None
 
