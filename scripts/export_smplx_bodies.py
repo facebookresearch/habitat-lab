@@ -509,7 +509,7 @@ def main():
         help="Folder where to output body files",
     )
     parser.add_argument(
-        "--body_file",
+        "--body-file",
         type=str,
         help="(Optional) File with body parameters, including gender and betas. If not provided, will generate a single shape with random parameters.",
     )
@@ -520,8 +520,8 @@ def main():
     if args.body_file is None:
         body_info: list[dict] = [{}]
     else:
-        with open(args.body_file):
-            body_info = json.load(args.body_file)
+        with open(args.body_file) as f:
+            body_info = [json.load(f)]
 
     fbx_names = []
     export_glb = True
@@ -536,6 +536,7 @@ def main():
         # Set gender
         if "gender" in curr_body_info:
             assert curr_body_info["gender"] in genders
+            gender = curr_body_info["gender"]
         else:
             gender = random.choice(genders)
 
@@ -573,6 +574,8 @@ def main():
         ind = 0
 
         for key_block in obj.data.shape_keys.key_blocks:
+            if ind == 10:
+                break
             if key_block.name.startswith("Shape"):
                 key_block.value = betas[ind]
                 ind += 1
@@ -613,7 +616,7 @@ def main():
         fbx_names.append(fbx_path)
 
     # Import FBX and export URDF
-    fbx_names = ["/Users/xavierpuig/Documents/Projects/test_smplx_blender/habitat/habitat-lab/data/versioned_data/habitat_humanoids/avatar_0/avatar_0.fbx"]
+    # fbx_names = ["/Users/xavierpuig/Documents/Projects/test_smplx_blender/habitat/habitat-lab/data/versioned_data/habitat_humanoids/avatar_0/avatar_0.fbx"]
     if export_urdf:
         for fbx_name in fbx_names:
             cleanup()
