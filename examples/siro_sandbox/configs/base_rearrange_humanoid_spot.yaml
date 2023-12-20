@@ -187,12 +187,12 @@ habitat_baselines:
             pick:
               skill_name: "PickSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "data/models/pick_latest.pth"
+              load_ckpt_file: "data/models/pick.pth"
               max_skill_steps: 250
               obs_skill_input_dim: 3
             place:
               skill_name: "PlaceSkillPolicy"
-              # We can swtich between if we want to use pick skill to replace place skill
+              # We can switch between if we want to use pick skill to replace place skill
               # or just use the true place skill
               # Use the place skill
               # obs_skill_inputs: ["obj_goal_sensor"]
@@ -200,7 +200,7 @@ habitat_baselines:
               # use_pick_skill_as_place_skill: False
               # Use the pick skill to be the place skill
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "data/models/pick_latest.pth"
+              load_ckpt_file: "data/models/pick.pth"
               use_pick_skill_as_place_skill: True
               max_skill_steps: 250
               obs_skill_input_dim: 3
@@ -210,7 +210,7 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/point_nav_ckpt.2545.pth"
+              load_ckpt_file: "data/models/point_nav.pth"
               max_skill_steps: 750
               obs_skill_input_dim: 2
               pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
@@ -218,7 +218,7 @@ habitat_baselines:
             nav_to_robot:
               skill_name: "NavSkillPolicy"
               obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              load_ckpt_file: "data/models/social_nav_ckpt.1297.pth"
+              load_ckpt_file: "data/models/social_nav.pth"
               obs_skill_input_dim: 2
               pddl_action_names: [ "nav_to_goal", "nav_to_robot", "nav_to_receptacle_by_name"]
       agent_1:

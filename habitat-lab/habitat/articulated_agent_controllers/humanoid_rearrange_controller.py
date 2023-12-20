@@ -217,7 +217,7 @@ class HumanoidRearrangeController:
             )
 
         if self.prev_orientation is not None:
-            # If prev orrientation is None, transition to this wposition directly
+            # If prev orientation is None, transition to this position directly
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[2], prev_orientation[0])
@@ -520,6 +520,7 @@ class HumanoidRearrangeController:
 
     def calculate_reach_pose(self, obj_pos: mn.Vector3, index_hand=0):
         hand_name = self._hand_names[index_hand]
+        assert hand_name in self.hand_processed_data
         hand_data = self.hand_processed_data[hand_name]
         root_pos = self.obj_transform_base.translation
         inv_T = (

@@ -47,10 +47,8 @@ The system is composed of the following components:
 | `habitat-lab` | This specific `habitat-lab` version must be installed. See [instructions](../../README.md#installation). The `main` branch is currently incompatible. |
 | Datasets | `python -m habitat_sim.utils.datasets_download --uids habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/` |
 | [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for dataset processing. |
-| [habitat_humanoids](https://huggingface.co/datasets/ai-habitat/habitat_humanoids) | TODO: Instructions and additional data |
-| [NN Weights](TODO) | Copy the files to `data/models`. |
-| [Spot animation data](TODO) | Copy the files to `data/robots/spot_data/`. |
-| [Episodes](TODO) | Put `hitl_vr_sample_episodes.json.gz` in `data/episodes`. Do not extract. |
+| [habitat_humanoids](https://huggingface.co/datasets/ai-habitat/habitat_humanoids) | Use the `main` branch. |
+| [Server files](https://huggingface.co/datasets/ai-habitat/siro_fetch_extra_data) | Copy the files as-is to `data/`, following the directory structure. |
 | `websockets` | `pip install websockets` |
 
 #### Client
