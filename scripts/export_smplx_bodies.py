@@ -186,31 +186,31 @@ def get_origin_from_matrix(M):
 
     return origin_xml_node
 
+
 def get_origin_from_bone(bone):
     global multiplier
-    M = bone.matrix_local
-    translation = bone.matrix_local.to_translation(
-    ) - bone.parent.matrix_local.to_translation()
+    translation = (
+        bone.matrix_local.to_translation()
+        - bone.parent.matrix_local.to_translation()
+    )
 
-    translation = translation/multiplier
+    translation = translation / multiplier
 
-    origin_xml_node = ET.Element('origin')
+    origin_xml_node = ET.Element("origin")
     origin_xml_node.set("rpy", "0 0 0")
-    origin_xml_node.set("xyz", ORIGIN_NODE_FORMAT.format(
-        translation.x, translation.y, translation.z))
+    origin_xml_node.set(
+        "xyz",
+        ORIGIN_NODE_FORMAT.format(translation.x, translation.y, translation.z),
+    )
 
     return origin_xml_node
+
 
 def create_bone_link(this_bone):
     global counter
 
     # Get bone properties
     parent_bone = this_bone.parent
-
-    this_matrix = this_bone.matrix_local
-    parent_matrix = parent_bone.matrix_local
-    this_relative_matrix = parent_matrix.inverted() @ this_matrix
-
     base_joint_name = JOINT_NAME_FORMAT.format(
         counter=counter, bone_name=this_bone.name
     )
@@ -376,10 +376,10 @@ def smplx_export_urdf(filename, settings):
     joints = []
     if "multiplier" in settings:
         multiplier = settings["multiplier"]
-    if 'armature' in settings:
-        ob = settings['armature']
+    if "armature" in settings:
+        ob = settings["armature"]
     else:
-        ob = bpy.data.objects['Armature']
+        ob = bpy.data.objects["Armature"]
     # find the root bone, there can be only one
     root_bone = None
 
@@ -483,22 +483,54 @@ class BlenderArgumentParser(argparse.ArgumentParser):
 
         return super().parse_args(args=parsed_args)
 
+
 def setup_bones():
-    bpy.types.Bone.xml_link_name = bpy.props.StringProperty(name="URDF xml link name", default="unset")
-    bpy.types.Bone.body_segment_mass = bpy.props.FloatProperty(name="URDF body segment mass", default=5.0)
-    bpy.types.Bone.ixx = bpy.props.FloatProperty(name="Inertia value XX", default=1.0)
-    bpy.types.Bone.iyy = bpy.props.FloatProperty(name="Inertia value YY", default=1.0)
-    bpy.types.Bone.izz = bpy.props.FloatProperty(name="Inertia value ZZ", default=1.0)
-    bpy.types.Bone.ixy = bpy.props.FloatProperty(name="Inertia value XY", default=0.0)
-    bpy.types.Bone.ixz = bpy.props.FloatProperty(name="Inertia value XZ", default=0.0)
-    bpy.types.Bone.iyz = bpy.props.FloatProperty(name="Inertia value YZ", default=0.0)	
-    bpy.types.EditBone.body_segment_mass = bpy.props.FloatProperty(name="URDF body segment mass", default=5.0 )
-    bpy.types.EditBone.ixx = bpy.props.FloatProperty(name="Inertia value XX", default=1.0)
-    bpy.types.EditBone.iyy = bpy.props.FloatProperty(name="Inertia value YY", default=1.0)
-    bpy.types.EditBone.izz = bpy.props.FloatProperty(name="Inertia value ZZ", default=1.0)
-    bpy.types.EditBone.ixy = bpy.props.FloatProperty(name="Inertia value XY", default=0.0)
-    bpy.types.EditBone.ixz = bpy.props.FloatProperty(name="Inertia value XZ", default=0.0)
-    bpy.types.EditBone.iyz = bpy.props.FloatProperty(name="Inertia value YZ", default=0.0)
+    bpy.types.Bone.xml_link_name = bpy.props.StringProperty(
+        name="URDF xml link name", default="unset"
+    )
+    bpy.types.Bone.body_segment_mass = bpy.props.FloatProperty(
+        name="URDF body segment mass", default=5.0
+    )
+    bpy.types.Bone.ixx = bpy.props.FloatProperty(
+        name="Inertia value XX", default=1.0
+    )
+    bpy.types.Bone.iyy = bpy.props.FloatProperty(
+        name="Inertia value YY", default=1.0
+    )
+    bpy.types.Bone.izz = bpy.props.FloatProperty(
+        name="Inertia value ZZ", default=1.0
+    )
+    bpy.types.Bone.ixy = bpy.props.FloatProperty(
+        name="Inertia value XY", default=0.0
+    )
+    bpy.types.Bone.ixz = bpy.props.FloatProperty(
+        name="Inertia value XZ", default=0.0
+    )
+    bpy.types.Bone.iyz = bpy.props.FloatProperty(
+        name="Inertia value YZ", default=0.0
+    )
+    bpy.types.EditBone.body_segment_mass = bpy.props.FloatProperty(
+        name="URDF body segment mass", default=5.0
+    )
+    bpy.types.EditBone.ixx = bpy.props.FloatProperty(
+        name="Inertia value XX", default=1.0
+    )
+    bpy.types.EditBone.iyy = bpy.props.FloatProperty(
+        name="Inertia value YY", default=1.0
+    )
+    bpy.types.EditBone.izz = bpy.props.FloatProperty(
+        name="Inertia value ZZ", default=1.0
+    )
+    bpy.types.EditBone.ixy = bpy.props.FloatProperty(
+        name="Inertia value XY", default=0.0
+    )
+    bpy.types.EditBone.ixz = bpy.props.FloatProperty(
+        name="Inertia value XZ", default=0.0
+    )
+    bpy.types.EditBone.iyz = bpy.props.FloatProperty(
+        name="Inertia value YZ", default=0.0
+    )
+
 
 def main():
     parser = BlenderArgumentParser()
@@ -509,7 +541,7 @@ def main():
         help="Folder where to output body files",
     )
     parser.add_argument(
-        "--body_file",
+        "--body-file",
         type=str,
         help="(Optional) File with body parameters, including gender and betas. If not provided, will generate a single shape with random parameters.",
     )
@@ -520,8 +552,8 @@ def main():
     if args.body_file is None:
         body_info: list[dict] = [{}]
     else:
-        with open(args.body_file):
-            body_info = json.load(args.body_file)
+        with open(args.body_file, "r") as f:
+            body_info = json.load(f)
 
     fbx_names = []
     export_glb = True
@@ -536,6 +568,7 @@ def main():
         # Set gender
         if "gender" in curr_body_info:
             assert curr_body_info["gender"] in genders
+            gender = curr_body_info["gender"]
         else:
             gender = random.choice(genders)
 
@@ -545,9 +578,10 @@ def main():
         # Set texture
         if "texture" in curr_body_info:
             texture = curr_body_info["texture"]
+            bpy.context.window_manager.smplx_tool.smplx_texture = texture
+            bpy.ops.object.smplx_set_texture()
         else:
             if gender != "neutral":
-                
                 if gender == "female":
                     texture = "smplx_texture_f_alb.png"
                 else:
@@ -573,13 +607,17 @@ def main():
         ind = 0
 
         for key_block in obj.data.shape_keys.key_blocks:
+            if ind == 10:
+                break
             if key_block.name.startswith("Shape"):
                 key_block.value = betas[ind]
                 ind += 1
 
         bpy.ops.object.smplx_snap_ground_plane()
 
-        avatar_name = curr_body_info.get("name", "avatar_{}".format(index_body))
+        avatar_name = curr_body_info.get(
+            "name", "avatar_{}".format(index_body)
+        )
         avatar_dir = "{}/{}".format(output_path, avatar_name)
         if not os.path.isdir(avatar_dir):
             os.mkdir(avatar_dir)
@@ -613,7 +651,7 @@ def main():
         fbx_names.append(fbx_path)
 
     # Import FBX and export URDF
-    fbx_names = ["/Users/xavierpuig/Documents/Projects/test_smplx_blender/habitat/habitat-lab/data/versioned_data/habitat_humanoids/avatar_0/avatar_0.fbx"]
+
     if export_urdf:
         for fbx_name in fbx_names:
             cleanup()
@@ -623,15 +661,14 @@ def main():
             )
             armature_object = None
             for obj in bpy.context.selected_objects:
-                if obj.type == 'ARMATURE':
+                if obj.type == "ARMATURE":
                     armature_object = obj
                     break
             if armature_object == None:
                 print("No armature is selected.")
             setup_bones()
-            bpy.ops.object.mode_set(mode='OBJECT')
-            smplx_export_urdf(urdf_name, {'armature': armature_object})
-            
+            bpy.ops.object.mode_set(mode="OBJECT")
+            smplx_export_urdf(urdf_name, {"armature": armature_object})
 
 
 if __name__ == "__main__":

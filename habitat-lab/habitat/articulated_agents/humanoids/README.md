@@ -85,13 +85,15 @@ This will generate a single body with random gender and body parameters and stor
 path_to_blender -b -P 'scripts/export_smplx_bodies.py' -- --output-dir your_output_dir --body-file your_body_file
 ```
 
-Here `your_body_file` should be a json file containing a list of dictionaries, one for each avatar you want to generate. Each dictionary should have the format below.
+Here `your_body_file` should be a json file containing a list of dictionaries, one for each avatar you want to generate. For a single avatar, the json file should have the format below.
 
 ```python
-{
-    "name": "The name of the avatar. If not provided, will be avatar_{ind}, with {ind} being the avatar index",
-    "betas": "A list of 10 beta parameters (see SMPL-X). If not provided, samples at random from a normal distribution",
-    "gender": "The gender of the avatar (neutral, female, male). If not provided, samples at random among the 3",
-    "texture": "The texture of the avatar. If not provided, samples among the ones we provide by default"
-}
+[
+    {
+        "name": "The name of the avatar. If not provided, will be avatar_{ind}, with {ind} being the avatar index",
+        "betas": "A list of 10 beta parameters (see SMPL-X). If not provided, samples at random from a normal distribution",
+        "gender": "The gender of the avatar (neutral, female, male). If not provided, samples at random among the 3",
+        "texture": "The texture of the avatar. If not provided, samples among the ones we provide by default"
+    }
+]
 ```
