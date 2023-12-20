@@ -58,7 +58,7 @@ The system is composed of the following components:
 | Unity 2022.3.7f1 | Beware that a license may be required by your organization. |
 | Quest Headset | Tested on Quest Pro and Quest 3. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. |
 | [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | Use the `main` branch. See [instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
-| Unity data folder | See this section for instructions for generating the data folder. |
+| Unity data folder | See [this section](#dataset-processing) for instructions for generating the data folder. |
 
 ## Launch Commands
 
@@ -187,32 +187,32 @@ Note: Quest's browser (and probably all browsers) will only load WebXR experienc
 
 1. install openssl on your OS if necessary.
 
-1. generate private.key
+2. generate private.key
 ```
 openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048
 ```
 
-1. generate temp.csr
+3. generate temp.csr
 ```
 openssl req -new -key private.key -out temp.csr
 ```
 
-1. generate self_signed.pem
+4. generate self_signed.pem
 * There are several prompts for info like country and organization. You can press return to use defaults for all of these.
 ```
 openssl x509 -req -days 365 -in temp.csr -signkey private.key -out self_signed.pem -outform PEM
 ```
 
-1. Launch your HTTPS server in a folder that you want to serve
+5. Launch your HTTPS server in a folder that you want to serve
 ```
 openssl s_server -accept 8443 -cert self_signed.pem -key private.key -WWW
 ```
 
-1. Test on the same machine
+6. Test on the same machine
 * Browse to https://0.0.0.0:8443/example.html
 * In Chrome and other browsers, you will have to navigate past a "Your connection is not private" warning but it will otherwise work.
 
-1. Test on another machine on the same local network (same router)
+7. Test on another machine on the same local network (same router)
 * First, make sure that your firewall is configured to allow the the connection to port 8443.
 * Find your *private* IP address, e.g. `hostname -I`
 * From the other machine, browse to https://IP:8443/example.html
