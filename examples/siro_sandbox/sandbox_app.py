@@ -73,6 +73,7 @@ DEFAULT_POSE_PATH = (
 )
 
 DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+VIZ_ANIMATION_SPEED = 2.0
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -146,7 +147,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._debug_images = args.debug_images
 
-        self._viz_anim_fraction = 0.0
+        self._viz_anim_fraction: float = 0.0
         self._pending_cursor_style = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
@@ -157,7 +158,7 @@ class SandboxDriver(GuiAppDriver):
             self._end_episode(do_reset)
 
         self._client_message_manager = None
-        if self.do_network_server:
+        if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
         self._sandbox_service = SandboxService(
@@ -225,15 +226,14 @@ class SandboxDriver(GuiAppDriver):
     def close(self):
         self._check_terminate_server()
 
-    # TODO: More descriptive name.
     @property
-    def do_network_server(self):
+    def network_server_enabled(self) -> bool:
         return self._args.remote_gui_mode
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
         self._interprocess_record = None
-        if self.do_network_server:
+        if self.network_server_enabled:
             # How many frames we can simulate "ahead" of what keyframes have been sent.
             # A larger value increases lag on the client, while ensuring a more reliable
             # simulation rate in the presence of unreliable network comms.
@@ -246,7 +246,7 @@ class SandboxDriver(GuiAppDriver):
             )
 
     def _check_terminate_server(self):
-        if self.do_network_server:
+        if self.network_server_enabled:
             terminate_server_process()
 
     def _make_dataset(self, config):
@@ -356,7 +356,7 @@ class SandboxDriver(GuiAppDriver):
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
-        if self.do_network_server:
+        if self.network_server_enabled:
             self._remote_gui_input.clear_history()
 
         self.ctrl_helper.on_environment_reset()
@@ -469,9 +469,8 @@ class SandboxDriver(GuiAppDriver):
             self._remote_gui_input.update()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
-        viz_anim_speed = 2.0
         self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * viz_anim_speed
+            self._viz_anim_fraction + dt * VIZ_ANIMATION_SPEED
         ) % 1.0
 
         # Navmesh visualization only works in the debug third-person view
@@ -546,7 +545,7 @@ class SandboxDriver(GuiAppDriver):
         if self._remote_gui_input:
             self._remote_gui_input.on_frame_end()
 
-        if self.do_network_server:
+        if self.network_server_enabled:
             for keyframe_json in keyframes:
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
