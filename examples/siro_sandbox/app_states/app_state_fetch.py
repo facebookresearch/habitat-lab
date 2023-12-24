@@ -13,12 +13,14 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-from utils.hablab_utils import get_agent_art_obj_transform, get_grasped_objects_idxs
-
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
-from habitat.tasks.rearrange.utils import get_angle_to_pos
+from utils.hablab_utils import (
+    get_agent_art_obj_transform,
+    get_grasped_objects_idxs,
+)
+
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
 COLOR_GRASPABLE = mn.Color3(1, 0.75, 0)
@@ -90,47 +92,8 @@ class AppStateFetch(AppState):
         self._has_grasp_preview = False
         self._remote_place_goal_counter = 0
 
-        # sloppy: set this private member so we get deterministic
-        # agent starting positions
-        self._sandbox_service.env.task._fixed_starting_position = True
-
     def _is_remote_active(self):
         return self._is_remote_active_toggle
-
-    def _make_agent_face_target(self, target_pos, idx):
-        agent_pos = (
-            self.get_sim().get_agent_data(idx).articulated_agent.base_pos
-        )
-        relative_target = target_pos - agent_pos
-        angle_to_object = get_angle_to_pos(relative_target)
-        self.get_sim().get_agent_data(
-            idx
-        ).articulated_agent.base_rot = angle_to_object
-
-    def _make_robot_near_human(self, human_pos):
-        """Constrain the robot location to be near human pos"""
-        robot_pos = self.get_sim().pathfinder.get_random_navigable_point_near(
-            human_pos,
-            ROBOT_SPAWN_NEAR_HUMAN_DIS,
-            island_index=self.get_sim()._largest_island_idx,
-        )
-
-        # If the robot_pos is not NaN
-        if not np.isnan(robot_pos[0]):
-            # Sloppy: overwrite the location of the robot
-            # Make sure the height is consistent
-            robot_pos[1] = (
-                self.get_sim()
-                .get_agent_data(1 - self.get_gui_controlled_agent_index())
-                .articulated_agent.base_pos[1]
-            )
-            self.get_sim().get_agent_data(
-                1 - self.get_gui_controlled_agent_index()
-            ).articulated_agent.base_pos = robot_pos
-            # Make the robot face toward the human
-            self._make_agent_face_target(
-                human_pos, 1 - self.get_gui_controlled_agent_index()
-            )
 
     def _get_navmesh_triangle_vertices(self):
         """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
@@ -167,57 +130,11 @@ class AppStateFetch(AppState):
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.count_tsteps_stop = 0
 
-        # Get the scene id
-        scene_id = (
-            self._sandbox_service.episode_helper.current_episode.scene_id
+        human_pos = (
+            self.get_sim()
+            .get_agent_data(self.get_gui_controlled_agent_index())
+            .articulated_agent.base_pos
         )
-
-        # Reset the location of the robot so that it is near human
-        # Sloppy: should move this flag to other places
-        if RANDOM_AGENT_LOCATION_RESET:
-            human_pos = (
-                self.get_sim()
-                .get_agent_data(self.get_gui_controlled_agent_index())
-                .articulated_agent.base_pos
-            )
-            self._make_robot_near_human(human_pos)
-            robot_pos = (
-                self.get_sim()
-                .get_agent_data(1 - self.get_gui_controlled_agent_index())
-                .articulated_agent.base_pos
-            )
-        elif scene_id is not None:
-            # Robot
-            #fix_robot_pos = FIX_AGENT_INIT_POS[scene_id][0]
-            #robot_height = (
-            #    self.get_sim()
-            #    .get_agent_data(1 - self.get_gui_controlled_agent_index())
-            #    .articulated_agent.base_pos[1]
-            #)
-            #robot_pos = mn.Vector3(
-            #    [fix_robot_pos[0], robot_height, fix_robot_pos[1]]
-            #)
-            #self.get_sim().get_agent_data(
-            #    1 - self.get_gui_controlled_agent_index()
-            #).articulated_agent.base_pos = robot_pos
-            ## Human
-            #fix_human_pos = FIX_AGENT_INIT_POS[scene_id][1]
-            #human_height = (
-            #    self.get_sim()
-            #    .get_agent_data(self.get_gui_controlled_agent_index())
-            #    .articulated_agent.base_pos[1]
-            #)
-            #human_pos = mn.Vector3(
-            #    [fix_human_pos[0], human_height, fix_human_pos[1]]
-            #)
-            #self.get_sim().get_agent_data(
-            #    self.get_gui_controlled_agent_index()
-            #).articulated_agent.base_pos = human_pos
-
-            human_pos = self.get_sim().get_agent_data(
-                self.get_gui_controlled_agent_index()
-            ).articulated_agent.base_pos
-            pass
 
         client_message_manager = self._sandbox_service.client_message_manager
         if client_message_manager:
@@ -706,7 +623,6 @@ class AppStateFetch(AppState):
         lookat_y_offset = mn.Vector3(0, 0, 0)
         lookat = agent_pos + lookat_y_offset
         return lookat
-
 
     def sim_update(self, dt, post_sim_update_dict):
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):

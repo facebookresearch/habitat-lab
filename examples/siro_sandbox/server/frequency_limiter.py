@@ -7,6 +7,7 @@
 import asyncio
 import time
 
+
 class FrequencyLimiter:
     def __init__(self, desired_frequency: float) -> None:
         self.desired_frequency: float = desired_frequency

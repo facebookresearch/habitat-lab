@@ -130,7 +130,10 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.calculate_walk_pose(target_position, distance_multiplier=0)
 
     def calculate_walk_pose(
-        self, target_position: mn.Vector3, distance_multiplier:float = 1.0, target_dir: mn.Vector3 = None
+        self,
+        target_position: mn.Vector3,
+        distance_multiplier: float = 1.0,
+        target_dir: mn.Vector3 = None,
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
@@ -139,7 +142,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         :param target_dir: the position the agent should be looking at.
         """
-        #TODO: Add target_dir for controlling from VR
+        # TODO: Add target_dir for controlling from VR
         deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if (
@@ -309,7 +312,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         Given a 3D coordinate position, computes humanoid's joints, rotations and
         translations to reach that position, doing trilinear interpolation.
         """
-        assert(hand_data is not None)
+        assert hand_data is not None
 
         joints, rotations, translations = hand_data
 

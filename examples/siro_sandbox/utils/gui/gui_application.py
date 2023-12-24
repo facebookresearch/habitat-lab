@@ -10,7 +10,6 @@ import time
 
 import magnum as mn
 from magnum.platform.glfw import Application
-
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 

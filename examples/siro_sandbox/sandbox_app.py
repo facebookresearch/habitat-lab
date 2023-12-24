@@ -19,7 +19,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import argparse
 import json
 from datetime import datetime
-from functools import partial, wraps
+from functools import wraps
 from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import magnum as mn
@@ -68,7 +68,7 @@ from server.server import launch_server_process, terminate_server_process
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
-    #TODO: Get from model.
+    # TODO: Get from model.
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
@@ -221,11 +221,11 @@ class SandboxDriver(GuiAppDriver):
         self._app_state = None
 
         self._reset_environment()
-    
+
     def close(self):
         self._check_terminate_server()
 
-    #TODO: More descriptive name.
+    # TODO: More descriptive name.
     @property
     def do_network_server(self):
         return self._args.remote_gui_mode
@@ -248,7 +248,6 @@ class SandboxDriver(GuiAppDriver):
     def _check_terminate_server(self):
         if self.do_network_server:
             terminate_server_process()
-
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore
@@ -359,7 +358,7 @@ class SandboxDriver(GuiAppDriver):
 
         if self.do_network_server:
             self._remote_gui_input.clear_history()
-        
+
         self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:

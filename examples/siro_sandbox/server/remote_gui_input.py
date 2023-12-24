@@ -6,7 +6,6 @@
 
 import magnum as mn
 from server.average_rate_tracker import AverageRateTracker
-
 from utils.gui.gui_input import GuiInput
 
 

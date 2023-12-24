@@ -13,11 +13,7 @@ from utils.gui.gui_input import GuiInput
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat_sim.physics import (
-    CollisionGroupHelper,
-    CollisionGroups,
-    MotionType,
-)
+from habitat_sim.physics import CollisionGroups, MotionType
 
 from .controller_abc import GuiController
 
@@ -492,11 +488,8 @@ class GuiHumanoidController(GuiController):
         # fixup is the difference between the movement allowed by step_filter
         # and the requested base movement.
 
-
-
         fixup = filtered_query_pos - target_query_pos
         self._humanoid_controller.obj_transform_base.translation += fixup
-
 
         # TODO: Get Y offset from source data.
         navmesh_to_floor_y_fixup = -0.17
@@ -512,7 +505,6 @@ class GuiHumanoidController(GuiController):
             self._humanoid_controller.calculate_reach_pose(
                 reach_pos, index_hand=hand_index
             )
-
 
         humanoidjoint_action = np.array(
             self._humanoid_controller.get_pose(), dtype=np.float32

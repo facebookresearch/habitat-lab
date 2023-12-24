@@ -7,9 +7,8 @@
 import os
 from typing import Callable, List, Tuple
 
-from omegaconf import DictConfig
-
 from controllers.gui_controller import GuiHumanoidController
+from omegaconf import DictConfig
 from sandbox_service import SandboxService
 
 from habitat.articulated_agent_controllers.humanoid_rearrange_controller import (
@@ -69,11 +68,11 @@ class GuiAvatarSwitchHelper:
     ):
         self._sandbox_service: SandboxService = sandbox_service
         self._gui_agent_ctrl: GuiHumanoidController = gui_agent_ctrl
-        self._agent_idx:int = self._gui_agent_ctrl._agent_idx
+        self._agent_idx: int = self._gui_agent_ctrl._agent_idx
 
-        self._humanoid_models: List[Tuple[str, str]] = self._get_humanoid_models(
-            "data/humanoids/humanoid_data/"
-        )
+        self._humanoid_models: List[
+            Tuple[str, str]
+        ] = self._get_humanoid_models("data/humanoids/humanoid_data/")
 
         self._avatar_model_idx = 0
 

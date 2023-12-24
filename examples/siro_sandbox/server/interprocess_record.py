@@ -8,6 +8,7 @@ import queue
 
 from .multiprocessing_config import Queue, Semaphore
 
+
 class InterprocessRecord:
     def __init__(self, max_steps_ahead: int):
         self.keyframe_queue = Queue()

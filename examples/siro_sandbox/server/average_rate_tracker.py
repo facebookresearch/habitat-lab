@@ -6,6 +6,7 @@
 
 import time
 
+
 class AverageRateTracker:
     def __init__(self, duration_window: float) -> None:
         self._recent_count: int = 0

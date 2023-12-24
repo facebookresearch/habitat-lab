@@ -124,10 +124,10 @@ class GuiNavigationHelper:
             return walk_dir, distance_multiplier
 
         (
-                walk_dir,
-                distance_multiplier,
-                forward_dir,
-            ) = self._get_humanoid_walk_hints(
+            walk_dir,
+            distance_multiplier,
+            forward_dir,
+        ) = self._get_humanoid_walk_hints(
             target_pos=target_on_floor,
             target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
             visualize_path=visualize_path,
@@ -141,8 +141,8 @@ class GuiNavigationHelper:
         walk_dir = None
         distance_multiplier = 1.0
         geodesic_dist_threshold = 0.05
-        dist_to_always_move_forward = 0.5 #TODO: ???
-        forward_gaze = None #TODO: ???
+        dist_to_always_move_forward = 0.5  # TODO: ???
+        forward_gaze = None  # TODO: ???
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
         if (
@@ -159,7 +159,7 @@ class GuiNavigationHelper:
             walk_dir = self._compute_forward_dir(target_rot_quat)
             distance_multiplier = 0.0
 
-        #TODO: ???
+        # TODO: ???
         if (
             found_path
             and len(path.points) >= 2
@@ -167,7 +167,7 @@ class GuiNavigationHelper:
         ):
             target_rot_quat = None
 
-        #TODO: ???
+        # TODO: ???
         if target_rot_quat is not None:
             # Get the forward direction
             forward_gaze = self._compute_forward_dir(target_rot_quat)
