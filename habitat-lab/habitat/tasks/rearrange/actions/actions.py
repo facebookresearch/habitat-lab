@@ -362,13 +362,13 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
 
         delta_per_step = (delta) * interpolation
         for i in range(int(num_steps)):
-            obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
+            obs = self._sim.get_sensor_observations()['third_rgb'][:,:,:3]
             # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
             task._frames.append(obs)
             curr_arm_pos = curr_arm_pos + delta_per_step
             self.cur_articulated_agent.arm_motor_pos = curr_arm_pos
             self.cur_articulated_agent.arm_joint_pos = curr_arm_pos
-            self._sim.maybe_update_robot()
+            self._sim.maybe_update_articulated_agent()
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
         self.cur_articulated_agent.arm_joint_pos = set_arm_pos
         if self.cur_grasp_mgr.snap_idx is not None:
@@ -915,9 +915,9 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
         num_steps = max(int(np.ceil(max([lin_pos_x / max_base_forward_delta, lin_pos_z / max_base_forward_delta, turn / max_turn_delta]))), 1)
         
 
-        for i in range(num_steps):
+        for _ in range(num_steps):
             interpolation = 1.0 / num_steps
-            obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
+            obs = self._sim.get_sensor_observations()['third_rgb'][:,:,:3]
             # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
             task._frames.append(obs)
             self._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
@@ -941,9 +941,9 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
             if not self._allow_back:
                 lin_pos_x_new = np.maximum(lin_pos_x_new, 0)
 
-            # Get the transformation of the robot
-            base_trans = self._sim.robot.base_transformation
-            obj_trans = self.cur_robot.sim_obj.transformation
+            # Get the transformation of the articulated agent
+            base_trans = self._sim.articulated_agent.base_transformation
+            obj_trans = self.cur_articulated_agent.sim_obj.transformation
             # Get the global pos from the local target waypoints
             target_pos = base_trans.transform_point(
                 mn.Vector3([lin_pos_x_new, lin_pos_z_new, 0])
@@ -967,14 +967,10 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
                 
             if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
                 task._is_navmesh_violated = self.update_base(target_rigid_state)
-                self._sim.maybe_update_robot()
+                self._sim.maybe_update_articulated_agent()
             else:
                 # no violation if no movement was required in the first place
                 task._is_navmesh_violated = False
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.base_velocity)
-        else:
-            return {}
 
 
 class HumanoidJointAction(ArticulatedAgentAction):

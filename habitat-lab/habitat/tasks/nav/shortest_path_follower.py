@@ -96,8 +96,8 @@ class ShortestPathFollower:
         try:
             curr_pos, curr_rot = None, None
             if isinstance(self._sim, RearrangeSim):
-                ang_pos = float(self._sim.robot.base_rot) - np.pi / 2
-                curr_quat = self._sim.robot.sim_obj.rotation
+                ang_pos = float(self._sim.articulated_agent.base_rot) - np.pi / 2
+                curr_quat = self._sim.articulated_agent.sim_obj.rotation
                 curr_rotation = [
                     curr_quat.vector.x,
                     curr_quat.vector.y,
@@ -113,7 +113,7 @@ class ShortestPathFollower:
                 curr_rot = mn.Quaternion(
                     mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
                 )
-                curr_pos = self._sim.robot.base_pos
+                curr_pos = self._sim.articulated_agent.base_pos
 
             # Get the target rotation
             next_action = self._follower.next_action_along(
