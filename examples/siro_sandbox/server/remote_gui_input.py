@@ -18,17 +18,6 @@ class RemoteGuiInput:
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
-        # temp hack
-        self._key_map = {
-            "q": GuiInput.KeyNS.Q,
-            "w": GuiInput.KeyNS.W,
-            "e": GuiInput.KeyNS.E,
-            "a": GuiInput.KeyNS.A,
-            "s": GuiInput.KeyNS.S,
-            "d": GuiInput.KeyNS.D,
-            "f": GuiInput.KeyNS.F,
-        }
-
         # temp map VR button to key
         self._button_map = {
             0: GuiInput.KeyNS.ZERO,
@@ -97,18 +86,6 @@ class RemoteGuiInput:
 
             if "buttonHeld" not in input_json:
                 continue
-            # for key in input_json["keyDown"]:
-            #     if key not in self._key_map:
-            #         print(f"key {key} not mapped!")
-            #         continue
-            #     if input_json["keyDown"][key]:
-            #         self._gui_input._key_down.add(self._key_map[key])
-            # for key in input_json["keyUp"]:
-            #     if key not in self._key_map:
-            #         print(f"key {key} not mapped!")
-            #         continue
-            #     if input_json["keyUp"][key]:
-            #         self._gui_input._key_up.add(self._key_map[key])
 
             # assume button containers are sets of buttonIndices
             for button in input_json["buttonDown"]:
@@ -124,22 +101,6 @@ class RemoteGuiInput:
                 if True:
                     self._gui_input._key_up.add(self._button_map[button])
 
-            # code assumes dictionary<buttonId, bool>
-            # for button in input_json["buttonDown"]:
-            #     if button not in self._button_map:
-            #         print(f"button {button} not mapped!")
-            #         continue
-            #     if input_json["buttonDown"][button]:
-            #         self._gui_input._key_down.add(self._button_map[button])
-            #         print(f"button {button} down")
-            # for button in input_json["buttonUp"]:
-            #     if button not in self._button_map:
-            #         print(f"key {button} not mapped!")
-            #         continue
-            #     if input_json["buttonUp"][button]:
-            #         self._gui_input._key_up.add(self._button_map[button])
-            #         print(f"button {button} up")
-
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
@@ -152,12 +113,6 @@ class RemoteGuiInput:
             return
 
         self._gui_input._key_held.clear()
-        # for key in input_json["keyHeld"]:
-        #     if key not in self._key_map:
-        #         print(f"key {key} not mapped!")
-        #         continue
-        #     if input_json["keyHeld"][key]:
-        #         self._gui_input._key_held.add(self._key_map[key])
 
         for button in input_json["buttonHeld"]:
             if button not in self._button_map:
@@ -178,11 +133,7 @@ class RemoteGuiInput:
         if True:
             pos, rot_quat = self.get_head_pose()
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            # half_size = 0.25
             self._debug_line_render.push_transform(trans)
-            # self._debug_line_render.draw_box(mn.Vector3(-half_size, -half_size, -half_size),
-            #     mn.Vector3(half_size, half_size, half_size),
-            #     mn.Color3(151, 206, 222) / 255)
             color0 = avatar_color
             color1 = mn.Color4(
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
@@ -216,15 +167,10 @@ class RemoteGuiInput:
 
             self._debug_line_render.pop_transform()
 
-        # hand_colors = avatar_color
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-            # half_size = 0.07
             self._debug_line_render.push_transform(trans)
-            # self._debug_line_render.draw_box(mn.Vector3(-half_size, -half_size, -half_size),
-            #     mn.Vector3(half_size, half_size, half_size),
-            #     hand_colors[hand_idx])
             pointer_len = 0.5
             self._debug_line_render.draw_transformed_line(
                 mn.Vector3(0, 0, 0),

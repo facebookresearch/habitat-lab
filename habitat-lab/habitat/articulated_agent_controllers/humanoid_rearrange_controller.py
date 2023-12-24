@@ -23,7 +23,7 @@ TURNING_STEP_AMOUNT = (
 )
 THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
 DIST_TO_STOP = (
-    1e-9  # If the amout to move is this distance, just stop the character
+    1e-9  # If the amount to move is this distance, just stop the character
 )
 
 
@@ -130,14 +130,16 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.calculate_walk_pose(target_position, distance_multiplier=0)
 
     def calculate_walk_pose(
-        self, target_position: mn.Vector3, distance_multiplier=1.0
+        self, target_position: mn.Vector3, distance_multiplier:float = 1.0, target_dir: mn.Vector3 = None
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
+        :param target_dir: the position the agent should be looking at.
         """
+        #TODO: Add target_dir for controlling from VR
         deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if (
@@ -153,7 +155,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The angle we initially want to go to
         new_angle = np.arctan2(forward_V[0], forward_V[2]) * deg_per_rads
         if self.prev_orientation is not None:
-            # If prev orrientation is None, transition to this position directly
+            # If prev orientation is None, transition to this position directly
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[0], prev_orientation[2])
@@ -307,6 +309,8 @@ class HumanoidRearrangeController(HumanoidBaseController):
         Given a 3D coordinate position, computes humanoid's joints, rotations and
         translations to reach that position, doing trilinear interpolation.
         """
+        assert(hand_data is not None)
+
         joints, rotations, translations = hand_data
 
         def find_index_quant(minv, maxv, num_bins, value, interp=False):
@@ -355,7 +359,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         def inter_data(x_i, y_i, z_i, dat, is_quat=False):
             """
             General trilinear interpolation function. Performs trilinear interpolation,
-            normalizing the result if the values are repsented as quaternions (is_quat)
+            normalizing the result if the values are represented as quaternions (is_quat)
             :param x_i, y_i, z_i: For the x,y,z dimensions, specifies the lower, upper, and normalized value
             so that we can perform interpolation in 3 dimensions
             :param data: the values we want to interpolate.
@@ -437,14 +441,16 @@ class HumanoidRearrangeController(HumanoidBaseController):
         )
         relative_pos = inv_T.transform_vector(obj_pos - root_pos)
 
-        curr_poses, curr_transform = self._trilinear_interpolate_pose(
-            mn.Vector3(relative_pos), hand_data
-        )
+        # TODO
+        if hand_data is not None:
+            curr_poses, curr_transform = self._trilinear_interpolate_pose(
+                mn.Vector3(relative_pos), hand_data
+            )
 
-        self.obj_transform_offset = (
-            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
-            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
-            @ curr_transform
-        )
+            self.obj_transform_offset = (
+                mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+                @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+                @ curr_transform
+            )
 
-        self.joint_pose = curr_poses
+            self.joint_pose = curr_poses
