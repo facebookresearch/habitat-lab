@@ -141,13 +141,14 @@ class GuiNavigationHelper:
         walk_dir = None
         distance_multiplier = 1.0
         geodesic_dist_threshold = 0.05
-        dist_to_always_move_forward = 0.5  # TODO: ???
-        forward_gaze = None  # TODO: ???
+        move_forward_dist_threshold = 0.5
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
+        is_navigating: bool = found_path and len(path.points) >= 2 
+
+        # Only initiate movement is the goal is far enough.
         if (
-            found_path
-            and len(path.points) >= 2
+            is_navigating
             and path.geodesic_distance >= geodesic_dist_threshold
         ):
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
@@ -155,22 +156,23 @@ class GuiNavigationHelper:
             if visualize_path:
                 self._viz_humanoid_walk_path(path)
 
+        # Define walk direction from target_rot_quat.
         if walk_dir is None and target_rot_quat is not None:
             walk_dir = self._compute_forward_dir(target_rot_quat)
             distance_multiplier = 0.0
 
-        # TODO: ???
+        # Only rotate humanoid is the goal is close enough.
         if (
-            found_path
-            and len(path.points) >= 2
-            and path.geodesic_distance >= dist_to_always_move_forward
+            is_navigating
+            and path.geodesic_distance >= move_forward_dist_threshold
         ):
             target_rot_quat = None
 
-        # TODO: ???
+        # Set forward gaze.
+        forward_gaze = None
         if target_rot_quat is not None:
-            # Get the forward direction
             forward_gaze = self._compute_forward_dir(target_rot_quat)
+
         return walk_dir, distance_multiplier, forward_gaze
 
     def _get_target_pos_from_ray_cast(self):
@@ -187,7 +189,7 @@ class GuiNavigationHelper:
         return target_on_floor
 
     def _compute_forward_dir(self, target_rot_quat):
-        direction_vector = mn.Vector3(1.0, 0.0, 0.0)
+        direction_vector = mn.Vector3(0.0, 0.0, 1.0)
         heading_vector = target_rot_quat.transform_vector(direction_vector)
         heading_vector.y = 0
         heading_vector = heading_vector.normalized()
