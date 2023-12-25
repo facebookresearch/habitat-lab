@@ -26,8 +26,6 @@ As it stands, the VR integration can only be used with the `fetch` app state. In
     - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
     - [Connection Issues](#connection-issues)
     - [Slow Performance](#slow-performance)
-  - [Other information](#other-information)
-    - [Serving HTTPS content from your local machine](#serving-https-content-from-your-local-machine)
 
 
 ## Installation
