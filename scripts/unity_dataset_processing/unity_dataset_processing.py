@@ -98,8 +98,7 @@ def process_model(args):
 
     if os.path.isfile(job.dest_path):
         print(f"Skipping:   {job.source_path}")
-        result = {}
-        result["status"] = "skipped"
+        result = {"status": "skipped"}
         return result
 
     print(f"Processing: {job.source_path}")
@@ -109,24 +108,26 @@ def process_model(args):
 
     try:
         source_tris, target_tris, simplified_tris = decimate.decimate(
-            job.source_path,
-            job.dest_path,
+            inputFile=job.source_path,
+            outputFile=job.dest_path,
             quiet=True,
             sloppy=False,
             simplify=job.simplify,
         )
-    except:
+    except Exception:
         try:
             print(
                 f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation)."
             )
             source_tris, target_tris, simplified_tris = decimate.decimate(
-                job.source_path, job.dest_path, quiet=True, decimate=False
+                inputFile=job.source_path,
+                outputFile=job.dest_path,
+                quiet=True,
+                simplify=False,
             )
-        except:
+        except Exception:
             print(f"Unable to decimate: {job.source_path}")
-            result = {}
-            result["status"] = "error"
+            result = {"status": "error"}
             return result
 
     print(
@@ -255,7 +256,7 @@ def find_model_paths_in_scenes(hssd_hab_root_dir, scene_ids) -> List[str]:
                                 continue
                             model_filepaths.add(render_glb)
 
-    return model_filepaths
+    return list(model_filepaths)
 
 
 def main():
@@ -304,7 +305,9 @@ def main():
         jobs.append(job)
 
     # Add all models contained in the scenes
-    scene_models = find_model_paths_in_scenes(args.hssd_hab_root_dir, scene_ids)
+    scene_models = find_model_paths_in_scenes(
+        args.hssd_hab_root_dir, scene_ids
+    )
     for scene_model in scene_models:
         rel_path = scene_model[len(args.hssd_hab_root_dir) :]
         if "decomposed" not in scene_model:
@@ -315,13 +318,17 @@ def main():
             )  # Remove 'objects/' from path
             job.source_path = os.path.join(parts[0], parts[1])
             assert len(parts) == 2
-            job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
+            job.dest_path = os.path.join(
+                OUTPUT_DIR, hssd_hab_rel_dir, rel_path
+            )
             job.simplify = False
             jobs.append(job)
         else:
             job = Job()
             job.source_path = os.path.join(args.hssd_hab_root_dir, rel_path)
-            job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
+            job.dest_path = os.path.join(
+                OUTPUT_DIR, hssd_hab_rel_dir, rel_path
+            )
             job.simplify = False
             jobs.append(job)
 

@@ -7,8 +7,15 @@
 import argparse
 from typing import Dict
 
-from magnum import Matrix4, MeshPrimitive, Vector3
-from magnum import math, meshtools, scenetools, trade
+from magnum import (
+    Matrix4,
+    MeshPrimitive,
+    Vector3,
+    math,
+    meshtools,
+    scenetools,
+    trade,
+)
 
 # Scene conversion plugins need access to image conversion plugins
 importer_manager = trade.ImporterManager()
@@ -62,7 +69,12 @@ converter.configuration[
 
 
 def decimate(
-    input, output, quiet=None, verbose=None, sloppy=False, simplify=True
+    inputFile,
+    outputFile,
+    quiet=None,
+    verbose=None,
+    sloppy=False,
+    simplify=True,
 ):
     if quiet:
         importer.flags |= trade.ImporterFlags.QUIET
@@ -75,8 +87,8 @@ def decimate(
         resizer.flags |= trade.ImageConverterFlags.VERBOSE
         meshoptimizer.flags |= trade.SceneConverterFlags.VERBOSE
 
-    importer.open_file(input)
-    converter.begin_file(output)
+    importer.open_file(inputFile)
+    converter.begin_file(outputFile)
 
     # For each mesh calculate the transformation scaling in the scene to make the
     # decimation reflect how large a particular mesh actually is there. The same
@@ -117,15 +129,13 @@ def decimate(
             if not scaled_mesh.is_indexed:
                 converter.end_file()
                 importer.close()
-                assert (
-                    False
-                ), "i didn't bother with index-less variant for the heuristics, sorry"
+                print("Index-less meshes are not supported.")
+                raise AssertionError()
             if scaled_mesh.primitive != MeshPrimitive.TRIANGLES:
                 converter.end_file()
                 importer.close()
-                assert (
-                    False
-                ), "i didn't bother with non-triangle meshes either, sorry"
+                print("Non-triangle meshes are not supported.")
+                raise AssertionError()
             triangle_count = scaled_mesh.index_count // 3
             total_source_tris += triangle_count
 
