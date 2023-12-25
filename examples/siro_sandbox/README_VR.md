@@ -2,7 +2,7 @@
 
 **Note: VR HITL evaluation currently only works from this branch.**
 
-HITL evaluation can be driven from VR. In this mode, the sandbox app acts as a server that can be remotely accessed by a client.
+HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
 
 As it stands, the VR integration can only be used with the `fetch` app state. In this mode, the user controls a human avatar that can play fetch with a policy-driven Spot robot.
 
@@ -34,7 +34,7 @@ As it stands, the VR integration can only be used with the `fetch` app state. In
 
 The system is composed of the following components:
 
-* The **Server**, which is the sandbox app.
+* The **Server**, which is the HITL app.
 * The **Client**, which runs on Unity and is deployed on a VR headset.
 
 ### Requirements
@@ -45,11 +45,10 @@ The system is composed of the following components:
 |---|---|
 | `habitat-sim` | Use the `main` branch. Bullet is required. |
 | `habitat-lab` | This specific `habitat-lab` version must be installed. See [instructions](../../README.md#installation). The `main` branch is currently incompatible. |
-| Datasets | `python -m habitat_sim.utils.datasets_download --uids habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/` |
+| Datasets | From the root `habitat-lab` directory, run: `python -m habitat_sim.utils.datasets_download --uids habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/` |
 | [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for dataset processing. |
 | [habitat_humanoids](https://huggingface.co/datasets/ai-habitat/habitat_humanoids) | Use the `main` branch. |
 | [Server files](https://huggingface.co/datasets/ai-habitat/siro_fetch_extra_data) | Copy the files as-is to `data/`, following the directory structure. |
-| `websockets` | `pip install websockets` |
 
 #### Client
 
@@ -103,7 +102,12 @@ This step requires [Magnum](https://github.com/mosra/magnum) data processing too
 
 It is recommended that you create a new `conda` environment so that it can be reused in the future without interfering with Habitat.
 
-1. Get the latest `magnum-tools` from [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml). Extract to a convenient location.
+1. Get the latest `magnum-tools`.
+   * Navigate to the [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml).
+   * Select the latest green workflow run.
+   * Scroll down to "Artifacts".
+   * Download your the binaries that match your system (e.g. On MacOS: `magnum-tools-v2020.06-1579-g68eed-2737-gc9e13-1374-g70dca-macos11-x64`)
+   * Extract to a convenient location.
 2. Create a new `conda` environment:
 ```
 conda create --name magnum python=3.10
@@ -120,10 +124,10 @@ conda create --name magnum python=3.10
 
 #### Usage
 
-Example command:
+To process the dataset, navigate to your `habitat-lab` root directory and run the following command:
 
 ```
-python get_scene_object_glbs.py \
+python unity_dataset_processing.py \
 --hssd-hab-root-dir path_to/hssd-hab/ \
 --hssd-models-root-dir path_to/hssd-models/ \
 --scenes 102344193 102344280 102817200 103997424_171030444 103997541_171030615
@@ -155,7 +159,11 @@ See [troubleshooting notes](#connection-issues) is connection fails.
 * When connecting your headset to your development computer via USB, a pop-up will ask you to confirm the connection within the VR headset.
   * If the pop-up doesn't show up, reconnect your USB cable.
   * You may also have to re-do this after the headset goes into sleep mode.
-* Deployment occasionally fails when the application is already installed.
+* Deployment occasionally fails when the application is already installed. You can delete the old build from the Quest storage menu. The following error will often show in Unity when that occurs:
+```
+CommandInvokationFailure: Unable to install APK to device. Please make sure the Android SDK is installed and is properly configured in the Editor. See the Console for more details.
+/home/user/Unity/Hub/Editor/2022.3.7f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb -s "4G3YA1ZF571D4D" install -r -d "/home/user/git/siro_hitl_unity_client/Build/build.apk"
+```
 
 ### Connection Issues
 
@@ -166,8 +174,6 @@ See [troubleshooting notes](#connection-issues) is connection fails.
 
 ### Slow Performance
 
-**Note: As it stands, pose tracking is updated at a low frequency.**
-
 * If your server runs on Mac, consider disabling Retina. You can use [displayplacer](https://github.com/jakehilborn/displayplacer) to achieve this.
   * If you need to mirror your screen, do it before using the tool.
   * Use `displayplacer list` to see all supported display modes.
@@ -176,43 +182,4 @@ See [troubleshooting notes](#connection-issues) is connection fails.
 * If using a laptop, make sure that power is connected.
 * If running on a busy network, consider using the wifi hotspot on your phone or a separate router.
 * Performance is poor on Quest Pro. Consider using smaller scenes, or increasing mesh simplification aggressiveness in the dataset processing tool. See [decimate.py](../../scripts/unity_dataset_processing/decimate.py).
-
-## Other information
-
-### Serving HTTPS content from your local machine
-
-Note: This is not required for using the native Unity app.
-
-Note: Quest's browser (and probably all browsers) will only load WebXR experiences if served as a secure (HTTPS) web page. Luckily for us, this includes self-signed HTTPS.
-
-1. install openssl on your OS if necessary.
-
-2. generate private.key
-```
-openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048
-```
-
-3. generate temp.csr
-```
-openssl req -new -key private.key -out temp.csr
-```
-
-4. generate self_signed.pem
-* There are several prompts for info like country and organization. You can press return to use defaults for all of these.
-```
-openssl x509 -req -days 365 -in temp.csr -signkey private.key -out self_signed.pem -outform PEM
-```
-
-5. Launch your HTTPS server in a folder that you want to serve
-```
-openssl s_server -accept 8443 -cert self_signed.pem -key private.key -WWW
-```
-
-6. Test on the same machine
-* Browse to https://0.0.0.0:8443/example.html
-* In Chrome and other browsers, you will have to navigate past a "Your connection is not private" warning but it will otherwise work.
-
-7. Test on another machine on the same local network (same router)
-* First, make sure that your firewall is configured to allow the the connection to port 8443.
-* Find your *private* IP address, e.g. `hostname -I`
-* From the other machine, browse to https://IP:8443/example.html
+* The VR device transforms are currently sent to from the client to the server at frequency that is lower than the simulation. This causes grabbed objects to jitter. This is the current expected behavior.

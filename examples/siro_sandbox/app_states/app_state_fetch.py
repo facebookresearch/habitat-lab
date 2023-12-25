@@ -831,11 +831,6 @@ class AppStateFetch(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        # if self._held_target_obj_idx is not None:
-        #     status_str += "Throw the object!"
-        # else:
-        #     status_str += "Grab an object!\n"
-
         if self._sandbox_service.args.remote_gui_mode:
             status_str += (
                 "human control: VR\n"
