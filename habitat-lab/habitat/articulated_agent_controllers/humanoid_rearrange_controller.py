@@ -133,16 +133,13 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self,
         target_position: mn.Vector3,
         distance_multiplier: float = 1.0,
-        target_dir: mn.Vector3 = None,
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
-        :param target_dir: the position the agent should be looking at.
         """
-        # TODO: Add target_dir for controlling from VR
         deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if (
@@ -244,6 +241,181 @@ class HumanoidRearrangeController(HumanoidBaseController):
 
         # Remove the forward component, and orient according to forward_V
         add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1, 0))
+        obj_transform = add_rot @ obj_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+
+        # This is the rotation and translation caused by the current motion pose
+        #  we still need to apply the base_transform to obtain the full transform
+        self.obj_transform_offset = obj_transform
+
+        # The base_transform here is independent of transforms caused by the current
+        # motion pose.
+        obj_transform_base = look_at_path_T
+        forward_V_dist = forward_V * dist_diff * distance_multiplier
+        obj_transform_base.translation += forward_V_dist
+
+        rot_offset = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base = obj_transform_base @ rot_offset
+        self.joint_pose = joint_pose
+
+    def calculate_walk_pose_directional(
+        self,
+        target_position: mn.Vector3,
+        distance_multiplier=1.0,
+        target_dir=None,
+    ):
+        """
+        Computes a walking pose and transform, so that the humanoid moves to the relative position
+
+        :param position: target position, relative to the character root translation
+        :param distance_multiplier: allows to create walk motion while not translating, good for turning
+        :param target_dir: the position we should be looking at. If this is None, rotates the agent to face target_position
+        otherwise, it moves the agent towards target_position but facing target_dir. This is important for moving backwards.
+        """
+        deg_per_rads = 180.0 / np.pi
+        epsilon = 1e-5
+
+        forward_V = target_position
+        if forward_V.length() < epsilon or np.isnan(target_position).any():
+            self.calculate_stop_pose()
+            return
+        distance_to_walk = float(np.linalg.norm(forward_V))
+        did_rotate = False
+
+        forward_V_orientation = forward_V
+        # The angle we initially want to go to
+        if target_dir is not None:
+            new_angle = np.arctan2(target_dir[2], target_dir[0]) * deg_per_rads
+            new_angle = (new_angle + 180) % 360 - 180
+            if self.prev_orientation is not None:
+                prev_angle = (
+                    np.arctan2(
+                        self.prev_orientation[2], self.prev_orientation[0]
+                    )
+                    * deg_per_rads
+                )
+            else:
+                prev_angle = None
+
+            new_angle_walk = (
+                np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            )
+
+        else:
+            new_angle = np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            new_angle_walk = (
+                np.arctan2(forward_V[2], forward_V[0]) * deg_per_rads
+            )
+
+        if self.prev_orientation is not None:
+            # If prev orientation is None, transition to this position directly
+            prev_orientation = self.prev_orientation
+            prev_angle = (
+                np.arctan2(prev_orientation[2], prev_orientation[0])
+                * deg_per_rads
+            )
+            forward_angle = new_angle - prev_angle
+            if forward_angle >= 180:
+                forward_angle = forward_angle - 360
+            if forward_angle <= -180:
+                forward_angle = 360 + forward_angle
+
+            if np.abs(forward_angle) > self.min_angle_turn:
+                if target_dir is None:
+                    actual_angle_move = self.turning_step_amount
+                else:
+                    actual_angle_move = self.turning_step_amount * 20
+                if abs(forward_angle) < actual_angle_move:
+                    actual_angle_move = abs(forward_angle)
+                new_angle = prev_angle + actual_angle_move * np.sign(
+                    forward_angle
+                )
+                new_angle /= deg_per_rads
+                did_rotate = True
+                new_angle_walk = new_angle
+            else:
+                new_angle = new_angle / deg_per_rads
+                new_angle_walk = new_angle_walk / deg_per_rads
+            forward_V = mn.Vector3(
+                np.cos(new_angle_walk), 0, np.sin(new_angle_walk)
+            )
+            forward_V_orientation = mn.Vector3(
+                np.cos(new_angle), 0, np.sin(new_angle)
+            )
+
+        forward_V = mn.Vector3(forward_V)
+        forward_V = forward_V.normalized()
+        self.prev_orientation = forward_V_orientation
+
+        # TODO: Scale step size based on deltatime.
+        #step_size = int(self.walk_motion.fps / self.draw_fps)
+        step_size = int(self.walk_motion.fps / 30.0)
+
+        if did_rotate:
+            # When we rotate, we allow some movement
+            distance_to_walk = 0.05
+
+        assert not np.isnan(
+            distance_to_walk
+        ), f"distance_to_walk is NaN: {distance_to_walk}"
+        assert not np.isnan(
+            self.dist_per_step_size
+        ), f"distance_to_walk is NaN: {self.dist_per_step_size}"
+        # Step size according to how much we moved, this is so that
+        # we don't overshoot if the speed of the character would it make
+        # it move further than what `position` indicates
+        step_size = max(
+            1, min(step_size, int(distance_to_walk / self.dist_per_step_size))
+        )
+
+        if distance_multiplier == 0.0:
+            step_size = 0
+
+        # Advance mocap frame
+        prev_mocap_frame = self.walk_mocap_frame
+        self.walk_mocap_frame = (
+            self.walk_mocap_frame + step_size
+        ) % self.walk_motion.num_poses
+
+        # Compute how much distance we covered in this motion
+        prev_cum_distance_covered = self.walk_motion.displacement[
+            prev_mocap_frame
+        ]
+        new_cum_distance_covered = self.walk_motion.displacement[
+            self.walk_mocap_frame
+        ]
+
+        offset = 0
+        if self.walk_mocap_frame < prev_mocap_frame:
+            # We looped over the motion
+            offset = self.walk_motion.displacement[-1]
+
+        distance_covered = max(
+            0, new_cum_distance_covered + offset - prev_cum_distance_covered
+        )
+        dist_diff = min(distance_to_walk, distance_covered)
+
+        new_pose = self.walk_motion.poses[self.walk_mocap_frame]
+        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
+
+        forward_V_norm = mn.Vector3(
+            [
+                forward_V_orientation[2],
+                forward_V_orientation[1],
+                -forward_V_orientation[0],
+            ]
+        )
+        look_at_path_T = mn.Matrix4.look_at(
+            self.obj_transform_base.translation,
+            self.obj_transform_base.translation + forward_V_norm.normalized(),
+            mn.Vector3.y_axis(),
+        )
+
+        # Remove the forward component, and orient according to forward_V
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
         obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
