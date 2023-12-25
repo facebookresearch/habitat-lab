@@ -471,7 +471,7 @@ class GuiHumanoidController(GuiController):
             if self._hint_distance_multiplier is None
             else self._hint_distance_multiplier
         )
-    
+
         # Compute the walk pose.
         # TODO: This doesn't use the same 'calculate_walk_pose' method as other lab components.
         self._humanoid_controller.calculate_walk_pose_directional(

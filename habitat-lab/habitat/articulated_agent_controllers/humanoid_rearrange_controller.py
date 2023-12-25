@@ -350,7 +350,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.prev_orientation = forward_V_orientation
 
         # TODO: Scale step size based on deltatime.
-        #step_size = int(self.walk_motion.fps / self.draw_fps)
+        # step_size = int(self.walk_motion.fps / self.draw_fps)
         step_size = int(self.walk_motion.fps / 30.0)
 
         if did_rotate:

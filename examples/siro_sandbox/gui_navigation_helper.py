@@ -144,13 +144,10 @@ class GuiNavigationHelper:
         move_forward_dist_threshold = 0.5
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
-        is_navigating: bool = found_path and len(path.points) >= 2 
+        is_navigating: bool = found_path and len(path.points) >= 2
 
         # Only initiate movement is the goal is far enough.
-        if (
-            is_navigating
-            and path.geodesic_distance >= geodesic_dist_threshold
-        ):
+        if is_navigating and path.geodesic_distance >= geodesic_dist_threshold:
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
             distance_multiplier = 1.0
             if visualize_path:
