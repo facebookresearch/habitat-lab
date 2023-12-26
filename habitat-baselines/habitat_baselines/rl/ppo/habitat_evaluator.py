@@ -145,12 +145,14 @@ class HabitatEvaluator(Evaluator):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         agent.eval()
+        count_i = 0
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and envs.num_envs > 0
         ):
             current_episodes_info = envs.current_episodes()
-
+            print("Start the loop:", count_i)
+            count_i += 1
             space_lengths = {}
             n_agents = len(config.habitat.simulator.agents)
             if n_agents > 1:
@@ -233,14 +235,15 @@ class HabitatEvaluator(Evaluator):
 
             # TODO: better way to handle this
             if transformer_based_policy:
-                temp_masks = torch.tensor(
+                cur_done_masks = torch.tensor(
                     [[not done] for done in dones],
                     dtype=torch.bool,
                     device="cpu",
                 ).repeat(1, *agent.masks_shape)
-                temp_masks = temp_masks.T
+                cur_done_masks = cur_done_masks.T
                 not_done_masks = torch.cat(
-                    (not_done_masks[:, :, 0].to("cpu").T, temp_masks), axis=0
+                    (not_done_masks[:, :, 0].to("cpu").T, cur_done_masks),
+                    axis=0,
                 )
                 not_done_masks = not_done_masks.T
                 not_done_masks = not_done_masks.unsqueeze(-1)
@@ -280,7 +283,16 @@ class HabitatEvaluator(Evaluator):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, disp_info
                     )
-                    if not not_done_masks[i].any().item():
+
+                    if transformer_based_policy:
+                        # The shape of not_done_masks is [#envs, cur_accumulate_steps, 1]
+                        # We need to get the latest frame
+                        process_frame = not not_done_masks[-1][i].any().item()
+                    else:
+                        process_frame = not not_done_masks[i].any().item()
+
+                    # TODO: Better way to handle transformer done masks
+                    if process_frame:
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         final_frame = observations_to_image(
@@ -295,8 +307,16 @@ class HabitatEvaluator(Evaluator):
                         frame = overlay_frame(frame, disp_info)
                         rgb_frames[i].append(frame)
 
+                # TODO: Better way to handle transformer done masks
+                if transformer_based_policy:
+                    # The shape of not_done_masks is [#envs, cur_accumulate_steps, 1]
+                    # We need to get the latest frame
+                    process_frame = not not_done_masks[-1][i].any().item()
+                else:
+                    process_frame = not not_done_masks[i].any().item()
+
                 # episode ended
-                if not not_done_masks[i].any().item():
+                if process_frame:
                     pbar.update()
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
