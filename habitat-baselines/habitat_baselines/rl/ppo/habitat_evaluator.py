@@ -99,8 +99,25 @@ class HabitatEvaluator(Evaluator):
             device=device,
             dtype=torch.bool,
         )
+
         if transformer_based_policy:
             not_done_masks = not_done_masks.unsqueeze(-1)
+
+        # Check if we are in the setting of multi-agent with transformer policy
+        n_agents = len(config.habitat.simulator.agents)
+        transformer_based_policy_is_multi_agent = False
+        if n_agents > 1:
+            transformer_based_policy_is_multi_agent = True
+
+        # Modify the not_done_masks
+        if transformer_based_policy_is_multi_agent:
+            not_done_masks = torch.zeros(
+                config.habitat_baselines.num_environments,
+                1,  # for a single steps
+                *agent.masks_shape,
+                device=device,
+                dtype=torch.bool,
+            )
 
         stats_episodes: Dict[
             Any, Any
@@ -154,11 +171,20 @@ class HabitatEvaluator(Evaluator):
             count_i += 1
             space_lengths = {}
             n_agents = len(config.habitat.simulator.agents)
+
             if n_agents > 1:
-                space_lengths = {
-                    "index_len_recurrent_hidden_states": hidden_state_lens,
-                    "index_len_prev_actions": action_space_lens,
-                }
+                # TODO: better way to handle this
+                if transformer_based_policy:
+                    space_lengths = {
+                        "index_len_recurrent_hidden_states": [32, 0],
+                        "index_len_prev_actions": action_space_lens,
+                    }
+                else:
+                    space_lengths = {
+                        "index_len_recurrent_hidden_states": hidden_state_lens,
+                        "index_len_prev_actions": action_space_lens,
+                    }
+
             with inference_mode():
                 action_data = agent.actor_critic.act(
                     batch,
@@ -168,7 +194,12 @@ class HabitatEvaluator(Evaluator):
                     deterministic=False,
                     **space_lengths,
                 )
-                if action_data.should_inserts is None:
+
+                # TODO: A temp hack to make sure we get a correct test_recurrent_hidden_states
+                if (
+                    action_data.should_inserts is None
+                    or transformer_based_policy_is_multi_agent
+                ):
                     if transformer_based_policy:
                         if 0 in test_recurrent_hidden_states.shape:
                             # empty in the begining
@@ -239,13 +270,28 @@ class HabitatEvaluator(Evaluator):
                     dtype=torch.bool,
                     device="cpu",
                 ).repeat(1, *agent.masks_shape)
-                cur_not_done_masks = cur_not_done_masks.T
-                not_done_masks = torch.cat(
-                    (not_done_masks[:, :, 0].to("cpu").T, cur_not_done_masks),
-                    axis=0,
-                )
-                not_done_masks = not_done_masks.T
-                not_done_masks = not_done_masks.unsqueeze(-1)
+                if transformer_based_policy_is_multi_agent:
+                    # cur_not_done_masks size = [# of envs, # of agents]
+                    # not_done_masks size = [# of envs, # of agents, 1]
+                    cur_not_done_masks = cur_not_done_masks.unsqueeze(
+                        1
+                    )  # [# of envs, one step, # of agents]
+                    not_done_masks = torch.cat(
+                        (not_done_masks.to("cpu"), cur_not_done_masks),
+                        axis=1,
+                    )
+                    # not_done_masks becomes [# of envs, # of steps, # of agents]
+                else:
+                    cur_not_done_masks = cur_not_done_masks.T
+                    not_done_masks = torch.cat(
+                        (
+                            not_done_masks[:, :, 0].to("cpu").T,
+                            cur_not_done_masks,
+                        ),
+                        axis=0,
+                    )
+                    not_done_masks = not_done_masks.T
+                    not_done_masks = not_done_masks.unsqueeze(-1)
             else:
                 not_done_masks = torch.tensor(
                     [[not done] for done in dones],
