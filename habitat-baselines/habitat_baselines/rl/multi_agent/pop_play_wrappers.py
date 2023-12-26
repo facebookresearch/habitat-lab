@@ -228,12 +228,15 @@ class MultiPolicy(Policy):
             agent_obs = self._update_obs_with_agent_prefix_fn(
                 observations, agent_i
             )
+            # TODO: A temp hack so that the agent_masks receive the correct one
             agent_actions.append(
                 policy.act(
                     agent_obs,
                     agent_rnn_hidden_states[agent_i],
                     agent_prev_actions[agent_i],
-                    agent_masks[agent_i],
+                    agent_masks[agent_i]
+                    if agent_i == 0
+                    else agent_masks[agent_i][:, -1, :],
                     deterministic,
                 )
             )
