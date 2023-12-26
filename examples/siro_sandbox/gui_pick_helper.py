@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Final
+
 import magnum as mn
 import numpy as np
 
-DIST_HIGHLIGHT = 0.15
+DIST_HIGHLIGHT: Final[float] = 0.15
 
 
 class GuiPickHelper:

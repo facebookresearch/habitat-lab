@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Final
+
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -23,22 +25,14 @@ from utils.hablab_utils import (
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
-COLOR_GRASPABLE = mn.Color3(1, 0.75, 0)
-COLOR_GRASP_PREVIEW = mn.Color3(0.5, 1, 0)
-COLOR_FOCUS_OBJECT = mn.Color3(1, 1, 1)
-RADIUS_GRASPABLE = 0.15
-RADIUS_GRASP_PREVIEW = 0.15
-RADIUS_FOCUS_OBJECT = 0.2
-RING_PULSE_SIZE = 0.03
-
-
-MIN_STEPS_STOP = 15
-disable_spot = False
-
-# The distance constrain for the robot being placed near human
-ROBOT_SPAWN_NEAR_HUMAN_DIS = 5.0
-# Randomly reset the location of the robot or human
-RANDOM_AGENT_LOCATION_RESET = False
+COLOR_GRASPABLE: Final[mn.Color3] = mn.Color3(1, 0.75, 0)
+COLOR_GRASP_PREVIEW: Final[mn.Color3] = mn.Color3(0.5, 1, 0)
+COLOR_FOCUS_OBJECT: Final[mn.Color3] = mn.Color3(1, 1, 1)
+RADIUS_GRASPABLE: Final[float] = 0.15
+RADIUS_GRASP_PREVIEW: Final[float] = 0.15
+RADIUS_FOCUS_OBJECT: Final[float] = 0.2
+RING_PULSE_SIZE: Final[float] = 0.03
+MIN_STEPS_STOP: Final[int] = 15
 
 
 class AppStateFetch(AppState):
@@ -90,7 +84,6 @@ class AppStateFetch(AppState):
         )
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
-        self._remote_place_goal_counter = 0
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle

@@ -124,7 +124,6 @@ class GuiAvatarSwitchHelper:
         )
 
         # create new humanoid
-        # TODO: New constructor signature
         agent_config = DictConfig(
             {
                 "articulated_agent_urdf": model[0],

@@ -20,7 +20,7 @@ import argparse
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Set
 
 import magnum as mn
 import numpy as np
@@ -67,13 +67,15 @@ from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
 
 # Please reach out to the paper authors to obtain this file
-DEFAULT_POSE_PATH = (
+DEFAULT_POSE_PATH: Final[str] = (
     # TODO: Get from model.
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
-DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
-VIZ_ANIMATION_SPEED = 2.0
+DEFAULT_CFG: Final[
+    str
+] = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+VIZ_ANIMATION_SPEED: Final[float] = 2.0
 
 
 def requires_habitat_sim_with_bullet(callable_):
