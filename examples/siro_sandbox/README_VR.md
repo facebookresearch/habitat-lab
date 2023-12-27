@@ -68,7 +68,9 @@ python examples/siro_sandbox/sandbox_app.py \
 --never-end \
 --gui-controlled-agent-index 1 \
 --ang-speed "15" \
---cfg social_rearrange/pop_play.yaml
+--cfg social_rearrange/pop_play.yaml \
+--cfg-opts habitat_baselines.num_environments=1 \
+habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
 ```
 
 ## Unity Data Folder
