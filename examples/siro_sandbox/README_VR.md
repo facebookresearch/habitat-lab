@@ -2,7 +2,7 @@
 
 HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
 
-As it stands, the VR integration can only be used with the `fetch` app state. In this mode, the user controls a human avatar that can play fetch with a policy-driven Spot robot.
+As it stands, the VR integration can only be used with the `pick_throw_vr` app state. In this mode, the user controls a human avatar that can interact with policy-driven Spot robot.
 
 ## Table of Contents
 - [VR Human-in-the-loop (HITL) Evaluation](#vr-human-in-the-loop-hitl-evaluation)
@@ -57,13 +57,13 @@ The system is composed of the following components:
 The standard keyboard-mouse launch commands can be used with those differences:
 
 * The client-server application can be activated by including the `--remote-gui-mode` command-line argument.
-* Only `--app-state fetch` supports remote VR evaluation.
+* Only `--app-state pick_throw_vr` supports remote VR evaluation.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --remote-gui-mode \
---app-state fetch \
+--app-state pick_throw_vr \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \

@@ -63,7 +63,7 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 # Command-line Options
 
 ## App State and use cases
-Use `--app-state rearrange` to run rearrange task in the sandbox app. Supported app states: `rearrange` (default), `fetch`, `socialnav`, `free_camera`. These correspond to the different use cases for the HITL tool (see corresponding implementations in `app_states/app_state_<state name>.py` files). Note, `free_camera` is special: it's not a "task" state, it's a state that lets the user control the camera instead of controlling an agent (useful for debugging and policies' behaviour visualization). Also, `tutorial` is a special state that shows a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. Tutorial should be followed by the task app state (`rearrange`, `fetch` or `socialnav`) and is currently supported only for the rearrange task.
+Use `--app-state rearrange` to run rearrange task in the sandbox app. Supported app states: `rearrange` (default), `pick_throw_vr`, `socialnav`, `free_camera`. These correspond to the different use cases for the HITL tool (see corresponding implementations in `app_states/app_state_<state name>.py` files). Note, `free_camera` is special: it's not a "task" state, it's a state that lets the user control the camera instead of controlling an agent (useful for debugging and policies' behaviour visualization). Also, `tutorial` is a special state that shows a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. Tutorial should be followed by the task app state (`rearrange`, `pick_throw_vr` or `socialnav`) and is currently supported only for the rearrange task.
 
 ## Hack to hide the skinned humanoid in the GUI viewport
 Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
@@ -128,7 +128,7 @@ This is an experimental feature aimed at those of us building the batch renderer
     * This class is provided a `gui_input` object that encapsulates OS input (keyboard and mouse input). We should avoid making direct calls to PyGame, GLFW, and other OS-specific APIs.
     * `sim_update` returns a `post_sim_update_dict` that contains info needed by the app renderer (below). E.g. a gfx-replay keyframe and a camera transform for rendering, plus optional "debug images" to be shown to the user.
     * This class also has access to a `debug_line_render` instance for visualizing lines in the GUI (the lines aren't rendered into camera sensors). This access is somewhat hacky; future versions of HITL apps will likely convey lines via `post_sim_update_dict` instead of getting direct access to this object.
-    * See `app_states/app_state_rearrange.py` and similar classes for per-step logic that is specific to various use cases (rearrange, fetch, etc.).
+    * See `app_states/app_state_rearrange.py` and similar classes for per-step logic that is specific to various use cases (rearrange, pick_throw_vr, etc.).
 * `GuiApplication`
     * manages the OS window (via GLFW for now), including OS-input-handling (keyboard and mouse) and updating the display (invoking the renderer).
 * `ReplayGuiAppRenderer`

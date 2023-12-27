@@ -35,7 +35,7 @@ RING_PULSE_SIZE: Final[float] = 0.03
 MIN_STEPS_STOP: Final[int] = 15
 
 
-class AppStateFetch(AppState):
+class AppStatePickThrowVr(AppState):
     """
     This app state allows to evaluate a Spot robot, interacting with a GUI-controlled human.
     The human can pick up and throw objects.
@@ -63,7 +63,7 @@ class AppStateFetch(AppState):
         self._camera_helper = CameraHelper(
             self._sandbox_service.args, self._sandbox_service.gui_input
         )
-        # not supported for fetch
+        # not supported for pick_throw_vr
         assert not self._sandbox_service.args.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(

@@ -55,8 +55,8 @@ if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
 from app_states.app_state_abc import AppState
-from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_free_camera import AppStateFreeCamera
+from app_states.app_state_pick_throw_vr import AppStatePickThrowVr
 from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
@@ -183,9 +183,9 @@ class SandboxDriver(GuiAppDriver):
         )
 
         self._app_states: List[AppState]
-        if args.app_state == "fetch":
+        if args.app_state == "pick_throw_vr":
             self._app_states = [
-                AppStateFetch(
+                AppStatePickThrowVr(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
                 )
@@ -755,7 +755,7 @@ if __name__ == "__main__":
         "--app-state",
         default="rearrange",
         type=str,
-        help="'rearrange' (default) or 'fetch'",
+        help="'rearrange', 'pick_throw_vr', 'socialnav' or 'free_camera'",
     )
     parser.add_argument(
         "--remote-gui-mode",
@@ -778,9 +778,9 @@ if __name__ == "__main__":
             "--show-tutorial is only supported for --app-state=rearrange"
         )
 
-    if args.remote_gui_mode and args.app_state != "fetch":
+    if args.remote_gui_mode and args.app_state != "pick_throw_vr":
         raise ValueError(
-            "--remote-gui-mode is only supported for fetch app-state"
+            "--remote-gui-mode is only supported for pick_throw_vr app-state"
         )
 
     if (
