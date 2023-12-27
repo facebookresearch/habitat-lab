@@ -75,7 +75,7 @@ class HabitatEvaluator(Evaluator):
                 (
                     8,
                     2,
-                    2,
+                    config.habitat_baselines.num_environments,
                     24,
                     0,
                     32,
