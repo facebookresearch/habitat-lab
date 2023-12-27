@@ -4,9 +4,9 @@ HITL evaluation can be driven from VR. In this mode, the HITL app acts as a serv
 
 As it stands, the VR integration can only be used with the `pick_throw_vr` app state. In this mode, the user controls a human avatar that can interact with policy-driven Spot robot.
 
+This document explains how to set up and troubleshoot the VR integration.
+
 ## Table of Contents
-- [VR Human-in-the-loop (HITL) Evaluation](#vr-human-in-the-loop-hitl-evaluation)
-  - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
     - [Requirements](#requirements)
       - [Server](#server)
@@ -40,7 +40,7 @@ The system is composed of the following components:
 
 | Requirements | Notes |
 |---|---|
-| [habitat-sim](https://github.com/facebookresearch/habitat-sim) | Use the `main` branch. Bullet is required. |
+| [habitat-sim](https://github.com/facebookresearch/habitat-sim) | Use an up-to-date branch. Bullet is required. |
 | Datasets | After installing `habitat-sim`, run the following command from the root `habitat-lab` directory:<br>```python -m habitat_sim.utils.datasets_download --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/``` |
 | [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for processing datasets for Unity.<br>Clone it anywhere. It will be specified later as a command-line argument. |
 
@@ -56,7 +56,7 @@ The system is composed of the following components:
 
 The standard keyboard-mouse launch commands can be used with those differences:
 
-* The client-server application can be activated by including the `--remote-gui-mode` command-line argument.
+* Remote control can be activated by including the `--remote-gui-mode` command-line argument.
 * Only `--app-state pick_throw_vr` supports remote VR evaluation.
 
 ```bash
@@ -77,7 +77,7 @@ habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
 
 Because the Unity application is a remote client, it must have its own copy of the datasets.
 
-Furthermore, HSSD is not directly compatible with Unity. Meshes must also be simplified to run at an acceptable performance on the VR devices.
+Datasets are not directly compatible with Unity, and must be simplified to run at an acceptable performance on the VR devices.
 
 Therefore, a script is provided so that you can process your datasets and add them to your Unity project.
 
@@ -93,7 +93,7 @@ It is recommended that you create a new `conda` environment so that it can be re
    * Navigate to the [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml).
    * Select the latest green workflow run.
    * Scroll down to "Artifacts".
-   * Download your the binaries that match your system (e.g. On MacOS: `magnum-tools-v2020.06-1579-g68eed-2737-gc9e13-1374-g70dca-macos11-x64`)
+   * Download your the binaries that match your system (e.g. On Linux: `magnum-tools-v2020.06-...-linux-x64`)
    * Extract to a convenient location.
 2. Create a new `conda` environment:
 ```
@@ -105,13 +105,13 @@ conda create --name magnum python=3.10
 ```
 /home/USER/Documents/magnum-tools/linux-x64/python/
 ```
-6. The Magnum libraries will now be included upon activating your `magnum` environment. Validate the installation as such:
+6. The Magnum libraries will now be included upon activating your `magnum` environment. You may validate by assessing that the following commands don't return errors:
    * `conda activate magnum`
    * `python -c "from magnum import math, meshtools, scenetools, trade"`
 
 #### Usage
 
-To process the dataset, navigate to your `habitat-lab` root directory and run the following command:
+To process the dataset, activate your `magnum` conda environment and navigate to your `habitat-lab` root directory. Run the following command:
 
 ```
 python unity_dataset_processing.py \
@@ -128,6 +128,7 @@ In Unity, open the project and use `Tools/Update Data Folder...`. From the dialo
 
 ## Running Locally from Unity
 
+At this point, you should be able to run HITL remotely from Unity Editor.
 To validate that everything is in place, follow the following steps:
 
 1. Start the HITL tool by running [this command](#launch-command) from the root `habitat-lab` directory.
@@ -139,22 +140,32 @@ To validate that everything is in place, follow the following steps:
 
 ## Running Remotely from Quest Headset
 
+If the application works correctly from the Unity Editor, you may now deploy it to a Quest headset.
+
 1. Quest is an Android device. In the Unity editor, go to `Build Settings`. From the platform list, select `Android`, then `Switch Platform`.
 2. Plug your Quest to your machine via USB.
    * A popup will show up in your Quest headset to authorize the computer.
 3. Still in `Build Settings`, refresh the device list, then look for your specific Quest device in the dropdown menu. Select it.
 4. Click `Build and Run` and ensure that this completes without error. You'll be prompted for a build save location - any location will do.
 5. Put on your headset. The app may already be running. You can find the application `siro_hitl_vr_client` in your applications list.
+6. The application won't connect to the server. Follow the steps below to enable the connection.
 
 ### Connection
 
 Upon launching the server, it will start listening for incoming connections. The client will attempt to connect to the addresses listed in `Android/data/com.meta.siro_hitl_vr_client/files/config.txt`. It rotates between the addresses periodically until a connection is established.
 
-Put your server IP addresses there (which can be found using `hostname -i`, for example).
+1. Make sure that your Quest is connected to your machine via USB.
+   * A popup will show up in your Quest headset to authorize the computer.
+2. Navigate to `Android/data/com.meta.siro_hitl_vr_client/files/config.txt`
+3. Put your server IP addresses there (which can be found using `hostname -i`, for example).
+4. Save and restart `siro_hitl_vr_client`.
+   * You may now disconnect the USB cable.
 
 See [troubleshooting notes](#connection-issues) if connection fails.
 
 ### Server Controls
+
+See on-screen help for information about controls.
 
 * Use `T` to toggle between server-controlled mouse-keyboard and client-controlled VR controls.
 
@@ -174,10 +185,11 @@ CommandInvokationFailure: Unable to install APK to device. Please make sure the 
 
 ### Connection Issues
 
-* Make sure that your server firewall allows incoming connections.
+* Make sure that your server firewall allows incoming connections to the port `8888`.
 * Check that the Unity client `config.txt` file lists to the correct address. See [this section](#connection).
 * Make sure that both devices are on the same network.
-* Corporate networks may introduce additional obstacles. To circumvent these, you can use the wifi hotspot on your phone or a separate router.
+* Corporate networks may introduce additional hurdles. To circumvent these, you can use the wifi hotspot on your phone or a separate router.
+* Check that only 1 server is running on your PC.
 
 ### Slow Performance
 

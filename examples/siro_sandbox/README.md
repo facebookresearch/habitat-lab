@@ -137,4 +137,4 @@ This is an experimental feature aimed at those of us building the batch renderer
 
 ## VR Human-in-the-loop (HITL) Evaluation
 
-See [README_VR.md](./README_VR.md) for instructions for running the sandbox app in VR.
+See [VR_HITL.md](./VR_HITL.md) for instructions for running the sandbox app in VR.

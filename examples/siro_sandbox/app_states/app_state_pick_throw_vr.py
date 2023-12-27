@@ -39,7 +39,8 @@ class AppStatePickThrowVr(AppState):
     """
     This app state allows to evaluate a Spot robot, interacting with a GUI-controlled human.
     The human can pick up and throw objects.
-    Control from a remote VR client is supported. See README_VR.md for instructions.
+    The human can either be controlled with mouse and keyboard, or a VR headset.
+    See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
     def __init__(self, sandbox_service, gui_agent_ctrl):
