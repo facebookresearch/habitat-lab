@@ -12,6 +12,8 @@ from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 
 
 class GuiNavigationHelper:
+    """Helper for controlling an agent from the GUI."""
+
     def __init__(self, gui_service, agent_idx):
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx

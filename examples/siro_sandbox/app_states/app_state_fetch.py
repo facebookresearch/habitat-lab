@@ -36,6 +36,12 @@ MIN_STEPS_STOP: Final[int] = 15
 
 
 class AppStateFetch(AppState):
+    """
+    This app state allows to evaluate a Spot robot, interacting with a GUI-controlled human.
+    The human can pick up and throw objects.
+    Control from a remote VR client is supported. See README_VR.md for instructions.
+    """
+
     def __init__(self, sandbox_service, gui_agent_ctrl):
         self._sandbox_service = sandbox_service
         self._gui_agent_ctrl = gui_agent_ctrl

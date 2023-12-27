@@ -13,6 +13,8 @@ DIST_HIGHLIGHT: Final[float] = 0.15
 
 
 class GuiPickHelper:
+    """Helper for picking up objects from the GUI."""
+
     def __init__(self, gui_service, agent_idx, agent_feet_height):
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx

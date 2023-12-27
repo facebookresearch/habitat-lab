@@ -75,7 +75,7 @@ habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
 
 ## Unity Data Folder
 
-Unity is intended to run on a remote client (VR headset). Therefore, it must have its own copy of the datasets.
+Because the Unity application is a remote client, it must have its own copy of the datasets.
 
 Furthermore, HSSD is not directly compatible with Unity. Meshes must also be simplified to run at an acceptable performance on the VR devices.
 

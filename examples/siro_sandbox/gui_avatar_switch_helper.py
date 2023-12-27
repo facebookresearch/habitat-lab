@@ -61,6 +61,8 @@ def find_files(
 
 
 class GuiAvatarSwitchHelper:
+    """Helper for changing the active humanoid model, along with its animations and controller."""
+
     def __init__(
         self,
         sandbox_service: SandboxService,

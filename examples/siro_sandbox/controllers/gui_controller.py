@@ -13,7 +13,11 @@ from utils.gui.gui_input import GuiInput
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat_sim.physics import CollisionGroups, MotionType
+from habitat_sim.physics import (
+    CollisionGroupHelper,
+    CollisionGroups,
+    MotionType,
+)
 
 from .controller_abc import GuiController
 
@@ -173,7 +177,10 @@ class GuiRobotController(GuiController):
 
 
 class GuiHumanoidController(GuiController):
-    """Controller for humanoid agent."""
+    """
+    A controller for animated humanoid agents.
+    Supports walking, picking and placing objects, along with the associated animations.
+    """
 
     def __init__(
         self,
@@ -225,6 +232,17 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        self._hint_throw_vel = None
+        self._last_object_thrown_info = None
+        self._is_picking = None
+        self._iter_pose = 0
+        self._obj_to_grasp = None
+        self._hint_target_dir = None
+        # Disable collision between thrown object and the agents.
+        # Both agents (robot and humanoid) have the collision group Robot.
+        CollisionGroupHelper.set_mask_for_group(
+            self._thrown_object_collision_group, ~CollisionGroups.Robot
+        )
         assert not self.is_grasped
 
     def get_random_joint_action(self):
@@ -464,7 +482,7 @@ class GuiHumanoidController(GuiController):
             + base_offset
         )
 
-        # 1.0 is the default value indicating mowing in the relative_pos direction
+        # 1.0 is the default value indicating moving in the relative_pos direction
         # 0.0 indicates no movement but possibly a rotation on the spot
         distance_multiplier = (
             1.0
@@ -473,7 +491,7 @@ class GuiHumanoidController(GuiController):
         )
 
         # Compute the walk pose.
-        # TODO: This doesn't use the same 'calculate_walk_pose' method as other lab components.
+        # Note: This doesn't use the same 'calculate_walk_pose' method as other lab components.
         self._humanoid_controller.calculate_walk_pose_directional(
             relative_pos, distance_multiplier, self._hint_target_dir
         )
@@ -489,13 +507,13 @@ class GuiHumanoidController(GuiController):
         )
         # fixup is the difference between the movement allowed by step_filter
         # and the requested base movement.
-
         fixup = filtered_query_pos - target_query_pos
-        self._humanoid_controller.obj_transform_base.translation += fixup
 
         # TODO: Get Y offset from source data.
         navmesh_to_floor_y_fixup = -0.17
         fixup.y += navmesh_to_floor_y_fixup
+
+        self._humanoid_controller.obj_transform_base.translation += fixup
 
         # TODO: remove the joint angles overwrite here
         if self._hint_reach_pos:

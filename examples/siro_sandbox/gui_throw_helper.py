@@ -11,6 +11,8 @@ import numpy as np
 
 
 class GuiThrowHelper:
+    """Helper for throwing objects from the GUI."""
+
     def __init__(self, gui_service, agent_idx):
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx
