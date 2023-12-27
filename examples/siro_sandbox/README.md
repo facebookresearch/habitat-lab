@@ -134,3 +134,7 @@ This is an experimental feature aimed at those of us building the batch renderer
 * `ReplayGuiAppRenderer`
     * `ReplayGuiAppRenderer` is a "render client". It receives the `post_sim_update_dict` from `SandboxDriver` and updates the OS window by rendering the scene from the requested camera pose.
     * In theory, render clients should be app-agnostic, i.e. `ReplayGuiAppRenderer` could be re-used for other GUI apps, but in practice we may find situations where we have to inject some app-specific code into this class (we should avoid if possible).
+
+## VR Human-in-the-loop (HITL) Evaluation
+
+See [README_VR.md](./README_VR.md) for instructions for running the sandbox app in VR.
