@@ -2,7 +2,7 @@
 
 HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
 
-As it stands, the VR integration can only be used with the `pick_throw_vr` app state. In this mode, the user controls a human avatar that can interact with policy-driven Spot robot.
+As it stands, the VR integration can only be used with the `pick_throw_vr` app state. In this mode, the user controls a human avatar that can interact with a policy-driven Spot robot.
 
 This document explains how to set up and troubleshoot the VR integration.
 
@@ -32,7 +32,7 @@ This document explains how to set up and troubleshoot the VR integration.
 The system is composed of the following components:
 
 * The **Server**, which is the HITL app.
-* The **Client**, which runs on Unity and can be deployed to a VR headset.
+* The **Client** is a Unity app that can be run from within the Unity Editor or deployed to a VR headset.
 
 ### Requirements
 
