@@ -33,6 +33,7 @@ RADIUS_GRASP_PREVIEW: Final[float] = 0.15
 RADIUS_FOCUS_OBJECT: Final[float] = 0.2
 RING_PULSE_SIZE: Final[float] = 0.03
 MIN_STEPS_STOP: Final[int] = 15
+GRASP_THRESHOLD: Final[float] = 0.2
 
 
 class AppStatePickThrowVr(AppState):
@@ -51,12 +52,13 @@ class AppStatePickThrowVr(AppState):
         )
 
         self._cam_transform = None
-
         self._held_target_obj_idx = None
-        self._held_hand_idx = None  # currently only used with remote_gui_input
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
+
+        # Index of the remote-controlled hand holding an object
+        self._remote_held_hand_idx = None
 
         # will be set in on_environment_reset
         self._target_obj_ids = None
@@ -170,7 +172,6 @@ class AppStatePickThrowVr(AppState):
             return
         assert len(hand_positions) == num_hands
 
-        grasp_threshold = 0.2
         grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
 
         remote_button_input = remote_gui_input.get_gui_input()
@@ -183,7 +184,7 @@ class AppStatePickThrowVr(AppState):
         for hand_idx in range(num_hands):
             hand_pos = hand_positions[hand_idx]
 
-            min_dist = grasp_threshold
+            min_dist = GRASP_THRESHOLD
             min_i = None
             for i in range(len(self._target_obj_ids)):
                 # object is already grasped by Spot
@@ -224,19 +225,19 @@ class AppStatePickThrowVr(AppState):
             return
 
         self._held_target_obj_idx = found_obj_idx
-        self._held_hand_idx = found_hand_idx
+        self._remote_held_hand_idx = found_hand_idx
         rom_obj = self._get_target_rigid_object(self._held_target_obj_idx)
         rom_obj.motion_type = MotionType.KINEMATIC
 
     def _update_held_and_try_throw_remote(self):
         assert self._held_target_obj_idx is not None
-        assert self._held_hand_idx is not None
+        assert self._remote_held_hand_idx is not None
 
         remote_gui_input = self._sandbox_service.remote_gui_input
         remote_button_input = remote_gui_input.get_gui_input()
 
         do_throw = False
-        for key in self.get_grasp_keys_by_hand(self._held_hand_idx):
+        for key in self.get_grasp_keys_by_hand(self._remote_held_hand_idx):
             if remote_button_input.get_key_up(key):
                 do_throw = True
 
@@ -246,7 +247,7 @@ class AppStatePickThrowVr(AppState):
             rom_obj.motion_type = MotionType.DYNAMIC
             rom_obj.collidable = True
 
-            hand_idx = self._held_hand_idx
+            hand_idx = self._remote_held_hand_idx
             history_len = remote_gui_input.get_history_length()
             assert history_len >= 2
             history_offset = 1
@@ -266,11 +267,11 @@ class AppStatePickThrowVr(AppState):
                 rom_obj.linear_velocity = mn.Vector3(0, 0, 0)
 
             self._held_target_obj_idx = None
-            self._held_hand_idx = None
+            self._remote_held_hand_idx = None
         else:
             # snap to hand
             hand_pos, hand_rotation = remote_gui_input.get_hand_pose(
-                self._held_hand_idx
+                self._remote_held_hand_idx
             )
             assert hand_pos is not None
 
@@ -311,7 +312,7 @@ class AppStatePickThrowVr(AppState):
             reach_pos = self._get_target_object_position(
                 self._held_target_obj_idx
             )
-            hand_idx = self._held_hand_idx
+            hand_idx = self._remote_held_hand_idx
         elif self._recent_reach_pos:
             # Track the state of the hand when trying to reach an object
             reach_pos = self._recent_reach_pos
