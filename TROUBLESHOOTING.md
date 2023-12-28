@@ -4,6 +4,15 @@ This is a list of common issues, FAQs and troubleshooting steps.
 
 If filing a Github issue, please include your environment and the troubleshooting steps that you have attempted.
 
+- [Common Issues](#common-issues)
+  - [Habitat-Lab interactive\_play.py](#habitat-lab-interactive_playpy)
+  - [Unable to create context](#unable-to-create-context)
+- [Troubleshooting tips](#troubleshooting-tips)
+    - [General Tips](#general-tips)
+    - [Linux](#linux)
+    - [Windows](#windows)
+
+
 ## Common Issues
 
 ### Habitat-Lab interactive_play.py
@@ -31,7 +40,7 @@ On Linux, this is often caused by an invalid driver or `libglvnd` installation. 
 
 These steps aim to narrow down your graphics-related issues.
 
-#### First Steps:
+#### General Tips
 
 1. Enable verbose logging.
 
@@ -49,7 +58,7 @@ These steps aim to narrow down your graphics-related issues.
     * Using `habitat-sim` built from source:
       * `MAGNUM_LOG=verbose MAGNUM_GPU_VALIDATION=ON {habitat-sim}/build/viewer data/scene_datasets/habitat-test-scenes/skokloster-castle.glb`
 
-#### Linux:
+#### Linux
 
 1. *(NVIDIA)* Run `nvidia-smi`. The header of the output should indicate the expected driver and CUDA versions. For example:
 
