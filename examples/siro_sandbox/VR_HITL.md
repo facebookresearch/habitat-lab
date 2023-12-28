@@ -2,29 +2,29 @@
 
 HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
 
-As it stands, the VR integration can only be used with the `pick_throw_vr` app state. In this mode, the user controls a human avatar that can interact with a policy-driven Spot robot.
+VR control is only integrated to the `pick_throw_vr` app state. This is an example application that showcases the current VR features. [Read this section](./README.md#applications) for information on how to extend the HITL app for your use case.
 
-This document explains how to set up and troubleshoot the VR integration.
+**Note:** The robot policy used in this document will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
 
-## Table of Contents
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-      - [Server](#server)
-      - [Client](#client)
-  - [Launch Command](#launch-command)
-  - [Unity Data Folder](#unity-data-folder)
-    - [Dataset Processing](#dataset-processing)
-      - [Installation](#installation-1)
-      - [Usage](#usage)
-      - [Importing Data Into Unity](#importing-data-into-unity)
-  - [Running Locally from Unity](#running-locally-from-unity)
-  - [Running Remotely from Quest Headset](#running-remotely-from-quest-headset)
-    - [Connection](#connection)
-    - [Server Controls](#server-controls)
-  - [Troubleshooting](#troubleshooting)
-    - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
-    - [Connection Issues](#connection-issues)
-    - [Slow Performance](#slow-performance)
+---
+- [Installation](#installation)
+  - [Requirements](#requirements)
+    - [Server](#server)
+    - [Client](#client)
+- [Launch Command](#launch-command)
+- [Unity Data Folder](#unity-data-folder)
+  - [Dataset Processing](#dataset-processing)
+    - [Installation](#installation-1)
+    - [Usage](#usage)
+    - [Importing Data Into Unity](#importing-data-into-unity)
+- [Running Locally from Unity](#running-locally-from-unity)
+- [Running Remotely from Quest Headset](#running-remotely-from-quest-headset)
+  - [Connection](#connection)
+  - [Server Controls](#server-controls)
+- [Troubleshooting](#troubleshooting)
+  - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
+  - [Connection Issues](#connection-issues)
+  - [Slow Performance](#slow-performance)
 
 
 ## Installation
