@@ -54,7 +54,7 @@ These steps aim to narrow down your graphics-related issues.
 1. *(NVIDIA)* Run `nvidia-smi`. The header of the output should indicate the expected driver and CUDA versions. For example:
 
     ```NVIDIA-SMI 535.129.03 Driver Version: 535.129.03 CUDA Version: 12.2```
-    
+
     If the command returns an error or unexpected versions, reinstall your NVIDIA driver.
 
 2. The command `eglinfo` should work without error.
@@ -64,7 +64,7 @@ These steps aim to narrow down your graphics-related issues.
     1. Check that `libglvnd` is installed.
         * Debian-based: `apt list --installed | grep libglvnd`
         * RPM-based: `dnf list installed | grep libglvnd`
-    
+
     2. Ensure that a valid entry exists for NVIDIA.
         * In `/usr/share/glvnd/egl_vendor.d/` (specific path may vary), make sure that a `10_nvidia.json` entry exists. If it doesn't exist, you may try creating it manually.
         * This file should have the following content:
