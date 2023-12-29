@@ -50,7 +50,7 @@ The system is composed of the following components:
 |---|---|
 | Quest Headset | Tested on Quest Pro and Quest 3. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. |
 | [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | Clone it anywhere. |
-| Unity | **Beware that a license may be required by your organization.**<br>- Install the Unity Hub<br>- Open `siro_hitl_unity_client` in Unity Hub. This will trigger installation of the correct version of Unity Editor.<br>- During Unity installation, select `Android Build Tools`, including `OpenJDK` and `Android SDK and NDK tools`. |
+| Unity | **Beware that a license may be required by your organization.**<br>Follow [these installation instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
 
 ## Launch Command
 
@@ -173,15 +173,7 @@ See on-screen help for information about controls.
 
 ### Deployment to the VR Headset
 
-* Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated.
-* When connecting your headset to your development computer via USB, a pop-up will ask you to confirm the connection within the VR headset.
-  * If the pop-up doesn't show up, reconnect your USB cable.
-  * You may also have to re-do this after the headset goes into sleep mode.
-* Deployment occasionally fails when the application is already installed. You can delete the old build from the Quest storage menu. The following error will often show in Unity when that occurs:
-```
-CommandInvokationFailure: Unable to install APK to device. Please make sure the Android SDK is installed and is properly configured in the Editor. See the Console for more details.
-/home/user/Unity/Hub/Editor/2022.3.7f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb -s "4G3YA1ZF571D4D" install -r -d "/home/user/git/siro_hitl_unity_client/Build/build.apk"
-```
+See [the troubleshooting steps on siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md#deployment-to-the-vr-headset) if you have issues deploying the client to your VR device.
 
 ### Connection Issues
 
