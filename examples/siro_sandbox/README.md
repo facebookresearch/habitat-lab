@@ -80,13 +80,12 @@ habitat.environment.iterator_options.cycle=False \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] \
-habitat.simulator.habitat_sim_v0.allow_sliding=False
+habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
 ```
 
 ### AppState: pick_throw_vr
 
-Example application that allows for controlling a human from either mouse/keyboard or a VR headset, while evaluating a policy-driven spot robot.
+Example application that allows a user to interact with a scene, controlling a human avatar with mouse/keyboard or a VR headset. A policy-driven Spot robot also interacts with the scene. This is a proof of concept and not meant for rigorous evaluation or data-collection.
 
 See [VR_HITL.md](./VR_HITL.md) for instructions.
 
@@ -111,8 +110,7 @@ habitat.environment.iterator_options.cycle=False \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] \
-habitat.simulator.habitat_sim_v0.allow_sliding=False
+habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
 ```
 
 ### AppState: socialnav

@@ -2,9 +2,9 @@
 
 HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
 
-VR control is only integrated to the `pick_throw_vr` app state. This is an example application that showcases the current VR features. [Read this section](./README.md#applications) for information on how to extend the HITL app for your use case.
+VR control is only integrated to the `pick_throw_vr` app state. This is an example application that allows a user to interact with a scene, controlling a human avatar with mouse/keyboard or a VR headset. A policy-driven Spot robot also interacts with the scene. This is a proof of concept and not meant for rigorous evaluation or data-collection. [Read this section](./README.md#applications) for information on how to extend the HITL app for your use case.
 
-**Note:** The robot policy used in this document will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
+**Note:** The robot policy used in this example application will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
 
 ---
 - [Installation](#installation)
@@ -40,7 +40,7 @@ The system is composed of the following components:
 
 | Requirements | Notes |
 |---|---|
-| [habitat-sim](https://github.com/facebookresearch/habitat-sim) | Use an up-to-date branch. Bullet is required. |
+| [habitat-sim](https://github.com/facebookresearch/habitat-sim) | Use a nightly conda build, or build from source. Bullet is required. |
 | Datasets | After installing `habitat-sim`, run the following command from the root `habitat-lab` directory:<br>```python -m habitat_sim.utils.datasets_download --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab --data-path data/``` |
 | [hssd-models](https://huggingface.co/datasets/hssd/hssd-models) | Required for processing datasets for Unity.<br>Clone it anywhere. It will be specified later as a command-line argument. |
 
@@ -49,14 +49,13 @@ The system is composed of the following components:
 | Requirements | Notes |
 |---|---|
 | Quest Headset | Tested on Quest Pro and Quest 3. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. |
-| [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | Clone it anywhere. |
-| Unity | **Beware that a license may be required by your organization.**<br>Follow [these installation instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
+| [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | **Beware that a Unity license may be required by your organization.**<br>Follow [these installation instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
 
 ## Launch Command
 
-The standard keyboard-mouse launch commands can be used with those differences:
+The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
-* Remote control can be activated by including the `--remote-gui-mode` command-line argument.
+* The `--remote-gui-mode` argument launches the HITL tool as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 * Only `--app-state pick_throw_vr` supports remote VR evaluation.
 
 ```bash
@@ -75,9 +74,9 @@ habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
 
 ## Unity Data Folder
 
-Because the Unity application is a remote client, it must have its own copy of the datasets.
+Because the Unity application is a remote client, it must have its own copy of the 3D models used for rendering scenes.
 
-Datasets are not directly compatible with Unity, and must be simplified to run at an acceptable performance on the VR devices.
+Habitat's 3D models are not directly compatible with Unity, and must be simplified to run at an acceptable performance on the VR devices.
 
 Therefore, a script is provided so that you can process your datasets and add them to your Unity project.
 
@@ -114,9 +113,9 @@ conda create --name magnum python=3.10
 To process the dataset, activate your `magnum` conda environment and navigate to your `habitat-lab` root directory. Run the following command:
 
 ```
-python unity_dataset_processing.py \
+python ./scripts/unity_dataset_processing/unity_dataset_processing.py \
 --hssd-hab-root-dir data/scene_datasets/hssd-hab \
---hssd-models-root-dir path_to/hssd-models \
+--hssd-models-root-dir path_to/hssd-models/objects \
 --scenes 105515448_173104512
 ```
 
