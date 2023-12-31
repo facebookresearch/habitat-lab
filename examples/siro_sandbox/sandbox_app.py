@@ -17,9 +17,10 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Set
 
 import magnum as mn
 import numpy as np
@@ -54,19 +55,27 @@ if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
 from app_states.app_state_abc import AppState
-from app_states.app_state_fetch import AppStateFetch
 from app_states.app_state_free_camera import AppStateFreeCamera
+from app_states.app_state_pick_throw_vr import AppStatePickThrowVr
 from app_states.app_state_rearrange import AppStateRearrange
 from app_states.app_state_socialnav import AppStateSocialNav
 from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
+from server.client_message_manager import ClientMessageManager
+from server.interprocess_record import InterprocessRecord
+from server.remote_gui_input import RemoteGuiInput
+from server.server import launch_server_process, terminate_server_process
 
 # Please reach out to the paper authors to obtain this file
-DEFAULT_POSE_PATH = (
+DEFAULT_POSE_PATH: Final[str] = (
+    # TODO: Get from model.
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
-DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+DEFAULT_CFG: Final[
+    str
+] = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
+VIZ_ANIMATION_SPEED: Final[float] = 2.0
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -131,23 +140,34 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.gym_habitat_env, config, args, gui_input, self._step_recorder
+            gym_habitat_env=self.gym_habitat_env,
+            config=config,
+            args=args,
+            gui_input=gui_input,
+            recorder=self._step_recorder,
         )
 
         self._debug_images = args.debug_images
 
-        self._viz_anim_fraction = 0.0
+        self._viz_anim_fraction: float = 0.0
         self._pending_cursor_style = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
+        self._check_init_server(line_render)
+
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
+
+        self._client_message_manager = None
+        if self.network_server_enabled:
+            self._client_message_manager = ClientMessageManager()
 
         self._sandbox_service = SandboxService(
             args,
             config,
             gui_input,
+            self._remote_gui_input,
             line_render,
             text_drawer,
             lambda: self._viz_anim_fraction,
@@ -159,12 +179,13 @@ class SandboxDriver(GuiAppDriver):
             local_end_episode,
             lambda: self._set_cursor_style,
             self._episode_helper,
+            self._client_message_manager,
         )
 
         self._app_states: List[AppState]
-        if args.app_state == "fetch":
+        if args.app_state == "pick_throw_vr":
             self._app_states = [
-                AppStateFetch(
+                AppStatePickThrowVr(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
                 )
@@ -203,6 +224,32 @@ class SandboxDriver(GuiAppDriver):
         self._app_state = None
 
         self._reset_environment()
+
+    def close(self):
+        self._check_terminate_server()
+
+    @property
+    def network_server_enabled(self) -> bool:
+        return self._args.remote_gui_mode
+
+    def _check_init_server(self, line_render):
+        self._remote_gui_input = None
+        self._interprocess_record = None
+        if self.network_server_enabled:
+            # How many frames we can simulate "ahead" of what keyframes have been sent.
+            # A larger value increases lag on the client, while ensuring a more reliable
+            # simulation rate in the presence of unreliable network comms.
+            # See also server.py max_send_rate
+            max_steps_ahead = 5
+            self._interprocess_record = InterprocessRecord(max_steps_ahead)
+            launch_server_process(self._interprocess_record)
+            self._remote_gui_input = RemoteGuiInput(
+                self._interprocess_record, line_render
+            )
+
+    def _check_terminate_server(self):
+        if self.network_server_enabled:
+            terminate_server_process()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore
@@ -311,6 +358,9 @@ class SandboxDriver(GuiAppDriver):
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
+        if self.network_server_enabled:
+            self._remote_gui_input.clear_history()
+
         self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
@@ -320,9 +370,21 @@ class SandboxDriver(GuiAppDriver):
         for app_state in self._app_states:
             app_state.on_environment_reset(self._episode_recorder_dict)
 
+        # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
+        # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
+        self.ctrl_helper.on_environment_reset()
+
         self._app_state_index = (
             0  # start from the first app state for each episode
         )
+
+        # If show_tutorial enabled we show the tutorial once - before the first episode
+        if (
+            self._args.show_tutorial
+            and self._episode_helper.num_episodes_done > 0
+        ):
+            self._app_state_index += 1
+
         self._app_state = self._app_states[self._app_state_index]
         self._app_state.on_enter(
             prev_state=self._get_prev_app_state(),
@@ -405,10 +467,12 @@ class SandboxDriver(GuiAppDriver):
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
 
+        if self._remote_gui_input:
+            self._remote_gui_input.update()
+
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
-        viz_anim_speed = 2.0
         self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * viz_anim_speed
+            self._viz_anim_fraction + dt * VIZ_ANIMATION_SPEED
         ) % 1.0
 
         # Navmesh visualization only works in the debug third-person view
@@ -479,6 +543,24 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict["debug_images"] = [
             np.flipud(image) for image in debug_images
         ]
+
+        if self._remote_gui_input:
+            self._remote_gui_input.on_frame_end()
+
+        if self.network_server_enabled:
+            for keyframe_json in keyframes:
+                obj = json.loads(keyframe_json)
+                assert "keyframe" in obj
+                keyframe_obj = obj["keyframe"]
+                # Insert server->client message into the keyframe
+                message = self._client_message_manager.get_message_dict()
+                if len(message) > 0:
+                    keyframe_obj["message"] = message
+                    self._client_message_manager.clear_message_dict()
+                # Send the keyframe
+                self._interprocess_record.send_keyframe_to_networking_thread(
+                    keyframe_obj
+                )
 
         return post_sim_update_dict
 
@@ -643,7 +725,7 @@ if __name__ == "__main__":
         "--show-tutorial",
         action="store_true",
         default=False,
-        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+        help="Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.",
     )
     parser.add_argument(
         "--hide-humanoid-in-gui",
@@ -673,13 +755,13 @@ if __name__ == "__main__":
         "--app-state",
         default="rearrange",
         type=str,
-        help="'rearrange' (default) or 'fetch'",
+        help="'rearrange', 'pick_throw_vr', 'socialnav' or 'free_camera'",
     )
     parser.add_argument(
         "--remote-gui-mode",
         action="store_true",
         default=False,
-        help="Observer mode, where the humanoid follows the VR headset pose provided by remote_gui_input",
+        help="When enabled, the sandbox app behaves as a server that takes input from a remote client.",
     )
 
     args = parser.parse_args()
@@ -696,9 +778,9 @@ if __name__ == "__main__":
             "--show-tutorial is only supported for --app-state=rearrange"
         )
 
-    if args.remote_gui_mode and args.app_state != "fetch":
+    if args.remote_gui_mode and args.app_state != "pick_throw_vr":
         raise ValueError(
-            "--remote-gui-mode is only supported for fetch app-state"
+            "--remote-gui-mode is only supported for pick_throw_vr app-state"
         )
 
     if (
@@ -895,3 +977,5 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
+
+    driver.close()
