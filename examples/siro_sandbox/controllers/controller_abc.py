@@ -119,7 +119,7 @@ class BaselinesController(Controller):
                 "index_len_prev_actions": action_space_lens,
             }
 
-        # these addributes are used for inference
+        # these attributes are used for inference
         # and will be set in on_environment_reset
         self._test_recurrent_hidden_states = None
         self._prev_actions = None

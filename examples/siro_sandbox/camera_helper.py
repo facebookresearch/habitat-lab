@@ -44,6 +44,10 @@ class CameraHelper:
         self._cam_transform = None
         self._gui_input = gui_input
 
+    @property
+    def first_person_mode(self):
+        return self._first_person_mode
+
     def _camera_pitch_and_yaw_wasd_control(self):
         # update yaw and pitch using ADIK keys
         cam_rot_angle = 0.1

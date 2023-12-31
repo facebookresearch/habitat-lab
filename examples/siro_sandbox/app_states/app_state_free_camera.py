@@ -139,7 +139,7 @@ class AppStateFreeCamera(AppState):
             self._episode_helper.num_iter_episodes
             - self._episode_helper.num_episodes_done
         )
-        progress_str = f"{num_episodes_remaining} episodes remaining"
+        progress_str = f"{num_episodes_remaining} episodes left"
         self._sandbox_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
