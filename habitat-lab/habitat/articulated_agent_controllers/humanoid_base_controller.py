@@ -13,12 +13,13 @@ import numpy as np
 # where all joints are representated as quaternions. In future PRs we need
 # to abstract this class to support other kinds of joints.
 class Pose:
-    def __init__(self, joints_quat, root_transform):
-        """
+    """
         Contains a single humanoid pose
-            :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
-            :param root_transform: Matrix4 with the root trasnform.
-        """
+        :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
+        :param root_transform: Matrix4 with the root trasnform.
+    """
+    def __init__(self, joints_quat, root_transform):
+
         self.joints = list(joints_quat)
         self.root_transform = root_transform
 
@@ -29,7 +30,7 @@ class Motion:
         :param joints_quat_array: num_poses x num_joints x 4 array, containing the join orientations
         :param transform_array: num_poses x 4 x 4 array, containing the root transform
         :param displacement: on each pose, how much forward displacement was there?
-            Used to measure how many poses we should advance to move a cerain amount
+        Used to measure how many poses we should advance to move a cerain amount
         :param fps: the FPS at which the motion was recorded
     """
 
