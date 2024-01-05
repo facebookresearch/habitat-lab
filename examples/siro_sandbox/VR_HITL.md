@@ -60,7 +60,7 @@ The standard keyboard-mouse launch command-line arguments can be used with those
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
+python examples/siro_sandbox/hitl_main.py \
 --remote-gui-mode \
 --app-state pick_throw_vr \
 --disable-inverse-kinematics \

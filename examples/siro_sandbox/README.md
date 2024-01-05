@@ -69,7 +69,7 @@ See on-screen help for controls.
 GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD:
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
+python examples/siro_sandbox/hitl_main.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
@@ -100,7 +100,7 @@ See on-screen help for controls.
 Policy-controlled humanoid (initialized with random weights) in HSSD:
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
+python examples/siro_sandbox/hitl_main.py \
 --disable-inverse-kinematics \
 --never-end \
 --app-state free_camera \
