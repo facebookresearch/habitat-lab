@@ -24,8 +24,6 @@ from typing import TYPE_CHECKING, Any, Dict, Final, List, Set
 import numpy as np
 from controllers.controller_helper import ControllerHelper
 from episode_helper import EpisodeHelper
-
-# from hitl_tutorial import Tutorial, generate_tutorial
 from utils.gui.gui_application import GuiAppDriver
 from utils.gui.gui_input import GuiInput
 from utils.serialize_utils import (
@@ -47,9 +45,11 @@ if TYPE_CHECKING:
 from app_states.app_state_abc import AppState
 from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_pick_throw_vr import AppStatePickThrowVr
-from app_states.app_state_rearrange import AppStateRearrange
+from app_states.app_state_rearrange import (
+    AppStateRearrange,
+    AppStateRearrangeTutorialTransition,
+)
 from app_states.app_state_socialnav import AppStateSocialNav
-from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
@@ -172,20 +172,17 @@ class SandboxDriver(GuiAppDriver):
                 )
             ]
         elif args.app_state == "rearrange":
+            app_state_class = (
+                AppStateRearrangeTutorialTransition
+                if args.show_tutorial
+                else AppStateRearrange
+            )
             self._app_states = [
-                AppStateRearrange(
+                app_state_class(
                     self._sandbox_service,
                     self.ctrl_helper.get_gui_agent_controller(),
                 )
             ]
-            if args.show_tutorial:
-                self._app_states.insert(
-                    0,
-                    AppStateTutorial(
-                        self._sandbox_service,
-                        self.ctrl_helper.get_gui_agent_controller(),
-                    ),
-                )
         elif args.app_state == "socialnav":
             self._app_states = [
                 AppStateSocialNav(
@@ -197,8 +194,6 @@ class SandboxDriver(GuiAppDriver):
             self._app_states = [AppStateFreeCamera(self._sandbox_service)]
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
-        # Note that we expect SandboxDriver to create multiple AppStates in some
-        # situations and manage the transition between them, e.g. tutorial -> rearrange.
 
         assert self._app_states
         self._app_state_index = None
@@ -358,13 +353,6 @@ class SandboxDriver(GuiAppDriver):
         self._app_state_index = (
             0  # start from the first app state for each episode
         )
-
-        # If show_tutorial enabled we show the tutorial once - before the first episode
-        if (
-            self._args.show_tutorial
-            and self._episode_helper.num_episodes_done > 0
-        ):
-            self._app_state_index += 1
 
         self._app_state = self._app_states[self._app_state_index]
         self._app_state.on_enter(

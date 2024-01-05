@@ -7,6 +7,7 @@
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
+from app_states.app_state_tutorial import AppStateTutorial
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
@@ -436,3 +437,53 @@ class AppStateRearrange(AppState):
     def is_app_state_done(self):
         # terminal neverending app state
         return False
+
+
+class AppStateRearrangeTutorialTransition(AppState):
+    def __init__(self, sandbox_service, gui_agent_ctrl):
+        self._app_state_rearrange = AppStateRearrange(
+            sandbox_service, gui_agent_ctrl
+        )
+        self._app_state_tutorial = AppStateTutorial(
+            sandbox_service, gui_agent_ctrl
+        )
+        self._is_tutorial_active = False
+        self._only_show_tutorial_once = True
+        self._is_first_reset = True
+
+    def _start_tutorial(self):
+        assert not self._is_tutorial_active
+        final_eye_pos = self._app_state_rearrange._camera_helper.get_eye_pos()
+        final_lookat_pos = (
+            self._app_state_rearrange._camera_helper.get_lookat_pos()
+        )
+        self._app_state_tutorial.on_enter(final_eye_pos, final_lookat_pos)
+        self._is_tutorial_active = True
+
+    def _get_active_app_state(self):
+        return (
+            self._app_state_tutorial
+            if self._is_tutorial_active
+            else self._app_state_rearrange
+        )
+
+    def sim_update(self, dt, post_sim_update_dict):
+        self._get_active_app_state().sim_update(dt, post_sim_update_dict)
+
+        if (
+            self._is_tutorial_active
+            and self._app_state_tutorial._tutorial.is_completed()
+        ):
+            self._is_tutorial_active = False
+
+    def on_environment_reset(self, episode_recorder_dict):
+        self._app_state_rearrange.on_environment_reset(episode_recorder_dict)
+        self._app_state_tutorial.on_environment_reset(episode_recorder_dict)
+
+        if self._is_first_reset or not self._only_show_tutorial_once:
+            self._start_tutorial()
+
+        self._is_first_reset = False
+
+    def record_state(self):
+        self._get_active_app_state().record_state()
