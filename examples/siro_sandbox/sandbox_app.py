@@ -163,41 +163,31 @@ class SandboxDriver(GuiAppDriver):
             self._client_message_manager,
         )
 
-        self._app_states: List[AppState]
+        self._app_state: AppState = None
         if args.app_state == "pick_throw_vr":
-            self._app_states = [
-                AppStatePickThrowVr(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
+            self._app_state = AppStatePickThrowVr(
+                self._sandbox_service,
+                self.ctrl_helper.get_gui_agent_controller(),
+            )
         elif args.app_state == "rearrange":
             app_state_class = (
                 AppStateRearrangeTutorialTransition
                 if args.show_tutorial
                 else AppStateRearrange
             )
-            self._app_states = [
-                app_state_class(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
+            self._app_state = app_state_class(
+                self._sandbox_service,
+                self.ctrl_helper.get_gui_agent_controller(),
+            )
         elif args.app_state == "socialnav":
-            self._app_states = [
-                AppStateSocialNav(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
+            self._app_state = AppStateSocialNav(
+                self._sandbox_service,
+                self.ctrl_helper.get_gui_agent_controller(),
+            )
         elif args.app_state == "free_camera":
-            self._app_states = [AppStateFreeCamera(self._sandbox_service)]
+            self._app_state = AppStateFreeCamera(self._sandbox_service)
         else:
             raise RuntimeError("Unexpected --app-state=", args.app_state)
-
-        assert self._app_states
-        self._app_state_index = None
-        self._app_state = None
 
         self._reset_environment()
 
@@ -317,48 +307,23 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_recorder_dict = ep_dict
 
-    def _get_prev_app_state(self):
-        return (
-            self._app_states[self._app_state_index - 1]
-            if self._app_state_index > 0
-            else None
-        )
-
-    def _get_next_app_state(self):
-        return (
-            self._app_states[self._app_state_index + 1]
-            if self._app_state_index < len(self._app_states) - 1
-            else None
-        )
-
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
         if self.network_server_enabled:
             self._remote_gui_input.clear_history()
 
+        # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
         self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
 
-        # Reset all the app states
-        for app_state in self._app_states:
-            app_state.on_environment_reset(self._episode_recorder_dict)
+        self._app_state.on_environment_reset(self._episode_recorder_dict)
 
         # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
         # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
         self.ctrl_helper.on_environment_reset()
-
-        self._app_state_index = (
-            0  # start from the first app state for each episode
-        )
-
-        self._app_state = self._app_states[self._app_state_index]
-        self._app_state.on_enter(
-            prev_state=self._get_prev_app_state(),
-            next_state=self._get_next_app_state(),
-        )
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False
@@ -455,9 +420,6 @@ class SandboxDriver(GuiAppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
-        if self._app_state.is_app_state_done():
-            self._try_next_state()
-
         if self._pending_cursor_style:
             post_sim_update_dict[
                 "application_cursor"
@@ -532,13 +494,3 @@ class SandboxDriver(GuiAppDriver):
                 )
 
         return post_sim_update_dict
-
-    def _try_next_state(self):
-        self._app_state_index += 1
-        if self._app_state_index >= len(self._app_states):
-            return
-        self._app_state = self._app_states[self._app_state_index]
-        self._app_state.on_enter(
-            prev_state=self._get_prev_app_state(),
-            next_state=self._get_next_app_state(),
-        )

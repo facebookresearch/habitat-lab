@@ -434,10 +434,6 @@ class AppStateRearrange(AppState):
 
         self._update_help_text()
 
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False
-
 
 class AppStateRearrangeTutorialTransition(AppState):
     def __init__(self, sandbox_service, gui_agent_ctrl):

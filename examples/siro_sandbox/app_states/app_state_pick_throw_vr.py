@@ -712,7 +712,3 @@ class AppStatePickThrowVr(AppState):
         hit_info = raycast_results.hits[0]
 
         return hit_info
-
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False

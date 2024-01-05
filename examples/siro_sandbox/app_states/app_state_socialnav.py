@@ -315,7 +315,3 @@ class AppStateSocialNav(AppState):
         )
 
         return status_str
-
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False
