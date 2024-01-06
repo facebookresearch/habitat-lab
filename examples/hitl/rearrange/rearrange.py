@@ -12,7 +12,7 @@ def add_hitl_framework_import_path():
 
     current_script_directory = os.path.dirname(os.path.realpath(__file__))
     parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../")
+        os.path.join(current_script_directory, "../../siro_sandbox/")
     )
     sys.path.append(parent_directory)
 
