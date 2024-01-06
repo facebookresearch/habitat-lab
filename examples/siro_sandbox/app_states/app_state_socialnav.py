@@ -22,10 +22,11 @@ class AppStateSocialNav(AppState):
     def __init__(
         self,
         sandbox_service: SandboxService,
-        gui_agent_ctrl: GuiHumanoidController,
     ) -> None:
         self._sandbox_service: SandboxService = sandbox_service
-        self._gui_agent_ctrl: GuiHumanoidController = gui_agent_ctrl
+        self._gui_agent_ctrl: GuiHumanoidController = (
+            self._sandbox_service.gui_agent_controller
+        )
 
         self._cam_transform = None
         self._camera_helper = CameraHelper(

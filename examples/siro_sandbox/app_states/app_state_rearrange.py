@@ -23,10 +23,9 @@ class AppStateRearrange(AppState):
     def __init__(
         self,
         sandbox_service,
-        gui_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
 
         # cache items from config; config is expensive to access at runtime
         config = self._sandbox_service.config
@@ -436,13 +435,9 @@ class AppStateRearrange(AppState):
 
 
 class AppStateRearrangeTutorialTransition(AppState):
-    def __init__(self, sandbox_service, gui_agent_ctrl):
-        self._app_state_rearrange = AppStateRearrange(
-            sandbox_service, gui_agent_ctrl
-        )
-        self._app_state_tutorial = AppStateTutorial(
-            sandbox_service, gui_agent_ctrl
-        )
+    def __init__(self, sandbox_service):
+        self._app_state_rearrange = AppStateRearrange(sandbox_service)
+        self._app_state_tutorial = AppStateTutorial(sandbox_service)
         self._is_tutorial_active = False
         self._only_show_tutorial_once = True
         self._is_first_reset = True

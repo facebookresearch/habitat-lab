@@ -44,9 +44,9 @@ class AppStatePickThrowVr(AppState):
     See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
-    def __init__(self, sandbox_service, gui_agent_ctrl):
+    def __init__(self, sandbox_service):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._can_grasp_place_threshold = (
             self._sandbox_service.args.can_grasp_place_threshold
         )

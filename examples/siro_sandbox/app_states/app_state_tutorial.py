@@ -14,10 +14,9 @@ class AppStateTutorial(AppState):
     def __init__(
         self,
         sandbox_service,
-        gui_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._cam_transform = None
 
     def get_sim(self):

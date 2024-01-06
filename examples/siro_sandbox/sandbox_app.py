@@ -161,13 +161,13 @@ class SandboxDriver(GuiAppDriver):
             lambda: self._set_cursor_style,
             self._episode_helper,
             self._client_message_manager,
+            self.ctrl_helper.get_gui_agent_controller(),
         )
 
         self._app_state: AppState = None
         if args.app_state == "pick_throw_vr":
             self._app_state = AppStatePickThrowVr(
                 self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
             )
         elif args.app_state == "rearrange":
             app_state_class = (
@@ -177,12 +177,10 @@ class SandboxDriver(GuiAppDriver):
             )
             self._app_state = app_state_class(
                 self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
             )
         elif args.app_state == "socialnav":
             self._app_state = AppStateSocialNav(
                 self._sandbox_service,
-                self.ctrl_helper.get_gui_agent_controller(),
             )
         elif args.app_state == "free_camera":
             self._app_state = AppStateFreeCamera(self._sandbox_service)
