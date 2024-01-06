@@ -69,11 +69,10 @@ See on-screen help for controls.
 GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD:
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/hitl_main.py \
+python examples/siro_sandbox/app_states/app_state_rearrange.py \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
---app-state rearrange \
 --cfg social_rearrange/pop_play.yaml \
 --cfg-opts \
 habitat.environment.iterator_options.cycle=False \

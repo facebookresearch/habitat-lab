@@ -4,6 +4,21 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
+# temp until hitl framework is a proper package
+def add_hitl_framework_import_path():
+    import os
+    import sys
+
+    current_script_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = os.path.abspath(
+        os.path.join(current_script_directory, "../")
+    )
+    sys.path.append(parent_directory)
+
+
+add_hitl_framework_import_path()
+
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -11,6 +26,7 @@ from app_states.app_state_tutorial import AppStateTutorial
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
+from hitl_main import do_hitl_main
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
@@ -478,3 +494,16 @@ class AppStateRearrangeTutorialTransition(AppState):
 
     def record_state(self):
         self._get_active_app_state().record_state()
+
+
+def create_app_state(sandbox_service):
+    app_state_class = (
+        AppStateRearrangeTutorialTransition
+        if sandbox_service.args.show_tutorial
+        else AppStateRearrange
+    )
+    return app_state_class(sandbox_service)
+
+
+if __name__ == "__main__":
+    do_hitl_main(create_app_state)

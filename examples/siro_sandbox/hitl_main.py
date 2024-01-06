@@ -28,7 +28,7 @@ def _parse_debug_third_person(args, framebuffer_size):
     return do_show, width, height
 
 
-def do_hitl_main():
+def do_hitl_main(create_app_state_lambda=None):
     args = get_hitl_args()
 
     # todo: move these to app states
@@ -97,6 +97,7 @@ def do_hitl_main():
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
+        create_app_state_lambda,
     )
 
     # sanity check if there are no agents with camera sensors

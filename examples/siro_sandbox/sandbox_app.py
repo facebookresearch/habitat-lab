@@ -45,10 +45,6 @@ if TYPE_CHECKING:
 from app_states.app_state_abc import AppState
 from app_states.app_state_free_camera import AppStateFreeCamera
 from app_states.app_state_pick_throw_vr import AppStatePickThrowVr
-from app_states.app_state_rearrange import (
-    AppStateRearrange,
-    AppStateRearrangeTutorialTransition,
-)
 from app_states.app_state_socialnav import AppStateSocialNav
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
@@ -72,7 +68,15 @@ def requires_habitat_sim_with_bullet(callable_):
 
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
-    def __init__(self, args, config, gui_input, line_render, text_drawer):
+    def __init__(
+        self,
+        args,
+        config,
+        gui_input,
+        line_render,
+        text_drawer,
+        create_app_state_lambda,
+    ):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
@@ -165,17 +169,10 @@ class SandboxDriver(GuiAppDriver):
         )
 
         self._app_state: AppState = None
-        if args.app_state == "pick_throw_vr":
+        if create_app_state_lambda is not None:
+            self._app_state = create_app_state_lambda(self._sandbox_service)
+        elif args.app_state == "pick_throw_vr":
             self._app_state = AppStatePickThrowVr(
-                self._sandbox_service,
-            )
-        elif args.app_state == "rearrange":
-            app_state_class = (
-                AppStateRearrangeTutorialTransition
-                if args.show_tutorial
-                else AppStateRearrange
-            )
-            self._app_state = app_state_class(
                 self._sandbox_service,
             )
         elif args.app_state == "socialnav":
