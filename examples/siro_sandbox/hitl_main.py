@@ -1,6 +1,5 @@
 import magnum as mn
-from hb_config_helper import get_habitat_baselines_config_and_update_args
-from hitl_arg_parser import get_hitl_args
+from hb_config_helper import update_config_and_args
 from magnum.platform.glfw import Application
 from sandbox_app import SandboxDriver
 from utils.gui.gui_application import GuiApplication
@@ -28,16 +27,9 @@ def _parse_debug_third_person(args, framebuffer_size):
     return do_show, width, height
 
 
-def do_hitl_main(create_app_state_lambda=None):
-    args = get_hitl_args()
-
+def hitl_main(args, config, create_app_state_lambda=None):
     # todo: move these to app states
     ####
-    if args.show_tutorial and args.app_state != "rearrange":
-        raise ValueError(
-            "--show-tutorial is only supported for --app-state=rearrange"
-        )
-
     if args.remote_gui_mode and args.app_state != "pick_throw_vr":
         raise ValueError(
             "--remote-gui-mode is only supported for pick_throw_vr app-state"
@@ -84,7 +76,8 @@ def do_hitl_main(create_app_state_lambda=None):
         args.use_batch_renderer,
     )
 
-    hb_config = get_habitat_baselines_config_and_update_args(
+    update_config_and_args(
+        config,
         args,
         show_debug_third_person=show_debug_third_person,
         debug_third_person_width=debug_third_person_width,
@@ -93,7 +86,7 @@ def do_hitl_main(create_app_state_lambda=None):
 
     driver = SandboxDriver(
         args,
-        hb_config,
+        config,
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
@@ -102,7 +95,7 @@ def do_hitl_main(create_app_state_lambda=None):
 
     # sanity check if there are no agents with camera sensors
     if (
-        len(hb_config.habitat.simulator.agents) == 1
+        len(config.habitat.simulator.agents) == 1
         and args.gui_controlled_agent_index is not None
     ):
         assert driver.get_sim().renderer is None
@@ -115,4 +108,5 @@ def do_hitl_main(create_app_state_lambda=None):
 
 
 if __name__ == "__main__":
-    do_hitl_main()
+    raise RuntimeError("not implemented")
+    # hitl_main(None, None)

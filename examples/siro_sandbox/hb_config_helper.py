@@ -1,6 +1,5 @@
 # from habitat_baselines.config.default import get_config as get_baselines_config
 import habitat
-import habitat_baselines.config.default
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     HumanoidJointActionConfig,
@@ -8,18 +7,13 @@ from habitat.config.default_structured_configs import (
 )
 
 
-def get_habitat_baselines_config_and_update_args(
+def update_config_and_args(
+    config,
     args,
     show_debug_third_person=False,
     debug_third_person_width=None,
     debug_third_person_height=None,
 ):
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
     with habitat.config.read_write(config):  # type: ignore
         habitat_config = config.habitat
         env_config = habitat_config.environment
@@ -154,5 +148,3 @@ def get_habitat_baselines_config_and_update_args(
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig()
-
-    return config

@@ -138,12 +138,6 @@ def create_hitl_arg_parser():
         ),
     )
     parser.add_argument(
-        "--show-tutorial",
-        action="store_true",
-        default=False,
-        help="Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.",
-    )
-    parser.add_argument(
         "--hide-humanoid-in-gui",
         action="store_true",
         default=False,
