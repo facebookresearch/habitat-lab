@@ -4,9 +4,7 @@ Habitat Lab TopdownMap Visualization Examples
 .. contents::
     :class: m-block m-default
 
-The example code below is available on `Colab`_, or runnable via:
-
-.. _Colab: https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/Habitat_Lab_TopdownMap_Visualization.ipynb
+The example code below is available as a Jupyter notebook, or directly runnable via:
 
 .. code:: shell-session
 

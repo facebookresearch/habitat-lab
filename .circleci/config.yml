@@ -25,8 +25,8 @@ jobs:
       - run:
           name: run black
           command: |
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(notebooks|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(notebooks|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
       - run:
           name: run isort
           command: |
