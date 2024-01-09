@@ -30,11 +30,6 @@ def _parse_debug_third_person(args, framebuffer_size):
 def hitl_main(args, config, create_app_state_lambda=None):
     # todo: move these to app states
     ####
-    if args.remote_gui_mode and args.app_state != "pick_throw_vr":
-        raise ValueError(
-            "--remote-gui-mode is only supported for pick_throw_vr app-state"
-        )
-
     if (
         args.app_state == "free_camera"
         and args.gui_controlled_agent_index is not None

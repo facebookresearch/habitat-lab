@@ -56,20 +56,16 @@ The system is composed of the following components:
 The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
 * The `--remote-gui-mode` argument launches the HITL tool as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
-* Only `--app-state pick_throw_vr` supports remote VR evaluation.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/hitl_main.py \
+python examples/hitl/pick_throw_vr/pick_throw_vr.py \
 --remote-gui-mode \
---app-state pick_throw_vr \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
 --ang-speed "15" \
---cfg social_rearrange/pop_play.yaml \
---cfg-opts habitat_baselines.num_environments=1 \
-habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
+--cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
 ```
 
 ## Unity Data Folder

@@ -2,11 +2,7 @@
 
 defaults:
   - social_rearrange: pop_play
-  # fetch specific defaults overrides:
-  # (placeholder for future overrides)
-
   - _self_
-
 
 habitat:
   environment:
