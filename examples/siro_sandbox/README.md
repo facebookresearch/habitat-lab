@@ -15,7 +15,6 @@ This is a 3D interactive GUI app that enables human-in-the-loop (HITL) evaluatio
   - [AppState: pick\_throw\_vr](#appstate-pick_throw_vr)
   - [AppState: free\_camera](#appstate-free_camera)
     - [Example launch command](#example-launch-command-1)
-  - [AppState: socialnav](#appstate-socialnav)
   - [AppState: tutorial](#appstate-tutorial)
 - [Controls](#controls)
 - [Workaround for poor runtime perf on slower machines](#workaround-for-poor-runtime-perf-on-slower-machines)
@@ -111,11 +110,6 @@ habitat_baselines.num_environments=1 \
 habitat_baselines.eval.should_load_ckpt=False \
 habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
 ```
-
-### AppState: socialnav
-
-This app state is a work in progress and doesn't currently run.
-
 
 ### AppState: tutorial
 

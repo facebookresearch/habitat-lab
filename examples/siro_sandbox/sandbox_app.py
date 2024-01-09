@@ -44,7 +44,6 @@ if TYPE_CHECKING:
 
 from app_states.app_state_abc import AppState
 from app_states.app_state_free_camera import AppStateFreeCamera
-from app_states.app_state_socialnav import AppStateSocialNav
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
@@ -170,10 +169,6 @@ class SandboxDriver(GuiAppDriver):
         self._app_state: AppState = None
         if create_app_state_lambda is not None:
             self._app_state = create_app_state_lambda(self._sandbox_service)
-        elif args.app_state == "socialnav":
-            self._app_state = AppStateSocialNav(
-                self._sandbox_service,
-            )
         elif args.app_state == "free_camera":
             self._app_state = AppStateFreeCamera(self._sandbox_service)
         else:
