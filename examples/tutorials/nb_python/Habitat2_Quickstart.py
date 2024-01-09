@@ -7,7 +7,7 @@
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: nb_python//py:percent,colabs//ipynb
+#     formats: nb_python//py:percent,notebooks//ipynb
 #     notebook_metadata_filter: all
 #     text_representation:
 #       extension: .py
@@ -15,8 +15,19 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.9.17
 # ---
 
 # %% [markdown]
@@ -36,40 +47,23 @@ from habitat.config.default_structured_configs import (
 )
 
 try:
-    from IPython.display import HTML
+    from IPython.display import IFrame
 
-    HTML(
-        '<iframe src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview" width="640" height="480" allow="autoplay"></iframe>'
+    # NOTE: this file is unreachable
+    IFrame(
+        src="https://drive.google.com/file/d/1ltrse38i8pnJPGAXlThylcdy8PMjUMKh/preview",
+        width=640,
+        height=480,
     )
+
 except Exception:
     pass
 
 # %%
-# %%capture
-# @title Install Dependencies (if on Colab) { display-mode: "form" }
-# @markdown (double click to show code)
-
-import os
-
-# Colab installation
-if "COLAB_GPU" in os.environ:
-    print("Setting up Habitat")
-    # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# %%
 # Imports
 import os
 
-if "COLAB_GPU" in os.environ:
-    print("Setting Habitat base path")
-    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
-    import importlib
-
-    import PIL
-
-    importlib.reload(PIL.TiffTags)  # type:ignore
-
-import os
-
+import git
 import gym
 import numpy as np
 from hydra.core.config_store import ConfigStore
@@ -112,6 +106,15 @@ importlib.reload(
     PIL.TiffTags  # type: ignore[attr-defined]
 )  # To potentially avoid PIL problem
 
+repo = git.Repo(".", search_parent_directories=True)
+dir_path = repo.working_tree_dir
+data_path = os.path.join(dir_path, "data")
+output_path = os.path.join(
+    dir_path, "examples/tutorials/habitat_lab_visualization/"
+)
+os.makedirs(output_path, exist_ok=True)
+os.chdir(dir_path)
+
 
 # %% [markdown]
 # # Local installation
@@ -128,7 +131,10 @@ importlib.reload(
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            "benchmark/rearrange/skills/pick.yaml",
+            os.path.join(
+                dir_path,
+                "habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml",
+            ),
         )
     )
 ) as env:
@@ -137,7 +143,7 @@ with habitat.Env(
     print("Agent acting inside environment.")
     count_steps = 0
     # To save the video
-    video_file_path = "data/example_interact.mp4"
+    video_file_path = os.path.join(output_path, "example_interact.mp4")
     video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 
     while not env.episode_over:
@@ -164,7 +170,7 @@ with habitat.Env(
 # %%
 env = gym.make("HabitatRenderPick-v0")
 
-video_file_path = "data/example_interact.mp4"
+video_file_path = os.path.join(output_path, "example_interact.mp4")
 video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 
 done = False
@@ -476,7 +482,7 @@ habitat:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
     scenes_dir: "data/replica_cad/"
 """
-nav_pick_cfg_path = "data/nav_pick_demo.yaml"
+nav_pick_cfg_path = os.path.join(data_path, "nav_pick_demo.yaml")
 with open(nav_pick_cfg_path, "w") as f:
     f.write(cfg_txt)
 
@@ -492,7 +498,7 @@ with habitat.Env(
     print("Agent acting inside environment.")
     count_steps = 0
     # To save the video
-    video_file_path = "data/example_interact.mp4"
+    video_file_path = os.path.join(output_path, "example_interact.mp4")
     video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 
     while not env.episode_over:
@@ -579,12 +585,12 @@ object_target_samplers:
       num_samples: [1, 1]
       orientation_sampling: "up"
 """
-nav_pick_cfg_path = "data/nav_pick_dataset.yaml"
+nav_pick_cfg_path = os.path.join(data_path, "nav_pick_dataset.yaml")
 with open(nav_pick_cfg_path, "w") as f:
     f.write(dataset_cfg_txt)
 
 # %%
-# !python -m habitat.datasets.rearrange.run_episode_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
+# !python -m habitat.datasets.rearrange.run_episode_generator --run --config {nav_pick_cfg_path} --num-episodes 10 --out data/nav_pick.json.gz
 
 # %% [markdown]
 # To use this dataset set `dataset.data_path = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.run_episode_generator --list`
