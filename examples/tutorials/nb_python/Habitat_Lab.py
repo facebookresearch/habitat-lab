@@ -7,7 +7,7 @@
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: nb_python//py:percent,colabs//ipynb
+#     formats: nb_python//py:percent,notebooks//ipynb
 #     notebook_metadata_filter: all
 #     text_representation:
 #       extension: .py
