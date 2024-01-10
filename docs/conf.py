@@ -44,6 +44,7 @@ habitat.core.__all__ = [
     "simulator",
     "registry",
     "vector_env",
+    "batch_rendering",
 ]
 
 habitat.datasets.__all__ = [
