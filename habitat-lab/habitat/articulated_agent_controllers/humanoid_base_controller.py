@@ -13,10 +13,11 @@ import numpy as np
 # where all joints are represented as quaternions. In future PRs we need
 # to abstract this class to support other kinds of joints.
 class Pose:
-    """
+    def __init__(self, joints_quat, root_transform):
+        """
         Contains a single humanoid pose
             :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
-            :param root_transform: Matrix4 with the root transform.
+            :param root_transform: Matrix4 with the root trasnform.
         """
         self.joints = list(joints_quat)
         self.root_transform = root_transform

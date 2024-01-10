@@ -32,7 +32,8 @@ habitat.__all__ = [
     "datasets",
     "sims",
     "tasks",
-    "utils"]
+    "utils",
+]
 
 habitat.core.__all__ = [
     "agent",
@@ -51,11 +52,8 @@ habitat.datasets.__all__ = [
     "object_nav",
     "pointnav",
     "rearrange",
-    "vln"
+    "vln",
 ]
-
-
-
 
 
 PROJECT_TITLE = "Habitat"

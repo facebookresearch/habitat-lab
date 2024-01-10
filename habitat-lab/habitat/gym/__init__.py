@@ -11,5 +11,5 @@ __all__ = [
     "make_gym_from_config",
     "gym_env_episode_count_wrapper",
     "gym_env_obs_dict_wrapper",
-    "gym_wrapper"
-    ]
+    "gym_wrapper",
+]

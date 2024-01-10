@@ -8,7 +8,4 @@
 from habitat.config.default import DictConfig, get_config
 from habitat.config.read_write import read_write
 
-__all__ = [
-    "get_config",
-    "read_write",
-    "default_structured_configs"]
+__all__ = ["get_config", "read_write", "default_structured_configs"]
