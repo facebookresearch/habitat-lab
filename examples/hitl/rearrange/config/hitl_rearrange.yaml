@@ -2,12 +2,18 @@
 
 defaults:
   - social_rearrange: pop_play
+  - hitl_defaults
   - _self_
 
 habitat:
   environment:
+    max_episode_steps: 0
     iterator_options:
       cycle: False
+  task:
+    measurements:
+      pddl_success:
+        must_call_stop: False
 
 habitat_baselines:
   evaluate: True

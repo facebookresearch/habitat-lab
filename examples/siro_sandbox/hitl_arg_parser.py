@@ -49,11 +49,7 @@ def create_hitl_arg_parser():
             "that lets the user observe the scene (instead of controlling one of the agents)"
         ),
     )
-    parser.add_argument(
-        "--disable-inverse-kinematics",
-        action="store_true",
-        help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
-    )
+
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
         "--cfg-opts",
@@ -84,12 +80,6 @@ def create_hitl_arg_parser():
         type=float,
         default=10.0,
         help="GUI-controlled agent's angular speed",
-    )
-    parser.add_argument(
-        "--never-end",
-        action="store_true",
-        default=False,
-        help="If true, make the task never end due to reaching max number of steps",
     )
     parser.add_argument(
         "--use-batch-renderer",
@@ -166,12 +156,6 @@ def create_hitl_arg_parser():
         default=None,
         type=str,
         help="Filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
-    )
-    parser.add_argument(
-        "--app-state",
-        default="rearrange",
-        type=str,
-        help="'rearrange', 'pick_throw_vr', 'socialnav' or 'free_camera'",
     )
     parser.add_argument(
         "--remote-gui-mode",

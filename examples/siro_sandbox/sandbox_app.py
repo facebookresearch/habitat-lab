@@ -19,7 +19,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, Final, List, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import numpy as np
 from controllers.controller_helper import ControllerHelper
@@ -49,8 +49,6 @@ from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
 
-VIZ_ANIMATION_SPEED: Final[float] = 2.0
-
 
 def requires_habitat_sim_with_bullet(callable_):
     @wraps(callable_)
@@ -74,6 +72,7 @@ class SandboxDriver(GuiAppDriver):
         text_drawer,
         create_app_state_lambda,
     ):
+        self._hitl_config = config.hitl
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
@@ -386,7 +385,8 @@ class SandboxDriver(GuiAppDriver):
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * VIZ_ANIMATION_SPEED
+            self._viz_anim_fraction
+            + dt * self._hitl_config.viz_animation_speed
         ) % 1.0
 
         # Navmesh visualization only works in the debug third-person view

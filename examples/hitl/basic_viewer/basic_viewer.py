@@ -24,6 +24,7 @@ import magnum as mn
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
 from hitl_arg_parser import create_hitl_arg_parser
+from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 
@@ -220,5 +221,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # register_hydra_plugins()  # coming soon
+    register_hydra_plugins()
     main()

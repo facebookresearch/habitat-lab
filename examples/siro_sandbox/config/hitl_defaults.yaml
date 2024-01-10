@@ -1,0 +1,3 @@
+hitl:
+  # The speed of the default animation timer. See sandbox_service.get_anim_fraction. Currently used to animate some debug lines.
+  viz_animation_speed: 2.0

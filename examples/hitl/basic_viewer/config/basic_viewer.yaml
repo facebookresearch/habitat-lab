@@ -2,12 +2,8 @@
 
 defaults:
   - social_rearrange: pop_play
+  - hitl_defaults
   - _self_
-
-habitat:
-  environment:
-    iterator_options:
-      cycle: False
 
 habitat_baselines:
   evaluate: True

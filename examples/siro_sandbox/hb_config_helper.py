@@ -21,7 +21,6 @@ def update_config_and_args(
 ):
     with habitat.config.read_write(config):  # type: ignore
         habitat_config = config.habitat
-        env_config = habitat_config.environment
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
         gym_obs_keys = habitat_config.gym.obs_keys
@@ -42,33 +41,6 @@ def update_config_and_args(
             agent_sensor_name = f"{agent_key}third_rgb"
             args.debug_images.append(agent_sensor_name)
             gym_obs_keys.append(agent_sensor_name)
-
-        # Code below is ported from interactive_play.py. I'm not sure what it is for.
-        if True:
-            if "pddl_success" in task_config.measurements:
-                task_config.measurements.pddl_success.must_call_stop = False
-            if "rearrange_nav_to_obj_success" in task_config.measurements:
-                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
-                    False
-                )
-            if "force_terminate" in task_config.measurements:
-                task_config.measurements.force_terminate.max_accum_force = -1.0
-                task_config.measurements.force_terminate.max_instant_force = (
-                    -1.0
-                )
-
-        if args.never_end:
-            env_config.max_episode_steps = 0
-
-        if not args.disable_inverse_kinematics:
-            if "arm_action" not in task_config.actions:
-                raise ValueError(
-                    "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
-                )
-            sim_config.agents.main_agent.ik_arm_urdf = (
-                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
-            )
-            task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
         if args.gui_controlled_agent_index is not None:
             # make sure gui_controlled_agent_index is valid

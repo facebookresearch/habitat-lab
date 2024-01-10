@@ -32,6 +32,7 @@ from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
 from hitl_arg_parser import create_hitl_arg_parser
+from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
@@ -751,5 +752,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # register_hydra_plugins()  # coming soon
+    register_hydra_plugins()
     main()
