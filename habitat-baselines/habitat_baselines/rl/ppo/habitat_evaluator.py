@@ -430,9 +430,7 @@ class HabitatEvaluator(Evaluator):
             # This could be turned off if you feel that we mess up something
             if transformer_based_policy_is_multi_agent and any(envs_to_pause):
                 # For human HRL skills
-                agent.actor_critic._active_policies[1].on_envs_pause(
-                    envs_to_pause
-                )
+                agent.actor_critic.on_envs_pause(envs_to_pause)
 
         pbar.close()
         assert (
