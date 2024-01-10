@@ -7,7 +7,7 @@
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: nb_python//py:percent,colabs//ipynb
+#     formats: nb_python//py:percent,notebooks//ipynb
 #     notebook_metadata_filter: all
 #     text_representation:
 #       extension: .py
@@ -15,15 +15,20 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.9.17
 # ---
-
-# %%
-# @title Installation
-
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# !wget -c http://dl.fbaipublicfiles.com/habitat/mp3d_example.zip && unzip -o mp3d_example.zip -d /content/habitat-sim/data/scene_datasets/mp3d/
 
 # %%
 # !pip uninstall --yes pyopenssl
@@ -35,7 +40,6 @@
 
 import os
 import random
-import sys
 
 import git
 import numpy as np
@@ -44,15 +48,10 @@ from gym import spaces
 # %matplotlib inline
 from matplotlib import pyplot as plt
 
-# %cd "/content/habitat-lab"
-
-
-if "google.colab" in sys.modules:
-    # This tells imageio to use the system FFMPEG that has hardware acceleration.
-    os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
-# %cd $dir_path
+data_path = os.path.join(dir_path, "data")
+os.chdir(dir_path)
 
 from PIL import Image
 
@@ -63,6 +62,9 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import NavigationTask
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config as get_baselines_config
+
+# %%
+# !python -m habitat_sim.utils.datasets_download --uids mp3d_example_scene --data-path {data_path} --no-replace
 
 # %%
 # @title Define Observation Display Utility Function { display-mode: "form" }
@@ -114,7 +116,10 @@ def display_sample(
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        config_path=os.path.join(
+            dir_path,
+            "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        ),
         overrides=[
             "habitat.environment.max_episode_steps=10",
             "habitat.environment.iterator_options.shuffle=False",
@@ -246,7 +251,10 @@ except ImportError:
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        config_path=os.path.join(
+            dir_path,
+            "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        ),
         overrides=[
             "habitat.environment.max_episode_steps=10",
             "habitat.environment.iterator_options.shuffle=False",
@@ -344,7 +352,10 @@ class AgentPositionSensor(habitat.Sensor):
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        config_path=os.path.join(
+            dir_path,
+            "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        ),
         overrides=[
             "habitat.environment.max_episode_steps=10",
             "habitat.environment.iterator_options.shuffle=False",

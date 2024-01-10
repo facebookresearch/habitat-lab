@@ -14,9 +14,9 @@ Quickstart                                          :ref:`Page <std:doc:quicksta
 
 Habitat Lab Demo                                    :ref:`Page <std:doc:habitat-lab-demo>`
 
-Habitat Lab TopdownMap Visualization                :ref:`Page <std:doc:habitat-lab-tdmap-viz>`                                                                                                                `Interactive Colab <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/Habitat_Lab_TopdownMap_Visualization.ipynb>`__
+Habitat Lab TopdownMap Visualization                :ref:`Page <std:doc:habitat-lab-tdmap-viz>`                                                                                                                :gh:`Jupyter Notebook <facebookresearch/habitat-lab/blob/main/examples/tutorials/notebooks/Habitat_Lab_TopdownMap_Visualization.ipynb>`
 
-Habitat 2.0 Overview                                :ref:`Page <std:doc:habitat2>`                                                                                                                             `Interactive Colab 1 <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/Habitat2_Quickstart.ipynb>`__, `Interactive Colab 2 <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb>`__
+Habitat 2.0 Overview                                :ref:`Page <std:doc:habitat2>`                                                                                                                             :gh:`Jupyter Notebook 1 <facebookresearch/habitat-lab/blob/main/examples/tutorials/notebooks/Habitat2_Quickstart.ipynb>` :gh:`Jupyter Notebook 2 <facebookresearch/habitat-lab/blob/main/examples/tutorials/notebooks/habitat2_gym_tutorial.ipynb>`
 
 View, Transform and Warp                            :ref:`Page <std:doc:view-transform-warp>`
 =================================================== ========================================================================================================================================================== ======================

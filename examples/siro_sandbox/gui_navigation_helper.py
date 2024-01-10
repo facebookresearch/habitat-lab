@@ -12,6 +12,8 @@ from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 
 
 class GuiNavigationHelper:
+    """Helper for controlling an agent from the GUI."""
+
     def __init__(self, gui_service, agent_idx):
         self._sandbox_service = gui_service
         self._agent_idx = agent_idx
@@ -30,12 +32,6 @@ class GuiNavigationHelper:
             self._get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
         agent_pos = art_obj.transformation.translation
-
-        # if not forward_dir:
-        #     transformation = self.cam_transform or art_obj.transformation
-        #     forward_dir = transformation.transform_vector(-mn.Vector3(0, 0, 1))
-        #     forward_dir[1] = 0
-        #     forward_dir = forward_dir.normalized()
 
         self._draw_nav_hint(
             agent_pos,
@@ -61,6 +57,7 @@ class GuiNavigationHelper:
         pathfinder = self._get_sim().pathfinder
         # snap target to the selected island
         assert self._largest_island_idx is not None
+        assert target_pos is not None
         snapped_pos = pathfinder.snap_point(
             target_pos, island_index=self._largest_island_idx
         )
@@ -106,13 +103,19 @@ class GuiNavigationHelper:
             target_rot_quat,
         ) = self._sandbox_service.remote_gui_input.get_head_pose()
 
-        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
-            target_pos=target_pos,
-            target_rot_quat=target_rot_quat,
-            visualize_path=visualize_path,
-        )
+        forward_dir = None
+        if target_pos and target_rot_quat:
+            (
+                walk_dir,
+                distance_multiplier,
+                forward_dir,
+            ) = self._get_humanoid_walk_hints(
+                target_pos=target_pos,
+                target_rot_quat=target_rot_quat,
+                visualize_path=visualize_path,
+            )
 
-        return walk_dir, distance_multiplier
+        return walk_dir, distance_multiplier, forward_dir
 
     def get_humanoid_walk_hints_from_ray_cast(self, visualize_path=True):
         walk_dir = None
@@ -122,7 +125,11 @@ class GuiNavigationHelper:
         if target_on_floor is None:
             return walk_dir, distance_multiplier
 
-        walk_dir, distance_multiplier = self._get_humanoid_walk_hints(
+        (
+            walk_dir,
+            distance_multiplier,
+            forward_dir,
+        ) = self._get_humanoid_walk_hints(
             target_pos=target_on_floor,
             target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
             visualize_path=visualize_path,
@@ -136,23 +143,36 @@ class GuiNavigationHelper:
         walk_dir = None
         distance_multiplier = 1.0
         geodesic_dist_threshold = 0.05
+        move_forward_dist_threshold = 0.5
 
         found_path, path = self._get_humanoid_walk_path_to(target_pos)
-        if (
-            found_path
-            and len(path.points) >= 2
-            and path.geodesic_distance >= geodesic_dist_threshold
-        ):
+        is_navigating: bool = found_path and len(path.points) >= 2
+
+        # Only initiate movement is the goal is far enough.
+        if is_navigating and path.geodesic_distance >= geodesic_dist_threshold:
             walk_dir = self._get_humanoid_walk_dir_from_path(path)
             distance_multiplier = 1.0
             if visualize_path:
                 self._viz_humanoid_walk_path(path)
 
+        # Define walk direction from target_rot_quat.
         if walk_dir is None and target_rot_quat is not None:
             walk_dir = self._compute_forward_dir(target_rot_quat)
             distance_multiplier = 0.0
 
-        return walk_dir, distance_multiplier
+        # Only rotate humanoid is the goal is close enough.
+        if (
+            is_navigating
+            and path.geodesic_distance >= move_forward_dist_threshold
+        ):
+            target_rot_quat = None
+
+        # Set forward gaze.
+        forward_gaze = None
+        if target_rot_quat is not None:
+            forward_gaze = self._compute_forward_dir(target_rot_quat)
+
+        return walk_dir, distance_multiplier, forward_gaze
 
     def _get_target_pos_from_ray_cast(self):
         ray = self._sandbox_service.gui_input.mouse_ray
@@ -168,7 +188,7 @@ class GuiNavigationHelper:
         return target_on_floor
 
     def _compute_forward_dir(self, target_rot_quat):
-        direction_vector = mn.Vector3(1.0, 0.0, 0.0)
+        direction_vector = mn.Vector3(0.0, 0.0, 1.0)
         heading_vector = target_rot_quat.transform_vector(direction_vector)
         heading_vector.y = 0
         heading_vector = heading_vector.normalized()
