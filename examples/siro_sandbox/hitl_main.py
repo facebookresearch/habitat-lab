@@ -28,17 +28,6 @@ def _parse_debug_third_person(args, framebuffer_size):
 
 
 def hitl_main(args, config, create_app_state_lambda=None):
-    # todo: move these to app states
-    ####
-    if (
-        args.app_state == "free_camera"
-        and args.gui_controlled_agent_index is not None
-    ):
-        raise ValueError(
-            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
-        )
-    ####
-
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"  # todo: get from hydra config
     glfw_config.size = (args.width, args.height)
