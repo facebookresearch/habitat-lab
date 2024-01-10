@@ -426,6 +426,14 @@ class HabitatEvaluator(Evaluator):
                 transformer_based_policy,
             )
 
+            # TODO: Porpose a fix so that the env is paused on HRL policy
+            # This could be turned off if you feel that we mess up something
+            if transformer_based_policy_is_multi_agent and any(envs_to_pause):
+                # For human HRL skills
+                agent.actor_critic._active_policies[1].on_envs_pause(
+                    envs_to_pause
+                )
+
         pbar.close()
         assert (
             len(ep_eval_count) >= number_of_eval_episodes
