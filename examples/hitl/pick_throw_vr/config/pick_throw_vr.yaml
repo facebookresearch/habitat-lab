@@ -19,4 +19,7 @@ habitat_baselines:
   evaluate: True
   num_environments: 1
 
+habitat_hitl:
+  gui_controlled_agent_index: 1
+
 pick_throw_vr:

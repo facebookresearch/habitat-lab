@@ -73,11 +73,11 @@ class SandboxDriver(GuiAppDriver):
         text_drawer,
         create_app_state_lambda,
     ):
-        if "hitl" not in config:
+        if "habitat_hitl" not in config:
             raise RuntimeError(
-                "Required parameter 'hitl' not found in config. See hitl_defaults.yaml."
+                "Required parameter 'habitat_hitl' not found in config. See hitl_defaults.yaml."
             )
-        self._hitl_config = omegaconf_to_object(config.hitl)
+        self._hitl_config = omegaconf_to_object(config.habitat_hitl)
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
@@ -101,10 +101,10 @@ class SandboxDriver(GuiAppDriver):
             self.gym_habitat_env.unwrapped.habitat_env
         )
 
-        if args.gui_controlled_agent_index is not None:
+        if self._hitl_config.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
             gui_agent_key = sim_config.agents_order[
-                args.gui_controlled_agent_index
+                self._hitl_config.gui_controlled_agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if (

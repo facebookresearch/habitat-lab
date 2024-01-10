@@ -10,7 +10,6 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/rearrange/rearrange.py \
---gui-controlled-agent-index 1 \
 --cfg examples/hitl/rearrange/config/hitl_rearrange.yaml
 ```
 

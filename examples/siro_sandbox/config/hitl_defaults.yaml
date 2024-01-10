@@ -1,3 +1,7 @@
-hitl:
+habitat_hitl:
   # The speed of the default animation timer. See sandbox_service.get_anim_fraction. Currently used to animate some debug lines.
   viz_animation_speed: 2.0
+
+  # GUI-controlled agent index (must be None or >= 0 and < number of agents).
+  # Defaults to None, indicating that all the agents are policy-controlled.
+  gui_controlled_agent_index: ~

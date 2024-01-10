@@ -42,22 +42,23 @@ def update_config_and_args(
             args.debug_images.append(agent_sensor_name)
             gym_obs_keys.append(agent_sensor_name)
 
-        if args.gui_controlled_agent_index is not None:
+        gui_controlled_agent_index = (
+            config.habitat_hitl.gui_controlled_agent_index
+        )
+        if gui_controlled_agent_index is not None:
             # make sure gui_controlled_agent_index is valid
             if not (
-                args.gui_controlled_agent_index >= 0
-                and args.gui_controlled_agent_index < len(sim_config.agents)
+                gui_controlled_agent_index >= 0
+                and gui_controlled_agent_index < len(sim_config.agents)
             ):
                 print(
-                    f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
+                    f"habitat_hitl.gui_controlled_agent_index ({gui_controlled_agent_index}) "
                     f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
                 )
                 exit()
 
             # make sure chosen articulated_agent_type is supported
-            gui_agent_key = sim_config.agents_order[
-                args.gui_controlled_agent_index
-            ]
+            gui_agent_key = sim_config.agents_order[gui_controlled_agent_index]
             if (
                 sim_config.agents[gui_agent_key].articulated_agent_type
                 != "KinematicHumanoid"
@@ -70,7 +71,7 @@ def update_config_and_args(
 
             # avoid camera sensors for GUI-controlled agents
             gui_controlled_agent_config = get_agent_config(
-                sim_config, agent_id=args.gui_controlled_agent_index
+                sim_config, agent_id=gui_controlled_agent_index
             )
             gui_controlled_agent_config.sim_sensors.clear()
 

@@ -17,7 +17,7 @@ Build interactive desktop and VR applications that enable human-in-the-loop eval
     - [Saving episode data](#saving-episode-data)
     - [Debugging visual sensors](#debugging-visual-sensors)
     - [Debugging simulator-rendering](#debugging-simulator-rendering)
-    - [GUI-controlled agents and free camera mode](#gui-controlled-agents-and-free-camera-mode)
+    - [GUI-controlled agent linear and angular speed](#gui-controlled-agent-linear-and-angular-speed)
     - [First-person and third-person mode for GUI-controlled humanoid](#first-person-and-third-person-mode-for-gui-controlled-humanoid)
     - [Can grasp/place area](#can-graspplace-area)
     - [Disable episode end on collision](#disable-episode-end-on-collision)
@@ -90,14 +90,8 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
 
 Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
 
-### GUI-controlled agents and free camera mode
-Add `--gui-controlled-agent-index` followed by the agent's index you want to control via GUI (for example, `--gui-controlled-agent-index 0` to control the first agent).
-
-If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents. Update Aug 11: free camera is temporarily unsupported!
-
+### GUI-controlled agent linear and angular speed
 Use `--lin-speed` and `--ang-speed` arguments to control GUI-controlled agent's linear and angular speed respectively. For example, `--lin-speed 10 --ang-speed 10` to set both linear and angular speed to 10.
-
-**Note:** Currently, only Spot and Humanoid agents can be policy-controlled (PDDL planner + oracle skills). If you want to test the free camera mode, omit `--gui-controlled-agent-index` argument.
 
 ### First-person and third-person mode for GUI-controlled humanoid
 Include `--first-person-mode`, or omit it to use third-person mode. With first-person mode, use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `--hide-humanoid-in-gui` with `--first-person-mode`, because it doesn't make sense to visualize the humanoid with this camera.

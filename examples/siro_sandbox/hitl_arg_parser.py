@@ -38,17 +38,6 @@ def create_hitl_arg_parser():
         type=int,
         help="Vertical resolution of the window.",
     )
-    parser.add_argument(
-        "--gui-controlled-agent-index",
-        type=int,
-        default=None,
-        help=(
-            "GUI-controlled agent index (must be >= 0 and < number of agents). "
-            "Defaults to None, indicating that all the agents are policy-controlled. "
-            "If none of the agents is GUI-controlled, the camera is switched to 'free camera' mode "
-            "that lets the user observe the scene (instead of controlling one of the agents)"
-        ),
-    )
 
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(

@@ -199,11 +199,6 @@ class AppStateBasicViewer(AppState):
 def main():
     args = create_hitl_arg_parser().parse_args()
 
-    if args.gui_controlled_agent_index is not None:
-        raise ValueError(
-            "--gui-controlled-agent-index is not supported for basic_viewer"
-        )
-
     # todo: get config using @hydra.main (this requires removal of our legacy command-
     # line arguments)
     config_path = args.cfg
@@ -212,6 +207,11 @@ def main():
     config = habitat_baselines.config.default.get_config(
         config_path, overrides
     )
+
+    if config.habitat_hitl.gui_controlled_agent_index is not None:
+        raise ValueError(
+            "habitat_hitl.gui_controlled_agent_index is not supported for basic_viewer"
+        )
 
     hitl_main.hitl_main(
         args,

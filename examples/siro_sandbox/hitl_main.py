@@ -86,7 +86,7 @@ def hitl_main(args, config, create_app_state_lambda=None):
     # sanity check if there are no agents with camera sensors
     if (
         len(config.habitat.simulator.agents) == 1
-        and args.gui_controlled_agent_index is not None
+        and config.habitat_hitl.gui_controlled_agent_index is not None
     ):
         assert driver.get_sim().renderer is None
 

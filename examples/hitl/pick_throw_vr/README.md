@@ -36,7 +36,6 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---gui-controlled-agent-index 1 \
 --ang-speed "15" \
 --cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
 ```
@@ -79,7 +78,6 @@ The standard keyboard-mouse launch command-line arguments can be used with those
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
 --remote-gui-mode \
---gui-controlled-agent-index 1 \
 --ang-speed "15" \
 --cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
 ```

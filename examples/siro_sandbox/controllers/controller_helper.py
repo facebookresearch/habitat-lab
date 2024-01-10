@@ -35,7 +35,9 @@ class ControllerHelper:
     ):
         self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
         self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
-        self._gui_controlled_agent_index = args.gui_controlled_agent_index
+        self._gui_controlled_agent_index = (
+            config.habitat_hitl.gui_controlled_agent_index
+        )
 
         self.n_agents: int = len(self._env._sim.agents_mgr)  # type: ignore[attr-defined]
         self.n_user_controlled_agents: int = (
