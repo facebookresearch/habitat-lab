@@ -302,6 +302,10 @@ class HabitatEvaluator(Evaluator):
                 rgb_frames,
             )
 
+            # We pause the statefull parameters in the policy
+            if any(envs_to_pause):
+                agent.actor_critic.on_envs_pause(envs_to_pause)
+
         pbar.close()
         assert (
             len(ep_eval_count) >= number_of_eval_episodes
