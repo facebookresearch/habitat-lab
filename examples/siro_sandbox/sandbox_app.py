@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
 from app_states.app_state_abc import AppState
+from hydra_helper import omegaconf_to_object
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
@@ -72,7 +73,11 @@ class SandboxDriver(GuiAppDriver):
         text_drawer,
         create_app_state_lambda,
     ):
-        self._hitl_config = config.hitl
+        if "hitl" not in config:
+            raise RuntimeError(
+                "Required parameter 'hitl' not found in config. See hitl_defaults.yaml."
+            )
+        self._hitl_config = omegaconf_to_object(config.hitl)
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
