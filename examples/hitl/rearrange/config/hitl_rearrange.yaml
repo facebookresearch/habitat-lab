@@ -26,6 +26,7 @@ habitat_baselines:
 
 habitat_hitl:
   window:
+    title: "Rearrange"
     width: 1300
     height: 1000
   gui_controlled_agent:

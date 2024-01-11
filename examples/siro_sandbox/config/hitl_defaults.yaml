@@ -1,6 +1,8 @@
 habitat_hitl:
 
   window:
+    # title displayed in application title bar GUI
+    title: "Habitat HITL Application"
     # Horizontal resolution of the window.
     width: 1280
     # Vertical resolution of the window.

@@ -21,6 +21,8 @@ habitat_baselines:
       num_pool_agents_per_type: [1,1]
 
 habitat_hitl:
+  window:
+    title: "Basic_viewer"
   debug_third_person_viewport:
     width: 256
   debug_images: ["agent_1_head_depth"]

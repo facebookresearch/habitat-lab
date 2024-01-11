@@ -41,7 +41,7 @@ def _parse_debug_third_person(hitl_config, framebuffer_size):
 def hitl_main(config, create_app_state_lambda=None):
     hitl_config = config.habitat_hitl
     glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"  # todo: get from hydra config
+    glfw_config.title = hitl_config.window.title
     glfw_config.size = (hitl_config.window.width, hitl_config.window.height)
     gui_app_wrapper = GuiApplication(glfw_config, hitl_config.target_sps)
     # on Mac Retina displays, this will be 2x the window size
