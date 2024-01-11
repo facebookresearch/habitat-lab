@@ -294,6 +294,16 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     enable_lateral_move: bool = False
     # If the condition of sliding includs the checking of rotation
     enable_rotation_check_for_dyn_slide: bool = True
+    # If we want to do leg animation or not
+    animate_leg: bool = False
+    # Leg animation checkpoint file
+    leg_animation_checkpoint: str = (
+        "data/robots/spot_data/spot_walking_trajectory.csv"
+    )
+    # The play step interval of the leg animation
+    play_i_perframe: int = 5
+    # The start and end frames of the leg animation data
+    use_range: Optional[List[int]] = field(default_factory=lambda: [107, 863])
 
 
 @dataclass

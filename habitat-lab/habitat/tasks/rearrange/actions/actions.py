@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import csv
+import os
 from typing import Optional, cast
 
 import magnum as mn
@@ -11,6 +13,7 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -568,6 +571,23 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self._navmesh_offset = self._config.navmesh_offset
         self._enable_lateral_move = self._config.enable_lateral_move
 
+        # You can only do leg animation of the robot is a spot robot and animate_leg flag is true
+        self._animate_leg = self._config.animate_leg and isinstance(
+            self.cur_articulated_agent, SpotRobot
+        )
+        # Leg animation code, it is only used when animate_leg is true
+        if self._animate_leg:
+            self._checkpoint = self._config.get("leg_animation_checkpoint")
+            self._use_range = self._config.get("use_range")
+            assert (
+                os.path.exists(self._checkpoint) == 1
+            ), "Does not provide leg animation checkpoint"
+            self._leg_data = {}  # type: ignore
+            self._load_animation()
+            self._play_i = 0
+            self._play_length_data = len(self._leg_data)
+            self._play_i_perframe = self._config.get("play_i_perframe")
+
     @property
     def action_space(self):
         lim = 20
@@ -589,6 +609,30 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
                     )
                 }
             )
+
+    def _load_animation(self):
+        """
+        The function loads the leg animation data from a csv file.
+        """
+        first_row = True
+        time_i = 0
+        with open(self._checkpoint, newline="") as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=" ", quotechar="|")
+            # Read from each csv row
+            for row in spamreader:
+                if not first_row:
+                    # Only load the data within the use_range
+                    if (
+                        time_i >= self._use_range[0]
+                        and time_i < self._use_range[1]
+                    ):
+                        joint_angs = row[0].split(",")[1:13]
+                        joint_angs = [float(i) for i in joint_angs]
+                        self._leg_data[
+                            time_i - self._use_range[0]
+                        ] = joint_angs
+                    time_i += 1
+                first_row = False
 
     def collision_check(
         self, trans, target_trans, target_rigid_state, compute_sliding
@@ -679,7 +723,10 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
+        if (
+            self.cur_articulated_agent._base_type == "leg"
+            and not self._animate_leg
+        ):
             # Fix the leg joints
             self.cur_articulated_agent.leg_joint_pos = (
                 self.cur_articulated_agent.params.leg_init_params
@@ -725,6 +772,18 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or ang_vel != 0.0
         ):
             self.update_base(ang_vel != 0.0)
+            if self._animate_leg:
+                cur_i = int(self._play_i % self._play_length_data)
+                self.cur_articulated_agent.leg_joint_pos = self._leg_data[
+                    cur_i
+                ]
+                self._play_i += self._play_i_perframe
+        elif self._animate_leg:
+            self._play_i = 0
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
 
 
 @registry.register_task_action
