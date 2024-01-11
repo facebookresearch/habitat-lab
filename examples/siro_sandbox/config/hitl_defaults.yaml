@@ -13,7 +13,7 @@ habitat_hitl:
   episodes_filter: ~
 
   experimental:
-    # Choose between classic and batch renderer.
+    # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
 
   debug_third_person_viewport:
@@ -42,19 +42,14 @@ habitat_hitl:
   remote_gui_mode: False
 
   camera:
-    # See CameraHelper. Choose between first-person and third-person camera.
-    # When using first-person mode, you should also:
-    #   * set hide_humanoid_in_gui=True to avoid visual artifacts, and
-    #   * set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning
+
+    # See CameraHelper. Include `--first-person-mode`, or omit it to use third-person mode. With first-person mode, use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `--hide-humanoid-in-gui` with `--first-person-mode`, because it doesn't make sense to visualize the humanoid with this camera. For first-person mode, you should also set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning.
     first_person_mode: False
-    # Look up angle limit. See CameraHelper.
     max_look_up_angle: 15.0
-    # Look down angle limit.
     min_look_down_angle: -60.0
 
   gui_controlled_agent:
-    # GUI-controlled agent index (must be None or >= 0 and < number of agents).
-    # Defaults to None, indicating that all the agents are policy-controlled.
+    # GUI-controlled agent index (must be None or >= 0 and < number of agents). Defaults to None, indicating that all the agents are policy-controlled.
     agent_index: ~
     # linear speed
     lin_speed: 10.0
@@ -62,9 +57,11 @@ habitat_hitl:
     ang_speed: 10.0
 
   data_collection:
-    # Filepath base used for saving various session data files. Include a full path including basename, but not an extension.
+    # Filepath base used for saving various session data files, e.g. `my_output/my_session`. Specify a full path including basename, but not an extension.
     save_filepath_base: None
-    # Save the gfx-replay keyframes to file. Use filepath_base to specify the filepath base.
-    save_gfx_replay_keyframes: False
-    # Save recorded episode data to file. Use filepath_base to specify the filepath base.
+
+    # Save recorded episode data to file. Use save_filepath_base (above) to specify the filepath base. The first episode will be saved as `my_output/my_session.0.json.gz` and `my_output/my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. The second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
     save_episode_record: False
+
+    # Save the gfx-replay keyframes to file. Use save_filepath_base to specify the filepath base. Gfx-replay files can be used elsewhere in Habitat, e.g. https://github.com/facebookresearch/habitat-lab/pull/1041. Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_output/my_session.gfx_replay.json.gz`.
+    save_gfx_replay_keyframes: False
