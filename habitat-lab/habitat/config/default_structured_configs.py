@@ -407,7 +407,7 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     """
     type: str = "HumanoidDetectorSensor"
     # The default human id is 100
-    human_id: int = 100
+    human_id: int = 10000
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
     # Image based or binary based
@@ -990,7 +990,7 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     min_dis_human: float = 1.0
     max_dis_human: float = 2.0
     # The human id
-    human_id: int = 100
+    human_id: int = 10000
     # The pixel needed
     human_detect_pixel_threshold: int = 1000
     # The total number of steps

@@ -64,6 +64,26 @@ class HabitatEvaluator(Evaluator):
             device=device,
         )
 
+        transformer_based_policy = False
+        # TODO: hack here to make sure it is runable for mobile gaze with transformers
+        if (
+            "main_agent" in config.habitat_baselines.rl.policy
+            and "transformer_config"
+            in config.habitat_baselines.rl.policy.main_agent
+        ):
+            test_recurrent_hidden_states = torch.zeros(
+                (
+                    8,
+                    2,
+                    config.habitat_baselines.num_environments,
+                    24,
+                    0,
+                    32,
+                ),
+                device=device,
+            )
+            transformer_based_policy = True
+
         hidden_state_lens = agent.actor_critic.hidden_state_shape_lens
         action_space_lens = agent.actor_critic.policy_action_space_shape_lens
 
@@ -79,6 +99,26 @@ class HabitatEvaluator(Evaluator):
             device=device,
             dtype=torch.bool,
         )
+
+        if transformer_based_policy:
+            not_done_masks = not_done_masks.unsqueeze(-1)
+
+        # Check if we are in the setting of multi-agent with transformer policy
+        n_agents = len(config.habitat.simulator.agents)
+        transformer_based_policy_is_multi_agent = False
+        if n_agents > 1:
+            transformer_based_policy_is_multi_agent = True
+
+        # Modify the not_done_masks
+        if transformer_based_policy_is_multi_agent:
+            not_done_masks = torch.zeros(
+                config.habitat_baselines.num_environments,
+                1,  # for a single steps
+                *agent.masks_shape,
+                device=device,
+                dtype=torch.bool,
+            )
+
         stats_episodes: Dict[
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
@@ -122,19 +162,29 @@ class HabitatEvaluator(Evaluator):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         agent.eval()
+        count_i = 0
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and envs.num_envs > 0
         ):
             current_episodes_info = envs.current_episodes()
-
+            count_i += 1
             space_lengths = {}
             n_agents = len(config.habitat.simulator.agents)
+
             if n_agents > 1:
-                space_lengths = {
-                    "index_len_recurrent_hidden_states": hidden_state_lens,
-                    "index_len_prev_actions": action_space_lens,
-                }
+                # TODO: better way to handle this
+                if transformer_based_policy:
+                    space_lengths = {
+                        "index_len_recurrent_hidden_states": [32, 0],
+                        "index_len_prev_actions": action_space_lens,
+                    }
+                else:
+                    space_lengths = {
+                        "index_len_recurrent_hidden_states": hidden_state_lens,
+                        "index_len_prev_actions": action_space_lens,
+                    }
+
             with inference_mode():
                 action_data = agent.actor_critic.act(
                     batch,
@@ -144,10 +194,32 @@ class HabitatEvaluator(Evaluator):
                     deterministic=False,
                     **space_lengths,
                 )
-                if action_data.should_inserts is None:
-                    test_recurrent_hidden_states = (
-                        action_data.rnn_hidden_states
-                    )
+
+                # TODO: A temp hack to make sure we get a correct test_recurrent_hidden_states
+                if (
+                    action_data.should_inserts is None
+                    or transformer_based_policy_is_multi_agent
+                ):
+                    if transformer_based_policy:
+                        if 0 in test_recurrent_hidden_states.shape:
+                            # empty in the begining
+                            test_recurrent_hidden_states = (
+                                action_data.rnn_hidden_states.unsqueeze(-2)
+                            )
+                        else:
+                            test_recurrent_hidden_states = torch.cat(
+                                (
+                                    test_recurrent_hidden_states,
+                                    action_data.rnn_hidden_states.unsqueeze(
+                                        -2
+                                    ),
+                                ),
+                                -2,
+                            )
+                    else:
+                        test_recurrent_hidden_states = (
+                            action_data.rnn_hidden_states
+                        )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
                     agent.actor_critic.update_hidden_state(
@@ -191,11 +263,41 @@ class HabitatEvaluator(Evaluator):
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
 
-            not_done_masks = torch.tensor(
-                [[not done] for done in dones],
-                dtype=torch.bool,
-                device="cpu",
-            ).repeat(1, *agent.masks_shape)
+            # TODO: better way to handle this
+            if transformer_based_policy:
+                cur_not_done_masks = torch.tensor(
+                    [[not done] for done in dones],
+                    dtype=torch.bool,
+                    device="cpu",
+                ).repeat(1, *agent.masks_shape)
+                if transformer_based_policy_is_multi_agent:
+                    # cur_not_done_masks size = [# of envs, # of agents]
+                    # not_done_masks size = [# of envs, # of agents, 1]
+                    cur_not_done_masks = cur_not_done_masks.unsqueeze(
+                        1
+                    )  # [# of envs, one step, # of agents]
+                    not_done_masks = torch.cat(
+                        (not_done_masks.to("cpu"), cur_not_done_masks),
+                        axis=1,
+                    )
+                    # not_done_masks becomes [# of envs, # of steps, # of agents]
+                else:
+                    cur_not_done_masks = cur_not_done_masks.T
+                    not_done_masks = torch.cat(
+                        (
+                            not_done_masks[:, :, 0].to("cpu").T,
+                            cur_not_done_masks,
+                        ),
+                        axis=0,
+                    )
+                    not_done_masks = not_done_masks.T
+                    not_done_masks = not_done_masks.unsqueeze(-1)
+            else:
+                not_done_masks = torch.tensor(
+                    [[not done] for done in dones],
+                    dtype=torch.bool,
+                    device="cpu",
+                ).repeat(1, *agent.masks_shape)
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device="cpu"
@@ -204,6 +306,7 @@ class HabitatEvaluator(Evaluator):
             next_episodes_info = envs.current_episodes()
             envs_to_pause = []
             n_envs = envs.num_envs
+
             for i in range(n_envs):
                 if (
                     ep_eval_count[
@@ -226,7 +329,18 @@ class HabitatEvaluator(Evaluator):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, disp_info
                     )
-                    if not not_done_masks[i].any().item():
+
+                    if transformer_based_policy:
+                        # The shape of not_done_masks is [#envs, cur_accumulate_steps, 1]
+                        # We need to get the latest frame
+                        process_frame = (
+                            not not_done_masks[:, -1][i].any().item()
+                        )
+                    else:
+                        process_frame = not not_done_masks[i].any().item()
+
+                    # TODO: Better way to handle transformer done masks
+                    if process_frame:
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         final_frame = observations_to_image(
@@ -241,8 +355,16 @@ class HabitatEvaluator(Evaluator):
                         frame = overlay_frame(frame, disp_info)
                         rgb_frames[i].append(frame)
 
+                # TODO: Better way to handle transformer done masks
+                if transformer_based_policy:
+                    # The shape of not_done_masks is [#envs, cur_accumulate_steps, 1]
+                    # We need to get the latest frame
+                    process_frame = not not_done_masks[:, -1][i].any().item()
+                else:
+                    process_frame = not not_done_masks[i].any().item()
+
                 # episode ended
-                if not not_done_masks[i].any().item():
+                if process_frame:
                     pbar.update()
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
@@ -282,6 +404,7 @@ class HabitatEvaluator(Evaluator):
                             current_episodes_info[i].episode_id,
                         )
 
+            # TODO: Better way to handle env pause issue for the hidden state dimension
             not_done_masks = not_done_masks.to(device=device)
             (
                 envs,
@@ -300,7 +423,14 @@ class HabitatEvaluator(Evaluator):
                 prev_actions,
                 batch,
                 rgb_frames,
+                transformer_based_policy,
             )
+
+            # TODO: Porpose a fix so that the env is paused on HRL policy
+            # This could be turned off if you feel that we mess up something
+            if transformer_based_policy_is_multi_agent and any(envs_to_pause):
+                # For human HRL skills
+                agent.actor_critic.on_envs_pause(envs_to_pause)
 
         pbar.close()
         assert (

@@ -289,6 +289,10 @@ class HierarchicalPolicy(nn.Module, Policy):
         batch_size = masks.shape[0]
         masks_cpu = masks.cpu()
         log_info: List[Dict[str, Any]] = [{} for _ in range(batch_size)]
+
+        # The size between the HRL and transformer policy are not consistent
+        if len(masks_cpu.shape) != 2:
+            masks_cpu = masks_cpu[:, 0, :]
         self._high_level_policy.apply_mask(masks_cpu)  # type: ignore[attr-defined]
 
         # Initialize empty action set based on the overall action space.

@@ -59,6 +59,7 @@ def pause_envs(
     prev_actions: Tensor,
     batch: Dict[str, Tensor],
     rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
+    transformer_based_policy: bool = False,
 ) -> Tuple[
     VectorEnv,
     Tensor,
@@ -76,9 +77,23 @@ def pause_envs(
             envs.pause_at(idx)
 
         # indexing along the batch dimensions
-        test_recurrent_hidden_states = test_recurrent_hidden_states[
-            state_index
-        ]
+        # TODO: Better way to handle the hidden state of transformers
+        if transformer_based_policy:
+            # test_recurrent_hidden_states is
+            # [# of RNN layers,
+            # 2,
+            # # of envs,
+            # # of heads,
+            # # of steps,
+            # cur_hidden_state//num_heads]
+            test_recurrent_hidden_states = test_recurrent_hidden_states[
+                :, :, state_index
+            ]
+        else:
+            test_recurrent_hidden_states = test_recurrent_hidden_states[
+                state_index
+            ]
+
         not_done_masks = not_done_masks[state_index]
         current_episode_reward = current_episode_reward[state_index]
         prev_actions = prev_actions[state_index]
@@ -86,7 +101,9 @@ def pause_envs(
         for k, v in batch.items():
             batch[k] = v[state_index]
 
-        rgb_frames = [rgb_frames[i] for i in state_index]
+        # TODO: make sure the rgb image frames are not decoded
+        if rgb_frames is not None:
+            rgb_frames = [rgb_frames[i] for i in state_index]
         # actor_critic.do_pause(state_index)
 
     return (

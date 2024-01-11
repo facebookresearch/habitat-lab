@@ -115,9 +115,10 @@ class MultiPolicy(Policy):
     def set_active(self, active_policies):
         self._active_policies = active_policies
 
-    def pause_envs(self, envs_to_pause):
+    def on_envs_pause(self, envs_to_pause):
         for policy in self._active_policies:
-            policy.pause_envs(envs_to_pause)
+            # TODO: check if this is a correct implementation
+            policy.on_envs_pause(envs_to_pause)
 
     @property
     def hidden_state_shape_lens(self):
@@ -134,9 +135,30 @@ class MultiPolicy(Policy):
         """
         Stack the hidden states of all the policies in the active population.
         """
-        hidden_shapes = np.stack(
-            [policy.hidden_state_shape for policy in self._active_policies]
-        )
+        # TODO: figure out a better way to handle the shape
+        # This is used when do multi-agent training
+        # self._active_storages
+        # Check if the hidden state has the same shape
+        shapes = [
+            policy.hidden_state_shape for policy in self._active_policies
+        ]
+        shape_0 = shapes[0]
+        is_same_shape = True
+        for shape in range(1, len(shapes)):
+            if shape != shape_0:
+                is_same_shape = False
+                break
+
+        if is_same_shape:
+            hidden_shapes = np.stack(
+                [policy.hidden_state_shape for policy in self._active_policies]
+            )
+        else:
+            # This is only works for the transformer policy
+            hidden_shapes = np.array(
+                [(8, 2, 2, 24, 0, 32), (8, 2, 2, 24, 0, 0)]
+            )
+
         # We do max because some policies may be non-neural
         # And will have a hidden state of [0, hidden_dim]
         max_hidden_shape = hidden_shapes.max(0)
@@ -163,6 +185,25 @@ class MultiPolicy(Policy):
                     action_data.actions[env_i, ac_sel]
                 )
 
+    def _check_if_hidden_state_size_consistent(self, agent_actions):
+        """This is the function to check if the hidden states of policies are consistent"""
+        # Get the first agent hidden states
+        # We do not check the last dim since it is for the size
+        hidden_state_shape = agent_actions[0].rnn_hidden_states.shape[:-1]
+        return all(
+            hidden_state_shape
+            == agent_actions[idx].rnn_hidden_states.shape[:-1]
+            for idx in range(1, len(agent_actions))
+        )
+
+    def _check_if_value_consistent(self, all_value):
+        """Check if the values are consistent"""
+        value_shape = all_value[0].shape[:-1]
+        return all(
+            value_shape == all_value[idx].shape[:-1]
+            for idx in range(1, len(all_value))
+        )
+
     def act(
         self,
         observations,
@@ -188,15 +229,37 @@ class MultiPolicy(Policy):
             agent_obs = self._update_obs_with_agent_prefix_fn(
                 observations, agent_i
             )
-            agent_actions.append(
-                policy.act(
-                    agent_obs,
-                    agent_rnn_hidden_states[agent_i],
-                    agent_prev_actions[agent_i],
-                    agent_masks[agent_i],
-                    deterministic,
+            # TODO: A temp hack so that the agent_masks receive the correct one
+            # TODO: A temp hack so that we can do lstm/transformer training
+            # for social nav skills
+            # Work for
+            # social nav train transformer
+            # social nav eval transformer
+            # social nav train lstm
+            if len(agent_masks[agent_i].shape) == 3:
+                # transformer based
+                agent_actions.append(
+                    policy.act(
+                        agent_obs,
+                        agent_rnn_hidden_states[agent_i],
+                        agent_prev_actions[agent_i],
+                        agent_masks[agent_i]
+                        if agent_i == 0
+                        else agent_masks[agent_i][:, -1, :],
+                        deterministic,
+                    )
                 )
-            )
+            else:
+                # lstm based
+                agent_actions.append(
+                    policy.act(
+                        agent_obs,
+                        agent_rnn_hidden_states[agent_i],
+                        agent_prev_actions[agent_i],
+                        agent_masks[agent_i],
+                        deterministic,
+                    )
+                )
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
@@ -230,10 +293,30 @@ class MultiPolicy(Policy):
         rnn_hidden_lengths = [
             ac.rnn_hidden_states.shape[-1] for ac in agent_actions
         ]
-        return MultiAgentPolicyActionData(
-            rnn_hidden_states=torch.cat(
+
+        # We want to make sure that the hidden state size are consistent
+        if self._check_if_hidden_state_size_consistent(agent_actions):
+            # If the hidden state sizes are consistent, then we can stack the hidden state
+            prcessed_hidden_states = torch.cat(
                 [ac.rnn_hidden_states for ac in agent_actions], -1
-            ),
+            )
+        else:
+            # The hidden state size is not consistent, we should make sure the hidden sizes are consistent
+            # TODO: This will not work if the first hidden state is not the main one, and it is assuming that we are not training
+            # the parameters other than the first agent
+            main_size = tuple(agent_actions[0].rnn_hidden_states.shape[:-1])
+            main_size += (0,)
+            dummy_run_hidden_state = torch.empty(
+                main_size, dtype=torch.float32
+            ).to(device)
+            prcessed_hidden_states = [agent_actions[0].rnn_hidden_states]
+            prcessed_hidden_states += [
+                dummy_run_hidden_state for i in range(1, len(agent_actions))
+            ]
+            prcessed_hidden_states = torch.cat(prcessed_hidden_states, -1)
+
+        return MultiAgentPolicyActionData(
+            rnn_hidden_states=prcessed_hidden_states,
             actions=_maybe_cat(
                 lambda ac: ac.actions, action_dims, prev_actions.dtype
             ),
@@ -327,7 +410,18 @@ class MultiPolicy(Policy):
                     agent_masks[agent_i],
                 )
             )
-        return torch.stack(all_value, -1)
+
+        # We check if the values returned from the policy have the same shape
+        if self._check_if_value_consistent(all_value):
+            return torch.stack(all_value, -1)
+        else:
+            # TODO: This will not work if the first value is not the main one, and
+            # it is assuming that we are not training the parameters other than the first agent
+            dummy_value = torch.zeros(all_value[0].shape).to(
+                all_value[0].get_device()
+            )
+            dummy_values = [dummy_value for i in range(1, len(all_value))]
+            return torch.stack([all_value[0]] + dummy_values, -1)
 
     def get_extra(
         self, action_data: PolicyActionData, infos, dones
@@ -492,6 +586,16 @@ class MultiStorage(Storage):
         for storage in self._active_storages:
             storage.after_update()
 
+    def _check_if_data_shape_consistent(self, data):
+        """check the size of the data"""
+        if len(data) == 0:
+            return True
+        feature_shape = data[0].shape[:-1]
+        return all(
+            feature_shape == data[idx].shape[:-1]
+            for idx in range(1, len(data))
+        )
+
     def _merge_step_outputs(self, get_step):
         obs: Dict[str, torch.Tensor] = {}
         agent_step_data: Dict[str, Any] = defaultdict(list)
@@ -518,7 +622,30 @@ class MultiStorage(Storage):
                 for as_data in agent_step_data[k]
                 if as_data.numel() > 0
             ]
-            new_agent_step_data[k] = torch.cat(as_data_greater, dim=-1)
+            # TODO: this will only work for a setting in which the main training one
+            # is the first agent
+            if not self._check_if_data_shape_consistent(as_data_greater):
+                # The data shapes are not consistent
+                if k == "masks":
+                    for idx in range(1, len(as_data_greater)):
+                        motified_tensor = as_data_greater[idx].expand(
+                            -1, as_data_greater[0].shape[1]
+                        )
+                        motified_tensor = torch.unsqueeze(motified_tensor, -1)
+                        as_data_greater[idx] = motified_tensor
+                else:
+                    raise ValueError("Do not handle such keys.")
+
+            # This means that the data is empty
+            # TODO: this will only work for HRL+transformer settings
+            if len(as_data_greater) == 0:
+                empty_tensor = agent_step_data[k][0]
+                lengths_data = [empty_tensor.shape[-1]] + [0] * (
+                    len(lengths_data) - 1
+                )
+                new_agent_step_data[k] = empty_tensor
+            else:
+                new_agent_step_data[k] = torch.cat(as_data_greater, dim=-1)
             new_agent_step_data[new_name] = lengths_data
 
         agent_step_data = dict(new_agent_step_data)
