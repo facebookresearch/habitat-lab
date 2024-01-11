@@ -230,17 +230,36 @@ class MultiPolicy(Policy):
                 observations, agent_i
             )
             # TODO: A temp hack so that the agent_masks receive the correct one
-            agent_actions.append(
-                policy.act(
-                    agent_obs,
-                    agent_rnn_hidden_states[agent_i],
-                    agent_prev_actions[agent_i],
-                    agent_masks[agent_i]
-                    if agent_i == 0
-                    else agent_masks[agent_i][:, -1, :],
-                    deterministic,
+            # TODO: A temp hack so that we can do lstm/transformer training
+            # for social nav skills
+            # Work for
+            # social nav train transformer
+            # social nav eval transformer
+            # social nav train lstm
+            if len(agent_masks[agent_i].shape) == 3:
+                # transformer based
+                agent_actions.append(
+                    policy.act(
+                        agent_obs,
+                        agent_rnn_hidden_states[agent_i],
+                        agent_prev_actions[agent_i],
+                        agent_masks[agent_i]
+                        if agent_i == 0
+                        else agent_masks[agent_i][:, -1, :],
+                        deterministic,
+                    )
                 )
-            )
+            else:
+                # lstm based
+                agent_actions.append(
+                    policy.act(
+                        agent_obs,
+                        agent_rnn_hidden_states[agent_i],
+                        agent_prev_actions[agent_i],
+                        agent_masks[agent_i],
+                        deterministic,
+                    )
+                )
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
