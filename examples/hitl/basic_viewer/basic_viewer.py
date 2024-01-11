@@ -112,27 +112,31 @@ class AppStateBasicViewer(AppState):
         controls_str += "ESC: exit\n"
         if self._episode_helper.next_episode_exists():
             controls_str += "M: next episode\n"
-
+        else:
+            controls_str += "no remaining episodes\n"
+        controls_str += "R + drag: rotate camera\n"
+        controls_str += "Scroll: zoom\n"
         controls_str += "I, K: look up, down\n"
-        controls_str += "A, D: look left, right\n"
+        controls_str += "A, D: turn\n"
         controls_str += "O, P: move up, down\n"
-        controls_str += "W, S: move forward, backward\n"
+        controls_str += "W, S: move forward, back\n"
 
         return controls_str
 
     def _get_status_text(self):
-        status_str = ""
-
+        progress_str = f"episode {self._sandbox_service.episode_helper.current_episode.episode_id}"
         if not self._env_episode_active():
-            if self._env_task_complete:
-                status_str += "Task complete!\n"
-            else:
-                status_str += "Oops! Something went wrong.\n"
+            progress_str += (
+                " - task succeeded!"
+                if self._env_task_complete
+                else "- task ended in failure!"
+            )
 
         # center align the status_str
         max_status_str_len = 50
         status_str = "/n".join(
-            line.center(max_status_str_len) for line in status_str.split("/n")
+            line.center(max_status_str_len)
+            for line in progress_str.split("/n")
         )
 
         return status_str
@@ -152,17 +156,6 @@ class AppStateBasicViewer(AppState):
                 text_delta_x=-280,
                 text_delta_y=-50,
             )
-
-        num_episodes_remaining = (
-            self._episode_helper.num_iter_episodes
-            - self._episode_helper.num_episodes_done
-        )
-        progress_str = f"{num_episodes_remaining} episodes left"
-        self._sandbox_service.text_drawer.add_text(
-            progress_str,
-            TextOnScreenAlignment.TOP_RIGHT,
-            text_delta_x=370,
-        )
 
     def get_sim(self):
         return self._sandbox_service.sim
