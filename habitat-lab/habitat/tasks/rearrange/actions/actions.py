@@ -571,7 +571,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self._navmesh_offset = self._config.navmesh_offset
         self._enable_lateral_move = self._config.enable_lateral_move
 
-        # You can only do leg animation of the robot is a spot robot and animate_leg flag is true
+        # You can only do leg animation if the robot is a spot robot and animate_leg flag is true
         self._animate_leg = self._config.animate_leg and isinstance(
             self.cur_articulated_agent, SpotRobot
         )
