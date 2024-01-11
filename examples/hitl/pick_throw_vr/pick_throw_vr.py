@@ -22,6 +22,7 @@ add_hitl_framework_import_path()
 from typing import Final
 
 import hitl_main
+import hydra
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -31,7 +32,6 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-from hitl_arg_parser import create_hitl_arg_parser
 from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
@@ -40,7 +40,6 @@ from utils.hablab_utils import (
     get_grasped_objects_idxs,
 )
 
-import habitat_baselines
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
@@ -733,19 +732,11 @@ class AppStatePickThrowVr(AppState):
         return hit_info
 
 
-def main():
-    args = create_hitl_arg_parser().parse_args()
-    # todo: get config using @hydra.main (this requires removal of our legacy command-
-    # line arguments)
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
-
+@hydra.main(
+    version_base=None, config_path="config", config_name="pick_throw_vr"
+)
+def main(config):
     hitl_main.hitl_main(
-        args,
         config,
         lambda sandbox_service: AppStatePickThrowVr(sandbox_service),
     )

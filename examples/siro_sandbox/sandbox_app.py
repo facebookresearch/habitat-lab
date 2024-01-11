@@ -66,7 +66,6 @@ def requires_habitat_sim_with_bullet(callable_):
 class SandboxDriver(GuiAppDriver):
     def __init__(
         self,
-        args,
         config,
         gui_input,
         line_render,
@@ -81,7 +80,6 @@ class SandboxDriver(GuiAppDriver):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
-        self._args = args
         self._gui_input = gui_input
 
         line_render.set_line_width(3)

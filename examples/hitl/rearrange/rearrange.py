@@ -20,6 +20,7 @@ def add_hitl_framework_import_path():
 add_hitl_framework_import_path()
 
 import hitl_main
+import hydra
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -27,7 +28,6 @@ from app_states.app_state_tutorial import AppStateTutorial
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
-from hitl_arg_parser import create_hitl_arg_parser
 from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
@@ -35,8 +35,6 @@ from utils.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
-
-import habitat_baselines
 
 
 class AppStateRearrange(AppState):
@@ -529,18 +527,11 @@ def create_app_state(sandbox_service):
     return app_state_class(sandbox_service)
 
 
-def main():
-    args = create_hitl_arg_parser().parse_args()
-    # todo: get config using @hydra.main (this requires removal of our legacy command-
-    # line arguments)
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
-
-    hitl_main.hitl_main(args, config, create_app_state)
+@hydra.main(
+    version_base=None, config_path="config", config_name="hitl_rearrange"
+)
+def main(config):
+    hitl_main.hitl_main(config, create_app_state)
 
 
 if __name__ == "__main__":

@@ -9,8 +9,7 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/hitl/basic_viewer/basic_viewer.py \
---cfg examples/hitl/basic_viewer/config/basic_viewer.yaml
+python examples/hitl/basic_viewer/basic_viewer.py
 ```
 
 ## Configuration

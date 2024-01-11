@@ -20,15 +20,13 @@ def add_hitl_framework_import_path():
 add_hitl_framework_import_path()
 
 import hitl_main
+import hydra
 import magnum as mn
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from hitl_arg_parser import create_hitl_arg_parser
 from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
-
-import habitat_baselines
 
 
 class AppStateBasicViewer(AppState):
@@ -196,25 +194,16 @@ class AppStateBasicViewer(AppState):
         self._update_help_text()
 
 
-def main():
-    args = create_hitl_arg_parser().parse_args()
-
-    # todo: get config using @hydra.main (this requires removal of our legacy command-
-    # line arguments)
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
-
+@hydra.main(
+    version_base=None, config_path="config", config_name="basic_viewer"
+)
+def main(config):
     if config.habitat_hitl.gui_controlled_agent.agent_index is not None:
         raise ValueError(
             "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
         )
 
     hitl_main.hitl_main(
-        args,
         config,
         lambda sandbox_service: AppStateBasicViewer(sandbox_service),
     )

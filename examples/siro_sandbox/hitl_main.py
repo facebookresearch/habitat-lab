@@ -38,7 +38,7 @@ def _parse_debug_third_person(hitl_config, framebuffer_size):
     return do_show, width, height
 
 
-def hitl_main(args, config, create_app_state_lambda=None):
+def hitl_main(config, create_app_state_lambda=None):
     hitl_config = config.habitat_hitl
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"  # todo: get from hydra config
@@ -80,7 +80,6 @@ def hitl_main(args, config, create_app_state_lambda=None):
     )
 
     driver = SandboxDriver(
-        args,
         config,
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),

@@ -35,8 +35,7 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
+python examples/hitl/pick_throw_vr/pick_throw_vr.py
 ```
 
 # VR
@@ -76,8 +75,7 @@ The standard keyboard-mouse launch command-line arguments can be used with those
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml \
-habitat_hitl.remote_gui_mode=True \
+habitat_hitl.remote_gui_mode=True
 ```
 
 ## Unity Data Folder

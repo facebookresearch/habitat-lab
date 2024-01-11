@@ -11,8 +11,7 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/hitl/rearrange/rearrange.py \
---cfg examples/hitl/rearrange/config/hitl_rearrange.yaml
+python examples/hitl/rearrange/rearrange.py
 ```
 
 ## Configuration
