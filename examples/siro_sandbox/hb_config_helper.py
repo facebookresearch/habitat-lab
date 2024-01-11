@@ -12,9 +12,8 @@ from habitat.config.default_structured_configs import (
 )
 
 
-def update_config_and_args(
+def update_config(
     config,
-    args,
     show_debug_third_person=False,
     debug_third_person_width=None,
     debug_third_person_height=None,
@@ -24,6 +23,7 @@ def update_config_and_args(
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
         gym_obs_keys = habitat_config.gym.obs_keys
+        hitl_config = config.habitat_hitl
 
         agent_config = get_agent_config(sim_config=sim_config)
 
@@ -39,11 +39,11 @@ def update_config_and_args(
             )
             agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
             agent_sensor_name = f"{agent_key}third_rgb"
-            args.debug_images.append(agent_sensor_name)
+            hitl_config.debug_images.append(agent_sensor_name)
             gym_obs_keys.append(agent_sensor_name)
 
         gui_controlled_agent_index = (
-            config.habitat_hitl.gui_controlled_agent_index
+            config.habitat_hitl.gui_controlled_agent.agent_index
         )
         if gui_controlled_agent_index is not None:
             # make sure gui_controlled_agent_index is valid
@@ -52,7 +52,7 @@ def update_config_and_args(
                 and gui_controlled_agent_index < len(sim_config.agents)
             ):
                 print(
-                    f"habitat_hitl.gui_controlled_agent_index ({gui_controlled_agent_index}) "
+                    f"habitat_hitl.gui_controlled_agent.agent_index ({gui_controlled_agent_index}) "
                     f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
                 )
                 exit()

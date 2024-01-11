@@ -36,7 +36,6 @@ See [siro_sandbox/README.md](../../siro_sandbox/README.md).
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---ang-speed "15" \
 --cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
 ```
 
@@ -72,14 +71,13 @@ The system is composed of the following components:
 
 The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
-* The `--remote-gui-mode` argument launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
+* The `habitat_hitl.remote_gui_mode=True` config override launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---remote-gui-mode \
---ang-speed "15" \
---cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
+--cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml \
+habitat_hitl.remote_gui_mode=True \
 ```
 
 ## Unity Data Folder

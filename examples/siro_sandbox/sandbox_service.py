@@ -9,8 +9,8 @@
 class SandboxService:
     def __init__(
         self,
-        args,
         config,
+        hitl_config,
         gui_input,
         remote_gui_input,
         line_render,
@@ -27,8 +27,8 @@ class SandboxService:
         client_message_manager,
         gui_agent_controller,
     ):
-        self._args = args
         self._config = config
+        self._hitl_config = hitl_config
         self._gui_input = gui_input
         self._remote_gui_input = remote_gui_input
         self._line_render = line_render
@@ -46,12 +46,12 @@ class SandboxService:
         self._gui_agent_controller = gui_agent_controller
 
     @property
-    def args(self):
-        return self._args
-
-    @property
     def config(self):
         return self._config
+
+    @property
+    def hitl_config(self):
+        return self._hitl_config
 
     @property
     def gui_input(self):

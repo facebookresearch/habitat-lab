@@ -66,7 +66,7 @@ class AppStateRearrange(AppState):
         self._success_measure_name = config.habitat.task.success_measure
 
         self._can_grasp_place_threshold = (
-            self._sandbox_service.args.can_grasp_place_threshold
+            self._sandbox_service.hitl_config.can_grasp_place_threshold
         )
 
         self._cam_transform = None
@@ -80,9 +80,11 @@ class AppStateRearrange(AppState):
         self._goal_positions = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
+            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
-        self._first_person_mode = self._sandbox_service.args.first_person_mode
+        self._first_person_mode = (
+            self._sandbox_service.hitl_config.camera.first_person_mode
+        )
 
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()

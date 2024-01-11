@@ -67,7 +67,7 @@ class AppStatePickThrowVr(AppState):
         self._sandbox_service = sandbox_service
         self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._can_grasp_place_threshold = (
-            self._sandbox_service.args.can_grasp_place_threshold
+            self._sandbox_service.hitl_config.can_grasp_place_threshold
         )
 
         self._cam_transform = None
@@ -83,10 +83,10 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
+            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
         # not supported for pick_throw_vr
-        assert not self._sandbox_service.args.first_person_mode
+        assert not self._sandbox_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
@@ -108,7 +108,7 @@ class AppStatePickThrowVr(AppState):
 
         # choose initial value for toggle
         self._is_remote_active_toggle = (
-            self._sandbox_service.args.remote_gui_mode
+            self._sandbox_service.hitl_config.remote_gui_mode
         )
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
@@ -593,7 +593,7 @@ class AppStatePickThrowVr(AppState):
             controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
-            if self._sandbox_service.args.remote_gui_mode:
+            if self._sandbox_service.hitl_config.remote_gui_mode:
                 controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
             if not self._is_remote_active_toggle:
@@ -606,7 +606,7 @@ class AppStatePickThrowVr(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        if self._sandbox_service.args.remote_gui_mode:
+        if self._sandbox_service.hitl_config.remote_gui_mode:
             status_str += (
                 "human control: VR\n"
                 if self._is_remote_active()
@@ -671,7 +671,7 @@ class AppStatePickThrowVr(AppState):
         # - must not be holding anything
         # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._sandbox_service.args.remote_gui_mode
+            self._sandbox_service.hitl_config.remote_gui_mode
             and self._held_target_obj_idx is None
             and (
                 self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T)

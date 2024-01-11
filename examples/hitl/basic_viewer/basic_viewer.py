@@ -47,7 +47,7 @@ class AppStateBasicViewer(AppState):
         self._cam_transform = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
+            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
         self._episode_helper = self._sandbox_service.episode_helper
 
@@ -208,9 +208,9 @@ def main():
         config_path, overrides
     )
 
-    if config.habitat_hitl.gui_controlled_agent_index is not None:
+    if config.habitat_hitl.gui_controlled_agent.agent_index is not None:
         raise ValueError(
-            "habitat_hitl.gui_controlled_agent_index is not supported for basic_viewer"
+            "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
         )
 
     hitl_main.hitl_main(

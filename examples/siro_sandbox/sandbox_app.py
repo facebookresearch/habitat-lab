@@ -79,7 +79,7 @@ class SandboxDriver(GuiAppDriver):
             )
         self._hitl_config = omegaconf_to_object(config.habitat_hitl)
         self._dataset_config = config.habitat.dataset
-        self._play_episodes_filter_str = args.episodes_filter
+        self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
         self._args = args
         self._gui_input = gui_input
@@ -101,10 +101,10 @@ class SandboxDriver(GuiAppDriver):
             self.gym_habitat_env.unwrapped.habitat_env
         )
 
-        if self._hitl_config.gui_controlled_agent_index is not None:
+        if self._hitl_config.gui_controlled_agent.agent_index is not None:
             sim_config = config.habitat.simulator
             gui_agent_key = sim_config.agents_order[
-                self._hitl_config.gui_controlled_agent_index
+                self._hitl_config.gui_controlled_agent.agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if (
@@ -115,25 +115,37 @@ class SandboxDriver(GuiAppDriver):
                     oracle_nav_sensor_key
                 ]
 
-        self._save_filepath_base = args.save_filepath_base
-        self._save_episode_record = args.save_episode_record
+        data_collection_config = self._hitl_config.data_collection
+        if (
+            data_collection_config.save_gfx_replay_keyframes
+            or data_collection_config.save_episode_record
+        ) and not data_collection_config.save_filepath_base:
+            raise ValueError(
+                "data_collection.save_gfx_replay_keyframes and/or data_collection.save_episode_record are enabled, "
+                "but data_collection.save_filepath_base is not set."
+            )
+
+        self._save_filepath_base = data_collection_config.save_filepath_base
+        self._save_episode_record = data_collection_config.save_episode_record
         self._step_recorder = (
             StepRecorder() if self._save_episode_record else NullRecorder()
         )
         self._episode_recorder_dict = None
 
-        self._save_gfx_replay_keyframes: bool = args.save_gfx_replay_keyframes
+        self._save_gfx_replay_keyframes: bool = (
+            data_collection_config.save_gfx_replay_keyframes
+        )
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
             gym_habitat_env=self.gym_habitat_env,
             config=config,
-            args=args,
+            hitl_config=self._hitl_config,
             gui_input=gui_input,
             recorder=self._step_recorder,
         )
 
-        self._debug_images = args.debug_images
+        self._debug_images = self._hitl_config.debug_images
 
         self._viz_anim_fraction: float = 0.0
         self._pending_cursor_style = None
@@ -150,8 +162,8 @@ class SandboxDriver(GuiAppDriver):
             self._client_message_manager = ClientMessageManager()
 
         self._sandbox_service = SandboxService(
-            args,
             config,
+            self._hitl_config,
             gui_input,
             self._remote_gui_input,
             line_render,
@@ -180,7 +192,7 @@ class SandboxDriver(GuiAppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._args.remote_gui_mode
+        return self._hitl_config.remote_gui_mode
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
@@ -426,7 +438,7 @@ class SandboxDriver(GuiAppDriver):
         ):
             self._save_recorded_keyframes_to_file()
 
-        if self._args.hide_humanoid_in_gui:
+        if self._hitl_config.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
             # hides all render instances with a filepath starting with
             # "data/humanoids/humanoid_data", by replacing with an invalid filepath.

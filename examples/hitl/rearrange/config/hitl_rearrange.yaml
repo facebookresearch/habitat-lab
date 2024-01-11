@@ -25,7 +25,15 @@ habitat_baselines:
       num_pool_agents_per_type: [1,1]
 
 habitat_hitl:
-  gui_controlled_agent_index: 1
+  window:
+    width: 1300
+    height: 1000
+  gui_controlled_agent:
+    agent_index: 1
+  data_collection:
+    save_filepath_base: "my_session"
+    save_gfx_replay_keyframes: True
+    save_episode_record: True
 
 rearrange:
   # Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.

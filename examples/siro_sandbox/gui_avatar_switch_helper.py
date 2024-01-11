@@ -103,7 +103,6 @@ class GuiAvatarSwitchHelper:
         """Switch the avatar to a new model."""
         sim = self._sandbox_service.sim
         config = self._sandbox_service.config
-        args = self._sandbox_service.args
 
         model = self._get_next_model()
 
@@ -157,7 +156,9 @@ class GuiAvatarSwitchHelper:
             walk_pose_path=model[1]
         )
         humanoid_controller.set_framerate_for_linspeed(
-            args.lin_speed, args.ang_speed, sim.ctrl_freq
+            self._sandbox_service.hitl_config.gui_controlled_agent.lin_speed,
+            self._sandbox_service.hitl_config.gui_controlled_agent.ang_speed,
+            sim.ctrl_freq,
         )
 
         humanoid_controller.reset(humanoid.base_transformation)
