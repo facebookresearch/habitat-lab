@@ -1,5 +1,9 @@
-habitat_hitl:
+habitat_baselines:
+  # some defaults for interactive HITL applications
+  evaluate: True
+  num_environments: 1
 
+habitat_hitl:
   window:
     # title displayed in application title bar GUI
     title: "Habitat HITL Application"

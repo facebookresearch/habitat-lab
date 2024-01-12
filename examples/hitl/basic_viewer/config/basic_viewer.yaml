@@ -12,8 +12,7 @@ habitat:
       shuffle: False
 
 habitat_baselines:
-  evaluate: True
-  num_environments: 1
+  # todo: document these choices
   eval:
     should_load_ckpt: False
   rl:

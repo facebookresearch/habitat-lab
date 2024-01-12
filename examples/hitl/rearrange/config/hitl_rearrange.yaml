@@ -6,6 +6,7 @@ defaults:
   - _self_
 
 habitat:
+  # todo: document these choices
   environment:
     max_episode_steps: 0
     iterator_options:
@@ -16,8 +17,7 @@ habitat:
         must_call_stop: False
 
 habitat_baselines:
-  evaluate: True
-  num_environments: 1
+  # todo: document these choices
   eval:
     should_load_ckpt: False
   rl:
