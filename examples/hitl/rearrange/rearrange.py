@@ -41,6 +41,18 @@ import habitat_baselines
 
 
 class AppStateRearrange(AppState):
+    """
+    A user-controlled human and policy-controlled robot must accomplish a collaborative rearrangement task in HSSD scenes.
+
+    See examples/siro_sandbox/README.md for more about AppStates and HITL apps.
+
+    Overview of the main pieces of this class:
+    * sim_update: per-frame entrypoint. Step the habitat env, update the camera and help text, and restart episodes as necessary.
+    * _update_task: visualize the task for the user, namely, show a 3D navigation hint to the target objects.
+    * _update_grasping_and_set_act_hints: Update the user-controlled humanoid agent, e.g. grasp a nearby object when the user presses spacebar. Includes "click-to-walk": see get_humanoid_walk_hints_from_ray_cast and set_act_hints.
+    * record_state: collect some key task-specific data. Note: aside from this function, most habitat-lab built-in metrics are collected automatically by the HITL framework.
+    """
+
     def __init__(
         self,
         sandbox_service,
@@ -456,6 +468,12 @@ class AppStateRearrange(AppState):
 
 
 class AppStateRearrangeTutorialTransition(AppState):
+    """
+    Helper class to manage the transition from the tutorial AppState to the rearrange AppState.
+
+    Each episode starts with the tutorial (a camera flythrough sequence with help text), and then we switch to rearrange when the tutorial ends.
+    """
+
     def __init__(self, sandbox_service):
         self._app_state_rearrange = AppStateRearrange(sandbox_service)
         self._app_state_tutorial = AppStateTutorial(sandbox_service)
