@@ -68,7 +68,7 @@ The system is composed of the following components:
 
 | Requirements | Notes |
 |---|---|
-| Quest Headset | Tested on Quest Pro and Quest 3. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. |
+| VR Headset | We recommend Quest 3 (best) or Quest Pro with ~300 MB free storage. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. On Quest 2, more complex HSSD scenes may run poorly or not at all. Other VR headsets supported by Unity should also work. |
 | [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | **Beware that a Unity license may be required by your organization.**<br>Follow [these installation instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
 
 ## Launch Command
