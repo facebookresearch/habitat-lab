@@ -86,7 +86,8 @@ def pause_envs(
         for k, v in batch.items():
             batch[k] = v[state_index]
 
-        rgb_frames = [rgb_frames[i] for i in state_index]
+        if rgb_frames is not None:
+            rgb_frames = [rgb_frames[i] for i in state_index]
         # actor_critic.do_pause(state_index)
 
     return (
