@@ -51,7 +51,7 @@ The HITL framework can be used to build desktop applications (controlled with ke
 
 ## Configuration
 
-HITL apps use Hydra for configuration, for example, to control the desktop window width and height. See [`hitl_defaults.yaml`](./config/hitl_defaults.yaml) as well as each example app's individual config, e.g. [`pick_throw_vr.yaml`](../hitl/pick_throw_vr/config/pick_throw_vr.yaml).
+HITL apps use Hydra for configuration, for example, to control the desktop window width and height. See [`hitl_defaults.yaml`](./config/hitl_defaults.yaml) as well as each example app's individual config, e.g. [`pick_throw_vr.yaml`](../hitl/pick_throw_vr/config/pick_throw_vr.yaml). See also [`habitat-lab/habitat/config/README.md`](../../habitat-lab/habitat/config/README.md).
 
 ## HITL Framework Architecture
 * The HITL framework is logically divided into a Habitat-lab environment wrapper (`SandboxDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).
