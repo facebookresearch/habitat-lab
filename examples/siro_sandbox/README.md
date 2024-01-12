@@ -7,6 +7,7 @@ Build interactive desktop and VR applications that enable human-in-the-loop eval
 </p>
 
 - [Human-in-the-loop (HITL) Framework](#human-in-the-loop-hitl-framework)
+  - [System Requirements](#system-requirements)
   - [Installation](#installation)
   - [Example HITL applications](#example-hitl-applications)
   - [VR HITL applications](#vr-hitl-applications)
@@ -26,6 +27,15 @@ Build interactive desktop and VR applications that enable human-in-the-loop eval
     - [Testing BatchReplayRenderer](#testing-batchreplayrenderer)
   - [Known Issues](#known-issues)
   - [HITL Framework Architecture](#hitl-framework-architecture)
+
+## System Requirements
+* **Operating System:** macOS or Linux. We've tested Fedora but other flavors should also work.
+* **CPU/GPU:** Apple M1 Max, Intel Core i7 + dedicated GPU, or equivalent.
+* **Display:** laptop or desktop with an attached monitor. We haven't tested remote desktop or other headless options.
+* **Storage:** ~20 GB. Example HITL apps use the Habitat Synthetic Scenes Dataset (HSSD), which is about 20 GB.
+* **VR:** HITL VR uses a client/server model which requires both a desktop system (above) and a VR headset. See [`pick_throw_vr/README.md`](../hitl/pick_throw_vr/README.md) for details.
+
+Example HITL apps are configured to run at 30 steps per second (SPS). If your system doesn't meet the above specs, you'll have a lower SPS and a degraded user experience.
 
 ## Installation
 1. Clone Habitat-lab [main branch](https://github.com/facebookresearch/habitat-lab).
