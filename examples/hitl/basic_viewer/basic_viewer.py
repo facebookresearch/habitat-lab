@@ -48,6 +48,8 @@ class AppStateBasicViewer(AppState):
             self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
         self._episode_helper = self._sandbox_service.episode_helper
+        self._paused = False
+        self._do_single_step = False
 
     def _init_lookat_pos(self):
         random_navigable_point = self.get_sim().sample_navigable_point()
@@ -61,9 +63,9 @@ class AppStateBasicViewer(AppState):
             move.x -= move_delta
         if self._gui_input.get_key(GuiInput.KeyNS.S):
             move.x += move_delta
-        if self._gui_input.get_key(GuiInput.KeyNS.O):
+        if self._gui_input.get_key(GuiInput.KeyNS.E):
             move.y += move_delta
-        if self._gui_input.get_key(GuiInput.KeyNS.P):
+        if self._gui_input.get_key(GuiInput.KeyNS.Q):
             move.y -= move_delta
         if self._gui_input.get_key(GuiInput.KeyNS.J):
             move.z += move_delta
@@ -114,11 +116,13 @@ class AppStateBasicViewer(AppState):
             controls_str += "M: next episode\n"
         else:
             controls_str += "no remaining episodes\n"
+        controls_str += "P: unpause\n" if self._paused else "P: pause\n"
+        controls_str += "Spacebar: single step\n"
         controls_str += "R + drag: rotate camera\n"
         controls_str += "Scroll: zoom\n"
         controls_str += "I, K: look up, down\n"
         controls_str += "A, D: turn\n"
-        controls_str += "O, P: move up, down\n"
+        controls_str += "E, Q: move up, down\n"
         controls_str += "W, S: move forward, back\n"
 
         return controls_str
@@ -129,8 +133,10 @@ class AppStateBasicViewer(AppState):
             progress_str += (
                 " - task succeeded!"
                 if self._env_task_complete
-                else "- task ended in failure!"
+                else " - task ended in failure!"
             )
+        elif self._paused:
+            progress_str += " - paused"
 
         # center align the status_str
         max_status_str_len = 50
@@ -169,15 +175,26 @@ class AppStateBasicViewer(AppState):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+            self._paused = not self._paused
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            self._do_single_step = True
+            self._paused = True
+
+        do_step = not self._paused or self._do_single_step
+
         if (
             self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
             and self._episode_helper.next_episode_exists()
+            and not do_step
         ):
             self._sandbox_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
-        if self._env_episode_active():
+        if self._env_episode_active() and do_step:
             self._sandbox_service.compute_action_and_step_env()
+            self._do_single_step = False
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
