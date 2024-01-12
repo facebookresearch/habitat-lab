@@ -25,6 +25,7 @@ class SandboxService:
         set_cursor_style,
         episode_helper,
         client_message_manager,
+        gui_agent_controller,
     ):
         self._args = args
         self._config = config
@@ -42,6 +43,7 @@ class SandboxService:
         self._set_cursor_style = set_cursor_style
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
+        self._gui_agent_controller = gui_agent_controller
 
     @property
     def args(self):
@@ -106,3 +108,7 @@ class SandboxService:
     @property
     def client_message_manager(self):
         return self._client_message_manager
+
+    @property
+    def gui_agent_controller(self):
+        return self._gui_agent_controller

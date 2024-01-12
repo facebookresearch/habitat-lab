@@ -1,136 +1,71 @@
-# Sandbox Tool
+# Human-in-the-loop (HITL) Framework
 
-This is a 3D interactive GUI app that enables human-in-the-loop (HITL) evaluation of agents trained on Habitat.
+Build interactive desktop and VR applications that enable human-in-the-loop evaluation of agents in Habitat environments.
 
 <p align="center">
   <img src="../../res/img/hitl_tool.gif" height=400>
 </p>
 
----
+- [Human-in-the-loop (HITL) Framework](#human-in-the-loop-hitl-framework)
+  - [System Requirements](#system-requirements)
+  - [Installation](#installation)
+  - [Example HITL applications](#example-hitl-applications)
+  - [VR HITL applications](#vr-hitl-applications)
+  - [Workaround for poor runtime perf on slower machines](#workaround-for-poor-runtime-perf-on-slower-machines)
+  - [Command-line Options](#command-line-options)
+    - [Hack to hide the skinned humanoid in the GUI viewport](#hack-to-hide-the-skinned-humanoid-in-the-gui-viewport)
+    - [Saving episode data](#saving-episode-data)
+    - [Debugging visual sensors](#debugging-visual-sensors)
+    - [Debugging simulator-rendering](#debugging-simulator-rendering)
+    - [GUI-controlled agents and free camera mode](#gui-controlled-agents-and-free-camera-mode)
+    - [First-person and third-person mode for GUI-controlled humanoid](#first-person-and-third-person-mode-for-gui-controlled-humanoid)
+    - [Can grasp/place area](#can-graspplace-area)
+    - [Disable episode end on collision](#disable-episode-end-on-collision)
+    - [Play episodes filter](#play-episodes-filter)
+    - [Saving episode data](#saving-episode-data-1)
+    - [Capturing Gfx-Replay Files](#capturing-gfx-replay-files)
+    - [Testing BatchReplayRenderer](#testing-batchreplayrenderer)
+  - [Known Issues](#known-issues)
+  - [HITL Framework Architecture](#hitl-framework-architecture)
 
-- [Installation](#installation)
-- [Applications](#applications)
-  - [AppState: rearrange](#appstate-rearrange)
-    - [Example launch command](#example-launch-command)
-  - [AppState: pick\_throw\_vr](#appstate-pick_throw_vr)
-  - [AppState: free\_camera](#appstate-free_camera)
-    - [Example launch command](#example-launch-command-1)
-  - [AppState: socialnav](#appstate-socialnav)
-  - [AppState: tutorial](#appstate-tutorial)
-- [Controls](#controls)
-- [Workaround for poor runtime perf on slower machines](#workaround-for-poor-runtime-perf-on-slower-machines)
-- [Command-line Options](#command-line-options)
-  - [Hack to hide the skinned humanoid in the GUI viewport](#hack-to-hide-the-skinned-humanoid-in-the-gui-viewport)
-  - [Saving episode data](#saving-episode-data)
-  - [Debugging visual sensors](#debugging-visual-sensors)
-  - [Debugging simulator-rendering](#debugging-simulator-rendering)
-  - [GUI-controlled agents and free camera mode](#gui-controlled-agents-and-free-camera-mode)
-  - [First-person and third-person mode for GUI-controlled humanoid](#first-person-and-third-person-mode-for-gui-controlled-humanoid)
-  - [Can grasp/place area](#can-graspplace-area)
-  - [Disable episode end on collision](#disable-episode-end-on-collision)
-  - [Play episodes filter](#play-episodes-filter)
-  - [Saving episode data](#saving-episode-data-1)
-  - [Capturing Gfx-Replay Files](#capturing-gfx-replay-files)
-  - [Human-in-the-loop tutorial sequence](#human-in-the-loop-tutorial-sequence)
-  - [Testing BatchReplayRenderer](#testing-batchreplayrenderer)
-- [Known Issues](#known-issues)
-- [Sandbox Tool Architecture](#sandbox-tool-architecture)
-- [VR HITL Evaluation](#vr-hitl-evaluation)
+## System Requirements
+* **Operating System:** macOS or Linux. We've tested Fedora but other flavors should also work.
+* **CPU/GPU:** Apple M1 Max, Intel Core i7 + dedicated GPU, or equivalent.
+* **Display:** laptop or desktop with an attached monitor. We haven't tested remote desktop or other headless options.
+* **Storage:** ~20 GB. Example HITL apps use the Habitat Synthetic Scenes Dataset (HSSD), which is about 20 GB.
+* **VR:** HITL VR uses a client/server model which requires both a desktop system (above) and a VR headset. See [`pick_throw_vr/README.md`](../hitl/pick_throw_vr/README.md) for details.
 
+Example HITL apps are configured to run at 30 steps per second (SPS). If your system doesn't meet the above specs, you'll have a lower SPS and a degraded user experience.
 
 ## Installation
 1. Clone Habitat-lab [main branch](https://github.com/facebookresearch/habitat-lab).
 2. Install Habitat-lab using [instructions](https://github.com/facebookresearch/habitat-lab#installation).
-    * The HITL tool depends on the `habitat-lab` and `habitat-baselines` packages. While these packages are in the same repository as the HITL tool, it's not strictly necessary for the HITL tool to import the packages that live in the parent directory. You can use any version installed to your current environment.
+    * The HITL framework depends on the `habitat-lab` and `habitat-baselines` packages. While these packages are in the same repository as the HITL framework, it's not strictly necessary for the HITL framework to import the packages that live in th- [Human-in-the-loop (HITL) Framework](#human-in-the-loop-hitl-framework)
 3. Install Habitat-sim [main branch](https://github.com/facebookresearch/habitat-sim).
     * [Build from source](https://github.com/facebookresearch/habitat-sim/blob/main/BUILD_FROM_SOURCE.md), or install the [conda packages](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages).
         * Be sure to include Bullet physics, e.g. `python setup.py install --bullet`.
-4. Download required assets:
+4. Download required assets for our example HITL applications:
     ```bash
     python -m habitat_sim.utils.datasets_download \
     --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
     --data-path data/
     ```
 
-## Applications
+## Example HITL applications
 
-The HITL app has a variety of built-in applications, called `AppState`. These are independent from each other and use the HITL app as a framework.
+Check out our example HITL applications [here](../hitl/).
 
-The app state can be selected with the `--app-state` command-line argument.
+All of these applications share core functionality provided by the HITL framework, including:
+* loading and simulating Habitat environments in real time
+* simulating virtual agents including policy inference
+* graphical user interfaces (GUIs) to enable real humans (users) to interact with these virtual agents
 
-To create a new application, we recommend forking the files in `examples/siro_sandbox`. We recommend adding a new `AppState` for your use case, starting by copy-pasting an existing `AppState` class like `app_state_pick_throw_vr.py`.
+To create a new HITL application, we recommend starting by copy-pasting one of the application folders like `hitl/pick_throw_vr/` into your own git repository, for example `my_repo/my_pick_throw_vr/`.
 
-### AppState: rearrange
+## VR HITL applications
 
-In this application, the human and robot must accomplish a collaborative rearrangement task.
-See on-screen help for controls.
+The HITL framework can be used to build desktop applications (controlled with keyboard/mouse) as well as **VR** applications. See our [Pick_throw_vr](../hitl/pick_throw_vr/README.md) example application.
 
-#### Example launch command
-GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot in HSSD:
-```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---gui-controlled-agent-index 1 \
---app-state rearrange \
---cfg social_rearrange/pop_play.yaml \
---cfg-opts \
-habitat.environment.iterator_options.cycle=False \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
-```
-
-### AppState: pick_throw_vr
-
-Example application that allows a user to interact with a scene, controlling a human avatar with mouse/keyboard or a VR headset. A policy-driven Spot robot also interacts with the scene. This is a proof of concept and not meant for rigorous evaluation or data-collection.
-
-See [VR_HITL.md](./VR_HITL.md) for instructions.
-
-
-### AppState: free_camera
-
-This application allows to observe two policy-driven agents from an independent controllable camera.
-See on-screen help for controls.
-
-#### Example launch command
-
-Policy-controlled humanoid (initialized with random weights) in HSSD:
-```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---never-end \
---app-state free_camera \
---cfg social_rearrange/pop_play.yaml \
---cfg-opts \
-habitat.environment.iterator_options.cycle=False \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False \
-habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
-```
-
-### AppState: socialnav
-
-This app state is a work in progress and doesn't currently run.
-
-
-### AppState: tutorial
-
-Tutorial is a special app state that shows a tutorial sequence at the start of the application to introduce the user to the scene and goals in a human-in-the-loop context.
-
-Unlike other app states, it is enabled with the `--show-tutorial` command-line argument.
-
-It is currently only supported with the `rearrange` app state.
-
-## Controls
-
-* See on-screen help text for common keyboard and mouse controls
-* `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
-* For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 ## Workaround for poor runtime perf on slower machines
 
@@ -185,9 +120,6 @@ Add `--save-episode-record` flag to enable saving recorded episode data to file 
 ### Capturing Gfx-Replay Files
 Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_session.gfx_replay.json.gz`.
 
-### Human-in-the-loop tutorial sequence
-The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
-
 ### Testing BatchReplayRenderer
 This is an experimental feature aimed at those of us building the batch renderer. Run the above command but also include `--use-batch-renderer` as one of the first arguments.
 
@@ -196,21 +128,17 @@ This is an experimental feature aimed at those of us building the batch renderer
 * The humanoid isn't visualized because 3D primitives aren't yet supported in the batch renderer.
 * Ruslan reported an issue with the mouse-controlled humanoid navigation not working correctly.
 
-## Sandbox Tool Architecture
-* The sandbox app is logically divided into a Sim/Task/RL component (`SandboxDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).
+## HITL Framework Architecture
+* A HITL application is logically divided into a Sim/Task/RL component (`SandboxDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).
 * `SandboxDriver`
     * It creates a `habitat.Env` instance.
     * Camera sensors are rendered by the `habitat.Env` instance in the usual way; see `self.obs = self.env.step(action)` in `SandboxDriver.sim_update`.
     * This class is provided a `gui_input` object that encapsulates OS input (keyboard and mouse input). We should avoid making direct calls to PyGame, GLFW, and other OS-specific APIs.
     * `sim_update` returns a `post_sim_update_dict` that contains info needed by the app renderer (below). E.g. a gfx-replay keyframe and a camera transform for rendering, plus optional "debug images" to be shown to the user.
     * This class also has access to a `debug_line_render` instance for visualizing lines in the GUI (the lines aren't rendered into camera sensors). This access is somewhat hacky; future versions of HITL apps will likely convey lines via `post_sim_update_dict` instead of getting direct access to this object.
-    * See `app_states/app_state_rearrange.py` and similar classes for per-step logic that is specific to various use cases (rearrange, pick_throw_vr, etc.).
+    * This class is provided an AppState which provides application-specific logic, for example, specific keyboard/mouse controls and specific on-screen help text.
 * `GuiApplication`
     * manages the OS window (via GLFW for now), including OS-input-handling (keyboard and mouse) and updating the display (invoking the renderer).
 * `ReplayGuiAppRenderer`
     * `ReplayGuiAppRenderer` is a "render client". It receives the `post_sim_update_dict` from `SandboxDriver` and updates the OS window by rendering the scene from the requested camera pose.
     * In theory, render clients should be app-agnostic, i.e. `ReplayGuiAppRenderer` could be re-used for other GUI apps, but in practice we may find situations where we have to inject some app-specific code into this class (we should avoid if possible).
-
-## VR HITL Evaluation
-
-VR HITL evaluation is supported in the `pick_throw_vr` app state. See [VR_HITL.md](./VR_HITL.md) for instructions for running the sandbox app in VR.

@@ -4,8 +4,24 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
+# temp until hitl framework is a proper package
+def add_hitl_framework_import_path():
+    import os
+    import sys
+
+    current_script_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = os.path.abspath(
+        os.path.join(current_script_directory, "../../siro_sandbox/")
+    )
+    sys.path.append(parent_directory)
+
+
+add_hitl_framework_import_path()
+
 from typing import Final
 
+import hitl_main
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -15,6 +31,7 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
+from hitl_arg_parser import create_hitl_arg_parser
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
@@ -22,6 +39,7 @@ from utils.hablab_utils import (
     get_grasped_objects_idxs,
 )
 
+import habitat_baselines
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
@@ -44,9 +62,9 @@ class AppStatePickThrowVr(AppState):
     See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
-    def __init__(self, sandbox_service, gui_agent_ctrl):
+    def __init__(self, sandbox_service):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._can_grasp_place_threshold = (
             self._sandbox_service.args.can_grasp_place_threshold
         )
@@ -713,6 +731,25 @@ class AppStatePickThrowVr(AppState):
 
         return hit_info
 
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False
+
+def main():
+    args = create_hitl_arg_parser().parse_args()
+    # todo: get config using @hydra.main (this requires removal of our legacy command-
+    # line arguments)
+    config_path = args.cfg
+    overrides = args.cfg_opts
+
+    config = habitat_baselines.config.default.get_config(
+        config_path, overrides
+    )
+
+    hitl_main.hitl_main(
+        args,
+        config,
+        lambda sandbox_service: AppStatePickThrowVr(sandbox_service),
+    )
+
+
+if __name__ == "__main__":
+    # register_hydra_plugins()  # coming soon
+    main()

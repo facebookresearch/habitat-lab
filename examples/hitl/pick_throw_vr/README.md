@@ -1,37 +1,57 @@
-# VR Human-in-the-loop (HITL) Evaluation
+# Pick_throw_vr HITL application
 
-HITL evaluation can be driven from VR. In this mode, the HITL app acts as a server that can be remotely accessed by a client.
-
-VR control is only integrated to the `pick_throw_vr` app state. This is an example application that allows a user to interact with a scene, controlling a human avatar with mouse/keyboard or a VR headset. A policy-driven Spot robot also interacts with the scene. This is a proof of concept and not meant for rigorous evaluation or data-collection. [Read this section](./README.md#applications) for information on how to extend the HITL app for your use case.
+This is an example HITL application that allows a user to interact with a scene, controlling a human avatar with mouse/keyboard or a [VR headset](#vr). A policy-driven Spot robot also interacts with the scene. This is a proof of concept and not meant for rigorous evaluation or data-collection.
 
 **Note:** The robot policy used in this example application will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
 
 ---
-- [Installation](#installation)
-  - [Requirements](#requirements)
-    - [Server](#server)
-    - [Client](#client)
-- [Launch Command](#launch-command)
-- [Unity Data Folder](#unity-data-folder)
-  - [Dataset Processing](#dataset-processing)
-    - [Installation](#installation-1)
-    - [Usage](#usage)
-    - [Importing Data Into Unity](#importing-data-into-unity)
-- [Running Locally from Unity](#running-locally-from-unity)
-- [Running Remotely from Quest Headset](#running-remotely-from-quest-headset)
-  - [Connection](#connection)
-  - [Server Controls](#server-controls)
-- [Troubleshooting](#troubleshooting)
-  - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
-  - [Connection Issues](#connection-issues)
-  - [Slow Performance](#slow-performance)
+- [Pick\_throw\_vr HITL application](#pick_throw_vr-hitl-application)
+  - [Installing and using HITL apps](#installing-and-using-hitl-apps)
+  - [Example launch command (mouse/keyboard)](#example-launch-command-mousekeyboard)
+- [VR](#vr)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+      - [Server](#server)
+      - [Client](#client)
+  - [Launch Command](#launch-command)
+  - [Unity Data Folder](#unity-data-folder)
+    - [Dataset Processing](#dataset-processing)
+      - [Installation](#installation-1)
+      - [Usage](#usage)
+      - [Importing Data Into Unity](#importing-data-into-unity)
+  - [Running Locally from Unity](#running-locally-from-unity)
+  - [Running Remotely from Quest Headset](#running-remotely-from-quest-headset)
+    - [Connection](#connection)
+    - [Server Controls](#server-controls)
+  - [Troubleshooting](#troubleshooting)
+    - [Deployment to the VR Headset](#deployment-to-the-vr-headset)
+    - [Connection Issues](#connection-issues)
+    - [Slow Performance](#slow-performance)
 
+## Installing and using HITL apps
+See [siro_sandbox/README.md](../../siro_sandbox/README.md).
+
+## Example launch command (mouse/keyboard)
+
+```bash
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/hitl/pick_throw_vr/pick_throw_vr.py \
+--disable-inverse-kinematics \
+--never-end \
+--gui-controlled-agent-index 1 \
+--ang-speed "15" \
+--cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
+```
+
+# VR
+
+The human avatar can optionally be controlled from VR. In this mode, the Pick_throw_vr app must still be run on a headed desktop machine, and it still offers a 3D window and some limited keyboard/mouse controls. However, it also acts as a server that communicates with our Unity-based VR client (below), which immerses the VR user in the Habitat environment.
 
 ## Installation
 
 The system is composed of the following components:
 
-* The **Server**, which is the HITL app.
+* The **Server**, which is the Pick_throw_vr app.
 * The **Client** is a Unity app that can be run from within the Unity Editor or deployed to a VR headset.
 
 ### Requirements
@@ -48,28 +68,24 @@ The system is composed of the following components:
 
 | Requirements | Notes |
 |---|---|
-| Quest Headset | Tested on Quest Pro and Quest 3. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. |
+| VR Headset | We recommend Quest 3 (best) or Quest Pro with ~300 MB free storage. Make sure that [developer mode](https://developer.oculus.com/documentation/native/android/mobile-device-setup/) is activated. On Quest 2, more complex HSSD scenes may run poorly or not at all. Other VR headsets supported by Unity should also work. |
 | [siro_hitl_unity_client](https://github.com/eundersander/siro_hitl_unity_client) | **Beware that a Unity license may be required by your organization.**<br>Follow [these installation instructions](https://github.com/eundersander/siro_hitl_unity_client/blob/main/README.md). |
 
 ## Launch Command
 
 The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
-* The `--remote-gui-mode` argument launches the HITL tool as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
-* Only `--app-state pick_throw_vr` supports remote VR evaluation.
+* The `--remote-gui-mode` argument launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
+python examples/hitl/pick_throw_vr/pick_throw_vr.py \
 --remote-gui-mode \
---app-state pick_throw_vr \
 --disable-inverse-kinematics \
 --never-end \
 --gui-controlled-agent-index 1 \
 --ang-speed "15" \
---cfg social_rearrange/pop_play.yaml \
---cfg-opts habitat_baselines.num_environments=1 \
-habitat.task.measurements.rearrange_cooperate_reward.end_on_collide=False
+--cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
 ```
 
 ## Unity Data Folder

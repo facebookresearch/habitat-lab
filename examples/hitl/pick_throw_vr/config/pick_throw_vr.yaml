@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - social_rearrange: pop_play
+  - _self_
+
+habitat:
+  task:
+    measurements:
+      rearrange_cooperate_reward:
+        end_on_collide: False
+
+habitat_baselines:
+  evaluate: True
+  num_environments: 1
+
+pick_throw_vr:

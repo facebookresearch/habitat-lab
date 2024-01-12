@@ -14,12 +14,10 @@ class AppStateTutorial(AppState):
     def __init__(
         self,
         sandbox_service,
-        gui_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._cam_transform = None
-        self._camera_helper = None
 
     def get_sim(self):
         return self._sandbox_service.sim
@@ -27,18 +25,18 @@ class AppStateTutorial(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def on_enter(self, prev_state, next_state):
-        self._camera_helper = next_state._camera_helper
-        self._cam_transform = self._camera_helper.get_cam_transform()
-
+    def on_enter(self, final_eye_pos, final_lookat_pos):
         self._tutorial: Tutorial = generate_tutorial(
             sim=self.get_sim(),
             agent_idx=self.get_gui_controlled_agent_index(),
             final_lookat=(
-                self._camera_helper.get_eye_pos(),
-                self._camera_helper.get_lookat_pos(),
+                final_eye_pos,
+                final_lookat_pos,
             ),
         )
+
+        assert not self._tutorial.is_completed()
+        self._cam_transform = self._tutorial.get_look_at_matrix()
 
     def on_environment_reset(self, episode_recorder_dict):
         pass
@@ -90,7 +88,3 @@ class AppStateTutorial(AppState):
     def record_state(self):
         # Because the environment is not stepped in the tutorial, we don't need to save state.
         pass
-
-    def is_app_state_done(self):
-        """Returns True if all the tutorial stages are completed."""
-        return self._tutorial.is_completed()

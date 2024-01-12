@@ -4,14 +4,33 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
+# temp until hitl framework is a proper package
+def add_hitl_framework_import_path():
+    import os
+    import sys
+
+    current_script_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = os.path.abspath(
+        os.path.join(current_script_directory, "../../siro_sandbox/")
+    )
+    sys.path.append(parent_directory)
+
+
+add_hitl_framework_import_path()
+
+import hitl_main
 import magnum as mn
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
+from hitl_arg_parser import create_hitl_arg_parser
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 
+import habitat_baselines
 
-class AppStateFreeCamera(AppState):
+
+class AppStateBasicViewer(AppState):
     def __init__(
         self,
         sandbox_service,
@@ -175,6 +194,31 @@ class AppStateFreeCamera(AppState):
 
         self._update_help_text()
 
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False
+
+def main():
+    args = create_hitl_arg_parser().parse_args()
+
+    if args.gui_controlled_agent_index is not None:
+        raise ValueError(
+            "--gui-controlled-agent-index is not supported for basic_viewer"
+        )
+
+    # todo: get config using @hydra.main (this requires removal of our legacy command-
+    # line arguments)
+    config_path = args.cfg
+    overrides = args.cfg_opts
+
+    config = habitat_baselines.config.default.get_config(
+        config_path, overrides
+    )
+
+    hitl_main.hitl_main(
+        args,
+        config,
+        lambda sandbox_service: AppStateBasicViewer(sandbox_service),
+    )
+
+
+if __name__ == "__main__":
+    # register_hydra_plugins()  # coming soon
+    main()

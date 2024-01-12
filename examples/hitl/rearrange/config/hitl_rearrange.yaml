@@ -1,0 +1,23 @@
+# @package _global_
+
+defaults:
+  - social_rearrange: pop_play
+  - _self_
+
+habitat:
+  environment:
+    iterator_options:
+      cycle: False
+
+habitat_baselines:
+  evaluate: True
+  num_environments: 1
+  eval:
+    should_load_ckpt: False
+  rl:
+    agent:
+      num_pool_agents_per_type: [1,1]
+
+rearrange:
+  # Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.
+  show_tutorial: True
