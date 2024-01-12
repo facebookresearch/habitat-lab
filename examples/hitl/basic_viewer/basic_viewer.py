@@ -116,8 +116,11 @@ class AppStateBasicViewer(AppState):
             controls_str += "M: next episode\n"
         else:
             controls_str += "no remaining episodes\n"
-        controls_str += "P: unpause\n" if self._paused else "P: pause\n"
-        controls_str += "Spacebar: single step\n"
+        if self._env_episode_active():
+            controls_str += "P: unpause\n" if self._paused else "P: pause\n"
+            controls_str += "Spacebar: single step\n"
+        else:
+            controls_str += "\n\n"
         controls_str += "R + drag: rotate camera\n"
         controls_str += "Scroll: zoom\n"
         controls_str += "I, K: look up, down\n"
@@ -175,24 +178,27 @@ class AppStateBasicViewer(AppState):
             self._sandbox_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        if (
+            self._env_episode_active()
+            and self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P)
+        ):
             self._paused = not self._paused
 
         if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
             self._do_single_step = True
             self._paused = True
 
-        do_step = not self._paused or self._do_single_step
+        is_paused_this_frame = self._paused and not self._do_single_step
 
         if (
             self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
             and self._episode_helper.next_episode_exists()
-            and not do_step
+            and not is_paused_this_frame
         ):
             self._sandbox_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
-        if self._env_episode_active() and do_step:
+        if self._env_episode_active() and not is_paused_this_frame:
             self._sandbox_service.compute_action_and_step_env()
             self._do_single_step = False
 
