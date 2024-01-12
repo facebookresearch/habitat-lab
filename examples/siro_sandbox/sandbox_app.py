@@ -16,22 +16,16 @@ import sys
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
-import argparse
 import json
 from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Dict, Final, List, Set
 
-import magnum as mn
 import numpy as np
 from controllers.controller_helper import ControllerHelper
 from episode_helper import EpisodeHelper
-
-# from hitl_tutorial import Tutorial, generate_tutorial
-from magnum.platform.glfw import Application
-from utils.gui.gui_application import GuiAppDriver, GuiApplication
+from utils.gui.gui_application import GuiAppDriver
 from utils.gui.gui_input import GuiInput
-from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from utils.serialize_utils import (
     NullRecorder,
     StepRecorder,
@@ -44,37 +38,17 @@ import habitat
 import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
-from habitat.config.default import get_agent_config
-from habitat.config.default_structured_configs import (
-    HumanoidJointActionConfig,
-    ThirdRGBSensorConfig,
-)
-from habitat_baselines.config.default import get_config as get_baselines_config
 
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
 from app_states.app_state_abc import AppState
-from app_states.app_state_free_camera import AppStateFreeCamera
-from app_states.app_state_pick_throw_vr import AppStatePickThrowVr
-from app_states.app_state_rearrange import AppStateRearrange
-from app_states.app_state_socialnav import AppStateSocialNav
-from app_states.app_state_tutorial import AppStateTutorial
 from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
 from server.server import launch_server_process, terminate_server_process
 
-# Please reach out to the paper authors to obtain this file
-DEFAULT_POSE_PATH: Final[str] = (
-    # TODO: Get from model.
-    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
-)
-
-DEFAULT_CFG: Final[
-    str
-] = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
 VIZ_ANIMATION_SPEED: Final[float] = 2.0
 
 
@@ -91,7 +65,15 @@ def requires_habitat_sim_with_bullet(callable_):
 
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
-    def __init__(self, args, config, gui_input, line_render, text_drawer):
+    def __init__(
+        self,
+        args,
+        config,
+        gui_input,
+        line_render,
+        text_drawer,
+        create_app_state_lambda,
+    ):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = args.episodes_filter
         self._num_recorded_episodes = 0
@@ -180,48 +162,12 @@ class SandboxDriver(GuiAppDriver):
             lambda: self._set_cursor_style,
             self._episode_helper,
             self._client_message_manager,
+            self.ctrl_helper.get_gui_agent_controller(),
         )
 
-        self._app_states: List[AppState]
-        if args.app_state == "pick_throw_vr":
-            self._app_states = [
-                AppStatePickThrowVr(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
-        elif args.app_state == "rearrange":
-            self._app_states = [
-                AppStateRearrange(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
-            if args.show_tutorial:
-                self._app_states.insert(
-                    0,
-                    AppStateTutorial(
-                        self._sandbox_service,
-                        self.ctrl_helper.get_gui_agent_controller(),
-                    ),
-                )
-        elif args.app_state == "socialnav":
-            self._app_states = [
-                AppStateSocialNav(
-                    self._sandbox_service,
-                    self.ctrl_helper.get_gui_agent_controller(),
-                )
-            ]
-        elif args.app_state == "free_camera":
-            self._app_states = [AppStateFreeCamera(self._sandbox_service)]
-        else:
-            raise RuntimeError("Unexpected --app-state=", args.app_state)
-        # Note that we expect SandboxDriver to create multiple AppStates in some
-        # situations and manage the transition between them, e.g. tutorial -> rearrange.
-
-        assert self._app_states
-        self._app_state_index = None
-        self._app_state = None
+        self._app_state: AppState = None
+        assert create_app_state_lambda is not None
+        self._app_state = create_app_state_lambda(self._sandbox_service)
 
         self._reset_environment()
 
@@ -341,55 +287,23 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_recorder_dict = ep_dict
 
-    def _get_prev_app_state(self):
-        return (
-            self._app_states[self._app_state_index - 1]
-            if self._app_state_index > 0
-            else None
-        )
-
-    def _get_next_app_state(self):
-        return (
-            self._app_states[self._app_state_index + 1]
-            if self._app_state_index < len(self._app_states) - 1
-            else None
-        )
-
     def _reset_environment(self):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
         if self.network_server_enabled:
             self._remote_gui_input.clear_history()
 
+        # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
         self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
 
-        # Reset all the app states
-        for app_state in self._app_states:
-            app_state.on_environment_reset(self._episode_recorder_dict)
+        self._app_state.on_environment_reset(self._episode_recorder_dict)
 
         # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
         # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
         self.ctrl_helper.on_environment_reset()
-
-        self._app_state_index = (
-            0  # start from the first app state for each episode
-        )
-
-        # If show_tutorial enabled we show the tutorial once - before the first episode
-        if (
-            self._args.show_tutorial
-            and self._episode_helper.num_episodes_done > 0
-        ):
-            self._app_state_index += 1
-
-        self._app_state = self._app_states[self._app_state_index]
-        self._app_state.on_enter(
-            prev_state=self._get_prev_app_state(),
-            next_state=self._get_next_app_state(),
-        )
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False
@@ -486,9 +400,6 @@ class SandboxDriver(GuiAppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
-        if self._app_state.is_app_state_done():
-            self._try_next_state()
-
         if self._pending_cursor_style:
             post_sim_update_dict[
                 "application_cursor"
@@ -563,419 +474,3 @@ class SandboxDriver(GuiAppDriver):
                 )
 
         return post_sim_update_dict
-
-    def _try_next_state(self):
-        self._app_state_index += 1
-        if self._app_state_index >= len(self._app_states):
-            return
-        self._app_state = self._app_states[self._app_state_index]
-        self._app_state.on_enter(
-            prev_state=self._get_prev_app_state(),
-            next_state=self._get_next_app_state(),
-        )
-
-
-def _parse_debug_third_person(args, framebuffer_size):
-    viewport_multiplier = mn.Vector2(
-        framebuffer_size.x / args.width, framebuffer_size.y / args.height
-    )
-
-    do_show = args.debug_third_person_width != 0
-
-    width = args.debug_third_person_width
-    # default to square aspect ratio
-    height = (
-        args.debug_third_person_height
-        if args.debug_third_person_height != 0
-        else width
-    )
-
-    width = int(width * viewport_multiplier.x)
-    height = int(height * viewport_multiplier.y)
-
-    return do_show, width, height
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--target-sps",
-        type=int,
-        default=30,
-        help="Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware",
-    )
-    parser.add_argument(
-        "--width",
-        default=1280,
-        type=int,
-        help="Horizontal resolution of the window.",
-    )
-    parser.add_argument(
-        "--height",
-        default=720,
-        type=int,
-        help="Vertical resolution of the window.",
-    )
-    parser.add_argument(
-        "--gui-controlled-agent-index",
-        type=int,
-        default=None,
-        help=(
-            "GUI-controlled agent index (must be >= 0 and < number of agents). "
-            "Defaults to None, indicating that all the agents are policy-controlled. "
-            "If none of the agents is GUI-controlled, the camera is switched to 'free camera' mode "
-            "that lets the user observe the scene (instead of controlling one of the agents)"
-        ),
-    )
-    parser.add_argument(
-        "--disable-inverse-kinematics",
-        action="store_true",
-        help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
-    )
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
-    parser.add_argument(
-        "--cfg-opts",
-        nargs="*",
-        default=list(),
-        help="Modify config options from command line",
-    )
-    parser.add_argument(
-        "--debug-images",
-        nargs="*",
-        default=list(),
-        help=(
-            "Visualize camera sensors (corresponding to `--debug-images` keys) in the app GUI."
-            "For example, to visualize agent1's head depth sensor set: --debug-images agent_1_head_depth"
-        ),
-    )
-    parser.add_argument(
-        "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
-    )
-    parser.add_argument(
-        "--lin-speed",
-        type=float,
-        default=10.0,
-        help="GUI-controlled agent's linear speed",
-    )
-    parser.add_argument(
-        "--ang-speed",
-        type=float,
-        default=10.0,
-        help="GUI-controlled agent's angular speed",
-    )
-    parser.add_argument(
-        "--never-end",
-        action="store_true",
-        default=False,
-        help="If true, make the task never end due to reaching max number of steps",
-    )
-    parser.add_argument(
-        "--use-batch-renderer",
-        action="store_true",
-        default=False,
-        help="Choose between classic and batch renderer",
-    )
-    parser.add_argument(
-        "--debug-third-person-width",
-        default=0,
-        type=int,
-        help="If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width",
-    )
-    parser.add_argument(
-        "--debug-third-person-height",
-        default=0,
-        type=int,
-        help="If specified, use the specified viewport height for the debug third-person camera",
-    )
-    parser.add_argument(
-        "--max-look-up-angle",
-        default=15,
-        type=float,
-        help="Look up angle limit.",
-    )
-    parser.add_argument(
-        "--min-look-down-angle",
-        default=-60,
-        type=float,
-        help="Look down angle limit.",
-    )
-    parser.add_argument(
-        "--first-person-mode",
-        action="store_true",
-        default=False,
-        help="Choose between classic and batch renderer",
-    )
-    parser.add_argument(
-        "--can-grasp-place-threshold",
-        default=1.2,
-        type=float,
-        help="Object grasp/place proximity threshold",
-    )
-    parser.add_argument(
-        "--episodes-filter",
-        default=None,
-        type=str,
-        help=(
-            "Episodes filter in the form '0:10 12 14:20:2', "
-            "where single integer number (`12` in this case) represents an episode id, "
-            "colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range."
-        ),
-    )
-    parser.add_argument(
-        "--show-tutorial",
-        action="store_true",
-        default=False,
-        help="Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.",
-    )
-    parser.add_argument(
-        "--hide-humanoid-in-gui",
-        action="store_true",
-        default=False,
-        help="Hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.",
-    )
-    parser.add_argument(
-        "--save-gfx-replay-keyframes",
-        action="store_true",
-        default=False,
-        help="Save the gfx-replay keyframes to file. Use --save-filepath-base to specify the filepath base.",
-    )
-    parser.add_argument(
-        "--save-episode-record",
-        action="store_true",
-        default=False,
-        help="Save recorded episode data to file. Use --save-filepath-base to specify the filepath base.",
-    )
-    parser.add_argument(
-        "--save-filepath-base",
-        default=None,
-        type=str,
-        help="Filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
-    )
-    parser.add_argument(
-        "--app-state",
-        default="rearrange",
-        type=str,
-        help="'rearrange', 'pick_throw_vr', 'socialnav' or 'free_camera'",
-    )
-    parser.add_argument(
-        "--remote-gui-mode",
-        action="store_true",
-        default=False,
-        help="When enabled, the sandbox app behaves as a server that takes input from a remote client.",
-    )
-
-    args = parser.parse_args()
-    if (
-        args.save_gfx_replay_keyframes or args.save_episode_record
-    ) and not args.save_filepath_base:
-        raise ValueError(
-            "--save-gfx-replay-keyframes and/or --save-episode-record flags are enabled, "
-            "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
-        )
-
-    if args.show_tutorial and args.app_state != "rearrange":
-        raise ValueError(
-            "--show-tutorial is only supported for --app-state=rearrange"
-        )
-
-    if args.remote_gui_mode and args.app_state != "pick_throw_vr":
-        raise ValueError(
-            "--remote-gui-mode is only supported for pick_throw_vr app-state"
-        )
-
-    if (
-        args.app_state == "free_camera"
-        and args.gui_controlled_agent_index is not None
-    ):
-        raise ValueError(
-            "--gui-controlled-agent-index is not supported for --app-state=free_camera"
-        )
-
-    glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"
-    glfw_config.size = (args.width, args.height)
-    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
-    # on Mac Retina displays, this will be 2x the window size
-    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
-
-    (
-        show_debug_third_person,
-        debug_third_person_width,
-        debug_third_person_height,
-    ) = _parse_debug_third_person(args, framebuffer_size)
-
-    viewport_rect = None
-    if show_debug_third_person:
-        # adjust main viewport to leave room for the debug third-person camera on the right
-        assert framebuffer_size.x > debug_third_person_width
-        viewport_rect = mn.Range2Di(
-            mn.Vector2i(0, 0),
-            mn.Vector2i(
-                framebuffer_size.x - debug_third_person_width,
-                framebuffer_size.y,
-            ),
-        )
-
-    # note this must be created after GuiApplication due to OpenGL stuff
-    app_renderer = ReplayGuiAppRenderer(
-        framebuffer_size,
-        viewport_rect,
-        args.use_batch_renderer,
-    )
-
-    config = get_baselines_config(args.cfg, args.cfg_opts)
-    with habitat.config.read_write(config):  # type: ignore
-        habitat_config = config.habitat
-        env_config = habitat_config.environment
-        sim_config = habitat_config.simulator
-        task_config = habitat_config.task
-        gym_obs_keys = habitat_config.gym.obs_keys
-
-        agent_config = get_agent_config(sim_config=sim_config)
-
-        if show_debug_third_person:
-            sim_config.debug_render = True
-            agent_config.sim_sensors.update(
-                {
-                    "third_rgb_sensor": ThirdRGBSensorConfig(
-                        height=debug_third_person_height,
-                        width=debug_third_person_width,
-                    )
-                }
-            )
-            agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
-            agent_sensor_name = f"{agent_key}third_rgb"
-            args.debug_images.append(agent_sensor_name)
-            gym_obs_keys.append(agent_sensor_name)
-
-        # Code below is ported from interactive_play.py. I'm not sure what it is for.
-        if True:
-            if "pddl_success" in task_config.measurements:
-                task_config.measurements.pddl_success.must_call_stop = False
-            if "rearrange_nav_to_obj_success" in task_config.measurements:
-                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
-                    False
-                )
-            if "force_terminate" in task_config.measurements:
-                task_config.measurements.force_terminate.max_accum_force = -1.0
-                task_config.measurements.force_terminate.max_instant_force = (
-                    -1.0
-                )
-
-        if args.never_end:
-            env_config.max_episode_steps = 0
-
-        if not args.disable_inverse_kinematics:
-            if "arm_action" not in task_config.actions:
-                raise ValueError(
-                    "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
-                )
-            sim_config.agents.main_agent.ik_arm_urdf = (
-                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
-            )
-            task_config.actions.arm_action.arm_controller = "ArmEEAction"
-
-        if args.gui_controlled_agent_index is not None:
-            # make sure gui_controlled_agent_index is valid
-            if not (
-                args.gui_controlled_agent_index >= 0
-                and args.gui_controlled_agent_index < len(sim_config.agents)
-            ):
-                print(
-                    f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
-                    f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
-                )
-                exit()
-
-            # make sure chosen articulated_agent_type is supported
-            gui_agent_key = sim_config.agents_order[
-                args.gui_controlled_agent_index
-            ]
-            if (
-                sim_config.agents[gui_agent_key].articulated_agent_type
-                != "KinematicHumanoid"
-            ):
-                print(
-                    f"Selected agent for GUI control is of type {sim_config.agents[gui_agent_key].articulated_agent_type}, "
-                    "but only KinematicHumanoid is supported at the moment."
-                )
-                exit()
-
-            # avoid camera sensors for GUI-controlled agents
-            gui_controlled_agent_config = get_agent_config(
-                sim_config, agent_id=args.gui_controlled_agent_index
-            )
-            gui_controlled_agent_config.sim_sensors.clear()
-
-            lab_sensor_names = ["has_finished_oracle_nav"]
-            for lab_sensor_name in lab_sensor_names:
-                sensor_name = (
-                    lab_sensor_name
-                    if len(sim_config.agents) == 1
-                    else (f"{gui_agent_key}_{lab_sensor_name}")
-                )
-                if sensor_name in task_config.lab_sensors:
-                    task_config.lab_sensors.pop(sensor_name)
-
-            task_measurement_names = [
-                "does_want_terminate",
-                "bad_called_terminate",
-            ]
-            for task_measurement_name in task_measurement_names:
-                measurement_name = (
-                    task_measurement_name
-                    if len(sim_config.agents) == 1
-                    else (f"{gui_agent_key}_{task_measurement_name}")
-                )
-                if measurement_name in task_config.measurements:
-                    task_config.measurements.pop(measurement_name)
-
-            sim_sensor_names = ["head_depth", "head_rgb"]
-            for sensor_name in sim_sensor_names + lab_sensor_names:
-                sensor_name = (
-                    sensor_name
-                    if len(sim_config.agents) == 1
-                    else (f"{gui_agent_key}_{sensor_name}")
-                )
-                if sensor_name in gym_obs_keys:
-                    gym_obs_keys.remove(sensor_name)
-
-            # use humanoidjoint_action for GUI-controlled KinematicHumanoid
-            # for example, humanoid oracle-planner-based policy uses following actions:
-            # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
-            task_actions = task_config.actions
-            action_prefix = (
-                "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
-            )
-            gui_agent_actions = [
-                action_key
-                for action_key in task_actions.keys()
-                if action_key.startswith(action_prefix)
-            ]
-            for action_key in gui_agent_actions:
-                task_actions.pop(action_key)
-
-            task_actions[
-                f"{action_prefix}humanoidjoint_action"
-            ] = HumanoidJointActionConfig()
-
-    driver = SandboxDriver(
-        args,
-        config,
-        gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
-        app_renderer._text_drawer,
-    )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(config.habitat.simulator.agents) == 1
-        and args.gui_controlled_agent_index is not None
-    ):
-        assert driver.get_sim().renderer is None
-
-    gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
-
-    gui_app_wrapper.exec()
-
-    driver.close()

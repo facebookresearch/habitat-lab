@@ -4,12 +4,32 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
+# temp until hitl framework is a proper package
+def add_hitl_framework_import_path():
+    import os
+    import sys
+
+    current_script_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = os.path.abspath(
+        os.path.join(current_script_directory, "../../siro_sandbox/")
+    )
+    sys.path.append(parent_directory)
+
+
+add_hitl_framework_import_path()
+
+import hitl_main
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
+from app_states.app_state_tutorial import AppStateTutorial
 from camera_helper import CameraHelper
 from controllers.gui_controller import GuiHumanoidController
 from gui_navigation_helper import GuiNavigationHelper
+from hitl_arg_parser import create_hitl_arg_parser
+
+# from hydra_helper import register_hydra_plugins  # coming soon
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
@@ -17,15 +37,28 @@ from utils.hablab_utils import (
     get_grasped_objects_idxs,
 )
 
+import habitat_baselines
+
 
 class AppStateRearrange(AppState):
+    """
+    A user-controlled human and policy-controlled robot must accomplish a collaborative rearrangement task in HSSD scenes.
+
+    See examples/siro_sandbox/README.md for more about AppStates and HITL apps.
+
+    Overview of the main pieces of this class:
+    * sim_update: per-frame entrypoint. Step the habitat env, update the camera and help text, and restart episodes as necessary.
+    * _update_task: visualize the task for the user, namely, show a 3D navigation hint to the target objects.
+    * _update_grasping_and_set_act_hints: Update the user-controlled humanoid agent, e.g. grasp a nearby object when the user presses spacebar. Includes "click-to-walk": see get_humanoid_walk_hints_from_ray_cast and set_act_hints.
+    * record_state: collect some key task-specific data. Note: aside from this function, most habitat-lab built-in metrics are collected automatically by the HITL framework.
+    """
+
     def __init__(
         self,
         sandbox_service,
-        gui_agent_ctrl,
     ):
         self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = gui_agent_ctrl
+        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
 
         # cache items from config; config is expensive to access at runtime
         config = self._sandbox_service.config
@@ -433,6 +466,82 @@ class AppStateRearrange(AppState):
 
         self._update_help_text()
 
-    def is_app_state_done(self):
-        # terminal neverending app state
-        return False
+
+class AppStateRearrangeTutorialTransition(AppState):
+    """
+    Helper class to manage the transition from the tutorial AppState to the rearrange AppState.
+
+    Each episode starts with the tutorial (a camera flythrough sequence with help text), and then we switch to rearrange when the tutorial ends.
+    """
+
+    def __init__(self, sandbox_service):
+        self._app_state_rearrange = AppStateRearrange(sandbox_service)
+        self._app_state_tutorial = AppStateTutorial(sandbox_service)
+        self._is_tutorial_active = False
+        self._only_show_tutorial_once = True
+        self._is_first_reset = True
+
+    def _start_tutorial(self):
+        assert not self._is_tutorial_active
+        final_eye_pos = self._app_state_rearrange._camera_helper.get_eye_pos()
+        final_lookat_pos = (
+            self._app_state_rearrange._camera_helper.get_lookat_pos()
+        )
+        self._app_state_tutorial.on_enter(final_eye_pos, final_lookat_pos)
+        self._is_tutorial_active = True
+
+    def _get_active_app_state(self):
+        return (
+            self._app_state_tutorial
+            if self._is_tutorial_active
+            else self._app_state_rearrange
+        )
+
+    def sim_update(self, dt, post_sim_update_dict):
+        self._get_active_app_state().sim_update(dt, post_sim_update_dict)
+
+        if (
+            self._is_tutorial_active
+            and self._app_state_tutorial._tutorial.is_completed()
+        ):
+            self._is_tutorial_active = False
+
+    def on_environment_reset(self, episode_recorder_dict):
+        self._app_state_rearrange.on_environment_reset(episode_recorder_dict)
+        self._app_state_tutorial.on_environment_reset(episode_recorder_dict)
+
+        if self._is_first_reset or not self._only_show_tutorial_once:
+            self._start_tutorial()
+
+        self._is_first_reset = False
+
+    def record_state(self):
+        self._get_active_app_state().record_state()
+
+
+def create_app_state(sandbox_service):
+    app_state_class = (
+        AppStateRearrangeTutorialTransition
+        if sandbox_service.config.rearrange.show_tutorial
+        else AppStateRearrange
+    )
+    return app_state_class(sandbox_service)
+
+
+def main():
+    args = create_hitl_arg_parser().parse_args()
+    # todo: get config using @hydra.main (this requires removal of our legacy command-
+    # line arguments)
+    config_path = args.cfg
+    overrides = args.cfg_opts
+
+    config = habitat_baselines.config.default.get_config(
+        config_path, overrides
+    )
+
+    hitl_main.hitl_main(args, config, create_app_state)
+
+
+if __name__ == "__main__":
+    # register_hydra_plugins()  # coming soon
+    main()
