@@ -105,10 +105,7 @@ class AppStatePickThrowVr(AppState):
 
         self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
 
-        # choose initial value for toggle
-        self._is_remote_active_toggle = (
-            self._sandbox_service.hitl_config.remote_gui_mode
-        )
+        self._is_remote_active_toggle = False
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
 
