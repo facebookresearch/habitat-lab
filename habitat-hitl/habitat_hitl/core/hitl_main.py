@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
+from habitat_hitl._internal.hitl_driver import HitlDriver
 from hb_config_helper import update_config
 from magnum.platform.glfw import Application
-from sandbox_app import SandboxDriver
 from utils.gui.gui_application import GuiApplication
 from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 
@@ -79,7 +79,7 @@ def hitl_main(config, create_app_state_lambda=None):
         debug_third_person_height=debug_third_person_height,
     )
 
-    driver = SandboxDriver(
+    driver = HitlDriver(
         config,
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),

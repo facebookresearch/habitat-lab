@@ -63,7 +63,7 @@ def requires_habitat_sim_with_bullet(callable_):
 
 
 @requires_habitat_sim_with_bullet
-class SandboxDriver(GuiAppDriver):
+class HitlDriver(GuiAppDriver):
     def __init__(
         self,
         config,
@@ -405,7 +405,7 @@ class SandboxDriver(GuiAppDriver):
         ) % 1.0
 
         # Navmesh visualization only works in the debug third-person view
-        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
+        # (--debug-third-person-width), not the main viewport. Navmesh
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
         if self._gui_input.get_key_down(GuiInput.KeyNS.N):

@@ -8,7 +8,7 @@ The HITL framework consists of the `habitat-hitl` Python library, HITL example [
 * The library is logically divided into a Habitat environment wrapper (`HitlDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).
 * `HitlDriver`
     * It creates a `habitat.Env` instance.
-    * Camera sensors are rendered by the `habitat.Env` instance in the usual way; see `self.obs = self.env.step(action)` in `SandboxDriver.sim_update`.
+    * Camera sensors are rendered by the `habitat.Env` instance in the usual way; see `self.obs = self.env.step(action)` in `HitlDriver.sim_update`.
     * This class is provided a `gui_input` object that encapsulates OS input (keyboard and mouse input). HITL apps should avoid making direct calls to PyGame, GLFW, and other OS-specific APIs.
     * `sim_update` returns a `post_sim_update_dict` that contains info needed by the app renderer (below). E.g. a gfx-replay keyframe and a camera transform for rendering, plus optional "debug images" to be shown to the user.
     * This class also has access to a `debug_line_render` instance for visualizing lines in the GUI (the lines aren't rendered into camera sensors). This access is somewhat hacky; future versions of HITL apps will likely convey lines via `post_sim_update_dict` instead of getting direct access to this object.
@@ -16,7 +16,7 @@ The HITL framework consists of the `habitat-hitl` Python library, HITL example [
 * `GuiApplication`
     * manages the OS window (via GLFW for now), including OS-input-handling (keyboard and mouse) and updating the display (invoking the renderer).
 * `ReplayGuiAppRenderer`
-    * `ReplayGuiAppRenderer` is a renderer. It receives the `post_sim_update_dict` from `SandboxDriver` and updates the OS window by rendering the scene from the requested camera pose.
+    * `ReplayGuiAppRenderer` is a renderer. It receives the `post_sim_update_dict` from `HitlDriver` and updates the OS window by rendering the scene from the requested camera pose.
     * `ReplayGuiAppRenderer` is application-agnostic. Whereas the behavior of `HitlDriver` is customized by the externally-provided AppState, no external customization of `ReplayGuiAppRenderer` is required. All HITL apps use our provided combination of 3D model rendering, 3D debug lines, 2D debug images, and 2D on-screen help text.
 
 ## Directory structure
