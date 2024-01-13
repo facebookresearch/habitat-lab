@@ -7,18 +7,25 @@
 from abc import ABC
 
 
-# See also SandboxDriver. SandboxDriver loads a habitat env, including scene/episode/task/agent/policy. A derived AppState class drives use-case-specific behavior for the HITL tool during each env step, including processing user input and manipulating the sim state. In the future, SandboxDriver may manage the transition between AppStates, e.g. transition from a non-interactive tutorial state to a user-controlled-agent state.
-#
-# AppState is conceptually an ABC, but all the current methods are optional so there's no use of @abstractmethod here yet.
 class AppState(ABC):
-    # This is where the main app state logic should go. The AppState should update the sim state and also populate post_sim_update_dict["cam_transform"], at a minimum. The AppState can also record to _sandbox_service.step_recorder here.
+    """
+    Base class for implementing a HITL app. See habitat-hitl/README.md.
+    """
+
     def sim_update(self, dt, post_sim_update_dict):
-        pass
+        """
+        A hook called continuously (for each "frame"), before updating/rendering the app's GUI window.
+        This is where the main app state logic should go. The AppState should update the sim state and also populate post_sim_update_dict["cam_transform"], at a minimum. The AppState can also record to _sandbox_service.step_recorder here.
+        """
 
-    # The AppState should reset internal members as necessary for the new episode. It can record arbitrary per-episode data to episode_recorder_dict, e.g. episode_recorder_dict["mymetric"] = my_metric, but beware episode_recorder_dict may be None.
     def on_environment_reset(self, episode_recorder_dict):
-        pass
+        """
+        A hook called on environment reset (starting a new episode).
+        The AppState should reset internal members as necessary. It can record arbitrary per-episode data to episode_recorder_dict, e.g. episode_recorder_dict["mymetric"] = my_metric, but beware episode_recorder_dict will be None when data-collection is not enabled/configured.
+        """
 
-    # This is a good place to record using _sandbox_service.step_recorder because this function will be skipped if the app isn't recording. However, an AppState is free to record at any time (in other methods, too).
     def record_state(self):
-        pass
+        """
+        A hook called on each environment step.
+        This is a good place to record using _sandbox_service.step_recorder because this function will be skipped if the app isn't recording. However, an AppState is free to record at any time (in other methods, too).
+        """
