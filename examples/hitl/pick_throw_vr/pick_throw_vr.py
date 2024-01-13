@@ -16,7 +16,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
-from habitat_hitl.environment.avatar_switcher import GuiAvatarSwitchHelper
+from habitat_hitl.environment.avatar_switcher import AvatarSwitcher
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
@@ -86,7 +86,7 @@ class AppStatePickThrowVr(AppState):
             self._get_gui_agent_feet_height(),
         )
 
-        self._avatar_switch_helper = GuiAvatarSwitchHelper(
+        self._avatar_switch_helper = AvatarSwitcher(
             self._app_service, self._gui_agent_ctrl
         )
 

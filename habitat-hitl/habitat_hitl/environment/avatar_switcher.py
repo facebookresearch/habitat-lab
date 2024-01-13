@@ -62,7 +62,7 @@ def find_files(
     return filepaths
 
 
-class GuiAvatarSwitchHelper:
+class AvatarSwitcher:
     """Helper for changing the active humanoid model, along with its animations and controller."""
 
     def __init__(
