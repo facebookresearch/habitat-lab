@@ -1,0 +1,3 @@
+graft habitat-hitl/config
+graft habitat-hitl/core/fonts
+include requirements.txt
