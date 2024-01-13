@@ -34,6 +34,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import (
+    BaseRecorder,
     NullRecorder,
     StepRecorder,
     save_as_gzip,
@@ -123,8 +124,8 @@ class HitlDriver(GuiAppDriver):
 
         self._save_filepath_base = data_collection_config.save_filepath_base
         self._save_episode_record = data_collection_config.save_episode_record
-        self._step_recorder = (
-            StepRecorder() if self._save_episode_record else NullRecorder()
+        self._step_recorder: BaseRecorder = (
+            StepRecorder() if self._save_episode_record else NullRecorder()  # type: ignore
         )
         self._episode_recorder_dict = None
 
@@ -266,7 +267,7 @@ class HitlDriver(GuiAppDriver):
             self._record_action(action)
             self._app_state.record_state()
             self._record_metrics(self._get_recent_metrics())
-            self._step_recorder.finish_step()
+            self._step_recorder.finish_step()  # type: ignore
 
     def _find_episode_save_filepath_base(self):
         retval = (
@@ -275,7 +276,7 @@ class HitlDriver(GuiAppDriver):
         return retval
 
     def _save_episode_recorder_dict(self):
-        if not len(self._step_recorder._steps):
+        if not len(self._step_recorder._steps):  # type: ignore
             return
 
         filepath_base = self._find_episode_save_filepath_base()
@@ -294,8 +295,8 @@ class HitlDriver(GuiAppDriver):
         ep_dict["scene_id"] = self._episode_helper.current_episode.scene_id
         ep_dict["episode_id"] = self._episode_helper.current_episode.episode_id
 
-        self._step_recorder.reset()
-        ep_dict["steps"] = self._step_recorder._steps
+        self._step_recorder.reset()  # type: ignore
+        ep_dict["steps"] = self._step_recorder._steps  # type: ignore
 
         self._episode_recorder_dict = ep_dict
 
