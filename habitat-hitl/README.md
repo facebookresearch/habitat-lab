@@ -13,11 +13,10 @@ The framework builds on `habitat-lab` and `habitat-baselines`. It provides wrapp
 - [Human-in-the-loop (HITL) Framework](#human-in-the-loop-hitl-framework)
   - [System Requirements](#system-requirements)
   - [Installation](#installation)
-  - [Minimal HITL application](#minimal-hitl-application)
   - [Example HITL applications](#example-hitl-applications)
   - [VR HITL applications](#vr-hitl-applications)
-  - [AppService and helpers](#appservice-and-helpers)
   - [Configuration](#configuration)
+  - [Minimal HITL application](#minimal-hitl-application)
 
 ## System Requirements
 * **Operating System:** macOS or Linux. We've tested Fedora but other flavors should also work.
@@ -44,13 +43,6 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
     --data-path data/
     ```
 
-## Minimal HITL application
-
-Build a minimal desktop HITL app by implementing a derived AppState (`MyAppState`), loading a suitable Hydra config, and calling `hitl_main.hitl_main(config, lambda: MyAppState())`. Let's take a closer look:
-```
-todo: full python source for a minimal HITL app, plus config yaml source
-```
-
 ## Example HITL applications
 
 Check out our example HITL apps [here](../examples/hitl/).
@@ -61,10 +53,76 @@ Use these as additional reference to create your own HITL application. we recomm
 
 The HITL framework can be used to build desktop applications (controlled with keyboard/mouse) as well as **VR** applications. See our [Pick_throw_vr](../examples/hitl/pick_throw_vr/README.md) example application.
 
-## AppService and helpers
-
-todo
-
 ## Configuration
 
 HITL apps use Hydra for configuration, for example, to control the desktop window width and height. See [`hitl_defaults.yaml`](./config/hitl_defaults.yaml) as well as each example app's individual config, e.g. [`pick_throw_vr.yaml`](../examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml). See also [`habitat-lab/habitat/config/README.md`](../habitat-lab/habitat/config/README.md).
+
+## Minimal HITL application
+
+Build a minimal desktop HITL app by implementing a derived AppState, loading a suitable Hydra config, and calling `hitl_main`. Let's take a closer look:
+```
+# minimal_cfg.yaml
+
+# Read more about Hydra at habitat-lab/habitat/config/README.md.
+# @package _global_
+
+defaults:
+  # We load the `pop_play` Habitat baseline featuring a Spot robot
+  # and a humanoid in HSSD scenes. See habitat-baselines/README.md.
+  - social_rearrange: pop_play
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_
+
+```
+```
+# minimal.py
+
+import hydra
+import magnum
+
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.gui_input import GuiInput
+
+class AppStateMinimal(AppState):
+    """
+    A minimal HITL app that loads and steps a Habitat environment, with
+    a fixed overhead camera.
+    """
+    def __init__(self, app_service):
+        self._app_service = app_service
+
+    def sim_update(self, dt, post_sim_update_dict):
+        """
+        The HITL framework calls sim_update continuously (for each
+        "frame"), before rendering the app's GUI window.
+        """
+        # run the episode until it ends
+        if not self._app_service.env.episode_over:
+            self._app_service.compute_action_and_step_env()
+
+        # set the camera for the main 3D viewport
+        post_sim_update_dict["cam_transform"] = magnum.Matrix4.look_at(
+            eye=magnum.Vector3(-20, 20, -20),
+            target=magnum.Vector3(0, 0, 0),
+            up=magnum.Vector3(0, 1, 0),
+        )
+
+        # exit when the ESC key is pressed
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            post_sim_update_dict["application_exit"] = True
+
+
+
+@hydra.main(version_base=None, config_path="./", config_name="minimal_cfg")
+def main(config):
+    hitl_main(config, lambda app_service: AppStateMinimal(app_service))
+
+
+if __name__ == "__main__":
+    register_hydra_plugins()
+    main()
+```
