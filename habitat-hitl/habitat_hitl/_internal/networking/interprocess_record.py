@@ -6,7 +6,10 @@
 
 import queue
 
-from .multiprocessing_config import Queue, Semaphore
+from habitat_hitl._internal.networking.multiprocessing_config import (
+    Queue,
+    Semaphore,
+)
 
 
 class InterprocessRecord:

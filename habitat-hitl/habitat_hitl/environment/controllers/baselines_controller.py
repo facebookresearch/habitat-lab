@@ -20,8 +20,9 @@ from habitat_baselines.rl.multi_agent.utils import (
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
-
-from .controller_abc import BaselinesController
+from habitat_hitl.environment.controllers.controller_abc import (
+    BaselinesController,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig

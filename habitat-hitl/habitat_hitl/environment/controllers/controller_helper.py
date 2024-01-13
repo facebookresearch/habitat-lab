@@ -8,12 +8,15 @@ from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 
-from .baselines_controller import (
+from habitat_hitl.environment.controllers.baselines_controller import (
     MultiAgentBaselinesController,
     SingleAgentBaselinesController,
 )
-from .controller_abc import Controller
-from .gui_controller import GuiHumanoidController, GuiRobotController
+from habitat_hitl.environment.controllers.controller_abc import Controller
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
+    GuiRobotController,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig

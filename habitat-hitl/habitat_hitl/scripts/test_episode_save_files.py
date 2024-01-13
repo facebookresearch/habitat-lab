@@ -7,7 +7,8 @@
 import argparse
 
 import numpy as np
-from utils.serialize_utils import load_json_gzip, load_pickle_gzip
+
+from habitat_hitl.core.serialize_utils import load_json_gzip, load_pickle_gzip
 
 
 def get_comp_value(a):

@@ -8,7 +8,8 @@ from typing import Tuple
 
 import magnum as mn
 import numpy as np
-from utils.gui.gui_input import GuiInput
+
+from habitat_hitl.core.gui_input import GuiInput
 
 
 class CameraHelper:

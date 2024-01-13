@@ -12,9 +12,14 @@ import threading
 
 import websockets
 
-from . import multiprocessing_config
-from .frequency_limiter import FrequencyLimiter
-from .keyframe_utils import get_empty_keyframe, update_consolidated_keyframe
+from habitat_hitl._internal.networking import multiprocessing_config
+from habitat_hitl._internal.networking.frequency_limiter import (
+    FrequencyLimiter,
+)
+from habitat_hitl._internal.networking.keyframe_utils import (
+    get_empty_keyframe,
+    update_consolidated_keyframe,
+)
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False

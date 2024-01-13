@@ -8,50 +8,45 @@
 See README.md in this directory.
 """
 
-import ctypes
-
-# must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
-import sys
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
-
 import json
 from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 import numpy as np
-from controllers.controller_helper import ControllerHelper
-from episode_helper import EpisodeHelper
-from utils.gui.gui_application import GuiAppDriver
-from utils.gui.gui_input import GuiInput
-from utils.serialize_utils import (
+
+import habitat
+import habitat.gym
+import habitat.tasks.rearrange.rearrange_task
+import habitat_sim
+from habitat_hitl._internal.gui_application import GuiAppDriver
+from habitat_hitl._internal.networking.interprocess_record import (
+    InterprocessRecord,
+)
+from habitat_hitl._internal.networking.networking_process import (
+    launch_networking_process,
+    terminate_networking_process,
+)
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hydra_utils import omegaconf_to_object
+from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.serialize_utils import (
     NullRecorder,
     StepRecorder,
     save_as_gzip,
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
-
-import habitat
-import habitat.gym
-import habitat.tasks.rearrange.rearrange_task
-import habitat_sim
+from habitat_hitl.environment.controllers.controller_helper import (
+    ControllerHelper,
+)
+from habitat_hitl.environment.episode_helper import EpisodeHelper
 
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
-
-from app_service import AppService
-from app_states.app_state_abc import AppState
-from hydra_helper import omegaconf_to_object
-from server.client_message_manager import ClientMessageManager
-from server.interprocess_record import InterprocessRecord
-from server.remote_gui_input import RemoteGuiInput
-from server.server import (
-    launch_networking_process,
-    terminate_networking_process,
-)
 
 
 def requires_habitat_sim_with_bullet(callable_):

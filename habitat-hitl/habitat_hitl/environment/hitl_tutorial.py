@@ -8,16 +8,8 @@
 See README.md in this directory.
 """
 
-import ctypes
 import math
-
-# must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
-import sys
 from math import radians
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
-
 from typing import List, Tuple
 
 import magnum as mn

@@ -5,10 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
-from utils.hablab_utils import get_agent_art_obj_transform
 
 import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 
 
 class GuiNavigationHelper:

@@ -4,43 +4,30 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
-
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
-
 from typing import Final
 
-import hitl_main
 import hydra
 import magnum as mn
 import numpy as np
-from app_states.app_state_abc import AppState
-from camera_helper import CameraHelper
-from controllers.gui_controller import GuiHumanoidController
-from gui_avatar_switch_helper import GuiAvatarSwitchHelper
-from gui_navigation_helper import GuiNavigationHelper
-from gui_pick_helper import GuiPickHelper
-from gui_throw_helper import GuiThrowHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
-from utils.hablab_utils import (
+
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.avatar_switcher import GuiAvatarSwitchHelper
+from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
+)
+from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
+from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
+from habitat_hitl.environment.gui_throw_helper import GuiThrowHelper
+from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
-
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
 COLOR_GRASPABLE: Final[mn.Color3] = mn.Color3(1, 0.75, 0)
@@ -729,7 +716,7 @@ class AppStatePickThrowVr(AppState):
     version_base=None, config_path="config", config_name="pick_throw_vr"
 )
 def main(config):
-    hitl_main.hitl_main(
+    hitl_main(
         config,
         lambda app_service: AppStatePickThrowVr(app_service),
     )

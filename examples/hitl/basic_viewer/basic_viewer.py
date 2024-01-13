@@ -5,28 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
-
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
-
-import hitl_main
 import hydra
 import magnum as mn
-from app_states.app_state_abc import AppState
-from camera_helper import CameraHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
+
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.camera_helper import CameraHelper
 
 
 class AppStateBasicViewer(AppState):
@@ -219,7 +206,7 @@ def main(config):
             "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
         )
 
-    hitl_main.hitl_main(
+    hitl_main(
         config,
         lambda app_service: AppStateBasicViewer(app_service),
     )

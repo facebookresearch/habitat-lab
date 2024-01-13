@@ -4,10 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from app_states.app_state_abc import AppState
-from hitl_tutorial import Tutorial, generate_tutorial
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.hitl_tutorial import Tutorial, generate_tutorial
 
 
 class AppStateTutorial(AppState):

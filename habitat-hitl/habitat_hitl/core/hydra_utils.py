@@ -20,8 +20,8 @@ from habitat_baselines.config.default_structured_configs import (
 class HabitatHitlConfigPlugin(SearchPathPlugin):
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
         search_path.append(
-            provider="siro_sandbox",
-            path="file://examples/siro_sandbox/config",
+            provider="habitat",
+            path="pkg://habitat_hitl/config",
         )
 
 

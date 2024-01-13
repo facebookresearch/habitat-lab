@@ -8,18 +8,17 @@ from typing import Any
 
 import magnum as mn
 import numpy as np
-from utils.gui.gui_input import GuiInput
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.utils import get_aabb
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_sim.physics import (
     CollisionGroupHelper,
     CollisionGroups,
     MotionType,
 )
-
-from .controller_abc import GuiController
 
 
 class GuiRobotController(GuiController):

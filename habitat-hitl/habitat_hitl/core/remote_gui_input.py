@@ -5,8 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
-from server.average_rate_tracker import AverageRateTracker
-from utils.gui.gui_input import GuiInput
+
+from habitat_hitl._internal.networking.average_rate_tracker import (
+    AverageRateTracker,
+)
+from habitat_hitl.core.gui_input import GuiInput
 
 
 class RemoteGuiInput:

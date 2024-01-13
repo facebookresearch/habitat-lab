@@ -8,11 +8,12 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
+from habitat_hitl._internal.gui_application import GuiAppRenderer
+from habitat_hitl._internal.image_framebuffer_drawer import (
+    ImageFramebufferDrawer,
+)
+from habitat_hitl.core.text_drawer import TextDrawer
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
-
-from .gui_application import GuiAppRenderer
-from .image_framebuffer_drawer import ImageFramebufferDrawer
-from .text_drawer import TextDrawer
 
 
 class ReplayGuiAppRenderer(GuiAppRenderer):

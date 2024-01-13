@@ -5,33 +5,22 @@
 # LICENSE file in the root directory of this source tree.
 
 
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
-
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
-
-import hitl_main
 import hydra
 import magnum as mn
 import numpy as np
-from app_states.app_state_abc import AppState
-from app_states.app_state_tutorial import AppStateTutorial
-from camera_helper import CameraHelper
-from controllers.gui_controller import GuiHumanoidController
-from gui_navigation_helper import GuiNavigationHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
-from utils.hablab_utils import (
+
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
+)
+from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
+from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
@@ -527,7 +516,7 @@ def create_app_state(app_service):
     version_base=None, config_path="config", config_name="hitl_rearrange"
 )
 def main(config):
-    hitl_main.hitl_main(config, create_app_state)
+    hitl_main(config, create_app_state)
 
 
 if __name__ == "__main__":

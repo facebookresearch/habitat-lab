@@ -4,12 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+# must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
+import ctypes
+import sys
+
+flags = sys.getdlopenflags()
+sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
+
 import magnum as mn
-from habitat_hitl._internal.hitl_driver import HitlDriver
-from hb_config_helper import update_config
 from magnum.platform.glfw import Application
-from utils.gui.gui_application import GuiApplication
-from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
+
+from habitat_hitl._internal.config_helper import update_config
+from habitat_hitl._internal.gui_application import GuiApplication
+from habitat_hitl._internal.hitl_driver import HitlDriver
+from habitat_hitl._internal.replay_gui_app_renderer import ReplayGuiAppRenderer
 
 
 def _parse_debug_third_person(hitl_config, framebuffer_size):

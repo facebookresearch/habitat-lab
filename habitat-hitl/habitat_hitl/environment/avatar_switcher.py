@@ -7,8 +7,6 @@
 import os
 from typing import Callable, List, Tuple
 
-from app_service import AppService
-from controllers.gui_controller import GuiHumanoidController
 from omegaconf import DictConfig
 
 from habitat.articulated_agent_controllers.humanoid_rearrange_controller import (
@@ -22,6 +20,10 @@ from habitat.tasks.rearrange.articulated_agent_manager import (
 )
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
+)
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
 )
 
 
