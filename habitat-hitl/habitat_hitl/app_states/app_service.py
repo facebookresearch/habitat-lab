@@ -6,7 +6,7 @@
 
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
-class SandboxService:
+class AppService:
     def __init__(
         self,
         config,

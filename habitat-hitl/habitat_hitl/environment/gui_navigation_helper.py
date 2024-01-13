@@ -15,12 +15,12 @@ class GuiNavigationHelper:
     """Helper for controlling an agent from the GUI."""
 
     def __init__(self, gui_service, agent_idx):
-        self._sandbox_service = gui_service
+        self._app_service = gui_service
         self._agent_idx = agent_idx
         self._largest_island_idx = None
 
     def _get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def _draw_nav_hint_from_agent(
         self, forward_dir, end_pos, end_radius, color
@@ -39,7 +39,7 @@ class GuiNavigationHelper:
             end_pos,
             end_radius,
             color,
-            self._sandbox_service.get_anim_fraction(),
+            self._app_service.get_anim_fraction(),
         )
 
     def on_environment_reset(self):
@@ -88,7 +88,7 @@ class GuiNavigationHelper:
                 adjusted_point.y = mn.Vector3(path.points[path_i + 1]).y
             path_points.append(adjusted_point)
 
-        self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.line_render.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
 
@@ -101,7 +101,7 @@ class GuiNavigationHelper:
         (
             target_pos,
             target_rot_quat,
-        ) = self._sandbox_service.remote_gui_input.get_head_pose()
+        ) = self._app_service.remote_gui_input.get_head_pose()
 
         forward_dir = None
         if target_pos and target_rot_quat:
@@ -175,7 +175,7 @@ class GuiNavigationHelper:
         return walk_dir, distance_multiplier, forward_gaze
 
     def _get_target_pos_from_ray_cast(self):
-        ray = self._sandbox_service.gui_input.mouse_ray
+        ray = self._app_service.gui_input.mouse_ray
 
         floor_y = 0.15  # hardcoded to ReplicaCAD
 
@@ -260,7 +260,7 @@ class GuiNavigationHelper:
                 normal = (pos - prev_pos).normalized()
                 color_with_alpha = mn.Color4(color)
                 color_with_alpha[3] *= alpha
-                self._sandbox_service.line_render.draw_circle(
+                self._app_service.line_render.draw_circle(
                     pos, radius, color_with_alpha, num_segments, normal
                 )
             prev_pos = pos

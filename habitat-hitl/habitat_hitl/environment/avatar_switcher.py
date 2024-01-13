@@ -7,9 +7,9 @@
 import os
 from typing import Callable, List, Tuple
 
+from app_service import AppService
 from controllers.gui_controller import GuiHumanoidController
 from omegaconf import DictConfig
-from sandbox_service import SandboxService
 
 from habitat.articulated_agent_controllers.humanoid_rearrange_controller import (
     HumanoidRearrangeController,
@@ -65,10 +65,10 @@ class GuiAvatarSwitchHelper:
 
     def __init__(
         self,
-        sandbox_service: SandboxService,
+        app_service: AppService,
         gui_agent_ctrl: GuiHumanoidController,
     ):
-        self._sandbox_service: SandboxService = sandbox_service
+        self._app_service: AppService = app_service
         self._gui_agent_ctrl: GuiHumanoidController = gui_agent_ctrl
         self._agent_idx: int = self._gui_agent_ctrl._agent_idx
 
@@ -101,8 +101,8 @@ class GuiAvatarSwitchHelper:
 
     def switch_avatar(self):
         """Switch the avatar to a new model."""
-        sim = self._sandbox_service.sim
-        config = self._sandbox_service.config
+        sim = self._app_service.sim
+        config = self._app_service.config
 
         model = self._get_next_model()
 
@@ -156,8 +156,8 @@ class GuiAvatarSwitchHelper:
             walk_pose_path=model[1]
         )
         humanoid_controller.set_framerate_for_linspeed(
-            self._sandbox_service.hitl_config.gui_controlled_agent.lin_speed,
-            self._sandbox_service.hitl_config.gui_controlled_agent.ang_speed,
+            self._app_service.hitl_config.gui_controlled_agent.lin_speed,
+            self._app_service.hitl_config.gui_controlled_agent.ang_speed,
             sim.ctrl_freq,
         )
 

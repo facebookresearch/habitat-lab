@@ -42,9 +42,9 @@ import habitat_sim
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
 
+from app_service import AppService
 from app_states.app_state_abc import AppState
 from hydra_helper import omegaconf_to_object
-from sandbox_service import SandboxService
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
@@ -159,7 +159,7 @@ class SandboxDriver(GuiAppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
-        self._sandbox_service = SandboxService(
+        self._app_service = AppService(
             config,
             self._hitl_config,
             gui_input,
@@ -181,7 +181,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._app_state: AppState = None
         assert create_app_state_lambda is not None
-        self._app_state = create_app_state_lambda(self._sandbox_service)
+        self._app_state = create_app_state_lambda(self._app_service)
 
         self._reset_environment()
 

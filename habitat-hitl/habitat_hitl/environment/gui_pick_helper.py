@@ -16,7 +16,7 @@ class GuiPickHelper:
     """Helper for picking up objects from the GUI."""
 
     def __init__(self, gui_service, agent_idx, agent_feet_height):
-        self._sandbox_service = gui_service
+        self._app_service = gui_service
         self._agent_idx = agent_idx
         self._rom = self._get_sim().get_rigid_object_manager()
         self.obj_ids = self._get_sim()._scene_obj_ids
@@ -24,7 +24,7 @@ class GuiPickHelper:
         self._dist_to_highlight_obj = DIST_HIGHLIGHT
 
     def _get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def _closest_point_and_dist(self, origin, direction_vector, points):
         norm_direction = direction_vector / np.linalg.norm(direction_vector)
@@ -46,7 +46,7 @@ class GuiPickHelper:
         this_target_pos = mn.Vector3(this_target_pos)
         box_half_size = 0.20
         box_offset = mn.Vector3(box_half_size, box_half_size, box_half_size)
-        self._sandbox_service.line_render.draw_box(
+        self._app_service.line_render.draw_box(
             this_target_pos - box_offset,
             this_target_pos + box_offset,
             color,
@@ -55,15 +55,15 @@ class GuiPickHelper:
         # draw can grasp area
         can_grasp_position = mn.Vector3(this_target_pos)
         can_grasp_position[1] = self.agent_feet_height
-        self._sandbox_service.line_render.draw_circle(
+        self._app_service.line_render.draw_circle(
             can_grasp_position,
-            self._sandbox_service.hitl_config.can_grasp_place_threshold,
+            self._app_service.hitl_config.can_grasp_place_threshold,
             mn.Color3(255 / 255, 255 / 255, 0),
             24,
         )
 
     def viz_and_get_pick_object(self):
-        ray = self._sandbox_service.gui_input.mouse_ray
+        ray = self._app_service.gui_input.mouse_ray
         if (
             not ray
             or ray.direction.y >= 0

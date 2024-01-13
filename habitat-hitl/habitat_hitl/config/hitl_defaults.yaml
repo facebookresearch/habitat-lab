@@ -31,7 +31,7 @@ habitat_hitl:
   # Visualize camera sensors in the app GUI. For example, to visualize agent1's head depth sensor, include "agent_1_head_depth" in this list.
   debug_images: []
 
-  # The speed of the default animation timer. See sandbox_service.get_anim_fraction. Currently used to animate some debug lines.
+  # The speed of the default animation timer. See app_service.get_anim_fraction. Currently used to animate some debug lines.
   viz_animation_speed: 2.0
 
   # Hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. Mainly used for camera first-person mode (below).

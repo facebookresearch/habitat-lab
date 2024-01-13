@@ -13,14 +13,14 @@ from utils.gui.text_drawer import TextOnScreenAlignment
 class AppStateTutorial(AppState):
     def __init__(
         self,
-        sandbox_service,
+        app_service,
     ):
-        self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
+        self._app_service = app_service
+        self._gui_agent_ctrl = self._app_service.gui_agent_controller
         self._cam_transform = None
 
     def get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
@@ -57,10 +57,10 @@ class AppStateTutorial(AppState):
 
         self._tutorial.update(dt)
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
             self._tutorial.skip_stage()
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.Q):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Q):
             while not self._tutorial.is_completed():
                 self._tutorial.skip_stage()
 
@@ -72,13 +72,13 @@ class AppStateTutorial(AppState):
     def _update_help_text(self):
         controls_str = self._tutorial.get_help_text()
         if len(controls_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
         tutorial_str = self._tutorial.get_display_text()
         if len(tutorial_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 tutorial_str,
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,

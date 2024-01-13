@@ -15,7 +15,7 @@ class AppState(ABC):
     def sim_update(self, dt, post_sim_update_dict):
         """
         A hook called continuously (for each "frame"), before updating/rendering the app's GUI window.
-        This is where the main app state logic should go. The AppState should update the sim state and also populate post_sim_update_dict["cam_transform"], at a minimum. The AppState can also record to _sandbox_service.step_recorder here.
+        This is where the main app state logic should go. The AppState should update the sim state and also populate post_sim_update_dict["cam_transform"], at a minimum. The AppState can also record to _app_service.step_recorder here.
         """
 
     def on_environment_reset(self, episode_recorder_dict):
@@ -27,5 +27,5 @@ class AppState(ABC):
     def record_state(self):
         """
         A hook called on each environment step.
-        This is a good place to record using _sandbox_service.step_recorder because this function will be skipped if the app isn't recording. However, an AppState is free to record at any time (in other methods, too).
+        This is a good place to record using _app_service.step_recorder because this function will be skipped if the app isn't recording. However, an AppState is free to record at any time (in other methods, too).
         """

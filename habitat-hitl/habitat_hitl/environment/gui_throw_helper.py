@@ -14,12 +14,12 @@ class GuiThrowHelper:
     """Helper for throwing objects from the GUI."""
 
     def __init__(self, gui_service, agent_idx):
-        self._sandbox_service = gui_service
+        self._app_service = gui_service
         self._agent_idx = agent_idx
         self._largest_island_idx = None
 
     def _get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def compute_velocity_throw(self, start_point, end_point, gravity=-9.8):
         displacement = end_point - start_point
@@ -46,7 +46,7 @@ class GuiThrowHelper:
         path_color = mn.Color3(153 / 255, 0, 255 / 255)
         path_endpoint_radius = 0.12
 
-        ray = self._sandbox_service.gui_input.mouse_ray
+        ray = self._app_service.gui_input.mouse_ray
 
         floor_y = 0.15  # hardcoded to ReplicaCAD
 
@@ -66,10 +66,10 @@ class GuiThrowHelper:
         vel_vector, path_points = self.compute_velocity_throw(
             robot_root, target_on_floor
         )
-        self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.line_render.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
-        self._sandbox_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.line_render.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
 
