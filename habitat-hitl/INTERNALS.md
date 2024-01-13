@@ -2,7 +2,7 @@
 
 This doc is aimed at developers looking to understand and contribute to the framework.
 
-The HITL framework consists of the `habitat-hitl` Python library, HITL example [desktop applications](../examples/hitl/), and our Unity-based [VR client](../examples/hitl/pick_throw_vr/README.md#vr).
+The HITL framework consists of the `habitat-hitl` Python library, example [desktop applications](../examples/hitl/), and our Unity-based [VR client](../examples/hitl/pick_throw_vr/README.md#vr).
 
 ## Library architecture
 * The library is logically divided into a Habitat environment wrapper (`HitlDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).

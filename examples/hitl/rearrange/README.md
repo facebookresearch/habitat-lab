@@ -5,7 +5,7 @@ The user-controlled human and policy-controlled robot must accomplish a collabor
 This app is similar to the human-in-the-loop tool used in the [Habitat 3.0 paper](https://arxiv.org/abs/2310.13724) to evaluate policies against real human collaborators.
 
 ## Installing and using HITL apps
-See [siro_sandbox/README.md](../../siro_sandbox/README.md).
+See [habitat_hitl/README.md](../../../habitat-hitl/README.md).
 
 ## Example launch command
 
