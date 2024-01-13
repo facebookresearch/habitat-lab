@@ -48,7 +48,10 @@ from hydra_helper import omegaconf_to_object
 from server.client_message_manager import ClientMessageManager
 from server.interprocess_record import InterprocessRecord
 from server.remote_gui_input import RemoteGuiInput
-from server.server import launch_server_process, terminate_server_process
+from server.server import (
+    launch_networking_process,
+    terminate_networking_process,
+)
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -202,14 +205,14 @@ class HitlDriver(GuiAppDriver):
             # See also server.py max_send_rate
             max_steps_ahead = 5
             self._interprocess_record = InterprocessRecord(max_steps_ahead)
-            launch_server_process(self._interprocess_record)
+            launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
                 self._interprocess_record, line_render
             )
 
     def _check_terminate_server(self):
         if self.network_server_enabled:
-            terminate_server_process()
+            terminate_networking_process()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset  # type: ignore

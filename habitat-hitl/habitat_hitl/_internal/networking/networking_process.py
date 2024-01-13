@@ -19,14 +19,14 @@ from .keyframe_utils import get_empty_keyframe, update_consolidated_keyframe
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
 
-server_process = None
+networking_process = None
 exit_event = None
 
 
-def launch_server_process(interprocess_record):
+def launch_networking_process(interprocess_record):
     # see multiprocessing_config to switch between real and dummy multiprocessing
 
-    global server_process
+    global networking_process
     global exit_event
 
     # multiprocessing.dummy.Process is actually a thread and requires special logic
@@ -35,23 +35,23 @@ def launch_server_process(interprocess_record):
         threading.Event() if multiprocessing_config.use_dummy else None
     )
 
-    server_process = multiprocessing_config.Process(
-        target=server_main, args=(interprocess_record, exit_event)
+    networking_process = multiprocessing_config.Process(
+        target=networking_main, args=(interprocess_record, exit_event)
     )
-    server_process.start()
+    networking_process.start()
 
 
-def terminate_server_process():
-    global server_process
+def terminate_networking_process():
+    global networking_process
     global exit_event
     if multiprocessing_config.use_dummy:
         if exit_event:
             exit_event.set()
             exit_event = None
     else:
-        if server_process:
-            server_process.terminate()
-            server_process = None
+        if networking_process:
+            networking_process.terminate()
+            networking_process = None
 
 
 def create_ssl_context():
@@ -63,25 +63,25 @@ def create_ssl_context():
     return ssl_context
 
 
-class Server:
+class NetworkManager:
     """
     This class handles client connections, including sending a stream of keyframes and
     receiving a stream of client states.
 
-    When the server has no clients, async check_keyframe_queue runs continuously (an
+    When NetworkManager has no clients, async check_keyframe_queue runs continuously (an
     infinite loop with an asyncio.sleep(0.02) on each iteration). Its main job is
     to extract keyframes from the multiprocess queue and consolidate them into
     self._consolidated_keyframe.
 
-    When the server has a client, check_keyframe_queue will also send each incremental
+    When NetworkManager has a client, check_keyframe_queue will also send each incremental
     keyframe to the client.
 
-    Also when the server has a client, async receive_client_states will run continuously.
+    Also when NetworkManager has a client, async receive_client_states will run continuously.
     `async for message in websocket` runs until the websocket closes, essentially
     awaiting each incoming message.
 
     These continuously-running async methods are run via the asyncio event loop (see
-    server_main).
+    networking_main).
 
     A network error (e.g. closed socket) will result in an exception handled either in
     check_keyframe_queue or serve (the caller of receive_client_states). The error is
@@ -237,29 +237,29 @@ class Server:
             self.handle_disconnect()
 
 
-def server_main(interprocess_record, exit_event):
+def networking_main(interprocess_record, exit_event):
     global use_ssl
 
     if multiprocessing_config.use_dummy:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    server_obj = Server(interprocess_record, exit_event)
-    server_lambda = lambda ws, path: server_obj.serve(ws)
+    network_mgr = NetworkManager(interprocess_record, exit_event)
+    network_mgr_lambda = lambda ws, path: network_mgr.serve(ws)
     ssl_context = create_ssl_context() if use_ssl else None
     start_server = websockets.serve(
-        server_lambda, "0.0.0.0", 8888, ssl=ssl_context
+        network_mgr_lambda, "0.0.0.0", 8888, ssl=ssl_context
     )
 
     check_keyframe_queue_task = asyncio.ensure_future(
-        server_obj.check_keyframe_queue()
+        network_mgr.check_keyframe_queue()
     )
 
     asyncio.get_event_loop().run_until_complete(start_server)
-    print("Server started on server thread. Waiting for clients...")
+    print("NetworkManager started on server thread. Waiting for clients...")
     while not (exit_event and exit_event.is_set()):
         asyncio.get_event_loop().run_until_complete(
             asyncio.sleep(1.0)
         )  # todo: investigate what sleep duration does here
     check_keyframe_queue_task.cancel()
-    print("server_main finished")
+    print("networking_main finished")
