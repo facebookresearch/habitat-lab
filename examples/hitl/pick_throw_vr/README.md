@@ -29,7 +29,7 @@ This is an example HITL application that allows a user to interact with a scene,
     - [Slow Performance](#slow-performance)
 
 ## Installing and using HITL apps
-See [habitat_hitl/README.md](../../../habitat-hitl/README.md).
+See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 
 ## Example launch command (mouse/keyboard)
 

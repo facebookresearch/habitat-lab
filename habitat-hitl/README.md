@@ -47,7 +47,7 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
 
 Check out our example HITL apps [here](../examples/hitl/).
 
-Use these as additional reference to create your own HITL application. we recommend starting by copy-pasting one of the example application folders like `hitl/pick_throw_vr/` into your own git repository, for example `my_repo/my_pick_throw_vr/`.
+Use these as reference to create your own HITL application. we recommend starting by copy-pasting one of the example application folders like `hitl/pick_throw_vr/` into your own git repository, for example `my_repo/my_pick_throw_vr/`.
 
 ## VR HITL applications
 
