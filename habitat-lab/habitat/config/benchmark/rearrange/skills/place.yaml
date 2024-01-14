@@ -17,6 +17,7 @@ defaults:
     - end_effector_to_goal_distance
     - object_to_goal_distance
     - obj_at_goal
+    - obj_at_receptacle
     - place_success
     - place_reward
     - num_steps
