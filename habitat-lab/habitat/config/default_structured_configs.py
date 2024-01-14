@@ -73,6 +73,7 @@ __all__ = [
     "ForceTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
+    "ObjAtReceptacleMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
     "RotDistToGoalMeasurementConfig",
     "PddlStageGoalsMeasurementConfig",
@@ -1198,6 +1199,18 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class ObjAtReceptacleMeasurementConfig(MeasurementConfig):
+    r"""
+    The measure is a dictionary of target indexes to float. The values are 1 if the object is placed on the target receptacle.
+
+    :property dummy:
+    """
+    type: str = "ObjAtReceptacle"
+    height_diff_threshold: float = 0.15
+    surface_height_diff_threshold: float = 0.15
+
+
+@dataclass
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the place task.
@@ -1207,6 +1220,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     :property drop_pen: The penalty for dropping the object.
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    :property obj_at_receptacle_success: If true, we only check if the object is in the nearby receptacle.
     """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
@@ -1223,15 +1237,18 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    obj_at_receptacle_success: bool = False
 
 
 @dataclass
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its end effector within ee_resting_success_threshold of its resting position.
+    :property obj_at_receptacle_success: If true, we only check if the object is in the nearby receptacle.
     """
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
+    obj_at_receptacle_success: bool = False
 
 
 @dataclass
@@ -1469,7 +1486,6 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
-
     # The minimum distance between the agents at start. If < 0
     # there is no minimal distance
     min_distance_start_agents: float = -1.0
@@ -2502,6 +2518,12 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.obj_at_receptacle",
+    group="habitat/task/measurements",
+    name="obj_at_receptacle",
+    node=ObjAtReceptacleMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",

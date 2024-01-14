@@ -5,6 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
+import numpy as np
+
+import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -17,6 +21,62 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RobotForce,
 )
 from habitat.tasks.rearrange.utils import rearrange_logger
+
+
+@registry.register_measure
+class ObjAtReceptacle(Measure):
+    """
+    Returns 1 if the agent has called the stop action and 0 otherwise.
+    """
+
+    cls_uuid: str = "obj_at_receptacle"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjAtReceptacle.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        idxs, goal_pos = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        cur_obj_pos = scene_pos[idxs]
+
+        # Compute the height difference
+        height_diff = np.linalg.norm(
+            cur_obj_pos[:, [1]] - goal_pos[:, [1]], ord=2, axis=-1
+        )
+
+        surface_height_diff = []
+        for i in range(height_diff.shape[0]):
+            # Cast a ray to see if the object is on the receptacle
+            ray = habitat_sim.geo.Ray()
+            # Only support one object at a time
+            ray.origin = mn.Vector3(cur_obj_pos[i])
+            # Cast a ray from top to bottom
+            ray.direction = mn.Vector3(0, -1.0, 0)
+            raycast_results = self._sim.cast_ray(ray)
+            if raycast_results.has_hits():
+                surface_height_diff.append(
+                    abs(raycast_results.hits[0].point[1] - goal_pos[i, 1])
+                )
+            else:
+                surface_height_diff.append(-1.0)
+
+        # Get the metric
+        self._metric = {
+            str(i): height_diff[i] < self._config.height_diff_threshold
+            and surface_height_diff[i] != -1
+            and surface_height_diff[i]
+            < self._config.surface_height_diff_threshold
+            for i in range(height_diff.shape[0])
+        }
 
 
 @registry.register_measure
@@ -35,16 +95,17 @@ class PlaceReward(RearrangeReward):
         return PlaceReward.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                ObjectToGoalDistance.cls_uuid,
-                ObjAtGoal.cls_uuid,
-                EndEffectorToRestDistance.cls_uuid,
-                RobotForce.cls_uuid,
-                ForceTerminate.cls_uuid,
-            ],
-        )
+        measures = [
+            ObjectToGoalDistance.cls_uuid,
+            ObjAtGoal.cls_uuid,
+            EndEffectorToRestDistance.cls_uuid,
+            RobotForce.cls_uuid,
+            ForceTerminate.cls_uuid,
+        ]
+        if self._config.obj_at_receptacle_success:
+            measures += [ObjAtReceptacle.cls_uuid]
+
+        task.measurements.check_measure_dependencies(self.uuid, measures)
         self._prev_dist = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
 
@@ -79,6 +140,12 @@ class PlaceReward(RearrangeReward):
             ObjAtGoal.cls_uuid
         ].get_metric()[str(task.targ_idx)]
 
+        obj_at_receptacle = False
+        if self._config.obj_at_receptacle_success:
+            obj_at_receptacle = task.measurements.measures[
+                ObjAtReceptacle.cls_uuid
+            ].get_metric()[str(task.targ_idx)]
+
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
 
@@ -94,7 +161,11 @@ class PlaceReward(RearrangeReward):
 
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
-            if obj_at_goal:
+            if (
+                obj_at_goal and not self._config.obj_at_receptacle_success
+            ) or (
+                obj_at_receptacle and self._config.obj_at_receptacle_success
+            ):
                 reward += self._config.place_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
@@ -141,13 +212,14 @@ class PlaceSuccess(Measure):
         return PlaceSuccess.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                ObjAtGoal.cls_uuid,
-                EndEffectorToRestDistance.cls_uuid,
-            ],
-        )
+        measures = [
+            ObjAtGoal.cls_uuid,
+            EndEffectorToRestDistance.cls_uuid,
+        ]
+        if self._config.obj_at_receptacle_success:
+            measures += [ObjAtReceptacle.cls_uuid]
+
+        task.measurements.check_measure_dependencies(self.uuid, measures)
         self.update_metric(
             *args,
             episode=episode,
@@ -160,6 +232,13 @@ class PlaceSuccess(Measure):
         is_obj_at_goal = task.measurements.measures[
             ObjAtGoal.cls_uuid
         ].get_metric()[str(task.targ_idx)]
+
+        obj_at_receptacle = False
+        if self._config.obj_at_receptacle_success:
+            obj_at_receptacle = task.measurements.measures[
+                ObjAtReceptacle.cls_uuid
+            ].get_metric()[str(task.targ_idx)]
+
         is_holding = self._sim.grasp_mgr.is_grasped
 
         ee_to_rest_distance = task.measurements.measures[
@@ -168,7 +247,13 @@ class PlaceSuccess(Measure):
 
         self._metric = (
             not is_holding
-            and is_obj_at_goal
+            and (
+                (is_obj_at_goal and not self._config.obj_at_receptacle_success)
+                or (
+                    obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                )
+            )
             and (
                 ee_to_rest_distance < self._config.ee_resting_success_threshold
                 or self._config.ee_resting_success_threshold == -1.0

@@ -31,13 +31,17 @@ habitat:
         max_accum_force: -1.0
         max_instant_force: -1.0
       place_reward:
-        wrong_drop_should_end: True
+        wrong_drop_should_end: False
         drop_pen: 5.0
         count_coll_pen: 0.05
         max_count_colls: 100
         count_coll_end_pen: 5
+        # We want to check if the object is placed on the receptacle
+        obj_at_receptacle_success: True
       place_success:
         ee_resting_success_threshold: -1.0
+        # We want to check if the object is placed on the receptacle
+        obj_at_receptacle_success: True
       obj_at_goal:
         # We want this number to be as small as possible
         # since we want the robot to place the object precisely on the receptacle
@@ -57,8 +61,7 @@ habitat:
         should_clip: True
     success_reward: 10.0
     slack_reward: -0.01
-    # TODO: the initial location of robot is very far
-    # away from the target object
+    # Control Spot robot place location
     spawn_max_dist_to_obj: 1.0
     base_angle_noise: 0.261799
   simulator:
