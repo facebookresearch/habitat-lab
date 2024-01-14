@@ -65,6 +65,7 @@ class PlaceReward(RearrangeReward):
             **kwargs
         )
         reward = self._metric
+
         ee_to_goal_dist = task.measurements.measures[
             EndEffectorToGoalDistance.cls_uuid
         ].get_metric()
@@ -168,5 +169,8 @@ class PlaceSuccess(Measure):
         self._metric = (
             not is_holding
             and is_obj_at_goal
-            and ee_to_rest_distance < self._config.ee_resting_success_threshold
+            and (
+                ee_to_rest_distance < self._config.ee_resting_success_threshold
+                or self._config.ee_resting_success_threshold == -1.0
+            )
         )
