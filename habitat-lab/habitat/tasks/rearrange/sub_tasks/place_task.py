@@ -12,9 +12,6 @@ from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
 
 @registry.register_task(name="RearrangePlaceTask-v0")
 class RearrangePlaceTaskV1(RearrangePickTaskV1):
-    def _get_targ_pos(self, sim):
-        return sim.get_targets()[1]
-
     def _should_prevent_grip(self, action_args):
         # Never allow regrasping
         return (
@@ -32,6 +29,9 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
 
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
 
+        # Here, we teleport the target object to the gripper
+        # The place task is to let Spot place the object in the original
+        # object location
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
 
         self.was_prev_holding = self.targ_idx
