@@ -48,13 +48,15 @@ class ObjAtReceptacle(Measure):
         scene_pos = self._sim.get_scene_pos()
         cur_obj_pos = scene_pos[idxs]
 
-        # Compute the height difference
-        height_diff = np.linalg.norm(
+        # Check 1: Compute the height difference
+        vertical_diff = np.linalg.norm(
             cur_obj_pos[:, [1]] - goal_pos[:, [1]], ord=2, axis=-1
         )
 
-        surface_height_diff = []
-        for i in range(height_diff.shape[0]):
+        # Check 2: Get the first hit object's height, and check if that height
+        # is similar to the goal location's height
+        surface_vertical_diff = []
+        for i in range(vertical_diff.shape[0]):
             # Cast a ray to see if the object is on the receptacle
             ray = habitat_sim.geo.Ray()
             # Only support one object at a time
@@ -63,19 +65,36 @@ class ObjAtReceptacle(Measure):
             ray.direction = mn.Vector3(0, -1.0, 0)
             raycast_results = self._sim.cast_ray(ray)
             if raycast_results.has_hits():
-                surface_height_diff.append(
+                surface_vertical_diff.append(
                     abs(raycast_results.hits[0].point[1] - goal_pos[i, 1])
                 )
             else:
-                surface_height_diff.append(-1.0)
+                surface_vertical_diff.append(-1.0)
+
+        # Check 3: place x, y location to the goal location
+        horizontal_diff = np.linalg.norm(
+            cur_obj_pos[:, [0, 2]] - goal_pos[:, [0, 2]], ord=2, axis=-1
+        )
 
         # Get the metric
         self._metric = {
-            str(i): height_diff[i] < self._config.height_diff_threshold
-            and surface_height_diff[i] != -1
-            and surface_height_diff[i]
-            < self._config.surface_height_diff_threshold
-            for i in range(height_diff.shape[0])
+            str(i): (
+                vertical_diff[i] < self._config.vertical_diff_threshold
+                or self._config.vertical_diff_threshold == -1
+            )
+            and (
+                (
+                    surface_vertical_diff[i] != -1
+                    and surface_vertical_diff[i]
+                    < self._config.surface_vertical_diff_threshold
+                )
+                or self._config.surface_vertical_diff_threshold == -1
+            )
+            and (
+                horizontal_diff[i] < self._config.horizontal_diff_threshold
+                or self._config.horizontal_diff_threshold == -1
+            )
+            for i in range(vertical_diff.shape[0])
         }
 
 
