@@ -8,6 +8,7 @@
 from collections import defaultdict, deque
 
 import numpy as np
+import torch
 from gym import spaces
 
 from habitat.articulated_agents.humanoids import KinematicHumanoid
@@ -1339,3 +1340,77 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             bbox[rmin:rmax, cmin:cmax] = 1.0
 
         return np.float32(bbox)
+
+
+@registry.register_sensor
+class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
+    """Pretrained visual feature sensor for arm rgb camera"""
+
+    cls_uuid: str = "arm_rgb_pretrain_visual_feature_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        try:
+            from transformers import (
+                AutoModel,
+                AutoProcessor,
+                SiglipVisionConfig,
+            )
+        except ImportError as e:
+            raise RuntimeError(
+                "Failed to import transformer package. Please install HuggingFace transformers by the following: pip install git+https://github.com/huggingface/transformers"
+            ) from e
+        self._device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+        configuration = SiglipVisionConfig()
+        self._feature_dim = configuration.hidden_size  # 768
+        self._model_name = "google/siglip-base-patch16-224"
+        super().__init__(config=config)
+        self._sim = sim
+        # Load the model based on HuggingFace's transformers
+        self._model = AutoModel.from_pretrained(self._model_name).to(
+            self._device
+        )
+        self._processor = AutoProcessor.from_pretrained(self._model_name)
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArmRGBPretrainVisualFeatureSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(self._feature_dim,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_rgb"
+            assert target_key in observations
+        else:
+            target_key = f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+            assert target_key in observations
+
+        # Get image
+        rgb_image = observations[target_key]
+
+        # Feed the image into the model
+        rgb_image_input = self._processor(
+            images=rgb_image, return_tensors="pt"
+        )
+        rgb_image_input = rgb_image_input.to(self._device)
+        with torch.no_grad():
+            image_features = self._model.get_image_features(**rgb_image_input)
+
+        # Move the features back to cpu
+        image_features = image_features.to("cpu")
+        image_features = np.array(image_features.squeeze())
+
+        return image_features
