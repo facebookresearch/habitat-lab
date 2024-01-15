@@ -8,14 +8,6 @@
 See README.md in this directory.
 """
 
-import ctypes
-
-# must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
-import sys
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
-
 import json
 from datetime import datetime
 from functools import wraps
