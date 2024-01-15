@@ -1206,8 +1206,9 @@ class ObjAtReceptacleMeasurementConfig(MeasurementConfig):
     :property dummy:
     """
     type: str = "ObjAtReceptacle"
-    height_diff_threshold: float = 0.15
-    surface_height_diff_threshold: float = 0.15
+    vertical_diff_threshold: float = 0.15
+    horizontal_diff_threshold: float = 0.15
+    surface_vertical_diff_threshold: float = 0.15
 
 
 @dataclass
