@@ -45,6 +45,7 @@ __all__ = [
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
+    "ArmRGBPretrainVisualFeatureSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
@@ -425,6 +426,14 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
     type: str = "ArmDepthBBoxSensor"
     height: int = 480
     width: int = 640
+
+
+@dataclass
+class ArmRGBPretrainVisualFeatureSensorConfig(LabSensorConfig):
+    r"""
+    Pretrained visual feature sensor for arm rgb camera
+    """
+    type: str = "ArmRGBPretrainVisualFeatureSensor"
 
 
 @dataclass
@@ -2179,6 +2188,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_rgb_pretrain_visual_feature_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_rgb_pretrain_visual_feature_sensor",
+    node=ArmRGBPretrainVisualFeatureSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
