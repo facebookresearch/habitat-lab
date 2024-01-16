@@ -31,10 +31,16 @@ habitat_hitl:
     height: 1000
   gui_controlled_agent:
     agent_index: 1
+    ang_speed: 300
   data_collection:
     save_filepath_base: "my_session"
     save_gfx_replay_keyframes: True
     save_episode_record: True
+  hide_humanoid_in_gui: True
+  camera:
+    first_person_mode: True
+
+
 
 rearrange:
   # Shows an intro sequence before the first episode that helps familiarize the user to task in a HITL context.

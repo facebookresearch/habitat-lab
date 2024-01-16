@@ -4,34 +4,28 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import ctypes
+import sys
 
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
+# must call this before importing habitat or magnum! avoids runtime errors on some platforms
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
-
-import hitl_main
 import hydra
 import magnum as mn
 import numpy as np
-from app_states.app_state_abc import AppState
-from app_states.app_state_tutorial import AppStateTutorial
-from camera_helper import CameraHelper
-from controllers.gui_controller import GuiHumanoidController
-from gui_navigation_helper import GuiNavigationHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
-from utils.hablab_utils import (
+
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
+)
+from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
+from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
@@ -41,7 +35,7 @@ class AppStateRearrange(AppState):
     """
     A user-controlled human and policy-controlled robot must accomplish a collaborative rearrangement task in HSSD scenes.
 
-    See examples/siro_sandbox/README.md for more about AppStates and HITL apps.
+    See habitat-hitl/README.md for more about AppStates and HITL apps.
 
     Overview of the main pieces of this class:
     * sim_update: per-frame entrypoint. Step the habitat env, update the camera and help text, and restart episodes as necessary.
@@ -52,19 +46,19 @@ class AppStateRearrange(AppState):
 
     def __init__(
         self,
-        sandbox_service,
+        app_service,
     ):
-        self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
+        self._app_service = app_service
+        self._gui_agent_ctrl = self._app_service.gui_agent_controller
 
         # cache items from config; config is expensive to access at runtime
-        config = self._sandbox_service.config
+        config = self._app_service.config
         self._end_on_success = config.habitat.task.end_on_success
         self._obj_succ_thresh = config.habitat.task.obj_succ_thresh
         self._success_measure_name = config.habitat.task.success_measure
 
         self._can_grasp_place_threshold = (
-            self._sandbox_service.hitl_config.can_grasp_place_threshold
+            self._app_service.hitl_config.can_grasp_place_threshold
         )
 
         self._cam_transform = None
@@ -78,16 +72,16 @@ class AppStateRearrange(AppState):
         self._goal_positions = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
+            self._app_service.hitl_config, self._app_service.gui_input
         )
         self._first_person_mode = (
-            self._sandbox_service.hitl_config.camera.first_person_mode
+            self._app_service.hitl_config.camera.first_person_mode
         )
 
         self._nav_helper = GuiNavigationHelper(
-            self._sandbox_service, self.get_gui_controlled_agent_index()
+            self._app_service, self.get_gui_controlled_agent_index()
         )
-        self._episode_helper = self._sandbox_service.episode_helper
+        self._episode_helper = self._app_service.episode_helper
 
     def on_environment_reset(self, episode_recorder_dict):
         self._held_target_obj_idx = None
@@ -110,7 +104,7 @@ class AppStateRearrange(AppState):
             episode_recorder_dict["goal_positions"] = self._goal_positions
 
     def get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def _update_grasping_and_set_act_hints(self):
         end_radius = self._obj_succ_thresh
@@ -121,7 +115,7 @@ class AppStateRearrange(AppState):
         if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             goal_position = self._goal_positions[self._held_target_obj_idx]
-            self._sandbox_service.line_render.draw_circle(
+            self._app_service.line_render.draw_circle(
                 goal_position, end_radius, color, 24
             )
 
@@ -135,16 +129,14 @@ class AppStateRearrange(AppState):
             # draw can place area
             can_place_position = mn.Vector3(goal_position)
             can_place_position[1] = self._get_agent_feet_height()
-            self._sandbox_service.line_render.draw_circle(
+            self._app_service.line_render.draw_circle(
                 can_place_position,
                 self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
                 24,
             )
 
-            if self._sandbox_service.gui_input.get_key_down(
-                GuiInput.KeyNS.SPACE
-            ):
+            if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                 translation = self._get_agent_translation()
                 dist_to_obj = np.linalg.norm(goal_position - translation)
                 if dist_to_obj < self._can_grasp_place_threshold:
@@ -155,7 +147,7 @@ class AppStateRearrange(AppState):
             if self._held_target_obj_idx is None:
                 assert not self._gui_agent_ctrl.is_grasped
                 # pick up an object
-                if self._sandbox_service.gui_input.get_key_down(
+                if self._app_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
                 ):
                     translation = self._get_agent_translation()
@@ -190,7 +182,7 @@ class AppStateRearrange(AppState):
             ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
                 visualize_path=True
             )
-            if self._sandbox_service.gui_input.get_mouse_button(
+            if self._app_service.gui_input.get_mouse_button(
                 GuiInput.MouseNS.RIGHT
             ):
                 walk_dir = candidate_walk_dir
@@ -255,7 +247,7 @@ class AppStateRearrange(AppState):
                 box_offset = mn.Vector3(
                     box_half_size, box_half_size, box_half_size
                 )
-                self._sandbox_service.line_render.draw_box(
+                self._app_service.line_render.draw_box(
                     this_target_pos - box_offset,
                     this_target_pos + box_offset,
                     color,
@@ -271,7 +263,7 @@ class AppStateRearrange(AppState):
                 # draw can grasp area
                 can_grasp_position = mn.Vector3(this_target_pos)
                 can_grasp_position[1] = self._get_agent_feet_height()
-                self._sandbox_service.line_render.draw_circle(
+                self._app_service.line_render.draw_circle(
                     can_grasp_position,
                     self._can_grasp_place_threshold,
                     mn.Color3(255 / 255, 255 / 255, 0),
@@ -329,17 +321,17 @@ class AppStateRearrange(AppState):
     def _env_task_complete(self):
         return (
             self._end_on_success
-            and self._sandbox_service.get_metrics()[self._success_measure_name]
+            and self._app_service.get_metrics()[self._success_measure_name]
         )
 
     def _env_episode_active(self) -> bool:
         """
         Returns True if current episode is active:
-        1) not self._sandbox_service.env.episode_over - none of the constraints is violated, or
+        1) not self._app_service.env.episode_over - none of the constraints is violated, or
         2) not self._env_task_complete - success measure value is not True
         """
         return not (
-            self._sandbox_service.env.episode_over or self._env_task_complete
+            self._app_service.env.episode_over or self._env_task_complete
         )
 
     def _get_status_text(self):
@@ -377,13 +369,13 @@ class AppStateRearrange(AppState):
     def _update_help_text(self):
         controls_str = self._get_controls_text()
         if len(controls_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
         status_str = self._get_status_text()
         if len(status_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,
@@ -395,7 +387,7 @@ class AppStateRearrange(AppState):
             - self._episode_helper.num_episodes_done
         )
         progress_str = f"{num_episodes_remaining} episodes left"
-        self._sandbox_service.text_drawer.add_text(
+        self._app_service.text_drawer.add_text(
             progress_str,
             TextOnScreenAlignment.TOP_RIGHT,
             text_delta_x=370,
@@ -426,11 +418,9 @@ class AppStateRearrange(AppState):
                 }
             )
 
-        self._sandbox_service.step_recorder.record(
-            "agent_states", agent_states
-        )
+        self._app_service.step_recorder.record("agent_states", agent_states)
 
-        self._sandbox_service.step_recorder.record(
+        self._app_service.step_recorder.record(
             "target_object_positions", self._get_target_object_positions()
         )
 
@@ -443,20 +433,20 @@ class AppStateRearrange(AppState):
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            self._sandbox_service.end_episode()
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
         if (
-            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            self._app_service.gui_input.get_key_down(GuiInput.KeyNS.M)
             and self._episode_helper.next_episode_exists()
         ):
-            self._sandbox_service.end_episode(do_reset=True)
+            self._app_service.end_episode(do_reset=True)
 
         if self._env_episode_active():
             self._update_task()
             self._update_grasping_and_set_act_hints()
-            self._sandbox_service.compute_action_and_step_env()
+            self._app_service.compute_action_and_step_env()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
@@ -473,9 +463,9 @@ class AppStateRearrangeTutorialTransition(AppState):
     Each episode starts with the tutorial (a camera flythrough sequence with help text), and then we switch to rearrange when the tutorial ends.
     """
 
-    def __init__(self, sandbox_service):
-        self._app_state_rearrange = AppStateRearrange(sandbox_service)
-        self._app_state_tutorial = AppStateTutorial(sandbox_service)
+    def __init__(self, app_service):
+        self._app_state_rearrange = AppStateRearrange(app_service)
+        self._app_state_tutorial = AppStateTutorial(app_service)
         self._is_tutorial_active = False
         self._only_show_tutorial_once = True
         self._is_first_reset = True
@@ -518,20 +508,20 @@ class AppStateRearrangeTutorialTransition(AppState):
         self._get_active_app_state().record_state()
 
 
-def create_app_state(sandbox_service):
+def create_app_state(app_service):
     app_state_class = (
         AppStateRearrangeTutorialTransition
-        if sandbox_service.config.rearrange.show_tutorial
+        if app_service.config.rearrange.show_tutorial
         else AppStateRearrange
     )
-    return app_state_class(sandbox_service)
+    return app_state_class(app_service)
 
 
 @hydra.main(
     version_base=None, config_path="config", config_name="hitl_rearrange"
 )
 def main(config):
-    hitl_main.hitl_main(config, create_app_state)
+    hitl_main(config, create_app_state)
 
 
 if __name__ == "__main__":

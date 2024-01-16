@@ -4,43 +4,36 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import ctypes
+import sys
 
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
-
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
+# must call this before importing habitat or magnum! avoids runtime errors on some platforms
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 
 from typing import Final
 
-import hitl_main
 import hydra
 import magnum as mn
 import numpy as np
-from app_states.app_state_abc import AppState
-from camera_helper import CameraHelper
-from controllers.gui_controller import GuiHumanoidController
-from gui_avatar_switch_helper import GuiAvatarSwitchHelper
-from gui_navigation_helper import GuiNavigationHelper
-from gui_pick_helper import GuiPickHelper
-from gui_throw_helper import GuiThrowHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
-from utils.hablab_utils import (
+
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.avatar_switcher import AvatarSwitcher
+from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.gui_controller import (
+    GuiHumanoidController,
+)
+from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
+from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
+from habitat_hitl.environment.gui_throw_helper import GuiThrowHelper
+from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
     get_grasped_objects_idxs,
 )
-
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
 COLOR_GRASPABLE: Final[mn.Color3] = mn.Color3(1, 0.75, 0)
@@ -62,11 +55,11 @@ class AppStatePickThrowVr(AppState):
     See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
-    def __init__(self, sandbox_service):
-        self._sandbox_service = sandbox_service
-        self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
+    def __init__(self, app_service):
+        self._app_service = app_service
+        self._gui_agent_ctrl = self._app_service.gui_agent_controller
         self._can_grasp_place_threshold = (
-            self._sandbox_service.hitl_config.can_grasp_place_threshold
+            self._app_service.hitl_config.can_grasp_place_threshold
         )
 
         self._cam_transform = None
@@ -82,28 +75,28 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
+            self._app_service.hitl_config, self._app_service.gui_input
         )
         # not supported for pick_throw_vr
-        assert not self._sandbox_service.hitl_config.camera.first_person_mode
+        assert not self._app_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
-            self._sandbox_service, self.get_gui_controlled_agent_index()
+            self._app_service, self.get_gui_controlled_agent_index()
         )
         self._throw_helper = GuiThrowHelper(
-            self._sandbox_service, self.get_gui_controlled_agent_index()
+            self._app_service, self.get_gui_controlled_agent_index()
         )
         self._pick_helper = GuiPickHelper(
-            self._sandbox_service,
+            self._app_service,
             self.get_gui_controlled_agent_index(),
             self._get_gui_agent_feet_height(),
         )
 
-        self._avatar_switch_helper = GuiAvatarSwitchHelper(
-            self._sandbox_service, self._gui_agent_ctrl
+        self._avatar_switch_helper = AvatarSwitcher(
+            self._app_service, self._gui_agent_ctrl
         )
 
-        self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
+        self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._is_remote_active_toggle = False
         self.count_tsteps_stop = 0
@@ -153,7 +146,7 @@ class AppStatePickThrowVr(AppState):
             .articulated_agent.base_pos
         )
 
-        client_message_manager = self._sandbox_service.client_message_manager
+        client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
             client_message_manager.change_humanoid_position(human_pos)
             client_message_manager.signal_scene_change()
@@ -162,7 +155,7 @@ class AppStatePickThrowVr(AppState):
             )
 
     def get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def get_grasp_keys_by_hand(self, hand_idx):
         if hand_idx == 0:
@@ -175,7 +168,7 @@ class AppStatePickThrowVr(AppState):
         assert not self._held_target_obj_idx
         self._recent_reach_pos = None
         self._recent_hand_idx = None
-        remote_gui_input = self._sandbox_service.remote_gui_input
+        remote_gui_input = self._app_service.remote_gui_input
 
         hand_positions = []
         num_hands = 2
@@ -248,7 +241,7 @@ class AppStatePickThrowVr(AppState):
         assert self._held_target_obj_idx is not None
         assert self._remote_held_hand_idx is not None
 
-        remote_gui_input = self._sandbox_service.remote_gui_input
+        remote_gui_input = self._app_service.remote_gui_input
         remote_button_input = remote_gui_input.get_gui_input()
 
         do_throw = False
@@ -365,7 +358,7 @@ class AppStatePickThrowVr(AppState):
         self._has_grasp_preview = False
 
         if self._held_target_obj_idx is not None:
-            if self._sandbox_service.gui_input.get_key(GuiInput.KeyNS.SPACE):
+            if self._app_service.gui_input.get_key(GuiInput.KeyNS.SPACE):
                 if self._recent_reach_pos:
                     # Continue reaching towards the recent reach position (the
                     # original position of the grasped object before it was snapped
@@ -383,9 +376,7 @@ class AppStatePickThrowVr(AppState):
                     # also preview throw
                     _ = self._throw_helper.viz_and_get_humanoid_throw()
 
-            if self._sandbox_service.gui_input.get_key_up(
-                GuiInput.KeyNS.SPACE
-            ):
+            if self._app_service.gui_input.get_key_up(GuiInput.KeyNS.SPACE):
                 if self._recent_reach_pos:
                     # this spacebar release means we've finished the reach-and-grasp motion
                     self._recent_reach_pos = None
@@ -430,7 +421,7 @@ class AppStatePickThrowVr(AppState):
                     )
                     self._has_grasp_preview = True
 
-                    if self._sandbox_service.gui_input.get_key_down(
+                    if self._app_service.gui_input.get_key_down(
                         GuiInput.KeyNS.SPACE
                     ):
                         self._recent_reach_pos = (
@@ -447,7 +438,7 @@ class AppStatePickThrowVr(AppState):
         walk_dir = None
         distance_multiplier = 1.0
 
-        if self._sandbox_service.gui_input.get_mouse_button(
+        if self._app_service.gui_input.get_mouse_button(
             GuiInput.MouseNS.RIGHT
         ):
             (
@@ -505,7 +496,7 @@ class AppStatePickThrowVr(AppState):
 
     def _draw_circle(self, pos, color, radius):
         num_segments = 24
-        self._sandbox_service.line_render.draw_circle(
+        self._app_service.line_render.draw_circle(
             pos,
             radius,
             color,
@@ -520,16 +511,14 @@ class AppStatePickThrowVr(AppState):
 
     def _add_target_highlight_ring(self, pos, color, radius, do_pulse=False):
         if do_pulse:
-            radius += (
-                self._sandbox_service.get_anim_fraction() * RING_PULSE_SIZE
-            )
+            radius += self._app_service.get_anim_fraction() * RING_PULSE_SIZE
 
         if (
-            self._sandbox_service.client_message_manager
+            self._app_service.client_message_manager
             and self._is_remote_active()
         ):
             client_radius = radius
-            self._sandbox_service.client_message_manager.add_highlight(
+            self._app_service.client_message_manager.add_highlight(
                 pos, client_radius
             )
 
@@ -589,7 +578,7 @@ class AppStatePickThrowVr(AppState):
             controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
-            if self._sandbox_service.hitl_config.remote_gui_mode:
+            if self._app_service.hitl_config.remote_gui_mode:
                 controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
             if not self._is_remote_active_toggle:
@@ -602,7 +591,7 @@ class AppStatePickThrowVr(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        if self._sandbox_service.hitl_config.remote_gui_mode:
+        if self._app_service.hitl_config.remote_gui_mode:
             status_str += (
                 "human control: VR\n"
                 if self._is_remote_active()
@@ -617,13 +606,13 @@ class AppStatePickThrowVr(AppState):
     def _update_help_text(self):
         controls_str = self._get_controls_text()
         if len(controls_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
         status_str = self._get_status_text()
         if len(status_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
             )
@@ -641,8 +630,8 @@ class AppStatePickThrowVr(AppState):
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            self._sandbox_service.end_episode()
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
         # use 1-5 keys to select certain episodes corresponding to our 5 scenes
@@ -651,40 +640,40 @@ class AppStatePickThrowVr(AppState):
         episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
         for scene_idx in range(num_fetch_scenes):
             key = GuiInput.KeyNS(GuiInput.KeyNS.ONE.value + scene_idx)
-            if self._sandbox_service.gui_input.get_key_down(key):
-                self._sandbox_service.episode_helper.set_next_episode_by_id(
+            if self._app_service.gui_input.get_key_down(key):
+                self._app_service.episode_helper.set_next_episode_by_id(
                     episode_id_by_scene_index[scene_idx]
                 )
-                self._sandbox_service.end_episode(do_reset=True)
+                self._app_service.end_episode(do_reset=True)
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.H):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
         # toggle remote/local under certain conditions:
         # - must not be holding anything
         # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._sandbox_service.hitl_config.remote_gui_mode
+            self._app_service.hitl_config.remote_gui_mode
             and self._held_target_obj_idx is None
             and (
-                self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T)
+                self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
                 or (
                     not self._is_remote_active_toggle
-                    and self._sandbox_service.remote_gui_input.get_gui_input().get_any_key_down()
+                    and self._app_service.remote_gui_input.get_gui_input().get_any_key_down()
                 )
             )
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
             self._avatar_switch_helper.switch_avatar()
 
         if not self._paused:
             self._update_grasping_and_set_act_hints()
-            self._sandbox_service.compute_action_and_step_env()
+            self._app_service.compute_action_and_step_env()
             self._fix_physics_for_target_objects()
 
         self._viz_objects()
@@ -733,9 +722,9 @@ class AppStatePickThrowVr(AppState):
     version_base=None, config_path="config", config_name="pick_throw_vr"
 )
 def main(config):
-    hitl_main.hitl_main(
+    hitl_main(
         config,
-        lambda sandbox_service: AppStatePickThrowVr(sandbox_service),
+        lambda app_service: AppStatePickThrowVr(app_service),
     )
 
 

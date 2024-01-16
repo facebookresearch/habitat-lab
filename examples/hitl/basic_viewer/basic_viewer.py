@@ -4,40 +4,32 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import ctypes
+import sys
 
-# temp until hitl framework is a proper package
-def add_hitl_framework_import_path():
-    import os
-    import sys
+# must call this before importing habitat or magnum! avoids runtime errors on some platforms
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 
-    current_script_directory = os.path.dirname(os.path.realpath(__file__))
-    parent_directory = os.path.abspath(
-        os.path.join(current_script_directory, "../../siro_sandbox/")
-    )
-    sys.path.append(parent_directory)
-
-
-add_hitl_framework_import_path()
-
-import hitl_main
 import hydra
 import magnum as mn
-from app_states.app_state_abc import AppState
-from camera_helper import CameraHelper
-from hydra_helper import register_hydra_plugins
-from utils.gui.gui_input import GuiInput
-from utils.gui.text_drawer import TextOnScreenAlignment
+
+from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.hitl_main import hitl_main
+from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.environment.camera_helper import CameraHelper
 
 
 class AppStateBasicViewer(AppState):
     def __init__(
         self,
-        sandbox_service,
+        app_service,
     ):
-        self._sandbox_service = sandbox_service
-        self._gui_input = self._sandbox_service.gui_input
+        self._app_service = app_service
+        self._gui_input = self._app_service.gui_input
 
-        config = self._sandbox_service.config
+        config = self._app_service.config
         self._end_on_success = config.habitat.task.end_on_success
         self._success_measure_name = config.habitat.task.success_measure
 
@@ -45,9 +37,9 @@ class AppStateBasicViewer(AppState):
         self._cam_transform = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
+            self._app_service.hitl_config, self._app_service.gui_input
         )
-        self._episode_helper = self._sandbox_service.episode_helper
+        self._episode_helper = self._app_service.episode_helper
         self._paused = False
         self._do_single_step = False
 
@@ -82,7 +74,7 @@ class AppStateBasicViewer(AppState):
 
         # draw lookat point
         radius = 0.15
-        self._sandbox_service.line_render.draw_circle(
+        self._app_service.line_render.draw_circle(
             self._get_camera_lookat_pos(),
             radius,
             mn.Color3(255 / 255, 0 / 255, 0 / 255),
@@ -93,17 +85,17 @@ class AppStateBasicViewer(AppState):
     def _env_task_complete(self):
         return (
             self._end_on_success
-            and self._sandbox_service.get_metrics()[self._success_measure_name]
+            and self._app_service.get_metrics()[self._success_measure_name]
         )
 
     def _env_episode_active(self) -> bool:
         """
         Returns True if current episode is active:
-        1) not self._sandbox_service.env.episode_over - none of the constraints is violated, or
+        1) not self._app_service.env.episode_over - none of the constraints is violated, or
         2) not self._env_task_complete - success measure value is not True
         """
         return not (
-            self._sandbox_service.env.episode_over or self._env_task_complete
+            self._app_service.env.episode_over or self._env_task_complete
         )
 
     def _get_camera_lookat_pos(self):
@@ -131,7 +123,7 @@ class AppStateBasicViewer(AppState):
         return controls_str
 
     def _get_status_text(self):
-        progress_str = f"episode {self._sandbox_service.episode_helper.current_episode.episode_id}"
+        progress_str = f"episode {self._app_service.episode_helper.current_episode.episode_id}"
         if not self._env_episode_active():
             progress_str += (
                 " - task succeeded!"
@@ -153,13 +145,13 @@ class AppStateBasicViewer(AppState):
     def _update_help_text(self):
         controls_str = self._get_controls_text()
         if len(controls_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
         status_str = self._get_status_text()
         if len(status_str) > 0:
-            self._sandbox_service.text_drawer.add_text(
+            self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,
@@ -167,39 +159,39 @@ class AppStateBasicViewer(AppState):
             )
 
     def get_sim(self):
-        return self._sandbox_service.sim
+        return self._app_service.sim
 
     def on_environment_reset(self, episode_recorder_dict):
         self._init_lookat_pos()
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            self._sandbox_service.end_episode()
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
         if (
             self._env_episode_active()
-            and self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P)
+            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P)
         ):
             self._paused = not self._paused
 
-        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
             self._do_single_step = True
             self._paused = True
 
         is_paused_this_frame = self._paused and not self._do_single_step
 
         if (
-            self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            self._app_service.gui_input.get_key_down(GuiInput.KeyNS.M)
             and self._episode_helper.next_episode_exists()
             and not is_paused_this_frame
         ):
-            self._sandbox_service.end_episode(do_reset=True)
+            self._app_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
         if self._env_episode_active() and not is_paused_this_frame:
-            self._sandbox_service.compute_action_and_step_env()
+            self._app_service.compute_action_and_step_env()
             self._do_single_step = False
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
@@ -219,9 +211,9 @@ def main(config):
             "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
         )
 
-    hitl_main.hitl_main(
+    hitl_main(
         config,
-        lambda sandbox_service: AppStateBasicViewer(sandbox_service),
+        lambda app_service: AppStateBasicViewer(app_service),
     )
 
 
