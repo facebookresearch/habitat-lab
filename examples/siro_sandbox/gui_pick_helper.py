@@ -57,7 +57,7 @@ class GuiPickHelper:
         can_grasp_position[1] = self.agent_feet_height
         self._sandbox_service.line_render.draw_circle(
             can_grasp_position,
-            self._sandbox_service.args.can_grasp_place_threshold,
+            self._sandbox_service.hitl_config.can_grasp_place_threshold,
             mn.Color3(255 / 255, 255 / 255, 0),
             24,
         )

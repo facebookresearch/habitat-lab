@@ -20,14 +20,13 @@ def add_hitl_framework_import_path():
 add_hitl_framework_import_path()
 
 import hitl_main
+import hydra
 import magnum as mn
 from app_states.app_state_abc import AppState
 from camera_helper import CameraHelper
-from hitl_arg_parser import create_hitl_arg_parser
+from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
-
-import habitat_baselines
 
 
 class AppStateBasicViewer(AppState):
@@ -46,9 +45,11 @@ class AppStateBasicViewer(AppState):
         self._cam_transform = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
+            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
         self._episode_helper = self._sandbox_service.episode_helper
+        self._paused = False
+        self._do_single_step = False
 
     def _init_lookat_pos(self):
         random_navigable_point = self.get_sim().sample_navigable_point()
@@ -62,9 +63,9 @@ class AppStateBasicViewer(AppState):
             move.x -= move_delta
         if self._gui_input.get_key(GuiInput.KeyNS.S):
             move.x += move_delta
-        if self._gui_input.get_key(GuiInput.KeyNS.O):
+        if self._gui_input.get_key(GuiInput.KeyNS.E):
             move.y += move_delta
-        if self._gui_input.get_key(GuiInput.KeyNS.P):
+        if self._gui_input.get_key(GuiInput.KeyNS.Q):
             move.y -= move_delta
         if self._gui_input.get_key(GuiInput.KeyNS.J):
             move.z += move_delta
@@ -113,27 +114,38 @@ class AppStateBasicViewer(AppState):
         controls_str += "ESC: exit\n"
         if self._episode_helper.next_episode_exists():
             controls_str += "M: next episode\n"
-
+        else:
+            controls_str += "no remaining episodes\n"
+        if self._env_episode_active():
+            controls_str += "P: unpause\n" if self._paused else "P: pause\n"
+            controls_str += "Spacebar: single step\n"
+        else:
+            controls_str += "\n\n"
+        controls_str += "R + drag: rotate camera\n"
+        controls_str += "Scroll: zoom\n"
         controls_str += "I, K: look up, down\n"
-        controls_str += "A, D: look left, right\n"
-        controls_str += "O, P: move up, down\n"
-        controls_str += "W, S: move forward, backward\n"
+        controls_str += "A, D: turn\n"
+        controls_str += "E, Q: move up, down\n"
+        controls_str += "W, S: move forward, back\n"
 
         return controls_str
 
     def _get_status_text(self):
-        status_str = ""
-
+        progress_str = f"episode {self._sandbox_service.episode_helper.current_episode.episode_id}"
         if not self._env_episode_active():
-            if self._env_task_complete:
-                status_str += "Task complete!\n"
-            else:
-                status_str += "Oops! Something went wrong.\n"
+            progress_str += (
+                " - task succeeded!"
+                if self._env_task_complete
+                else " - task ended in failure!"
+            )
+        elif self._paused:
+            progress_str += " - paused"
 
         # center align the status_str
         max_status_str_len = 50
         status_str = "/n".join(
-            line.center(max_status_str_len) for line in status_str.split("/n")
+            line.center(max_status_str_len)
+            for line in progress_str.split("/n")
         )
 
         return status_str
@@ -154,17 +166,6 @@ class AppStateBasicViewer(AppState):
                 text_delta_y=-50,
             )
 
-        num_episodes_remaining = (
-            self._episode_helper.num_iter_episodes
-            - self._episode_helper.num_episodes_done
-        )
-        progress_str = f"{num_episodes_remaining} episodes left"
-        self._sandbox_service.text_drawer.add_text(
-            progress_str,
-            TextOnScreenAlignment.TOP_RIGHT,
-            text_delta_x=370,
-        )
-
     def get_sim(self):
         return self._sandbox_service.sim
 
@@ -178,14 +179,28 @@ class AppStateBasicViewer(AppState):
             post_sim_update_dict["application_exit"] = True
 
         if (
+            self._env_episode_active()
+            and self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.P)
+        ):
+            self._paused = not self._paused
+
+        if self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            self._do_single_step = True
+            self._paused = True
+
+        is_paused_this_frame = self._paused and not self._do_single_step
+
+        if (
             self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.M)
             and self._episode_helper.next_episode_exists()
+            and not is_paused_this_frame
         ):
             self._sandbox_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
-        if self._env_episode_active():
+        if self._env_episode_active() and not is_paused_this_frame:
             self._sandbox_service.compute_action_and_step_env()
+            self._do_single_step = False
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
@@ -195,30 +210,21 @@ class AppStateBasicViewer(AppState):
         self._update_help_text()
 
 
-def main():
-    args = create_hitl_arg_parser().parse_args()
-
-    if args.gui_controlled_agent_index is not None:
+@hydra.main(
+    version_base=None, config_path="config", config_name="basic_viewer"
+)
+def main(config):
+    if config.habitat_hitl.gui_controlled_agent.agent_index is not None:
         raise ValueError(
-            "--gui-controlled-agent-index is not supported for basic_viewer"
+            "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
         )
 
-    # todo: get config using @hydra.main (this requires removal of our legacy command-
-    # line arguments)
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
-
     hitl_main.hitl_main(
-        args,
         config,
         lambda sandbox_service: AppStateBasicViewer(sandbox_service),
     )
 
 
 if __name__ == "__main__":
-    # register_hydra_plugins()  # coming soon
+    register_hydra_plugins()
     main()

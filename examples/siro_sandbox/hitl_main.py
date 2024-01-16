@@ -5,39 +5,45 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
-from hb_config_helper import update_config_and_args
+from hb_config_helper import update_config
 from magnum.platform.glfw import Application
 from sandbox_app import SandboxDriver
 from utils.gui.gui_application import GuiApplication
 from utils.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 
 
-def _parse_debug_third_person(args, framebuffer_size):
+def _parse_debug_third_person(hitl_config, framebuffer_size):
     viewport_multiplier = mn.Vector2(
-        framebuffer_size.x / args.width, framebuffer_size.y / args.height
+        framebuffer_size.x / hitl_config.window.width,
+        framebuffer_size.y / hitl_config.window.height,
     )
 
-    do_show = args.debug_third_person_width != 0
+    do_show = hitl_config.debug_third_person_viewport.width is not None
 
-    width = args.debug_third_person_width
-    # default to square aspect ratio
-    height = (
-        args.debug_third_person_height
-        if args.debug_third_person_height != 0
-        else width
-    )
+    if do_show:
+        width = hitl_config.debug_third_person_viewport.width
+        # default to square aspect ratio
+        height = (
+            hitl_config.debug_third_person_viewport.height
+            if hitl_config.debug_third_person_viewport.height is not None
+            else width
+        )
 
-    width = int(width * viewport_multiplier.x)
-    height = int(height * viewport_multiplier.y)
+        width = int(width * viewport_multiplier.x)
+        height = int(height * viewport_multiplier.y)
+    else:
+        width = 0
+        height = 0
 
     return do_show, width, height
 
 
-def hitl_main(args, config, create_app_state_lambda=None):
+def hitl_main(config, create_app_state_lambda=None):
+    hitl_config = config.habitat_hitl
     glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"  # todo: get from hydra config
-    glfw_config.size = (args.width, args.height)
-    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
+    glfw_config.title = hitl_config.window.title
+    glfw_config.size = (hitl_config.window.width, hitl_config.window.height)
+    gui_app_wrapper = GuiApplication(glfw_config, hitl_config.target_sps)
     # on Mac Retina displays, this will be 2x the window size
     framebuffer_size = gui_app_wrapper.get_framebuffer_size()
 
@@ -45,7 +51,7 @@ def hitl_main(args, config, create_app_state_lambda=None):
         show_debug_third_person,
         debug_third_person_width,
         debug_third_person_height,
-    ) = _parse_debug_third_person(args, framebuffer_size)
+    ) = _parse_debug_third_person(hitl_config, framebuffer_size)
 
     viewport_rect = None
     if show_debug_third_person:
@@ -63,19 +69,17 @@ def hitl_main(args, config, create_app_state_lambda=None):
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size,
         viewport_rect,
-        args.use_batch_renderer,
+        hitl_config.experimental.use_batch_renderer,
     )
 
-    update_config_and_args(
+    update_config(
         config,
-        args,
         show_debug_third_person=show_debug_third_person,
         debug_third_person_width=debug_third_person_width,
         debug_third_person_height=debug_third_person_height,
     )
 
     driver = SandboxDriver(
-        args,
         config,
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
@@ -86,7 +90,7 @@ def hitl_main(args, config, create_app_state_lambda=None):
     # sanity check if there are no agents with camera sensors
     if (
         len(config.habitat.simulator.agents) == 1
-        and args.gui_controlled_agent_index is not None
+        and config.habitat_hitl.gui_controlled_agent.agent_index is not None
     ):
         assert driver.get_sim().renderer is None
 

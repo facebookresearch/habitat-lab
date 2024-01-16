@@ -22,6 +22,7 @@ add_hitl_framework_import_path()
 from typing import Final
 
 import hitl_main
+import hydra
 import magnum as mn
 import numpy as np
 from app_states.app_state_abc import AppState
@@ -31,7 +32,7 @@ from gui_avatar_switch_helper import GuiAvatarSwitchHelper
 from gui_navigation_helper import GuiNavigationHelper
 from gui_pick_helper import GuiPickHelper
 from gui_throw_helper import GuiThrowHelper
-from hitl_arg_parser import create_hitl_arg_parser
+from hydra_helper import register_hydra_plugins
 from utils.gui.gui_input import GuiInput
 from utils.gui.text_drawer import TextOnScreenAlignment
 from utils.hablab_utils import (
@@ -39,7 +40,6 @@ from utils.hablab_utils import (
     get_grasped_objects_idxs,
 )
 
-import habitat_baselines
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_sim.physics import MotionType
 
@@ -66,7 +66,7 @@ class AppStatePickThrowVr(AppState):
         self._sandbox_service = sandbox_service
         self._gui_agent_ctrl = self._sandbox_service.gui_agent_controller
         self._can_grasp_place_threshold = (
-            self._sandbox_service.args.can_grasp_place_threshold
+            self._sandbox_service.hitl_config.can_grasp_place_threshold
         )
 
         self._cam_transform = None
@@ -82,10 +82,10 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = None
 
         self._camera_helper = CameraHelper(
-            self._sandbox_service.args, self._sandbox_service.gui_input
+            self._sandbox_service.hitl_config, self._sandbox_service.gui_input
         )
         # not supported for pick_throw_vr
-        assert not self._sandbox_service.args.first_person_mode
+        assert not self._sandbox_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
             self._sandbox_service, self.get_gui_controlled_agent_index()
@@ -105,10 +105,7 @@ class AppStatePickThrowVr(AppState):
 
         self._gui_agent_ctrl.line_renderer = sandbox_service.line_render
 
-        # choose initial value for toggle
-        self._is_remote_active_toggle = (
-            self._sandbox_service.args.remote_gui_mode
-        )
+        self._is_remote_active_toggle = False
         self.count_tsteps_stop = 0
         self._has_grasp_preview = False
 
@@ -592,7 +589,7 @@ class AppStatePickThrowVr(AppState):
             controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
-            if self._sandbox_service.args.remote_gui_mode:
+            if self._sandbox_service.hitl_config.remote_gui_mode:
                 controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
             if not self._is_remote_active_toggle:
@@ -605,7 +602,7 @@ class AppStatePickThrowVr(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        if self._sandbox_service.args.remote_gui_mode:
+        if self._sandbox_service.hitl_config.remote_gui_mode:
             status_str += (
                 "human control: VR\n"
                 if self._is_remote_active()
@@ -670,7 +667,7 @@ class AppStatePickThrowVr(AppState):
         # - must not be holding anything
         # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._sandbox_service.args.remote_gui_mode
+            self._sandbox_service.hitl_config.remote_gui_mode
             and self._held_target_obj_idx is None
             and (
                 self._sandbox_service.gui_input.get_key_down(GuiInput.KeyNS.T)
@@ -732,24 +729,16 @@ class AppStatePickThrowVr(AppState):
         return hit_info
 
 
-def main():
-    args = create_hitl_arg_parser().parse_args()
-    # todo: get config using @hydra.main (this requires removal of our legacy command-
-    # line arguments)
-    config_path = args.cfg
-    overrides = args.cfg_opts
-
-    config = habitat_baselines.config.default.get_config(
-        config_path, overrides
-    )
-
+@hydra.main(
+    version_base=None, config_path="config", config_name="pick_throw_vr"
+)
+def main(config):
     hitl_main.hitl_main(
-        args,
         config,
         lambda sandbox_service: AppStatePickThrowVr(sandbox_service),
     )
 
 
 if __name__ == "__main__":
-    # register_hydra_plugins()  # coming soon
+    register_hydra_plugins()
     main()

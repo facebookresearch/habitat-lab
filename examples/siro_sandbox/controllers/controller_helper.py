@@ -29,13 +29,15 @@ class ControllerHelper:
         self,
         gym_habitat_env: "GymHabitatEnv",
         config: "DictConfig",
-        args,
+        hitl_config,
         gui_input,
         recorder,
     ):
         self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
         self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
-        self._gui_controlled_agent_index = args.gui_controlled_agent_index
+        self._gui_controlled_agent_index = (
+            config.habitat_hitl.gui_controlled_agent.agent_index
+        )
 
         self.n_agents: int = len(self._env._sim.agents_mgr)  # type: ignore[attr-defined]
         self.n_user_controlled_agents: int = (
@@ -87,9 +89,9 @@ class ControllerHelper:
                     is_multi_agent=is_multi_agent,
                     gui_input=gui_input,
                     env=self._env,
-                    walk_pose_path=args.walk_pose_path,
-                    lin_speed=args.lin_speed,
-                    ang_speed=args.ang_speed,
+                    walk_pose_path=hitl_config.walk_pose_path,
+                    lin_speed=hitl_config.gui_controlled_agent.lin_speed,
+                    ang_speed=hitl_config.gui_controlled_agent.ang_speed,
                     recorder=recorder.get_nested_recorder("gui_humanoid"),
                 )
             else:

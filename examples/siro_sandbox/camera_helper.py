@@ -12,21 +12,33 @@ from utils.gui.gui_input import GuiInput
 
 
 class CameraHelper:
-    def __init__(self, args, gui_input):
+    def __init__(self, hitl_config, gui_input):
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
-        self._first_person_mode = args.first_person_mode
+        self._first_person_mode = hitl_config.camera.first_person_mode
         if self._first_person_mode:
             self._lookat_offset_yaw = 0.0
             self._lookat_offset_pitch = float(
                 mn.Rad(mn.Deg(20.0))
             )  # look slightly down
             self._min_lookat_offset_pitch = (
-                -max(min(np.radians(args.max_look_up_angle), np.pi / 2), 0)
+                -max(
+                    min(
+                        np.radians(hitl_config.camera.max_look_up_angle),
+                        np.pi / 2,
+                    ),
+                    0,
+                )
                 + 1e-5
             )
             self._max_lookat_offset_pitch = (
-                -min(max(np.radians(args.min_look_down_angle), -np.pi / 2), 0)
+                -min(
+                    max(
+                        np.radians(hitl_config.camera.min_look_down_angle),
+                        -np.pi / 2,
+                    ),
+                    0,
+                )
                 - 1e-5
             )
         else:
@@ -43,10 +55,6 @@ class CameraHelper:
         self._lookat_pos = None
         self._cam_transform = None
         self._gui_input = gui_input
-
-    @property
-    def first_person_mode(self):
-        return self._first_person_mode
 
     def _camera_pitch_and_yaw_wasd_control(self):
         # update yaw and pitch using ADIK keys
