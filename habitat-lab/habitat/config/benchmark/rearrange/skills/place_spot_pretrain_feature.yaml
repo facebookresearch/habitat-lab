@@ -5,6 +5,7 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - arm_rgb_pretrain_visual_feature_sensor
+    - pretrain_textual_feature_goal_sensor
     - spot_head_stereo_depth_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
@@ -23,6 +24,7 @@ habitat:
   gym:
     obs_keys:
       - arm_rgb_pretrain_visual_feature_sensor
+      - pretrain_textual_feature_goal_sensor
       - articulated_agent_arm_depth
       - joint
       - is_holding

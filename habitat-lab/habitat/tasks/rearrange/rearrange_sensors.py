@@ -1414,3 +1414,135 @@ class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
         image_features = np.array(image_features.squeeze())
 
         return image_features
+
+
+@registry.register_sensor
+class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
+    """Pretrained visual feature sensor for arm rgb camera"""
+
+    cls_uuid: str = "pretrain_textual_feature_goal_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        try:
+            from transformers import (
+                AutoModel,
+                AutoTokenizer,
+                SiglipVisionConfig,
+            )
+        except ImportError as e:
+            raise RuntimeError(
+                "Failed to import transformer package. Please install HuggingFace transformers by the following: pip install git+https://github.com/huggingface/transformers"
+            ) from e
+        self._device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+        configuration = SiglipVisionConfig()
+        self._feature_dim = configuration.hidden_size  # 768
+        self._model_name = "google/siglip-base-patch16-224"
+        super().__init__(config=config)
+        self._sim = sim
+        # Load the model based on HuggingFace's transformers
+        self._model = AutoModel.from_pretrained(self._model_name).to(
+            self._device
+        )
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            "google/siglip-base-patch16-224"
+        )
+        self._goal_name = None
+        self._goal_pos = None
+        self._goal_textual_feature = None
+        self._diff_treshold = 0.01
+        self._target_receptacle_names = [
+            "refrigerator",
+            "cupboard",
+            "counter",
+            "table",
+            "tvstand",
+            "sofa",
+            "cabinet",
+            "chair",
+        ]
+        self._pre_fix = "place an object on the "
+
+    def _get_uuid(self, *args, **kwargs):
+        return PretrainTextualFeatureGoalSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(self._feature_dim,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_goal_text(self):
+        # Cache the name of the receptacle
+        _, goal_pos = self._sim.get_targets()
+        if (
+            self._goal_pos is not None
+            and np.linalg.norm(goal_pos[0, [0, 2]] - self._goal_pos[0, [0, 2]])
+            < self._diff_treshold
+        ):
+            return self._goal_name
+
+        min_dis = float("inf")
+        goal_name = "None"
+        for rep_name in self._sim.receptacles:
+            distance = np.linalg.norm(
+                np.array(self._sim.receptacles[rep_name].center())[[0, 2]]
+                - goal_pos[0, [0, 2]]
+            )
+            if distance < min_dis:
+                min_dis = distance  # type: ignore
+                goal_name = rep_name
+
+        self._goal_pos = goal_pos
+        return goal_name
+
+    def _filter_receptacle_name(self, raw_name):
+        candidate_name = [
+            name
+            for name in self._target_receptacle_names
+            if name in raw_name.lower().replace("_", "")
+        ]
+
+        # Handle special case
+        if len(candidate_name) == 0:
+            return self._pre_fix + "furniture"
+        # Only return the first one
+        candidate_name = candidate_name[0]
+        # Handle special case
+        if candidate_name == "cabinet":
+            return self._pre_fix + "chair"
+        else:
+            return self._pre_fix + candidate_name
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a target receptacle name
+        rep_name = self._get_goal_text()
+
+        if self._goal_name == rep_name:
+            return self._goal_textual_feature
+
+        # Prepare the model input
+        inputs = self._tokenizer(
+            [self._filter_receptacle_name(rep_name)],
+            padding="max_length",
+            return_tensors="pt",
+        )
+        inputs = inputs.to(self._device)
+        # Get text feature
+        with torch.no_grad():
+            text_features = self._model.get_text_features(**inputs)
+
+        # Move the features back to cpu
+        text_features = text_features.to("cpu")
+        text_features = np.array(text_features.squeeze())
+        self._goal_textual_feature = text_features
+
+        return text_features
