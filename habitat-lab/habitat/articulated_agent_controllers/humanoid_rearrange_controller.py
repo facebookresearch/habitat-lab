@@ -30,6 +30,7 @@ DIST_TO_STOP = (
 class HumanoidRearrangeController(HumanoidBaseController):
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions
+
         :param walk_pose_path: file containing the walking poses we care about.
         :param motion_fps: the FPS at which we should be advancing the pose.
         :base_offset: what is the offset between the root of the character and their feet.
@@ -535,6 +536,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
             """
             General trilinear interpolation function. Performs trilinear interpolation,
             normalizing the result if the values are represented as quaternions (is_quat)
+
             :param x_i, y_i, z_i: For the x,y,z dimensions, specifies the lower, upper, and normalized value
             so that we can perform interpolation in 3 dimensions
             :param data: the values we want to interpolate.

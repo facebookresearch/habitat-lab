@@ -45,6 +45,7 @@ class BaseEpisode:
     Base class for episode specification that includes only the episode_id
     and scene id. This class allows passing the minimum required episode
     information to identify the episode (unique key) to the habitat baseline process, thus saving evaluation time.
+
     :property episode_id: id of episode in the dataset, usually episode number.
     :property scene_id: id of scene in dataset.
     """

@@ -45,6 +45,9 @@ habitat.core.__all__ = [
     "registry",
     "vector_env",
     "batch_rendering",
+    "challenge",
+    "environments",
+    "logging",
 ]
 
 habitat.datasets.__all__ = [
@@ -54,6 +57,16 @@ habitat.datasets.__all__ = [
     "pointnav",
     "rearrange",
     "vln",
+]
+
+habitat.datasets.rearrange__all__ = [
+    "combine_datasets",
+    "generate_episode",
+    "navmesh_utils",
+    "rearrange_dataset",
+    "rearrange_generator",
+    "run_episode_generator",
+    "samplers",
 ]
 
 

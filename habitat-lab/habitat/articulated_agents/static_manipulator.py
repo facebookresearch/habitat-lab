@@ -16,6 +16,7 @@ from habitat_sim.simulator import Simulator
 class StaticManipulatorParams:
     """
     Data to configure a static manipulator.
+
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property arm_init_params: The starting joint angles of the arm. If None, resets to 0.

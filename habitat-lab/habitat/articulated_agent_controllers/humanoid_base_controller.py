@@ -16,6 +16,7 @@ class Pose:
     def __init__(self, joints_quat, root_transform):
         """
         Contains a single humanoid pose
+
             :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
             :param root_transform: Matrix4 with the root trasnform.
         """
@@ -26,6 +27,7 @@ class Pose:
 class Motion:
     """
     Contains a sequential motion, corresponding to a sequence of poses
+
         :param joints_quat_array: num_poses x num_joints x 4 array, containing the join orientations
         :param transform_array: num_poses x 4 x 4 array, containing the root transform
         :param displacement: on each pose, how much forward displacement was there?
@@ -53,6 +55,7 @@ class Motion:
 class HumanoidBaseController:
     """
     Generic class to replay SMPL-X motions
+
         :param motion_fps: the FPS at which we should be playing the motion.
         :param base_offset: what is the offset between the root of the character and their feet.
     """

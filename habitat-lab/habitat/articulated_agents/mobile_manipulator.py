@@ -18,6 +18,7 @@ from habitat_sim.simulator import Simulator
 @attr.s(auto_attribs=True, slots=True)
 class ArticulatedAgentCameraParams:
     """Data to configure a camera placement on the articulated agent.
+
     :property attached_link_id: Which link ID this camera is attached to, -1 for the base link.
     :property cam_offset_pos: The 3D position of the camera relative to the transformation of the attached link.
     :property cam_look_at_pos: The 3D of where the camera should face relative to the transformation of the attached link.
@@ -35,6 +36,7 @@ class ArticulatedAgentCameraParams:
 @attr.s(auto_attribs=True, slots=True)
 class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
+
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property wheel_joints: The joint ids of the wheels. If the wheels are not controlled, then this should be None
@@ -102,6 +104,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         base_type="mobile",
     ):
         r"""Constructor
+
         :param params: The parameter of the manipulator articulated agent.
         :param agent_cfg: Config to the agent. Contains urdf_path to URDF file.
         :param sim: The simulator.
