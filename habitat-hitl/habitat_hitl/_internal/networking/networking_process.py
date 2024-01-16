@@ -60,9 +60,24 @@ def terminate_networking_process():
 
 
 def create_ssl_context():
+    """
+    Create an SSL context.
+
+    This is not currently needed by the HITL framework, but we leave this here for reference.
+
+    If an SSL context is needed, in some cases a self-signed key is sufficient, at least for testing. To generate self_signed.pem and private.key:
+
+    1. Install openssl on your OS if necessary. I used conda to install.
+    2. Generate private.key:
+        openssl genpkey -algorithm RSA -out private.key -pkeyopt rsa_keygen_bits:2048
+    3. Generate temp.csr:
+        openssl req -new -key private.key -out temp.csr
+    4. Generate self_signed.pem. There are several prompts for info like country and organization. You can press return to use defaults for all of these.
+        openssl x509 -req -days 365 -in temp.csr -signkey private.key -out self_signed.pem -outform PEM
+    """
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    certfile = "./examples/siro_sandbox/self_signed.pem"
-    keyfile = "./examples/siro_sandbox/private.key"
+    certfile = "./self_signed.pem"
+    keyfile = "./private.key"
     assert os.path.exists(certfile) and os.path.exists(keyfile)
     ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile)
     return ssl_context
