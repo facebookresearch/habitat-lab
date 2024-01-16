@@ -4,6 +4,8 @@ This is an example HITL application that allows a user to interact with a scene,
 
 **Note:** The robot policy used in this example application will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
 
+![pick_throw_vr_screenshot](https://github.com/facebookresearch/habitat-lab/assets/6557808/39972686-ec74-49f0-ac7d-fbd0128dd713)
+
 ---
 - [Pick\_throw\_vr HITL application](#pick_throw_vr-hitl-application)
   - [Installing and using HITL apps](#installing-and-using-hitl-apps)
@@ -29,18 +31,13 @@ This is an example HITL application that allows a user to interact with a scene,
     - [Slow Performance](#slow-performance)
 
 ## Installing and using HITL apps
-See [siro_sandbox/README.md](../../siro_sandbox/README.md).
+See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 
 ## Example launch command (mouse/keyboard)
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---disable-inverse-kinematics \
---never-end \
---gui-controlled-agent-index 1 \
---ang-speed "15" \
---cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
+python examples/hitl/pick_throw_vr/pick_throw_vr.py
 ```
 
 # VR
@@ -75,17 +72,12 @@ The system is composed of the following components:
 
 The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
-* The `--remote-gui-mode` argument launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
+* The `habitat_hitl.remote_gui_mode=True` config override launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
---remote-gui-mode \
---disable-inverse-kinematics \
---never-end \
---gui-controlled-agent-index 1 \
---ang-speed "15" \
---cfg examples/hitl/pick_throw_vr/config/pick_throw_vr.yaml
+habitat_hitl.remote_gui_mode=True
 ```
 
 ## Unity Data Folder
