@@ -435,6 +435,8 @@ class ArmRGBPretrainVisualFeatureSensorConfig(LabSensorConfig):
     Pretrained visual feature sensor for arm rgb camera
     """
     type: str = "ArmRGBPretrainVisualFeatureSensor"
+    # This is added to prevent from cuda out of memory issue
+    force_to_use_cpu: bool = False
 
 
 @dataclass
@@ -443,6 +445,8 @@ class PretrainTextualFeatureGoalSensorConfig(LabSensorConfig):
     Pretrained visual feature sensor for goal receptacle text
     """
     type: str = "PretrainTextualFeatureGoalSensor"
+    # This is added to prevent from cuda out of memory issue
+    force_to_use_cpu: bool = False
 
 
 @dataclass

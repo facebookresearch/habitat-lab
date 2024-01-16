@@ -1361,7 +1361,7 @@ class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
             ) from e
         self._device = (
             torch.device("cuda")
-            if torch.cuda.is_available()
+            if torch.cuda.is_available() and not config.force_to_use_cpu
             else torch.device("cpu")
         )
         configuration = SiglipVisionConfig()
@@ -1435,7 +1435,7 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
             ) from e
         self._device = (
             torch.device("cuda")
-            if torch.cuda.is_available()
+            if torch.cuda.is_available() and not config.force_to_use_cpu
             else torch.device("cpu")
         )
         configuration = SiglipVisionConfig()
