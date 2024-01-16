@@ -49,7 +49,7 @@ habitat_hitl:
 
   camera:
 
-    # See CameraHelper. Include `--first-person-mode`, or omit it to use third-person mode. With first-person mode, use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `--hide-humanoid-in-gui` with `--first-person-mode`, because it doesn't make sense to visualize the humanoid with this camera. For first-person mode, you should also set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning.
+    # See CameraHelper. Set first_person_mode=True, or False to use third-person mode. With first-person mode, use  `max_look_up_angle` and `min_look_down_angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `hide_humanoid_in_gui=True` with `first_person_mode`, because it doesn't make sense to visualize the humanoid with this camera. For first-person mode, you should also set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning.
     first_person_mode: False
     max_look_up_angle: 15.0
     min_look_down_angle: -60.0

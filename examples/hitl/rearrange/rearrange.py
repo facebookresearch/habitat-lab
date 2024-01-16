@@ -35,7 +35,7 @@ class AppStateRearrange(AppState):
     """
     A user-controlled human and policy-controlled robot must accomplish a collaborative rearrangement task in HSSD scenes.
 
-    See examples/siro_sandbox/README.md for more about AppStates and HITL apps.
+    See habitat-hitl/README.md for more about AppStates and HITL apps.
 
     Overview of the main pieces of this class:
     * sim_update: per-frame entrypoint. Step the habitat env, update the camera and help text, and restart episodes as necessary.

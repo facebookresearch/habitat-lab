@@ -79,19 +79,26 @@ defaults:
 ```
 # minimal.py
 
+import ctypes, sys
+
+# must call this before importing habitat or magnum! avoids runtime errors on some platforms
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
+
 import hydra
 import magnum
 
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
-from habitat_hitl.core.gui_input import GuiInput
+
 
 class AppStateMinimal(AppState):
     """
     A minimal HITL app that loads and steps a Habitat environment, with
     a fixed overhead camera.
     """
+
     def __init__(self, app_service):
         self._app_service = app_service
 
@@ -116,7 +123,6 @@ class AppStateMinimal(AppState):
             post_sim_update_dict["application_exit"] = True
 
 
-
 @hydra.main(version_base=None, config_path="./", config_name="minimal_cfg")
 def main(config):
     hitl_main(config, lambda app_service: AppStateMinimal(app_service))
@@ -126,3 +132,4 @@ if __name__ == "__main__":
     register_hydra_plugins()
     main()
 ```
+See the latest version of the minimal app [here](../examples/hitl/minimal/).
