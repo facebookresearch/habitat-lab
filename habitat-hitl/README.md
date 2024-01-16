@@ -4,7 +4,7 @@ The HITL framework brings real human users into Habitat virtual environments. Us
 
 The HITL framework consists of the `habitat-hitl` Python library, example [desktop applications](../examples/hitl/), and our Unity-based [VR client](../examples/hitl/pick_throw_vr/README.md#vr).
 
-The framework builds on `habitat-lab` and `habitat-baselines`. It provides wrappers to load, simulate, and render Habitat environments in real time, including virtual agents and policy inference. To enable users to interact with these agents, the framework provides graphical user interfaces (GUIs), including a 3D viewport window, camera-control and avatar-control helpers, and VR integration.
+The framework builds on `habitat-lab` and `habitat-baselines`. It provides wrappers to load, simulate, and render Habitat environments in real time, including virtual agents and policy inference. To enable users to interact with these agents, the framework provides graphical user interfaces (GUIs), including a window with a 3D viewport, camera-control and avatar-control helpers, and VR integration.
 
 <p align="center">
   <img src="../res/img/hitl_tool.gif" height=400>
@@ -19,10 +19,10 @@ The framework builds on `habitat-lab` and `habitat-baselines`. It provides wrapp
   - [Minimal HITL application](#minimal-hitl-application)
 
 ## System Requirements
-* **Operating System:** macOS or Linux. We've tested Fedora but other flavors should also work.
-* **CPU/GPU:** Apple M1 Max, Intel Core i7 + dedicated GPU, or equivalent.
+* **Operating System:** macOS or Linux. We've tested Fedora but other Linux flavors should also work.
+* **CPU/GPU:** Apple M1 Pro/Max, Intel Core i7 + dedicated GPU, or equivalent.
 * **Display:** laptop or desktop with an attached monitor. We haven't tested remote desktop or other headless options.
-* **Storage:** ~20 GB. Example HITL apps use the Habitat Synthetic Scenes Dataset (HSSD), which is about 20 GB.
+* **Storage:** ~20 GB including Habitat dependencies and runtime data like HSSD. This excludes common third-party and OS libraries. An Ubuntu machine needs about 60 GB of storage for the OS and everything else required to run HITL apps.
 * **VR:** HITL VR uses a client/server model which requires both a desktop system (above) and a VR headset. See [`pick_throw_vr/README.md`](../examples/hitl/pick_throw_vr/README.md) for details.
 
 Example HITL apps are configured to run at 30 steps per second (SPS). If your system doesn't meet the above specs, you'll have a lower SPS and a degraded user experience.
