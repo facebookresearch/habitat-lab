@@ -302,6 +302,13 @@ class HabitatEvaluator(Evaluator):
                 rgb_frames,
             )
 
+            # We pause the statefull parameters in the policy.
+            # We only do this if there are envs to pause to reduce the overhead.
+            # In addition, HRL policy requires the solution_actions to be non-empty, and
+            # empty list of envs_to_pause will raise an error.
+            if any(envs_to_pause):
+                agent.actor_critic.on_envs_pause(envs_to_pause)
+
         pbar.close()
         assert (
             len(ep_eval_count) >= number_of_eval_episodes

@@ -22,11 +22,3 @@ class AppState(ABC):
     # This is a good place to record using _sandbox_service.step_recorder because this function will be skipped if the app isn't recording. However, an AppState is free to record at any time (in other methods, too).
     def record_state(self):
         pass
-
-    # Called when the AppState is entered. This is a good place to get extra information from previous or next app state.
-    def on_enter(self, prev_state=None, next_state=None):
-        pass
-
-    # Indicates if the AppState is done, as a hint to SandboxDriver that a state transition is needed.
-    def is_app_state_done(self):
-        pass
