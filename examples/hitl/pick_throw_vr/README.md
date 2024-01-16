@@ -4,6 +4,8 @@ This is an example HITL application that allows a user to interact with a scene,
 
 **Note:** The robot policy used in this example application will randomly move around and pick up objects. This is an example application from which you can base yourself to build your own VR application.
 
+![pick_throw_vr_screenshot](https://github.com/facebookresearch/habitat-lab/assets/6557808/39972686-ec74-49f0-ac7d-fbd0128dd713)
+
 ---
 - [Pick\_throw\_vr HITL application](#pick_throw_vr-hitl-application)
   - [Installing and using HITL apps](#installing-and-using-hitl-apps)
