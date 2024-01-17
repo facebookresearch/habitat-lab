@@ -18,12 +18,10 @@ from habitat_sim.simulator import Simulator
 @attr.s(auto_attribs=True, slots=True)
 class ArticulatedAgentCameraParams:
     """Data to configure a camera placement on the articulated agent.
-    :property attached_link_id: Which link ID this camera is attached to, -1
-        for the base link.
-    :property cam_offset_pos: The 3D position of the camera relative to the
-        transformation of the attached link.
-    :property cam_look_at_pos: The 3D of where the camera should face relative
-        to the transformation of the attached link.
+
+    :property attached_link_id: Which link ID this camera is attached to, -1 for the base link.
+    :property cam_offset_pos: The 3D position of the camera relative to the transformation of the attached link.
+    :property cam_look_at_pos: The 3D of where the camera should face relative to the transformation of the attached link.
     :property relative_transform: An added local transform for the camera.
     """
 
@@ -38,35 +36,25 @@ class ArticulatedAgentCameraParams:
 @attr.s(auto_attribs=True, slots=True)
 class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
+
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property wheel_joints: The joint ids of the wheels. If the wheels are not controlled, then this should be None
-    :property arm_init_params: The starting joint angles of the arm. If None,
-        resets to 0.
-    :property gripper_init_params: The starting joint positions of the gripper. If None,
-        resets to 0.
-    :property ee_offset: The 3D offset from the end-effector link to the true
-        end-effector position.
+    :property arm_init_params: The starting joint angles of the arm. If None, resets to 0.
+    :property gripper_init_params: The starting joint positions of the gripper. If None, resets to 0.
+    :property ee_offset: The 3D offset from the end-effector link to the true end-effector position.
     :property ee_links: A list with the Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
-        lower limits for each end-effector joint where N is the arm DOF.
-    :property cameras: The cameras and where they should go. The key is the
-        prefix to match in the sensor names. For example, a key of `"head"`
-        will match sensors `"head_rgb"` and `"head_depth"`
-    :property gripper_closed_state: All gripper joints must achieve this
-        state for the gripper to be considered closed.
-    :property gripper_open_state: All gripper joints must achieve this
-        state for the gripper to be considered open.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and lower limits for each end-effector joint where N is the arm DOF.
+    :property cameras: The cameras and where they should go. The key is the prefix to match in the sensor names. For example, a key of `"head"`will match sensors `"head_rgb"` and `"head_depth"`
+    :property gripper_closed_state: All gripper joints must achieve this state for the gripper to be considered closed.
+    :property gripper_open_state: All gripper joints must achieve this state for the gripper to be considered open.
     :property gripper_state_eps: Error margin for detecting whether gripper is closed.
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
-    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if
-        there are wheels).
-    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if
-        there are wheels).
-    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
-        there are wheels).
+    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if there are wheels).
+    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if there are wheels).
+    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if there are wheels).
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
     :property ee_count: how many end effectors
     """
@@ -116,6 +104,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         base_type="mobile",
     ):
         r"""Constructor
+
         :param params: The parameter of the manipulator articulated agent.
         :param agent_cfg: Config to the agent. Contains urdf_path to URDF file.
         :param sim: The simulator.

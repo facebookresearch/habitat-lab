@@ -20,4 +20,6 @@ __all__ = [
     "HumanoidBaseController",
     "HumanoidRearrangeController",
     "HumanoidSeqPoseController",
+    "Pose",
+    "Motion",
 ]

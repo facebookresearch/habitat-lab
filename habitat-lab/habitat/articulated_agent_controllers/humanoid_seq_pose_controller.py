@@ -18,6 +18,7 @@ from habitat.articulated_agent_controllers import (
 class HumanoidSeqPoseController(HumanoidBaseController):
     """
     Humanoid Seq Pose Controller, replays a sequence of humanoid poses.
+
         :param motion_pose_path: file containing the motion poses we want to play.
         :param motion_fps: the FPS at which we should be advancing the pose.
         :param base_offset: what is the offset between the root of the character and their feet.
@@ -64,6 +65,7 @@ class HumanoidSeqPoseController(HumanoidBaseController):
     def next_pose(self, cycle=False) -> None:
         """
         Move to the next pose in the motion sequence
+
             :param cycle: boolean indicating whether we should stop or cycle when reaching the last pose
         """
 

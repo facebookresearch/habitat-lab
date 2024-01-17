@@ -31,6 +31,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         **kwargs,
     ):
         r"""Constructor
+
         :param params: The parameter of the base articulated agent.
         :param urdf_path: The path to the articulated agent's URDF file.
         :param sim: The simulator.

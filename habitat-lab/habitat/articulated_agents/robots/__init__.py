@@ -18,4 +18,6 @@ __all__ = [
     "FrankaRobot",
     "SpotRobot",
     "StretchRobot",
+    "fetch_suction",
+    "spot_robot",
 ]
