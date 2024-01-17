@@ -443,10 +443,15 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
-            at_goal = (
+
+            # Distance at which we don't need to check angle
+            # this is because in some cases we may be very close to the object
+            # which causes instability in the angle_to_obj
+            distance_close_no_distance = self._config.dist_thresh / 10.0
+            at_goal = dist_to_final_nav_targ < distance_close_no_distance or (
                 dist_to_final_nav_targ < self._config.dist_thresh
                 and angle_to_obj < self._config.turn_thresh
-            ) or dist_to_final_nav_targ < self._config.dist_thresh / 10.0
+            )
 
             if self.motion_type == "base_velocity":
                 if not at_goal:

@@ -35,7 +35,6 @@ class HumanoidPickAction(HumanoidJointAction):
         self._task = task
         self._entities = self._task.pddl_problem.get_ordered_entities_list()
         self._prev_ep_id = None
-        self._targets = {}
         self.skill_done = False
         self.hand_state = HandState.APPROACHING
 
@@ -186,7 +185,6 @@ class HumanoidPickAction(HumanoidJointAction):
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         if self._task._episode_id != self._prev_ep_id:
-            self._targets = {}
             self._prev_ep_id = self._task._episode_id
             self.skill_done = False
         self._hand_pose_iter = 0
@@ -205,7 +203,6 @@ class HumanoidPickObjIdAction(HumanoidPickAction):
 
         self._task = task
         self._prev_ep_id = None
-        self._targets = {}
         self.skill_done = False
         self.hand_state = HandState.APPROACHING
 
@@ -313,7 +310,6 @@ class HumanoidPickObjIdAction(HumanoidPickAction):
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         if self._task._episode_id != self._prev_ep_id:
-            self._targets = {}
             self._prev_ep_id = self._task._episode_id
             self.skill_done = False
         self._hand_pose_iter = 0
