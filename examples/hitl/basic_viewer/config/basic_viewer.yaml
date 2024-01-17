@@ -22,8 +22,6 @@ habitat_baselines:
 habitat_hitl:
   window:
     title: "Basic_viewer"
-
-  # Temp disable debug images due to a crash issue on Linux. See https://app.asana.com/0/1205829436198608/1206363026162486
-  # debug_third_person_viewport:
-  #   width: 256
-  # debug_images: ["agent_1_head_depth"]
+  debug_third_person_viewport:
+    width: 256
+  debug_images: ["agent_1_head_depth"]
