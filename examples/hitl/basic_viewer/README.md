@@ -4,8 +4,6 @@ Inspect Habitat environments, episodes, and agent policy evaluation in real time
 
 ![basic_viewer_screenshot](https://github.com/facebookresearch/habitat-lab/assets/6557808/5f1b47db-8988-4eef-8275-46cf58f1d6ec)
 
-Note on this screenshot: the debug images on the right (`debug_third_person_viewport` and `agent_1_head_depth`) are disabled by default. You can enable them in `basic_viewer.yaml`.
-
 ## Installing and using HITL apps
 See [habitat-hitl/README.md](../../../habitat-hitl/README.md)
 

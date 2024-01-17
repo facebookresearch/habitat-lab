@@ -21,30 +21,80 @@ class ImageFramebufferDrawer:
             mn.gl.Framebuffer.ColorAttachment(0), self.texture, 0
         )
 
-    def draw(self, pixel_data, dest_x, dest_y):
+    # pad images to avoid error in Magnum ImageView code.
+    def _pad_image_tensor_for_draw_requirements(self, tensor):
+        # todo: investigate Magnum ImageView2D to understand actual requirements here.
+        required_width_multiple = 4
+
+        # Calculate padding for the second-to-last dimension
+        remainder = tensor.shape[-2] % required_width_multiple
+        if remainder != 0:
+            padding_needed = required_width_multiple - remainder
+        else:
+            padding_needed = 0
+
+        # Apply padding if needed
+        if padding_needed > 0:
+            if isinstance(tensor, np.ndarray):
+                pad_width = [
+                    (0, 0)
+                    if dim != len(tensor.shape) - 2
+                    else (0, padding_needed)
+                    for dim in range(len(tensor.shape))
+                ]
+                tensor = np.pad(
+                    tensor,
+                    pad_width=pad_width,
+                    mode="constant",
+                    constant_values=0,
+                )
+            else:
+                raise AssertionError()  # Code below is untested! Uncomment it and try it!
+                # import torch.nn.functional as F  # lazy import; avoid torch dependency at file scope
+                # assert len(tensor.shape) == 3, "Tensor is not 3D."
+                # # Only pad the second-to-last dimension (i.e., middle dimension in a 3D tensor)
+                # pad = (
+                #     0,
+                #     0,
+                #     0,
+                #     0,
+                #     padding_needed,
+                #     0,
+                # )  # format: (front, back, left, right, top, bottom)
+                # tensor = F.pad(tensor, pad, "constant", 0)
+
+        return tensor
+
+    def draw(self, image_tensor, dest_x, dest_y):
         import torch  # lazy import; avoid torch dependency at file scope
 
-        if isinstance(pixel_data, (np.ndarray, torch.Tensor)):
-            assert len(pixel_data.shape) == 3 and (
-                pixel_data.shape[2] == 3 or pixel_data.shape[2] == 4
+        if isinstance(image_tensor, (np.ndarray, torch.Tensor)):
+            assert len(image_tensor.shape) == 3 and (
+                image_tensor.shape[2] == 3 or image_tensor.shape[2] == 4
             )
             assert (
-                pixel_data.dtype == np.uint8 or pixel_data.dtype == torch.uint8
+                image_tensor.dtype == np.uint8
+                or image_tensor.dtype == torch.uint8
             )
+
+            padded_tensor = self._pad_image_tensor_for_draw_requirements(
+                image_tensor
+            )
+
             # todo: catch case where storage is not 0-dim-major?
             self.draw_bytearray(
-                bytearray_pixel_data=bytearray(pixel_data),
-                height=pixel_data.shape[0],
-                width=pixel_data.shape[1],
-                bytes_per_pixel=pixel_data.shape[2],
+                bytearray_pixel_data=bytearray(padded_tensor),
+                height=padded_tensor.shape[0],
+                width=padded_tensor.shape[1],
+                bytes_per_pixel=padded_tensor.shape[2],
                 dest_x=dest_x,
                 dest_y=dest_y,
             )
         else:
             raise TypeError(
                 "Type "
-                + type(pixel_data)
-                + " isn't yet supported by ImageFramebufferDrawer. You should add it!"
+                + type(image_tensor)
+                + " isn't yet supported by ImageFramebufferDrawer."
             )
 
     def draw_bytearray(
