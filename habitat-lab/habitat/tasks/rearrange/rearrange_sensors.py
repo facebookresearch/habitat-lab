@@ -1370,9 +1370,10 @@ class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
         super().__init__(config=config)
         self._sim = sim
         # Load the model based on HuggingFace's transformers
-        self._model = AutoModel.from_pretrained(self._model_name).to(
-            self._device
-        )
+        # Use bfloat16 to speed up inference
+        self._model = AutoModel.from_pretrained(
+            self._model_name, torch_dtype=torch.bfloat16
+        ).to(self._device)
         self._processor = AutoProcessor.from_pretrained(self._model_name)
 
     def _get_uuid(self, *args, **kwargs):
@@ -1406,11 +1407,15 @@ class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
             images=rgb_image, return_tensors="pt"
         )
         rgb_image_input = rgb_image_input.to(self._device)
-        with torch.no_grad():
+        rgb_image_input["pixel_values"] = rgb_image_input[
+            "pixel_values"
+        ].bfloat16()
+        with torch.inference_mode():
             image_features = self._model.get_image_features(**rgb_image_input)
 
         # Move the features back to cpu
         image_features = image_features.to("cpu")
+        image_features = image_features.float()
         image_features = np.array(image_features.squeeze())
 
         return image_features
@@ -1444,9 +1449,10 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         super().__init__(config=config)
         self._sim = sim
         # Load the model based on HuggingFace's transformers
-        self._model = AutoModel.from_pretrained(self._model_name).to(
-            self._device
-        )
+        # Use bfloat16 to speed up inference
+        self._model = AutoModel.from_pretrained(
+            self._model_name, torch_dtype=torch.bfloat16
+        ).to(self._device)
         self._tokenizer = AutoTokenizer.from_pretrained(
             "google/siglip-base-patch16-224"
         )
@@ -1537,11 +1543,12 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         )
         inputs = inputs.to(self._device)
         # Get text feature
-        with torch.no_grad():
+        with torch.inference_mode():
             text_features = self._model.get_text_features(**inputs)
 
         # Move the features back to cpu
         text_features = text_features.to("cpu")
+        text_features = text_features.float()
         text_features = np.array(text_features.squeeze())
         self._goal_textual_feature = text_features
 
