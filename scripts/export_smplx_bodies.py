@@ -497,29 +497,6 @@ def pprint(data):
                 )
 
 
-def apply_shape_keys(ob):
-    if not hasattr(ob.data, "shape_keys"):
-        return
-    ob.shape_key_add(name="CombinedKeys", from_mix=True)
-    if ob.data.shape_keys:
-        for shapeKey in ob.data.shape_keys.key_blocks:
-            ob.shape_key_remove(shapeKey)
-
-
-def body_locations(num_bodies_gender):
-    bodies_row = num_bodies_gender
-    rows = 3
-    crowd_width = 6
-    crowd_depth = 3.7
-    locations = []
-    for row in range(rows):
-        y = -crowd_depth / 2 + (row * crowd_depth) / (rows - 1)
-        for col in range(bodies_row):
-            x = -crowd_width / 2 + (col * crowd_width) / (bodies_row - 1)
-            locations.append((x, y))
-    return locations
-
-
 def cleanup():
     """Deletes all objects in the blender scene."""
     bpy.ops.object.select_all(action="SELECT")
