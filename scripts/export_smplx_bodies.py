@@ -514,7 +514,12 @@ class BlenderArgumentParser(argparse.ArgumentParser):
         return super().parse_args(args=parsed_args)
 
 
-def set_texture(texture):
+def set_texture(texture: str):
+    """
+    Sets a texture to the humanoid, given the file named texture.
+    Args:
+        texture: path to the texture
+    """
     if not os.path.isfile(texture):
         # If the texture file does not exist, it may be part of the blender plugin
         bpy.context.window_manager.smplx_tool.smplx_texture = texture
