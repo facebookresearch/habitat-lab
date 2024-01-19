@@ -10,6 +10,7 @@ import sys
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 from math import radians
+from typing import Any, Dict
 
 # /Applications/Blender.app/Contents/MacOS/Blender
 import bpy
@@ -46,7 +47,11 @@ root_bone = None
 ####### Export GLTF code ######
 
 
-def smplx_export_gltf(filepath):
+def smplx_export_gltf(filepath: str):
+    """Given a generate SMPL-X body model, exports it into a GLB file, used to skin the URDF
+    Args:
+        filepath: the full path where the output glb file will be saved. Should have the glb extension.
+    """
     obj = bpy.context.object
 
     armature_original = obj.parent
@@ -170,7 +175,14 @@ def smplx_export_gltf(filepath):
 
 
 #### Build URDF CODE #####
-def get_origin_from_matrix(M):
+def get_origin_from_matrix(M) -> ET.Element:
+    """Get the origin coordinate and rotation from a matrix M.
+    Args:
+        M: the matrix for which we want to compute the origin coord.
+    Returns:
+        origin_xml_node: an xml element with the rotation and coordinates of the origin
+    """
+
     global multiplier
     translation = M.to_translation() / multiplier
     euler = M.to_euler()
@@ -187,7 +199,13 @@ def get_origin_from_matrix(M):
     return origin_xml_node
 
 
-def get_origin_from_bone(bone):
+def get_origin_from_bone(bone) -> ET.Element:
+    """Get the origin coordinate and rotation for the bone, at the connection of its parent.
+    Args:
+        bone: the bone for which we want to compute the origin coord.
+    Returns:
+        origin_xml_node: an xml element with the rotation and coordinates of the origin
+    """
     global multiplier
     translation = (
         bone.matrix_local.to_translation()
@@ -206,7 +224,13 @@ def get_origin_from_bone(bone):
     return origin_xml_node
 
 
-def create_bone_link(this_bone):
+def create_bone_link(this_bone) -> ET.Element:
+    """Create an xml link given a child bone and populate the joint connecting the child and parent bone.
+    Args:
+        this_bone: the bone from which we want to create the link.
+    Returns:
+        xml_link: the xml link with the bone information.
+    """
     global counter
 
     # Get bone properties
@@ -253,7 +277,13 @@ def create_bone_link(this_bone):
 # ==========================================
 
 
-def create_root_bone_link(this_bone):
+def create_root_bone_link(this_bone) -> ET.Element:
+    """Create an xml link given the root bone.
+    Args:
+        this_bone: the bone from which we want to create the link. It should not have any parent.
+    Returns:
+        xml_link: the xml link with the root bone information.
+    """
     xml_link = ET.Element("link")
     xml_link_name = this_bone.xml_link_name
     xml_link.set("name", xml_link_name)
@@ -263,7 +293,13 @@ def create_root_bone_link(this_bone):
     return xml_link
 
 
-def get_visual_origin(bone, padding):
+def get_visual_origin(bone) -> ET.Element:
+    """Get the origin coordinate and rotation for the bone center.
+    Args:
+        bone: the bone for which we want to compute the origin coord.
+    Returns:
+        origin_xml_node: an xml element with the rotation and coordinates of the origin
+    """
     global multiplier
     M = bone.matrix_local
     translation = (bone.tail_local - bone.head_local) / (2 * multiplier)
@@ -283,7 +319,10 @@ def get_visual_origin(bone, padding):
 
 def bone_to_urdf(this_bone):
     """This function extracts the basic properties of the bone and populates
-    links and joint lists with the corresponding urdf nodes"""
+    links and joint lists with the corresponding urdf nodes
+    Args:
+        this_bone: a humanoid bone. Should have properties such as name, length, and children.
+    """
 
     global counter, multiplier
     this_bone.xml_link_name = LINK_NAME_FORMAT.format(
@@ -335,7 +374,7 @@ def bone_to_urdf(this_bone):
 
     this_xml_visual = ET.Element("visual")
     # this_xml_visual.append(ET.fromstring('<origin rpy="0 0 0" xyz="0 {} 0"/>'.format(this_bone.length/2 + padding)))
-    this_xml_visual.append(get_visual_origin(this_bone, None))
+    this_xml_visual.append(get_visual_origin(this_bone))
     this_xml_visual.append(this_xml_geom)
     this_xml_visual.append(this_xml_material)
 
@@ -343,7 +382,7 @@ def bone_to_urdf(this_bone):
 
     # Create the collision node
     this_xml_collision = ET.Element("collision")
-    this_xml_collision.append(get_visual_origin(this_bone, None))
+    this_xml_collision.append(get_visual_origin(this_bone))
     this_xml_collision.append(this_xml_geom)
 
     this_xml_link.append(this_xml_collision)
@@ -364,12 +403,22 @@ def set_base_limit_str(effort, velocity):
 
 
 def walk_armature(this_bone, handler):
+    """Walks recursively through an armature's bones and applies the handler function for each bone.
+    Args:
+        this_bone: current_root_bone from which the armature should be built
+        handler: the function that should be applied to the bone.
+    """
     handler(this_bone)
     for child in this_bone.children:
         walk_armature(child, handler)
 
 
-def smplx_export_urdf(filename, settings):
+def smplx_export_urdf(filename: str, settings: Dict[str, Any]):
+    """Exports the fbx file in the blender scene into a URDF file, stored in filename.
+    Args:
+        filename: full path of the urdf file to export.
+        settings: a dictionary with export settings, should at least have a field with armature with the armature as a value.
+    """
     global LINK_NAME_FORMAT, JOINT_NAME_FORMAT, ob, root_bone, links, joints, multiplier, counter
     counter = 0
     links = []
@@ -472,6 +521,7 @@ def body_locations(num_bodies_gender):
 
 
 def cleanup():
+    """Deletes all objects in the blender scene."""
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
 
@@ -488,6 +538,7 @@ class BlenderArgumentParser(argparse.ArgumentParser):
 
 
 def setup_bones():
+    """Set mass and inertia values to the bones."""
     bpy.types.Bone.xml_link_name = bpy.props.StringProperty(
         name="URDF xml link name", default="unset"
     )
@@ -561,7 +612,6 @@ def main():
     fbx_names = []
     export_glb = True
     export_urdf = True
-    display = False  # TODO delete
     index_body = 0
     genders = ["neutral", "male", "female"]
     cleanup()
@@ -641,13 +691,6 @@ def main():
         if export_glb:
             smplx_export_gltf(filepath=glb_path)
 
-        if display:
-            armature = bpy.context.view_layer.objects.active.parent
-            for bone in armature.pose.bones:
-                bone.bone.hide = True
-                bone.bone.hide_select = True
-            armature.location = Vector((0, 0, 0))  # armature.location.z) )
-
         bpy.ops.object.smplx_export_fbx(
             filepath=fbx_path, target_format="UNITY", export_shape_keys="NONE"
         )
@@ -675,4 +718,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # To run this script, use the following command to generate a humanoid avatar with a random shape and gender:
+    # For MacOS, the path to blender typically is /Applications/Blender.app/Contents/MacOS/Blender
+    # path_to_blender -b -P 'scripts/export_smplx_bodies.py'
+    # For more details an options, check out the README:
+    # https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/articulated_agents/humanoids#humanoid-design
     main()
