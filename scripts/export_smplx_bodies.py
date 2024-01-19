@@ -537,6 +537,73 @@ class BlenderArgumentParser(argparse.ArgumentParser):
         return super().parse_args(args=parsed_args)
 
 
+def set_texture(texture):
+    if not os.path.isfile(texture):
+        # If the texture file does not exist, it may be part of the blender plugin
+        bpy.context.window_manager.smplx_tool.smplx_texture = texture
+        bpy.ops.object.smplx_set_texture()
+    else:
+        # Set the texture manually
+        # code adapted from https://github.com/Meshcapade/SMPL_blender_addon/blob/main/meshcapade_addon/operators.py#L426
+        obj = bpy.context.object
+        if (len(obj.data.materials) == 0) or (obj.data.materials[0] is None):
+            print({"WARNING"}, "Selected mesh has no material: %s" % obj.name)
+
+        mat = obj.data.materials[0]
+        links = mat.node_tree.links
+        nodes = mat.node_tree.nodes
+
+        # Find texture node
+        node_texture = None
+        for node in nodes:
+            if node.type == "TEX_IMAGE":
+                node_texture = node
+                break
+        # Find shader node
+        node_shader = None
+        for node in nodes:
+            if node.type.startswith("BSDF"):
+                node_shader = node
+                break
+
+        if texture == "NONE":
+            # Unlink texture node
+            if node_texture is not None:
+                for link in node_texture.outputs[0].links:
+                    links.remove(link)
+
+                nodes.remove(node_texture)
+
+                # 3D Viewport still shows previous texture when texture link is removed via script.
+                # As a workaround we trigger desired viewport update by setting color value.
+                node_shader.inputs[0].default_value = node_shader.inputs[
+                    0
+                ].default_value
+        else:
+            if node_texture is None:
+                node_texture = nodes.new(type="ShaderNodeTexImage")
+
+            if (texture == "UV_GRID") or (texture == "COLOR_GRID"):
+                if texture not in bpy.data.images:
+                    bpy.ops.image.new(name=texture, generated_type=texture)
+                image = bpy.data.images[texture]
+            else:
+                if texture not in bpy.data.images:
+                    texture_path = texture
+                    image = bpy.data.images.load(texture_path)
+                else:
+                    image = bpy.data.images[texture]
+
+            node_texture.image = image
+
+            if len(node_texture.outputs[0].links) == 0:
+                links.new(node_texture.outputs[0], node_shader.inputs[0])
+
+        # Switch viewport shading to Material Preview to show texture
+        if bpy.context.space_data and bpy.context.space_data.type == "VIEW_3D":
+            bpy.context.space_data.shading.type = "MATERIAL"
+
+
 def setup_bones():
     """Set mass and inertia values to the bones."""
     bpy.types.Bone.xml_link_name = bpy.props.StringProperty(
@@ -603,6 +670,9 @@ def main():
     args = parser.parse_args()
 
     output_path = args.output_dir
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+
     if args.body_file is None:
         body_info: list[dict] = [{}]
     else:
@@ -631,16 +701,14 @@ def main():
         # Set texture
         if "texture" in curr_body_info:
             texture = curr_body_info["texture"]
-            bpy.context.window_manager.smplx_tool.smplx_texture = texture
-            bpy.ops.object.smplx_set_texture()
+            set_texture(texture)
         else:
             if gender != "neutral":
                 if gender == "female":
                     texture = "smplx_texture_f_alb.png"
                 else:
                     texture = "smplx_texture_m_alb.png"
-                bpy.context.window_manager.smplx_tool.smplx_texture = texture
-                bpy.ops.object.smplx_set_texture()
+                set_texture(texture)
 
         obj = bpy.context.object
         bpy.ops.object.mode_set(mode="OBJECT")
