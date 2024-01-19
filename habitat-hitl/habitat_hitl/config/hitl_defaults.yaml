@@ -22,6 +22,9 @@ habitat_hitl:
     # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
 
+  # Disable policy-initialization and environment-stepping. Useful for testing on lower-power machines.
+  disable_policies_and_stepping: False
+
   debug_third_person_viewport:
     # If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width. If height (below) is not specified, assume square aspect ratio (height==width).
     width: ~

@@ -134,13 +134,16 @@ class HitlDriver(GuiAppDriver):
         )
         self._recording_keyframes: List[str] = []
 
-        self.ctrl_helper = ControllerHelper(
-            gym_habitat_env=self.gym_habitat_env,
-            config=config,
-            hitl_config=self._hitl_config,
-            gui_input=gui_input,
-            recorder=self._step_recorder,
-        )
+        if not self._hitl_config.disable_policies_and_stepping:
+            self.ctrl_helper = ControllerHelper(
+                gym_habitat_env=self.gym_habitat_env,
+                config=config,
+                hitl_config=self._hitl_config,
+                gui_input=gui_input,
+                recorder=self._step_recorder,
+            )
+        else:
+            self.ctrl_helper = None
 
         self._debug_images = self._hitl_config.debug_images
 
@@ -175,7 +178,9 @@ class HitlDriver(GuiAppDriver):
             lambda: self._set_cursor_style,
             self._episode_helper,
             self._client_message_manager,
-            self.ctrl_helper.get_gui_agent_controller(),
+            self.ctrl_helper.get_gui_agent_controller()
+            if self.ctrl_helper
+            else None,
         )
 
         self._app_state: AppState = None
@@ -260,6 +265,9 @@ class HitlDriver(GuiAppDriver):
         ) = self.gym_habitat_env.step(action)
 
     def _compute_action_and_step_env(self):
+        if self._hitl_config.disable_policies_and_stepping:
+            return
+
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
 
@@ -307,7 +315,8 @@ class HitlDriver(GuiAppDriver):
             self._remote_gui_input.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
-        self.ctrl_helper.on_environment_reset()
+        if self.ctrl_helper:
+            self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
@@ -316,7 +325,13 @@ class HitlDriver(GuiAppDriver):
 
         # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
         # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
-        self.ctrl_helper.on_environment_reset()
+        if self.ctrl_helper:
+            self.ctrl_helper.on_environment_reset()
+
+        if self._hitl_config.disable_policies_and_stepping:
+            # we need to manually save a keyframe since the Habitat env only does this
+            # after an env step.
+            self.get_sim().gfx_replay_manager.save_keyframe()
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False
