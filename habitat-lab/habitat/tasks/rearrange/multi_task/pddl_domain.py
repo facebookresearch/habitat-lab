@@ -668,7 +668,7 @@ class PddlProblem(PddlDomain):
             self.stage_goals[stage_name], _ = self.expand_quantifiers(expr)
 
         self._solution: Optional[List[PddlAction]] = None
-        if "solution" in problem_def:
+        if False: # "solution" in problem_def:
             self._solution = []
             for sol in problem_def["solution"]:
                 action_name, action_args = parse_func(sol)

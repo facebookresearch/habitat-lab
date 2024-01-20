@@ -461,12 +461,12 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            try:
-                self._scene_sampler.set_cur_episode(len(generated_episodes))
-                new_episode = self.generate_single_episode()
-            except Exception:
-                new_episode = None
-                logger.error("Generation failed with exception...")
+            # try:
+            self._scene_sampler.set_cur_episode(len(generated_episodes))
+            new_episode = self.generate_single_episode()
+            # except Exception:
+            #     new_episode = None
+            #     logger.error("Generation failed with exception...")
             if new_episode is None:
                 failed_episodes += 1
                 continue
@@ -552,7 +552,6 @@ class RearrangeEpisodeGenerator:
         largest_indoor_island_id = get_largest_island_index(
             self.sim.pathfinder, self.sim, allow_outdoor=False
         )
-
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
@@ -562,21 +561,21 @@ class RearrangeEpisodeGenerator:
             while len(new_target_receptacles) < num_targets:
                 assert len(failed_samplers.keys()) < len(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
-                ), f"All target samplers failed to find a match for '{sampler_name}'."
+                ), f"All target samplers failed to find a match for '{sampler_name}' {len(failed_samplers.keys())} < {len(targ_sampler_name_to_obj_sampler_names[sampler_name])}."
                 obj_sampler_name = random.choice(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 )
 
                 sampler = self._obj_samplers[obj_sampler_name]
                 new_receptacle = None
-                try:
-                    new_receptacle = sampler.sample_receptacle(
-                        self.sim, recep_tracker
-                    )
-                except AssertionError:
-                    # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
-                    failed_samplers[obj_sampler_name]
-                    continue
+                #try:
+                new_receptacle = sampler.sample_receptacle(
+                    self.sim, recep_tracker
+                )
+                #except AssertionError:
+                #    # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
+                #    failed_samplers[obj_sampler_name]
+                #    continue
 
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates

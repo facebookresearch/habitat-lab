@@ -71,7 +71,6 @@ class RearrangeTask(NavigationTask):
         **kwargs,
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
@@ -130,6 +129,7 @@ class RearrangeTask(NavigationTask):
         if len(self._sim.agents_mgr) > 1:
             # Duplicate sensors that handle articulated agents. One for each articulated agent.
             self._duplicate_sensor_suite(self.sensor_suite)
+
 
     def overwrite_sim_config(self, config: Any, episode: Episode) -> Any:
         return config

@@ -123,7 +123,7 @@ class KinematicHumanoid(MobileManipulator):
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # via configured local offset from origin.
         # TODO: maybe this can be simplified
-
+        
         if len(position) != 3:
             raise ValueError("Base position needs to be three dimensions")
 

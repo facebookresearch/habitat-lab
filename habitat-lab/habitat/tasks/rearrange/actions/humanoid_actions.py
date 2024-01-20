@@ -57,9 +57,10 @@ class HumanoidPickAction(HumanoidJointAction):
             or task.humanoid_controller is None
         ):
             # Initialize humanoid controller
-            agent_name = self._sim.habitat_config.agents_order[
-                self._agent_index
-            ]
+            if len(self._sim.habitat_config.agents) == 1:
+                agent_name = list(self._sim.habitat_config.agents.keys())[0]
+            else:
+                agent_name = f"agent_{self._agent_index}"
             walk_pose_path = self._sim.habitat_config.agents[
                 agent_name
             ].motion_data_path

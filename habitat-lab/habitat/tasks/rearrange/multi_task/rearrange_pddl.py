@@ -213,7 +213,10 @@ class PddlSimInfo:
         elif self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
-            return self.obj_ids[ename]
+            try:
+                return self.obj_ids[ename]
+            except:
+                breakpoint()
         elif self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
