@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import random
 from typing import List, Tuple, Union
 
@@ -11,6 +12,26 @@ import numpy as np
 import quaternion
 
 EPSILON = 1e-8
+
+
+def quat_to_euler(wxyz):
+    """Convert a Quat object into Euler yaw, pitch, roll angles (radians)."""
+    w, x, y, z = wxyz[0], wxyz[1], wxyz[2], wxyz[3]
+    pitch = math.asin(-2 * (x * z - w * y))
+    if pitch > 0.9999:
+        yaw = 2.0 * math.atan2(z, w)
+        pitch = math.pi / 2
+        roll = 0.0
+    elif pitch < -0.9999:
+        yaw = 2.0 * math.atan2(z, w)
+        pitch = -math.pi / 2
+        roll = 0.0
+    else:
+        yaw = math.atan2(2 * (x * y + w * z), w * w + x * x - y * y - z * z)
+        roll = math.atan2(2 * (y * z + w * x), w * w - x * x - y * y + z * z)
+
+    # The actual meaning is roll, pitch, yaw.
+    return roll, yaw, pitch
 
 
 def angle_between_quaternions(
