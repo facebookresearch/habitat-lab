@@ -21,6 +21,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
+      - relative_end_effector_orientation_sensor
       - articulated_agent_arm_depth
       - joint
       - is_holding
