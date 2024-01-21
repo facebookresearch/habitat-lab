@@ -39,14 +39,23 @@ habitat:
         count_coll_end_pen: 5
         # We want to check if the object is placed on the receptacle
         obj_at_receptacle_success: True
+        # We want to give the reward for ee orientation to initial orientation
+        use_ee_ori: True
       place_success:
         ee_resting_success_threshold: -1.0
         # We want to check if the object is placed on the receptacle
         obj_at_receptacle_success: True
+        # We want to check if the robot maintains the same ee's orientation
+        ee_orientation_to_initial_threshold: 0.15
       obj_at_goal:
         # We want this number to be as small as possible
         # since we want the robot to place the object precisely on the receptacle
         succ_thresh: 0.05
+      obj_at_receptacle:
+        vertical_diff_threshold: 0.10
+        horizontal_diff_threshold: 0.30
+        surface_vertical_diff_threshold: -1.0
+        snap_down_surface_vertical_diff_threshold: 0.10
     lab_sensors:
       # We can only control 4 of the joints of Spot's arm
       joint_sensor:
