@@ -376,6 +376,39 @@ class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class RelativeInitialEEOrientationSensor(
+    UsesArticulatedAgentInterface, Sensor
+):
+    cls_uuid: str = "relative_initial_ee_orientation"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeInitialEEOrientationSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        _, ee_orientation = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.get_ee_local_pose()
+        return np.array(
+            task.init_ee_orientation - ee_orientation, dtype=np.float32
+        )
+
+
+@registry.register_sensor
 class RestingPositionSensor(Sensor):
     """
     Desired resting position in the articulated_agent coordinate frame.
