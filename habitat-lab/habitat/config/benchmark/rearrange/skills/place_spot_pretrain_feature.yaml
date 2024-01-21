@@ -25,7 +25,7 @@ habitat:
     obs_keys:
       - arm_rgb_pretrain_visual_feature_sensor
       - pretrain_textual_feature_goal_sensor
-      - relative_end_effector_orientation_sensor
+      - relative_initial_ee_orientation
       - articulated_agent_arm_depth
       - joint
       - is_holding
