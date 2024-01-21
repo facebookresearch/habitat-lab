@@ -1274,7 +1274,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
-    ori_reward: float = 2.0
+    ori_reward: float = 1.0
     place_reward: float = 5.0
     drop_pen: float = 0.0
     use_diff: bool = True
@@ -1731,6 +1731,8 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: Optional[str] = None
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    # Addtional data for joint selection
+    joint_start_override_random: Optional[List[float]] = None
 
 
 @dataclass

@@ -72,7 +72,8 @@ habitat:
     step_physics: False
     agents:
       main_agent:
-        joint_start_noise: 0.1
+        joint_start_noise: 0.0
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
         # The real-world gaze ready location
         joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
+        joint_start_override_random: [[0, -3.14, 0, 3.14, 0, 0, 1.57], [0, -3.14, 0, 3.14, 0, 0, -1.57], [-0.016, -1.621, 0, 1.592, 0, 1.571, 0],  [-0.046, -1.920, 0, 2.094, 0, 1.396, 0]]
