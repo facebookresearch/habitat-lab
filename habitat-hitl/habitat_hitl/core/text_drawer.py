@@ -12,7 +12,8 @@ from typing import List, Tuple
 import magnum as mn
 from magnum import shaders, text
 
-DEFAULT_FONT_PATH = "./fonts/ProggyClean.ttf"
+DEFAULT_FONT_PATH = "./fonts/IBMPlexSans-Regular.ttf"
+DEFAULT_FONT_SIZE = 16.0
 
 # the maximum number of chars displayable in the app window
 # using the magnum text module
@@ -25,9 +26,6 @@ MAX_DISPLAY_TEXT_CHARS = 512
 # window height * TEXT_DELTA_FROM_CENTER in the y axis, as the text
 # position defaults to the middle of the app window)
 TEXT_DELTA_FROM_CENTER = 0.49
-
-# font size of the magnum in-window display text
-DISPLAY_FONT_SIZE = 16.0
 
 
 class TextOnScreenAlignment(Enum):
@@ -50,7 +48,7 @@ class TextDrawer:
         framebuffer_size: mn.Vector2i,
         relative_path_to_font: str = DEFAULT_FONT_PATH,
         max_display_text_chars: int = MAX_DISPLAY_TEXT_CHARS,
-        display_font_size: float = DISPLAY_FONT_SIZE,
+        display_font_size: float = DEFAULT_FONT_SIZE,
     ) -> None:
         self._text_transform_pairs: List[Tuple[str, mn.Matrix3]] = []
         self._framebuffer_size = framebuffer_size
@@ -59,15 +57,19 @@ class TextDrawer:
         self._display_font = text.FontManager().load_and_instantiate(
             "TrueTypeFont"
         )
+        # Crisper rendering can be achieved if the loaded font size is twice as much as the display size
+        load_font_size = 2 * display_font_size
         self._display_font.open_file(
             os.path.join(os.path.dirname(__file__), relative_path_to_font),
-            13,
+            load_font_size,
         )
         self._display_font_size = display_font_size
         self._max_display_text_chars = max_display_text_chars
 
         # Glyphs we need to render everything
-        self._glyph_cache = text.GlyphCache(mn.Vector2i(256))
+        # Using(1024, 768) as a size of the GlyphCache, to fit larger font size
+        # Ideal size for the GPU is of power-of-two in at least one dimension
+        self._glyph_cache = text.GlyphCache((1024, 768))
         self._display_font.fill_glyph_cache(
             self._glyph_cache,
             string.ascii_lowercase

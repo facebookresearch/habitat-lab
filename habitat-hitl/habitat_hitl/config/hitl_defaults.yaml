@@ -12,6 +12,12 @@ habitat_hitl:
     # Vertical resolution of the window.
     height: 720
 
+  # Font size for text displayed in the GUI app.
+  display_font_size: 16
+
+  # Font to display in the GUI app.
+  display_font_path: "../core/fonts/IBMPlexSans-Regular.ttf"
+
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
 
