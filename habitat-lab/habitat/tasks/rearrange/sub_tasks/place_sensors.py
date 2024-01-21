@@ -8,9 +8,11 @@
 import magnum as mn
 import numpy as np
 
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToGoalDistance,
     EndEffectorToRestDistance,
@@ -35,15 +37,54 @@ class ObjAtReceptacle(Measure):
         self._sim = sim
         self._config = config
         super().__init__(**kwargs)
+        self._targ_obj = []
+        self._support_object_ids = []
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return ObjAtReceptacle.cls_uuid
 
-    def reset_metric(self, *args, **kwargs):
+    def reset_metric(self, *args, task, **kwargs):
+        # Cache the receptacle IDs for checking if the object is at a receptacle
+        # Get the current target object
+        idxs, _ = self._sim.get_targets()
+        self._targ_obj = [
+            self._sim.get_rigid_object_manager().get_object_by_id(
+                self._sim.scene_obj_ids[idx]
+            )
+            for idx in idxs
+        ]
+        # Cache the receptacle IDs
+        self._get_recepticle_ids()
         self.update_metric(*args, **kwargs)
 
-    def update_metric(self, *args, task, **kwargs):
+    def _get_recepticle_ids(self):
+        """Returns the list of receptacle IDs"""
+        receptacles = find_receptacles(self._sim)
+        self._support_object_ids = []
+        for receptacle in receptacles:
+            if receptacle.is_parent_object_articulated:
+                ao_instance = self._sim.get_articulated_object_manager().get_object_by_handle(
+                    receptacle.parent_object_handle
+                )
+                for (
+                    object_id,
+                    link_ix,
+                ) in ao_instance.link_object_ids.items():
+                    if receptacle.parent_link == link_ix:
+                        self._support_object_ids += [
+                            object_id,
+                            ao_instance.object_id,
+                        ]
+                        break
+            elif receptacle.parent_object_handle is not None:
+                self._support_object_ids += [
+                    self._sim.get_rigid_object_manager()
+                    .get_object_by_handle(receptacle.parent_object_handle)
+                    .object_id
+                ]
+
+    def update_metric(self, *args, **kwargs):
         idxs, goal_pos = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         cur_obj_pos = scene_pos[idxs]
@@ -53,7 +94,12 @@ class ObjAtReceptacle(Measure):
             cur_obj_pos[:, [1]] - goal_pos[:, [1]], ord=2, axis=-1
         )
 
-        # Check 2: Get the first hit object's height, and check if that height
+        # Check 2: place x, y location to the goal location
+        horizontal_diff = np.linalg.norm(
+            cur_obj_pos[:, [0, 2]] - goal_pos[:, [0, 2]], ord=2, axis=-1
+        )
+
+        # Check 3: Get the first hit object's height, and check if that height
         # is similar to the goal location's height
         surface_vertical_diff = []
         for i in range(vertical_diff.shape[0]):
@@ -71,10 +117,21 @@ class ObjAtReceptacle(Measure):
             else:
                 surface_vertical_diff.append(-1.0)
 
-        # Check 3: place x, y location to the goal location
-        horizontal_diff = np.linalg.norm(
-            cur_obj_pos[:, [0, 2]] - goal_pos[:, [0, 2]], ord=2, axis=-1
-        )
+        # Check 4: Use snap down function to check if the object can be placed
+        snap_down_height_diff = []
+        for ori_obj in self._targ_obj:
+            # Note that this does not consider the height difference
+            ori_obj_pos = ori_obj.translation
+            snap_success_temp = False
+            snap_success_temp = sutils.snap_down(
+                self._sim, ori_obj, self._support_object_ids
+            )
+            # Check the height difference between the object and the receptacle
+            if snap_success_temp:
+                height_diff = ori_obj_pos[1] - ori_obj.translation[1]
+                snap_down_height_diff.append(height_diff)
+            else:
+                snap_down_height_diff.append(-float("inf"))
 
         # Get the metric
         self._metric = {
@@ -93,6 +150,14 @@ class ObjAtReceptacle(Measure):
             and (
                 horizontal_diff[i] < self._config.horizontal_diff_threshold
                 or self._config.horizontal_diff_threshold == -1
+            )
+            and (
+                (
+                    snap_down_height_diff[i]
+                    < self._config.snap_down_surface_vertical_diff_threshold
+                    and snap_down_height_diff[i] >= 0.0
+                )
+                or self._config.snap_down_surface_vertical_diff_threshold == -1
             )
             for i in range(vertical_diff.shape[0])
         }

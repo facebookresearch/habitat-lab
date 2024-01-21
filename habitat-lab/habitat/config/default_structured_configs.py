@@ -1231,6 +1231,7 @@ class ObjAtReceptacleMeasurementConfig(MeasurementConfig):
     vertical_diff_threshold: float = 0.15
     horizontal_diff_threshold: float = 0.15
     surface_vertical_diff_threshold: float = 0.15
+    snap_down_surface_vertical_diff_threshold: float = 0.15
 
 
 @dataclass
