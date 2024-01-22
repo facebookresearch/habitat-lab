@@ -149,6 +149,13 @@ class MultiPolicy(Policy):
                 is_same_shape = False
                 break
 
+        # Check if length are the same
+        # 01/22/2024: This is a bug fix when doing evaluate on lstm
+        for shape in shapes[1:]:
+            if len(shape) == len(shape_0):
+                is_same_shape = True
+                break
+
         if is_same_shape:
             hidden_shapes = np.stack(
                 [policy.hidden_state_shape for policy in self._active_policies]

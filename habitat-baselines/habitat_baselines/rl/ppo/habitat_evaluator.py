@@ -106,7 +106,8 @@ class HabitatEvaluator(Evaluator):
         # Check if we are in the setting of multi-agent with transformer policy
         n_agents = len(config.habitat.simulator.agents)
         transformer_based_policy_is_multi_agent = False
-        if n_agents > 1:
+        # Update 01/22/2024: make lstm not_done_masks is okay
+        if n_agents > 1 and transformer_based_policy:
             transformer_based_policy_is_multi_agent = True
 
         # Modify the not_done_masks
