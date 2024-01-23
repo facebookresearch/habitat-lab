@@ -8,6 +8,7 @@
 See README.md in this directory.
 """
 
+import abc
 import json
 from datetime import datetime
 from functools import wraps
@@ -19,7 +20,6 @@ import habitat
 import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
-from habitat_hitl._internal.gui_application import GuiAppDriver
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
@@ -61,8 +61,15 @@ def requires_habitat_sim_with_bullet(callable_):
     return wrapper
 
 
+class AppDriver:
+    # todo: rename to just "update"?
+    @abc.abstractmethod
+    def sim_update(self, dt):
+        pass
+
+
 @requires_habitat_sim_with_bullet
-class HitlDriver(GuiAppDriver):
+class HitlDriver(AppDriver):
     def __init__(
         self,
         config,
@@ -79,6 +86,13 @@ class HitlDriver(GuiAppDriver):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
+        if (
+            not self._hitl_config.experimental.headless
+            and gui_input.is_stub_implementation
+        ):
+            raise RuntimeError(
+                "HitlDriver with experimental.headless=False requires a non-stub-implementation GuiInput."
+            )
         self._gui_input = gui_input
 
         line_render.set_line_width(3)

@@ -639,7 +639,14 @@ class AppStatePickThrowVr(AppState):
         # hand-picked episodes from hitl_vr_sample_episodes.json.gz
         episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
         for scene_idx in range(num_fetch_scenes):
-            key = GuiInput.KeyNS(GuiInput.KeyNS.ONE.value + scene_idx)
+            key_map = [
+                GuiInput.KeyNS.ONE,
+                GuiInput.KeyNS.TWO,
+                GuiInput.KeyNS.THREE,
+                GuiInput.KeyNS.FOUR,
+                GuiInput.KeyNS.FIVE,
+            ]
+            key = key_map[scene_idx]
             if self._app_service.gui_input.get_key_down(key):
                 self._app_service.episode_helper.set_next_episode_by_id(
                     episode_id_by_scene_index[scene_idx]

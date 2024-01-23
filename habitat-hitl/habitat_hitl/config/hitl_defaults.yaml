@@ -21,12 +21,21 @@ habitat_hitl:
   experimental:
     # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
+    headless:
+      # Run without a GUI window. For unit-testing or use with remote_gui_mode as a headless server.
+      do_headless: False
+      # Shortly after app startup, write debug images from the first K steps to video files. See debug_third_person_viewport and debug_images.
+      debug_video_writer:
+        num_frames_to_save: 0
+        filepath_base: "./debug_video"
+      # force app exit after K steps
+      exit_after: ~
 
   # Disable policy-initialization and environment-stepping. Useful for testing on lower-power machines.
   disable_policies_and_stepping: False
 
   debug_third_person_viewport:
-    # If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width. If height (below) is not specified, assume square aspect ratio (height==width).
+    # If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width. If height (below) is not specified, assume square aspect ratio (height==width). This is considered an additional debug image (see also debug_images below).
     width: ~
     # If specified, use the specified viewport height for the debug third-person camera.
     height: ~
