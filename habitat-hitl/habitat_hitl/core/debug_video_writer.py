@@ -6,6 +6,13 @@
 
 
 class DebugVideoWriter:
+    """
+    Helper class to write debug images to video files.
+
+    This is a thin wrapper over habitat_sim.utils.viz_utils.make_video. The expected
+    input is exactly HitlDriver's post_sim_update_dict["debug_images"].
+    """
+
     def __init__(self, fps=10):
         self._cached_images = None
         self._fps = fps

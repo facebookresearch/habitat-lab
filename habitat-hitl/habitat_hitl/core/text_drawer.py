@@ -68,6 +68,12 @@ class AbstractTextDrawer(ABC):
 
 
 class StubTextDrawer(AbstractTextDrawer):
+    """
+    Stub TextDrawer class. Has no effect but allows user code to run without error.
+
+    This is intended for use with habitat_hitl.headless. See also TextDrawer.
+    """
+
     def add_text(
         self,
         text_to_add,
