@@ -130,7 +130,7 @@ class ObjAtReceptacle(Measure):
             # Check the height difference between the object and the receptacle
             if snap_success_temp:
                 height_diff = ori_obj_pos[1] - ori_obj.translation[1]
-                snap_down_height_diff.append(height_diff)
+                snap_down_height_diff.append(round(height_diff, 2))
             else:
                 snap_down_height_diff.append(-float("inf"))
 
