@@ -163,6 +163,29 @@ class ObjAtReceptacle(Measure):
             for i in range(vertical_diff.shape[0])
         }
 
+        _vertical_diff = {
+            str(i) + "_vertical_diff": vertical_diff[i]
+            for i in range(vertical_diff.shape[0])
+        }
+        _horizontal_diff = {
+            str(i) + "_horizontal_diff": horizontal_diff[i]
+            for i in range(horizontal_diff.shape[0])
+        }
+        _surface_vertical_diff = {
+            str(i) + "_surface_vertical_diff": surface_vertical_diff[i]
+            for i in range(len(surface_vertical_diff))
+        }
+        _snap_down_height_diff = {
+            str(i) + "_snap_down_height_diff": snap_down_height_diff[i]
+            for i in range(len(snap_down_height_diff))
+        }
+
+        # Update the metrics
+        self._metric.update(_vertical_diff)
+        self._metric.update(_horizontal_diff)
+        self._metric.update(_surface_vertical_diff)
+        self._metric.update(_snap_down_height_diff)
+
 
 @registry.register_measure
 class EndEffectorToInitialOrientationDistance(Measure):
@@ -289,9 +312,18 @@ class PlaceReward(RearrangeReward):
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
             if (
-                obj_at_goal and not self._config.obj_at_receptacle_success
-            ) or (
-                obj_at_receptacle and self._config.obj_at_receptacle_success
+                (obj_at_goal and not self._config.obj_at_receptacle_success)
+                or (
+                    obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                    and self._config.ee_orientation_to_initial_threshold != -1
+                )
+                or (
+                    obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                    and ee_orientation_to_initial_distance
+                    < self._config.ee_orientation_to_initial_threshold
+                )
             ):
                 reward += self._config.place_reward
                 # If we just transitioned to the next stage our current
@@ -299,7 +331,7 @@ class PlaceReward(RearrangeReward):
                 self._prev_dist = -1
                 self._prev_ori = -1
             else:
-                # Dropped at wrong location
+                # Dropped at wrong location or wrong orientation
                 reward -= self._config.drop_pen
                 if self._config.wrong_drop_should_end:
                     rearrange_logger.debug(
