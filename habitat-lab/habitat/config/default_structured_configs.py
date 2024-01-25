@@ -1291,6 +1291,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     count_coll_end_pen: float = 1.0
     obj_at_receptacle_success: bool = False
     use_ee_ori: bool = False
+    ee_orientation_to_initial_threshold: float = -1.0
 
 
 @dataclass
