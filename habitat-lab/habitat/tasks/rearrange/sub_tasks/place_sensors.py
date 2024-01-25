@@ -318,7 +318,7 @@ class PlaceReward(RearrangeReward):
                 or (
                     self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
-                    and self._config.ee_orientation_to_initial_threshold != -1
+                    and self._config.ee_orientation_to_initial_threshold == -1
                 )
                 or (
                     self._prev_obj_at_receptacle
