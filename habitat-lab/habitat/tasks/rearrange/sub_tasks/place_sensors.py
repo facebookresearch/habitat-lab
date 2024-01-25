@@ -224,6 +224,7 @@ class PlaceReward(RearrangeReward):
         self._metric = None
 
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self._prev_obj_at_receptacle = False
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -252,6 +253,7 @@ class PlaceReward(RearrangeReward):
             observations=observations,
             **kwargs
         )
+        self._prev_obj_at_receptacle = False
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         super().update_metric(
@@ -314,12 +316,12 @@ class PlaceReward(RearrangeReward):
             if (
                 (obj_at_goal and not self._config.obj_at_receptacle_success)
                 or (
-                    obj_at_receptacle
+                    self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
                     and self._config.ee_orientation_to_initial_threshold != -1
                 )
                 or (
-                    obj_at_receptacle
+                    self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
                     and ee_orientation_to_initial_distance
                     < self._config.ee_orientation_to_initial_threshold
@@ -369,6 +371,8 @@ class PlaceReward(RearrangeReward):
             reward += self._config.ori_reward * ori_diff
         self._prev_ori = ori_to_init
 
+        self._prev_obj_at_receptacle = obj_at_receptacle
+
         self._metric = reward
 
 
@@ -380,6 +384,7 @@ class PlaceSuccess(Measure):
         self._config = config
         self._sim = sim
         super().__init__(**kwargs)
+        self._prev_obj_at_receptacle = False
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -401,6 +406,7 @@ class PlaceSuccess(Measure):
             observations=observations,
             **kwargs
         )
+        self._prev_obj_at_receptacle = False
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         is_obj_at_goal = task.measurements.measures[
@@ -430,7 +436,7 @@ class PlaceSuccess(Measure):
             and (
                 (is_obj_at_goal and not self._config.obj_at_receptacle_success)
                 or (
-                    obj_at_receptacle
+                    self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
                 )
             )
@@ -444,3 +450,5 @@ class PlaceSuccess(Measure):
                 or self._config.ee_orientation_to_initial_threshold == -1.0
             )
         )
+
+        self._prev_obj_at_receptacle = obj_at_receptacle
