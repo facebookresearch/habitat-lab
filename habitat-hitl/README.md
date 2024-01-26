@@ -36,7 +36,7 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
         * Be sure to include Bullet physics, e.g. `python setup.py install --bullet`.
 4. Install the `habitat-hitl` package.
     * From the `habitat-lab` root directory, run `pip install -e habitat-hitl`.
-5. Download required assets for our example HITL applications:
+5. Download required assets for our example HITL applications (Note that the dataset downloader should be run from habitat-lab/.):
     ```bash
     python -m habitat_sim.utils.datasets_download \
     --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
