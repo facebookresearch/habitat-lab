@@ -43,13 +43,12 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
     --data-path data/
     ```
 
-## Run Requirements
+## Data directory and running location
 
-HITL apps expect a `data/` directory in the running location. This can be satisfied by:
+HITL apps (and Habitat libraries in general) expect a `data/` directory in the running location (aka current working directory). Notice the `--data-path` argument in our installation steps above. Here are two options to consider:
 
-1. Running HITL directly from habitat-lab/ where the data directory exists
-2. Symlinking `data/` from habitat-lab into another location
-3. Placing compatible Habitat dataset into a `data/` folder in the running directory
+1. Download data to `habitat-lab/data` as shown in our installation steps above. This is the default location for many Habitat tutorials and utilities. Run your HITL app from this location, e.g. `habitat-lab/$ python /path/to/my_hitl_app/my_hitl_app.py`.
+2. Download (or symlink) data to your HITL app's root directory, e.g. `/path/to/my_hitl_app/data`. Run your HITL app from this location, e.g. `/path/to/my_hitl_app/$ python my_hitl_app.py`."
 
 ## Example HITL applications
 
