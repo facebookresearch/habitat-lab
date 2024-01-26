@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import magnum as mn
 
 from habitat_hitl._internal.config_helper import update_config
@@ -42,6 +44,14 @@ def _parse_debug_third_person(hitl_config, viewport_multiplier=(1, 1)):
 
 
 def hitl_main(app_config, create_app_state_lambda=None):
+    # Add check for data/
+    if not os.path.exists("data/"):
+        raise FileNotFoundError(
+            "Could not find /data in current directory. "
+            "HITL apps expect 'data/' directory to exist. "
+            "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
+        )
+
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 
     if hitl_config.experimental.headless.do_headless:

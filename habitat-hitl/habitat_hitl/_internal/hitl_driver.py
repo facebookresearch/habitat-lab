@@ -237,6 +237,9 @@ class HitlDriver(AppDriver):
             id_dataset=dataset_config.type, config=dataset_config
         )
         if self._play_episodes_filter_str is not None:
+            self._play_episodes_filter_str = str(
+                self._play_episodes_filter_str
+            )
             max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):

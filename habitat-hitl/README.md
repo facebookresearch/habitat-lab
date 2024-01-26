@@ -36,12 +36,19 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
         * Be sure to include Bullet physics, e.g. `python setup.py install --bullet`.
 4. Install the `habitat-hitl` package.
     * From the `habitat-lab` root directory, run `pip install -e habitat-hitl`.
-5. Download required assets for our example HITL applications:
+5. Download required assets for our example HITL applications (Note that the dataset downloader should be run from habitat-lab/.):
     ```bash
     python -m habitat_sim.utils.datasets_download \
     --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
     --data-path data/
     ```
+
+## Data directory and running location
+
+HITL apps (and Habitat libraries in general) expect a `data/` directory in the running location (aka current working directory). Notice the `--data-path` argument in our installation steps above. Here are two options to consider:
+
+1. Download data to `habitat-lab/data` as shown in our installation steps above. This is the default location for many Habitat tutorials and utilities. Run your HITL app from this location, e.g. `habitat-lab/$ python /path/to/my_hitl_app/my_hitl_app.py`.
+2. Download (or symlink) data to your HITL app's root directory, e.g. `/path/to/my_hitl_app/data`. Run your HITL app from this location, e.g. `/path/to/my_hitl_app/$ python my_hitl_app.py`."
 
 ## Example HITL applications
 
