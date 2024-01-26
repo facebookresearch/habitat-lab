@@ -561,7 +561,7 @@ class DebugVisualizer:
         import math
 
         # compute the optimal view distance from the camera specs and object size
-        distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
+        distance = (np.amax(np.array(bb_size)) * 1.1 / aspect) / math.tan(
             fov / (360 / math.pi)
         )
         if cam_local_pos is None:
