@@ -1505,6 +1505,22 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         ]
         self._pre_fix = "place an object on the "
 
+        self._goal_obj_name = None
+        self._goal_obj_textual_feature = None
+        self._target_object_names = [
+            "mug",
+            "bowl",
+            "banana",
+            "tomato_soup_can",
+            "master_chef_can",
+            "sugar_box",
+            "tuna_fish_can",
+            "bleach_cleanser",
+            "preach",
+            "lemon",
+        ]
+        self._use_features = self.config.use_features
+
     def _get_uuid(self, *args, **kwargs):
         return PretrainTextualFeatureGoalSensor.cls_uuid
 
@@ -1512,12 +1528,20 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(self._feature_dim,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
+        if len(self.config.use_features) == 2:
+            return spaces.Box(
+                shape=(self._feature_dim * 2,),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
+        else:
+            return spaces.Box(
+                shape=(self._feature_dim,),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
 
     def _get_goal_text(self):
         # Cache the name of the receptacle
@@ -1541,6 +1565,7 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
                 goal_name = rep_name
 
         self._goal_pos = goal_pos
+
         return goal_name
 
     def _filter_receptacle_name(self, raw_name):
@@ -1561,16 +1586,19 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         else:
             return self._pre_fix + candidate_name
 
-    def get_observation(self, observations, episode, task, *args, **kwargs):
-        # Get a target receptacle name
-        rep_name = self._get_goal_text()
+    def _get_object_name(self):
+        """Get the object name."""
+        # Only support the first one
+        object_name = [key for key, value in self._sim._targets.items()][0]
+        object_name = object_name.split("_")
+        object_name = object_name[1:-1]
+        object_name = "_".join(object_name)
+        return object_name
 
-        if self._goal_name == rep_name:
-            return self._goal_textual_feature
-
+    def _get_text_feature(self, text):
         # Prepare the model input
         inputs = self._tokenizer(
-            [self._filter_receptacle_name(rep_name)],
+            [self._filter_receptacle_name(text)],
             padding="max_length",
             return_tensors="pt",
         )
@@ -1583,6 +1611,50 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         text_features = text_features.to("cpu")
         text_features = text_features.float()
         text_features = np.array(text_features.squeeze())
-        self._goal_textual_feature = text_features
-
         return text_features
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a target receptacle name
+        rep_name = self._get_goal_text()
+
+        # Get a target object name
+        obj_name = self._get_object_name()
+        if (
+            self._goal_name == rep_name
+            and "rep" in self._use_features
+            and len(self._use_features) == 1
+        ):
+            return self._goal_textual_feature
+
+        if (
+            self._goal_obj_name == obj_name
+            and "obj" in self._use_features
+            and len(self._use_features) == 1
+        ):
+            return self._goal_obj_textual_feature
+
+        if (
+            self._goal_name == rep_name
+            and self._goal_obj_name == obj_name
+            and len(self._use_features) == 2
+        ):
+            return np.concatenate(
+                [self._goal_textual_feature, self._goal_obj_textual_feature]
+            )
+
+        return_feature = []
+        # Get the receptacle text feature
+        if "rep" in self._use_features:
+            text_features = self._get_text_feature(rep_name)
+            self._goal_textual_feature = text_features
+            self._goal_name = rep_name
+            return_feature.append(text_features)
+
+        if "obj" in self._use_features:
+            # Get the object text feature
+            obj_text_features = self._get_text_feature(obj_name)
+            self._goal_obj_textual_feature = obj_text_features
+            self._goal_obj_name = obj_name
+            return_feature.append(obj_text_features)
+
+        return np.concatenate(return_feature, axis=0)
