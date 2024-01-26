@@ -449,6 +449,7 @@ class PretrainTextualFeatureGoalSensorConfig(LabSensorConfig):
     type: str = "PretrainTextualFeatureGoalSensor"
     # This is added to prevent from cuda out of memory issue
     force_to_use_cpu: bool = False
+    use_features: List[str] = field(default_factory=lambda: ["rep"])
 
 
 @dataclass
