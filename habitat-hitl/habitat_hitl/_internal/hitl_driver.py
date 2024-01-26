@@ -12,7 +12,7 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import numpy as np
 
@@ -236,33 +236,44 @@ class HitlDriver(AppDriver):
         dataset = make_dataset(
             id_dataset=dataset_config.type, config=dataset_config
         )
-
         if self._play_episodes_filter_str is not None:
+            self._play_episodes_filter_str = str(
+                self._play_episodes_filter_str
+            )
             max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):
-                play_episodes_ids: Set[str] = set()
+                play_episodes_ids: List[str] = []
                 for ep_filter_str in play_episodes_filter_str.split(" "):
                     if ":" in ep_filter_str:
                         range_params = map(int, ep_filter_str.split(":"))
-                        play_episodes_ids.update(
+                        play_episodes_ids.extend(
                             episode_id.zfill(max_num_digits)
                             for episode_id in map(str, range(*range_params))
                         )
                     else:
                         episode_id = ep_filter_str
-                        play_episodes_ids.add(episode_id.zfill(max_num_digits))
+                        play_episodes_ids.append(
+                            episode_id.zfill(max_num_digits)
+                        )
 
                 return play_episodes_ids
 
-            play_episodes_ids_set: Set[str] = get_play_episodes_ids(
+            play_episodes_ids_list = get_play_episodes_ids(
                 self._play_episodes_filter_str
             )
             dataset.episodes = [
                 ep
                 for ep in dataset.episodes
-                if ep.episode_id.zfill(max_num_digits) in play_episodes_ids_set
+                if ep.episode_id.zfill(max_num_digits)
+                in play_episodes_ids_list
             ]
+
+            dataset.episodes.sort(
+                key=lambda x: play_episodes_ids_list.index(
+                    x.episode_id.zfill(max_num_digits)
+                )
+            )
 
         return dataset
 

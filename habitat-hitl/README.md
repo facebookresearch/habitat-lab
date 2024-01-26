@@ -43,6 +43,14 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
     --data-path data/
     ```
 
+## Run Requirements
+
+HITL apps expect a `data/` directory in the running location. This can be satisfied by:
+
+1. Running HITL directly from habitat-lab/ where the data directory exists
+2. Symlinking `data/` from habitat-lab into another location
+3. Placing compatible Habitat dataset into a `data/` folder in the running directory
+
 ## Example HITL applications
 
 Check out our example HITL apps [here](../examples/hitl/).
