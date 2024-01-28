@@ -1543,12 +1543,14 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
                 dtype=np.float32,
             )
 
-    def _get_goal_text(self):
+    def _get_goal_text(self, targ_idx):
         # Cache the name of the receptacle
         _, goal_pos = self._sim.get_targets()
         if (
             self._goal_pos is not None
-            and np.linalg.norm(goal_pos[0, [0, 2]] - self._goal_pos[0, [0, 2]])
+            and np.linalg.norm(
+                goal_pos[targ_idx, [0, 2]] - self._goal_pos[targ_idx, [0, 2]]
+            )
             < self._diff_treshold
         ):
             return self._goal_name
@@ -1558,7 +1560,7 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         for rep_name in self._sim.receptacles:
             distance = np.linalg.norm(
                 np.array(self._sim.receptacles[rep_name].center())[[0, 2]]
-                - goal_pos[0, [0, 2]]
+                - goal_pos[targ_idx, [0, 2]]
             )
             if distance < min_dis:
                 min_dis = distance  # type: ignore
@@ -1586,10 +1588,12 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
         else:
             return self._pre_fix + candidate_name
 
-    def _get_object_name(self):
+    def _get_object_name(self, targ_idx):
         """Get the object name."""
         # Only support the first one
-        object_name = [key for key, value in self._sim._targets.items()][0]
+        object_name = [key for key, value in self._sim._targets.items()][
+            targ_idx
+        ]
         object_name = object_name.split("_")
         object_name = object_name[1:-1]
         object_name = "_".join(object_name)
@@ -1615,10 +1619,10 @@ class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Get a target receptacle name
-        rep_name = self._get_goal_text()
+        rep_name = self._get_goal_text(task.targ_idx)
 
         # Get a target object name
-        obj_name = self._get_object_name()
+        obj_name = self._get_object_name(task.targ_idx)
         if (
             self._goal_name == rep_name
             and "rep" in self._use_features
@@ -1699,12 +1703,14 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
-    def _get_rep_text(self):
+    def _get_rep_text(self, targ_idx):
         # Cache the name of the receptacle
         _, rep_pos = self._sim.get_targets()
         if (
             self._rep_pos is not None
-            and np.linalg.norm(rep_pos[0, [0, 2]] - self._rep_pos[0, [0, 2]])
+            and np.linalg.norm(
+                rep_pos[targ_idx, [0, 2]] - self._rep_pos[targ_idx, [0, 2]]
+            )
             < self._diff_treshold
         ):
             return self._rep_name
@@ -1716,7 +1722,7 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
                 np.array(self._sim.receptacles_id[rep_name][1].center())[
                     [0, 2]
                 ]
-                - rep_pos[0, [0, 2]]
+                - rep_pos[targ_idx, [0, 2]]
             )
             if distance < min_dis:
                 min_dis = distance  # type: ignore
@@ -1744,7 +1750,7 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
         # Get the target receptacle name
-        rep_name = self._get_rep_text()
+        rep_name = self._get_rep_text(task.targ_idx)
         self._rep_name = rep_name
 
         # Get the target mask
