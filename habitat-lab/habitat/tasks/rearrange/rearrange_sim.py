@@ -103,8 +103,14 @@ class RearrangeSim(HabitatSim):
         self._scene_obj_ids: List[int] = []
         # The receptacle information cached between all scenes.
         self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        # The receptacle name to semantic id information cached between all scenes.
+        self._receptacles_id_cache: Dict[
+            str, Dict[str, Tuple[int, mn.Range3D]]
+        ] = {}
         # The per episode receptacle information.
         self._receptacles: Dict[str, mn.Range3D] = {}
+        # The per episode receptacle id information.
+        self._receptacles_id: Dict[str, Tuple[int, mn.Range3D]] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
@@ -157,6 +163,10 @@ class RearrangeSim(HabitatSim):
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
         return self._receptacles
+
+    @property
+    def receptacles_id(self) -> Dict[str, Tuple[int, mn.Range3D]]:
+        return self._receptacles_id
 
     @property
     def handle_to_object_id(self) -> Dict[str, int]:
@@ -639,7 +649,7 @@ class RearrangeSim(HabitatSim):
             self._receptacles = self._create_recep_info(
                 ep_info.scene_id, list(self._handle_to_object_id.keys())
             )
-
+            self._receptacles_id = self._receptacles_id_cache[ep_info.scene_id]
             ao_mgr = self.get_articulated_object_manager()
             # Make all articulated objects (including the robots) kinematic
             for aoi_handle in ao_mgr.get_object_handles():
@@ -656,10 +666,13 @@ class RearrangeSim(HabitatSim):
     ) -> Dict[str, mn.Range3D]:
         if scene_id not in self._receptacles_cache:
             receps = {}
+            receps_id = {}
             all_receps = find_receptacles(
                 self,
                 ignore_handles=ignore_handles,
             )
+            obj_mgr = self.get_rigid_object_manager()
+            ao_mgr = self.get_articulated_object_manager()
             for recep in all_receps:
                 recep = cast(AABBReceptacle, recep)
                 local_bounds = recep.bounds
@@ -673,10 +686,29 @@ class RearrangeSim(HabitatSim):
                     ],
                     axis=0,
                 )
-                receps[recep.name] = mn.Range3D(
+
+                rep_bound = mn.Range3D(
                     np.min(bounds, axis=0), np.max(bounds, axis=0)
                 )
+                receps[recep.name] = rep_bound
+
+                # Get the target rep id for this receptacle
+                obj = obj_mgr.get_object_by_handle(recep.parent_object_handle)
+                ao = ao_mgr.get_object_by_handle(recep.parent_object_handle)
+                if obj is not None:
+                    target_receps_id = (
+                        obj.object_id + self.habitat_config.object_ids_start
+                    )
+                elif ao is not None:
+                    target_receps_id = ao.visual_scene_nodes[0].semantic_id
+
+                receps_id[recep.name + ":" + recep.parent_object_handle] = (
+                    target_receps_id,
+                    rep_bound,
+                )
+
             self._receptacles_cache[scene_id] = receps
+            self._receptacles_id_cache[scene_id] = receps_id
         return self._receptacles_cache[scene_id]
 
     def _create_obj_viz(self):

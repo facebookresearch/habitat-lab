@@ -45,6 +45,7 @@ __all__ = [
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
+    "ArmReceptacleSemanticSensorConfig",
     "ArmRGBPretrainVisualFeatureSensorConfig",
     "PretrainTextualFeatureGoalSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
@@ -427,6 +428,16 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
     Bounding box sensor to check if the object is in frame
     """
     type: str = "ArmDepthBBoxSensor"
+    height: int = 480
+    width: int = 640
+
+
+@dataclass
+class ArmReceptacleSemanticSensorConfig(LabSensorConfig):
+    r"""
+    Semantic sensor for getting the target place receptacle
+    """
+    type: str = "ArmReceptacleSemanticSensor"
     height: int = 480
     width: int = 640
 
@@ -2236,6 +2247,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_receptacle_semantic_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_receptacle_semantic_sensor",
+    node=ArmReceptacleSemanticSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.arm_rgb_pretrain_visual_feature_sensor",
