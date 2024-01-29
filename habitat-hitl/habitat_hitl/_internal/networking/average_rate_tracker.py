@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
+from typing import Union
 
 
 class AverageRateTracker:
@@ -12,17 +13,24 @@ class AverageRateTracker:
         self._recent_count: int = 0
         self._recent_time: float = time.time()
         self._duration_window: float = duration_window
-        self._recent_rate: float = 0.0
+        self._recent_rate: Union[float, None] = None
 
-    def increment(self, inc: int) -> None:
+    def increment(self, inc: int = 1):
+        """
+        Increments count for the purpose of tracking rate over time.
+
+        If a new smoothed rate was calculated, it is returned. This is a convenience in case the user wants to regularly log the smoothed framerate. See also get_smoothed_rate.
+        """
         self._recent_count += inc
-
-    def get_smoothed_rate(self) -> float:
         current_time = time.time()
         elapsed_time = current_time - self._recent_time
         if elapsed_time > self._duration_window:
             self._recent_rate = self._recent_count / elapsed_time
             self._recent_count = 0
             self._recent_time = current_time
+            return self._recent_rate
+        else:
+            return None
 
+    def get_smoothed_rate(self) -> float:
         return self._recent_rate

@@ -7,6 +7,9 @@ Inspect Habitat environments, episodes, and agent policy evaluation in real time
 ## Installing and using HITL apps
 See [habitat-hitl/README.md](../../../habitat-hitl/README.md)
 
+## To run
+cd path/to/habitat-lab # Or wherever data/ is symlinked
+
 ## Example launch command
 
 ```bash

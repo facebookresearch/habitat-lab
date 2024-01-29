@@ -14,34 +14,34 @@ class FrequencyLimiter:
         self.desired_period: float = (
             1.0 / desired_frequency if desired_frequency else None
         )
-        self.last_execution_time: float = time.time()
+        self.timer: float = time.time()
 
-    def limit_frequency(self) -> None:
+    def _calculate_remaining_time(self):
         if not self.desired_period:
-            return
+            return None
 
         current_time = time.time()
-        elapsed_time = current_time - self.last_execution_time
+        elapsed_time = current_time - self.timer
+
+        # Don't let timer get too far behind
+        if elapsed_time > self.desired_period * 2.0:
+            self.timer = current_time - self.desired_period * 2.0
+            elapsed_time = current_time - self.timer
 
         # Calculate the remaining time to meet the desired period
         remaining_time = self.desired_period - elapsed_time
+        return remaining_time
 
-        # Delay the loop execution if needed
-        if remaining_time > 0:
+    def limit_frequency(self):
+        remaining_time = self._calculate_remaining_time()
+        if remaining_time is not None and remaining_time > 0:
             time.sleep(remaining_time)
+        self.timer += self.desired_period
 
-        self.last_execution_time = time.time()
-
-    async def limit_frequency_async(self) -> None:
-        if not self.desired_period:
+    async def limit_frequency_async(self):
+        remaining_time = self._calculate_remaining_time()
+        if remaining_time is None:
             return
-
-        current_time = time.time()
-        elapsed_time = current_time - self.last_execution_time
-        remaining_time = self.desired_period - elapsed_time
-
-        # Delay the loop execution if needed
-        if remaining_time > 0:
+        if remaining_time is not None and remaining_time > 0:
             await asyncio.sleep(remaining_time)
-
-        self.last_execution_time = time.time()
+        self.timer += self.desired_period

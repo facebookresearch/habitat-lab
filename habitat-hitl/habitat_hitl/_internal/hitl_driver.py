@@ -8,10 +8,11 @@
 See README.md in this directory.
 """
 
+import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import numpy as np
 
@@ -19,7 +20,6 @@ import habitat
 import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
-from habitat_hitl._internal.gui_application import GuiAppDriver
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
@@ -61,8 +61,15 @@ def requires_habitat_sim_with_bullet(callable_):
     return wrapper
 
 
+class AppDriver:
+    # todo: rename to just "update"?
+    @abc.abstractmethod
+    def sim_update(self, dt):
+        pass
+
+
 @requires_habitat_sim_with_bullet
-class HitlDriver(GuiAppDriver):
+class HitlDriver(AppDriver):
     def __init__(
         self,
         config,
@@ -77,8 +84,15 @@ class HitlDriver(GuiAppDriver):
             )
         self._hitl_config = omegaconf_to_object(config.habitat_hitl)
         self._dataset_config = config.habitat.dataset
-        self._play_episodes_filter_str = self._hitl_config.episodes_filter
+        self._play_episodes_filter_str = str(self._hitl_config.episodes_filter)
         self._num_recorded_episodes = 0
+        if (
+            not self._hitl_config.experimental.headless
+            and gui_input.is_stub_implementation
+        ):
+            raise RuntimeError(
+                "HitlDriver with experimental.headless=False requires a non-stub-implementation GuiInput."
+            )
         self._gui_input = gui_input
 
         line_render.set_line_width(3)
@@ -134,13 +148,16 @@ class HitlDriver(GuiAppDriver):
         )
         self._recording_keyframes: List[str] = []
 
-        self.ctrl_helper = ControllerHelper(
-            gym_habitat_env=self.gym_habitat_env,
-            config=config,
-            hitl_config=self._hitl_config,
-            gui_input=gui_input,
-            recorder=self._step_recorder,
-        )
+        if not self._hitl_config.disable_policies_and_stepping:
+            self.ctrl_helper = ControllerHelper(
+                gym_habitat_env=self.gym_habitat_env,
+                config=config,
+                hitl_config=self._hitl_config,
+                gui_input=gui_input,
+                recorder=self._step_recorder,
+            )
+        else:
+            self.ctrl_helper = None
 
         self._debug_images = self._hitl_config.debug_images
 
@@ -175,7 +192,9 @@ class HitlDriver(GuiAppDriver):
             lambda: self._set_cursor_style,
             self._episode_helper,
             self._client_message_manager,
-            self.ctrl_helper.get_gui_agent_controller(),
+            self.ctrl_helper.get_gui_agent_controller()
+            if self.ctrl_helper
+            else None,
         )
 
         self._app_state: AppState = None
@@ -217,33 +236,45 @@ class HitlDriver(GuiAppDriver):
         dataset = make_dataset(
             id_dataset=dataset_config.type, config=dataset_config
         )
-
         if self._play_episodes_filter_str is not None:
+            self._play_episodes_filter_str = str(
+                self._play_episodes_filter_str
+            )
             max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):
-                play_episodes_ids: Set[str] = set()
+                play_episodes_ids: List[str] = []
                 for ep_filter_str in play_episodes_filter_str.split(" "):
                     if ":" in ep_filter_str:
                         range_params = map(int, ep_filter_str.split(":"))
-                        play_episodes_ids.update(
+                        play_episodes_ids.extend(
                             episode_id.zfill(max_num_digits)
                             for episode_id in map(str, range(*range_params))
                         )
                     else:
                         episode_id = ep_filter_str
-                        play_episodes_ids.add(episode_id.zfill(max_num_digits))
+                        play_episodes_ids.append(
+                            episode_id.zfill(max_num_digits)
+                        )
 
                 return play_episodes_ids
 
-            play_episodes_ids_set: Set[str] = get_play_episodes_ids(
+            play_episodes_ids_list = get_play_episodes_ids(
                 self._play_episodes_filter_str
             )
+
             dataset.episodes = [
                 ep
                 for ep in dataset.episodes
-                if ep.episode_id.zfill(max_num_digits) in play_episodes_ids_set
+                if ep.episode_id.zfill(max_num_digits)
+                in play_episodes_ids_list
             ]
+
+            dataset.episodes.sort(
+                key=lambda x: play_episodes_ids_list.index(
+                    x.episode_id.zfill(max_num_digits)
+                )
+            )
 
         return dataset
 
@@ -260,6 +291,9 @@ class HitlDriver(GuiAppDriver):
         ) = self.gym_habitat_env.step(action)
 
     def _compute_action_and_step_env(self):
+        if self._hitl_config.disable_policies_and_stepping:
+            return
+
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
 
@@ -307,7 +341,8 @@ class HitlDriver(GuiAppDriver):
             self._remote_gui_input.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
-        self.ctrl_helper.on_environment_reset()
+        if self.ctrl_helper:
+            self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
@@ -316,7 +351,13 @@ class HitlDriver(GuiAppDriver):
 
         # hack: we have to reset controllers after AppState reset in case AppState reset overrides the start pose of agents
         # The reason is that the controller would need the latest agent's trans info, and we do agent init location in app reset
-        self.ctrl_helper.on_environment_reset()
+        if self.ctrl_helper:
+            self.ctrl_helper.on_environment_reset()
+
+        if self._hitl_config.disable_policies_and_stepping:
+            # we need to manually save a keyframe since the Habitat env only does this
+            # after an env step.
+            self.get_sim().gfx_replay_manager.save_keyframe()
 
     def _check_save_episode_data(self, session_ended):
         saved_keyframes, saved_episode_data = False, False
