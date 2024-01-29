@@ -10,7 +10,7 @@ import os.path as osp
 import pickle
 import time
 from functools import wraps
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import attr
 import magnum as mn
@@ -22,8 +22,13 @@ from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.logging import HabitatLogger
+from habitat.datasets.rearrange.navmesh_utils import snap_point_is_occluded
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
+
+if TYPE_CHECKING:
+    # avoids circular import while allowing type hints
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 rearrange_logger = HabitatLogger(
     name="rearrange_task",
@@ -89,15 +94,37 @@ class CollisionDetails:
         )
 
 
+def general_sim_collision(
+    sim: habitat_sim.Simulator, agent_embodiement: MobileManipulator
+) -> Tuple[bool, CollisionDetails]:
+    """
+    Proxy for "rearrange_collision()" which does not require a RearrangeSim.
+    Used for testing functions which require a collision testing routine.
+
+    :return: boolean flag denoting collisions and a details struct (not complete)
+    """
+    colls = sim.get_physics_contact_points()
+
+    agent_embodiement_object_id = agent_embodiement.sim_obj.object_id
+
+    robot_scene_colls = 0
+    for col in colls:
+        if coll_name_matches(col, agent_embodiement_object_id):
+            robot_scene_colls += 1
+
+    return (robot_scene_colls > 0), CollisionDetails(
+        robot_scene_colls=robot_scene_colls
+    )
+
+
 def rearrange_collision(
-    sim,
+    sim: "RearrangeSim",
     count_obj_colls: bool,
-    verbose: bool = False,
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
     agent_idx: Optional[int] = None,
-):
+) -> Tuple[bool, CollisionDetails]:
     """Defines what counts as a collision for the Rearrange environment execution"""
     agent_model = sim.get_agent_data(agent_idx).articulated_agent
     grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
@@ -441,120 +468,6 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
         text_file.write(gfx_keyframe_str)
 
 
-def place_agent_at_dist_from_pos(
-    target_position: np.ndarray,
-    rotation_perturbation_noise: float,
-    distance_threshold: float,
-    sim,
-    num_spawn_attempts: int,
-    filter_colliding_states: bool,
-    agent: Optional[MobileManipulator] = None,
-    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
-):
-    """
-    Places the robot at closest point if distance_threshold is -1.0 otherwise
-    will place the robot at `distance_threshold` away.
-    """
-    if distance_threshold == -1.0:
-        if navmesh_offset is not None:
-            return place_robot_at_closest_point_with_navmesh(
-                target_position, sim, navmesh_offset, agent=agent
-            )
-        else:
-            return _place_robot_at_closest_point(
-                target_position, sim, agent=agent
-            )
-    else:
-        return _get_robot_spawns(
-            target_position,
-            rotation_perturbation_noise,
-            distance_threshold,
-            sim,
-            num_spawn_attempts,
-            filter_colliding_states,
-            agent=agent,
-        )
-
-
-def _place_robot_at_closest_point(
-    target_position: np.ndarray,
-    sim,
-    agent: Optional[MobileManipulator] = None,
-):
-    """
-    Gets the agent's position and orientation at the closest point to the target position.
-    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
-    """
-    if agent is None:
-        agent = sim.articulated_agent
-
-    agent_pos = sim.safe_snap_point(target_position)
-    if not sim.is_point_within_bounds(target_position):
-        rearrange_logger.error(
-            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
-        )
-    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
-
-    return agent_pos, desired_angle, False
-
-
-def place_robot_at_closest_point_with_navmesh(
-    target_position: np.ndarray,
-    sim,
-    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
-    agent: Optional[MobileManipulator] = None,
-):
-    """
-    Gets the agent's position and orientation at the closest point to the target position.
-    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
-    """
-    if agent is None:
-        agent = sim.articulated_agent
-
-    agent_pos = sim.safe_snap_point(target_position)
-    if not sim.is_point_within_bounds(target_position):
-        rearrange_logger.error(
-            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
-        )
-    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
-
-    # Cache the initial location of the agent
-    cache_pos = agent.base_pos
-    # Make a copy of agent trans
-    trans = mn.Matrix4(agent.sim_obj.transformation)
-
-    # Set the base pos of the agent
-    trans.translation = agent_pos
-    # Project the nav pos
-    nav_pos_3d = [
-        np.array([xz[0], cache_pos[1], xz[1]]) for xz in navmesh_offset
-    ]
-    # Do transformation to get the location
-    center_pos_list = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-
-    for center_pos in center_pos_list:
-        # Update the transformation of the agent
-        trans.translation = center_pos
-        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-        # Project the height
-        cur_pos = [np.array([xz[0], cache_pos[1], xz[2]]) for xz in cur_pos]
-
-        is_collision = False
-        for pos in cur_pos:
-            if not sim.pathfinder.is_navigable(pos):
-                is_collision = True
-                break
-
-        if not is_collision:
-            return (
-                np.array(center_pos),
-                agent.base_rot,
-                False,
-            )
-
-    return agent_pos, desired_angle, False
-
-
 def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, agent):
     """Set the agent's base position and rotation via object transformation"""
     position = position - agent.sim_obj.transformation.transform_vector(
@@ -567,104 +480,12 @@ def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, agent):
     agent.sim_obj.transformation = target_trans
 
 
-def _get_robot_spawns(
-    target_position: np.ndarray,
-    rotation_perturbation_noise: float,
-    distance_threshold: float,
-    sim,
-    num_spawn_attempts: int,
-    filter_colliding_states: bool,
-    agent: Optional[MobileManipulator] = None,
-) -> Tuple[mn.Vector3, float, bool]:
-    """
-    Attempts to place the robot near the target position, facing towards it.
-    This does NOT set the position or angle of the robot, even if a place is
-    successful.
-
-    :param target_position: The position of the target. This point is not
-        necessarily on the navmesh.
-    :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
-    :param distance_threshold: The maximum distance from the target.
-    :param sim: The RearrangeSimulator instance.
-    :param num_spawn_attempts: The number of sample attempts for the distance threshold.
-    :param filter_colliding_states: Whether or not to filter out states in which the robot is colliding with the scene. If True, runs discrete collision detection, otherwise returns the sampled state without checking.
-    :param agent: The agent to get the state for. If not specified, defaults to the simulator's articulated agent.
-
-    :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
-    """
-    assert (
-        distance_threshold > 0.0
-    ), f"Distance threshold must be positive, got {distance_threshold=}. You might want `place_agent_at_dist_from_pos` instead."
-    if agent is None:
-        agent = sim.articulated_agent
-
-    start_rotation = agent.base_rot
-    start_position = agent.base_pos
-
-    # Try to place the robot.
-    for _ in range(num_spawn_attempts):
-        # Place within `distance_threshold` of the object.
-        candidate_navmesh_position = (
-            sim.pathfinder.get_random_navigable_point_near(
-                target_position,
-                distance_threshold,
-                island_index=sim.largest_island_idx,
-            )
-        )
-        # get_random_navigable_point_near() can return NaNs for start_position.
-        # If we assign nan position into agent.base_pos, we cannot revert it back
-        # We want to make sure that the generated start_position is valid
-        if np.isnan(candidate_navmesh_position).any():
-            continue
-
-        # get the horizontal distance (XZ planar projection) to the target position
-        hor_disp = candidate_navmesh_position - target_position
-        hor_disp[1] = 0
-        target_distance = np.linalg.norm(hor_disp)
-
-        if target_distance > distance_threshold:
-            continue
-
-        # Face the robot towards the object.
-        relative_target = target_position - candidate_navmesh_position
-        angle_to_object = get_angle_to_pos(relative_target)
-        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        angle_to_object += rotation_noise
-
-        # Set the agent position and rotation
-        set_agent_base_via_obj_trans(
-            candidate_navmesh_position, angle_to_object, agent
-        )
-
-        is_feasible_state = True
-        if filter_colliding_states:
-            # Make sure the robot is not colliding with anything in this
-            # position.
-            sim.perform_discrete_collision_detection()
-            _, details = rearrange_collision(
-                sim,
-                False,
-                ignore_base=False,
-            )
-
-            # Only care about collisions between the robot and scene.
-            is_feasible_state = details.robot_scene_colls == 0
-
-        if is_feasible_state:
-            # found a feasbile state: reset state and return proposed stated
-            agent.base_pos = start_position
-            agent.base_rot = start_rotation
-            return candidate_navmesh_position, angle_to_object, False
-
-    # failure to sample a feasbile state: reset state and return initial conditions
-    agent.base_pos = start_position
-    agent.base_rot = start_rotation
-    return start_position, start_rotation, True
-
-
 def get_angle_to_pos(rel_pos: np.ndarray) -> float:
     """
+    Get the 1D orientation angle (around Y axis) for an agent with X axis forward to face toward a relative 3D position.
+
     :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+
     :returns: Angle in radians.
     """
 
@@ -785,3 +606,197 @@ def get_camera_lookat_relative_to_vertial_line(
     # Get angle between location and the vector
     angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
     return angle
+
+
+def embodied_unoccluded_navmesh_snap(
+    target_position: mn.Vector3,
+    height: float,
+    sim: Union[RearrangeSim, habitat_sim.Simulator],
+    pathfinder: habitat_sim.nav.PathFinder = None,
+    target_object_id: Optional[int] = None,
+    island_id: int = -1,
+    search_offset: float = 1.5,
+    test_batch_size: int = 20,
+    max_samples: int = 200,
+    min_sample_dist: float = 0.5,
+    embodiement_heuristic_offsets: Optional[List[Tuple[float, float]]] = None,
+    agent_embodiement: Optional[MobileManipulator] = None,
+    orientation_noise: float = 0,
+    max_orientation_samples: int = 5,
+    data_out: Dict[Any, Any] = None,
+) -> Tuple[mn.Vector3, float, bool]:
+    """
+    Snap a point to the navmesh considering point visibilty via raycasting.
+
+    :property target_position: The 3D target position to snap.
+    :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
+    :property sim: The RearrangeSimulator or Simulator instance. This choice will dictate the collision detection routine.
+    :property pathfinder: The PathFinder defining the NavMesh to use.
+    :property target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when pos is an object's COM, that object should not occlude the point.
+    :property island_id: Optionally restrict the search to a single navmesh island. Default -1 is the full navmesh.
+    :property search_offset: The additional radius to search for navmesh points around the target position. Added to the minimum distance from pos to navmesh.
+    :property test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
+    :property max_samples: The maximum number of attempts to sample navmesh points for the test batch.
+    :property min_sample_dist: The minimum allowed L2 distance between samples in the test batch.
+    :property embodiement_heuristic_offsets: A set of 2D offsets describing navmesh cylinder center points forming a proxy for agent embodiement. Assumes x-forward, y to the side and 3D height fixed to navmesh. If provided, this proxy embodiement will be used for collision checking.
+    :property agent_embodiement: The MobileManipulator to be used for collision checking if provided.
+    :property orientation_noise: Standard deviation of the gaussian used to sample orientation noise. If 0, states always face the target point. Noise is applied delta to this "target facing" orientation.
+    :property max_orientation_samples: The number of orientation noise samples to try for each candidate point.
+    :property data_out: Optionally provide a dictionary which can be filled with arbitrary detail data for external debugging and visualization.
+
+    NOTE: this function is based on sampling and does not guarantee the closest point.
+
+    :return: A Tuple containing: 1) An approximation of the closest unoccluded snap point to pos or None if an unoccluded point could not be found, 2) the sampled orientation if found or None, 3) a boolean success flag.
+    """
+
+    assert height > 0
+    assert search_offset > 0
+    assert test_batch_size > 0
+    assert max_samples > 0
+    assert orientation_noise >= 0
+
+    if pathfinder is None:
+        pathfinder = sim.pathfinder
+
+    assert pathfinder.is_loaded()
+
+    # first try the closest snap point
+    snap_point = pathfinder.snap_point(target_position, island_id)
+
+    # distance to closest snap point is the absolute minimum
+    min_radius = (snap_point - target_position).length()
+    # expand the search radius
+    search_radius = min_radius + search_offset
+
+    # gather a test batch
+    test_batch: List[Tuple[mn.Vector3, float]] = []
+    sample_count = 0
+    while len(test_batch) < test_batch_size and sample_count < max_samples:
+        sample = pathfinder.get_random_navigable_point_near(
+            circle_center=target_position,
+            radius=search_radius,
+            island_index=island_id,
+        )
+        reject = False
+        for batch_sample in test_batch:
+            if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
+                reject = True
+                break
+        if not reject:
+            test_batch.append(
+                (sample, float(np.linalg.norm(sample - target_position)))
+            )
+        sample_count += 1
+
+    # sort the test batch points by distance to the target
+    test_batch.sort(key=lambda s: s[1])
+
+    # find the closest unoccluded point in the test batch
+    for batch_sample in test_batch:
+        if not snap_point_is_occluded(
+            target_position,
+            batch_sample[0],
+            height,
+            sim,
+            target_object_id=target_object_id,
+        ):
+            facing_target_angle = get_angle_to_pos(
+                np.array(target_position - batch_sample[0])
+            )
+
+            if (
+                embodiement_heuristic_offsets is None
+                and agent_embodiement is None
+            ):
+                # No embodiement for collision detection, so return closest unocluded point
+                return batch_sample[0], facing_target_angle, True
+
+            # get orientation noise offset
+            orientation_noise_samples = []
+            if orientation_noise > 0 and max_orientation_samples > 0:
+                orientation_noise_samples = [
+                    np.random.normal(0.0, orientation_noise)
+                    for _ in range(max_orientation_samples)
+                ]
+            # last one is always no-noise to check forward-facing
+            orientation_noise_samples.append(0)
+
+            for orientation_noise_sample in orientation_noise_samples:
+                desired_angle = facing_target_angle + orientation_noise_sample
+                if embodiement_heuristic_offsets is not None:
+                    # local 2d point rotation
+                    rotation_2d = mn.Matrix3.rotation(-mn.Rad(desired_angle))
+                    transformed_offsets_2d = [
+                        rotation_2d.transform_vector(xz)
+                        for xz in embodiement_heuristic_offsets
+                    ]
+
+                    # translation to global 3D points at navmesh height
+                    offsets_3d = [
+                        np.array(
+                            [
+                                transformed_offset_2d[0],
+                                0,
+                                transformed_offset_2d[1],
+                            ]
+                        )
+                        + batch_sample[0]
+                        for transformed_offset_2d in transformed_offsets_2d
+                    ]
+
+                    if data_out is not None:
+                        data_out["offsets_3d"] = offsets_3d
+
+                    # check for offset navigability
+                    is_collision = False
+                    for offset_point in offsets_3d:
+                        if not (
+                            sim.pathfinder.is_navigable(offset_point)
+                            and (
+                                island_id == -1
+                                or sim.pathfinder.get_island(offset_point)
+                                == island_id
+                            )
+                        ):
+                            is_collision = True
+                            break
+
+                    # if this sample is invalid, try the next
+                    if is_collision:
+                        continue
+
+                if agent_embodiement is not None:
+                    # contact testing with collision shapes
+                    start_position = agent_embodiement.base_pos
+                    start_rotation = agent_embodiement.base_rot
+
+                    agent_embodiement.base_pos = batch_sample[0]
+                    agent_embodiement.base_rot = desired_angle
+
+                    details = None
+                    # Make sure the robot is not colliding with anything in this state.
+                    if type(sim) == RearrangeSim:
+                        _, details = rearrange_collision(
+                            sim,
+                            False,
+                            ignore_base=False,
+                        )
+                    else:
+                        _, details = general_sim_collision(
+                            sim, agent_embodiement
+                        )
+
+                    # reset agent state
+                    agent_embodiement.base_pos = start_position
+                    agent_embodiement.base_rot = start_rotation
+
+                    # Only care about collisions between the robot and scene.
+                    is_feasible_state = details.robot_scene_colls == 0
+                    if not is_feasible_state:
+                        continue
+
+                # if we made it here, all tests passed and we found a valid placement state
+                return batch_sample[0], desired_angle, True
+
+    # unable to find a valid navmesh point within constraints
+    return None, None, False

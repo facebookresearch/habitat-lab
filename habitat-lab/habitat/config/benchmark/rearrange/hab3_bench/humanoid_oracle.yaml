@@ -31,7 +31,7 @@ habitat:
     actions:
       oracle_nav_action:
         motion_control: human_joints
-        spawn_max_dist_to_obj: -1
+        spawn_max_dist_to_obj: 2.0
   simulator:
     agents:
       main_agent:

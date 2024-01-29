@@ -14,7 +14,7 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
+from habitat.tasks.rearrange.utils import embodied_unoccluded_navmesh_snap
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
@@ -127,14 +127,15 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            start_pos, _, _ = place_agent_at_dist_from_pos(
-                np.array(obj_pos),
-                0.0,
-                self._config.spawn_max_dist_to_obj,
-                self._sim,
-                self._config.num_spawn_attempts,
-                True,
-                self.cur_articulated_agent,
+            start_pos, _, _ = embodied_unoccluded_navmesh_snap(
+                target_position=np.array(obj_pos),
+                height=1.5,  # NOTE: this is default agent max height. This parameter is used to determine whether or not a point is occluded.
+                sim=self._sim,
+                island_id=self._sim._largest_indoor_island_idx,
+                search_offset=self._config.spawn_max_dist_to_obj,
+                max_samples=self._config.num_spawn_attempts,
+                agent_embodiement=self.cur_articulated_agent,
+                target_object_id=None,  # TODO: this must be the integer id of the target object or no unoccluded state will be found because this object will be considered occluding
             )
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(

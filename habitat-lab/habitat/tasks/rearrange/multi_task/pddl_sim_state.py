@@ -19,7 +19,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     SimulatorObjectType,
 )
 from habitat.tasks.rearrange.utils import (
-    place_agent_at_dist_from_pos,
+    embodied_unoccluded_navmesh_snap,
     rearrange_logger,
 )
 
@@ -198,22 +198,22 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
 
             # Place some distance away from the object.
-            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
+            start_pos, start_rot, success = embodied_unoccluded_navmesh_snap(
                 target_position=targ_pos,
-                rotation_perturbation_noise=self.get_base_angle_noise(
-                    sim_info
-                ),
-                distance_threshold=self.get_place_at_pos_dist(sim_info),
+                height=1.5,  # NOTE: this is default agent max height. This parameter is used to determine whether or not a point is occluded.
                 sim=sim,
-                num_spawn_attempts=sim_info.num_spawn_attempts,
-                filter_colliding_states=self.get_filter_colliding_states(
-                    sim_info
-                ),
-                agent=agent_data.articulated_agent,
+                island_id=sim._largest_indoor_island_idx,
+                orientation_noise=self.get_base_angle_noise(sim_info),
+                search_offset=self.get_place_at_pos_dist(sim_info),
+                max_samples=sim_info.num_spawn_attempts,
+                agent_embodiement=agent_data.articulated_agent
+                if self.get_filter_colliding_states(sim_info)
+                else None,
+                target_object_id=None,  # TODO: this must be the integer id of the target object or no unoccluded state will be found because this object will be considered occluding
             )
             agent_data.articulated_agent.base_pos = start_pos
             agent_data.articulated_agent.base_rot = start_rot
-            if was_fail:
+            if not success:
                 rearrange_logger.error("Failed to place the robot.")
 
             # We teleported the agent. We also need to teleport the object the agent was holding.

@@ -26,7 +26,7 @@ habitat:
     actions:
       agent_1_oracle_nav_action:
         motion_control: human_joints
-        spawn_max_dist_to_obj: -1
+        spawn_max_dist_to_obj: 2.0
 
   gym:
     obs_keys:
