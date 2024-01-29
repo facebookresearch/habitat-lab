@@ -92,8 +92,8 @@ class RearrangeEpisodeGenerator:
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.dbv: DebugVisualizer = DebugVisualizer(
-            sim=None  # visual debugger initialized with sim
+        self.dbv: DebugVisualizer = (
+            None  # visual debugger initialized with sim
         )
 
         # hold a habitat Simulator object for efficient re-use
