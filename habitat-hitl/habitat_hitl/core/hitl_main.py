@@ -98,11 +98,17 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
             ),
         )
 
+    text_drawer_kwargs = {
+        "display_font_size": hitl_config.window.display_font_size,
+        "relative_path_to_font": hitl_config.window.display_font_path,
+    }
+
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size,
         viewport_rect,
         hitl_config.experimental.use_batch_renderer,
+        text_drawer_kwargs=text_drawer_kwargs,
     )
 
     update_config(

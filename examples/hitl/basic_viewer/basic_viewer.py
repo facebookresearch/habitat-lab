@@ -154,8 +154,7 @@ class AppStateBasicViewer(AppState):
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-280,
-                text_delta_y=-50,
+                text_delta_x=-120,
             )
 
     def get_sim(self):
