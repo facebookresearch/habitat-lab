@@ -21,9 +21,6 @@ except ImportError:
     )
     disable_text_drawer = True
 
-DEFAULT_FONT_PATH = "./fonts/IBMPlexSans-Regular.ttf"
-DEFAULT_FONT_SIZE = 16.0
-
 # the maximum number of chars displayable in the app window
 # using the magnum text module
 MAX_DISPLAY_TEXT_CHARS = 512
@@ -88,9 +85,9 @@ if not disable_text_drawer:
         def __init__(
             self,
             framebuffer_size: mn.Vector2i,
-            relative_path_to_font: str = DEFAULT_FONT_PATH,
+            relative_path_to_font: str,
+            display_font_size: float,
             max_display_text_chars: int = MAX_DISPLAY_TEXT_CHARS,
-            display_font_size: float = DEFAULT_FONT_SIZE,
         ) -> None:
             self._text_transform_pairs: List[Tuple[str, mn.Matrix3]] = []
             self._framebuffer_size = framebuffer_size

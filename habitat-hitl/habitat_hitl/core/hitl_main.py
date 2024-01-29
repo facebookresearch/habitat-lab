@@ -99,8 +99,8 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         )
 
     text_drawer_kwargs = {
-        "display_font_size": hitl_config.display_font_size,
-        "relative_path_to_font": hitl_config.display_font_path,
+        "display_font_size": hitl_config.window.display_font_size,
+        "relative_path_to_font": hitl_config.window.display_font_path,
     }
 
     # note this must be created after GuiApplication due to OpenGL stuff
