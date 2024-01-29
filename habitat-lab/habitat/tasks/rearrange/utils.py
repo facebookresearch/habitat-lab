@@ -611,7 +611,7 @@ def get_camera_lookat_relative_to_vertial_line(
 def embodied_unoccluded_navmesh_snap(
     target_position: mn.Vector3,
     height: float,
-    sim: Union[RearrangeSim, habitat_sim.Simulator],
+    sim: Union["RearrangeSim", habitat_sim.Simulator],
     pathfinder: habitat_sim.nav.PathFinder = None,
     target_object_id: Optional[int] = None,
     island_id: int = -1,
@@ -658,7 +658,7 @@ def embodied_unoccluded_navmesh_snap(
     if pathfinder is None:
         pathfinder = sim.pathfinder
 
-    assert pathfinder.is_loaded()
+    assert pathfinder.is_loaded
 
     # first try the closest snap point
     snap_point = pathfinder.snap_point(target_position, island_id)
@@ -775,7 +775,7 @@ def embodied_unoccluded_navmesh_snap(
 
                     details = None
                     # Make sure the robot is not colliding with anything in this state.
-                    if type(sim) == RearrangeSim:
+                    if sim.__class__.__name__ == "RearrangeSim":
                         _, details = rearrange_collision(
                             sim,
                             False,

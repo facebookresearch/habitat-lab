@@ -98,6 +98,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         start_pos = np.array(T.transform_point(mn.Vector3(*start_pos)))
         start_pos = np.array([start_pos[0], 0, start_pos[2]])
         start_pos = self._sim.safe_snap_point(start_pos)
+        # TODO: is this correct behavior?
 
         targ_pos = np.array(T.transform_point(mn.Vector3(*targ_pos)))
 
