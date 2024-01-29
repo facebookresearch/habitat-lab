@@ -68,6 +68,9 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         ReplayGuiAppRenderer,
     )
 
+    assert hitl_config.window.width > 0
+    assert hitl_config.window.height > 0
+
     glfw_config = Application.Configuration()
     glfw_config.title = hitl_config.window.title
     glfw_config.size = (hitl_config.window.width, hitl_config.window.height)
@@ -76,8 +79,8 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
     framebuffer_size = gui_app_wrapper.get_framebuffer_size()
 
     viewport_multiplier = (
-        framebuffer_size.x // hitl_config.window.width,
-        framebuffer_size.y // hitl_config.window.height,
+        framebuffer_size.x / hitl_config.window.width,
+        framebuffer_size.y / hitl_config.window.height,
     )
 
     (
