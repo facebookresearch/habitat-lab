@@ -48,6 +48,7 @@ habitat.core.__all__ = [
     "challenge",
     "environments",
     "logging",
+    "utils",
 ]
 
 habitat.datasets.__all__ = [
@@ -57,16 +58,34 @@ habitat.datasets.__all__ = [
     "pointnav",
     "rearrange",
     "vln",
+    "utils",
+    "registration",
 ]
 
-habitat.datasets.rearrange__all__ = [
-    "combine_datasets",
-    "generate_episode",
+habitat.datasets.rearrange.__all__ = [
     "navmesh_utils",
     "rearrange_dataset",
-    "rearrange_generator",
-    "run_episode_generator",
     "samplers",
+]
+
+habitat.datasets.object_nav.__all__ = [
+    "object_nav_dataset",
+]
+
+habitat.datasets.pointnav.__all__ = [
+    "pointnav_dataset",
+]
+
+habitat.sims.__all__ = [
+    "pyrobot",
+    "habitat_simulator",
+    "registration",
+]
+
+habitat.utils.visualizations.__all__ = [
+    "fog_of_war",
+    "maps",
+    "utils",
 ]
 
 
