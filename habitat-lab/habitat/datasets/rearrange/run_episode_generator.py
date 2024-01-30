@@ -378,7 +378,7 @@ if __name__ == "__main__":
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)
-        ep_gen.vdb.output_path = osp.abspath(args.db_output)
+        ep_gen.dbv.output_path = osp.abspath(args.db_output)
 
         # Simulator has been initialized and SceneDataset is populated
         if args.list:

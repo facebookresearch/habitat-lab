@@ -505,11 +505,7 @@ class BaseVelAction(ArticulatedAgentAction):
         if not self._allow_dyn_slide:
             # Check if in the new articulated_agent state the arm collides with anything.
             # If so we have to revert back to the previous transform
-            self._sim.internal_step(-1)
-            colls = self._sim.get_collisions()
-            did_coll, _ = rearrange_collision(
-                colls, self._sim.snapped_obj_id, False
-            )
+            did_coll, _ = rearrange_collision(self._sim, count_obj_colls=False)
             if did_coll:
                 # Don't allow the step, revert back.
                 self._set_articulated_agent_state(before_trans_state)
