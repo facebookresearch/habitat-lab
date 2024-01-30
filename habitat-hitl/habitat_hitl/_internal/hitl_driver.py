@@ -84,7 +84,7 @@ class HitlDriver(AppDriver):
             )
         self._hitl_config = omegaconf_to_object(config.habitat_hitl)
         self._dataset_config = config.habitat.dataset
-        self._play_episodes_filter_str = str(self._hitl_config.episodes_filter)
+        self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
         if (
             not self._hitl_config.experimental.headless
