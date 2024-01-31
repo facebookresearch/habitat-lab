@@ -25,6 +25,10 @@ class LogicalQuantifierType(Enum):
 
 
 class LogicalExpr:
+    """
+    Refers to combinations of PDDL expressions or subexpressions.
+    """
+
     def __init__(
         self,
         expr_type: LogicalExprType,

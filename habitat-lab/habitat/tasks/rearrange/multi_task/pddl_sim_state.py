@@ -23,11 +23,17 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 
+# TODO: Deprecate these and instead represent them as articulated object entity type.
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
 
 
 class ArtSampler:
+    """
+    Desired simulator state for a articulated object. Expresses a range of
+    allowable joint values.
+    """
+
     def __init__(
         self, value: float, cmp: str, override_thresh: Optional[float] = None
     ):
@@ -46,7 +52,7 @@ class ArtSampler:
         elif self.cmp == "close":
             return abs(cur_value - self.value) < thresh
         else:
-            raise ValueError(f"Unrecognized cmp {self.cmp}")
+            raise ValueError(f"Unrecognized comparison {self.cmp}")
 
     def sample(self) -> float:
         return self.value
@@ -224,6 +230,10 @@ class PddlRobotState:
 
 
 class PddlSimState:
+    """
+    The "building block" for predicates. This checks if a particular simulator state is satisfied.
+    """
+
     def __init__(
         self,
         art_states: Dict[PddlEntity, ArtSampler],
@@ -437,7 +447,9 @@ def _is_object_inside(
     return global_bb.contains(entity_pos)
 
 
-def _is_obj_state_true(entity, target, sim_info) -> bool:
+def _is_obj_state_true(
+    entity: PddlEntity, target: PddlRobotState, sim_info: PddlSimInfo
+) -> bool:
     entity_pos = sim_info.get_entity_pos(entity)
 
     if sim_info.check_type_matches(
@@ -476,7 +488,14 @@ def _is_obj_state_true(entity, target, sim_info) -> bool:
     return True
 
 
-def _is_art_state_true(art_entity, set_art, sim_info) -> bool:
+def _is_art_state_true(
+    art_entity: PddlEntity, set_art: ArtSampler, sim_info: PddlSimInfo
+) -> bool:
+    """
+    Checks if an articulated object entity matches a condition specified by
+    `set_art`.
+    """
+
     if not sim_info.check_type_matches(
         art_entity,
         SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value,
@@ -498,6 +517,10 @@ def _is_art_state_true(art_entity, set_art, sim_info) -> bool:
 def _place_obj_on_goal(
     target: PddlEntity, sim_info: PddlSimInfo
 ) -> mn.Matrix4:
+    """
+    Place an object at a goal position.
+    """
+
     sim = sim_info.sim
     targ_idx = cast(
         int,
@@ -511,6 +534,10 @@ def _place_obj_on_goal(
 def _place_obj_on_obj(
     entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
 ) -> mn.Matrix4:
+    """
+    This is intended to implement placing an object on top of another object.
+    """
+
     raise NotImplementedError()
 
 
@@ -530,6 +557,12 @@ def _place_obj_on_recep(target: PddlEntity, sim_info) -> mn.Matrix4:
 def _set_obj_state(
     entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
 ) -> None:
+    """
+    Sets an object state to match the state specified by `target`. The context
+    of this will vary on the type of the source and target entity (like if we
+    are placing an object on a receptacle).
+    """
+
     sim = sim_info.sim
 
     # The source object must be movable.
