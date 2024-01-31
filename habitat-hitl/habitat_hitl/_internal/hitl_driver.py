@@ -176,23 +176,23 @@ class HitlDriver(AppDriver):
             self._client_message_manager = ClientMessageManager()
 
         self._app_service = AppService(
-            config,
-            self._hitl_config,
-            gui_input,
-            self._remote_gui_input,
-            line_render,
-            text_drawer,
-            lambda: self._viz_anim_fraction,
-            self.habitat_env,
-            self.get_sim(),
-            lambda: self._compute_action_and_step_env(),
-            self._step_recorder,
-            lambda: self._get_recent_metrics(),
-            local_end_episode,
-            lambda: self._set_cursor_style,
-            self._episode_helper,
-            self._client_message_manager,
-            self.ctrl_helper.get_gui_agent_controller()
+            config=config,
+            hitl_config=self._hitl_config,
+            gui_input=gui_input,
+            remote_gui_input=self._remote_gui_input,
+            line_render=line_render,
+            text_drawer=text_drawer,
+            get_anim_fraction=lambda: self._viz_anim_fraction,
+            env=self.habitat_env,
+            sim=self.get_sim(),
+            compute_action_and_step_env=lambda: self._compute_action_and_step_env(),
+            step_recorder=self._step_recorder,
+            get_metrics=lambda: self._get_recent_metrics(),
+            end_episode=local_end_episode,
+            set_cursor_style=self._set_cursor_style,
+            episode_helper=self._episode_helper,
+            client_message_manager=self._client_message_manager,
+            gui_agent_controller=self.ctrl_helper.get_gui_agent_controller()
             if self.ctrl_helper
             else None,
         )
@@ -429,7 +429,7 @@ class HitlDriver(AppDriver):
 
         self._step_recorder.record("metrics", metrics)
 
-    def _set_cursor_style(self, cursor_style):
+    def _set_cursor_style(self, cursor_style: Any) -> None:
         self._pending_cursor_style = cursor_style
 
     def sim_update(self, dt):
