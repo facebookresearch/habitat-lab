@@ -86,11 +86,6 @@ defaults:
 ```
 # minimal.py
 
-import ctypes, sys
-
-# must call this before importing habitat or magnum! avoids runtime errors on some platforms
-sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
-
 import hydra
 import magnum
 
