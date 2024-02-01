@@ -8,6 +8,7 @@
 from collections import defaultdict, deque
 
 import numpy as np
+import torch
 from gym import spaces
 
 from habitat.articulated_agents.humanoids import KinematicHumanoid
@@ -372,6 +373,39 @@ class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
         relative_desired_resting = task.desired_resting - local_ee_pos
 
         return np.array(relative_desired_resting, dtype=np.float32)
+
+
+@registry.register_sensor
+class RelativeInitialEEOrientationSensor(
+    UsesArticulatedAgentInterface, Sensor
+):
+    cls_uuid: str = "relative_initial_ee_orientation"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeInitialEEOrientationSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        _, ee_orientation = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.get_ee_local_pose()
+        return np.array(
+            task.init_ee_orientation - ee_orientation, dtype=np.float32
+        )
 
 
 @registry.register_sensor
@@ -1339,3 +1373,388 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             bbox[rmin:rmax, cmin:cmax] = 1.0
 
         return np.float32(bbox)
+
+
+@registry.register_sensor
+class ArmRGBPretrainVisualFeatureSensor(UsesArticulatedAgentInterface, Sensor):
+    """Pretrained visual feature sensor for arm rgb camera"""
+
+    cls_uuid: str = "arm_rgb_pretrain_visual_feature_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        try:
+            from transformers import (
+                AutoModel,
+                AutoProcessor,
+                SiglipVisionConfig,
+            )
+        except ImportError as e:
+            raise RuntimeError(
+                "Failed to import transformer package. Please install HuggingFace transformers by the following: pip install git+https://github.com/huggingface/transformers"
+            ) from e
+        self._device = (
+            torch.device("cuda")
+            if torch.cuda.is_available() and not config.force_to_use_cpu
+            else torch.device("cpu")
+        )
+        configuration = SiglipVisionConfig()
+        self._feature_dim = configuration.hidden_size  # 768
+        self._model_name = "google/siglip-base-patch16-224"
+        super().__init__(config=config)
+        self._sim = sim
+        # Load the model based on HuggingFace's transformers
+        # Use bfloat16 to speed up inference
+        self._model = AutoModel.from_pretrained(
+            self._model_name, torch_dtype=torch.bfloat16
+        ).to(self._device)
+        self._processor = AutoProcessor.from_pretrained(self._model_name)
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArmRGBPretrainVisualFeatureSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(self._feature_dim,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_rgb"
+            assert target_key in observations
+        else:
+            target_key = f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+            assert target_key in observations
+
+        # Get image
+        rgb_image = observations[target_key]
+
+        # Feed the image into the model
+        rgb_image_input = self._processor(
+            images=rgb_image, return_tensors="pt"
+        )
+        rgb_image_input = rgb_image_input.to(self._device)
+        rgb_image_input["pixel_values"] = rgb_image_input[
+            "pixel_values"
+        ].bfloat16()
+        with torch.inference_mode():
+            image_features = self._model.get_image_features(**rgb_image_input)
+
+        # Move the features back to cpu
+        image_features = image_features.to("cpu")
+        image_features = image_features.float()
+        image_features = np.array(image_features.squeeze())
+
+        return image_features
+
+
+@registry.register_sensor
+class PretrainTextualFeatureGoalSensor(UsesArticulatedAgentInterface, Sensor):
+    """Pretrained visual feature sensor for arm rgb camera"""
+
+    cls_uuid: str = "pretrain_textual_feature_goal_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        try:
+            from transformers import (
+                AutoModel,
+                AutoTokenizer,
+                SiglipVisionConfig,
+            )
+        except ImportError as e:
+            raise RuntimeError(
+                "Failed to import transformer package. Please install HuggingFace transformers by the following: pip install git+https://github.com/huggingface/transformers"
+            ) from e
+        self._device = (
+            torch.device("cuda")
+            if torch.cuda.is_available() and not config.force_to_use_cpu
+            else torch.device("cpu")
+        )
+        configuration = SiglipVisionConfig()
+        self._feature_dim = configuration.hidden_size  # 768
+        self._model_name = "google/siglip-base-patch16-224"
+        super().__init__(config=config)
+        self._sim = sim
+        # Load the model based on HuggingFace's transformers
+        # Use bfloat16 to speed up inference
+        self._model = AutoModel.from_pretrained(
+            self._model_name, torch_dtype=torch.bfloat16
+        ).to(self._device)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            "google/siglip-base-patch16-224"
+        )
+        self._goal_name = None
+        self._goal_pos = None
+        self._goal_textual_feature = None
+        self._diff_treshold = 0.01
+        self._target_receptacle_names = [
+            "refrigerator",
+            "cupboard",
+            "counter",
+            "table",
+            "tvstand",
+            "sofa",
+            "cabinet",
+            "chair",
+        ]
+        self._pre_fix = "place an object on the "
+
+        self._goal_obj_name = None
+        self._goal_obj_textual_feature = None
+        self._target_object_names = [
+            "mug",
+            "bowl",
+            "banana",
+            "tomato_soup_can",
+            "master_chef_can",
+            "sugar_box",
+            "tuna_fish_can",
+            "bleach_cleanser",
+            "preach",
+            "lemon",
+        ]
+        self._use_features = self.config.use_features
+
+    def _get_uuid(self, *args, **kwargs):
+        return PretrainTextualFeatureGoalSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        if len(self.config.use_features) == 2:
+            return spaces.Box(
+                shape=(self._feature_dim * 2,),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
+        else:
+            return spaces.Box(
+                shape=(self._feature_dim,),
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                dtype=np.float32,
+            )
+
+    def _get_goal_text(self, targ_idx):
+        # Cache the name of the receptacle
+        _, goal_pos = self._sim.get_targets()
+        if (
+            self._goal_pos is not None
+            and np.linalg.norm(
+                goal_pos[targ_idx, [0, 2]] - self._goal_pos[targ_idx, [0, 2]]
+            )
+            < self._diff_treshold
+        ):
+            return self._goal_name
+
+        min_dis = float("inf")
+        goal_name = "None"
+        for rep_name in self._sim.receptacles:
+            distance = np.linalg.norm(
+                np.array(self._sim.receptacles[rep_name].center())[[0, 2]]
+                - goal_pos[targ_idx, [0, 2]]
+            )
+            if distance < min_dis:
+                min_dis = distance  # type: ignore
+                goal_name = rep_name
+
+        self._goal_pos = goal_pos
+
+        return goal_name
+
+    def _filter_receptacle_name(self, raw_name):
+        candidate_name = [
+            name
+            for name in self._target_receptacle_names
+            if name in raw_name.lower().replace("_", "")
+        ]
+
+        # Handle special case
+        if len(candidate_name) == 0:
+            return self._pre_fix + "furniture"
+        # Only return the first one
+        candidate_name = candidate_name[0]
+        # Handle special case
+        if candidate_name == "cabinet":
+            return self._pre_fix + "chair"
+        else:
+            return self._pre_fix + candidate_name
+
+    def _get_object_name(self, targ_idx):
+        """Get the object name."""
+        # Only support the first one
+        object_name = [key for key, value in self._sim._targets.items()][
+            targ_idx
+        ]
+        object_name = object_name.split("_")
+        object_name = object_name[1:-1]
+        object_name = "_".join(object_name)
+        return object_name
+
+    def _get_text_feature(self, text):
+        # Prepare the model input
+        inputs = self._tokenizer(
+            [self._filter_receptacle_name(text)],
+            padding="max_length",
+            return_tensors="pt",
+        )
+        inputs = inputs.to(self._device)
+        # Get text feature
+        with torch.inference_mode():
+            text_features = self._model.get_text_features(**inputs)
+
+        # Move the features back to cpu
+        text_features = text_features.to("cpu")
+        text_features = text_features.float()
+        text_features = np.array(text_features.squeeze())
+        return text_features
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a target receptacle name
+        rep_name = self._get_goal_text(task.targ_idx)
+
+        # Get a target object name
+        obj_name = self._get_object_name(task.targ_idx)
+        if (
+            self._goal_name == rep_name
+            and "rep" in self._use_features
+            and len(self._use_features) == 1
+        ):
+            return self._goal_textual_feature
+
+        if (
+            self._goal_obj_name == obj_name
+            and "obj" in self._use_features
+            and len(self._use_features) == 1
+        ):
+            return self._goal_obj_textual_feature
+
+        if (
+            self._goal_name == rep_name
+            and self._goal_obj_name == obj_name
+            and len(self._use_features) == 2
+        ):
+            return np.concatenate(
+                [self._goal_textual_feature, self._goal_obj_textual_feature]
+            )
+
+        return_feature = []
+        # Get the receptacle text feature
+        if "rep" in self._use_features:
+            text_features = self._get_text_feature(rep_name)
+            self._goal_textual_feature = text_features
+            self._goal_name = rep_name
+            return_feature.append(text_features)
+
+        if "obj" in self._use_features:
+            # Get the object text feature
+            obj_text_features = self._get_text_feature(obj_name)
+            self._goal_obj_textual_feature = obj_text_features
+            self._goal_obj_name = obj_name
+            return_feature.append(obj_text_features)
+
+        return np.concatenate(return_feature, axis=0)
+
+
+@registry.register_sensor
+class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
+    """Semantic sensor for the target place receptacle"""
+
+    cls_uuid: str = "arm_receptacle_semantic_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._height = config.height
+        self._width = config.width
+
+        self._rep_name = None
+        self._rep_pos = None
+        self._diff_treshold = 0.01
+        self._rep_name_to_semantic_id = {
+            "kitchen_counter": 33,
+            "refrigerator": 1,
+            "refrigerator": 1,
+        }
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArmReceptacleSemanticSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_rep_text(self, targ_idx):
+        # Cache the name of the receptacle
+        _, rep_pos = self._sim.get_targets()
+        if (
+            self._rep_pos is not None
+            and np.linalg.norm(
+                rep_pos[targ_idx, [0, 2]] - self._rep_pos[targ_idx, [0, 2]]
+            )
+            < self._diff_treshold
+        ):
+            return self._rep_name
+
+        min_dis = float("inf")
+        find_rep_name = "None"
+        for rep_name in self._sim.receptacles_id:
+            distance = np.linalg.norm(
+                np.array(self._sim.receptacles_id[rep_name][1].center())[
+                    [0, 2]
+                ]
+                - rep_pos[targ_idx, [0, 2]]
+            )
+            if distance < min_dis:
+                min_dis = distance  # type: ignore
+                find_rep_name = rep_name
+        self._rep_pos = rep_pos
+        return find_rep_name
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_panoptic"
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+            )
+            assert target_key in observations
+
+        img_seg = observations[target_key]
+
+        # Check the size of the observation
+        assert (
+            img_seg.shape[0] == self._height
+            and img_seg.shape[1] == self._width
+        )
+
+        # Get the target receptacle name
+        rep_name = self._get_rep_text(task.targ_idx)
+        self._rep_name = rep_name
+
+        # Get the target mask
+        tgt_id = self._sim.receptacles_id[rep_name][0]
+        tgt_mask = (img_seg == tgt_id).astype(int)
+
+        return np.float32(tgt_mask)

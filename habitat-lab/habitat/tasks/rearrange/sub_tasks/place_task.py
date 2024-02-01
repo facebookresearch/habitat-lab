@@ -32,10 +32,19 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
 
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
 
+        # Here, we teleport the target object to the gripper
+        # The place task is to let Spot place the object in the original
+        # object location
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
 
         self.was_prev_holding = self.targ_idx
 
         sim.internal_step(-1)
         self._sim.maybe_update_articulated_agent()
+
+        # Get the initial ee orientation
+        _, self.init_ee_orientation = self._sim.get_agent_data(
+            None
+        ).articulated_agent.get_ee_local_pose()  # type: ignore
+
         return self._get_observations(episode)

@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterator, List, Optional
 
@@ -147,12 +148,15 @@ class ArticulatedAgentManager:
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
         """
         for agent_data in self._all_agent_data:
+            if agent_data.cfg.joint_start_override_random is not None:
+                agent_data.start_js = np.array(
+                    random.choice(agent_data.cfg.joint_start_override_random)
+                )
             target_arm_init_params = (
                 agent_data.start_js
                 + agent_data.cfg.joint_start_noise
                 * np.random.randn(len(agent_data.start_js))
             )
-
             # We only randomly set the location of the particular joint if that joint can be controlled
             # and given joint_that_can_control value.
             if agent_data.cfg.joint_that_can_control is not None:

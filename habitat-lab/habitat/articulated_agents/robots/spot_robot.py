@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import attr
 import magnum as mn
@@ -12,6 +12,7 @@ from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
 )
+from habitat.utils.geometry_utils import quat_to_euler
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -175,6 +176,39 @@ class SpotRobot(MobileManipulator):
             mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
         )
         return self.sim_obj.transformation @ add_rot
+
+    def get_ee_local_pose(
+        self, ee_index: int = 0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Get the local pose of the end-effector.
+
+        :param ee_index: the end effector index for which we want the link transform
+        """
+        if ee_index >= len(self.params.ee_links):
+            raise ValueError(
+                "The current manipulator does not have enough end effectors"
+            )
+
+        ef_link_transform = self.ee_transform()
+        base_transform = self.base_transformation
+        # Get the local ee location (x,y,z)
+        local_ee_location = base_transform.inverted().transform_point(
+            ef_link_transform.translation
+        )
+        # Get the local ee rotation (r,p,y)
+        local_ee_transform = base_transform.inverted() @ ef_link_transform
+        local_ee_quat = mn.Quaternion.from_matrix(
+            local_ee_transform.rotation()
+        )
+        local_ee_euler = quat_to_euler(
+            (
+                local_ee_quat.scalar,
+                local_ee_quat.vector[0],
+                local_ee_quat.vector[2],
+                local_ee_quat.vector[1],
+            )
+        )
+        return np.array(local_ee_location), np.array(local_ee_euler)
 
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True

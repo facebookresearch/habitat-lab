@@ -45,6 +45,9 @@ __all__ = [
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
+    "ArmReceptacleSemanticSensorConfig",
+    "ArmRGBPretrainVisualFeatureSensorConfig",
+    "PretrainTextualFeatureGoalSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
@@ -57,6 +60,7 @@ __all__ = [
     "SelectBaseOrArmActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
+    "RelativeInitialEEOrientationSensorConfig",
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
@@ -68,11 +72,13 @@ __all__ = [
     "TargetGoalGpsCompassSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
+    "EndEffectorToInitialOrientationDistanceMeasurementConfig",
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
+    "ObjAtReceptacleMeasurementConfig",
     "ArtObjAtDesiredStateMeasurementConfig",
     "RotDistToGoalMeasurementConfig",
     "PddlStageGoalsMeasurementConfig",
@@ -427,6 +433,37 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ArmReceptacleSemanticSensorConfig(LabSensorConfig):
+    r"""
+    Semantic sensor for getting the target place receptacle
+    """
+    type: str = "ArmReceptacleSemanticSensor"
+    height: int = 480
+    width: int = 640
+
+
+@dataclass
+class ArmRGBPretrainVisualFeatureSensorConfig(LabSensorConfig):
+    r"""
+    Pretrained visual feature sensor for arm rgb camera
+    """
+    type: str = "ArmRGBPretrainVisualFeatureSensor"
+    # This is added to prevent from cuda out of memory issue
+    force_to_use_cpu: bool = False
+
+
+@dataclass
+class PretrainTextualFeatureGoalSensorConfig(LabSensorConfig):
+    r"""
+    Pretrained visual feature sensor for goal receptacle text
+    """
+    type: str = "PretrainTextualFeatureGoalSensor"
+    # This is added to prevent from cuda out of memory issue
+    force_to_use_cpu: bool = False
+    use_features: List[str] = field(default_factory=lambda: ["rep"])
+
+
+@dataclass
 class SpotHeadStereoDepthSensorConfig(LabSensorConfig):
     r"""
     For Spot only. Sensor fusion for inputs of Spot stereo pair depth sensor
@@ -551,6 +588,17 @@ class RelativeRestingPositionSensorConfig(LabSensorConfig):
     """
 
     type: str = "RelativeRestingPositionSensor"
+
+
+@dataclass
+class RelativeInitialEEOrientationSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Sensor for the relative orientation of the end-effector's initial orientation, relative to the end-effector's current orientation.
+    The three values correspond to the roll, pitch, and yaw of the initial orientation in the frame of reference of the base.
+    The desired resting position is determined by the initial orientation of the end-effector.
+    """
+
+    type: str = "RelativeInitialEEOrientationSensor"
 
 
 @dataclass
@@ -879,6 +927,19 @@ class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class EndEffectorToInitialOrientationDistanceMeasurementConfig(
+    MeasurementConfig
+):
+    """
+    Rearrangement only. Orientation distance between current end effector orientation
+    and the initial orientation of the end effector. Requires that the
+    relative_end_effector_orientation_sensor is attached to the agent.
+    """
+
+    type: str = "EndEffectorToInitialOrientationDistance"
+
+
+@dataclass
 class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToGoalDistance"
 
@@ -1198,6 +1259,20 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class ObjAtReceptacleMeasurementConfig(MeasurementConfig):
+    r"""
+    The measure is a dictionary of target indexes to float. The values are 1 if the object is placed on the target receptacle.
+
+    :property dummy:
+    """
+    type: str = "ObjAtReceptacle"
+    vertical_diff_threshold: float = 0.15
+    horizontal_diff_threshold: float = 0.15
+    surface_vertical_diff_threshold: float = 0.15
+    snap_down_surface_vertical_diff_threshold: float = 0.15
+
+
+@dataclass
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the place task.
@@ -1207,9 +1282,11 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     :property drop_pen: The penalty for dropping the object.
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    :property obj_at_receptacle_success: If true, we only check if the object is in the nearby receptacle.
     """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
+    ori_reward: float = 1.0
     place_reward: float = 5.0
     drop_pen: float = 0.0
     use_diff: bool = True
@@ -1220,18 +1297,25 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    min_ori_to_init: float = 0.15
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    obj_at_receptacle_success: bool = False
+    use_ee_ori: bool = False
+    ee_orientation_to_initial_threshold: float = -1.0
 
 
 @dataclass
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its end effector within ee_resting_success_threshold of its resting position.
+    :property obj_at_receptacle_success: If true, we only check if the object is in the nearby receptacle.
     """
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
+    obj_at_receptacle_success: bool = False
+    ee_orientation_to_initial_threshold: float = -1.0
 
 
 @dataclass
@@ -1469,7 +1553,6 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
-
     # The minimum distance between the agents at start. If < 0
     # there is no minimal distance
     min_distance_start_agents: float = -1.0
@@ -1661,6 +1744,8 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: Optional[str] = None
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    # Addtional data for joint selection
+    joint_start_override_random: Optional[List[float]] = None
 
 
 @dataclass
@@ -2164,6 +2249,24 @@ cs.store(
     node=ArmDepthBBoxSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.arm_receptacle_semantic_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_receptacle_semantic_sensor",
+    node=ArmReceptacleSemanticSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_rgb_pretrain_visual_feature_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_rgb_pretrain_visual_feature_sensor",
+    node=ArmRGBPretrainVisualFeatureSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.pretrain_textual_feature_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="pretrain_textual_feature_goal_sensor",
+    node=PretrainTextualFeatureGoalSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
     group="habitat/task/lab_sensors",
     name="spot_head_stereo_depth_sensor",
@@ -2252,6 +2355,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="relative_resting_pos_sensor",
     node=RelativeRestingPositionSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.relative_end_effector_orientation_sensor",
+    group="habitat/task/lab_sensors",
+    name="relative_end_effector_orientation_sensor",
+    node=RelativeInitialEEOrientationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.instruction_sensor",
@@ -2426,6 +2535,12 @@ cs.store(
     node=EndEffectorToRestDistanceMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.end_effector_to_initial_orientation_distance",
+    group="habitat/task/measurements",
+    name="end_effector_to_initial_orientation_distance",
+    node=EndEffectorToInitialOrientationDistanceMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.end_effector_to_goal_distance",
     group="habitat/task/measurements",
     name="end_effector_to_goal_distance",
@@ -2502,6 +2617,12 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.obj_at_receptacle",
+    group="habitat/task/measurements",
+    name="obj_at_receptacle",
+    node=ObjAtReceptacleMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",

@@ -1,0 +1,100 @@
+# @package _global_
+defaults:
+  - place
+  - /habitat/task/measurements:
+    - base_to_object_distance
+  - /habitat/task/lab_sensors:
+    - arm_receptacle_semantic_sensor
+    - spot_head_stereo_depth_sensor
+    - pretrain_textual_feature_goal_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  - override /habitat/dataset/rearrangement: hssd
+  - _self_
+
+# This yaml is designed specifically for learning a semantic place policy for the Boston Dynamics Spot robot.
+# It uses the base place yaml to define the basic measurements and sensors,
+# observation keys, and reward function to train the policy.
+# The major changes compared to the base place yaml are the following:
+# (1) obs_keys: we ensure these observations can be obtained from the real robot (Spot)
+# (2) place_reward: place reward considers collisions based on a kinematic simulation
+# (3) actions: Spot uses arm action to place the object
+# (4) simulator: we simulate the environment via the kinematic mode to facilitate sim2real transfer
+habitat:
+  gym:
+    obs_keys:
+      - pretrain_textual_feature_goal_sensor
+      - arm_receptacle_semantic_sensor
+      - relative_initial_ee_orientation
+      - articulated_agent_arm_depth
+      - joint
+      - is_holding
+  task:
+    measurements:
+      force_terminate:
+        # We ignore the force here since in kinematic simulation, there is no force
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+      place_reward:
+        wrong_drop_should_end: False
+        drop_pen: 5.0
+        count_coll_pen: 0.05
+        max_count_colls: 100
+        count_coll_end_pen: 5
+        # We want to check if the object is placed on the receptacle
+        obj_at_receptacle_success: True
+        # We want to give the reward for ee orientation to initial orientation
+        use_ee_ori: True
+      place_success:
+        ee_resting_success_threshold: -1.0
+        # We want to check if the object is placed on the receptacle
+        obj_at_receptacle_success: True
+        # We want to check if the robot maintains the same ee's orientation
+        ee_orientation_to_initial_threshold: 0.15
+      obj_at_goal:
+        # We want this number to be as small as possible
+        # since we want the robot to place the object precisely on the receptacle
+        succ_thresh: 0.05
+      obj_at_receptacle:
+        vertical_diff_threshold: 0.10
+        horizontal_diff_threshold: 0.30
+        surface_vertical_diff_threshold: -1.0
+        snap_down_surface_vertical_diff_threshold: 0.10
+    lab_sensors:
+      # We can only control 4 of the joints of Spot's arm
+      joint_sensor:
+        dimensionality: 4
+        arm_joint_mask: [1,1,0,1,0,1,0]
+      arm_receptacle_semantic_sensor:
+        height: 240
+        width: 228
+      pretrain_textual_feature_goal_sensor:
+        use_features: ["obj"]
+    actions:
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        center_cone_vector: [0.0, 1.0, 0.0]
+        # We limit the joint angles to ensure that this is feasible in the real world
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        auto_grasp: False
+        should_clip: True
+    success_reward: 10.0
+    slack_reward: -0.01
+    # Control Spot robot place location
+    spawn_max_dist_to_obj: 1.0
+    base_angle_noise: 0.261799
+  simulator:
+    # We use the kinematic mode to train the policy
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    agents:
+      main_agent:
+        joint_start_noise: 0.0
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real-world gaze ready location
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
+        joint_start_override_random: [[0, -3.14, 0, 3.14, 0, 0, 1.57], [0, -3.14, 0, 3.14, 0, 0, -1.57], [-0.016, -1.621, 0, 1.592, 0, 1.571, 0],  [-0.046, -1.920, 0, 2.094, 0, 1.396, 0]]
+  dataset:
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
