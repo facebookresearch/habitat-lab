@@ -1389,9 +1389,11 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
 
         min_dis = float("inf")
         find_rep_name = "None"
-        for rep_name in self._sim.receptacles:
+        for rep_name in self._sim.receptacles_id:
             distance = np.linalg.norm(
-                np.array(self._sim.receptacles[rep_name].center())[[0, 2]]
+                np.array(self._sim.receptacles_id[rep_name][1].center())[
+                    [0, 2]
+                ]
                 - rep_pos[targ_idx, [0, 2]]
             )
             if distance < min_dis:
@@ -1424,7 +1426,7 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
         self._rep_name = rep_name
 
         # Get the target mask
-        tgt_id = self._sim.receptacles[rep_name][0]
+        tgt_id = self._sim.receptacles_id[rep_name][0]
         tgt_mask = (img_seg == tgt_id).astype(int)
 
         return np.float32(tgt_mask)
