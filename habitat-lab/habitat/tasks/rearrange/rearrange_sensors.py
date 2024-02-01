@@ -1339,3 +1339,92 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             bbox[rmin:rmax, cmin:cmax] = 1.0
 
         return np.float32(bbox)
+
+
+@registry.register_sensor
+class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
+    """Semantic sensor for the target place receptacle"""
+
+    cls_uuid: str = "arm_receptacle_semantic_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._height = config.height
+        self._width = config.width
+        self._dis_threshold = config.dis_threshold
+
+        self._rep_name = None
+        self._rep_pos = None
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArmReceptacleSemanticSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_rep_text(self, targ_idx):
+        # Cache the name of the receptacle
+        _, rep_pos = self._sim.get_targets()
+        if (
+            self._rep_pos is not None
+            and np.linalg.norm(
+                rep_pos[targ_idx, [0, 2]] - self._rep_pos[targ_idx, [0, 2]]
+            )
+            < self._dis_threshold
+        ):
+            return self._rep_name
+
+        min_dis = float("inf")
+        find_rep_name = "None"
+        for rep_name in self._sim.receptacles:
+            distance = np.linalg.norm(
+                np.array(self._sim.receptacles[rep_name].center())[[0, 2]]
+                - rep_pos[targ_idx, [0, 2]]
+            )
+            if distance < min_dis:
+                min_dis = distance  # type: ignore
+                find_rep_name = rep_name
+        self._rep_pos = rep_pos
+        return find_rep_name
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_panoptic"
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+            )
+            assert target_key in observations
+
+        img_seg = observations[target_key]
+
+        # Check the size of the observation
+        assert (
+            img_seg.shape[0] == self._height
+            and img_seg.shape[1] == self._width
+        )
+
+        # Get the target receptacle name
+        rep_name = self._get_rep_text(task.targ_idx)
+        self._rep_name = rep_name
+
+        # Get the target mask
+        tgt_id = self._sim.receptacles[rep_name][0]
+        tgt_mask = (img_seg == tgt_id).astype(int)
+
+        return np.float32(tgt_mask)
