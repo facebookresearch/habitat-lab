@@ -43,7 +43,7 @@ def _parse_debug_third_person(hitl_config, viewport_multiplier=(1, 1)):
     return do_show, width, height
 
 
-def hitl_main(app_config, create_app_state_lambda=None):
+def hitl_main(app_config, create_app_state_lambda=None, test_flag=False):
     # Add check for data/
     if not os.path.exists("data/"):
         raise FileNotFoundError(
