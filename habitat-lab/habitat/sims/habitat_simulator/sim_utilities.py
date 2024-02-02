@@ -537,6 +537,50 @@ def get_object_set_from_id_set(
     return rigids + aos
 
 
+def get_obj_contact_pairs(
+    sim: habitat_sim.Simulator,
+    obj: Union[
+        habitat_sim.physics.ManagedArticulatedObject,
+        habitat_sim.physics.ManagedRigidObject,
+    ],
+) -> None:
+    """
+    Search contact points for this object and list any objects contacting this one with some details.
+    """
+    ao_link_map = get_ao_link_id_map(sim)
+    my_obj_id = obj.object_id
+
+    def fill_defaults():
+        return {"object_handle": "", "deepest_dist": 99999, "num_points": 0}
+
+    contacting_object_details = {}
+    for cp in sim.get_physics_contact_points():
+        contacting_obj_id = None
+        if cp.object_id_a == my_obj_id:
+            contacting_obj_id = cp.object_id_b
+        if cp.object_id_b == my_obj_id:
+            contacting_obj_id = cp.object_id_a
+        if contacting_obj_id is not None:
+            contacting_obj = get_object_set_from_id_set(
+                sim, id_set=[contacting_obj_id], ao_link_map=ao_link_map
+            )[0][0]
+            if contacting_obj not in contacting_object_details:
+                contacting_object_details[contacting_obj] = fill_defaults()
+            contacting_object_details[contacting_obj][
+                "object_handle"
+            ] = contacting_obj.handle
+            contacting_object_details[contacting_obj]["deepest_dist"] = min(
+                contacting_object_details[contacting_obj]["deepest_dist"],
+                cp.contact_distance,
+            )
+            contacting_object_details[contacting_obj]["num_points"] += 1
+
+    print(contacting_object_details)
+
+    # from habitat.sims.habitat_simulator.sim_utilities import get_obj_contact_pairs
+    # get_obj_contact_pairs(self.sim,new_objs[0][0])
+
+
 def above(
     sim: habitat_sim.Simulator,
     objectA: habitat_sim.physics.ManagedRigidObject,
@@ -649,7 +693,7 @@ def within(
 
 
 # ============================================================
-# DEbug Rendering Utils (move to debug_visualizer.py?)
+# Debug Rendering Utils (move to debug_visualizer.py?)
 # ============================================================
 
 
