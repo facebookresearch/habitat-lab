@@ -235,11 +235,13 @@ jobs:
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               pip install -e habitat-lab
               pip install -e habitat-baselines
+              pip install -e habitat-hitl
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
           background: true
           paths:
             - ~/miniconda
+
       - run:
           name: Display dependency versions
           no_output_timeout: 20m
@@ -262,6 +264,19 @@ jobs:
 
       - store_artifacts:
           path: conda_env_dump.log  # This is the list of modules in conda and pip
+
+      - run:
+          name: Run HITL functionality
+          no_output_timeout: 60m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              ln -s ../habitat-sim/data data
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
+              export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              pytest test/hitl/test_hitl_main.py
+
       - run:
           name: Run api tests
           no_output_timeout: 120m
