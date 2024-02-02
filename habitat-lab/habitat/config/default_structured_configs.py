@@ -45,6 +45,7 @@ __all__ = [
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
+    "ArmReceptacleSemanticSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
@@ -424,6 +425,17 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
     type: str = "ArmDepthBBoxSensor"
     height: int = 480
     width: int = 640
+
+
+@dataclass
+class ArmReceptacleSemanticSensorConfig(LabSensorConfig):
+    r"""
+    Semantic sensor for getting the target place receptacle
+    """
+    type: str = "ArmReceptacleSemanticSensor"
+    height: int = 480
+    width: int = 640
+    dis_threshold: float = 0.01
 
 
 @dataclass
@@ -2162,6 +2174,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_receptacle_semantic_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_receptacle_semantic_sensor",
+    node=ArmReceptacleSemanticSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
