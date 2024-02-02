@@ -10,6 +10,7 @@ This is an example HITL application that allows a user to interact with a scene,
 - [Pick\_throw\_vr HITL application](#pick_throw_vr-hitl-application)
   - [Installing and using HITL apps](#installing-and-using-hitl-apps)
   - [Example launch command (mouse/keyboard)](#example-launch-command-mousekeyboard)
+  - [Configuration](#configuration)
 - [VR](#vr)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -39,6 +40,9 @@ See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py
 ```
+
+## Configuration
+See `config/pick_throw_vr.yaml`. You can also use the configs in `experiment` as overrides, e.g. `python examples/hitl/pick_throw_vr/pick_throw_vr.py +experiment=headless_server`.
 
 # VR
 
@@ -79,6 +83,13 @@ HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
 habitat_hitl.remote_gui_mode=True
 ```
+
+We also have an experimental headless server:
+```
+python examples/hitl/pick_throw_vr/pick_throw_vr.py \
++experiment=headless_server
+```
+
 
 ## Unity Data Folder
 

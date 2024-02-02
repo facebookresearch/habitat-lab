@@ -26,7 +26,7 @@ class HumanoidPickAction(HumanoidJointAction):
     def __init__(self, *args, task, **kwargs):
         config = kwargs["config"]
         HumanoidJointAction.__init__(self, *args, **kwargs)
-        self.vdb = None
+        self.dbv = None
 
         self.humanoid_controller = self.lazy_inst_humanoid_controller(
             task, config
@@ -70,7 +70,7 @@ class HumanoidPickAction(HumanoidJointAction):
             )
             task.humanoid_controller = humanoid_controller
 
-        self.vdb = DebugVisualizer(self._sim, output_path="")
+        self.dbv = DebugVisualizer(self._sim, output_path="")
         return task.humanoid_controller
 
     @property

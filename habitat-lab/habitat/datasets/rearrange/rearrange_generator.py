@@ -92,7 +92,7 @@ class RearrangeEpisodeGenerator:
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.vdb: DebugVisualizer = (
+        self.dbv: DebugVisualizer = (
             None  # visual debugger initialized with sim
         )
 
@@ -447,8 +447,8 @@ class RearrangeEpisodeGenerator:
             sampled_look_target = receptacle.sample_uniform_global(
                 self.sim, 1.0
             )
-            self.vdb.look_at(sampled_look_target)
-            self.vdb.get_observation()
+            self.dbv.look_at(sampled_look_target)
+            self.dbv.debug_obs.append(self.dbv.get_observation())
 
     def generate_episodes(
         self, num_episodes: int = 1, verbose: bool = False
@@ -655,7 +655,7 @@ class RearrangeEpisodeGenerator:
         # visualize after setting AO states to correctly see scene state
         if self._render_debug_obs:
             self.visualize_scene_receptacles()
-            self.vdb.make_debug_video(prefix="receptacles_")
+            self.dbv.make_debug_video(prefix="receptacles_")
 
         # track a list of target objects to be used for settle culling later
         target_object_names: List[str] = []
@@ -667,7 +667,7 @@ class RearrangeEpisodeGenerator:
                 recep_tracker,
                 target_receptacles[sampler_name],
                 snap_down=True,
-                vdb=(self.vdb if self._render_debug_obs else None),
+                dbv=(self.dbv if self._render_debug_obs else None),
             )
             if len(object_sample_data) == 0:
                 return None
@@ -702,8 +702,8 @@ class RearrangeEpisodeGenerator:
                     f"Generating debug images for {len(new_objects)} objects..."
                 )
                 for new_object in new_objects:
-                    self.vdb.look_at(new_object.translation)
-                    self.vdb.get_observation()
+                    self.dbv.look_at(new_object.translation)
+                    self.dbv.debug_obs.append(self.dbv.get_observation())
                 logger.info(
                     f"... done generating the debug images for {len(new_objects)} objects."
                 )
@@ -742,7 +742,7 @@ class RearrangeEpisodeGenerator:
                 self.sim,
                 recep_tracker,
                 snap_down=True,
-                vdb=self.vdb,
+                dbv=self.dbv,
                 target_receptacles=target_receptacles[obj_sampler_name],
                 goal_receptacles=goal_receptacles[sampler_name],
                 object_to_containing_receptacle=self.object_to_containing_receptacle,
@@ -775,7 +775,7 @@ class RearrangeEpisodeGenerator:
                         angular_speed=self.cfg.angular_velocity,
                         distance_threshold=self.cfg.distance_threshold,
                         linear_speed=self.cfg.linear_velocity,
-                        vdb=self.vdb,
+                        dbv=self.dbv,
                         render_debug_video=False,
                     )
                     if not is_navigable:
@@ -811,15 +811,15 @@ class RearrangeEpisodeGenerator:
                         size=target_bb_size / 2.0,
                         transform=target_transform,
                     )
-                    self.vdb.look_at(target_transform.translation)
-                    self.vdb.debug_line_render.set_line_width(2.0)
-                    self.vdb.debug_line_render.draw_transformed_line(
+                    self.dbv.look_at(target_transform.translation)
+                    self.dbv.debug_line_render.set_line_width(2.0)
+                    self.dbv.debug_line_render.draw_transformed_line(
                         target_transform.translation,
                         rom.get_object_by_handle(instance_handle).translation,
                         mn.Color4(1.0, 0.0, 0.0, 1.0),
                         mn.Color4(1.0, 0.0, 0.0, 1.0),
                     )
-                    self.vdb.get_observation()
+                    self.dbv.debug_obs.append(self.dbv.get_observation())
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
@@ -949,10 +949,10 @@ class RearrangeEpisodeGenerator:
         # initialize the debug visualizer
         output_path = (
             "rearrange_ep_gen_output/"
-            if self.vdb is None
-            else self.vdb.output_path
+            if self.dbv is None
+            else self.dbv.output_path
         )
-        self.vdb = DebugVisualizer(self.sim, output_path=output_path)
+        self.dbv = DebugVisualizer(self.sim, output_path=output_path)
 
     def settle_sim(
         self,
@@ -981,16 +981,16 @@ class RearrangeEpisodeGenerator:
         new_obj_centroid /= len(self.ep_sampled_objects)
         settle_db_obs: List[Any] = []
         if self._render_debug_obs:
-            self.vdb.get_observation(
-                look_at=new_obj_centroid,
-                look_from=scene_bb.center(),
-                obs_cache=settle_db_obs,
+            settle_db_obs.append(
+                self.dbv.get_observation(
+                    look_at=new_obj_centroid, look_from=scene_bb.center()
+                )
             )
 
         while self.sim.get_world_time() < duration:
             self.sim.step_world(1.0 / 30.0)
             if self._render_debug_obs:
-                self.vdb.get_observation(obs_cache=settle_db_obs)
+                settle_db_obs.append(self.dbv.get_observation())
 
         logger.info(
             f"   ...done with placement stability analysis in {time.time()-settle_start_time} seconds."
@@ -1013,7 +1013,7 @@ class RearrangeEpisodeGenerator:
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
                 if self._render_debug_obs:
-                    self.vdb.peek_rigid_object(
+                    self.dbv.peek_rigid_object(
                         obj=new_object,
                         peek_all_axis=True,
                         additional_savefile_prefix="unstable_",
@@ -1036,7 +1036,7 @@ class RearrangeEpisodeGenerator:
         # TODO: maybe draw/display trajectory tubes for the displacements?
 
         if self._render_debug_obs and make_video:
-            self.vdb.make_debug_video(
+            self.dbv.make_debug_video(
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
 
@@ -1127,7 +1127,7 @@ class RearrangeEpisodeGenerator:
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
-                self.vdb.peek_rigid_object(obj, peek_all_axis=True)
+                self.dbv.peek_rigid_object(obj, peek_all_axis=True)
 
         # return success or failure
         return success

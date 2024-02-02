@@ -15,13 +15,6 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 
 
-class GuiAppDriver:
-    # todo: rename to just "update"?
-    @abc.abstractmethod
-    def sim_update(self, dt):
-        pass
-
-
 class GuiAppRenderer:
     @abc.abstractmethod
     def post_sim_update(self, keyframe):
@@ -138,7 +131,6 @@ class GuiApplication(InputHandlerApplication):
         return self._sim_input
 
     def set_driver_and_renderer(self, driver, app_renderer):
-        assert isinstance(driver, GuiAppDriver)
         assert isinstance(app_renderer, GuiAppRenderer)
         self._driver = driver
         self._app_renderer = app_renderer

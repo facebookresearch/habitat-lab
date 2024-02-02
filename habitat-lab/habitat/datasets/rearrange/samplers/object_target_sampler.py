@@ -30,6 +30,7 @@ class ObjectTargetSampler(ObjectSampler):
         """
         Initialize a standard ObjectSampler but construct the object_set to correspond with specific object instances provided.
         """
+
         self.object_instance_set = object_instance_set
         object_set = [
             x.creation_attributes.handle for x in self.object_instance_set
@@ -41,7 +42,7 @@ class ObjectTargetSampler(ObjectSampler):
         sim: habitat_sim.Simulator,
         recep_tracker: ReceptacleTracker,
         snap_down: bool = False,
-        vdb: Optional[DebugVisualizer] = None,
+        dbv: Optional[DebugVisualizer] = None,
         target_receptacles=None,
         goal_receptacles=None,
         object_to_containing_receptacle=None,
@@ -50,7 +51,16 @@ class ObjectTargetSampler(ObjectSampler):
     ]:
         """
         Overridden sampler maps to instances without replacement.
-        Returns None if failed, or a dict mapping object handles to new object instances in the sampled target location.
+
+        :param sim: The Simulator instance.
+        :param recep_tracker: The ReceptacleTracker containing ReceptacleSet and use information.
+        :param snap_down: Whether or not to use the snapdown utility for placement.
+        :param dbv: An optional DebugVisualizer (dbv) to gather placement debug images.
+        :param target_receptacles: Specify precise Receptacles to use instead of sampling.
+        :param goal_receptacles: Provide the list of Receptacles pre-selected for goal placement.
+        :param object_to_containing_receptacle: Dictionary mapping object handles to receptacles containing them.
+
+        :return: None if failed. Otherwise a dict mapping object handles to new object instances in the sampled target location.
         """
 
         new_target_objects = {}
@@ -76,7 +86,7 @@ class ObjectTargetSampler(ObjectSampler):
                 sim,
                 recep_tracker,
                 snap_down,
-                vdb,
+                dbv,
                 goal_recep,
                 use_target.creation_attributes.handle,
             )

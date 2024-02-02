@@ -4,12 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import ctypes
-import sys
-
-# must call this before importing habitat or magnum! avoids runtime errors on some platforms
-sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
-
 import hydra
 import magnum as mn
 
@@ -154,8 +148,7 @@ class AppStateBasicViewer(AppState):
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-280,
-                text_delta_y=-50,
+                text_delta_x=-120,
             )
 
     def get_sim(self):

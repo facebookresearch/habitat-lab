@@ -68,3 +68,32 @@ convert_helper.convert_motion_file(
 ```
 
 Where `PATH_TO_MOTION_NPZ` contains the motion in SMPL-X format (e.g. from AMASS or [Motion Diffusion Models](https://github.com/GuyTevet/motion-diffusion-model)), and the output file will be a `.pkl` that can be input to the SequentialPoseController.
+
+
+### Generating new shapes
+
+You can also generate new humanoids using custom beta parameters or textures. For this, you will need to install blender, download and install the SMPL-X blender add on (see [https://smpl-x.is.tue.mpg.de/](https://smpl-x.is.tue.mpg.de/)). And run the following command:
+
+```bash
+# For MacOS, the path to blender typically is /Applications/Blender.app/Contents/MacOS/Blender
+path_to_blender -b -P 'scripts/export_smplx_bodies.py'
+```
+
+This will generate a single body with random gender and body parameters and store it under `data/humanoids/humanoid_data/avatar_0`. You can also change the output directory, and specify the parameters of the generated bodies by running:
+
+```bash
+path_to_blender -b -P 'scripts/export_smplx_bodies.py' -- --output-dir your_output_dir --body-file your_body_file
+```
+
+Here `your_body_file` should be a json file containing a list of dictionaries, one for each avatar you want to generate. For a single avatar, the json file should have the format below.
+
+```python
+[
+    {
+        "name": "The name of the avatar. If not provided, will be avatar_{ind}, with {ind} being the avatar index",
+        "betas": "A list of 10 beta parameters (see SMPL-X). If not provided, samples at random from a normal distribution",
+        "gender": "The gender of the avatar (neutral, female, male). If not provided, samples at random among the 3",
+        "texture": "The texture of the avatar. If not provided, samples among the ones we provide by default"
+    }
+]
+```
