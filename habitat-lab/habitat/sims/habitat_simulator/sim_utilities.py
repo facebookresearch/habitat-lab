@@ -283,7 +283,7 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.05)
+                (cp.contact_distance < -0.01)
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
@@ -500,6 +500,66 @@ def object_keypoint_cast(
     ]
 
 
+def get_obj_from_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from an object_id.
+
+    ArticulatedLink object_ids will return the ManagedArticulatedObject.
+    If you want link id, use ManagedArticulatedObject.link_object_ids[obj_id].
+
+    :param sim: The Simulator instance.
+    :param obj_id: object id for which ManagedObject is desired.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+
+    :return: a ManagedObject or None
+    """
+
+    if ao_link_map is None:
+        # Note: better to pre-compute this and pass it around
+        ao_link_map = get_ao_link_id_map(sim)
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_id(obj_id):
+        return rom.get_object_by_id(obj_id)
+    aom = sim.get_articulated_object_manager()
+    if obj_id in ao_link_map:
+        return aom.get_object_by_id(ao_link_map[obj_id])
+
+    return None
+
+
+def get_obj_from_handle(
+    sim: habitat_sim.Simulator, obj_handle: str
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from its handle.
+
+    :param sim: The Simulator instance.
+    :param obj_handle: object istance handle for which ManagedObject is desired.
+
+    :return: a ManagedObject or None
+    """
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_handle(obj_handle):
+        return rom.get_object_by_handle(obj_handle)
+    aom = sim.get_articulated_object_manager()
+    if aom.get_library_has_handle(obj_handle):
+        return aom.get_object_by_handle(obj_handle)
+
+    return None
+
+
 def get_object_set_from_id_set(
     sim: habitat_sim.Simulator,
     id_set: List[int],
@@ -549,15 +609,26 @@ def get_obj_contact_pairs(
         habitat_sim.physics.ManagedArticulatedObject,
         habitat_sim.physics.ManagedRigidObject,
     ],
-) -> None:
+    do_collision_detection: bool = True,
+) -> Dict[int, Dict[str, Any]]:
     """
     Search contact points for this object and list any objects contacting this one with some details.
+
+    :param sim: The Simulator instance.
+    :param obj: The ManagedObject instance.
+    :param do_collision_detection: Whether or not to run discrete collision detection before querying contact points. Should be True if called in isolation and False if called as part of a larger state investigation after a sim step or recent collision detection call.
+
+    :return: A dict mapping contacting object ids to contact detail summary.
     """
+
     ao_link_map = get_ao_link_id_map(sim)
     my_obj_id = obj.object_id
 
     def fill_defaults():
         return {"object_handle": "", "deepest_dist": 99999, "num_points": 0}
+
+    if do_collision_detection:
+        sim.perform_discrete_collision_detection()
 
     contacting_object_details = {}
     for cp in sim.get_physics_contact_points():
@@ -570,18 +641,19 @@ def get_obj_contact_pairs(
             contacting_obj = get_object_set_from_id_set(
                 sim, id_set=[contacting_obj_id], ao_link_map=ao_link_map
             )[0][0]
-            if contacting_obj not in contacting_object_details:
-                contacting_object_details[contacting_obj] = fill_defaults()
-            contacting_object_details[contacting_obj][
+            if contacting_obj_id not in contacting_object_details:
+                contacting_object_details[contacting_obj_id] = fill_defaults()
+            contacting_object_details[contacting_obj_id][
                 "object_handle"
             ] = contacting_obj.handle
-            contacting_object_details[contacting_obj]["deepest_dist"] = min(
-                contacting_object_details[contacting_obj]["deepest_dist"],
+            contacting_object_details[contacting_obj_id]["deepest_dist"] = min(
+                contacting_object_details[contacting_obj_id]["deepest_dist"],
                 cp.contact_distance,
             )
-            contacting_object_details[contacting_obj]["num_points"] += 1
+            contacting_object_details[contacting_obj_id]["num_points"] += 1
 
     print(contacting_object_details)
+    return contacting_object_details
 
     # from habitat.sims.habitat_simulator.sim_utilities import get_obj_contact_pairs
     # get_obj_contact_pairs(self.sim,new_objs[0][0])
