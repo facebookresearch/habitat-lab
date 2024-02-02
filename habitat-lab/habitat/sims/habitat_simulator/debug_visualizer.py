@@ -503,6 +503,10 @@ class DebugVisualizer:
         :return: a tuple containing saved filepath and the list of DebugObservations generated.
         """
 
+        # scene is best viewed from above by default
+        if cam_local_pos is None:
+            cam_local_pos = mn.Vector3(0, 1, 0)
+
         return self._peek_bb(
             bb_name=self.sim.curr_scene_name,
             bb=self.sim.get_active_scene_graph().get_root_node().cumulative_bb,
