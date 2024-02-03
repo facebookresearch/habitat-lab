@@ -21,7 +21,7 @@ class AppStateMinimal(AppState):
     """
 
     def __init__(self, app_service: AppService):
-        self._app_service: AppService = app_service
+        self._app_service = app_service
 
     def sim_update(self, dt, post_sim_update_dict):
         """

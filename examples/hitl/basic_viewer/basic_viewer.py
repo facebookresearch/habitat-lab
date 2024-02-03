@@ -21,7 +21,7 @@ class AppStateBasicViewer(AppState):
         self,
         app_service: AppService,
     ):
-        self._app_service: AppService = app_service
+        self._app_service = app_service
         self._gui_input = self._app_service.gui_input
 
         config = self._app_service.config

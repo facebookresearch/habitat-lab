@@ -143,36 +143,39 @@ class RemoteGuiInput:
         if pos is None or rot_quat is None:
             return
 
-        trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-        self._gui_drawer.push_transform(trans)
-        color0 = avatar_color
-        color1 = mn.Color4(avatar_color.r, avatar_color.g, avatar_color.b, 0)
-        size = 0.5
-        # draw a frustum (forward is z+)
-        self._gui_drawer.draw_transformed_line(
-            mn.Vector3(0, 0, 0),
-            mn.Vector3(size, size, size),
-            color0,
-            color1,
-        )
-        self._gui_drawer.draw_transformed_line(
-            mn.Vector3(0, 0, 0),
-            mn.Vector3(-size, size, size),
-            color0,
-            color1,
-        )
-        self._gui_drawer.draw_transformed_line(
-            mn.Vector3(0, 0, 0),
-            mn.Vector3(size, -size, size),
-            color0,
-            color1,
-        )
-        self._gui_drawer.draw_transformed_line(
-            mn.Vector3(0, 0, 0),
-            mn.Vector3(-size, -size, size),
-            color0,
-            color1,
-        )
+        if True:
+            trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
+            self._gui_drawer.push_transform(trans)
+            color0 = avatar_color
+            color1 = mn.Color4(
+                avatar_color.r, avatar_color.g, avatar_color.b, 0
+            )
+            size = 0.5
+            # draw a frustum (forward is z+)
+            self._gui_drawer.draw_transformed_line(
+                mn.Vector3(0, 0, 0),
+                mn.Vector3(size, size, size),
+                color0,
+                color1,
+            )
+            self._gui_drawer.draw_transformed_line(
+                mn.Vector3(0, 0, 0),
+                mn.Vector3(-size, size, size),
+                color0,
+                color1,
+            )
+            self._gui_drawer.draw_transformed_line(
+                mn.Vector3(0, 0, 0),
+                mn.Vector3(size, -size, size),
+                color0,
+                color1,
+            )
+            self._gui_drawer.draw_transformed_line(
+                mn.Vector3(0, 0, 0),
+                mn.Vector3(-size, -size, size),
+                color0,
+                color1,
+            )
 
         self._gui_drawer.pop_transform()
 

@@ -51,7 +51,7 @@ class AppStatePickThrowVr(AppState):
     """
 
     def __init__(self, app_service: AppService):
-        self._app_service: AppService = app_service
+        self._app_service = app_service
 
         assert isinstance(
             self._app_service.gui_agent_controller, GuiHumanoidController
