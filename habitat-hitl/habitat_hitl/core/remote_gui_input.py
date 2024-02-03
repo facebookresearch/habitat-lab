@@ -13,10 +13,10 @@ from habitat_hitl.core.gui_input import GuiInput
 
 
 class RemoteGuiInput:
-    def __init__(self, interprocess_record, debug_line_render):
+    def __init__(self, interprocess_record, gui_drawer):
         self._recent_client_states = []
         self._interprocess_record = interprocess_record
-        self._debug_line_render = debug_line_render
+        self._gui_drawer = gui_drawer
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
@@ -124,7 +124,7 @@ class RemoteGuiInput:
                 self._gui_input._key_held.add(self._button_map[button])
 
     def debug_visualize_client(self):
-        if not self._debug_line_render:
+        if not self._gui_drawer:
             return
 
         if not len(self._recent_client_states):
@@ -135,53 +135,53 @@ class RemoteGuiInput:
         if True:
             pos, rot_quat = self.get_head_pose()
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            self._debug_line_render.push_transform(trans)
+            self._gui_drawer.push_transform(trans)
             color0 = avatar_color
             color1 = mn.Color4(
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
             )
             size = 0.5
             # draw a frustum (forward is z+)
-            self._debug_line_render.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, size, size),
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, size, size),
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, -size, size),
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, -size, size),
                 color0,
                 color1,
             )
 
-            self._debug_line_render.pop_transform()
+        self._gui_drawer.pop_transform()
 
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-            self._debug_line_render.push_transform(trans)
+            self._gui_drawer.push_transform(trans)
             pointer_len = 0.5
-            self._debug_line_render.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(0, 0, pointer_len),
                 color0,
                 color1,
             )
 
-            self._debug_line_render.pop_transform()
+            self._gui_drawer.pop_transform()
 
     def update(self):
         client_states = self._interprocess_record.get_queued_client_states()

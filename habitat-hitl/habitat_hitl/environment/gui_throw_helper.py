@@ -66,10 +66,10 @@ class GuiThrowHelper:
         vel_vector, path_points = self.compute_velocity_throw(
             robot_root, target_on_floor
         )
-        self._app_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.gui_drawer.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
-        self._app_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.gui_drawer.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
 

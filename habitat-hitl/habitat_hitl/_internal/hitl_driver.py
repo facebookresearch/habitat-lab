@@ -12,7 +12,7 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import numpy as np
 
@@ -30,6 +30,7 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_drawer import AbstractGuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
@@ -41,6 +42,7 @@ from habitat_hitl.core.serialize_utils import (
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
+from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
 )
@@ -73,9 +75,9 @@ class HitlDriver(AppDriver):
     def __init__(
         self,
         config,
-        gui_input,
-        line_render,
-        text_drawer,
+        gui_input: GuiInput,
+        gui_drawer: AbstractGuiDrawer,
+        text_drawer: AbstractTextDrawer,
         create_app_state_lambda,
     ):
         if "habitat_hitl" not in config:
@@ -95,7 +97,7 @@ class HitlDriver(AppDriver):
             )
         self._gui_input = gui_input
 
-        line_render.set_line_width(3)
+        gui_drawer.set_line_width(3)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -162,11 +164,11 @@ class HitlDriver(AppDriver):
         self._debug_images = self._hitl_config.debug_images
 
         self._viz_anim_fraction: float = 0.0
-        self._pending_cursor_style = None
+        self._pending_cursor_style: Optional[Any] = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        self._check_init_server(line_render)
+        self._check_init_server(gui_drawer)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -175,12 +177,18 @@ class HitlDriver(AppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
+        gui_agent_controller: Any = (
+            self.ctrl_helper.get_gui_agent_controller()
+            if self.ctrl_helper
+            else None
+        )
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
             gui_input=gui_input,
             remote_gui_input=self._remote_gui_input,
-            line_render=line_render,
+            gui_drawer=gui_drawer,
             text_drawer=text_drawer,
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
@@ -192,9 +200,7 @@ class HitlDriver(AppDriver):
             set_cursor_style=self._set_cursor_style,
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
-            gui_agent_controller=self.ctrl_helper.get_gui_agent_controller()
-            if self.ctrl_helper
-            else None,
+            gui_agent_controller=gui_agent_controller,
         )
 
         self._app_state: AppState = None
@@ -210,7 +216,7 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.remote_gui_mode
 
-    def _check_init_server(self, line_render):
+    def _check_init_server(self, gui_drawer: AbstractGuiDrawer):
         self._remote_gui_input = None
         self._interprocess_record = None
         if self.network_server_enabled:
@@ -222,7 +228,7 @@ class HitlDriver(AppDriver):
             self._interprocess_record = InterprocessRecord(max_steps_ahead)
             launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
-                self._interprocess_record, line_render
+                self._interprocess_record, gui_drawer
             )
 
     def _check_terminate_server(self):
@@ -455,7 +461,7 @@ class HitlDriver(AppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
-        if self._pending_cursor_style:
+        if self._pending_cursor_style is not None:
             post_sim_update_dict[
                 "application_cursor"
             ] = self._pending_cursor_style

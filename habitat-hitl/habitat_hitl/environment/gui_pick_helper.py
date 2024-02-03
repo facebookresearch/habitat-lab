@@ -46,7 +46,7 @@ class GuiPickHelper:
         this_target_pos = mn.Vector3(this_target_pos)
         box_half_size = 0.20
         box_offset = mn.Vector3(box_half_size, box_half_size, box_half_size)
-        self._app_service.line_render.draw_box(
+        self._app_service.gui_drawer.draw_box(
             this_target_pos - box_offset,
             this_target_pos + box_offset,
             color,
@@ -55,7 +55,7 @@ class GuiPickHelper:
         # draw can grasp area
         can_grasp_position = mn.Vector3(this_target_pos)
         can_grasp_position[1] = self.agent_feet_height
-        self._app_service.line_render.draw_circle(
+        self._app_service.gui_drawer.draw_circle(
             can_grasp_position,
             self._app_service.hitl_config.can_grasp_place_threshold,
             mn.Color3(255 / 255, 255 / 255, 0),

@@ -16,6 +16,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl.core.gui_drawer import GuiDrawer, StubGuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 
@@ -124,7 +125,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
     driver = HitlDriver(
         app_config,
         gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
+        GuiDrawer(app_renderer._replay_renderer.debug_line_render(0)),
         app_renderer._text_drawer,
         create_app_state_lambda,
     )
@@ -211,26 +212,10 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height=debug_third_person_height,
     )
 
-    class StubLineRender:
-        """
-        Stub version of DebugLineRender that does nothing.
-
-        DebugLineRender has a large public interface. Rather than duplicate it, let's just
-        allow any method to be called.
-        """
-
-        def __getattr__(self, name):
-            # This method is called for any attribute not found on the object
-            def any_method(*args, **kwargs):
-                # This function accepts any arguments and does nothing
-                return None
-
-            return any_method
-
     driver = HitlDriver(
         config,
         GuiInput(),
-        StubLineRender(),
+        StubGuiDrawer(),
         StubTextDrawer(),
         create_app_state_lambda,
     )

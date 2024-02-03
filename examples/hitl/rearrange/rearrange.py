@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import List, Optional
+
 import hydra
 import magnum as mn
 import numpy as np
 
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
 from habitat_hitl.core.gui_input import GuiInput
@@ -40,10 +43,16 @@ class AppStateRearrange(AppState):
 
     def __init__(
         self,
-        app_service,
+        app_service: AppService,
     ):
-        self._app_service = app_service
-        self._gui_agent_ctrl = self._app_service.gui_agent_controller
+        self._app_service: AppService = app_service
+
+        assert isinstance(
+            self._app_service.gui_agent_controller, GuiHumanoidController
+        )
+        self._gui_agent_ctrl: GuiHumanoidController = (
+            self._app_service.gui_agent_controller
+        )
 
         # cache items from config; config is expensive to access at runtime
         config = self._app_service.config
@@ -55,15 +64,19 @@ class AppStateRearrange(AppState):
             self._app_service.hitl_config.can_grasp_place_threshold
         )
 
-        self._cam_transform = None
+        self._cam_transform: Optional[mn.Matrix4] = None
 
-        self._held_target_obj_idx = None
-        self._num_remaining_objects = None  # resting, not at goal location yet
-        self._num_busy_objects = None  # currently held by non-gui agents
+        self._held_target_obj_idx: Optional[int] = None
+        self._num_remaining_objects: Optional[
+            int
+        ] = None  # resting, not at goal location yet
+        self._num_busy_objects: Optional[
+            int
+        ] = None  # currently held by non-gui agents
 
         # will be set in on_environment_reset
-        self._target_obj_ids = None
-        self._goal_positions = None
+        self._target_obj_ids: Optional[List[str]] = None
+        self._goal_positions: Optional[List[mn.Vector3]] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
@@ -109,7 +122,7 @@ class AppStateRearrange(AppState):
         if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             goal_position = self._goal_positions[self._held_target_obj_idx]
-            self._app_service.line_render.draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 goal_position, end_radius, color, 24
             )
 
@@ -123,7 +136,7 @@ class AppStateRearrange(AppState):
             # draw can place area
             can_place_position = mn.Vector3(goal_position)
             can_place_position[1] = self._get_agent_feet_height()
-            self._app_service.line_render.draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 can_place_position,
                 self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
@@ -241,7 +254,7 @@ class AppStateRearrange(AppState):
                 box_offset = mn.Vector3(
                     box_half_size, box_half_size, box_half_size
                 )
-                self._app_service.line_render.draw_box(
+                self._app_service.gui_drawer.draw_box(
                     this_target_pos - box_offset,
                     this_target_pos + box_offset,
                     color,
@@ -257,7 +270,7 @@ class AppStateRearrange(AppState):
                 # draw can grasp area
                 can_grasp_position = mn.Vector3(this_target_pos)
                 can_grasp_position[1] = self._get_agent_feet_height()
-                self._app_service.line_render.draw_circle(
+                self._app_service.gui_drawer.draw_circle(
                     can_grasp_position,
                     self._can_grasp_place_threshold,
                     mn.Color3(255 / 255, 255 / 255, 0),
