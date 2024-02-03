@@ -43,9 +43,12 @@ class RemoteGuiInput:
         if history_index >= len(self._recent_client_states):
             return None, None
 
-        avatar_root_json = self._recent_client_states[history_index]["avatar"][
-            "root"
-        ]
+        client_state = self._recent_client_states[history_index]
+
+        if "avatar" not in client_state:
+            return None, None
+
+        avatar_root_json = client_state["avatar"]["root"]
         pos_json = avatar_root_json["position"]
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = avatar_root_json["rotation"]
@@ -60,6 +63,10 @@ class RemoteGuiInput:
             return None, None
 
         client_state = self._recent_client_states[history_index]
+
+        if "avatar" not in client_state:
+            return None, None
+
         assert "hands" in client_state["avatar"]
         hands_json = client_state["avatar"]["hands"]
         assert hand_idx >= 0 and hand_idx < len(hands_json)
@@ -132,40 +139,40 @@ class RemoteGuiInput:
 
         avatar_color = mn.Color3(0.3, 1, 0.3)
 
-        if True:
-            pos, rot_quat = self.get_head_pose()
-            trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            self._gui_drawer.push_transform(trans)
-            color0 = avatar_color
-            color1 = mn.Color4(
-                avatar_color.r, avatar_color.g, avatar_color.b, 0
-            )
-            size = 0.5
-            # draw a frustum (forward is z+)
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(size, size, size),
-                color0,
-                color1,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(-size, size, size),
-                color0,
-                color1,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(size, -size, size),
-                color0,
-                color1,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(-size, -size, size),
-                color0,
-                color1,
-            )
+        pos, rot_quat = self.get_head_pose()
+        if pos is None or rot_quat is None:
+            return
+
+        trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
+        self._gui_drawer.push_transform(trans)
+        color0 = avatar_color
+        color1 = mn.Color4(avatar_color.r, avatar_color.g, avatar_color.b, 0)
+        size = 0.5
+        # draw a frustum (forward is z+)
+        self._gui_drawer.draw_transformed_line(
+            mn.Vector3(0, 0, 0),
+            mn.Vector3(size, size, size),
+            color0,
+            color1,
+        )
+        self._gui_drawer.draw_transformed_line(
+            mn.Vector3(0, 0, 0),
+            mn.Vector3(-size, size, size),
+            color0,
+            color1,
+        )
+        self._gui_drawer.draw_transformed_line(
+            mn.Vector3(0, 0, 0),
+            mn.Vector3(size, -size, size),
+            color0,
+            color1,
+        )
+        self._gui_drawer.draw_transformed_line(
+            mn.Vector3(0, 0, 0),
+            mn.Vector3(-size, -size, size),
+            color0,
+            color1,
+        )
 
         self._gui_drawer.pop_transform()
 
