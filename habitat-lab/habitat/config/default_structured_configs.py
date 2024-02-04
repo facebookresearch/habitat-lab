@@ -1742,6 +1742,20 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class JawRGBSensorConfig(HabitatSimRGBSensorConfig):
+    uuid: str = "articulated_agent_jaw_rgb"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class JawDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "articulated_agent_jaw_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 512
@@ -2195,6 +2209,18 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="arm_rgb_sensor",
     node=ArmRGBSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_depth_sensor",
+    node=JawDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_rgb_sensor",
+    node=JawRGBSensorConfig,
 )
 
 cs.store(

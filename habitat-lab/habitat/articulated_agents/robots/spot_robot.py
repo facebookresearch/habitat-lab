@@ -153,6 +153,18 @@ class SpotRobot(MobileManipulator):
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
                 ),
+                "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "articulated_agent_jaw_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.023, -0.095),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
             },
             gripper_closed_state=[0.0],
             gripper_open_state=[-1.56],
