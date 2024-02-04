@@ -108,7 +108,7 @@ class SpotRobot(MobileManipulator):
                 0.7,
                 -1.5,
             ],
-            ee_offset=[mn.Vector3(0.08, 0, 0)],
+            ee_offset=[mn.Vector3(0.0, 0, -0.1)],
             ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={

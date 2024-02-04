@@ -21,6 +21,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     ObjectToGoalDistance,
     RearrangeReward,
     RelativeInitialEEOrientationSensor,
+    RelativeTargetObjectOrientationSensor,
     RobotForce,
 )
 from habitat.tasks.rearrange.utils import rearrange_logger
@@ -214,12 +215,49 @@ class EndEffectorToInitialOrientationDistance(Measure):
 
 
 @registry.register_measure
+class ObjectToTargetOrientationDistance(Measure):
+    """
+    Distance orientation between current end effector orientation to end effector orientation within the robot body.
+    """
+
+    cls_uuid: str = "object_to_target_orientation_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+        # Mapping
+        self._ori_index = []
+        if "roll" in config.target_orientation:
+            self._ori_index.append(0)
+        if "pitch" in config.target_orientation:
+            self._ori_index.append(2)
+        if "yaw" in config.target_orientation:
+            self._ori_index.append(1)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjectToTargetOrientationDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        to_target = observations[
+            RelativeTargetObjectOrientationSensor.cls_uuid
+        ]
+        target_dist = np.linalg.norm(to_target[self._ori_index])
+        self._metric = target_dist
+
+
+@registry.register_measure
 class PlaceReward(RearrangeReward):
     cls_uuid: str = "place_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._prev_dist = -1.0
         self._prev_ori = -1.0
+        self._prev_object_ori = -1.0
         self._prev_dropped = False
         self._metric = None
 
@@ -244,6 +282,7 @@ class PlaceReward(RearrangeReward):
         task.measurements.check_measure_dependencies(self.uuid, measures)
         self._prev_dist = -1.0
         self._prev_ori = -1.0
+        self._prev_object_ori = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
 
         super().reset_metric(
@@ -284,9 +323,16 @@ class PlaceReward(RearrangeReward):
                 ObjAtReceptacle.cls_uuid
             ].get_metric()[str(task.targ_idx)]
 
+        ee_orientation_to_initial_distance = -1.0
         if self._config.use_ee_ori:
             ee_orientation_to_initial_distance = task.measurements.measures[
                 EndEffectorToInitialOrientationDistance.cls_uuid
+            ].get_metric()
+
+        object_orientation_to_target_distance = -1.0
+        if self._config.use_obj_ori:
+            object_orientation_to_target_distance = task.measurements.measures[
+                ObjectToTargetOrientationDistance.cls_uuid
             ].get_metric()
 
         snapped_id = self._sim.grasp_mgr.snap_idx
@@ -304,12 +350,15 @@ class PlaceReward(RearrangeReward):
             min_dist = 0.0
 
         # Object/EE orientation reward
+        ori_to_init = 0.0
+        obj_to_target = 0.0
+        min_ori = 0.0
         if ((not obj_at_goal) or cur_picked) and self._config.use_ee_ori:
             ori_to_init = ee_orientation_to_initial_distance
             min_ori = self._config.min_ori_to_init
-        else:
-            ori_to_init = 0.0
-            min_ori = 0.0
+        if ((not obj_at_goal) or cur_picked) and self._config.use_obj_ori:
+            obj_to_target = object_orientation_to_target_distance
+            min_ori = self._config.min_ori_to_init
 
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
@@ -319,12 +368,31 @@ class PlaceReward(RearrangeReward):
                     self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
                     and self._config.ee_orientation_to_initial_threshold == -1
+                    and self._config.object_orientation_to_target_threshold
+                    == -1
                 )
                 or (
                     self._prev_obj_at_receptacle
                     and self._config.obj_at_receptacle_success
                     and ee_orientation_to_initial_distance
                     < self._config.ee_orientation_to_initial_threshold
+                    and self._config.object_orientation_to_target_threshold
+                    == -1
+                )
+                or (
+                    self._prev_obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                    and self._config.ee_orientation_to_initial_threshold == -1
+                    and object_orientation_to_target_distance
+                    < self._config.object_orientation_to_target_threshold
+                )
+                or (
+                    self._prev_obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                    and ee_orientation_to_initial_distance
+                    < self._config.ee_orientation_to_initial_threshold
+                    and object_orientation_to_target_distance
+                    < self._config.object_orientation_to_target_threshold
                 )
             ):
                 reward += self._config.place_reward
@@ -332,6 +400,7 @@ class PlaceReward(RearrangeReward):
                 # distance is stale.
                 self._prev_dist = -1
                 self._prev_ori = -1
+                self._prev_object_ori = -1
             else:
                 # Dropped at wrong location or wrong orientation
                 reward -= self._config.drop_pen
@@ -370,6 +439,18 @@ class PlaceReward(RearrangeReward):
             ori_diff = round(ori_diff, 3)
             reward += self._config.ori_reward * ori_diff
         self._prev_ori = ori_to_init
+
+        if self._config.use_obj_ori and obj_to_target >= min_ori:
+            # Update orientation
+            if self._prev_object_ori < 0:
+                ori_obj_diff = 0.0
+            else:
+                ori_obj_diff = self._prev_object_ori - obj_to_target
+
+            # Filter out the small fluctuations
+            ori_obj_diff = round(ori_obj_diff, 3)
+            reward += self._config.ori_reward * ori_obj_diff
+        self._prev_object_ori = obj_to_target
 
         self._prev_obj_at_receptacle = obj_at_receptacle
 
@@ -425,6 +506,12 @@ class PlaceSuccess(Measure):
                 EndEffectorToInitialOrientationDistance.cls_uuid
             ].get_metric()
 
+        object_orientation_to_target_distance = -1.0
+        if self._config.object_orientation_to_target_threshold != -1.0:
+            object_orientation_to_target_distance = task.measurements.measures[
+                ObjectToTargetOrientationDistance.cls_uuid
+            ].get_metric()
+
         is_holding = self._sim.grasp_mgr.is_grasped
 
         ee_to_rest_distance = task.measurements.measures[
@@ -448,6 +535,11 @@ class PlaceSuccess(Measure):
                 ee_orientation_to_initial_distance
                 < self._config.ee_orientation_to_initial_threshold
                 or self._config.ee_orientation_to_initial_threshold == -1.0
+            )
+            and (
+                object_orientation_to_target_distance
+                < self._config.object_orientation_to_target_threshold
+                or self._config.object_orientation_to_target_threshold == -1.0
             )
         )
 

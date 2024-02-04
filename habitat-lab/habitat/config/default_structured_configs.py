@@ -61,6 +61,7 @@ __all__ = [
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
     "RelativeInitialEEOrientationSensorConfig",
+    "RelativeTargetObjectOrientationSensorConfig",
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
@@ -73,6 +74,7 @@ __all__ = [
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
     "EndEffectorToInitialOrientationDistanceMeasurementConfig",
+    "ObjectToTargetOrientationDistanceMeasurementConfig",
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
@@ -599,6 +601,17 @@ class RelativeInitialEEOrientationSensorConfig(LabSensorConfig):
     """
 
     type: str = "RelativeInitialEEOrientationSensor"
+    use_smallest_angle: bool = False
+
+
+@dataclass
+class RelativeTargetObjectOrientationSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Sensor for the relative orientation of the target object orientation, relative to the end-effector's current orientation.
+    The three values correspond to the roll, pitch, and yaw of the initial orientation in the frame of reference of the base.
+    """
+
+    type: str = "RelativeTargetObjectOrientationSensor"
 
 
 @dataclass
@@ -937,6 +950,20 @@ class EndEffectorToInitialOrientationDistanceMeasurementConfig(
     """
 
     type: str = "EndEffectorToInitialOrientationDistance"
+
+
+@dataclass
+class ObjectToTargetOrientationDistanceMeasurementConfig(MeasurementConfig):
+    """
+    Rearrangement only. Orientation distance between current end effector orientation
+    and the initial orientation of the end effector. Requires that the
+    relative_end_effector_orientation_sensor is attached to the agent.
+    """
+
+    type: str = "ObjectToTargetOrientationDistance"
+    target_orientation: List[str] = field(
+        default_factory=lambda: ["roll", "pitch"]
+    )
 
 
 @dataclass
@@ -1303,7 +1330,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     count_coll_end_pen: float = 1.0
     obj_at_receptacle_success: bool = False
     use_ee_ori: bool = False
+    use_obj_ori: bool = False
     ee_orientation_to_initial_threshold: float = -1.0
+    object_orientation_to_target_threshold: float = -1.0
 
 
 @dataclass
@@ -1316,6 +1345,7 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     ee_resting_success_threshold: float = 0.15
     obj_at_receptacle_success: bool = False
     ee_orientation_to_initial_threshold: float = -1.0
+    object_orientation_to_target_threshold: float = -1.0
 
 
 @dataclass
@@ -2363,6 +2393,12 @@ cs.store(
     node=RelativeInitialEEOrientationSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.relative_target_object_orientation_sensor",
+    group="habitat/task/lab_sensors",
+    name="relative_target_object_orientation_sensor",
+    node=RelativeTargetObjectOrientationSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.instruction_sensor",
     group="habitat/task/lab_sensors",
     name="instruction_sensor",
@@ -2539,6 +2575,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_initial_orientation_distance",
     node=EndEffectorToInitialOrientationDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.object_to_target_orientation_distance",
+    group="habitat/task/measurements",
+    name="object_to_target_orientation_distance",
+    node=ObjectToTargetOrientationDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_goal_distance",

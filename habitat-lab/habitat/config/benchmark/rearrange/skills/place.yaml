@@ -19,6 +19,7 @@ defaults:
     - obj_at_goal
     - obj_at_receptacle
     - end_effector_to_initial_orientation_distance
+    - object_to_target_orientation_distance
     - place_success
     - place_reward
     - num_steps
@@ -28,6 +29,7 @@ defaults:
     - is_holding_sensor
     - relative_resting_pos_sensor
     - relative_end_effector_orientation_sensor
+    - relative_target_object_orientation_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
