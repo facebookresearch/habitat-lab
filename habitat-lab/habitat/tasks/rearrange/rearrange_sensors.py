@@ -387,6 +387,7 @@ class RelativeInitialEEOrientationSensor(
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        self._use_smallest_angle = config.use_smallest_angle
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -403,9 +404,49 @@ class RelativeInitialEEOrientationSensor(
         _, ee_orientation = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.get_ee_local_pose()
-        return np.array(
-            task.init_ee_orientation - ee_orientation, dtype=np.float32
+
+        delta = task.init_ee_orientation - ee_orientation
+        if self._use_smallest_angle:
+            delta = (delta + np.pi) % (2 * np.pi) - np.pi
+
+        return np.array(delta, dtype=np.float32)
+
+
+@registry.register_sensor
+class RelativeTargetObjectOrientationSensor(
+    UsesArticulatedAgentInterface, Sensor
+):
+    cls_uuid: str = "relative_target_object_orientation"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RelativeTargetObjectOrientationSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(3,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
         )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        _, ee_orientation = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.get_ee_local_pose()
+
+        # The target object orientation is initial object orientation
+        target_object_orientation = task.init_obj_orientation
+
+        delta = target_object_orientation - ee_orientation
+        delta = (delta + np.pi) % (2 * np.pi) - np.pi
+        return np.array(delta, dtype=np.float32)
 
 
 @registry.register_sensor
