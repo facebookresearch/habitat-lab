@@ -5,7 +5,7 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - spot_head_stereo_depth_sensor
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - _self_
@@ -24,6 +24,7 @@ habitat:
       - relative_initial_ee_orientation
       - relative_target_object_orientation
       - articulated_agent_arm_depth
+      - articulated_agent_jaw_depth
       - joint
       - is_holding
   task:
