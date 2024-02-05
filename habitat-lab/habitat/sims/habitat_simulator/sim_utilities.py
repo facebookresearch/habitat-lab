@@ -690,6 +690,39 @@ def above(
     return get_object_set_from_id_set(sim, above_object_ids, ao_link_map)
 
 
+def below(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedRigidObject,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> List[
+    Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ]
+]:
+    """
+    Get a list of all objects that a particular objectA is 'below'.
+    Concretely, 'below' is defined as: an upward raycast of any object keypoint hits the object above.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'above' set.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+
+    :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
+    """
+
+    # get object ids of all objects below this one
+    below_object_ids = [
+        hit.object_id
+        for keypoint_raycast_result in object_keypoint_cast(
+            sim, objectA, direction=mn.Vector3(0, 1, 0)
+        )
+        for hit in keypoint_raycast_result.hits
+    ]
+    below_object_ids = list(set(below_object_ids))
+    return get_object_set_from_id_set(sim, below_object_ids, ao_link_map)
+
+
 def within(
     sim: habitat_sim.Simulator,
     objectA: habitat_sim.physics.ManagedRigidObject,
