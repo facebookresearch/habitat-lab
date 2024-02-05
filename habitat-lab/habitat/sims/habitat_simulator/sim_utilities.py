@@ -664,7 +664,10 @@ def get_obj_contact_pairs(
 
 def above(
     sim: habitat_sim.Simulator,
-    objectA: habitat_sim.physics.ManagedRigidObject,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
     Tuple[
@@ -710,7 +713,10 @@ def above(
 
 def below(
     sim: habitat_sim.Simulator,
-    objectA: habitat_sim.physics.ManagedRigidObject,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
     Tuple[
@@ -758,7 +764,10 @@ def below(
 
 def within(
     sim: habitat_sim.Simulator,
-    objectA: habitat_sim.physics.ManagedRigidObject,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
     Tuple[
@@ -851,7 +860,10 @@ def within(
 
 def ontop(
     sim: habitat_sim.Simulator,
-    objectA: habitat_sim.physics.ManagedRigidObject,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
     ao_link_map: Optional[Dict[int, int]] = None,
     do_collision_detection: bool = True,
 ) -> List[
