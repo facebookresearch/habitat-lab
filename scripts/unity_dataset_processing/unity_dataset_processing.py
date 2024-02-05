@@ -372,6 +372,17 @@ def main():
         job.job_type = JobType.PROCESS
         jobs.append(job)
 
+    # Add humanoids.
+    for filename in Path("data/humanoids/humanoid_data").rglob("*.glb"):
+        rel_path = str(filename)[len("data/") :]
+        job = Job()
+        job.source_path = os.path.join("data", rel_path)
+        job.dest_path = os.path.join(OUTPUT_DIR, rel_path)
+        # GltfSceneConverter doesn't support skinning.
+        # Use humanoid models as-is.
+        job.job_type = JobType.COPY
+        jobs.append(job)
+
     simplify_models(jobs)
 
 
