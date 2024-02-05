@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-from typing import Dict
+from typing import Dict, Tuple
 
 from magnum import (
     Matrix4,
@@ -69,13 +69,13 @@ converter.configuration[
 
 
 def decimate(
-    inputFile,
-    outputFile,
-    quiet=None,
-    verbose=None,
-    sloppy=False,
-    simplify=True,
-):
+    input_file: str,
+    output_file: str,
+    quiet: bool = None,
+    verbose: bool = None,
+    sloppy: bool = False,
+    simplify: bool = True,
+) -> Tuple[int, int, int]:
     if quiet:
         importer.flags |= trade.ImporterFlags.QUIET
         converter.flags |= trade.SceneConverterFlags.QUIET
@@ -87,8 +87,8 @@ def decimate(
         resizer.flags |= trade.ImageConverterFlags.VERBOSE
         meshoptimizer.flags |= trade.SceneConverterFlags.VERBOSE
 
-    importer.open_file(inputFile)
-    converter.begin_file(outputFile)
+    importer.open_file(input_file)
+    converter.begin_file(output_file)
 
     # For each mesh calculate the transformation scaling in the scene to make the
     # decimation reflect how large a particular mesh actually is there. The same

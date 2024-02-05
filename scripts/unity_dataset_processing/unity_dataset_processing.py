@@ -24,16 +24,15 @@ class JobType(Enum):
     # Copy the asset as-is, skipping all processing.
     COPY = 1
     # Process the asset to make it compatible with Unity.
-    # Does operations such as removing basis compression.
+    # Enable 'job.decimate' to simplify the model.
     PROCESS = 2
-    # Same as 'PROCESS', but also decimates the mesh.
-    PROCESS_AND_DECIMATE = 3
 
 
 class Job:
     source_path: str
     dest_path: str
     job_type: JobType
+    decimate: bool = False
 
 
 def file_is_scene_config(filepath: str) -> bool:
@@ -122,31 +121,38 @@ def process_model(args):
     target_tris: int = 0
     simplified_tris: int = 0
 
+    def process_fn(simplify: bool):
+        return decimate.decimate(
+            input_file=job.source_path,
+            output_file=job.dest_path,
+            quiet=True,
+            simplify=simplify,
+        )
+
     job_type: JobType = job.job_type
     if job_type == JobType.COPY:
         shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
     else:
         try:
-            source_tris, target_tris, simplified_tris = decimate.decimate(
-                inputFile=job.source_path,
-                outputFile=job.dest_path,
-                quiet=True,
-                sloppy=False,
-                simplify=job.simplify,
+            source_tris, target_tris, simplified_tris = process_fn(
+                job.decimate
             )
         except Exception:
-            try:
-                print(
-                    f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation)."
-                )
-                source_tris, target_tris, simplified_tris = decimate.decimate(
-                    inputFile=job.source_path,
-                    outputFile=job.dest_path,
-                    quiet=True,
-                    simplify=False,
-                )
-            except Exception:
-                print(f"Unable to decimate: {job.source_path}")
+            # Retry without decimation.
+            if job.decimate:
+                try:
+                    print(
+                        f"Unable to process: {job.source_path}. Trying without decimation."
+                    )
+                    source_tris, target_tris, simplified_tris = process_fn(
+                        False
+                    )
+                except Exception:
+                    print(f"Unable to process: {job.source_path}")
+                    result = {"status": "error"}
+                    return result
+            else:
+                print(f"Unable to process: {job.source_path}")
                 result = {"status": "error"}
                 return result
 
@@ -155,8 +161,8 @@ def process_model(args):
     )
 
     result = {
-        "source_tris": source_tris,
-        "simplified_tris": simplified_tris,
+        "source_tris": str(source_tris),
+        "simplified_tris": str(simplified_tris),
         "source_path": job.source_path,
         "status": "ok",
     }
@@ -341,7 +347,8 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.job_type = JobType.PROCESS_AND_DECIMATE
+            job.job_type = JobType.PROCESS
+            job.decimate = True
             jobs.append(job)
         else:
             job = Job()
@@ -349,7 +356,8 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.job_type = JobType.PROCESS_AND_DECIMATE
+            job.job_type = JobType.PROCESS
+            job.decimate = True
             jobs.append(job)
 
     # Add ycb objects
