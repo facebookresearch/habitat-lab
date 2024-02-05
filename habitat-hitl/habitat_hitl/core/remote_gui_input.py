@@ -43,9 +43,13 @@ class RemoteGuiInput:
         if history_index >= len(self._recent_client_states):
             return None, None
 
-        avatar_root_json = self._recent_client_states[history_index]["avatar"][
-            "root"
-        ]
+        client_state = self._recent_client_states[history_index]
+
+        if "avatar" not in client_state:
+            return None, None
+
+        avatar_root_json = client_state["avatar"]["root"]
+
         pos_json = avatar_root_json["position"]
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = avatar_root_json["rotation"]
@@ -60,6 +64,10 @@ class RemoteGuiInput:
             return None, None
 
         client_state = self._recent_client_states[history_index]
+
+        if "avatar" not in client_state:
+            return None, None
+
         assert "hands" in client_state["avatar"]
         hands_json = client_state["avatar"]["hands"]
         assert hand_idx >= 0 and hand_idx < len(hands_json)
