@@ -235,6 +235,7 @@ jobs:
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               pip install -e habitat-lab
               pip install -e habitat-baselines
+              pip install -e habitat-hitl
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
           background: true
@@ -296,6 +297,15 @@ jobs:
               python scripts/hab2_bench/plot_bench.py
               # Assert the SPS number are up to standard
               python scripts/hab2_bench/assert_bench.py
+      - run:
+          name: Run HITL basic functionality
+          no_output_timeout: 30m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              python test/hitl/test_hitl_main.py -s
       - run:
           name: Build api documentation
           command: |
