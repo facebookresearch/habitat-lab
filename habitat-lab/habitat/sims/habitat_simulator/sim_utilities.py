@@ -609,6 +609,7 @@ def get_obj_contact_pairs(
         habitat_sim.physics.ManagedArticulatedObject,
         habitat_sim.physics.ManagedRigidObject,
     ],
+    ao_link_map: Optional[Dict[int, int]] = None,
     do_collision_detection: bool = True,
 ) -> Dict[int, Dict[str, Any]]:
     """
@@ -616,12 +617,14 @@ def get_obj_contact_pairs(
 
     :param sim: The Simulator instance.
     :param obj: The ManagedObject instance.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :param do_collision_detection: Whether or not to run discrete collision detection before querying contact points. Should be True if called in isolation and False if called as part of a larger state investigation after a sim step or recent collision detection call.
 
     :return: A dict mapping contacting object ids to contact detail summary.
     """
 
-    ao_link_map = get_ao_link_id_map(sim)
+    if ao_link_map is None:
+        ao_link_map = get_ao_link_id_map(sim)
     my_obj_id = obj.object_id
 
     def fill_defaults():
@@ -664,9 +667,12 @@ def above(
     objectA: habitat_sim.physics.ManagedRigidObject,
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
-    Union[
-        habitat_sim.physics.ManagedRigidObject,
-        habitat_sim.physics.ManagedArticulatedObject,
+    Tuple[
+        Union[
+            habitat_sim.physics.ManagedRigidObject,
+            habitat_sim.physics.ManagedArticulatedObject,
+        ],
+        int,
     ]
 ]:
     """
@@ -687,7 +693,19 @@ def above(
         for hit in keypoint_raycast_result.hits
     ]
     above_object_ids = list(set(above_object_ids))
-    return get_object_set_from_id_set(sim, above_object_ids, ao_link_map)
+
+    above_objects_links = get_object_set_from_id_set(
+        sim, above_object_ids, ao_link_map
+    )
+
+    # attempt to remove self from the list if present
+    above_objects_links = [
+        obj_link
+        for obj_link in above_objects_links
+        if obj_link[0] != objectA.object_id
+    ]
+
+    return above_objects_links
 
 
 def below(
@@ -695,9 +713,12 @@ def below(
     objectA: habitat_sim.physics.ManagedRigidObject,
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
-    Union[
-        habitat_sim.physics.ManagedRigidObject,
-        habitat_sim.physics.ManagedArticulatedObject,
+    Tuple[
+        Union[
+            habitat_sim.physics.ManagedRigidObject,
+            habitat_sim.physics.ManagedArticulatedObject,
+        ],
+        int,
     ]
 ]:
     """
@@ -720,7 +741,19 @@ def below(
         for hit in keypoint_raycast_result.hits
     ]
     below_object_ids = list(set(below_object_ids))
-    return get_object_set_from_id_set(sim, below_object_ids, ao_link_map)
+
+    below_objects_links = get_object_set_from_id_set(
+        sim, below_object_ids, ao_link_map
+    )
+
+    # attempt to remove self from the list if present
+    below_objects_links = [
+        obj_link
+        for obj_link in below_objects_links
+        if obj_link[0] != objectA.object_id
+    ]
+
+    return below_objects_links
 
 
 def within(
@@ -728,9 +761,12 @@ def within(
     objectA: habitat_sim.physics.ManagedRigidObject,
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
-    Union[
-        habitat_sim.physics.ManagedRigidObject,
-        habitat_sim.physics.ManagedArticulatedObject,
+    Tuple[
+        Union[
+            habitat_sim.physics.ManagedRigidObject,
+            habitat_sim.physics.ManagedArticulatedObject,
+        ],
+        int,
     ]
 ]:
     """
@@ -799,8 +835,75 @@ def within(
     ]
     containment_ids = list(set(containment_ids))
 
-    # convert to objects from ids
-    return get_object_set_from_id_set(sim, containment_ids, ao_link_map)
+    within_objects_links = get_object_set_from_id_set(
+        sim, containment_ids, ao_link_map
+    )
+
+    # attempt to remove self from the list if present
+    within_objects_links = [
+        obj_link
+        for obj_link in within_objects_links
+        if obj_link[0] != objectA.object_id
+    ]
+
+    return within_objects_links
+
+
+def ontop(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedRigidObject,
+    ao_link_map: Optional[Dict[int, int]] = None,
+    do_collision_detection: bool = True,
+) -> List[
+    Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ]
+]:
+    """
+    Get a list of all objects that are "ontop" of a particular objectA.
+    Concretely, 'ontop' is defined as: contact points between objectA and objectB have vertical normals "upward" relative to objectA.
+    This function uses collision points to determine which objects are resting on or contacting the surface of objectA.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'ontop' set.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param do_collision_detection: If True, a fresh discrete collision detection is run before the contact point query. Pass False to skip if a recent sim step or pre-process has run a collision detection pass on the current state.
+
+    :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
+    """
+
+    if ao_link_map is None:
+        ao_link_map = get_ao_link_id_map(sim)
+
+    if do_collision_detection:
+        sim.perform_discrete_collision_detection()
+
+    yup = mn.Vector3(0, 1, 0)
+    up_threshold = 0.75
+
+    ontop_objects = []
+    for cp in sim.get_physics_contact_points():
+        contacting_obj_id = None
+        obj_is_b = False
+        if cp.object_id_a == objectA.object_id:
+            contacting_obj_id = cp.object_id_b
+        if cp.object_id_b == objectA.object_id:
+            contacting_obj_id = cp.object_id_a
+            obj_is_b = True
+        if contacting_obj_id is not None:
+            contact_dir_me = (
+                cp.contact_normal_on_b_in_ws
+                if obj_is_b
+                else -cp.contact_normal_on_b_in_ws
+            )
+            if contact_dir_me.dot(yup) > up_threshold:
+                contacting_obj = get_obj_from_id(
+                    sim, contacting_obj_id, ao_link_map
+                )
+                ontop_objects.append(contacting_obj)
+
+    return ontop_objects
 
 
 # ============================================================
