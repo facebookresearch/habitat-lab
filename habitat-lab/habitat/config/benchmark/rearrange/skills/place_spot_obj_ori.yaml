@@ -5,6 +5,7 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - spot_head_stereo_depth_sensor
+    - jaw_receptacle_semantic_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
@@ -23,6 +24,7 @@ habitat:
     obs_keys:
       - relative_initial_ee_orientation
       - relative_target_object_orientation
+      - jaw_receptacle_semantic_sensor
       - articulated_agent_arm_depth
       - articulated_agent_jaw_depth
       - joint
@@ -68,6 +70,9 @@ habitat:
         # We may want to use dimension 5 for controlling the rotation
         dimensionality: 5
         arm_joint_mask: [1,1,0,1,0,1,1]
+      jaw_receptacle_semantic_sensor:
+        height: 240
+        width: 228
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"

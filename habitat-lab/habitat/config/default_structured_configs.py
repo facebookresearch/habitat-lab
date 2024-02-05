@@ -46,6 +46,7 @@ __all__ = [
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
     "ArmReceptacleSemanticSensorConfig",
+    "JawReceptacleSemanticSensorConfig",
     "ArmRGBPretrainVisualFeatureSensorConfig",
     "PretrainTextualFeatureGoalSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
@@ -440,6 +441,16 @@ class ArmReceptacleSemanticSensorConfig(LabSensorConfig):
     Semantic sensor for getting the target place receptacle
     """
     type: str = "ArmReceptacleSemanticSensor"
+    height: int = 480
+    width: int = 640
+
+
+@dataclass
+class JawReceptacleSemanticSensorConfig(LabSensorConfig):
+    r"""
+    Semantic sensor for getting the target place receptacle
+    """
+    type: str = "JawReceptacleSemanticSensor"
     height: int = 480
     width: int = 640
 
@@ -1728,6 +1739,13 @@ class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
 
 
 @dataclass
+class JawPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "articulated_agent_jaw_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
@@ -2262,6 +2280,12 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="jaw_panoptic_sensor",
+    node=JawPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="third_depth_sensor",
     node=ThirdDepthSensorConfig,
 )
@@ -2309,6 +2333,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_receptacle_semantic_sensor",
     node=ArmReceptacleSemanticSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.jaw_receptacle_semantic_sensor",
+    group="habitat/task/lab_sensors",
+    name="jaw_receptacle_semantic_sensor",
+    node=JawReceptacleSemanticSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.arm_rgb_pretrain_visual_feature_sensor",
