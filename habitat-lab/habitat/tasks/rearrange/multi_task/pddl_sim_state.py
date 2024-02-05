@@ -346,23 +346,27 @@ class PddlSimState:
         Throws exception if the arguments are not compatible.
         """
 
-        # Check object states.
-        for entity, target in self._obj_states.items():
-            return all(
-                _is_obj_state_true(entity, target, sim_info)
-                for entity, target in self._obj_states.items()
-            )
+        # Check object states are true.
+        if not all(
+            _is_obj_state_true(entity, target, sim_info)
+            for entity, target in self._obj_states.items()
+        ):
+            return False
 
-        for art_entity, set_art in self._art_states.items():
-            return all(
-                _is_art_state_true(art_entity, set_art, sim_info)
-                for art_entity, set_art in self._art_states.items()
-            )
+        # Check articulated object states are true.
+        if not all(
+            _is_art_state_true(art_entity, set_art, sim_info)
+            for art_entity, set_art in self._art_states.items()
+        ):
+            return False
 
-        return all(
+        # Check robot states are true.
+        if not all(
             robot_state.is_true(sim_info, robot_entity)
             for robot_entity, robot_state in self._robot_states.items()
-        )
+        ):
+            return False
+        return True
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
         """
