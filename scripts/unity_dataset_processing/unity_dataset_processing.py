@@ -7,6 +7,8 @@
 import argparse
 import json
 import os
+import shutil
+from enum import Enum
 from multiprocessing import Manager, Pool
 from pathlib import Path
 from typing import Callable, List, Set
@@ -18,10 +20,20 @@ OMIT_BLACK_LIST = False
 OMIT_GRAY_LIST = False
 
 
+class JobType(Enum):
+    # Copy the asset as-is, skipping all processing.
+    COPY = 1
+    # Process the asset to make it compatible with Unity.
+    # Does operations such as removing basis compression.
+    PROCESS = 2
+    # Same as 'PROCESS', but also decimates the mesh.
+    PROCESS_AND_DECIMATE = 3
+
+
 class Job:
     source_path: str
     dest_path: str
-    simplify: bool
+    job_type: JobType
 
 
 def file_is_scene_config(filepath: str) -> bool:
@@ -106,29 +118,37 @@ def process_model(args):
     # Create all necessary subdirectories
     os.makedirs(os.path.dirname(job.dest_path), exist_ok=True)
 
-    try:
-        source_tris, target_tris, simplified_tris = decimate.decimate(
-            inputFile=job.source_path,
-            outputFile=job.dest_path,
-            quiet=True,
-            sloppy=False,
-            simplify=job.simplify,
-        )
-    except Exception:
+    source_tris: int = 0
+    target_tris: int = 0
+    simplified_tris: int = 0
+
+    job_type: JobType = job.job_type
+    if job_type == JobType.COPY:
+        shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
+    else:
         try:
-            print(
-                f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation)."
-            )
             source_tris, target_tris, simplified_tris = decimate.decimate(
                 inputFile=job.source_path,
                 outputFile=job.dest_path,
                 quiet=True,
-                simplify=False,
+                sloppy=False,
+                simplify=job.simplify,
             )
         except Exception:
-            print(f"Unable to decimate: {job.source_path}")
-            result = {"status": "error"}
-            return result
+            try:
+                print(
+                    f"Unable to decimate: {job.source_path}. Trying passthrough (no decimation)."
+                )
+                source_tris, target_tris, simplified_tris = decimate.decimate(
+                    inputFile=job.source_path,
+                    outputFile=job.dest_path,
+                    quiet=True,
+                    simplify=False,
+                )
+            except Exception:
+                print(f"Unable to decimate: {job.source_path}")
+                result = {"status": "error"}
+                return result
 
     print(
         f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
@@ -301,7 +321,7 @@ def main():
         job = Job()
         job.source_path = os.path.join(args.hssd_hab_root_dir, rel_path)
         job.dest_path = os.path.join(OUTPUT_DIR, hssd_hab_rel_dir, rel_path)
-        job.simplify = False
+        job.job_type = JobType.PROCESS
         jobs.append(job)
 
     # Add all models contained in the scenes
@@ -321,7 +341,7 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.simplify = False
+            job.job_type = JobType.PROCESS_AND_DECIMATE
             jobs.append(job)
         else:
             job = Job()
@@ -329,7 +349,7 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.simplify = False
+            job.job_type = JobType.PROCESS_AND_DECIMATE
             jobs.append(job)
 
     # Add ycb objects
@@ -338,7 +358,7 @@ def main():
         job = Job()
         job.source_path = os.path.join("data", rel_path)
         job.dest_path = os.path.join(OUTPUT_DIR, rel_path)
-        job.simplify = False
+        job.job_type = JobType.PROCESS
         jobs.append(job)
 
     # Add spot models
@@ -349,7 +369,7 @@ def main():
         job = Job()
         job.source_path = os.path.join("data", rel_path)
         job.dest_path = os.path.join(OUTPUT_DIR, rel_path)
-        job.simplify = False
+        job.job_type = JobType.PROCESS
         jobs.append(job)
 
     simplify_models(jobs)
