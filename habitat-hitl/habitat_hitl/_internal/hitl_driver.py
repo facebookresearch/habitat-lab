@@ -208,7 +208,7 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.remote_gui_mode
+        return self._hitl_config.networking.enabled
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None

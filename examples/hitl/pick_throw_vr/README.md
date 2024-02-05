@@ -76,12 +76,12 @@ The system is composed of the following components:
 
 The standard keyboard-mouse launch command-line arguments can be used with those differences:
 
-* The `habitat_hitl.remote_gui_mode=True` config override launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
+* The `habitat_hitl.networking.enabled=True` config override launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 
 ```bash
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py \
-habitat_hitl.remote_gui_mode=True
+habitat_hitl.networking.enabled=True
 ```
 
 We also have an experimental headless server:

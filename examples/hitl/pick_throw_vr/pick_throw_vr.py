@@ -572,7 +572,7 @@ class AppStatePickThrowVr(AppState):
             controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
-            if self._app_service.hitl_config.remote_gui_mode:
+            if self._app_service.hitl_config.networking.enabled:
                 controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
             if not self._is_remote_active_toggle:
@@ -585,7 +585,7 @@ class AppStatePickThrowVr(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        if self._app_service.hitl_config.remote_gui_mode:
+        if self._app_service.hitl_config.networking.enabled:
             status_str += (
                 "human control: VR\n"
                 if self._is_remote_active()
@@ -657,7 +657,7 @@ class AppStatePickThrowVr(AppState):
         # - must not be holding anything
         # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._app_service.hitl_config.remote_gui_mode
+            self._app_service.hitl_config.networking.enabled
             and self._held_target_obj_idx is None
             and (
                 self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)

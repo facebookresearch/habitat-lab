@@ -26,7 +26,7 @@ habitat_hitl:
     # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
     headless:
-      # Run without a GUI window. For unit-testing or use with remote_gui_mode as a headless server.
+      # Run without a GUI window. For unit-testing or use with networking.enabled as a headless server.
       do_headless: False
       # Shortly after app startup, write debug images from the first K steps to video files. See debug_third_person_viewport and debug_images.
       debug_video_writer:
@@ -59,12 +59,12 @@ habitat_hitl:
   # See GuiHumanoidController.
   walk_pose_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 
-  # When enabled, a HITL app behaves as a server that takes input from a remote client.
-  # See pick_throw_vr example app.
-  remote_gui_mode: False
+  networking:
+    # When enabled, a HITL app behaves as a server that takes input from a remote client.
+    # See pick_throw_vr example app.
+    enabled: False
 
   camera:
-
     # See CameraHelper. Set first_person_mode=True, or False to use third-person mode. With first-person mode, use  `max_look_up_angle` and `min_look_down_angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `hide_humanoid_in_gui=True` with `first_person_mode`, because it doesn't make sense to visualize the humanoid with this camera. For first-person mode, you should also set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning.
     first_person_mode: False
     max_look_up_angle: 15.0
