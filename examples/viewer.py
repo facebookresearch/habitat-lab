@@ -188,11 +188,9 @@ class HabitatSimInteractiveViewer(Application):
         self.replay_renderer: Optional[ReplayRenderer] = None
         self.reconfigure_sim()
         self.ao_link_map = sim_utl.get_ao_link_id_map(self.sim)
-        self.selected_object: Optional[
-            habitat_sim.physics.ManagedRigidObject
-        ] = None
+        self.selected_object_id: Optional[int] = None
         self.ao_aabbs = sim_utl.get_ao_root_bbs(self.sim)
-        self.demo_modes = ["above", "within"]
+        self.demo_modes = ["above", "below", "within", "ontop"]
         self.demo_mode = "above"
 
         # compute NavMesh if not already loaded by the scene.
@@ -255,19 +253,40 @@ class HabitatSimInteractiveViewer(Application):
             self.sim.physics_debug_draw(proj_mat)
         if self.contact_debug_draw:
             self.draw_contact_debug()
-        if self.selected_object is not None:
-            sim_utl.debug_draw_rigid_object_bb(
-                self.sim, self.selected_object, color=mn.Color4.yellow()
+        if self.selected_object_id is not None:
+            selected_obj = sim_utl.get_obj_from_id(
+                self.sim, self.selected_object_id, self.ao_link_map
             )
+            if selected_obj.handle in self.ao_aabbs:
+                obj_bb = self.ao_aabbs[selected_obj.handle]
+                sim_utl.debug_draw_bb(
+                    self.sim,
+                    obj_bb,
+                    selected_obj.transformation,
+                    color=mn.Color4.yellow(),
+                )
+            else:
+                sim_utl.debug_draw_rigid_object_bb(
+                    self.sim, selected_obj, color=mn.Color4.yellow()
+                )
             selected_object_set = None
             if self.demo_mode == "above":
                 selected_object_set = sim_utl.above(
-                    self.sim, self.selected_object, self.ao_link_map
+                    self.sim, selected_obj, self.ao_link_map
+                )
+            elif self.demo_mode == "below":
+                selected_object_set = sim_utl.below(
+                    self.sim, selected_obj, self.ao_link_map
                 )
             elif self.demo_mode == "within":
                 selected_object_set = sim_utl.within(
-                    self.sim, self.selected_object, self.ao_link_map
+                    self.sim, selected_obj, self.ao_link_map
                 )
+            elif self.demo_mode == "ontop":
+                ontop_set = sim_utl.ontop(
+                    self.sim, selected_obj, self.ao_link_map
+                )
+                selected_object_set = [(obj, None) for obj in ontop_set]
             else:
                 return
             sim_utl.debug_draw_selected_set(self.sim, selected_object_set)
@@ -767,7 +786,7 @@ class HabitatSimInteractiveViewer(Application):
             )
             raycast_results = self.sim.cast_ray(ray=ray)
 
-            self.selected_object = None
+            self.selected_object_id = None
 
             if raycast_results.has_hits():
                 hit_object, ao_link = -1, -1
@@ -821,14 +840,16 @@ class HabitatSimInteractiveViewer(Application):
                     # done checking for AO
 
                     if hit_object >= 0:
-                        if ro:
-                            self.selected_object = ro_mngr.get_object_by_id(
-                                hit_object
+                        self.selected_object_id = hit_object
+                        if shift_pressed:
+                            selected_object = sim_utl.get_obj_from_id(
+                                self.sim,
+                                self.selected_object_id,
+                                self.ao_link_map,
                             )
-                            if shift_pressed:
-                                self.selected_object.motion_type = (
-                                    habitat_sim.physics.MotionType.DYNAMIC
-                                )
+                            selected_object.motion_type = (
+                                habitat_sim.physics.MotionType.DYNAMIC
+                            )
                         node = self.default_agent.scene_node
                         constraint_settings = physics.RigidConstraintSettings()
 

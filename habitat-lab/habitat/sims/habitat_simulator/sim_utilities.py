@@ -672,7 +672,7 @@ def above(
             habitat_sim.physics.ManagedRigidObject,
             habitat_sim.physics.ManagedArticulatedObject,
         ],
-        int,
+        Optional[int],
     ]
 ]:
     """
@@ -718,7 +718,7 @@ def below(
             habitat_sim.physics.ManagedRigidObject,
             habitat_sim.physics.ManagedArticulatedObject,
         ],
-        int,
+        Optional[int],
     ]
 ]:
     """
@@ -766,7 +766,7 @@ def within(
             habitat_sim.physics.ManagedRigidObject,
             habitat_sim.physics.ManagedArticulatedObject,
         ],
-        int,
+        Optional[int],
     ]
 ]:
     """
@@ -879,7 +879,7 @@ def ontop(
     if do_collision_detection:
         sim.perform_discrete_collision_detection()
 
-    yup = mn.Vector3(0, 1, 0)
+    yup = mn.Vector3(0.0, 1.0, 0.0)
     up_threshold = 0.75
 
     ontop_objects = []
@@ -897,7 +897,7 @@ def ontop(
                 if obj_is_b
                 else -cp.contact_normal_on_b_in_ws
             )
-            if contact_dir_me.dot(yup) > up_threshold:
+            if mn.math.dot(contact_dir_me, yup) > up_threshold:
                 contacting_obj = get_obj_from_id(
                     sim, contacting_obj_id, ao_link_map
                 )
