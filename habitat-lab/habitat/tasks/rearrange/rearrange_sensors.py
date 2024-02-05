@@ -1799,3 +1799,42 @@ class ArmReceptacleSemanticSensor(UsesArticulatedAgentInterface, Sensor):
         tgt_mask = (img_seg == tgt_id).astype(int)
 
         return np.float32(tgt_mask)
+
+
+@registry.register_sensor
+class JawReceptacleSemanticSensor(ArmReceptacleSemanticSensor):
+    """Semantic sensor for the target place receptacle"""
+
+    cls_uuid: str = "jaw_receptacle_semantic_sensor"
+
+    def _get_uuid(self, *args, **kwargs):
+        return JawReceptacleSemanticSensor.cls_uuid
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_jaw_panoptic"
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_jaw_panoptic"
+            )
+            assert target_key in observations
+
+        img_seg = observations[target_key]
+
+        # Check the size of the observation
+        assert (
+            img_seg.shape[0] == self._height
+            and img_seg.shape[1] == self._width
+        )
+
+        # Get the target receptacle name
+        rep_name = self._get_rep_text(task.targ_idx)
+        self._rep_name = rep_name
+
+        # Get the target mask
+        tgt_id = self._sim.receptacles_id[rep_name][0]
+        tgt_mask = (img_seg == tgt_id).astype(int)
+
+        return np.float32(tgt_mask)
