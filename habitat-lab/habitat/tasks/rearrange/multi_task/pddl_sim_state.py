@@ -452,7 +452,7 @@ def _is_object_inside(
 
 
 def _is_obj_state_true(
-    entity: PddlEntity, target: PddlRobotState, sim_info: PddlSimInfo
+    entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
 ) -> bool:
     entity_pos = sim_info.get_entity_pos(entity)
 
