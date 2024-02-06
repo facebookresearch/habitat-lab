@@ -264,6 +264,20 @@ jobs:
 
       - store_artifacts:
           path: conda_env_dump.log  # This is the list of modules in conda and pip
+
+      - run:
+          name: Run HITL functionality
+          no_output_timeout: 60m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              print("########################################", pwd)
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes
+              export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              export TEST_BASELINE_SMALL=1
+              python -m pytest test/hitl/test_hitl_main.py
+
       - run:
           name: Run api tests
           no_output_timeout: 120m
@@ -298,18 +312,6 @@ jobs:
               python scripts/hab2_bench/plot_bench.py
               # Assert the SPS number are up to standard
               python scripts/hab2_bench/assert_bench.py
-      - run:
-          name: Run HITL functionality
-          no_output_timeout: 60m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              print("########################################", pwd)
-              python -m habitat_sim.utils.datasets_download --uids hab3-episodes
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              export TEST_BASELINE_SMALL=1
-              python -m pytest test/hitl/test_hitl_main.py
       - run:
           name: Build api documentation
           command: |
