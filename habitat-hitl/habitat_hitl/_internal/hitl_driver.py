@@ -208,7 +208,7 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.networking.enabled
+        return self._hitl_config.networking.enable
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
@@ -219,7 +219,9 @@ class HitlDriver(AppDriver):
             # simulation rate in the presence of unreliable network comms.
             # See also server.py max_send_rate
             max_steps_ahead = 5
-            self._interprocess_record = InterprocessRecord(max_steps_ahead)
+            self._interprocess_record = InterprocessRecord(
+                self._hitl_config.networking, max_steps_ahead
+            )
             launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
                 self._interprocess_record, line_render

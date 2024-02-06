@@ -2,6 +2,10 @@
 
 habitat_hitl:
   window: ~
+  networking:
+    enable: True
+    http_availability_server:
+      enable: True
   experimental:
     headless:
       do_headless: True
