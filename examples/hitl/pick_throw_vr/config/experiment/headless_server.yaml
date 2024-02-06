@@ -14,5 +14,3 @@ habitat_hitl:
       #   num_frames_to_save: 50
       #   filepath_base: "./debug_video"
       # exit_after: 40
-  networking:
-    enabled: True

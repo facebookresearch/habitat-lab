@@ -41,7 +41,7 @@ habitat_hitl:
     # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
     headless:
-      # Run without a GUI window. For unit-testing or use with networking.enabled as a headless server.
+      # Run without a GUI window. For unit-testing or use with networking.enable as a headless server.
       do_headless: False
       # Shortly after app startup, write debug images from the first K steps to video files. See debug_third_person_viewport and debug_images.
       debug_video_writer:
