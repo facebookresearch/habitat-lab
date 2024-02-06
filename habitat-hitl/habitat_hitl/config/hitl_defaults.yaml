@@ -17,13 +17,13 @@ habitat_hitl:
     display_font_size: 16
 
   networking:
-    # When enabled, a HITL app behaves as a server that takes input from a remote client. See pick_throw_vr example app.
+    # When enabled, we run a websocket server that connects to remote clients. A HITL app with networking enabled is an "HITL server". See pick_throw_vr example app.
     enable: False
 
     # We'll listen for incoming client connections at this port.
     port: 8888
 
-    # Used with AWS elastic load balancer (ELB) health checks. Return a code based on whether the server is available to accept new client connections. Note the current server implementation only handles one client at a time.
+    # Used with AWS elastic load balancer (ELB) health checks. If enabled, we run a separate HTTP server that returns a code based on whether the HITL server is available to accept new client connections. Note this HTTP server doesn't serve any files or other content. Note the current HITL server implementation only handles one client at a time, so the expected behavior is that it becomes "unavailable" once it has a connected client. The HTTP server can be tested locally with e.g. curl -i 0.0.0.0:8889.
     http_availability_server:
       enable: False
       port: 8889

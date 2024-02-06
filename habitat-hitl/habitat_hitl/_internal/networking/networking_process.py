@@ -287,12 +287,15 @@ async def networking_main_async(interprocess_record):
         network_mgr.check_keyframe_queue()
     )
 
-    # Wait for SIGTERM. We should get this signal when we do networking_process.terminate(). See terminate_networking_process.
+    # Handle SIGTERM. We should get this signal when we do networking_process.terminate(). See terminate_networking_process.
     stop: asyncio.Future = asyncio.Future()
     loop = asyncio.get_event_loop()
     loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+
+    # This await essentially means "wait forever" (or until we get SIGTERM). Meanwhile, the other tasks we've started above (websocket server, http server, check_keyframe_queue_task) will also run forever in the asyncio event loop.
     await stop
 
+    # Do cleanup code after we've received SIGTERM: close both servers and cancel check_keyframe_queue_task.
     websocket_server.close()
     await websocket_server.wait_closed()
 
