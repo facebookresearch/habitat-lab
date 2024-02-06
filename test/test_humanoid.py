@@ -81,7 +81,7 @@ def make_cfg(settings):
         camera_sensor_spec = habitat_sim.CameraSensorSpec()
         camera_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.resolution = [settings["height"], settings["width"]]
-        camera_sensor_spec.position = [0, settings["sensor_height"], 0]
+        camera_sensor_spec.position = [0.0, settings["sensor_height"], 0.0]
         for k in kw_args:
             setattr(camera_sensor_spec, k, kw_args[k])
         return camera_sensor_spec
