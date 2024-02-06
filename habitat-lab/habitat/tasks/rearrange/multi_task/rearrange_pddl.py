@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -14,9 +14,12 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+
+# Trick to avoid circular import
+if TYPE_CHECKING:
+    from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 
 
 class SimulatorObjectType(Enum):
@@ -191,7 +194,7 @@ class PddlSimInfo:
 
         self.pred_truth_cache = {}
 
-    def get_predicate(self, pred_name: str) -> Predicate:
+    def get_predicate(self, pred_name: str) -> "Predicate":
         """
         Look up predicate by name.
         """
