@@ -243,16 +243,6 @@ jobs:
             - ~/miniconda
 
       - run:
-          name: Download HITL assets
-          command: |
-            export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-            . activate habitat
-            cd habitat-lab
-            python -m habitat_sim.utils.datasets_download \
-              --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
-              --data-path data/
-
-      - run:
           name: Display dependency versions
           no_output_timeout: 20m
           command: |
@@ -314,9 +304,14 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
+              python -m habitat_sim.utils.datasets_download \
+              --uids hab3-episodes habitat_humanoids hab_spot_arm ycb hssd-hab \
+              --data-path data/
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python test/hitl/test_hitl_main.py -s
+              python test/hitl/test_hitl_main.py
+
+
       - run:
           name: Build api documentation
           command: |
