@@ -52,6 +52,12 @@ class ClientMessageManager:
         """
         self._message["sceneChanged"] = True
 
+    def signal_app_ready(self):
+        r"""
+        See hitl_defaults.yaml wait_for_app_ready_signal documentation.
+        """
+        self._message["isAppReady"] = True
+
     def update_navmesh_triangles(self, triangle_vertices):
         r"""
         Send a navmesh. triangle_vertices should be a list of vertices, 3 per triangle.

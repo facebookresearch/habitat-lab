@@ -20,6 +20,8 @@ class RemoteGuiInput:
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
+        self._connection_params = None
+
         # temp map VR button to key
         self._button_map = {
             0: GuiInput.KeyNS.ZERO,
@@ -38,6 +40,9 @@ class RemoteGuiInput:
 
     def get_history_timestep(self):
         return 1 / 60
+
+    def get_connection_params(self):
+        return self._connection_params
 
     def get_head_pose(self, history_index=0):
         if history_index >= len(self._recent_client_states):
@@ -140,8 +145,8 @@ class RemoteGuiInput:
 
         avatar_color = mn.Color3(0.3, 1, 0.3)
 
-        if True:
-            pos, rot_quat = self.get_head_pose()
+        pos, rot_quat = self.get_head_pose()
+        if pos is not None and rot_quat is not None:
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
             self._debug_line_render.push_transform(trans)
             color0 = avatar_color
@@ -179,17 +184,54 @@ class RemoteGuiInput:
 
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
-            trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-            self._debug_line_render.push_transform(trans)
-            pointer_len = 0.5
-            self._debug_line_render.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(0, 0, pointer_len),
-                color0,
-                color1,
-            )
+            if hand_pos is not None and hand_rot_quat is not None:
+                trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
+                self._debug_line_render.push_transform(trans)
+                pointer_len = 0.5
+                self._debug_line_render.draw_transformed_line(
+                    mn.Vector3(0, 0, 0),
+                    mn.Vector3(0, 0, pointer_len),
+                    color0,
+                    color1,
+                )
 
-            self._debug_line_render.pop_transform()
+                self._debug_line_render.pop_transform()
+
+    def _update_connection_params(self, client_states):
+        # Note we only parse the first connection_params we find. The client is expected to only send this once.
+        for client_state in client_states:
+            if "connection_params_dict" in client_state:
+
+                def validate_connection_params_dict(obj):
+                    if not isinstance(obj, dict) and not (
+                        hasattr(obj, "keys") and callable(obj.keys)
+                    ):
+                        raise TypeError(
+                            "connection_params_dict is not dictionary-like."
+                        )
+
+                    if not all(isinstance(key, str) for key in obj.keys()):
+                        raise ValueError(
+                            "All keys in connection_params_dict must be strings."
+                        )
+
+                connection_params_dict = client_state["connection_params_dict"]
+                validate_connection_params_dict(connection_params_dict)
+                self._connection_params = connection_params_dict
+                break
+
+            elif "connection_params_query_string" in client_state:
+                from urllib.parse import parse_qs
+
+                def query_string_to_dict(query):
+                    parsed_query = parse_qs(query)
+                    # Convert each list of values to a single value (the first one)
+                    return {k: v[0] for k, v in parsed_query.items()}
+
+                self._connection_params = query_string_to_dict(
+                    client_state["connection_params_query_string"]
+                )
+                break
 
     def update(self):
         client_states = self._interprocess_record.get_queued_client_states()
@@ -208,10 +250,13 @@ class RemoteGuiInput:
 
         self.update_input_state_from_remote_client_states(client_states)
 
+        self._update_connection_params(client_states)
+
         self.debug_visualize_client()
 
     def on_frame_end(self):
         self._gui_input.on_frame_end()
+        self._connection_params = None
 
     def clear_history(self):
         self._recent_client_states.clear()
