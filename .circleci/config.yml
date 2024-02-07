@@ -276,13 +276,6 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               export TEST_BASELINE_SMALL=1
-              echo "###########"
-              pwd
-              ls
-              ls data/
-              ls data/scene_datasets/
-              ls data/scene_datasets/hssd-hab/
-              echo "###########"
               pytest test/hitl/test_hitl_main.py
 
       - run:

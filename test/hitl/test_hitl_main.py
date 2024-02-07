@@ -33,7 +33,6 @@ def main(config) -> None:
 
 
 def test_hitl_main():
-    print("Starting hitl_main test!")
     register_hydra_plugins()
     with initialize(
         version_base=None, config_path="../../habitat-hitl/habitat_hitl"
