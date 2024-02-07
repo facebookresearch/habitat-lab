@@ -268,7 +268,10 @@ jobs:
       - run:
           name: Download datasets
           command: |
-              python -m habitat_sim.utils.datasets_download --uids hssd-hab --data-path habitat-lab/data/
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              ln -s ../habitat-sim/data data
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path habitat-sim/data/ --no-replace --no-prune
 
       - run:
           name: Verify dataset exists before testing
@@ -276,6 +279,9 @@ jobs:
               ls -l habitat-lab/data/datasets/hssd/rearrange/train/
               echo "Contents of hssd dataset train folder:"
               ls habitat-lab/data/datasets/hssd/rearrange/train/
+              ls .
+              ls ../.
+              ls ../../.
 
       - run:
           name: Update test to valid dataset
