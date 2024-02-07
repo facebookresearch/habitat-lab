@@ -266,51 +266,17 @@ jobs:
           path: conda_env_dump.log  # This is the list of modules in conda and pip
 
       - run:
-          name: Download datasets
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              pwd
-              . activate habitat; cd habitat-lab
-              pwd
-              ls ../
-              ln -s ../habitat-sim/data data
-              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path data/ --no-replace --no-prune
-              ls
-              ls habitat-lab
-
-      - run:
-          name: Verify dataset exists before testing
-          command: |
-              ls -l habitat-lab/data/datasets/hssd/rearrange/train/
-              echo "Contents of hssd dataset train folder:"
-              ls habitat-lab/data/datasets/hssd/rearrange/train/
-              ls .
-              ls ../.
-              ls ../../.
-
-      - run:
-          name: Update test to valid dataset
-          command: |
-              sed -i '/social_rearrange.json.gz/other_dataset.json.gz/g' test/hitl/test_hitl_main.py
-
-      - run:
-          name: Run tests
-          command: |
-              pytest test/hitl/test_hitl_main.py
-
-
-      - run:
           name: Run HITL functionality
           no_output_timeout: 60m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               ln -s ../habitat-sim/data data
-              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path habitat-sim/data/ --no-replace --no-prune
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path data/ --no-replace --no-prune
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               export TEST_BASELINE_SMALL=1
-              python -m pytest test/hitl/test_hitl_main.py
+              pytest test/hitl/test_hitl_main.py
 
       - run:
           name: Run api tests
