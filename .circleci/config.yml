@@ -272,11 +272,10 @@ jobs:
               pwd
               . activate habitat; cd habitat-lab
               pwd
+              ls ../
               ln -s ../habitat-sim/data data
-              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path habitat-sim/data/ --no-replace --no-prune
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path data/ --no-replace --no-prune
               ls
-              ls habitat-sim
-              ls habitat-sim/data
               ls habitat-lab
 
       - run:
