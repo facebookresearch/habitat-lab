@@ -100,6 +100,7 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
             "teleportAvatarBasePosition",
             "sceneChanged",
             "navmeshVertices",
+            "isAppReady",
         ]:
             if message_key in inc_message:
                 ensure_dict(consolidated_keyframe, "message")

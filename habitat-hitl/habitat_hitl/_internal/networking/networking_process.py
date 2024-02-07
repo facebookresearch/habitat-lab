@@ -89,6 +89,7 @@ class NetworkManager:
         self._connected_clients = {}  # Dictionary to store connected clients
 
         self._interprocess_record = interprocess_record
+        self._networking_config = interprocess_record.networking_config
 
         # Limit how many messages/sec we send. Note the current server implementation sends
         # messages "one at a time" (waiting for confirmation of receipt from the
@@ -100,6 +101,7 @@ class NetworkManager:
         self._consolidated_keyframe = get_empty_keyframe()
         self._waiting_for_client_ready = False
         self._needs_consolidated_keyframe = False
+        self._waiting_for_app_ready = False
 
     def update_consolidated_keyframes(self, keyframes):
         for inc_keyframe in keyframes:
@@ -122,6 +124,13 @@ class NetworkManager:
             except Exception as e:
                 print(f"Error processing received pose data: {e}")
 
+    def is_okay_to_send_keyframes(self):
+        return (
+            self.has_connection()
+            and not self._waiting_for_client_ready
+            and not self._waiting_for_app_ready
+        )
+
     async def check_keyframe_queue(self):
         # this runs continuously even when there is no client connection
         while True:
@@ -137,11 +146,18 @@ class NetworkManager:
                         )
                     inc_keyframes = [tmp_con_keyframe]
 
-                wrapper_json = None
+                # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
                 if (
-                    self.has_connection()
-                    and not self._waiting_for_client_ready
+                    self._waiting_for_app_ready
+                    and "message" in inc_keyframes[0]
+                    and "isAppReady" in inc_keyframes[0]["message"]
                 ):
+                    self._waiting_for_app_ready = not inc_keyframes[0][
+                        "message"
+                    ]["isAppReady"]
+
+                wrapper_json = None
+                if self.is_okay_to_send_keyframes():
                     # This client may be joining "late", after we've already simulated
                     # some frames. To handle this case, we send a consolidated keyframe as
                     # the very first keyframe for the new client. It captures all the
@@ -162,10 +178,7 @@ class NetworkManager:
                 # our consolidated keyframe
                 self.update_consolidated_keyframes(inc_keyframes)
 
-                if (
-                    self.has_connection()
-                    and not self._waiting_for_client_ready
-                ):
+                if self.is_okay_to_send_keyframes():
                     websocket_id = list(self._connected_clients.keys())[0]
                     websocket = self._connected_clients[websocket_id]
                     try:
@@ -202,6 +215,9 @@ class NetworkManager:
         # Store the client connection object in the dictionary
         self._connected_clients[id(websocket)] = websocket
         self._waiting_for_client_ready = True
+        self._waiting_for_app_ready = (
+            self._networking_config.wait_for_app_ready_signal
+        )
         self._needs_consolidated_keyframe = True
 
         print(f"Connection from client {websocket.remote_address}!")

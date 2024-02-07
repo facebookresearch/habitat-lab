@@ -23,6 +23,9 @@ habitat_hitl:
     # We'll listen for incoming client connections at this port.
     port: 8888
 
+    # If True, NetworkManager will wait until the application issues ClientMessageManager.signal_app_ready before sending the first gfx-replay keyframe to the client. This gives the application an opportunity to e.g. change scenes when a client connects. If False, NetworkManager will start sending keyframes immediately upon connect.
+    wait_for_app_ready_signal: False
+
     # Used with AWS elastic load balancer (ELB) health checks. If enabled, we run a separate HTTP server that returns a code based on whether the HITL server is available to accept new client connections. Note this HTTP server doesn't serve any files or other content. Note the current HITL server implementation only handles one client at a time, so the expected behavior is that it becomes "unavailable" once it has a connected client. The HTTP server can be tested locally with e.g. curl -i 0.0.0.0:8889.
     http_availability_server:
       enable: False

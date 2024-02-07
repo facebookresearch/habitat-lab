@@ -21,6 +21,12 @@
     <div id="serverUrl"></div>
     <div id="status">Disconnected</div>
     <div id="messageRate">Message Rate: 0</div>
+    <!-- Add your new fields and button here -->
+    <label for="keyField">Key:</label>
+    <input type="text" id="keyField">
+    <label for="valueField">Value:</label>
+    <input type="text" id="valueField">
+    <button id="sendButton" disabled>Send</button>
 
     <script>
         var ws = null;
@@ -40,6 +46,7 @@
                 document.getElementById('disconnectButton').disabled = false;
                 document.getElementById('serverIp').disabled = true;
                 document.getElementById('serverPort').disabled = true;
+                document.getElementById('sendButton').disabled = false;
                 ws.send('client ready!');  // Send "client ready!" to the server
             };
 
@@ -49,6 +56,7 @@
                 document.getElementById('disconnectButton').disabled = true;
                 document.getElementById('serverIp').disabled = false;
                 document.getElementById('serverPort').disabled = false;
+                document.getElementById('sendButton').disabled = true;
             };
 
             ws.onmessage = function() {
@@ -62,6 +70,14 @@
             }
         }
 
+        function send() {
+            var key = document.getElementById('keyField').value;
+            var value = document.getElementById('valueField').value;
+            var dict = {};
+            dict[key] = value;
+            ws.send(JSON.stringify(dict));  // Send the dictionary as a JSON string
+        }
+
         function updateMessageRate() {
             var now = Date.now();
             var deltaTime = (now - lastUpdateTime) / 1000;  // Convert to seconds
@@ -73,6 +89,7 @@
 
         document.getElementById('connectButton').addEventListener('click', connect);
         document.getElementById('disconnectButton').addEventListener('click', disconnect);
+        document.getElementById('sendButton').addEventListener('click', send);  // Add an event listener for the send button
         setInterval(updateMessageRate, 2000);  // Update message rate every 2 seconds
     </script>
 </body>
