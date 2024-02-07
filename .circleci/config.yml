@@ -266,6 +266,29 @@ jobs:
           path: conda_env_dump.log  # This is the list of modules in conda and pip
 
       - run:
+          name: Download datasets
+          command: |
+              python -m habitat_sim.utils.datasets_download --uids hssd-hab --data-path habitat-lab/data/
+
+      - run:
+          name: Verify dataset exists before testing
+          command: |
+              ls -l habitat-lab/data/datasets/hssd/rearrange/train/
+              echo "Contents of hssd dataset train folder:"
+              ls habitat-lab/data/datasets/hssd/rearrange/train/
+
+      - run:
+          name: Update test to valid dataset
+          command: |
+              sed -i '/social_rearrange.json.gz/other_dataset.json.gz/g' test/hitl/test_hitl_main.py
+
+      - run:
+          name: Run tests
+          command: |
+              pytest test/hitl/test_hitl_main.py
+
+
+      - run:
           name: Run HITL functionality
           no_output_timeout: 60m
           command: |
