@@ -20,6 +20,7 @@ from magnum import shaders, text
 from magnum.platform.glfw import Application
 
 import habitat_sim
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.sims.habitat_simulator import sim_utilities as sim_utl
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration, physics
 from habitat_sim.logging import LoggingContext, logger
@@ -190,8 +191,18 @@ class HabitatSimInteractiveViewer(Application):
         self.ao_link_map = sim_utl.get_ao_link_id_map(self.sim)
         self.selected_object_id: Optional[int] = None
         self.ao_aabbs = sim_utl.get_ao_root_bbs(self.sim)
-        self.demo_modes = ["above", "below", "within", "ontop"]
+        self.demo_modes = [
+            "above",
+            "below",
+            "within",
+            "ontop",
+            "nearby-L2",
+            "nearby-geodesic",
+            "size_regularized_distance",
+        ]
         self.demo_mode = "above"
+        self.distance_threshold = 1.0
+        self.largest_indoor_island_id = -1
 
         # compute NavMesh if not already loaded by the scene.
         if (
@@ -257,8 +268,8 @@ class HabitatSimInteractiveViewer(Application):
             selected_obj = sim_utl.get_obj_from_id(
                 self.sim, self.selected_object_id, self.ao_link_map
             )
-            if selected_obj.handle in self.ao_aabbs:
-                obj_bb = self.ao_aabbs[selected_obj.handle]
+            if selected_obj.object_id in self.ao_aabbs:
+                obj_bb = self.ao_aabbs[selected_obj.object_id]
                 sim_utl.debug_draw_bb(
                     self.sim,
                     obj_bb,
@@ -286,10 +297,140 @@ class HabitatSimInteractiveViewer(Application):
                 ontop_set = sim_utl.ontop(
                     self.sim, selected_obj, self.ao_link_map
                 )
-                selected_object_set = [(obj, None) for obj in ontop_set]
+                selected_object_set = [(obj, 0) for obj in ontop_set]
+            elif self.demo_mode == "nearby-L2":
+                # first draw the nearby zone
+                self.sim.get_debug_line_render().draw_circle(
+                    translation=selected_obj.translation,
+                    radius=self.distance_threshold,
+                    color=mn.Color4.cyan(),
+                    normal=mn.Vector3(0, 1, 0),
+                )
+                nearby_set = sim_utl.nearby(
+                    self.sim,
+                    selected_obj,
+                    distance=self.distance_threshold,
+                    ao_link_map=self.ao_link_map,
+                )
+                selected_object_set = [(obj, 0) for obj in nearby_set]
+            elif self.demo_mode == "nearby-geodesic":
+                obj_snap = self.sim.pathfinder.snap_point(
+                    selected_obj.translation,
+                    island_index=self.largest_indoor_island_id,
+                )
+                remaining_dist = (
+                    self.distance_threshold
+                    - (selected_obj.translation - obj_snap).length()
+                )
+                # first draw the nearby zone
+                self.sim.get_debug_line_render().draw_circle(
+                    translation=obj_snap,
+                    radius=remaining_dist,
+                    color=mn.Color4.cyan(),
+                    normal=mn.Vector3(0, 1, 0),
+                )
+                nearby_set = sim_utl.nearby(
+                    self.sim,
+                    selected_obj,
+                    distance=self.distance_threshold,
+                    ao_link_map=self.ao_link_map,
+                    geodesic=True,
+                    island_id=self.largest_indoor_island_id,
+                )
+                selected_object_set = [(obj, 0) for obj in nearby_set]
+            elif self.demo_mode == "size_regularized_distance":
+                # NOTE: demonstrating the size regularized distance. Showing closest object based on regularized distance.
+                # yellow is the selected object
+                # blue is closest object
+                # green is heuristic distanc between objects
+
+                min_dist = 10.0
+                closest_object = None
+                for obj in sim_utl.get_all_objects(sim=self.sim):
+                    if obj.object_id != self.selected_object_id:
+                        dist_to_obj = sim_utl.size_regularized_distance(
+                            self.sim,
+                            selected_obj,
+                            obj,
+                            self.ao_link_map,
+                            self.ao_aabbs,
+                        )
+                        if dist_to_obj < min_dist:
+                            min_dist = dist_to_obj
+                            closest_object = obj
+
+                if closest_object is not None:
+                    # draw line between
+
+                    obja_bb, transform_a = sim_utl.get_bb_for_object_id(
+                        self.sim,
+                        self.selected_object_id,
+                        self.ao_link_map,
+                        self.ao_aabbs,
+                    )
+                    objb_bb, transform_b = sim_utl.get_bb_for_object_id(
+                        self.sim,
+                        closest_object.object_id,
+                        self.ao_link_map,
+                        self.ao_aabbs,
+                    )
+
+                    a_center = transform_a.transform_point(obja_bb.center())
+                    b_center = transform_b.transform_point(objb_bb.center())
+
+                    disp = a_center - b_center
+                    dist = disp.length()
+                    disp_dir = disp / dist
+
+                    local_scale_a = mn.Matrix4.scaling(obja_bb.size() / 2.0)
+                    local_vec_a = transform_a.inverted().transform_vector(
+                        disp_dir
+                    )
+                    a_size = local_scale_a.transform_vector(
+                        local_vec_a
+                    ).length()
+
+                    local_scale_b = mn.Matrix4.scaling(objb_bb.size() / 2.0)
+                    local_vec_b = transform_b.inverted().transform_vector(
+                        disp_dir
+                    )
+                    b_size = local_scale_b.transform_vector(
+                        local_vec_b
+                    ).length()
+
+                    self.sim.get_debug_line_render().draw_transformed_line(
+                        a_center - disp_dir * a_size,
+                        b_center + disp_dir * b_size,
+                        mn.Color4.green(),
+                    )
+                    self.sim.get_debug_line_render().draw_transformed_line(
+                        a_center - disp_dir * a_size,
+                        a_center,
+                        mn.Color4.yellow(),
+                    )
+                    self.sim.get_debug_line_render().draw_transformed_line(
+                        b_center,
+                        b_center + disp_dir * b_size,
+                        mn.Color4.blue(),
+                    )
+                    if closest_object.object_id in self.ao_aabbs:
+                        obj_bb = self.ao_aabbs[closest_object.object_id]
+                        sim_utl.debug_draw_bb(
+                            self.sim,
+                            obj_bb,
+                            closest_object.transformation,
+                            color=mn.Color4.blue(),
+                        )
+                    else:
+                        sim_utl.debug_draw_rigid_object_bb(
+                            self.sim, closest_object, color=mn.Color4.blue()
+                        )
+                return
             else:
                 return
-            sim_utl.debug_draw_selected_set(self.sim, selected_object_set)
+            sim_utl.debug_draw_selected_set(
+                self.sim, selected_object_set, self.ao_aabbs
+            )
 
     def draw_event(
         self,
@@ -777,6 +918,9 @@ class HabitatSimInteractiveViewer(Application):
         shift_pressed = bool(
             event.modifiers & Application.InputEvent.Modifier.SHIFT
         )
+        alt_pressed = bool(
+            event.modifiers & Application.InputEvent.Modifier.ALT
+        )
 
         # if interactive mode is True -> GRAB MODE
         if self.mouse_interaction == MouseMode.GRAB and physics_enabled:
@@ -849,6 +993,15 @@ class HabitatSimInteractiveViewer(Application):
                             )
                             selected_object.motion_type = (
                                 habitat_sim.physics.MotionType.DYNAMIC
+                            )
+                        if alt_pressed:
+                            selected_object = sim_utl.get_obj_from_id(
+                                self.sim,
+                                self.selected_object_id,
+                                self.ao_link_map,
+                            )
+                            selected_object.rotate(
+                                mn.Rad(0.2), mn.Vector3(0, 1, 0)
                             )
                         node = self.default_agent.scene_node
                         constraint_settings = physics.RigidConstraintSettings()
@@ -1027,6 +1180,9 @@ class HabitatSimInteractiveViewer(Application):
         self.sim.recompute_navmesh(
             self.sim.pathfinder,
             self.navmesh_settings,
+        )
+        self.largest_indoor_island_id = get_largest_island_index(
+            self.sim.pathfinder, self.sim, allow_outdoor=False
         )
 
     def exit_event(self, event: Application.ExitEvent):

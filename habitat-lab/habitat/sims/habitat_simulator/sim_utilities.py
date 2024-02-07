@@ -328,6 +328,82 @@ def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
     return object_id_map
 
 
+def get_all_objects(
+    sim: habitat_sim.Simulator,
+) -> List[
+    Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ]
+]:
+    """
+    Get a list of all ManagedRigidObjects and ManagedArticulatedObjects in the scene.
+    """
+    managers = [
+        sim.get_rigid_object_manager(),
+        sim.get_articulated_object_manager(),
+    ]
+    all_objects = []
+    for mngr in managers:
+        all_objects.extend(mngr.get_objects_by_handle_substring().values())
+    return all_objects
+
+
+def get_obj_size_along(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    global_vec: mn.Vector3,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> float:
+    """
+    Uses object bounding box as a heuristic to estimate object size in a particular global direction.
+    """
+    obj_bb, transform = get_bb_for_object_id(
+        sim, object_id, ao_link_map, ao_aabbs
+    )
+    local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
+    local_vec = transform.inverted().transform_vector(global_vec)
+    local_vec_size = local_scale.transform_vector(local_vec).length()
+    return local_vec_size
+
+
+def size_regularized_distance(
+    sim: habitat_sim.Simulator,
+    objectA,
+    objectB,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> float:
+    """
+    Get the distance between two objects regularized by their size.
+    """
+    obja_bb, transform_a = get_bb_for_object_id(
+        sim, objectA.object_id, ao_link_map, ao_aabbs
+    )
+    objb_bb, transform_b = get_bb_for_object_id(
+        sim, objectB.object_id, ao_link_map, ao_aabbs
+    )
+
+    a_center = transform_a.transform_point(obja_bb.center())
+    b_center = transform_b.transform_point(objb_bb.center())
+
+    disp = a_center - b_center
+    dist = disp.length()
+    disp_dir = disp / dist
+
+    local_scale_a = mn.Matrix4.scaling(obja_bb.size() / 2.0)
+    local_vec_a = transform_a.inverted().transform_vector(disp_dir)
+    local_vec_size_a = local_scale_a.transform_vector(local_vec_a).length()
+
+    local_scale_b = mn.Matrix4.scaling(objb_bb.size() / 2.0)
+    local_vec_b = transform_b.inverted().transform_vector(disp_dir)
+    local_vec_size_b = local_scale_b.transform_vector(local_vec_b).length()
+
+    # if object bounding boxes are significantly overlapping then distance may be negative, clamp to 0
+    return max(0, dist - local_vec_size_a - local_vec_size_b)
+
+
 # ============================================================
 # New Sim Query Utils
 # ============================================================
@@ -336,7 +412,8 @@ def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
 def get_bb_for_object_id(
     sim: habitat_sim.Simulator,
     obj_id: int,
-    ao_link_map: Optional[Dict[int, int]] = None,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> Tuple[mn.Range3D, mn.Matrix4]:
     """
     Wrapper to get a bb and global transform directly from an object id.
@@ -346,6 +423,7 @@ def get_bb_for_object_id(
     :param sim: The Simulator instance.
     :param obj_id: The integer id of the object or link.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
 
     :return: tuple (local_aabb, global_transform)
     """
@@ -354,19 +432,23 @@ def get_bb_for_object_id(
         # Note: better to pre-compute this and pass it around
         ao_link_map = get_ao_link_id_map(sim)
 
-    # first check the ao root bbs
-    # TODO: no cumulative BBs cached for articulated objects
-    # if obj_id in self.ao_aabbs:
-    #    aom = sim.get_articulated_object_manager()
-    #    return (self.ao_aabbs(obj_id), aom.get_object_by_id(obj_id).transformation)
     # check for a link
     if obj_id in ao_link_map:
         ao = sim.get_articulated_object_manager().get_object_by_id(
             ao_link_map[obj_id]
         )
-        link_node = ao.get_link_scene_node(ao.link_object_ids[obj_id])
-        link_transform = link_node.absolute_transformation()
-        return (link_node.cumulative_bb, link_transform)
+        if ao.object_id == obj_id:
+            ao_aabb = None
+            # This is the AO body
+            if ao_aabbs is None:
+                ao_aabb = get_ao_root_bb(ao)
+            else:
+                ao_aabb = ao_aabbs[obj_id]
+            return (ao_aabb, ao.transformation)
+        else:
+            link_node = ao.get_link_scene_node(ao.link_object_ids[obj_id])
+            link_transform = link_node.absolute_transformation()
+            return (link_node.cumulative_bb, link_transform)
     rom = sim.get_rigid_object_manager()
     if rom.get_library_has_id(obj_id):
         ro = rom.get_object_by_id(obj_id)
@@ -374,16 +456,55 @@ def get_bb_for_object_id(
     raise AssertionError("obj_id not found, this is unexpected.")
 
 
+def get_ao_root_bb(
+    ao: habitat_sim.physics.ManagedArticulatedObject,
+) -> mn.Range3D:
+    """
+    Get the local bounding box of all links of an articulated object in the root frame.
+
+    :param ao: The ArticulatedObject instance.
+    """
+
+    ao_local_part_bb_corners = []
+    # NOTE: this is empty because the links are not in the subtree of the root
+    # ao.root_scene_node.compute_cumulative_bb()
+    # print(f"ao {ao.handle} cumulative_bb = {ao.root_scene_node.cumulative_bb}")
+    # print(f"ao {ao.handle} cumulative_bb should be = {ao.root_scene_node.compute_cumulative_bb()}")
+    link_nodes = [ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)]
+    for link_node in link_nodes:
+        # print(f"    - link cumulative_bb = {link_node.cumulative_bb}")
+        local_bb_corners = get_bb_corners(link_node.cumulative_bb)
+        global_bb_corners = [
+            link_node.absolute_transformation().transform_point(bb_corner)
+            for bb_corner in local_bb_corners
+        ]
+        ao_local_bb_corners = [
+            ao.transformation.inverted().transform_point(p)
+            for p in global_bb_corners
+        ]
+        ao_local_part_bb_corners.extend(ao_local_bb_corners)
+
+    # get min and max of each dimension
+    # TODO: use numpy arrays for more elegance...
+    max_vec = mn.Vector3(ao_local_part_bb_corners[0])
+    min_vec = mn.Vector3(ao_local_part_bb_corners[0])
+    for point in ao_local_part_bb_corners:
+        for dim in range(3):
+            max_vec[dim] = max(max_vec[dim], point[dim])
+            min_vec[dim] = min(min_vec[dim], point[dim])
+    return mn.Range3D(min_vec, max_vec)
+
+
 def get_ao_root_bbs(
     sim: habitat_sim.Simulator,
-) -> Dict[habitat_sim.physics.ManagedBulletArticulatedObject, mn.Range3D]:
+) -> Dict[int, mn.Range3D]:
     """
     Computes a dictionary mapping AO handles to a global bounding box of parts.
     Must be updated when AO state changes to correctly bound the full set of links.
 
     :param sim: The Simulator instance.
 
-    :return: dictionary mapping ArticulatedObjects to their bounding box in local space.
+    :return: dictionary mapping ArticulatedObjects' object_id to their bounding box in local space.
     """
 
     ao_local_bbs: Dict[
@@ -391,37 +512,7 @@ def get_ao_root_bbs(
     ] = {}
     aom = sim.get_articulated_object_manager()
     for ao in aom.get_objects_by_handle_substring().values():
-        ao_local_part_bb_corners = []
-        # NOTE: this is empty because the links are not in the subtree of the root
-        # ao.root_scene_node.compute_cumulative_bb()
-        # print(f"ao {ao.handle} cumulative_bb = {ao.root_scene_node.cumulative_bb}")
-        # print(f"ao {ao.handle} cumulative_bb should be = {ao.root_scene_node.compute_cumulative_bb()}")
-        link_nodes = [
-            ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)
-        ]
-        for link_node in link_nodes:
-            # print(f"    - link cumulative_bb = {link_node.cumulative_bb}")
-            local_bb_corners = get_bb_corners(link_node.cumulative_bb)
-            global_bb_corners = [
-                link_node.absolute_transformation().transform_point(bb_corner)
-                for bb_corner in local_bb_corners
-            ]
-            ao_local_bb_corners = [
-                ao.transformation.inverted().transform_point(p)
-                for p in global_bb_corners
-            ]
-            ao_local_part_bb_corners.extend(ao_local_bb_corners)
-
-        # get min and max of each dimension
-        # TODO: use numpy arrays for more elegance...
-        max_vec = mn.Vector3(ao_local_part_bb_corners[0])
-        min_vec = mn.Vector3(ao_local_part_bb_corners[0])
-        for point in ao_local_part_bb_corners:
-            for dim in range(3):
-                max_vec[dim] = max(max_vec[dim], point[dim])
-                min_vec[dim] = min(min_vec[dim], point[dim])
-        ao_local_bbs[ao.handle] = mn.Range3D(min_vec, max_vec)
-
+        ao_local_bbs[ao.object_id] = get_ao_root_bb(ao)
     return ao_local_bbs
 
 
@@ -918,6 +1009,101 @@ def ontop(
     return ontop_objects
 
 
+def nearby(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    distance: float = 1.0,
+    size_regularized: bool = True,
+    geodesic: bool = False,
+    alt_pathfinder=None,
+    island_id: int = -1,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> List[
+    Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ]
+]:
+    """
+    Get list of ManagedRigidObjects and ManagedArticulatedObjects which are "nearby" the target object.
+    Nearby is defined by L2 or geodesic distance (if geodesic==True) between center of mass points within "distance" threshold.
+    #TODO: should this be keypoints instead of CoM?
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'ontop' set.
+    :param distance: Target threshold distance for "nearby". How close do objects need to be?
+    :param size_regularized: If True, regularize distance by object size. Use bounding box to determine regularization weight.
+    :param geodesic: If True, use navmesh distance instead of L2 distance. Counts distance to navmesh + distance on navmesh.
+    :param alt_pathfinder: If geodesic, optionally provide an alternative pathfinder instance. If not provided, uses sim.pathfinder.
+    :param island_id: If geodesic, restrict the check to a particular navmesh. Should be largest_navmesh_island. -1 is all islands, distance checks could be NaN. NaN distance counts as not nearby.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    """
+
+    all_objs = get_all_objects(sim)
+    # first get L2 distances
+
+    all_l2_nearby_objs = [
+        obj
+        for obj in all_objs
+        if (obj.translation - objectA.translation).length() <= distance
+    ]
+
+    # my_size_buffer = 0
+    # if size_regularized:
+    #     # TODO: my_bb = get_bb_for_object_id()
+    #     pass
+
+    # for obj in all_objs:
+    #     obj_size_buffer = 0
+    #     if size_regularized:
+    #         # TODO:
+    #         pass
+
+    if geodesic:
+        all_geo_nearby: List[
+            Union[
+                habitat_sim.physics.ManagedRigidObject,
+                habitat_sim.physics.ManagedArticulatedObject,
+            ]
+        ] = []
+        # first setup for geodesic
+        if alt_pathfinder is None:
+            alt_pathfinder = sim.pathfinder
+        assert alt_pathfinder.is_loaded
+        my_snap = alt_pathfinder.snap_point(
+            objectA.translation, island_index=island_id
+        )
+        my_snap_dist = (my_snap - objectA.translation).length()
+        shortest_path = habitat_sim.nav.ShortestPath()
+        shortest_path.requested_start = my_snap
+        if my_snap_dist >= distance:
+            # too far from navmesh, empty return
+            return all_geo_nearby
+        # now filter by geodesic if necessary
+        for obj in all_l2_nearby_objs:
+            obj_snap = alt_pathfinder.snap_point(
+                obj.translation, island_index=island_id
+            )
+            obj_snap_dist = (obj_snap - obj.translation).length()
+            # threshold for allowed navmesh travel
+            min_geo = distance - obj_snap_dist - my_snap_dist
+            if min_geo >= distance:
+                continue
+            shortest_path.requested_end = obj_snap
+            found_path = alt_pathfinder.find_path(shortest_path)
+            if not found_path:
+                continue
+            geo_dist = shortest_path.geodesic_distance
+            if geo_dist < min_geo:
+                # we found a "nearby" point
+                all_geo_nearby.append(obj)
+        return all_geo_nearby
+    return all_l2_nearby_objs
+
+
 # ============================================================
 # Debug Rendering Utils (move to debug_visualizer.py?)
 # ============================================================
@@ -983,6 +1169,7 @@ def debug_draw_selected_set(
             Optional[int],
         ]
     ],
+    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> None:
     """
     Render the selected set (e.g. "above" set) for the selected object and draw a debug visualization.
@@ -991,7 +1178,8 @@ def debug_draw_selected_set(
     :param selected_set: The set of selected objects for which to render bounding boxes. Consists of a list of Tuples, each with a ManagedObject and optional link index.
     """
 
-    ao_aabbs = get_ao_root_bbs(sim)
+    if ao_aabbs is None:
+        ao_aabbs = get_ao_root_bbs(sim)
     rendered_base = []
     for set_obj, link_id in selected_set:
         if type(set_obj) == habitat_sim.physics.ManagedBulletRigidObject:
@@ -1001,7 +1189,7 @@ def debug_draw_selected_set(
                 rendered_base.append(set_obj.object_id)
                 debug_draw_bb(
                     sim,
-                    ao_aabbs[set_obj.handle],
+                    ao_aabbs[set_obj.object_id],
                     set_obj.transformation,
                     color=mn.Color4.blue(),
                 )
