@@ -7,9 +7,10 @@
 import asyncio
 import json
 import os
+import signal
 import ssl
-import threading
 
+import aiohttp.web
 import websockets
 
 from habitat_hitl._internal.networking import multiprocessing_config
@@ -25,38 +26,28 @@ from habitat_hitl._internal.networking.keyframe_utils import (
 use_ssl = False
 
 networking_process = None
-exit_event = None
 
 
 def launch_networking_process(interprocess_record):
     # see multiprocessing_config to switch between real and dummy multiprocessing
 
     global networking_process
-    global exit_event
 
-    # multiprocessing.dummy.Process is actually a thread and requires special logic
-    # to terminate it.
-    exit_event = (
-        threading.Event() if multiprocessing_config.use_dummy else None
-    )
+    # we don't support dummy multiprocessing at this time
+    assert not multiprocessing_config.use_dummy
 
     networking_process = multiprocessing_config.Process(
-        target=networking_main, args=(interprocess_record, exit_event)
+        target=networking_main, args=(interprocess_record,)
     )
     networking_process.start()
 
 
 def terminate_networking_process():
     global networking_process
-    global exit_event
-    if multiprocessing_config.use_dummy:
-        if exit_event:
-            exit_event.set()
-            exit_event = None
-    else:
-        if networking_process:
-            networking_process.terminate()
-            networking_process = None
+    assert not multiprocessing_config.use_dummy
+    if networking_process:
+        networking_process.terminate()
+        networking_process = None
 
 
 def create_ssl_context():
@@ -85,30 +76,16 @@ def create_ssl_context():
 
 class NetworkManager:
     """
-    This class handles client connections, including sending a stream of keyframes and
-    receiving a stream of client states.
+    This class handles client connections, including sending a stream of keyframes and receiving a stream of client states.
 
-    When NetworkManager has no clients, async check_keyframe_queue runs continuously (an
-    infinite loop with an asyncio.sleep(0.02) on each iteration). Its main job is
-    to extract keyframes from the multiprocess queue and consolidate them into
-    self._consolidated_keyframe.
+    async check_keyframe_queue should be awaited. It runs continuously (an infinite loop with an asyncio.sleep(0.02) on each iteration). See networking_main_async. check_keyframe_queue's main job is to extract keyframes from the multiprocess queue and consolidate them into self._consolidated_keyframe. When NetworkManager has a client, check_keyframe_queue will also send each incremental keyframe to the client.
 
-    When NetworkManager has a client, check_keyframe_queue will also send each incremental
-    keyframe to the client.
+    handle_connection should be used with a websocket server. See networking_main_async. receive_client_states will run continuously. `async for message in websocket` runs until the websocket closes, essentially awaiting each incoming message.
 
-    Also when NetworkManager has a client, async receive_client_states will run continuously.
-    `async for message in websocket` runs until the websocket closes, essentially
-    awaiting each incoming message.
-
-    These continuously-running async methods are run via the asyncio event loop (see
-    networking_main).
-
-    A network error (e.g. closed socket) will result in an exception handled either in
-    check_keyframe_queue or serve (the caller of receive_client_states). The error is
-    handled identically in either case.
+    A network error (e.g. closed socket due to client disconnect) will result in an exception handled either in check_keyframe_queue or serve (the caller of receive_client_states). The error is handled identically in either case.
     """
 
-    def __init__(self, interprocess_record, exit_event):
+    def __init__(self, interprocess_record):
         self._connected_clients = {}  # Dictionary to store connected clients
 
         self._interprocess_record = interprocess_record
@@ -119,8 +96,6 @@ class NetworkManager:
         # network connection bandwidth even when sending at a high rate.
         max_send_rate = None  # 10  # or set None to not limit
         self._send_frequency_limiter = FrequencyLimiter(max_send_rate)
-
-        self._exit_event = exit_event
 
         self._consolidated_keyframe = get_empty_keyframe()
         self._waiting_for_client_ready = False
@@ -218,7 +193,7 @@ class NetworkManager:
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
-    async def serve(self, websocket):
+    async def handle_connection(self, websocket):
         # we only support one connected client at a time
         if self.has_connection():
             await websocket.close()
@@ -230,10 +205,6 @@ class NetworkManager:
         self._needs_consolidated_keyframe = True
 
         print(f"Connection from client {websocket.remote_address}!")
-
-        if self._exit_event and self._exit_event.is_set():
-            await websocket.close()  # not sure if this is correct
-            return
 
         try:
             print("Waiting for ready message from client...")
@@ -257,29 +228,86 @@ class NetworkManager:
             self.handle_disconnect()
 
 
-def networking_main(interprocess_record, exit_event):
+async def start_websocket_server(network_mgr, networking_config):
     global use_ssl
-
-    if multiprocessing_config.use_dummy:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    network_mgr = NetworkManager(interprocess_record, exit_event)
-    network_mgr_lambda = lambda ws, path: network_mgr.serve(ws)
+    network_mgr_lambda = lambda ws, path: network_mgr.handle_connection(ws)
     ssl_context = create_ssl_context() if use_ssl else None
-    start_server = websockets.serve(
-        network_mgr_lambda, "0.0.0.0", 8888, ssl=ssl_context
+    websocket_server = await websockets.serve(
+        network_mgr_lambda, "0.0.0.0", networking_config.port, ssl=ssl_context
+    )
+    print(
+        f"NetworkManager started on networking thread. Listening for client websocket connections on port {networking_config.port}..."
+    )
+    return websocket_server
+
+
+async def start_http_availability_server(network_mgr, networking_config):
+    async def http_handler(request):
+        # return an HTTP code to indicate available or not
+        code = (
+            networking_config.http_availability_server.code_unavailable
+            if network_mgr.has_connection()
+            else networking_config.http_availability_server.code_available
+        )
+        print(f"Returned availability HTTP code {code}")
+        return aiohttp.web.Response(status=code)
+
+    app = aiohttp.web.Application()
+    app.router.add_get("/", http_handler)
+    runner = aiohttp.web.AppRunner(app)
+    await runner.setup()
+    site = aiohttp.web.TCPSite(
+        runner, "0.0.0.0", networking_config.http_availability_server.port
+    )
+    await site.start()
+    print(
+        f"HTTP availability server started on networking thread. Listening for HTTP requests on port {networking_config.http_availability_server.port}..."
+    )
+
+    return runner
+
+
+async def networking_main_async(interprocess_record):
+    networking_config = interprocess_record.networking_config
+    assert networking_config.enable
+
+    network_mgr = NetworkManager(interprocess_record)
+
+    # Start servers
+    websocket_server = await start_websocket_server(
+        network_mgr, networking_config
+    )
+    http_runner = (
+        await start_http_availability_server(network_mgr, networking_config)
+        if networking_config.http_availability_server.enable
+        else None
     )
 
     check_keyframe_queue_task = asyncio.ensure_future(
         network_mgr.check_keyframe_queue()
     )
 
-    asyncio.get_event_loop().run_until_complete(start_server)
-    print("NetworkManager started on server thread. Waiting for clients...")
-    while not (exit_event and exit_event.is_set()):
-        asyncio.get_event_loop().run_until_complete(
-            asyncio.sleep(1.0)
-        )  # todo: investigate what sleep duration does here
+    # Handle SIGTERM. We should get this signal when we do networking_process.terminate(). See terminate_networking_process.
+    stop: asyncio.Future = asyncio.Future()
+    loop = asyncio.get_event_loop()
+    loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+
+    # This await essentially means "wait forever" (or until we get SIGTERM). Meanwhile, the other tasks we've started above (websocket server, http server, check_keyframe_queue_task) will also run forever in the asyncio event loop.
+    await stop
+
+    # Do cleanup code after we've received SIGTERM: close both servers and cancel check_keyframe_queue_task.
+    websocket_server.close()
+    await websocket_server.wait_closed()
+
+    if http_runner:
+        await http_runner.cleanup()
+
     check_keyframe_queue_task.cancel()
+
+
+def networking_main(interprocess_record):
+    # Set up the event loop and run the main coroutine
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(networking_main_async(interprocess_record))
+    loop.close()
     print("networking_main finished")

@@ -13,10 +13,11 @@ from habitat_hitl._internal.networking.multiprocessing_config import (
 
 
 class InterprocessRecord:
-    def __init__(self, max_steps_ahead: int):
+    def __init__(self, networking_config, max_steps_ahead: int):
         self.keyframe_queue = Queue()
         self.client_state_queue = Queue()
         self.step_semaphore = Semaphore(max_steps_ahead)
+        self.networking_config = networking_config
 
     def send_keyframe_to_networking_thread(self, keyframe):
         # Acquire the semaphore to ensure the simulation doesn't advance too far ahead

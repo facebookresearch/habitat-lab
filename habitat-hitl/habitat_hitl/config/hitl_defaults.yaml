@@ -16,6 +16,21 @@ habitat_hitl:
     # Font size for text displayed in the GUI app.
     display_font_size: 16
 
+  networking:
+    # When enabled, we run a websocket server that connects to remote clients. A HITL app with networking enabled is an "HITL server". See pick_throw_vr example app.
+    enable: False
+
+    # We'll listen for incoming client connections at this port.
+    port: 8888
+
+    # Used with AWS elastic load balancer (ELB) health checks. If enabled, we run a separate HTTP server that returns a code based on whether the HITL server is available to accept new client connections. Note this HTTP server doesn't serve any files or other content. Note the current HITL server implementation only handles one client at a time, so the expected behavior is that it becomes "unavailable" once it has a connected client. The HTTP server can be tested locally with e.g. curl -i 0.0.0.0:8889.
+    http_availability_server:
+      enable: False
+      port: 8889
+      # HTTP codes
+      code_available: 200  # "Ok"
+      code_unavailable: 503  # "Service Unavailable"
+
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
 
@@ -26,7 +41,7 @@ habitat_hitl:
     # Choose between classic and batch renderer. This is an experimental feature aimed at those of us building the batch renderer.
     use_batch_renderer: False
     headless:
-      # Run without a GUI window. For unit-testing or use with networking.enabled as a headless server.
+      # Run without a GUI window. For unit-testing or use with networking.enable as a headless server.
       do_headless: False
       # Shortly after app startup, write debug images from the first K steps to video files. See debug_third_person_viewport and debug_images.
       debug_video_writer:
@@ -58,11 +73,6 @@ habitat_hitl:
 
   # See GuiHumanoidController.
   walk_pose_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
-
-  networking:
-    # When enabled, a HITL app behaves as a server that takes input from a remote client.
-    # See pick_throw_vr example app.
-    enabled: False
 
   camera:
     # See CameraHelper. Set first_person_mode=True, or False to use third-person mode. With first-person mode, use  `max_look_up_angle` and `min_look_down_angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees. You should also generally use `hide_humanoid_in_gui=True` with `first_person_mode`, because it doesn't make sense to visualize the humanoid with this camera. For first-person mode, you should also set gui_controlled_agent.ang_speed=300 to avoid delayed movement after turning.
