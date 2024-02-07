@@ -271,11 +271,11 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
+              ln -s ../habitat-sim/data data
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path habitat-sim/data/ --no-replace --no-prune
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               export TEST_BASELINE_SMALL=1
-              echo $PWD
               python -m pytest test/hitl/test_hitl_main.py
 
       - run:
