@@ -269,9 +269,15 @@ jobs:
           name: Download datasets
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              pwd
               . activate habitat; cd habitat-lab
+              pwd
               ln -s ../habitat-sim/data data
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes --data-path habitat-sim/data/ --no-replace --no-prune
+              ls
+              ls habitat-sim
+              ls habitat-sim/data
+              ls habitat-lab
 
       - run:
           name: Verify dataset exists before testing
