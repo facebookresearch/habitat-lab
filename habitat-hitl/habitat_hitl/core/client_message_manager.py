@@ -39,6 +39,30 @@ class ClientMessageManager:
             {"t": [pos[0], pos[1], pos[2]], "r": radius}
         )
 
+    def add_line(self, a: List[float], b: List[float]) -> None:
+        r"""
+        Draw a line from the two specified world positions.
+        """
+        assert len(a) == 3
+        assert len(b) == 3
+
+        if "lines" not in self._message:
+            self._message["lines"] = []
+        self._message["lines"].append(
+            {"a": [a[0], a[1], a[2]], "b": [b[0], b[1], b[2]]}
+        )
+
+    def add_text(self, text: str, pos: list[float]):
+        r"""
+        Draw text at the specified screen positions.
+        """
+        if len(text) == 0:
+            return
+        assert len(pos) == 2
+        if "texts" not in self._message:
+            self._message["texts"] = []
+        self._message["texts"].append({"text": text, "position": [pos[0], pos[1]]})
+
     def change_humanoid_position(self, pos: List[float]) -> None:
         r"""
         Change the position of the humanoid.
@@ -70,3 +94,14 @@ class ClientMessageManager:
         self._message["navmeshVertices"] = [
             component for sublist in triangle_vertices for component in sublist
         ]
+
+    def update_camera_transform(self, pos: List[float], rot_quat: List[float]) -> None:
+        r"""
+        Update the camera transform.
+        """
+        assert len(pos) == 3
+        assert len(rot_quat) == 4
+
+        self._message["camera"] = {}
+        self._message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
+        self._message["camera"]["rotation"] = [rot_quat[0], rot_quat[1], rot_quat[2], rot_quat[3]]

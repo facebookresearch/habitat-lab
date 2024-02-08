@@ -196,6 +196,8 @@ class HitlDriver(AppDriver):
             if self.ctrl_helper
             else None,
         )
+        # TODO: Sloppy
+        text_drawer._service = self._app_service
 
         self._app_state: AppState = None
         assert create_app_state_lambda is not None

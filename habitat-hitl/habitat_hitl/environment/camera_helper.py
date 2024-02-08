@@ -13,7 +13,8 @@ from habitat_hitl.core.gui_input import GuiInput
 
 
 class CameraHelper:
-    def __init__(self, hitl_config, gui_input):
+    def __init__(self, hitl_config, gui_input, client_message_manager):
+        self._client_message_manager = client_message_manager
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
         self._first_person_mode = hitl_config.camera.first_person_mode
@@ -140,6 +141,14 @@ class CameraHelper:
         self._cam_transform = mn.Matrix4.look_at(
             self._eye_pos, self._lookat_pos, mn.Vector3(0, 1, 0)
         )
+
+        # Send the camera transform to the client
+        cam_position = self._cam_transform.translation
+        cam_rotation = mn.Quaternion.from_matrix(self._cam_transform.rotation())
+        if self._client_message_manager:
+            rot_vec = cam_rotation.vector
+            cam_rotation_list = [cam_rotation.scalar, rot_vec[0], rot_vec[1], rot_vec[2]]
+            self._client_message_manager.update_camera_transform(cam_position, cam_rotation_list)
 
     def get_xz_forward(self):
         assert self._cam_transform

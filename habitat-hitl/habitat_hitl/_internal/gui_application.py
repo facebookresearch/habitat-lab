@@ -189,11 +189,12 @@ class GuiApplication(InputHandlerApplication):
             self._post_sim_update(post_sim_update_dict)
             self._app_renderer.post_sim_update(post_sim_update_dict)
 
-        self._app_renderer._text_drawer.add_text(
-            f"SPS: {self._debug_sps:.1f}",
-            TextOnScreenAlignment.BOTTOM_LEFT,
-            text_delta_y=20,
-        )
+        # TODO: This is done at a high frequency, causing a large volume of messages to accumulate.
+        #self._app_renderer._text_drawer.add_text(
+        #    f"SPS: {self._debug_sps:.1f}",
+        #    TextOnScreenAlignment.BOTTOM_LEFT,
+        #    text_delta_y=20,
+        #)
 
         render_dt = 1 / 60.0  # todo: drive correctly
         did_render = self._app_renderer.render_update(render_dt)

@@ -69,7 +69,7 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = None
 
         self._camera_helper = CameraHelper(
-            self._app_service.hitl_config, self._app_service.gui_input
+            self._app_service.hitl_config, self._app_service.gui_input, self._app_service.client_message_manager
         )
         # not supported for pick_throw_vr
         assert not self._app_service.hitl_config.camera.first_person_mode

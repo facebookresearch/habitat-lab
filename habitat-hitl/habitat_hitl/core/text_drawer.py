@@ -88,9 +88,11 @@ if not disable_text_drawer:
             relative_path_to_font: str,
             display_font_size: float,
             max_display_text_chars: int = MAX_DISPLAY_TEXT_CHARS,
+            service = None,
         ) -> None:
             self._text_transform_pairs: List[Tuple[str, mn.Matrix3]] = []
             self._framebuffer_size = framebuffer_size
+            self._service = service
 
             # Load a TrueTypeFont plugin and open the font file
             self._display_font = text.FontManager().load_and_instantiate(
@@ -158,6 +160,11 @@ if not disable_text_drawer:
                 (text_to_add, window_text_transform)
             )
 
+            if self._service is not None:
+                client_message_manager = self._service.client_message_manager
+                if client_message_manager:
+                    client_message_manager.add_text(text_to_add, [align_x , align_y])
+
         def draw_text(self):
             # make magnum text background transparent
             mn.gl.Renderer.enable(mn.gl.Renderer.Feature.BLENDING)
@@ -183,3 +190,4 @@ if not disable_text_drawer:
             # DebugLineRender) will be forced to enable and configure blending when they
             # render
             mn.gl.Renderer.disable(mn.gl.Renderer.Feature.BLENDING)
+
