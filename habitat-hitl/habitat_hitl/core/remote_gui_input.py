@@ -12,6 +12,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl.core.gui_input import GuiInput
 
 
+# todo: rename to RemoteClientState
 class RemoteGuiInput:
     def __init__(self, interprocess_record, debug_line_render):
         self._recent_client_states = []
@@ -43,6 +44,23 @@ class RemoteGuiInput:
 
     def get_connection_params(self):
         return self._connection_params
+
+    def pop_recent_server_keyframe_id(self):
+        """
+        Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
+
+        The removal behavior here is to help user code by only returning a keyframe ID when a new (unseen) one is available.
+        """
+        if len(self._recent_client_states) == 0:
+            return None
+
+        latest_client_state = self._recent_client_states[0]
+        if "recentServerKeyframeId" not in latest_client_state:
+            return None
+
+        retval = int(latest_client_state["recentServerKeyframeId"])
+        del latest_client_state["recentServerKeyframeId"]
+        return retval
 
     def get_head_pose(self, history_index=0):
         if history_index >= len(self._recent_client_states):
