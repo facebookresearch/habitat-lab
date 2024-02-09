@@ -661,10 +661,6 @@ class AppStatePickThrowVr(AppState):
             and self._held_target_obj_idx is None
             and (
                 self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
-                or (
-                    not self._is_remote_active_toggle
-                    and self._app_service.remote_gui_input.get_gui_input().get_any_key_down()
-                )
             )
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle

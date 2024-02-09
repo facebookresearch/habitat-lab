@@ -13,7 +13,7 @@ from habitat_hitl.core.gui_input import GuiInput
 
 
 class RemoteGuiInput:
-    def __init__(self, interprocess_record, debug_line_render):
+    def __init__(self, interprocess_record, debug_line_render, gui_input):
         self._recent_client_states = []
         self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
@@ -22,15 +22,56 @@ class RemoteGuiInput:
 
         self._connection_params = None
 
+        # TODO: VR and keyboard share same keys.
         # temp map VR button to key
         self._button_map = {
-            0: GuiInput.KeyNS.ZERO,
-            1: GuiInput.KeyNS.ONE,
-            2: GuiInput.KeyNS.TWO,
-            3: GuiInput.KeyNS.THREE,
+            0x04: GuiInput.KeyNS.A,
+            0x05: GuiInput.KeyNS.B,
+            0x06: GuiInput.KeyNS.C,
+            0x07: GuiInput.KeyNS.D,
+            0x08: GuiInput.KeyNS.E,
+            0x09: GuiInput.KeyNS.F,
+            0x0A: GuiInput.KeyNS.G,
+            0x0B: GuiInput.KeyNS.H,
+            0x0C: GuiInput.KeyNS.I,
+            0x0D: GuiInput.KeyNS.J,
+            0x0E: GuiInput.KeyNS.K,
+            0x0F: GuiInput.KeyNS.L,
+            0x10: GuiInput.KeyNS.M,
+            0x11: GuiInput.KeyNS.N,
+            0x12: GuiInput.KeyNS.O,
+            0x13: GuiInput.KeyNS.P,
+            0x14: GuiInput.KeyNS.Q,
+            0x15: GuiInput.KeyNS.R,
+            0x16: GuiInput.KeyNS.S,
+            0x17: GuiInput.KeyNS.T,
+            0x18: GuiInput.KeyNS.U,
+            0x19: GuiInput.KeyNS.V,
+            0x1A: GuiInput.KeyNS.W,
+            0x1B: GuiInput.KeyNS.X,
+            0x1C: GuiInput.KeyNS.Y,
+            0x1D: GuiInput.KeyNS.Z,
+            0x27: GuiInput.KeyNS.ZERO,
+            0x1E: GuiInput.KeyNS.ONE,
+            0x1F: GuiInput.KeyNS.TWO,
+            0x20: GuiInput.KeyNS.THREE,
+            0x21: GuiInput.KeyNS.FOUR,
+            0x22: GuiInput.KeyNS.FIVE,
+            0x23: GuiInput.KeyNS.SIX,
+            0x24: GuiInput.KeyNS.SEVEN,
+            0x25: GuiInput.KeyNS.EIGHT,
+            0x26: GuiInput.KeyNS.NINE,
+            0x2C: GuiInput.KeyNS.SPACE,
+            # TODO: Other keys
         }
 
-        self._gui_input = GuiInput()
+        self._mouse_button_map = {
+            0: GuiInput.MouseNS.LEFT,
+            1: GuiInput.MouseNS.RIGHT,
+            2: GuiInput.MouseNS.MIDDLE,
+        }
+
+        self._gui_input = gui_input #TODO: Apply refactor
 
     def get_gui_input(self):
         return self._gui_input
@@ -56,6 +97,9 @@ class RemoteGuiInput:
         avatar_root_json = client_state["avatar"]["root"]
 
         pos_json = avatar_root_json["position"]
+        # TODO: This is XR-specific
+        if len(pos_json) == 0:
+            return None, None
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = avatar_root_json["rotation"]
         rot_quat = mn.Quaternion(
@@ -79,13 +123,16 @@ class RemoteGuiInput:
 
         hand_json = hands_json[hand_idx]
         pos_json = hand_json["position"]
-        pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
-        rot_json = hand_json["rotation"]
-        rot_quat = mn.Quaternion(
-            mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
-        )
+        # TODO: This is XR-specific
+        if len(pos_json) > 0:
+            pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
+            rot_json = hand_json["rotation"]
+            rot_quat = mn.Quaternion(
+                mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
+            )
 
-        return pos, rot_quat
+            return pos, rot_quat
+        return None, None
 
     def update_input_state_from_remote_client_states(self, client_states):
         if not len(client_states):
@@ -94,47 +141,70 @@ class RemoteGuiInput:
         # gather all recent keyDown and keyUp events
         for client_state in client_states:
             # Beware client_state input has dicts of bools (unlike GuiInput, which uses sets)
-            if "input" not in client_state:
-                continue
 
-            input_json = client_state["input"]
-
-            if "buttonHeld" not in input_json:
-                continue
+            input_json = client_state["input"] if "input" in client_state else None # TODO: Split keyboard and VR
+            mouse_json = client_state["mouse"] if "mouse" in client_state else None
 
             # assume button containers are sets of buttonIndices
-            for button in input_json["buttonDown"]:
-                if button not in self._button_map:
-                    print(f"button {button} not mapped!")
-                    continue
-                if True:
+            if input_json:
+                for button in input_json["buttonDown"]:
+                    if button not in self._button_map:
+                        print(f"button {button} not mapped!")
+                        continue
                     self._gui_input._key_down.add(self._button_map[button])
-            for button in input_json["buttonUp"]:
-                if button not in self._button_map:
-                    print(f"key {button} not mapped!")
-                    continue
-                if True:
+                for button in input_json["buttonUp"]:
+                    if button not in self._button_map:
+                        print(f"key {button} not mapped!")
+                        continue
                     self._gui_input._key_up.add(self._button_map[button])
+
+            if mouse_json and "buttons" in mouse_json:
+                mouse_buttons = mouse_json["buttons"]
+                for button in mouse_buttons["buttonDown"]:
+                    if button not in self._mouse_button_map:
+                        print(f"button {button} not mapped!")
+                        continue
+                    self._gui_input._mouse_button_down.add(self._mouse_button_map[button])
+
+                for button in mouse_buttons["buttonUp"]:
+                    if button not in self._mouse_button_map:
+                        print(f"button {button} not mapped!")
+                        continue
+                    self._gui_input._mouse_button_up.add(self._mouse_button_map[button])
+
+                if "scrollDelta" in mouse_json:
+                    delta = mouse_json["scrollDelta"]
+                    if len(delta) == 2:
+                        self._gui_input._mouse_scroll_offset += delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
-        if "input" not in client_state:
-            return
 
-        input_json = client_state["input"]
-
-        if "buttonHeld" not in input_json:
-            return
+        input_json = client_state["input"] if "input" in client_state else None # TODO: Split keyboard and VR
+        mouse_json = client_state["mouse"] if "mouse" in client_state else None
 
         self._gui_input._key_held.clear()
+        self._gui_input._mouse_button_held.clear()
 
-        for button in input_json["buttonHeld"]:
-            if button not in self._button_map:
-                print(f"button {button} not mapped!")
-                continue
-            if True:  # input_json["buttonHeld"][button]:
+        if input_json:
+            for button in input_json["buttonHeld"]:
+                if button not in self._button_map:
+                    print(f"button {button} not mapped!")
+                    continue
                 self._gui_input._key_held.add(self._button_map[button])
+
+        if mouse_json and "buttons" in mouse_json:
+            mouse_buttons = mouse_json["buttons"]
+            for button in mouse_buttons["buttonHeld"]:
+                if button not in self._mouse_button_map:
+                    print(f"button {button} not mapped!")
+                    continue
+                self._gui_input._mouse_button_held.add(self._mouse_button_map[button])
+
+        # TODO: Implement headless-compatible mouse handling.
+        # if "mousePosition" in input_json:
+        #     ...
 
     def debug_visualize_client(self):
         if not self._debug_line_render:

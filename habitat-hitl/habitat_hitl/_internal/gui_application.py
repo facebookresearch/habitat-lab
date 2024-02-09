@@ -51,8 +51,9 @@ class InputHandlerApplication(Application):
         key = event.key
         GuiInput.validate_key(key)
         for wrapper in self._gui_inputs:
-            wrapper._key_held.remove(key)
-            wrapper._key_up.add(key)
+            if key in wrapper._key_held:
+                wrapper._key_held.remove(key)
+                wrapper._key_up.add(key)
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
         mouse_button = event.button
