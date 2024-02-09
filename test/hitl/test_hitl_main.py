@@ -34,12 +34,9 @@ def main(config) -> None:
 
 def test_hitl_main():
     register_hydra_plugins()
-    with initialize(
-        version_base=None, config_path="../../habitat-hitl/habitat_hitl"
-    ):
+    with initialize(version_base=None, config_path="../config/habitat_hitl"):
         cfg = compose(config_name="test_cfg")
     main(cfg)
-    print("done!")
 
 
 test_hitl_main()
