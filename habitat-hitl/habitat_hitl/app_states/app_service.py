@@ -10,8 +10,6 @@ from typing import Callable, Optional
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-
-# Helpers to provide to AppState classes, provided by the underlying SandboxDriver
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
@@ -22,6 +20,7 @@ from habitat_hitl.environment.episode_helper import EpisodeHelper
 from habitat_sim.gfx import DebugLineRender
 
 
+# Helpers to provide to AppState classes, provided by the underlying SandboxDriver
 class AppService:
     def __init__(
         self,
