@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Optional
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -31,14 +31,14 @@ class AppService:
         remote_gui_input: RemoteGuiInput,
         line_render: DebugLineRender,
         text_drawer: AbstractTextDrawer,
-        get_anim_fraction: Callable[[], float],
+        get_anim_fraction: Callable,
         env: Env,
         sim: RearrangeSim,
-        compute_action_and_step_env: Callable[[], None],
+        compute_action_and_step_env: Callable,
         step_recorder: BaseRecorder,
-        get_metrics: Callable[[], Dict | Any],
-        end_episode: Callable[[bool], None],
-        set_cursor_style: Callable[[Any], None],
+        get_metrics: Callable,
+        end_episode: Callable,
+        set_cursor_style: Callable,
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
         gui_agent_controller: Optional[GuiController],
@@ -86,7 +86,7 @@ class AppService:
         return self._text_drawer
 
     @property
-    def get_anim_fraction(self) -> Callable[[], float]:
+    def get_anim_fraction(self) -> Callable:
         return self._get_anim_fraction
 
     @property
@@ -98,7 +98,7 @@ class AppService:
         return self._sim
 
     @property
-    def compute_action_and_step_env(self) -> Callable[[], None]:
+    def compute_action_and_step_env(self) -> Callable:
         return self._compute_action_and_step_env
 
     @property
@@ -106,15 +106,15 @@ class AppService:
         return self._step_recorder
 
     @property
-    def get_metrics(self) -> Callable[[], Dict | Any]:
+    def get_metrics(self) -> Callable:
         return self._get_metrics
 
     @property
-    def end_episode(self) -> Callable[[bool], None]:
+    def end_episode(self) -> Callable:
         return self._end_episode
 
     @property
-    def set_cursor_style(self) -> Callable[[Any], None]:
+    def set_cursor_style(self) -> Callable:
         return self._set_cursor_style
 
     @property
