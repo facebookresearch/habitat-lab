@@ -14,6 +14,7 @@ import tqdm
 
 from habitat.core.logging import logger
 from habitat.core.utils import try_cv2_import
+from habitat.utils.common import flatten_dict
 from habitat.utils.visualizations import maps
 
 cv2 = try_cv2_import()
@@ -220,16 +221,18 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):
                 obs_k = obs_k.cpu().numpy()
-            if  "ovmm_nav_goal_segmentation" in sensor_name:
-                if  obs_k.shape[2] == 1:
+            if "ovmm_nav_goal_segmentation" in sensor_name:
+                if obs_k.shape[2] == 1:
                     obs_k = obs_k * 255.0
                     obs_k = obs_k.astype(np.uint8)
                 elif obs_k.shape[2] == 2:
-                    obs_k = np.clip(obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1)[
-                        ..., None
-                    ]
+                    obs_k = np.clip(
+                        obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1
+                    )[..., None]
                 else:
-                    raise Exception("OVMM Nav Goal Segmentation Sensor can have max 2 channels")
+                    raise Exception(
+                        "OVMM Nav Goal Segmentation Sensor can have max 2 channels"
+                    )
 
             if obs_k.dtype != np.uint8 or sensor_name in [
                 "goal_recep_segmentation",
@@ -261,18 +264,66 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
-    if "collisions" in info and info["collisions"]["is_collision"]:
+    collisions_key = "collisions"
+    if collisions_key in info and info[collisions_key]["is_collision"]:
         render_frame = draw_collision(render_frame)
 
-    if "top_down_map" in info:
+    top_down_map_key = "top_down_map"
+    if top_down_map_key in info:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info["top_down_map"], render_frame.shape[0]
+            info[top_down_map_key], render_frame.shape[0]
         )
         render_frame = np.concatenate((render_frame, top_down_map), axis=1)
     return render_frame
 
 
-def append_text_to_image(image: np.ndarray, text: str):
+def build_text_image(image: np.ndarray, text: str, color="white") -> np.ndarray:
+    r"""Appends text underneath an image of size (height, width, channels).
+    The returned image has white text on a black background. Uses textwrap to
+    split long text into multiple lines.
+
+    :param image: The image to appends text underneath.
+    :param text: The string to display.
+    :return: A new image with text appended underneath.
+    """
+    _, w, _ = image.shape
+    font_size = 1.5
+    font_thickness = 2
+    padding = 16
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
+    wrapped_text = textwrap.wrap(text, width=int(w / char_size[0]))
+
+    if color == "black":
+        # black text on white background
+        color = (0, 0, 0)
+        blank_image = 255 * np.ones(image.shape, dtype=np.uint8)
+    else:
+        color = (255, 255, 255)
+        blank_image = 255 * np.zeros(image.shape, dtype=np.uint8)
+
+    y = 0
+    for line in wrapped_text:
+        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
+        y += textsize[1] + padding
+        x = int(w/2 - textsize[0]/2)
+        cv2.putText(
+            blank_image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            color,
+            font_thickness,
+            lineType=cv2.LINE_AA,
+        )
+    text_image = blank_image[0 : y + padding, 0:w]
+    cv2.imwrite("temporary_snapshot.png", text_image)
+    return text_image
+
+
+def append_text_to_image(image: np.ndarray, text: str, color="white", top=False):
     r"""Appends text underneath an image of size (height, width, channels).
     The returned image has white text on a black background. Uses textwrap to
     split long text into multiple lines.
@@ -282,30 +333,85 @@ def append_text_to_image(image: np.ndarray, text: str):
     Returns:
         A new image with text inserted underneath the input image
     """
+    text_image = build_text_image(image, text, color)
+    if top:
+        final = np.concatenate((text_image, image), axis=0)
+    else:
+        final = np.concatenate((image, text_image), axis=0)
+    return final
+
+
+def overlay_text_to_image(
+    image: np.ndarray, text: List[str], font_size: float = 0.5
+):
+    r"""Overlays lines of text on top of an image.
+
+    First this will render to the left-hand side of the image, once that column is full,
+    it will render to the right hand-side of the image.
+
+    :param image: The image to put text on top.
+    :param text: The list of strings which will be rendered (separated by new lines).
+    :param font_size: Font size.
+    :return: A new image with text overlaid on top.
+    """
     h, w, c = image.shape
-    font_size = 0.5
     font_thickness = 1
     font = cv2.FONT_HERSHEY_SIMPLEX
-    blank_image = np.zeros(image.shape, dtype=np.uint8)
-
-    char_size = cv2.getTextSize(" ", font, font_size, font_thickness)[0]
-    wrapped_text = textwrap.wrap(text, width=int(w / char_size[0]))
 
     y = 0
-    for line in wrapped_text:
+    left_aligned = True
+    for line in text:
         textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
         y += textsize[1] + 10
-        x = 10
+        if y > h:
+            left_aligned = False
+            y = textsize[1] + 10
+
+        if left_aligned:
+            x = 10
+        else:
+            x = w - (textsize[0] + 10)
+
         cv2.putText(
-            blank_image,
+            image,
             line,
             (x, y),
             font,
             font_size,
-            (255, 255, 255),
+            (0, 0, 0),
+            font_thickness * 2,
+            lineType=cv2.LINE_AA,
+        )
+
+        cv2.putText(
+            image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (255, 255, 255, 255),
             font_thickness,
             lineType=cv2.LINE_AA,
         )
-    text_image = blank_image[0 : y + 10, 0:w]
-    final = np.concatenate((image, text_image), axis=0)
-    return final
+
+    return np.clip(image, 0, 255)
+
+
+def overlay_frame(frame, info, additional=None):
+    """
+    Renders text from the `info` dictionary to the `frame` image.
+    """
+
+    lines = []
+    flattened_info = flatten_dict(info)
+    for k, v in flattened_info.items():
+        if isinstance(v, str):
+            lines.append(f"{k}: {v}")
+        else:
+            lines.append(f"{k}: {v:.2f}")
+    if additional is not None:
+        lines.extend(additional)
+
+    frame = overlay_text_to_image(frame, lines, font_size=0.25)
+
+    return frame

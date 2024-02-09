@@ -9,10 +9,10 @@ from os import path as osp
 import numpy as np
 import pytest
 
-import habitat.robots.fetch_robot as fetch_robot
-import habitat.robots.franka_robot as franka_robot
-import habitat.robots.spot_robot as spot_robot
-import habitat.robots.stretch_robot as stretch_robot
+import habitat.articulated_agents.robots.fetch_robot as fetch_robot
+import habitat.articulated_agents.robots.franka_robot as franka_robot
+import habitat.articulated_agents.robots.spot_robot as spot_robot
+import habitat.articulated_agents.robots.stretch_robot as stretch_robot
 import habitat_sim
 import habitat_sim.agent
 
@@ -54,6 +54,7 @@ default_sim_settings = {
     "test_object_index": 0,
     "frustum_culling": True,
 }
+
 
 # build SimulatorConfiguration
 def make_cfg(settings):
@@ -304,8 +305,7 @@ def test_fetch_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
@@ -459,8 +459,7 @@ def test_franka_robot_wrapper():
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
@@ -581,8 +580,7 @@ def test_spot_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
@@ -720,8 +718,7 @@ def test_stretch_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_stretch/urdf/hab_stretch.urdf"

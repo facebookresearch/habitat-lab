@@ -6,9 +6,9 @@ defaults:
     - arm_action
     - base_velocity
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - robot_collisions_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
@@ -45,13 +45,13 @@ end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 spawn_reference: view_points
 spawn_reference_sampling: uniform
-spawn_max_dists_to_obj: 0.0
+spawn_max_dist_to_obj: 0.0
 start_in_manip_mode: False
 camera_tilt: -0.5236      # start in navigation mode
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosReducedActionStretch"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [0,0,0,0,0,0,0,0,0,1]
     arm_joint_dimensionality: 1
@@ -82,9 +82,15 @@ measurements:
     ee_resting_success_threshold: 100.0
   pick_reward:
     object_goal: True
-    navmesh_violate_pen: 1.0
+    angle_reward_min_dist: 0.0
+    angle_reward_scale: 1.0
+    navmesh_violate_pen: 0.3
 lab_sensors:
   joint_sensor:
     dimensionality: 10
   joint_velocity_sensor:
     dimensionality: 10
+  start_recep_segmentation_sensor:
+    blank_out_prob: 0.5
+  object_segmentation_sensor:
+    blank_out_prob: 0.5

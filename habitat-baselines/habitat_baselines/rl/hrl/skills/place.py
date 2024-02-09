@@ -27,7 +27,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
         is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_not_holding):
             # Do not regrasp the object once it is released.
-            action[i, self._grip_ac_idx] = -1.0
+            action.actions[i, self._grip_ac_idx] = -1.0
         return action
 
     def _is_skill_done(
@@ -46,7 +46,6 @@ class PlaceSkillPolicy(PickSkillPolicy):
         if is_done.sum() > 0:
             self._internal_log(
                 f"Terminating with {rel_resting_pos} and {is_holding}",
-                observations,
             )
         return is_done
 

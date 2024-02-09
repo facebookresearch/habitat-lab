@@ -64,7 +64,6 @@ class Metric:
         self.stats.append(copy.deepcopy(current_stats))
 
     def get_stat_string(self, mode: int = 1) -> str:
-
         stat_string = ""
 
         for k, v in self.info.items():
@@ -88,7 +87,6 @@ class Metric:
         return stats
 
     def dump_log(self) -> bool:
-
         if self.log_json is None:
             return False
 

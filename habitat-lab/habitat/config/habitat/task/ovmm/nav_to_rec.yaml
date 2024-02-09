@@ -3,13 +3,15 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
-    - base_velocity
-    - rearrange_stop
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
   - /habitat/task/measurements:
     - object_to_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - ovmm_rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
@@ -40,18 +42,28 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 object_in_hand_sample_prob: 1.0
-actions:
-  base_velocity:
-    type: "BaseWaypointTeleportAction"
-    navmesh_offset: [[0.0, 0.0]]
+min_start_distance: 1.5
 camera_tilt: -0.5236
 receptacle_categories_file: data/objects/hssd-receptacles.csv
 measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
+  ovmm_nav_to_obj_reward:
+    navmesh_violate_pen: 0.3
+    turn_reward_dist: 3.0
+    angle_dist_reward: 1.0
+    dist_reward: 1.0
+  nav_to_pos_succ:
+    success_distance: 0.1
+  ovmm_nav_to_obj_success:
+    min_object_coverage_iou: -1
 lab_sensors:
   joint_sensor:
     dimensionality: 10
   joint_velocity_sensor:
     dimensionality: 10
+  ovmm_nav_goal_segmentation_sensor:
+    blank_out_prob: 0.5
+  receptacle_segmentation_sensor:
+    blank_out_prob: 0.5

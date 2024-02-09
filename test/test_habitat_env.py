@@ -15,17 +15,20 @@ from gym import Wrapper
 
 import habitat
 from habitat.config.default import get_agent_config, get_config
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
+    KEYFRAME_OBSERVATION_KEY,
+)
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.gym.gym_definitions import make_gym_from_config
+from habitat.gym.gym_wrapper import HabGymWrapper
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
-from habitat.utils.gym_adapter import HabGymWrapper
-from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.test_utils import (
     sample_non_stop_action,
     sample_non_stop_action_gym,
 )
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 NUM_ENVS = 4
 
 
@@ -290,6 +293,108 @@ def test_rl_vectorized_envs(gpu2gpu):
                 ), "dones should be true after max_episode steps"
 
 
+@pytest.mark.parametrize("classic_replay_renderer", [False, True])
+@pytest.mark.parametrize("sensor_uuid", ["rgb_sensor", "depth_sensor"])
+@pytest.mark.parametrize("gpu2gpu", [False])
+def test_rl_vectorized_envs_batch_renderer(
+    gpu2gpu: bool, sensor_uuid: str, classic_replay_renderer: bool
+):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
+    if sensor_uuid == "rgb_sensor":
+        obs_key = "rgb"
+    elif sensor_uuid == "depth_sensor":
+        obs_key = "depth"
+    else:
+        pytest.fail("Unknown sensor uuid: " + sensor_uuid)
+
+    configs, datasets = _load_test_data()
+    for config in configs:
+        with habitat.config.read_write(config):
+            config.habitat.simulator.renderer.enable_batch_renderer = True
+            config.habitat.simulator.renderer.classic_replay_renderer = (
+                classic_replay_renderer
+            )
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True
+            )
+            config.habitat.simulator.create_renderer = False
+            config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            agent_config = get_agent_config(config.habitat.simulator)
+            ## Only keep one sensor
+            agent_config.sim_sensors = {
+                sensor_uuid: agent_config.sim_sensors[sensor_uuid]
+            }
+
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
+    ) as envs:
+        envs.initialize_batch_renderer(configs[0])
+        observations = envs.reset()
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+        observations = envs.post_step(observations)
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY not in env_obs
+
+        assert len(observations) == num_envs
+
+        # TODO: Add screenshot tests. Image stats are compared until then.
+        threshold: float = 0.01
+        if sensor_uuid == "rgb_sensor":
+            baseline_mean = [126.23, 126.84, 126.62, 125.63]
+            baseline_std_dev = [26.54, 26.16, 25.80, 26.56]
+        elif sensor_uuid == "depth_sensor":
+            baseline_mean = [0.4852, 0.4886, 0.4920, 0.4956]
+            baseline_std_dev = [0.0107, 0.0112, 0.0117, 0.0122]
+        for env_idx in range(num_envs):
+            env_obs = observations[env_idx][obs_key]
+            mean = float(np.mean(env_obs[env_idx]))
+            std_dev = float(np.std(env_obs[env_idx]))
+            assert abs(baseline_mean[env_idx] - mean) < threshold
+            assert abs(baseline_std_dev[env_idx] - std_dev) < threshold
+
+        for _ in range(2 * configs[0].habitat.environment.max_episode_steps):
+            outputs = envs.step(
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
+            )
+            observations, rewards, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
+
+            for env_obs in observations:
+                assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+            observations = envs.post_step(observations)
+
+            for env_obs in observations:
+                assert KEYFRAME_OBSERVATION_KEY not in env_obs
+
+            assert len(observations) == num_envs
+            assert len(rewards) == num_envs
+            assert len(dones) == num_envs
+            assert len(infos) == num_envs
+
+            # Note: Uncomment this line to visualize:
+            # envs.render(mode="human")
+
+            tiled_img = envs.render(mode="rgb_array")
+            new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+            new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+            h, w, _ = observations[0][obs_key].shape
+            assert tiled_img.shape == (
+                h * new_height,
+                w * new_width,
+                3,
+            ), "vector env render is broken"
+
+
 @pytest.mark.parametrize("gpu2gpu", [False, True])
 def test_rl_env(gpu2gpu):
     import habitat_sim
@@ -352,7 +457,7 @@ def _make_dummy_env_func(config, dataset=None, env_id=0, rank=0):
     """
     env = DummyRLEnv(config=config, dataset=dataset)
     env.seed(config.habitat.seed + rank)
-    env = HabGymWrapper(env)
+    env = HabGymWrapper(env=env)
     env = CallTestEnvWrapper(env, env_id)
     return env
 

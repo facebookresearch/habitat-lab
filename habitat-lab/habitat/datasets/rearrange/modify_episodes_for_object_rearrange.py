@@ -383,7 +383,11 @@ def load_navmesh(sim, scene, agent_name):
     scene_name = osp.basename(scene).split(".")[0]
     scenes_dir = os.path.basename(osp.dirname(scene))
     navmesh_path = osp.join(
-        scene_base_dir, "navmeshes", scenes_dir, agent_name, scene_name + ".navmesh"
+        scene_base_dir,
+        "navmeshes",
+        scenes_dir,
+        agent_name,
+        scene_name + ".navmesh",
     )
     if osp.exists(navmesh_path):
         sim.pathfinder.load_nav_mesh(navmesh_path)
@@ -434,103 +438,104 @@ def add_cat_fields_to_episodes(
     if num_episodes == -1:
         num_episodes = len(episodes["episodes"])
 
-    with tqdm(total=num_episodes) as pbar:
-        for episode in episodes["episodes"]:
-            scene_id = episode["scene_id"]
-            sim = initialize_sim(
-                sim,
-                existing_rigid_objects,
-                scene_id,
-                episode["scene_dataset_config"],
-                episode["additional_obj_config_paths"],
-                config.agent.camera,
-                debug_viz,
-            )
-            load_navmesh(sim, scene_id, config.agent_name)
+    pbar = tqdm(total=num_episodes)
+    for episode in episodes["episodes"]:
+        scene_id = episode["scene_id"]
+        sim = initialize_sim(
+            sim,
+            existing_rigid_objects,
+            scene_id,
+            episode["scene_dataset_config"],
+            episode["additional_obj_config_paths"],
+            config.agent.camera,
+            debug_viz,
+        )
+        load_navmesh(sim, scene_id, config.agent_name)
 
-            rom = sim.get_rigid_object_manager()
-            existing_rigid_objects = set(rom.get_object_handles())
+        rom = sim.get_rigid_object_manager()
+        existing_rigid_objects = set(rom.get_object_handles())
 
-            rec = find_receptacles(sim)
-            dataset_name = osp.basename(episode["scene_dataset_config"]).split(
-                ".", 1
-            )[0]
-            scene_rec_cache_dir = osp.join(rec_cache_dir, dataset_name)
-            rec_viewpoints, _ = load_receptacle_cache(
-                scene_id, scene_rec_cache_dir, receptacle_cache
-            )[scene_id]
-            rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
-            rec_to_parent_obj = {r.unique_name: r.parent_object_handle for r in rec}
-            obj_idx_to_name = load_objects(
-                sim,
+        rec = find_receptacles(sim)
+        dataset_name = osp.basename(episode["scene_dataset_config"]).split(
+            ".", 1
+        )[0]
+        scene_rec_cache_dir = osp.join(rec_cache_dir, dataset_name)
+        rec_viewpoints, _ = load_receptacle_cache(
+            scene_id, scene_rec_cache_dir, receptacle_cache
+        )[scene_id]
+        rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
+        rec_to_parent_obj = {
+            r.unique_name: r.parent_object_handle for r in rec
+        }
+        obj_idx_to_name = load_objects(
+            sim,
+            episode["rigid_objs"],
+            episode["additional_obj_config_paths"],
+        )
+        populate_semantic_graph(sim)
+        all_rec_goals = collect_receptacle_goals(
+            sim, rec, rec_category_mapping=rec_category_mapping
+        )
+        obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
+            episode,
+            obj_category_mapping=obj_category_mapping,
+            rec_category_mapping=rec_category_mapping,
+        )
+
+        if start_rec_cat == goal_rec_cat:
+            print("Start and goal receptacle category are same")
+            print("Skipping episode", episode["episode_id"])
+            continue
+
+        episode["object_category"] = obj_cat
+        episode["start_recep_category"] = start_rec_cat
+        name_to_receptacle = episode["name_to_receptacle"]
+        try:
+            episode["goal_recep_category"] = goal_rec_cat
+            (
+                episode["candidate_objects"],
+                episode["candidate_objects_hard"],
+            ) = get_candidate_starts(
                 episode["rigid_objs"],
-                episode["additional_obj_config_paths"],
-            )
-            populate_semantic_graph(sim)
-            all_rec_goals = collect_receptacle_goals(
-                sim, rec, rec_category_mapping=rec_category_mapping
-            )
-            obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
-                episode,
+                obj_cat,
+                start_rec_cat,
+                obj_idx_to_name,
+                name_to_receptacle,
                 obj_category_mapping=obj_category_mapping,
                 rec_category_mapping=rec_category_mapping,
+                rec_to_parent_obj=rec_to_parent_obj,
             )
-
-            if start_rec_cat == goal_rec_cat:
-                print("Start and goal receptacle category are same")
-                print("Skipping episode", episode["episode_id"])
-                continue
-
-            episode["object_category"] = obj_cat
-            episode["start_recep_category"] = start_rec_cat
-            name_to_receptacle = {
-                k: v
-                for k, v in episode["name_to_receptacle"].items()
-            }
-            try:
-                episode["goal_recep_category"] = goal_rec_cat
-                (
-                    episode["candidate_objects"],
-                    episode["candidate_objects_hard"],
-                ) = get_candidate_starts(
-                    episode["rigid_objs"],
-                    obj_cat,
-                    start_rec_cat,
-                    obj_idx_to_name,
-                    name_to_receptacle,
-                    obj_category_mapping=obj_category_mapping,
-                    rec_category_mapping=rec_category_mapping,
-                    rec_to_parent_obj=rec_to_parent_obj,
-                )
-            except KeyError:
-                print("Skipping episode", episode["episode_id"])
-                continue
-            episode["candidate_start_receps"] = get_candidate_receptacles(
-                all_rec_goals, start_rec_cat
-            )
-            episode["candidate_goal_receps"] = get_candidate_receptacles(
-                all_rec_goals, goal_rec_cat
-            )
-            if enable_add_viewpoints and not add_viewpoints(
-                sim,
-                episode,
-                obj_idx_to_name,
-                rec_viewpoints,
-                rec_to_parent_obj,
-                config.agent.camera.height,
-                debug_viz,
-            ):
-                print("Skipping episode", episode["episode_id"])
-                continue
-            assert (
-                len(episode["candidate_objects"]) > 0
-                and len(episode["candidate_start_receps"]) > 0
-                and len(episode["candidate_goal_receps"]) > 0
-            )
-            new_episodes["episodes"].append(episode)
-            pbar.update()
-            if len(new_episodes["episodes"]) >= num_episodes:
-                break
+        except KeyError:
+            print("Skipping episode", episode["episode_id"])
+            continue
+        episode["candidate_start_receps"] = get_candidate_receptacles(
+            all_rec_goals, start_rec_cat
+        )
+        episode["candidate_goal_receps"] = get_candidate_receptacles(
+            all_rec_goals, goal_rec_cat
+        )
+        if enable_add_viewpoints and not add_viewpoints(
+            sim,
+            episode,
+            obj_idx_to_name,
+            rec_viewpoints,
+            rec_to_parent_obj,
+            config.agent.camera.height,
+            debug_viz,
+        ):
+            print("Skipping episode", episode["episode_id"])
+            continue
+        assert (
+            len(episode["candidate_objects"]) > 0
+            and len(episode["candidate_start_receps"]) > 0
+            and len(episode["candidate_goal_receps"]) > 0
+        )
+        new_episodes["episodes"].append(episode)
+        pbar.update()
+        if len(new_episodes["episodes"]) >= num_episodes:
+            break
+        pbar.update()
+    pbar.close()
     return new_episodes
 
 

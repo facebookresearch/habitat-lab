@@ -2,11 +2,9 @@
 
 defaults:
   - /habitat/task: task_config_base
-  - /habitat/task/actions:
-    - arm_action
-    - base_velocity
+  - /habitat/task/rearrange/agents: fetch_base_arm
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
@@ -32,9 +30,6 @@ success_measure: "pick_success"
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
-actions:
-  arm_action:
-    grip_controller: SuctionGraspAction
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

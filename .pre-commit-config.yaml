@@ -18,7 +18,6 @@ repos:
     -   id: check-merge-conflict
     -   id: check-toml
     -   id: check-yaml
-        exclude: "habitat-baselines/habitat_baselines/slambased/data/"
     -   id: mixed-line-ending
         args: ['--fix=lf']
 
@@ -29,6 +28,8 @@ repos:
         args: [--autofix]
     -   id: pretty-format-toml
         args: [--autofix]
+        additional_dependencies:
+         - toml-sort==0.21.0
 
 -   repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0  # Use the ref you want to point at
@@ -37,14 +38,14 @@ repos:
     # TODO: Add blanket type ignore check as well
 
 -   repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
+    rev: 5.11.5
     hooks:
     -   id: isort
         exclude: docs/|examples/tutorials/(colabs|nb_python)/(.*\.py|.*\.ipynb)$
         additional_dependencies: [toml]
 
 -   repo: https://github.com/ambv/black
-    rev: 22.3.0
+    rev: 23.1.0
     hooks:
     - id: black
       exclude: ^examples/tutorials/(nb_python|colabs)
@@ -98,14 +99,13 @@ repos:
         args: [--update-metadata, '{"jupytext":{"notebook_metadata_filter":"all", "cell_metadata_filter":"-all"}, "accelerator":"GPU"}', --set-formats, 'nb_python//py:percent,colabs//ipynb,', --pipe, black, --pipe, 'isort - --treat-comment-as-code "# %%"', --pipe-fmt, 'py:percent', --sync]
         additional_dependencies:
             - 'nbformat<=5.0.8'
-            - black
+            - black==23.1.0
             - isort
 
 -   repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.8.0.4
     hooks:
     -   id: shellcheck
-        exclude: ^habitat-baselines/habitat_baselines/slambased/
 
 -   repo: https://github.com/AleksaC/circleci-cli-py
     rev: v0.1.17183

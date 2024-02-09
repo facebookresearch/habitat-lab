@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
-from omegaconf import OmegaConf
 from tqdm import tqdm
 
 import habitat.datasets.rearrange.samplers as samplers
@@ -184,8 +183,8 @@ class RearrangeEpisodeGenerator:
                 object_set["name"]
             ] = cull_string_list_by_substrings(
                 object_template_handles,
-                OmegaConf.to_container(object_set["included_substrings"]),
-                OmegaConf.to_container(object_set["excluded_substrings"]),
+                object_set["included_substrings"],
+                object_set["excluded_substrings"],
             )
 
         # receptacle sets
@@ -261,17 +260,28 @@ class RearrangeEpisodeGenerator:
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
-                    object_handles,
-                    obj_sampler_info["params"]["receptacle_sets"],
-                    obj_sampler_info["sampler_range"],
-                    num_samples,
-                    obj_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(obj_sampler_info),
-                    obj_sampler_info["params"].get(
+                    object_set=object_handles,
+                    allowed_recep_set_names=obj_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    sampler_range_type=obj_sampler_info["sampler_range"],
+                    num_objects=num_samples,
+                    orientation_sample=obj_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        obj_sampler_info
+                    ),
+                    nav_to_min_distance=obj_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
-                    object_set_sampler_probs,
-                    obj_sampler_info["params"].get("sample_probs", None),
+                    object_set_sample_probs=object_set_sampler_probs,
+                    recep_set_sample_probs=obj_sampler_info["params"].get(
+                        "sample_probs", None
+                    ),
+                    constrain_to_largest_nav_island=obj_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
@@ -299,18 +309,30 @@ class RearrangeEpisodeGenerator:
                     target_sampler_info["name"]
                 ] = samplers.ObjectTargetSampler(
                     # Add object set later
-                    [],
-                    target_sampler_info["params"]["receptacle_sets"],
-                    target_sampler_info["sampler_range"],
-                    (
+                    object_instance_set=[],
+                    allowed_recep_set_names=target_sampler_info["params"][
+                        "receptacle_sets"
+                    ],
+                    sampler_range_type=target_sampler_info["sampler_range"],
+                    num_objects=(
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
                     ),
-                    target_sampler_info["params"]["orientation_sampling"],
-                    get_sample_region_ratios(target_sampler_info),
-                    target_sampler_info["params"].get(
+                    orientation_sample=target_sampler_info["params"][
+                        "orientation_sampling"
+                    ],
+                    sample_region_ratio=get_sample_region_ratios(
+                        target_sampler_info
+                    ),
+                    nav_to_min_distance=target_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
+                    recep_set_sample_probs=target_sampler_info["params"].get(
+                        "sample_probs", None
+                    ),
+                    constrain_to_largest_nav_island=target_sampler_info[
+                        "params"
+                    ].get("constrain_to_largest_nav_island", False),
                 )
             else:
                 logger.info(
@@ -499,7 +521,7 @@ class RearrangeEpisodeGenerator:
 
         # Reset the number of allowed objects per receptacle.
         recep_tracker = ReceptacleTracker(
-            {k: v for k, v in self.cfg.max_objects_per_receptacle},
+            dict(self.cfg.max_objects_per_receptacle),
             self._receptacle_sets,
         )
 
@@ -522,7 +544,11 @@ class RearrangeEpisodeGenerator:
         scene_name = osp.basename(ep_scene_handle).split(".")[0]
         scenes_dir = os.path.basename(osp.dirname(ep_scene_handle))
         navmesh_path = osp.join(
-            scene_base_dir, "navmeshes", scenes_dir, self.cfg.agent_name, scene_name + ".navmesh"
+            scene_base_dir,
+            "navmeshes",
+            scenes_dir,
+            self.cfg.agent_name,
+            scene_name + ".navmesh",
         )
         if osp.exists(navmesh_path) and not self._cache_staleness["navmesh"]:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
@@ -874,6 +900,7 @@ class RearrangeEpisodeGenerator:
         backend_cfg.scene_dataset_config_file = dataset_path
         backend_cfg.scene_id = scene_name
         backend_cfg.enable_physics = True
+        backend_cfg.gpu_device_id = self.cfg.gpu_device_id
         if not self._render_debug_obs:
             # don't bother loading textures if not intending to visualize the generation process
             backend_cfg.create_renderer = False
@@ -933,7 +960,9 @@ class RearrangeEpisodeGenerator:
             if self.vdb is None
             else self.vdb.output_path
         )
-        self.vdb = DebugVisualizer(self.sim, output_path=output_path, default_sensor_uuid="color")
+        self.vdb = DebugVisualizer(
+            self.sim, output_path=output_path, default_sensor_uuid="color"
+        )
 
     def settle_sim(
         self,

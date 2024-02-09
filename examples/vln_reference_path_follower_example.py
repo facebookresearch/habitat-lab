@@ -22,7 +22,7 @@ from habitat.config.default_structured_configs import (
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations.utils import (
-    append_text_to_image,
+    append_text_underneath_image,
     images_to_video,
 )
 
@@ -35,7 +35,7 @@ def save_map(observations, info, images):
     im = observations["rgb"]
     top_down_map = draw_top_down_map(info, im.shape[0])
     output_im = np.concatenate((im, top_down_map), axis=1)
-    output_im = append_text_to_image(
+    output_im = append_text_underneath_image(
         output_im, observations["instruction"]["text"]
     )
     images.append(output_im)
@@ -49,7 +49,13 @@ def reference_path_example(mode):
     Args:
         mode: 'geodesic_path' or 'greedy'
     """
-    config = habitat.get_config(config_path="test/habitat_r2r_vln_test.yaml")
+    config = habitat.get_config(
+        config_path="benchmark/nav/vln_r2r.yaml",
+        overrides=[
+            "habitat.task.measurements.success.success_distance=0.1",
+            "habitat.dataset.split=val_seen",
+        ],
+    )
     with habitat.config.read_write(config):
         config.habitat.task.measurements.update(
             {"top_down_map": TopDownMapMeasurementConfig()}

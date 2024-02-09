@@ -10,25 +10,32 @@ from typing import Optional
 
 import numpy as np
 
+from habitat.articulated_agents.robots.stretch_robot import (
+    StretchJointStates,
+    StretchRobot,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
+from habitat.datasets.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.utils import cartesian_to_polar
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
-from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
+from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
 
 
 @dataclass
 class NavToInfo:
     """
-    :property nav_goal_pos: Where the robot should navigate to. This is likely
+    :property nav_goal_pos: Where the articulated_agent should navigate to. This is likely
     on a receptacle and not a navigable position.
     """
 
     nav_goal_pos: np.ndarray
-    robot_start_pos: np.ndarray
-    robot_start_angle: float
+    articulated_agent_start_pos: np.ndarray
+    articulated_agent_start_angle: float
     start_hold_obj_idx: Optional[int]
 
 
@@ -45,11 +52,17 @@ class DynNavRLEnv(RearrangeTask):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
+            should_place_articulated_agent=False,
             **kwargs,
         )
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
+
+        # Set config options
+        self._object_in_hand_sample_prob = (
+            self._config.object_in_hand_sample_prob
+        )
+        self._min_start_distance = self._config.min_start_distance
 
         self._nav_to_info = None
         self._robot_start_position = None
@@ -64,6 +77,7 @@ class DynNavRLEnv(RearrangeTask):
 
         self._camera_tilt = config.camera_tilt
         self._start_in_manip_mode = config.start_in_manip_mode
+
     @property
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
@@ -78,11 +92,10 @@ class DynNavRLEnv(RearrangeTask):
         if "stop" in self.actions:
             does_want_terminate = self.is_stop_called
         else:
-            does_want_terminate = self.actions["rearrange_stop"].does_want_terminate
-        return (
-            self._should_end
-            or does_want_terminate
-        )
+            does_want_terminate = self.actions[
+                "rearrange_stop"
+            ].does_want_terminate
+        return self._should_end or does_want_terminate
 
     @should_end.setter
     def should_end(self, new_val: bool):
@@ -95,19 +108,17 @@ class DynNavRLEnv(RearrangeTask):
             self.force_recep_to_name = kwargs["marker"]
 
     def _generate_snap_to_obj(self) -> int:
-        # Snap the target object to the robot hand.
+        # Snap the target object to the articulated_agent hand.
         target_idxs, _ = self._sim.get_targets()
         return self._sim.scene_obj_ids[target_idxs[0]]
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None
     ):
-
         if start_hold_obj_idx is None:
             # Select an object at random and navigate to that object.
             all_pos = self._sim.get_target_objs_start()
             if force_idx is None:
-
                 nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
             else:
                 nav_to_pos = all_pos[force_idx]
@@ -132,35 +143,37 @@ class DynNavRLEnv(RearrangeTask):
             distance = self._sim.geodesic_distance(start_pos, goals, episode)
             return distance != np.inf and distance > self._min_start_distance
 
-        robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
+        (
+            articulated_agent_pos,
+            articulated_agent_angle,
+        ) = self._sim.set_articulated_agent_base_to_random_point(
             filter_func=filter_func
         )
 
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
-            robot_start_pos=robot_pos,
-            robot_start_angle=robot_angle,
+            articulated_agent_start_pos=articulated_agent_pos,
+            articulated_agent_start_angle=articulated_agent_angle,
             start_hold_obj_idx=start_hold_obj_idx,
         )
 
     def reset(self, episode: Episode):
-        sim = self._sim
         super().reset(episode, fetch_observations=False)
-
+        sim = self._sim
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
-        if isinstance(sim.robot, StretchRobot):
+        if isinstance(sim.articulated_agent, StretchRobot):
             joints = StretchJointStates.NAVIGATION.copy()
             # set camera tilt, which is the the last joint of the arm
             joints[-1] = self._camera_tilt
-            sim.robot.arm_joint_pos = joints
-            sim.robot.arm_motor_pos = joints
+            sim.articulated_agent.arm_joint_pos = joints
+            sim.articulated_agent.arm_motor_pos = joints
 
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
         if (
             self.force_obj_to_idx is None
-            and random.random() < self._config.object_in_hand_sample_prob
+            and random.random() < self._object_in_hand_sample_prob
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -173,7 +186,9 @@ class DynNavRLEnv(RearrangeTask):
         self._nav_to_info = self._generate_nav_start_goal(
             episode, nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
         )
-        if self._pick_init or self._place_init:
+        if (self._pick_init or self._place_init) and isinstance(
+            episode, OVMMEpisode
+        ):
             if self._pick_init:
                 spawn_goals = episode.candidate_objects
             else:
@@ -182,14 +197,22 @@ class DynNavRLEnv(RearrangeTask):
                 abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
                 sim.grasp_mgr.desnap(force=True)
                 sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-            view_points_per_recep = np.concatenate([
-                np.array([v.agent_state.position for v in g.view_points])
-                for g in spawn_goals
-            ], 0)
-            centers_per_recep = np.concatenate([
-                np.array([g.position for v in g.view_points])
-                for g in spawn_goals
-            ], 0)
+            
+            np.random.seed(42)
+            view_points_per_recep = np.concatenate(
+                [
+                    np.array([v.agent_state.position for v in g.view_points])
+                    for g in spawn_goals
+                ],
+                0,
+            )
+            centers_per_recep = np.concatenate(
+                [
+                    np.array([g.position for v in g.view_points])
+                    for g in spawn_goals
+                ],
+                0,
+            )
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 view_points_per_recep,
                 self._config.base_angle_noise,
@@ -200,40 +223,48 @@ class DynNavRLEnv(RearrangeTask):
                 orient_positions=centers_per_recep,
                 sample_probs=None,
             )
-            sim.robot.base_pos = start_pos
+            sim.articulated_agent.base_pos = start_pos
             if (
-                isinstance(self._sim.robot, StretchRobot)
+                isinstance(sim.articulated_agent, StretchRobot)
                 and self._start_in_manip_mode
             ):
                 # in the case of Stretch, rotate base so that the arm faces the target location
-                sim.robot.base_rot = angle_to_obj + np.pi / 2
+                sim.articulated_agent.base_rot = angle_to_obj + np.pi / 2
             else:
-                sim.robot.base_rot = angle_to_obj
+                sim.articulated_agent.base_rot = angle_to_obj
             camera_pan = 0.0
             if self._start_in_manip_mode:
                 # turn camera to face the arm
                 camera_pan = -np.pi / 2
-            if isinstance(sim.robot, StretchRobot):
+            if isinstance(sim.articulated_agent, StretchRobot):
                 joints = StretchJointStates.PRE_GRASP.copy()
                 joints[-2] = camera_pan
                 joints[-1] = self._camera_tilt
-                sim.robot.arm_motor_pos = joints
-                sim.robot.arm_joint_pos = joints
+                sim.articulated_agent.arm_motor_pos = joints
+                sim.articulated_agent.arm_joint_pos = joints
         elif np.sum(episode.start_position) != 0:
-            self._sim.robot.base_pos = np.array(episode.start_position)
-            start_quat = quaternion_from_coeff(
-                episode.start_rotation
+            self._sim.articulated_agent.base_pos = np.array(
+                episode.start_position
             )
+            start_quat = quaternion_from_coeff(episode.start_rotation)
             direction_vector = np.array([0, 0, -1])
-            heading_vector = quaternion_rotate_vector(start_quat, direction_vector)
-            self._sim.robot.base_rot = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+            heading_vector = quaternion_rotate_vector(
+                start_quat, direction_vector
+            )
+            self._sim.articulated_agent.base_rot = cartesian_to_polar(
+                -heading_vector[2], heading_vector[0]
+            )[1]
 
         else:
-            sim.robot.base_pos = self._nav_to_info.robot_start_pos
-            sim.robot.base_rot = self._nav_to_info.robot_start_angle
+            sim.articulated_agent.base_pos = (
+                self._nav_to_info.articulated_agent_start_pos
+            )
+            sim.articulated_agent.base_rot = (
+                self._nav_to_info.articulated_agent_start_angle
+            )
 
-        self._robot_start_position = sim.robot.sim_obj.translation
-        start_quat = sim.robot.sim_obj.rotation
+        self._robot_start_position = sim.articulated_agent.sim_obj.translation
+        start_quat = sim.articulated_agent.sim_obj.rotation
         self._robot_start_rotation = np.array(
             [
                 start_quat.vector.x,
@@ -243,25 +274,23 @@ class DynNavRLEnv(RearrangeTask):
             ]
         )
         if self._nav_to_info.start_hold_obj_idx is not None:
-            if self._sim.grasp_mgr.is_grasped:
+            if sim.grasp_mgr.is_grasped:
                 raise ValueError(
                     f"Attempting to grasp {self._nav_to_info.start_hold_obj_idx} even though object is already grasped"
                 )
             rearrange_logger.debug(
                 f"Forcing to grasp object {self._nav_to_info.start_hold_obj_idx}"
             )
-            self._sim.grasp_mgr.snap_to_obj(
+            sim.grasp_mgr.snap_to_obj(
                 self._nav_to_info.start_hold_obj_idx, force=True
             )
 
-        if self._sim.habitat_config.debug_render:
-            rom = self._sim.get_rigid_object_manager()
+        if sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.
-            self._sim.viz_ids["nav_targ_pos"] = self._sim.visualize_position(
-                #self._nav_to_info.nav_goal_pos,
-                np.array(rom.get_object_by_id(int(episode.candidate_objects[0].object_id)).translation),
-                self._sim.viz_ids["nav_targ_pos"],
+            sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
+                self._nav_to_info.nav_goal_pos,
+                sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
-        self._sim.maybe_update_robot()
+        sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

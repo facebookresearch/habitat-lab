@@ -785,7 +785,6 @@ class ProjectionConverter(nn.Module):
     def forward(
         self, batch: torch.Tensor, is_depth: bool = False
     ) -> torch.Tensor:
-
         # Depth conversion for input tensors
         if is_depth and self.input_zfactor is not None:
             input_b = batch.size()[0] // self.input_len
@@ -931,7 +930,6 @@ class ProjectionTransformer(ObservationTransformer):
     def forward(
         self, observations: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-
         for i, target_sensor_uuid in enumerate(self.target_uuids):
             # number of input and input sensor uuids
             in_len = self.converter.input_len
@@ -1185,7 +1183,6 @@ class Equirect2CubeMap(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-
         if hasattr(config, "target_uuids"):
             # Optional Config Value to specify target uuid
             target_uuids = config.target_uuids

@@ -25,4 +25,9 @@ def test_baselines_configs(test_cfg_path):
     cleaned_path = test_cfg_path.replace(
         "habitat-baselines/habitat_baselines/config/", ""
     )
+    if "habitat_baselines" in cleaned_path:
+        # Do not test non-standalone config options that are
+        # supposed to be used with "main" configs.
+        return
+
     get_config(cleaned_path)

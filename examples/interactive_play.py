@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Manually control the robot to interact with the environment. Run as
+Manually control the articulated agent to interact with the environment. Run as
 ```
 python examples/interative_play.py
 ```
@@ -13,22 +13,22 @@ python examples/interative_play.py
 To Run you need PyGame installed (to install run `pip install pygame==2.0.1`).
 
 By default this controls with velocity control (which makes controlling the
-robot hard). To use IK control instead add the `--add-ik` command line argument.
+agent hard). To use IK control instead add the `--add-ik` command line argument.
 
 Controls:
 - For velocity control
-    - 1-7 to increase the motor target for the robot arm joints
-    - Q-U to decrease the motor target for the robot arm joints
+    - 1-7 to increase the motor target for the articulated agent arm joints
+    - Q-U to decrease the motor target for the articulated agent arm joints
 - For IK control
     - W,S,A,D to move side to side
     - E,Q to move up and down
-- I,J,K,L to move the robot base around
-- PERIOD to print the current world coordinates of the robot base.
+- I,J,K,L to move the articulated agent base around
+- PERIOD to print the current world coordinates of the articulated agent base.
 - Z to toggle the camera to free movement mode. When in free camera mode:
     - W,S,A,D,Q,E to translate the camera
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
-- X to change the robot that is being controlled (if there are multiple robots).
+- X to change the articulated agent that is being controlled (if there are multiple articulated agents).
 
 Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
@@ -56,17 +56,21 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
+    PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
-from habitat.utils.render_wrapper import overlay_frame
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import (
+    observations_to_image,
+    overlay_frame,
+)
 from habitat_sim.utils import viz_utils as vut
 
 try:
@@ -74,6 +78,8 @@ try:
 except ImportError:
     pygame = None
 
+# Please reach out to the paper authors to obtain this file
+DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
@@ -85,21 +91,32 @@ def step_env(env, action_name, action_args):
 
 
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, env, not_block_input, agent_to_control
+    skip_pygame,
+    arm_action,
+    env,
+    not_block_input,
+    agent_to_control,
+    control_humanoid,
+    humanoid_controller,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
 
-    arm_action_name = "arm_action"
-    base_action_name = "base_velocity"
-    agent_k = f"agent_{agent_to_control}"
     if multi_agent:
-        arm_action_name = f"{agent_k}_{arm_action_name}"
-        base_action_name = f"{agent_k}_{base_action_name}"
-    arm_key = "arm_action"
-    grip_key = "grip_action"
-    base_key = "base_vel"
+        agent_k = f"agent_{agent_to_control}_"
+    else:
+        agent_k = ""
+    arm_action_name = f"{agent_k}arm_action"
+
+    if control_humanoid:
+        base_action_name = f"{agent_k}humanoidjoint_action"
+        base_key = "human_joints_trans"
+    else:
+        base_action_name = f"{agent_k}base_velocity"
+        arm_key = "arm_action"
+        grip_key = "grip_action"
+        base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -250,18 +267,68 @@ def get_input_vel_ctlr(
             logger.info("[play.py]: Snapping")
             magic_grasp = 1
 
+    if control_humanoid:
+        if humanoid_controller is None:
+            # Add random noise to human arms but keep global transform
+            (
+                joint_trans,
+                root_trans,
+            ) = env._sim.articulated_agent.get_joint_transform()
+            # Divide joint_trans by 4 since joint_trans has flattened quaternions
+            # and the dimension of each quaternion is 4
+            num_joints = len(joint_trans) // 4
+            root_trans = np.array(root_trans)
+            index_arms_start = 10
+            joint_trans_quat = [
+                mn.Quaternion(
+                    mn.Vector3(joint_trans[(4 * index) : (4 * index + 3)]),
+                    joint_trans[4 * index + 3],
+                )
+                for index in range(num_joints)
+            ]
+            rotated_joints_quat = []
+            for index, joint_quat in enumerate(joint_trans_quat):
+                random_vec = np.random.rand(3)
+                # We allow for maximum 10 angles per step
+                random_angle = np.random.rand() * 10
+                rotation_quat = mn.Quaternion.rotation(
+                    mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
+                )
+                if index > index_arms_start:
+                    joint_quat *= rotation_quat
+                rotated_joints_quat.append(joint_quat)
+            joint_trans = np.concatenate(
+                [
+                    np.array(list(quat.vector) + [quat.scalar])
+                    for quat in rotated_joints_quat
+                ]
+            )
+            base_action = np.concatenate(
+                [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
+            )
+        else:
+            # Use the controller
+            relative_pos = mn.Vector3(base_action[0], 0, base_action[1])
+            humanoid_controller.calculate_walk_pose(relative_pos)
+            base_action = humanoid_controller.get_pose()
+
     if keys[pygame.K_PERIOD]:
-        # Print the current position of the robot, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
-        rot = env._sim.robot.sim_obj.rotation
-        ee_pos = env._sim.robot.ee_transform.translation
+        # Print the current position of the articulated agent, useful for debugging.
+        pos = [
+            float("%.3f" % x)
+            for x in env._sim.articulated_agent.sim_obj.translation
+        ]
+        rot = env._sim.articulated_agent.sim_obj.rotation
+        ee_pos = env._sim.articulated_agent.ee_transform().translation
         logger.info(
-            f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
+            f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
-        # Print the current arm state of the robot, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
-        logger.info(f"Robot arm joint state: {joint_state}")
+        # Print the current arm state of the articulated agent, useful for debugging.
+        joint_state = [
+            float("%.3f" % x) for x in env._sim.articulated_agent.arm_joint_pos
+        ]
+        logger.info(f"Agent arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
@@ -356,7 +423,7 @@ class FreeCamHelper:
                 quat.to_matrix(), mn.Vector3(*self._free_xyz)
             )
             env._sim._sensors[
-                "robot_third_rgb"
+                "third_rgb"
             ]._sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
@@ -395,7 +462,12 @@ def play_env(env, args, config):
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
+    is_multi_agent = len(env._sim.agents_mgr) > 1
+
+    humanoid_controller = None
+    if args.use_humanoid_controller:
+        humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
+        humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     while True:
         if (
@@ -414,7 +486,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )
@@ -427,10 +499,12 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
+            args.control_humanoid,
+            humanoid_controller=humanoid_controller,
         )
 
         if not args.no_render and keys[pygame.K_c]:
-            pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
+            pddl_action = env.task.actions["pddl_apply_action"]
             logger.info("Actions:")
             actions = pddl_action._action_ordering
             for i, action in enumerate(actions):
@@ -447,7 +521,7 @@ def play_env(env, args, config):
             ac_start = pddl_action.get_pddl_action_start(action_sel)
             ac[ac_start : ac_start + len(entity_sel)] = entity_sel
 
-            step_env(env, "PDDL_APPLY_ACTION", {"pddl_action": ac})
+            step_env(env, "pddl_apply_action", {"pddl_action": ac})
 
         if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[
@@ -490,7 +564,7 @@ def play_env(env, args, config):
         info["Total Reward"] = total_reward
 
         if free_cam.is_free_cam_mode:
-            cam = obs["robot_third_rgb"]
+            cam = obs["third_rgb"]
             use_ob = np.zeros(draw_obs.shape)
             use_ob[:, : cam.shape[1]] = cam[:, :, :3]
 
@@ -526,7 +600,7 @@ def play_env(env, args, config):
             raise ValueError(
                 f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
             )
-        all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
+        all_arm_actions = all_arm_actions[: args.save_actions_count]
         os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
         save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
@@ -605,6 +679,21 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control.",
     )
+
+    parser.add_argument(
+        "--control-humanoid",
+        action="store_true",
+        default=False,
+        help="Control humanoid agent.",
+    )
+
+    parser.add_argument(
+        "--use-humanoid-controller",
+        action="store_true",
+        default=False,
+        help="Control humanoid agent.",
+    )
+
     parser.add_argument(
         "--gfx",
         action="store_true",
@@ -619,6 +708,10 @@ if __name__ == "__main__":
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
+    parser.add_argument(
+        "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
+    )
+
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
         raise ImportError(
@@ -664,6 +757,9 @@ if __name__ == "__main__":
         if args.never_end:
             env_config.max_episode_steps = 0
 
+        if args.control_humanoid:
+            args.disable_inverse_kinematics = True
+
         if not args.disable_inverse_kinematics:
             if "arm_action" not in task_config.actions:
                 raise ValueError(
@@ -673,6 +769,8 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
+        if task_config.type == "RearrangeCompositeTask-v0":
+            task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

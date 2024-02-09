@@ -12,10 +12,8 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.ovmm.sub_tasks.nav_to_obj_task import OVMMDynNavRLEnv
 from habitat.tasks.ovmm.utils import find_closest_goal_index_within_distance
-from habitat.tasks.ovmm.sub_tasks.nav_to_obj_task import (
-    OVMMDynNavRLEnv,
-)
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjReward,
     NavToObjSuccess,
@@ -27,7 +25,7 @@ from habitat.tasks.utils import compute_pixel_coverage
 @registry.register_sensor
 class OVMMNavGoalSegmentationSensor(Sensor):
     cls_uuid: str = "ovmm_nav_goal_segmentation"
-    panoptic_uuid: str = "robot_head_panoptic"
+    panoptic_uuid: str = "head_panoptic"
 
     def __init__(
         self,
@@ -40,7 +38,7 @@ class OVMMNavGoalSegmentationSensor(Sensor):
     ):
         self._config = config
         self._sim = sim
-        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._object_ids_start = self._sim.habitat_config.object_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
         self._blank_out_prob = self._config.blank_out_prob
         self.resolution = (
@@ -88,7 +86,7 @@ class OVMMNavGoalSegmentationSensor(Sensor):
                     goal.object_name
                 ].parent_object_handle
                 obj_id = rom.get_object_id_by_handle(handle)
-            instance_id = obj_id + self._instance_ids_start
+            instance_id = obj_id + self._object_ids_start
             # Skip if receptacle is not in the agent's viewport or if the instance
             # is selected to be blanked out randomly
             if (
@@ -135,7 +133,7 @@ class OVMMNavGoalSegmentationSensor(Sensor):
 @registry.register_sensor
 class ReceptacleSegmentationSensor(Sensor):
     cls_uuid: str = "receptacle_segmentation"
-    panoptic_uuid: str = "robot_head_panoptic"
+    panoptic_uuid: str = "head_panoptic"
 
     def __init__(
         self,
@@ -146,7 +144,7 @@ class ReceptacleSegmentationSensor(Sensor):
     ):
         self._config = config
         self._sim = sim
-        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._object_ids_start = self._sim.habitat_config.object_ids_start
         self._blank_out_prob = self._config.blank_out_prob
         self.resolution = (
             sim.agents[0]
@@ -183,7 +181,7 @@ class ReceptacleSegmentationSensor(Sensor):
             task.loaded_receptacle_categories
         ), "Empty receptacle semantic IDs, task didn't cache them."
         for obj_id, semantic_id in task.receptacle_semantic_ids.items():
-            instance_id = obj_id + self._instance_ids_start
+            instance_id = obj_id + self._object_ids_start
             # Skip if receptacle is not in the agent's viewport or if the instance
             # is selected to be blanked out randomly
             if (
@@ -290,7 +288,7 @@ class TargetIoUCoverage(Measure):
     cls_uuid: str = "target_iou_coverage"
 
     def __init__(self, *args, sim, task, config, **kwargs):
-        self._instance_ids_start = sim.habitat_config.instance_ids_start
+        self._object_ids_start = sim.habitat_config.object_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
         self._max_goal_dist = config.max_goal_dist
         self._sim = sim
@@ -317,8 +315,8 @@ class TargetIoUCoverage(Measure):
         """filters out goals that are not in the agent's viewport"""
         filtered_goals = []
         for goal in goals:
-            instance_id = self._get_object_id(goal) + self._instance_ids_start
-            if instance_id in observations["robot_head_panoptic"]:
+            instance_id = self._get_object_id(goal) + self._object_ids_start
+            if instance_id in observations["head_panoptic"]:
                 filtered_goals.append(goal)
         return filtered_goals
 
@@ -348,6 +346,6 @@ class TargetIoUCoverage(Measure):
             self._metric = 0
             return
         self._metric = compute_pixel_coverage(
-            observations["robot_head_panoptic"],
-            object_id + self._instance_ids_start,
+            observations["head_panoptic"],
+            object_id + self._object_ids_start,
         )

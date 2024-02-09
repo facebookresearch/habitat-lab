@@ -29,7 +29,6 @@ def test_sim_trajectory():
     with open("test/data/habitat-sim_trajectory_data.json", "r") as f:
         test_trajectory = json.load(f)
     with init_sim() as sim:
-
         sim.reset()
         sim.set_agent_state(
             position=test_trajectory["positions"][0],

@@ -194,5 +194,5 @@ validate that transformation comparing projected and original views.
 
         (-0.5, 255.5, 255.5, -0.5)
 
-.. image:: view-transform-warp.png
+.. image:: ../images/view-transform-warp-images/view-transform-warp.png
     :alt: View, Transform and Warp

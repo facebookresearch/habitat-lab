@@ -76,32 +76,11 @@ def get_agent_config(
 lock = threading.Lock()
 
 
-def get_config(
-    config_path: str,
-    overrides: Optional[List[str]] = None,
-    configs_dir: str = _HABITAT_CFG_DIR,
-) -> DictConfig:
-    r"""Returns habitat config object composed of configs from yaml file (config_path) and overrides.
-
-    :param config_path: path to the yaml config file.
-    :param overrides: list of config overrides. For example, :py:`overrides=["habitat.seed=1"]`.
-    :param configs_dir: path to the config files root directory (defaults to :ref:`_HABITAT_CFG_DIR`).
-    :return: composed config object.
+def patch_config(cfg: DictConfig) -> DictConfig:
     """
-    register_hydra_plugin(HabitatConfigPlugin)
-
-    config_path = get_full_config_path(config_path, configs_dir)
-    # If get_config is called from different threads, Hydra might
-    # get initialized twice leading to issues. This lock fixes it.
-    with lock, initialize_config_dir(
-        version_base=None,
-        config_dir=osp.dirname(config_path),
-    ):
-        cfg = compose(
-            config_name=osp.basename(config_path),
-            overrides=overrides if overrides is not None else [],
-        )
-
+    Internal method only. Modifies a configuration by inferring some missing keys
+    and makes sure some keys are present and compatible with each other.
+    """
     # In the single-agent setup use the agent's key from `habitat.simulator.agents`.
     sim_config = cfg.habitat.simulator
     if len(sim_config.agents) == 1:
@@ -122,3 +101,38 @@ def get_config(
     OmegaConf.set_readonly(cfg, True)
 
     return cfg
+
+
+def register_configs():
+    """
+    This method will register the Habitat-lab benchmark configurations.
+    """
+    register_hydra_plugin(HabitatConfigPlugin)
+
+
+def get_config(
+    config_path: str,
+    overrides: Optional[List[str]] = None,
+    configs_dir: str = _HABITAT_CFG_DIR,
+) -> DictConfig:
+    r"""Returns habitat config object composed of configs from yaml file (config_path) and overrides.
+
+    :param config_path: path to the yaml config file.
+    :param overrides: list of config overrides. For example, :py:`overrides=["habitat.seed=1"]`.
+    :param configs_dir: path to the config files root directory (defaults to :ref:`_HABITAT_CFG_DIR`).
+    :return: composed config object.
+    """
+    register_configs()
+    config_path = get_full_config_path(config_path, configs_dir)
+    # If get_config is called from different threads, Hydra might
+    # get initialized twice leading to issues. This lock fixes it.
+    with lock, initialize_config_dir(
+        version_base=None,
+        config_dir=osp.dirname(config_path),
+    ):
+        cfg = compose(
+            config_name=osp.basename(config_path),
+            overrides=overrides if overrides is not None else [],
+        )
+
+    return patch_config(cfg)

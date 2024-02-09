@@ -6,25 +6,22 @@
 
 import copy
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 import attr
 import numpy as np
 
-import habitat_sim.utils.datasets_download as data_downloader
-from habitat.core.dataset import Episode, EpisodeIterator
-from habitat.core.logging import logger
+from habitat.core.dataset import EpisodeIterator
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.utils import check_and_gen_physics_config
 from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectViewLocation
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
-
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -42,7 +39,6 @@ class OVMMEpisode(RearrangeEpisode):
     candidate_objects_hard: Optional[List[ObjectGoal]] = None
     candidate_start_receps: Optional[List[ObjectGoal]] = None
     candidate_goal_receps: Optional[List[ObjectGoal]] = None
-
 
 
 class OVMMEpisodeIterator(EpisodeIterator[OVMMEpisode]):
@@ -65,9 +61,7 @@ class OVMMEpisodeIterator(EpisodeIterator[OVMMEpisode]):
 
     def __next__(self) -> OVMMEpisode:
         # deepcopy is to avoid increasing memory as we iterate through the episodes
-        episode = cast(
-            OVMMEpisode, copy.deepcopy(super().__next__())
-        )
+        episode = cast(OVMMEpisode, copy.deepcopy(super().__next__()))
 
         deserialized_objs = []
         if self.transformations is not None:
@@ -108,7 +102,6 @@ class OVMMDatasetV0(PointNavDatasetV1):
     viewpoints_matrix: np.ndarray = None
     transformations_matrix: np.ndarray = None
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
-
 
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
@@ -171,18 +164,22 @@ class OVMMDatasetV0(PointNavDatasetV1):
                 "recep_category_to_recep_category_id"
             ]
 
-
         all_episodes = deserialized["episodes"]
         if self.episode_indices_range is None:
             episodes_index_low, episodes_index_high = 0, len(all_episodes)
         else:
-            episodes_index_low, episodes_index_high = self.episode_indices_range
+            (
+                episodes_index_low,
+                episodes_index_high,
+            ) = self.episode_indices_range
         episode_ids_subset = None
         if len(self.config.episode_ids) > 0:
-            episode_ids_subset = self.config.episode_ids[episodes_index_low: episodes_index_high]
+            episode_ids_subset = self.config.episode_ids[
+                episodes_index_low:episodes_index_high
+            ]
         else:
-            all_episodes = all_episodes[episodes_index_low: episodes_index_high]
-        for i, episode in enumerate(all_episodes):
+            all_episodes = all_episodes[episodes_index_low:episodes_index_high]
+        for episode in all_episodes:
             rearrangement_episode = OVMMEpisode(**episode)
             for goal_type in [
                 "candidate_objects",
@@ -202,6 +199,6 @@ class OVMMDatasetV0(PointNavDatasetV1):
 
             if (
                 episode_ids_subset is None
-                or int(episode['episode_id']) in episode_ids_subset
+                or int(episode["episode_id"]) in episode_ids_subset
             ):
                 self.episodes.append(rearrangement_episode)

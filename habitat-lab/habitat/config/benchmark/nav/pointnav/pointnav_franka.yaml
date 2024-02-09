@@ -13,8 +13,8 @@ habitat:
   simulator:
     agents:
       main_agent:
-        robot_urdf: ./data/robots/franka_panda/panda_arm.urdf
-        robot_type: "FrankaRobot"
+        articulated_agent_urdf: ./data/robots/franka_panda/panda_arm.urdf
+        articulated_agent_type: "FrankaRobot"
         sim_sensors:
           rgb_sensor:
             width: 256

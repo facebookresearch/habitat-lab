@@ -6,6 +6,7 @@
 
 
 from typing import Any
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -44,6 +45,7 @@ class PlaceReward(RearrangeReward):
         self._ee_resting_success_threshold = (
             config.ee_resting_success_threshold
         )
+        self._penalize_wrong_drop_once = config.penalize_wrong_drop_once
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -159,9 +161,12 @@ class PlaceReward(RearrangeReward):
             elif obj_at_goal and self._prev_reached_goal:
                 # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
                 reward += self._stability_reward
-            elif (
-                not obj_at_goal
-                and time_since_release >= self._max_steps_to_reach_surface
+            elif not obj_at_goal and (
+                time_since_release == self._max_steps_to_reach_surface
+                or (
+                    not self._penalize_wrong_drop_once
+                    and time_since_release > self._max_steps_to_reach_surface
+                )
             ):
                 # Dropped at wrong location
                 drop_pen = self._drop_pen
@@ -347,6 +352,7 @@ class PickedObjectAngularVel(Measure):
         ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.angular_velocity.length()
 
+
 @registry.register_measure
 class PickedObjectLinearVel(Measure):
     cls_uuid: str = "picked_object_linear_vel"
@@ -369,7 +375,8 @@ class PickedObjectLinearVel(Measure):
         abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.linear_velocity.length()
-    
+
+
 @registry.register_measure
 class ObjectAtRest(Measure):
     cls_uuid: str = "object_at_rest"
@@ -379,17 +386,20 @@ class ObjectAtRest(Measure):
         self._angular_vel_thresh = config.angular_vel_thresh
         self._sim = sim
         super().__init__(*args, **kwargs)
-    
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return ObjectAtRest.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = None
-    
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
         picked_idx = task._picked_object_idx
         abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         ro = rom.get_object_by_id(abs_obj_id)
-        self._metric = ro.linear_velocity.length() < self._linear_vel_thresh and ro.angular_velocity.length() < self._angular_vel_thresh
+        self._metric = (
+            ro.linear_velocity.length() < self._linear_vel_thresh
+            and ro.angular_velocity.length() < self._angular_vel_thresh
+        )

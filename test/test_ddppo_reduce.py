@@ -40,7 +40,7 @@ def _worker_fn(
         "gloo", store=tcp_store, rank=world_rank, world_size=world_size
     )
 
-    config = get_config("test/ppo_pointnav_test.yaml")
+    config = get_config("test/config/habitat_baselines/ppo_pointnav_test.yaml")
     obs_space = gym.spaces.Dict(
         {
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid: gym.spaces.Box(
@@ -80,8 +80,7 @@ def _worker_fn(
         2,
         obs_space,
         action_space,
-        ppo_cfg.hidden_size,
-        num_recurrent_layers=actor_critic.net.num_recurrent_layers,
+        actor_critic,
         is_double_buffered=False,
     )
     rollouts.to(device)
@@ -94,7 +93,7 @@ def _worker_fn(
     rollouts.advance_rollout()
 
     # Get a single batch
-    batch = next(rollouts.recurrent_generator(rollouts.buffers["returns"], 1))
+    batch = next(rollouts.data_generator(rollouts.buffers["returns"], 1))
 
     # Call eval actions through the internal wrapper that is used in
     # agent.update

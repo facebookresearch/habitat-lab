@@ -8,9 +8,9 @@ defaults:
     - arm_action
   - /habitat/task/measurements:
     - ovmm_object_to_place_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - does_want_terminate
     - num_steps
     - obj_anywhere_on_goal
@@ -71,7 +71,7 @@ receptacle_categories_file: data/objects/hssd-receptacles.csv
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosReducedActionStretch"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
     arm_joint_dimensionality: 7
@@ -117,8 +117,8 @@ measurements:
   nav_to_place_succ:
     success_distance: 0.1
   object_at_rest:
-    angular_vel_thresh: 5e-2
-    linear_vel_thresh: 5e-3
+    angular_vel_thresh: 100 # 5e-2
+    linear_vel_thresh: 100 #5e-3
 
 lab_sensors:
   joint_sensor:

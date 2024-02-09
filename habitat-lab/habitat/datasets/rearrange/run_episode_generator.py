@@ -59,6 +59,7 @@ class AgentConfig:
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5
+    gpu_device_id: int = 0
     # ----- import/initialization parameters ------
     # the scene dataset from which scenes and objects are sampled
     dataset_path: str = "data/replica_cad/replicaCAD.scene_dataset_config.json"
@@ -136,8 +137,10 @@ class RearrangeEpisodeGeneratorConfig:
     # Define the object sampling configuration
     object_samplers: List[Any] = field(default_factory=list)
     # {"name":str, "type:str", "params":{})
-    # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+    # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str, "nav_to_min_distance":float, "constrain_to_largest_nav_island":bool)
     # NOTE: "orientation_sampling" options: "none", "up", "all"
+    # NOTE: (optional) "constrain_to_largest_nav_island" (default False): if True, valid placements must snap to the largest navmesh island
+    # NOTE: (optional) "nav_to_min_distance" (default -1): if not -1, valid placements must snap to the navmesh with horizontal distance less than this value
     # TODO: convert some special examples to yaml:
     # (
     #     "fridge_middle",
@@ -172,6 +175,9 @@ class RearrangeEpisodeGeneratorConfig:
     # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
     # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
     # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
+    # NOTE: "orientation_sampling" options: "none", "up", "all"
+    # NOTE: (optional) "constrain_to_largest_nav_island" (default False): if True, valid placements must snap to the largest navmesh island
+    # NOTE: (optional) "nav_to_min_distance" (default -1): if not -1, valid placements must snap to the navmesh with horizontal distance less than this value
     # {
     #     "name": "any_one_target",
     #     "type": "uniform",
@@ -224,7 +230,54 @@ def get_config_defaults() -> "DictConfig":
     return OmegaConf.create(RearrangeEpisodeGeneratorConfig())  # type: ignore[call-overload]
 
 
-if __name__ == "__main__":
+def print_metadata_mediator(ep_gen):
+    mm = ep_gen.sim.metadata_mediator
+    receptacles = get_all_scenedataset_receptacles(ep_gen.sim)
+    logger.info("==================================")
+    logger.info("Listing SceneDataset Summary")
+    logger.info("==================================")
+    logger.info(f" SceneDataset: {mm.active_dataset}\n")
+    logger.info("--------")
+    logger.info(" Scenes:")
+    logger.info("--------\n    ")
+    logger.info("\n     ".join(mm.get_scene_handles()))
+    logger.info("---------------")
+    logger.info(" Rigid Objects:")
+    logger.info("---------------\n    ")
+    logger.info(
+        "\n     ".join(mm.object_template_manager.get_template_handles()),
+    )
+    logger.info("---------------------")
+    logger.info(" Articulated Objects:")
+    logger.info("---------------------\n    ")
+    logger.info("\n     ".join(mm.urdf_paths))
+
+    logger.info("-------------------------")
+    logger.info("Stage Global Receptacles:")
+    logger.info("-------------------------")
+    for handle, r_list in receptacles["stage"].items():
+        logger.info(f"  - {handle}\n    ")
+        logger.info("\n     ".join(r_list))
+
+    logger.info("-------------------------")
+    logger.info("Rigid Object Receptacles:")
+    logger.info("-------------------------")
+    for handle, r_list in receptacles["rigid"].items():
+        logger.info(f"  - {handle}\n    ")
+        logger.info("\n     ".join(r_list))
+    logger.info("-------------------------------")
+    logger.info("Articulated Object receptacles:")
+    logger.info("-------------------------------")
+    for handle, r_list in receptacles["articulated"].items():
+        logger.info(f"  - {handle}\n    ")
+        logger.info("\n     ".join(r_list))
+
+    logger.info("==================================")
+    logger.info("Done listing SceneDataset summary")
+    logger.info("==================================")
+
+
+def get_arg_parser():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -300,7 +353,11 @@ if __name__ == "__main__":
         help="The number of episodes to generate.",
     )
     parser.add_argument("--seed", type=int)
+    return parser
 
+
+if __name__ == "__main__":
+    parser = get_arg_parser()
     args, _ = parser.parse_known_args()
 
     if args.seed is not None:
@@ -335,52 +392,7 @@ if __name__ == "__main__":
         if args.list:
             # NOTE: you can retrieve a string CSV rep of the full SceneDataset with ep_gen.sim.metadata_mediator.dataset_report()
             mm = ep_gen.sim.metadata_mediator
-            receptacles = get_all_scenedataset_receptacles(ep_gen.sim)
-            list_sep = "\n    "
-            logger.info("==================================")
-            logger.info("Listing SceneDataset Summary")
-            logger.info("==================================")
-            logger.info(f" SceneDataset: {mm.active_dataset}\n")
-            logger.info("--------")
-            logger.info(" Scenes:")
-            logger.info("--------\n    ")
-            logger.info("\n     ".join(mm.get_scene_handles()))
-            logger.info("---------------")
-            logger.info(" Rigid Objects:")
-            logger.info("---------------\n    ")
-            logger.info(
-                "\n     ".join(
-                    mm.object_template_manager.get_template_handles()
-                ),
-            )
-            logger.info("---------------------")
-            logger.info(" Articulated Objects:")
-            logger.info("---------------------\n    ")
-            logger.info("\n     ".join(mm.urdf_paths))
-
-            logger.info("-------------------------")
-            logger.info("Stage Global Receptacles:")
-            logger.info("-------------------------")
-            for handle, r_list in receptacles["stage"].items():
-                logger.info(f"  - {handle}\n    ")
-                logger.info("\n     ".join(r_list))
-
-            logger.info("-------------------------")
-            logger.info("Rigid Object Receptacles:")
-            logger.info("-------------------------")
-            for handle, r_list in receptacles["rigid"].items():
-                logger.info(f"  - {handle}\n    ")
-                logger.info("\n     ".join(r_list))
-            logger.info("-------------------------------")
-            logger.info("Articulated Object receptacles:")
-            logger.info("-------------------------------")
-            for handle, r_list in receptacles["articulated"].items():
-                logger.info(f"  - {handle}\n    ")
-                logger.info("\n     ".join(r_list))
-
-            logger.info("==================================")
-            logger.info("Done listing SceneDataset summary")
-            logger.info("==================================")
+            print_metadata_mediator(mm)
         else:
             import time
 

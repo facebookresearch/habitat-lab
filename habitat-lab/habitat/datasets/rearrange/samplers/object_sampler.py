@@ -44,7 +44,8 @@ class ObjectSampler:
         nav_to_min_distance: float = -1.0,
         object_set_sample_probs: Optional[Dict[str, float]] = None,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
-        translation_up_offset=0.08,
+        translation_up_offset: float = 0.08,
+        constrain_to_largest_nav_island: bool = False,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -55,6 +56,7 @@ class ObjectSampler:
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
+        :param check_if_in_largest_island_id: Optionally check if the snapped point is in the largest island id
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
@@ -62,6 +64,7 @@ class ObjectSampler:
         self._recep_set_sample_probs = recep_set_sample_probs
         self._sampler_range_type = sampler_range_type
         self._translation_up_offset = translation_up_offset
+        self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -93,6 +96,7 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
+        self.largest_island_id = -1
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -109,6 +113,7 @@ class ObjectSampler:
             self._num_objects = None
         else:
             self.set_num_samples()
+        self.largest_island_id = -1
 
     def set_receptacle_instances(self, receptacles: List[Receptacle]) -> None:
         """
@@ -278,13 +283,20 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
-        navmesh_vertices = np.stack(
-            sim.pathfinder.build_navmesh_vertices(), axis=0
-        )
-        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        self.largest_island_size = max(
-            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
-        )
+
+        # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
+        # This assumption limits sampling to the largest navigable component of any scene.
+        if (
+            self._constrain_to_largest_nav_island
+            and self.largest_island_id == -1
+        ):
+            island_areas = list(
+                map(
+                    sim.pathfinder.island_area,
+                    range(sim.pathfinder.num_islands),
+                )
+            )
+            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -413,11 +425,38 @@ class ObjectSampler:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )
-        logger.warning(
+        logger.info(
             f"Failed to sample {object_handle} placement on {receptacle.unique_name} in {self.max_placement_attempts} tries."
         )
 
         return None
+
+    def _is_accessible(
+        self,
+        sim: habitat_sim.Simulator,
+        obj: habitat_sim.physics.ManagedRigidObject,
+    ) -> bool:
+        """
+        Return if the object is within a threshold horizontal distance of the nearest
+        navigable point, in which the nearest navigable point is on the same
+        navigation mesh of the object.
+
+        Note that this might not catch all edge cases since the heuristic is
+        horizontal Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle on a stairway, etc...
+        """
+        if self.nav_to_min_distance == -1:
+            return True
+
+        # If the sanp_point fails, the sanpped point is NaN and the distance
+        # check returns False. So it works out.
+        snapped = sim.pathfinder.snap_point(
+            obj.translation, self.largest_island_id
+        )
+        horizontal_dist = float(
+            np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+        )
+        return horizontal_dist < self.nav_to_min_distance
 
     def single_sample(
         self,
@@ -445,6 +484,7 @@ class ObjectSampler:
             object_handle = self.sample_object()
         else:
             object_handle = fixed_obj_handle
+
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
         else:
@@ -476,6 +516,8 @@ class ObjectSampler:
         target_receptacles: List[Receptacle],
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
+        target_object_handles: Optional[List[str]] = None,
+        object_idx_to_recep: Optional[Dict[int, Receptacle]] = None,
     ) -> List[Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
@@ -492,6 +534,8 @@ class ObjectSampler:
         new_objects: List[
             Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]
         ] = []
+        if object_idx_to_recep is None:
+            object_idx_to_recep = {}
 
         logger.info(
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
@@ -503,6 +547,12 @@ class ObjectSampler:
             len(new_objects) < self.target_objects_number
             and num_pairing_tries < self.max_sample_attempts
         ):
+            cur_obj_idx = len(new_objects)
+            if target_object_handles is None:
+                fixed_obj_handle = None
+            else:
+                fixed_obj_handle = target_object_handles[cur_obj_idx]
+
             num_pairing_tries += 1
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
@@ -511,13 +561,21 @@ class ObjectSampler:
                     recep_tracker,
                     snap_down,
                     vdb,
-                    target_receptacles[len(new_objects)],
+                    target_receptacles[cur_obj_idx],
+                    fixed_obj_handle=fixed_obj_handle,
                 )
                 # This receptacle has already been counted in the receptacle
                 # tracking so don't double count.
             else:
                 new_object, receptacle = self.single_sample(
-                    sim, recep_tracker, snap_down, vdb
+                    sim,
+                    recep_tracker,
+                    snap_down,
+                    vdb,
+                    fixed_target_receptacle=object_idx_to_recep.get(
+                        cur_obj_idx, None
+                    ),
+                    fixed_obj_handle=fixed_obj_handle,
                 )
                 if (
                     new_object is not None

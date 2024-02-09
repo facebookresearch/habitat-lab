@@ -96,6 +96,14 @@ class PointNavDatasetV1(Dataset):
         scenes.sort()
         return scenes
 
+    def _load_from_file(self, fname: str, scenes_dir: str) -> None:
+        """
+        Load the data from a file into `self.episodes`.
+        """
+
+        with gzip.open(fname, "rt") as f:
+            self.from_json(f.read(), scenes_dir=scenes_dir)
+
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []
 
@@ -118,16 +126,17 @@ class PointNavDatasetV1(Dataset):
                     content_scenes_path=self.content_scenes_path,
                     dataset_dir=dataset_dir,
                 )
+            # for i, scene in enumerate(scenes):
+            #     if config.scene_indices_range is None or i in range(config.scene_indices_range[0], config.scene_indices_range[1]):
             for scene in scenes:
                 scene_filename = self.content_scenes_path.format(
                     data_path=dataset_dir, scene=scene
                 )
-                with gzip.open(scene_filename, "rt") as f:
-                    self.from_json(f.read(), scenes_dir=config.scenes_dir)
+
+                self._load_from_file(scene_filename, config.scenes_dir)
 
         else:
-            with gzip.open(datasetfile_path, "rt") as f:
-                self.from_json(f.read(), scenes_dir=config.scenes_dir)
+            self._load_from_file(datasetfile_path, config.scenes_dir)
             self.episodes = list(
                 filter(self.build_content_scenes_filter(config), self.episodes)
             )

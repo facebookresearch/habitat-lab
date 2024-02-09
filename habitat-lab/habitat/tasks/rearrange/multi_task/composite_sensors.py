@@ -111,11 +111,10 @@ class MoveObjectsReward(RearrangeReward):
 
         # Get the target object's absolute index
         self.abs_targ_obj_idx = self._sim.scene_obj_ids[targ_obj_idx]
-        self.targ_obj_idx = str(targ_obj_idx)
 
     def get_distance(self, task, distance):
         return task.measurements.measures[distance.cls_uuid].get_metric()[
-            self.targ_obj_idx
+            str(self._cur_rearrange_stage)
         ]
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -164,6 +163,9 @@ class MoveObjectsReward(RearrangeReward):
         if place_success and not is_holding_obj:
             self._metric += self._config.single_rearrange_reward
             self._cur_rearrange_stage += 1
+            self._cur_rearrange_stage = (
+                self._cur_rearrange_stage % self.num_targets
+            )
             if self._cur_rearrange_stage < self.num_targets:
                 self.update_target_object()
 
@@ -247,3 +249,41 @@ class CompositeStageGoals(Measure):
                     self._stage_succ.append(stage_name)
                 else:
                     self._metric[succ_k] = 0.0
+
+
+@registry.register_measure
+class CompositeSubgoalReward(Measure):
+    """
+    Reward that gives a sparse reward on completing a PDDL stage-goal.
+    """
+
+    cls_uuid: str = "composite_subgoal_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeSubgoalReward.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        self._config = config
+
+    def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def _get_stage_reward(self, name):
+        return self._config.stage_sparse_reward
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+
+        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+            if stage_name in self._stage_succ:
+                continue
+
+            if task.pddl_problem.is_expr_true(logical_expr):
+                self._metric += self._get_stage_reward(stage_name)
+                self._stage_succ.append(stage_name)

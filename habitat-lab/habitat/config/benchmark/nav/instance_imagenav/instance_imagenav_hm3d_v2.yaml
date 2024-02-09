@@ -12,8 +12,6 @@ habitat:
     max_episode_steps: 1000
   simulator:
     turn_angle: 30
-    tilt_angle: 30
-    action_space_config: v1
     agents:
       main_agent:
         sim_sensors:

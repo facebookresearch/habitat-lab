@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from typing import Any, Dict, List, Optional
 
 import magnum as mn
@@ -100,22 +99,19 @@ def add_viz_sphere(
     return new_object
 
 
-def get_bb_corners(
-    obj: habitat_sim.physics.ManagedRigidObject,
-) -> List[mn.Vector3]:
+def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     """
-    Return a list of object bounding box corners in object local space.
+    Return a list of AABB (Range3D) corners in object local space.
     """
-    bb = obj.root_scene_node.cumulative_bb
     return [
-        bb.back_bottom_left,
-        bb.back_bottom_right,
-        bb.back_top_right,
-        bb.back_top_left,
-        bb.front_top_left,
-        bb.front_top_right,
-        bb.front_bottom_right,
-        bb.front_bottom_left,
+        range3d.back_bottom_left,
+        range3d.back_bottom_right,
+        range3d.back_top_right,
+        range3d.back_top_left,
+        range3d.front_top_left,
+        range3d.front_top_right,
+        range3d.front_bottom_right,
+        range3d.front_bottom_left,
     ]
 
 
@@ -141,8 +137,6 @@ def bb_ray_prescreen(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     check_all_corners: bool = False,
-    estimate_support_stability: bool = False,
-    support_stability_threshold: float = 0.1,
 ) -> Dict[str, Any]:
     """
     Pre-screen a potential placement by casting rays in the gravity direction from the object center of mass (and optionally each corner of its bounding box) checking for interferring objects below.
@@ -163,7 +157,7 @@ def bb_ray_prescreen(
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj)
+    bb_corners = get_bb_corners(obj.root_scene_node.cumulative_bb)
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
@@ -232,63 +226,6 @@ def bb_ray_prescreen(
         else highest_support_impact
         + gravity_dir * (base_rel_height - margin_offset)
     )
-
-    if surface_snap_point is not None and estimate_support_stability:
-        # compute average height of support points after object height adjustment
-        corner_support_positions = []
-        sup_raycast_results = []
-        world_com = object_local_to_global.transform_point(key_points[0])
-        for ix, key_point in enumerate(key_points):
-            world_point = object_local_to_global.transform_point(key_point)
-            if ix != 0:
-                # move the corners out a bit for more conservative estimate
-                delta_dir = world_point - world_com
-                lateral_dir = delta_dir - delta_dir.projected_onto_normalized(
-                    gravity_dir
-                )
-                world_point += (
-                    lateral_dir * 0.3
-                )  # 10% wider than original shape
-
-            ray = habitat_sim.geo.Ray(
-                world_point + gravity_dir * (base_rel_height - margin_offset),
-                gravity_dir,
-            )
-            sup_raycast_results.append(sim.cast_ray(ray))
-            # classify any obstructions before hitting the support surface
-            for hit in sup_raycast_results[-1].hits:
-                if hit.object_id == obj.object_id:
-                    continue
-                else:
-                    corner_support_positions.append(hit.point)
-                    break
-
-        num_corner_supports = len(corner_support_positions)
-        if num_corner_supports > 0:
-            # print(f"corner_support_positions = {corner_support_positions}")
-            max_support_deviation = 0
-            avg_support_pos_height = 0.0
-            for p in corner_support_positions:
-                # print(f"    {p[1]}")
-                avg_support_pos_height += p[1]
-            avg_support_pos_height /= num_corner_supports
-            variance = 0.0
-            for p in corner_support_positions:
-                support_deviation = p[1] - avg_support_pos_height
-                max_support_deviation = max(
-                    max_support_deviation, support_deviation
-                )
-                variance += (support_deviation) ** 2
-            variance /= num_corner_supports
-            std_deviation = math.sqrt(variance)
-            # print(f"corner height std deviation = {std_deviation}")
-            # print(f"corner height max deviation = {max_support_deviation}")
-
-            if (
-                std_deviation > support_stability_threshold
-                or max_support_deviation > support_stability_threshold
-            ):
-                surface_snap_point = None
 
     # return list of relative base height, object position for surface snapped point, and ray results details
     return {

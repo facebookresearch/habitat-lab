@@ -62,10 +62,6 @@ cv2 = try_cv2_import()
 
 MAP_THICKNESS_SCALAR: int = 128
 
-# These metrics are not scalars and cannot be easily reported
-# (unless using videos)
-NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
-
 
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
@@ -378,7 +374,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor(name="CompassSensor")
 class EpisodicCompassSensor(HeadingSensor):
-    r"""The agents heading in the coordinate frame defined by the epiosde,
+    r"""The agents heading in the coordinate frame defined by the episode,
     theta=0 is defined by the agents state at t=0
     """
     cls_uuid: str = "compass"
@@ -387,9 +383,7 @@ class EpisodicCompassSensor(HeadingSensor):
         return self.cls_uuid
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            episode.start_rotation
-        )
+        return quaternion_from_coeff(episode.start_rotation)
 
     def get_agent_current_rotation(self, sim):
         agent_state = self._sim.get_agent_state()
@@ -450,9 +444,7 @@ class EpisodicGPSSensor(Sensor):
         return episode.start_position
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            episode.start_rotation
-        )
+        return quaternion_from_coeff(episode.start_rotation)
 
     def get_agent_current_position(self, sim):
         agent_state = self._sim.get_agent_state()
@@ -461,7 +453,6 @@ class EpisodicGPSSensor(Sensor):
     def get_observation(
         self, observations, episode, task, *args: Any, **kwargs: Any
     ):
-
         start_position = self.get_agent_start_position(episode, task)
         rotation_world_start = self.get_agent_start_rotation(episode, task)
 
@@ -474,7 +465,8 @@ class EpisodicGPSSensor(Sensor):
         )
         if self._dimensionality == 2:
             return np.array(
-                [-relative_agent_position[2], relative_agent_position[0]], dtype=np.float32
+                [-relative_agent_position[2], relative_agent_position[0]],
+                dtype=np.float32,
             )
         else:
             return relative_agent_position.astype(np.float32)
@@ -687,18 +679,15 @@ class Collisions(Measure):
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
-        self._metric = None
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "collisions"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._metric = None
+        self._metric = {"count": 0, "is_collision": False}
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
-        if self._metric is None:
-            self._metric = {"count": 0, "is_collision": False}
         self._metric["is_collision"] = False
         if self._sim.previous_step_collided:
             self._metric["count"] += 1
@@ -725,7 +714,7 @@ class TopDownMap(Measure):
         self._ind_x_max: Optional[int] = None
         self._ind_y_min: Optional[int] = None
         self._ind_y_max: Optional[int] = None
-        self._previous_xy_location: Optional[Tuple[int, int]] = None
+        self._previous_xy_location: List[Optional[Tuple[int, int]]] = None
         self._top_down_map: Optional[np.ndarray] = None
         self._shortest_path_points: Optional[List[Tuple[int, int]]] = None
         self.line_thickness = int(
@@ -781,7 +770,6 @@ class TopDownMap(Measure):
 
     def _draw_goals_positions(self, episode):
         if self._config.draw_goal_positions:
-
             for goal in episode.goals:
                 if self._is_on_same_floor(goal.position[1]):
                     try:
@@ -875,19 +863,12 @@ class TopDownMap(Measure):
         return ref_floor_height <= height < ref_floor_height + ceiling_height
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._step_count = 0
-        self._metric = None
         self._top_down_map = self.get_original_map()
+        self._step_count = 0
         agent_position = self._sim.get_agent_state().position
-        a_x, a_y = maps.to_grid(
-            agent_position[2],
-            agent_position[0],
-            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
-            sim=self._sim,
-        )
-        self._previous_xy_location = (a_y, a_x)
-
-        self.update_fog_of_war_mask(np.array([a_x, a_y]))
+        self._previous_xy_location = [
+            None for _ in range(len(self._sim.habitat_config.agents))
+        ]
 
         if hasattr(episode, "goals"):
             # draw source and target parts last to avoid overlap
@@ -901,33 +882,36 @@ class TopDownMap(Measure):
                 episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
             )
 
+        self.update_metric(episode, None)
+        self._step_count = 0
+
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
-        house_map, map_agent_x, map_agent_y = self.update_map(
-            self._sim.get_agent_state().position
-        )
-
+        map_positions: List[Tuple[float]] = []
+        map_angles = []
+        for agent_index in range(len(self._sim.habitat_config.agents)):
+            agent_state = self._sim.get_agent_state(agent_index)
+            map_positions.append(self.update_map(agent_state, agent_index))
+            map_angles.append(TopDownMap.get_polar_angle(agent_state))
         self._metric = {
-            "map": house_map,
+            "map": self._top_down_map,
             "fog_of_war_mask": self._fog_of_war_mask,
-            "agent_map_coord": (map_agent_x, map_agent_y),
-            "agent_angle": self.get_polar_angle(),
+            "agent_map_coord": map_positions,
+            "agent_angle": map_angles,
         }
 
-    def get_polar_angle(self):
-        agent_state = self._sim.get_agent_state()
+    @staticmethod
+    def get_polar_angle(agent_state):
         # quaternion is in x, y, z, w format
         ref_rotation = agent_state.rotation
-
         heading_vector = quaternion_rotate_vector(
             ref_rotation.inverse(), np.array([0, 0, -1])
         )
+        phi = cartesian_to_polar(heading_vector[2], -heading_vector[0])[1]
+        return np.array(phi)
 
-        phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
-        z_neg_z_flip = np.pi
-        return np.array(phi) + z_neg_z_flip
-
-    def update_map(self, agent_position):
+    def update_map(self, agent_state: AgentState, agent_index: int):
+        agent_position = agent_state.position
         a_x, a_y = maps.to_grid(
             agent_position[2],
             agent_position[0],
@@ -941,26 +925,27 @@ class TopDownMap(Measure):
             )
 
             thickness = self.line_thickness
-            cv2.line(
-                self._top_down_map,
-                self._previous_xy_location,
-                (a_y, a_x),
-                color,
-                thickness=thickness,
-            )
+            if self._previous_xy_location[agent_index] is not None:
+                cv2.line(
+                    self._top_down_map,
+                    self._previous_xy_location[agent_index],
+                    (a_y, a_x),
+                    color,
+                    thickness=thickness,
+                )
+        angle = TopDownMap.get_polar_angle(agent_state)
+        self.update_fog_of_war_mask(np.array([a_x, a_y]), angle)
 
-        self.update_fog_of_war_mask(np.array([a_x, a_y]))
+        self._previous_xy_location[agent_index] = (a_y, a_x)
+        return a_x, a_y
 
-        self._previous_xy_location = (a_y, a_x)
-        return self._top_down_map, a_x, a_y
-
-    def update_fog_of_war_mask(self, agent_position):
+    def update_fog_of_war_mask(self, agent_position, angle):
         if self._config.fog_of_war.draw:
             self._fog_of_war_mask = fog_of_war.reveal_fog_of_war(
                 self._top_down_map,
                 self._fog_of_war_mask,
                 agent_position,
-                self.get_polar_angle(),
+                angle,
                 fov=self._config.fog_of_war.fov,
                 max_line_len=self._config.fog_of_war.visibility_dist
                 / maps.calculate_meters_per_pixel(
@@ -1101,70 +1086,91 @@ class DistanceToGoalReward(Measure):
         self._previous_distance = distance_to_target
 
 
+class NavigationMovementAgentAction(SimulatorTaskAction):
+    def __init__(self, *args, config, sim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim = sim
+        self._tilt_angle = config.tilt_angle
+
+    def _move_camera_vertical(self, amount: float):
+        assert (
+            len(self._sim.agents) == 1  # type: ignore
+        ), "For navigation tasks, there can be only one agent in the scene"
+        sensor_names = list(self._sim.agents[0]._sensors.keys())  # type: ignore
+        for sensor_name in sensor_names:
+            sensor = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
+            sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
+                mn.Deg(amount), mn.Vector3.x_axis()
+            )
+
+
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
     name: str = "move_forward"
+
     def step(self, task, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
         from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-        if type(self._sim) == RearrangeSim:
-            actuation = self._sim.config.agents[0].action_space[1].actuation.amount
-            trans = self._sim.robot.base_transformation
+
+        if isinstance(self._sim, RearrangeSim):
+            actuation = (
+                self._sim.config.agents[0].action_space[1].actuation.amount
+            )
+            trans = self._sim.articulated_agent.base_transformation
             local_pos = np.array([actuation, 0, 0])
             global_pos = trans.transform_point(local_pos)
             snapped_global_pos = self._sim.step_filter(
                 trans.translation, global_pos
             )
             if snapped_global_pos == global_pos:
-                self._sim.robot.base_pos = snapped_global_pos
+                self._sim.articulated_agent.base_pos = snapped_global_pos
                 task._is_navmesh_violated = False
             else:
                 task._is_navmesh_violated = True
         return self._sim.step(HabitatSimActions.move_forward)
 
 
-def rotate_action(sim, direction: str):
+def rotate_action(sim, task: EmbodiedTask, direction: str):
     from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-    
-    assert direction in ["left", "right"]
 
-    if type(sim) == RearrangeSim:
+    assert direction in ["left", "right"]
+    if isinstance(sim, RearrangeSim):
+        # TODO: move this code to rearrange file, also ava
         actuation = sim.config.agents[0].action_space[2].actuation.amount
-        if "robot_start_angle" not in dir(sim):
-            sim.robot_start_angle = kwargs[
-                "task"
-            ]._nav_to_info.robot_start_angle
-            sim.current_angle = sim.robot_start_angle
-        
+        if "articulated_agent_start_angle" not in dir(sim):
+            sim.articulated_agent_start_angle = (
+                task._nav_to_info.articulated_agent_start_angle  # type: ignore
+            )
+            sim.current_angle = sim.articulated_agent_start_angle
+
         if direction == "right":
             actuation = -1 * actuation
 
-        sim.updated_angle = (
-            self._sim.current_angle + actuation * np.pi / 180
-        )
-        sim.robot.base_rot = self._sim.updated_angle
-        sim.current_angle = self._sim.updated_angle
+        sim.updated_angle = sim.current_angle + actuation * np.pi / 180
+        sim.articulated_agent.base_rot = sim.updated_angle
+        sim.current_angle = sim.updated_angle
 
 
 @registry.register_task_action
 class TurnLeftAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        rotate_action(self._sim, direction="left")
+        rotate_action(self._sim, task, direction="left")
         return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
 class TurnRightAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        rotate_action(self._sim, direction="right")
+        rotate_action(self._sim, task, direction="right")
+
         return self._sim.step(HabitatSimActions.turn_right)
 
 
@@ -1180,26 +1186,26 @@ class StopAction(SimulatorTaskAction):
         ``step``.
         """
         task.is_stop_called = True  # type: ignore
-        task._is_navmesh_violated = False
+        task._is_navmesh_violated = False  # type: ignore
         return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action
-class LookUpAction(SimulatorTaskAction):
+class LookUpAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_up)
+        self._move_camera_vertical(self._tilt_angle)
 
 
 @registry.register_task_action
-class LookDownAction(SimulatorTaskAction):
+class LookDownAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_down)
+        self._move_camera_vertical(-self._tilt_angle)
 
 
 @registry.register_task_action
@@ -1227,10 +1233,10 @@ class TeleportAction(SimulatorTaskAction):
             rotation = list(rotation)
 
         if not self._sim.is_navigable(position):
-            return self._sim.get_observations_at()  # type: ignore
+            return
 
-        return self._sim.get_observations_at(
-            position=position, rotation=rotation, keep_agent_at_new_pose=True
+        self._sim.set_agent_state(  # type:ignore
+            position, rotation, reset_sensors=False
         )
 
     @property
@@ -1335,7 +1341,7 @@ class VelocityAction(SimulatorTaskAction):
             and abs(angular_velocity) < self.min_abs_ang_speed
         ):
             task.is_stop_called = True  # type: ignore
-            return self._sim.get_observations_at(position=None, rotation=None)
+            return
 
         angular_velocity = np.deg2rad(angular_velocity)
         self.vel_control.linear_velocity = np.array(
@@ -1375,7 +1381,7 @@ class VelocityAction(SimulatorTaskAction):
             goal_rigid_state.rotation.scalar,
         ]
 
-        # Check if a collision occured
+        # Check if a collision occurred
         dist_moved_before_filter = (
             goal_rigid_state.translation - agent_state.position
         ).dot()
@@ -1389,16 +1395,11 @@ class VelocityAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
+        self._sim.set_agent_state(  # type:ignore
+            final_position, final_rotation, reset_sensors=False
         )
-
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
-
-        return agent_observations
 
 
 @registry.register_task(name="Nav-v0")

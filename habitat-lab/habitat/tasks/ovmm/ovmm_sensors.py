@@ -5,32 +5,27 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import numpy as np
 import pickle
-
 from typing import Any, Optional
+
+import numpy as np
+from gym import spaces
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from gym import spaces
-
-from habitat.datasets.ovmm.ovmm_dataset import (
-    OVMMDatasetV0,
-    OVMMEpisode,
-)
+from habitat.datasets.ovmm.ovmm_dataset import OVMMDatasetV0, OVMMEpisode
 from habitat.tasks.ovmm.sub_tasks.nav_to_obj_sensors import (
     OVMMNavToObjSucc,
     OVMMRotDistToGoal,
     TargetIoUCoverage,
 )
+from habitat.tasks.ovmm.sub_tasks.place_sensors import OVMMPlaceSuccess
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToGoal,
     NavToPosSucc,
 )
 from habitat.tasks.rearrange.sub_tasks.pick_sensors import RearrangePickSuccess
-
-from habitat.tasks.ovmm.sub_tasks.place_sensors import OVMMPlaceSuccess
 
 
 @registry.register_sensor
@@ -166,7 +161,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 @registry.register_sensor
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
-    panoptic_uuid: str = "robot_head_panoptic"
+    panoptic_uuid: str = "head_panoptic"
 
     def __init__(
         self,
@@ -178,7 +173,7 @@ class ObjectSegmentationSensor(Sensor):
         self._config = config
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
-        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._object_ids_start = self._sim.habitat_config.object_ids_start
         self._resolution = (
             sim.agents[0]
             ._sensors[self.panoptic_uuid]
@@ -219,7 +214,7 @@ class ObjectSegmentationSensor(Sensor):
                 segmentation_sensor = segmentation_sensor | (
                     observations[self.panoptic_uuid]
                     == self._sim.scene_obj_ids[int(g.object_id)]
-                    + self._instance_ids_start
+                    + self._object_ids_start
                 )
             return segmentation_sensor
 
@@ -245,7 +240,7 @@ class RecepSegmentationSensor(ObjectSegmentationSensor):
                 segmentation_sensor = segmentation_sensor | (
                     observations[self.panoptic_uuid]
                     == int(g.object_id)
-                    + self._sim.habitat_config.instance_ids_start
+                    + self._sim.habitat_config.object_ids_start
                 )
             return segmentation_sensor
 
@@ -264,7 +259,6 @@ class GoalRecepSegmentationSensor(RecepSegmentationSensor):
 
     def _get_recep_goals(self, episode):
         return episode.candidate_goal_receps
-
 
 
 # Sensors for measuring success to pick goals
@@ -449,7 +443,7 @@ class OVMMNavOrientToPlaceSucc(OVMMNavToObjSucc):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OVMMRotDistToPlaceGoal.cls_uuid
-        
+
     @property
     def _target_iou_coverage_cls_uuid(self):
         return PlaceGoalIoUCoverage.cls_uuid
@@ -470,12 +464,11 @@ class OVMMFindObjectPhaseSuccess(Measure):
             *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
         )
 
-    def reset_metric(self, *args, episode, task,  **kwargs):
+    def reset_metric(self, *args, episode, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid, [OVMMNavOrientToPickSucc.cls_uuid]
         )
         self._metric = False
-
 
     def update_metric(self, episode, task, *args, **kwargs):
         nav_orient_to_pick_succ = task.measurements.measures[
@@ -493,18 +486,21 @@ class OVMMPickObjectPhaseSuccess(Measure):
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return OVMMPickObjectPhaseSuccess.cls_uuid
-    
+
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
         super().__init__(
             *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
         )
-    
-    def reset_metric(self, *args, episode, task,  **kwargs):
+
+    def reset_metric(self, *args, episode, task, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid, [OVMMFindObjectPhaseSuccess.cls_uuid, RearrangePickSuccess.cls_uuid]
+            self.uuid,
+            [
+                OVMMFindObjectPhaseSuccess.cls_uuid,
+                RearrangePickSuccess.cls_uuid,
+            ],
         )
         self._metric = False
-
 
     def update_metric(self, episode, task, *args, **kwargs):
         find_object_phase_success = task.measurements.measures[
@@ -513,7 +509,9 @@ class OVMMPickObjectPhaseSuccess(Measure):
         did_pick_object = task.measurements.measures[
             RearrangePickSuccess.cls_uuid
         ].get_metric()
-        self._metric = (find_object_phase_success and did_pick_object) or self._metric
+        self._metric = (
+            find_object_phase_success and did_pick_object
+        ) or self._metric
 
 
 @registry.register_measure
@@ -531,12 +529,15 @@ class OVMMFindRecepPhaseSuccess(Measure):
             *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
         )
 
-    def reset_metric(self, *args, episode, task,  **kwargs):
+    def reset_metric(self, *args, episode, task, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid, [OVMMNavOrientToPlaceSucc.cls_uuid, OVMMPickObjectPhaseSuccess.cls_uuid]
+            self.uuid,
+            [
+                OVMMNavOrientToPlaceSucc.cls_uuid,
+                OVMMPickObjectPhaseSuccess.cls_uuid,
+            ],
         )
         self._metric = False
-
 
     def update_metric(self, episode, task, *args, **kwargs):
         pick_object_phase_success = task.measurements.measures[
@@ -545,7 +546,9 @@ class OVMMFindRecepPhaseSuccess(Measure):
         nav_orient_to_place_succ = task.measurements.measures[
             OVMMNavOrientToPlaceSucc.cls_uuid
         ].get_metric()
-        self._metric = (pick_object_phase_success and nav_orient_to_place_succ) or self._metric
+        self._metric = (
+            pick_object_phase_success and nav_orient_to_place_succ
+        ) or self._metric
 
 
 @registry.register_measure
@@ -563,12 +566,12 @@ class OVMMPlaceObjectPhaseSuccess(Measure):
             *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
         )
 
-    def reset_metric(self, *args, episode, task,  **kwargs):
+    def reset_metric(self, *args, episode, task, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid, [OVMMFindRecepPhaseSuccess.cls_uuid, OVMMPlaceSuccess.cls_uuid]
+            self.uuid,
+            [OVMMFindRecepPhaseSuccess.cls_uuid, OVMMPlaceSuccess.cls_uuid],
         )
         self._metric = False
-
 
     def update_metric(self, episode, task, *args, **kwargs):
         find_recep_phase_success = task.measurements.measures[
@@ -577,5 +580,6 @@ class OVMMPlaceObjectPhaseSuccess(Measure):
         place_success = task.measurements.measures[
             OVMMPlaceSuccess.cls_uuid
         ].get_metric()
-        self._metric = (find_recep_phase_success and place_success) or self._metric
-
+        self._metric = (
+            find_recep_phase_success and place_success
+        ) or self._metric

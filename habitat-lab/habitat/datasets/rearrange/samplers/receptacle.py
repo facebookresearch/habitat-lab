@@ -475,7 +475,7 @@ class TriangleMeshReceptacle(Receptacle):
         assert_triangles(mesh_data.indices)
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
-        self._total_area = 0
+        self._total_area = 0.0
         triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
@@ -732,7 +732,6 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
             mn.trade.SceneField.MESH
         )
-
         mesh_transformations: List[
             mn.Matrix4
         ] = mn.scenetools.absolute_field_transformations3d(
@@ -970,7 +969,7 @@ def get_receptacle_viewpoints(
 
 
 def find_receptacles(
-    sim: habitat_sim.Simulator,
+    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
@@ -980,6 +979,8 @@ def find_receptacles(
 
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
+    if ignore_handles is None:
+        ignore_handles = []
 
     receptacles: List[
         Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]
@@ -998,6 +999,8 @@ def find_receptacles(
 
     # rigid object receptacles
     for obj_handle in obj_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = obj_mgr.get_object_by_handle(obj_handle)
         source_template_file = obj.creation_attributes.file_directory
         user_attr = obj.user_attributes
@@ -1011,6 +1014,8 @@ def find_receptacles(
 
     # articulated object receptacles
     for obj_handle in ao_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = ao_mgr.get_object_by_handle(obj_handle)
         # TODO: no way to get filepath from AO currently. Add this API.
         source_template_file = ""
@@ -1027,6 +1032,14 @@ def find_receptacles(
                 ao_uniform_scaling=obj.global_scale,
             )
         )
+
+    # check for non-unique naming mistakes in user dataset
+    for rec_ix in range(len(receptacles)):
+        rec1_unique_name = receptacles[rec_ix].unique_name
+        for rec_ix2 in range(rec_ix + 1, len(receptacles)):
+            assert (
+                rec1_unique_name != receptacles[rec_ix2].unique_name
+            ), "Two Receptacles found with the same unique name '{rec1_unique_name}'. Likely indicates multiple receptacle entries with the same name in the same config."
 
     return receptacles
 
@@ -1093,7 +1106,7 @@ class ReceptacleTracker:
                     for filtered_unique_name in filter_json[filter_type]:
                         filtered_unique_names.append(filtered_unique_name)
             # add exclusion filters to all receptacles sets
-            for _, r_set in self._receptacle_sets.items():
+            for r_set in self._receptacle_sets.values():
                 r_set.excluded_receptacle_substrings.extend(
                     filtered_unique_names
                 )

@@ -111,7 +111,6 @@ class EQADataset(wds.Dataset):
                         self.scene_episode_dict[scene],
                         desc="Saving episode frames for each scene",
                     ):
-
                         if self.only_vqa_task:
                             pos_queue = episode.shortest_paths[0][
                                 -self.num_frames :  # noqa: E203

@@ -8,9 +8,9 @@ defaults:
     - rearrange_stop
   - /habitat/task/measurements:
     - object_to_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - end_effector_to_object_distance
     - does_want_terminate
     - composite_success
@@ -28,6 +28,7 @@ defaults:
     - end_effector_sensor
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
+    - localization_sensor
   - _self_
 
 type: RearrangeCompositeTask-v0

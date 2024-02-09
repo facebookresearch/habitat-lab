@@ -4,9 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import attr
 import numpy as np
@@ -15,11 +14,9 @@ import habitat_sim.utils.datasets_download as data_downloader
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
-from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectViewLocation
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -45,7 +42,6 @@ class RearrangeEpisode(Episode):
     name_to_receptacle: Dict[str, str] = {}
 
 
-
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
@@ -64,7 +60,12 @@ class RearrangeDatasetV0(PointNavDatasetV1):
                 "Rearrange task assets are not downloaded locally, downloading and extracting now..."
             )
             data_downloader.main(
-                ["--uids", "rearrange_task_assets", "--no-replace"]
+                [
+                    "--uids",
+                    "rearrange_task_assets",
+                    "--no-replace",
+                    "--no-prune",
+                ]
             )
             logger.info("Downloaded and extracted the data.")
 
@@ -81,5 +82,3 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode.episode_id = str(i)
 
             self.episodes.append(rearrangement_episode)
-
-

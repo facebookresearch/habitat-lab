@@ -62,9 +62,7 @@ class Predicate:
             )
         ensure_entity_lists_match(self._args, arg_values)
         self._arg_values = arg_values
-        self._pddl_sim_state.sub_in(
-            {k: v for k, v in zip(self._args, self._arg_values)}
-        )
+        self._pddl_sim_state.sub_in(dict(zip(self._args, self._arg_values)))
 
     @property
     def n_args(self):
@@ -82,10 +80,42 @@ class Predicate:
         self._pddl_sim_state.sub_in(sub_dict)
         return self
 
+    def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+        p = Predicate(
+            self._name,
+            self._pddl_sim_state.sub_in_clone(sub_dict),
+            self._args,
+        )
+        if self._arg_values is not None:
+            p.set_param_values(
+                [sub_dict.get(entity, entity) for entity in self._arg_values]
+            )
+        return p
+
     def is_true(self, sim_info: PddlSimInfo) -> bool:
-        return self._pddl_sim_state.is_true(sim_info)
+        """
+        Returns if the predicate is satisfied in the current simulator state.
+        Potentially returns the cached truth value of the predicate depending
+        on `sim_info`.
+        """
+        self_repr = repr(self)
+        if (
+            sim_info.pred_truth_cache is not None
+            and self_repr in sim_info.pred_truth_cache
+        ):
+            # Return the cached value.
+            return sim_info.pred_truth_cache[self_repr]
+
+        # Recompute and potentially cache the result.
+        result = self._pddl_sim_state.is_true(sim_info)
+        if sim_info.pred_truth_cache is not None:
+            sim_info.pred_truth_cache[self_repr] = result
+        return result
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
+        """
+        Sets the simulator state to satisfy the predicate.
+        """
         return self._pddl_sim_state.set_state(sim_info)
 
     def clone(self):
@@ -102,7 +132,7 @@ class Predicate:
 
     @property
     def compact_str(self):
-        args = ",".join([str(x) for x in self._arg_values])
+        args = ",".join((x.name for x in self._arg_values))
         return f"{self._name}({args})"
 
     def __eq__(self, other_pred):

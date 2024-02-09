@@ -9,9 +9,8 @@ defaults:
 
 habitat:
   gym:
-    auto_name: NavToObj
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - ovmm_nav_goal_segmentation
       - receptacle_segmentation
       - goal_receptacle
@@ -36,8 +35,8 @@ habitat:
       main_agent:
         radius: 0.3
         height: 1.41
-        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
-        robot_type: "StretchRobot"
+        articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        articulated_agent_type: "StretchRobot"
         ik_arm_urdf: null
         sim_sensors:
            head_depth_sensor:

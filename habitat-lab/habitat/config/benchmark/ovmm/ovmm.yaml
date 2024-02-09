@@ -10,11 +10,10 @@ defaults:
 habitat:
   seed: 7
   gym:
-    auto_name: NavToObj
     obs_keys:
-      - robot_head_depth
-      - robot_head_rgb
-      - robot_third_rgb
+      - head_depth
+      - head_rgb
+      - third_rgb
       - start_receptacle
       - goal_receptacle
       - robot_start_gps
@@ -33,15 +32,15 @@ habitat:
   environment:
     max_episode_steps: 1250
   simulator:
-    turn_angle: 30
-    forward_step_size: 0.25
+    turn_angle: 5
+    forward_step_size: 0.10
     type: OVMMSim-v0
     additional_object_paths:
       - data/objects/train_val/amazon_berkeley/configs/
       - data/objects/train_val/google_scanned/configs/
       - data/objects/train_val/ai2thorhab/configs/objects/
       - data/objects/train_val/hssd/configs/objects/
-    debug_render_goal: False
+    debug_render_goal: True
     concur_render: True
     auto_sleep: True
     kinematic_mode: True
@@ -49,8 +48,8 @@ habitat:
       main_agent:
         radius: 0.3
         height: 1.41
-        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
-        robot_type: "StretchRobot"
+        articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        articulated_agent_type: "StretchRobot"
         ik_arm_urdf: null
         sim_sensors:
            head_rgb_sensor:

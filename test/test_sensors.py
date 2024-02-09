@@ -37,15 +37,8 @@ from habitat.tasks.nav.nav import (
     NavigationEpisode,
     NavigationGoal,
 )
-from habitat.utils.geometry_utils import (
-    angle_between_quaternions,
-    quaternion_rotate_vector,
-)
+from habitat.utils.geometry_utils import quaternion_rotate_vector
 from habitat.utils.test_utils import sample_non_stop_action
-from habitat.utils.visualizations.utils import (
-    images_to_video,
-    observations_to_image,
-)
 
 
 def get_test_config():
@@ -158,7 +151,10 @@ def test_collisions():
             _random_episode(env, config)
 
             env.reset()
-            assert env.get_metrics()["collisions"] is None
+            assert env.get_metrics()["collisions"] == {
+                "count": 0,
+                "is_collision": False,
+            }
 
             prev_collisions = 0
             prev_loc = env.sim.get_agent_state().position
@@ -195,7 +191,6 @@ def test_pointgoal_sensor():
             )
         }
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
@@ -296,7 +291,6 @@ def test_imagegoal_sensor():
         agent_config = get_agent_config(config.habitat.simulator)
         agent_config.sim_sensors = {"rgb_sensor": HabitatSimRGBSensorConfig()}
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         pointgoal = [0.1, 0.2, 0.3]
@@ -361,7 +355,6 @@ def test_get_observations_at():
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
@@ -392,9 +385,14 @@ def test_get_observations_at():
             new_obs = env.step(sample_non_stop_action(env.action_space))
             for key, val in new_obs.items():
                 agent_state = env.sim.get_agent_state()
-                if not (
-                    np.allclose(agent_state.position, start_state.position)
-                    and np.allclose(agent_state.rotation, start_state.rotation)
+                if (
+                    not (
+                        np.allclose(agent_state.position, start_state.position)
+                        and np.allclose(
+                            agent_state.rotation, start_state.rotation
+                        )
+                    )
+                    and "rgb" in key
                 ):
                     assert not np.allclose(val, obs[key])
             obs_at_point = env.sim.get_observations_at(
@@ -439,7 +437,6 @@ def smoke_test_sensor(config, N_STEPS=100):
     )
 
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
         no_noise_obs = env.reset()
         assert no_noise_obs is not None
@@ -531,8 +528,7 @@ def test_smoke_pinhole_sensors(sensor, cuda):
 
 
 def test_noise_models_rgbd():
-    DEMO_MODE = False
-    N_STEPS = 100
+    N_STEPS = 1
 
     config = get_test_config()
     with habitat.config.read_write(config):
@@ -566,7 +562,6 @@ def test_noise_models_rgbd():
 
     print(f"{test_episode}")
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
         no_noise_obs = [env.reset()]
         no_noise_states = [env.sim.get_agent_state()]
@@ -581,23 +576,14 @@ def test_noise_models_rgbd():
     with habitat.config.read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
         agent_config.sim_sensors.rgb_sensor.noise_model = "GaussianNoiseModel"
-        agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
+        agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.intensity_constant = (
             0.5
         )
         agent_config.sim_sensors.depth_sensor.noise_model = (
             "RedwoodDepthNoiseModel"
         )
 
-        config.habitat.simulator.action_space_config = "pyrobotnoisy"
-        config.habitat.simulator.action_space_config_arguments = {
-            "NOISE_MODEL": {
-                "robot": "LoCoBot",
-                "CONTROLLER": "Proportional",
-                "NOISE_MULTIPLIER": 0.5,
-            }
-        }
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
 
         obs = env.reset()
@@ -614,44 +600,3 @@ def test_noise_models_rgbd():
         ) > 1.5e-2 * np.linalg.norm(
             no_noise_obs[0]["depth"].astype(np.float32)
         ), "No Depth noise detected."
-
-        images = []
-        state = env.sim.get_agent_state()
-        angle_diffs = []
-        pos_diffs = []
-        for action in actions:
-            prev_state = state
-            obs = env.step(action)
-            state = env.sim.get_agent_state()
-            position_change = np.linalg.norm(
-                np.array(state.position) - np.array(prev_state.position), ord=2
-            )
-
-            if action["action"][:5] == "turn_":
-                angle_diff = abs(
-                    angle_between_quaternions(
-                        state.rotation, prev_state.rotation
-                    )
-                    - np.deg2rad(config.habitat.simulator.turn_angle)
-                )
-                angle_diffs.append(angle_diff)
-            else:
-                pos_diffs.append(
-                    abs(
-                        position_change
-                        - config.habitat.simulator.forward_step_size
-                    )
-                )
-
-            if DEMO_MODE:
-                images.append(observations_to_image(obs, {}))
-
-        if DEMO_MODE:
-            images_to_video(images, "data/video/test_noise", "test_noise")
-
-        assert (
-            np.mean(angle_diffs) > 0.025
-        ), "No turn action actuation noise detected."
-        assert (
-            np.mean(pos_diffs) > 0.025
-        ), "No forward action actuation noise detected."
