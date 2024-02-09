@@ -356,21 +356,37 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         curr_arm_pos = self.cur_articulated_agent.arm_motor_pos
         delta = set_arm_pos - curr_arm_pos
         max_allowed_delta = np.array([0.01, 0.01, 0.01, 0.01, 0.04] + [np.pi/36]* 5)
+        if np.allclose(delta, 0, atol=1e-3):
+            return
         num_steps = max(np.ceil(np.max(delta/max_allowed_delta)), 1)
         
-        interpolation = 1.0/num_steps # 5 intermediate steps per action
+        interpolation = 1.0/num_steps
 
         delta_per_step = (delta) * interpolation
-        for i in range(int(num_steps)):
-            obs = self._sim.get_sensor_observations()['third_rgb'][:,:,:3]
+        for idx in range(int(num_steps)):
             # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
-            task._frames.append(obs)
+            sensor_obs = self._sim.get_sensor_observations()
+            task._frames.append({
+                "head_rgb": sensor_obs['head_rgb'][:,:,:3],
+                "head_depth": sensor_obs['head_depth'],
+                # np.expand_dims(sensor_obs['head_depth'], axis=2)
+                "third_rgb": sensor_obs['third_rgb'][:,:,:3],
+            })
+            is_interpolated = idx < num_steps - 1
             curr_arm_pos = curr_arm_pos + delta_per_step
             self.cur_articulated_agent.arm_motor_pos = curr_arm_pos
             self.cur_articulated_agent.arm_joint_pos = curr_arm_pos
             self._sim.maybe_update_articulated_agent()
-        self.cur_articulated_agent.arm_motor_pos = set_arm_pos
-        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+            task._metrics_at_step.append(task.report_metrics_at_step(action=self, is_interpolated=is_interpolated))
+
+        if (not np.allclose(self.cur_articulated_agent.arm_motor_pos, set_arm_pos)
+            or not np.allclose(self.cur_articulated_agent.arm_joint_pos, set_arm_pos)):
+            # if due to rounding errors, the arm is not set to the desired position, set it to the desired position
+            self.cur_articulated_agent.arm_motor_pos = set_arm_pos
+            self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+            self._sim.maybe_update_articulated_agent()
+            task._metrics_at_step.append(task.report_metrics_at_step(action=self, is_interpolated=False))
+
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             self.cur_grasp_mgr.update_object_to_grasp()
@@ -912,14 +928,20 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
 
         max_base_forward_delta = 0.15
         max_turn_delta = 0.025
+        if lin_pos_x == 0 and lin_pos_z == 0 and turn == 0:
+            return
         num_steps = max(int(np.ceil(max([lin_pos_x / max_base_forward_delta, lin_pos_z / max_base_forward_delta, turn / max_turn_delta]))), 1)
         
-
-        for _ in range(num_steps):
+        for idx in range(num_steps):
             interpolation = 1.0 / num_steps
-            obs = self._sim.get_sensor_observations()['third_rgb'][:,:,:3]
             # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
-            task._frames.append(obs)
+            sensor_obs = self._sim.get_sensor_observations()
+            task._frames.append({
+                "head_rgb": sensor_obs['head_rgb'][:,:,:3],
+                "head_depth": sensor_obs['head_depth'],
+                "third_rgb": sensor_obs['third_rgb'][:,:,:3],
+            })
+            is_interpolated = idx < num_steps - 1
             self._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
             self._max_turn_radians_interp = self._max_turn_radians * interpolation
 
@@ -971,7 +993,7 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
             else:
                 # no violation if no movement was required in the first place
                 task._is_navmesh_violated = False
-
+            task._metrics_at_step.append(task.report_metrics_at_step(action=self, is_interpolated=is_interpolated))
 
 class HumanoidJointAction(ArticulatedAgentAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
