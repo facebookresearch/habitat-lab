@@ -104,7 +104,8 @@ def test_snap_down(support_margin, obj_margin, stage_support):
 
         # add the cube objects
         cube_stage_obj = None
-        support_obj_ids = [-1]
+        # stage defaults to ID 0
+        support_obj_ids = [0]
         if not stage_support:
             cube_stage_obj = rom.add_object_by_template_handle(
                 cube_stage_template_handle
