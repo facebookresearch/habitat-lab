@@ -355,17 +355,27 @@ def get_obj_size_along(
     global_vec: mn.Vector3,
     ao_link_map: Dict[int, int] = None,
     ao_aabbs: Dict[int, mn.Range3D] = None,
-) -> float:
+) -> Tuple[float, mn.Vector3]:
     """
     Uses object bounding box as a heuristic to estimate object size in a particular global direction.
+
+    :param sim: The Simulator instance.
+    :param object_id: The integer id of the object or link.
+    :param object_id: The integer id of the object or link.
+    :param global_vec: Vector in global space indicating the direction to approximate object size.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: distance and center of bounding box from which distance was estimated.
     """
     obj_bb, transform = get_bb_for_object_id(
         sim, object_id, ao_link_map, ao_aabbs
     )
+    center = transform.transform_point(obj_bb.center())
     local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
     local_vec = transform.inverted().transform_vector(global_vec)
     local_vec_size = local_scale.transform_vector(local_vec).length()
-    return local_vec_size
+    return local_vec_size, center
 
 
 def size_regularized_distance(
@@ -1200,3 +1210,35 @@ def debug_draw_selected_set(
             debug_draw_bb(
                 sim, link_node.cumulative_bb, link_transform, mn.Color4.cyan()
             )
+
+
+def on_floor(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedRigidObject,
+    distance_threshold: float = 0.1,
+    alt_pathfinder: habitat_sim.nav.PathFinder = None,
+) -> bool:
+    """
+    Gets whether or not the object is on the "floor" using the navmesh as an abstraction.
+    NOTE: alt_pathfinder option can be used to provide an alternative navmesh sized for objects. This would allow objects to be, for example, under tables or in corners and still be considered on the navmesh.
+    """
+
+    if alt_pathfinder is None:
+        alt_pathfinder = sim.pathfinder
+
+    assert alt_pathfinder.is_loaded
+
+    # TODO: pass along the link map and aobbs
+    obj_size, center = get_obj_size_along(
+        sim, objectA.object_id, mn.Vector3(0.0, -1.0, 0.0)
+    )
+
+    obj_snap = alt_pathfinder.snap_point(center)
+
+    snap_disp = obj_snap - objectA.translation
+    snap_dist = snap_disp.length() - obj_size
+
+    if snap_dist > distance_threshold:
+        # TODO: needs more precision?
+        return False
+    return True

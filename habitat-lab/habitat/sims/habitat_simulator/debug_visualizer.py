@@ -89,7 +89,7 @@ class DebugVisualizer:
     dbv.get_observation().show()
     dbv.translate(mn.Vector3(1,0,0), show=True)
     dbv.peek_articulated_object(my_ao, show=True)
-    dbv.peek_rigid_object(my_ro, show_all_axis=True, show=True)
+    dbv.peek_rigid_object(my_ro, peek_all_axis=True, show=True)
     """
 
     def __init__(

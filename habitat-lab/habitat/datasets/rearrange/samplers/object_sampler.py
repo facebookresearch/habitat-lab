@@ -256,6 +256,12 @@ class ObjectSampler:
                 sim.pathfinder, sim, allow_outdoor=False
             )
 
+        rec_up_global = (
+            receptacle.get_global_transform(sim)
+            .transform_vector(receptacle.up)
+            .normalized()
+        )
+
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
 
@@ -264,7 +270,7 @@ class ObjectSampler:
                 receptacle.sample_uniform_global(
                     sim, self.sample_region_ratio[receptacle.name]
                 )
-                + self._translation_up_offset * receptacle.up
+                + self._translation_up_offset * rec_up_global
             )
 
             # instance the new potential object from the handle
