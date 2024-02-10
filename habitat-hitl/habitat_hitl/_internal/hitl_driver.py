@@ -95,7 +95,7 @@ class HitlDriver(AppDriver):
             )
         self._gui_input = gui_input
 
-        line_render.set_line_width(3)
+        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -226,7 +226,9 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
-                self._interprocess_record, line_render, self._gui_input #TODO: Apply input refactor
+                self._interprocess_record,
+                line_render,
+                self._gui_input,  # TODO: Apply input refactor
             )
 
     def _check_terminate_server(self):
