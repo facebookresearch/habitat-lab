@@ -191,7 +191,7 @@ def _headless_app_loop(hitl_config, driver):
 
 
 def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
-    from habitat_hitl.core.text_drawer import StubTextDrawer
+    from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
         raise ValueError(
@@ -231,7 +231,7 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         config,
         GuiInput(),
         StubLineRender(),
-        StubTextDrawer(),
+        HeadlessTextDrawer(),
         create_app_state_lambda,
     )
 
