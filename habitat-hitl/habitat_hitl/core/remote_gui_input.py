@@ -72,7 +72,7 @@ class RemoteGuiInput:
             2: GuiInput.MouseNS.MIDDLE,
         }
 
-        self._gui_input = gui_input #TODO: Apply refactor
+        self._gui_input = gui_input  # TODO: Apply refactor
 
     def get_gui_input(self):
         return self._gui_input
@@ -160,8 +160,12 @@ class RemoteGuiInput:
         for client_state in client_states:
             # Beware client_state input has dicts of bools (unlike GuiInput, which uses sets)
 
-            input_json = client_state["input"] if "input" in client_state else None # TODO: Split keyboard and VR
-            mouse_json = client_state["mouse"] if "mouse" in client_state else None
+            input_json = (
+                client_state["input"] if "input" in client_state else None
+            )  # TODO: Split keyboard and VR
+            mouse_json = (
+                client_state["mouse"] if "mouse" in client_state else None
+            )
 
             # assume button containers are sets of buttonIndices
             if input_json:
@@ -182,24 +186,34 @@ class RemoteGuiInput:
                     if button not in self._mouse_button_map:
                         print(f"button {button} not mapped!")
                         continue
-                    self._gui_input._mouse_button_down.add(self._mouse_button_map[button])
+                    self._gui_input._mouse_button_down.add(
+                        self._mouse_button_map[button]
+                    )
 
                 for button in mouse_buttons["buttonUp"]:
                     if button not in self._mouse_button_map:
                         print(f"button {button} not mapped!")
                         continue
-                    self._gui_input._mouse_button_up.add(self._mouse_button_map[button])
+                    self._gui_input._mouse_button_up.add(
+                        self._mouse_button_map[button]
+                    )
 
                 if "scrollDelta" in mouse_json:
                     delta = mouse_json["scrollDelta"]
                     if len(delta) == 2:
-                        self._gui_input._mouse_scroll_offset += delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
+                        self._gui_input._mouse_scroll_offset += (
+                            delta[0]
+                            if abs(delta[0]) > abs(delta[1])
+                            else delta[1]
+                        )
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
 
-        input_json = client_state["input"] if "input" in client_state else None # TODO: Split keyboard and VR
+        input_json = (
+            client_state["input"] if "input" in client_state else None
+        )  # TODO: Split keyboard and VR
         mouse_json = client_state["mouse"] if "mouse" in client_state else None
 
         self._gui_input._key_held.clear()
@@ -218,7 +232,9 @@ class RemoteGuiInput:
                 if button not in self._mouse_button_map:
                     print(f"button {button} not mapped!")
                     continue
-                self._gui_input._mouse_button_held.add(self._mouse_button_map[button])
+                self._gui_input._mouse_button_held.add(
+                    self._mouse_button_map[button]
+                )
 
         # TODO: Implement headless-compatible mouse handling.
         # if "mousePosition" in input_json:
@@ -305,7 +321,8 @@ class RemoteGuiInput:
 
                 connection_params_dict = client_state["connection_params_dict"]
                 validate_connection_params_dict(connection_params_dict)
-                self._connection_params = connection_params_dict
+                if len(connection_params_dict):
+                    self._connection_params = connection_params_dict
                 break
 
             elif "connection_params_query_string" in client_state:
@@ -316,9 +333,11 @@ class RemoteGuiInput:
                     # Convert each list of values to a single value (the first one)
                     return {k: v[0] for k, v in parsed_query.items()}
 
-                self._connection_params = query_string_to_dict(
+                connection_params = query_string_to_dict(
                     client_state["connection_params_query_string"]
                 )
+                if len(connection_params):
+                    self._connection_params = connection_params
                 break
 
     def update(self):
