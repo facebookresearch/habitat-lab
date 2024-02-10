@@ -246,9 +246,10 @@ class AppStateRearrangeV2(AppState):
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            self._app_service.end_episode()
-            post_sim_update_dict["application_exit"] = True
+        # Do NOT let the remote client make the server application exit!
+        # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+        #     self._app_service.end_episode()
+        #     post_sim_update_dict["application_exit"] = True
 
         # # use 1-5 keys to select certain episodes corresponding to our 5 scenes
         # num_fetch_scenes = 5
