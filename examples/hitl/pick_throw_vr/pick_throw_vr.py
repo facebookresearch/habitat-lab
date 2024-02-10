@@ -4,13 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Final
+from typing import Any, Final, List, Optional
 
 import hydra
 import magnum as mn
 import numpy as np
 
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -49,24 +50,24 @@ class AppStatePickThrowVr(AppState):
     See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
-        self._gui_agent_ctrl = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
 
-        self._cam_transform = None
-        self._held_target_obj_idx = None
-        self._recent_reach_pos = None
-        self._paused = False
-        self._hide_gui_text = False
+        self._cam_transform: Optional[mn.Matrix4] = None
+        self._held_target_obj_idx: Optional[int] = None
+        self._recent_reach_pos: Optional[mn.Vector3] = None
+        self._paused: bool = False
+        self._hide_gui_text: bool = False
 
         # Index of the remote-controlled hand holding an object
-        self._remote_held_hand_idx = None
+        self._remote_held_hand_idx: Optional[int] = None
 
         # will be set in on_environment_reset
-        self._target_obj_ids = None
+        self._target_obj_ids: Optional[List[str]] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
@@ -92,9 +93,9 @@ class AppStatePickThrowVr(AppState):
 
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
-        self._is_remote_active_toggle = False
-        self.count_tsteps_stop = 0
-        self._has_grasp_preview = False
+        self._is_remote_active_toggle: bool = False
+        self._count_tsteps_stop: int = 0
+        self._has_grasp_preview: bool = False
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -132,7 +133,7 @@ class AppStatePickThrowVr(AppState):
         )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-        self.count_tsteps_stop = 0
+        self._count_tsteps_stop = 0
 
         human_pos = (
             self.get_sim()
@@ -300,16 +301,16 @@ class AppStatePickThrowVr(AppState):
         # Count number of steps since we stopped, this is to reduce jitter
         # with IK
         if distance_multiplier == 0:
-            self.count_tsteps_stop += 1
+            self._count_tsteps_stop += 1
         else:
-            self.count_tsteps_stop = 0
+            self._count_tsteps_stop = 0
 
         reach_pos = None
         hand_idx = None
         if (
             self._held_target_obj_idx is not None
             and distance_multiplier == 0.0
-            and self.count_tsteps_stop > MIN_STEPS_STOP
+            and self._count_tsteps_stop > MIN_STEPS_STOP
         ):
             reach_pos = self._get_target_object_position(
                 self._held_target_obj_idx
