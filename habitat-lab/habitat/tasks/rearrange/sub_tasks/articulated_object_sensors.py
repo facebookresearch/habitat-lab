@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -18,6 +19,8 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 )
 from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
+    get_camera_object_angle,
+    get_camera_transform,
     rearrange_logger,
 )
 
@@ -156,6 +159,15 @@ class ArtObjAtDesiredState(Measure):
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
+        self._gaze_method = config.gaze_method
+        self._center_cone_vector = mn.Vector3(
+            config.center_cone_vector
+        ).normalized()
+        self._min_dist, self._max_dist = config.gaze_distance_range
+        self._center_cone_angle_threshold = np.deg2rad(
+            config.center_cone_angle_threshold
+        )
+        self._sim = sim
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -171,15 +183,44 @@ class ArtObjAtDesiredState(Measure):
             **kwargs
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.success_js_state - task.get_use_marker().get_targ_js()
+    def _get_camera_object_angle(self, obj_pos):
+        """Calculates angle between gripper line-of-sight and given global position."""
+        # Get the camera transformation
+        cam_T = get_camera_transform(self._sim.articulated_agent)
 
-        # If not absolute distance, we can have a joint state greater than the
-        # target.
-        if self._config.use_absolute_distance:
-            self._metric = abs(dist) < self._config.success_dist_threshold
+        # Get angle between (normalized) location and the vector that the camera should
+        # look at
+        obj_angle = get_camera_object_angle(
+            cam_T, obj_pos, self._center_cone_vector
+        )
+        return obj_angle
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Check if the robot gazes the target
+        if self._gaze_method:
+            # Get distance
+            handle_pos = task.get_use_marker().get_current_position()
+            ee_pos = self._sim.articulated_agent.ee_transform().translation
+            dist = np.linalg.norm(handle_pos - ee_pos)
+            # Get gaze angle
+            obj_angle = self._get_camera_object_angle(handle_pos)
+            # Return metric
+            if (
+                dist > self._min_dist
+                and dist < self._max_dist
+                and obj_angle < self._center_cone_angle_threshold
+            ):
+                self._metric = True
+            else:
+                self._metric = False
         else:
-            self._metric = dist < self._config.success_dist_threshold
+            dist = task.success_js_state - task.get_use_marker().get_targ_js()
+            # If not absolute distance, we can have a joint state greater than the
+            # target.
+            if self._config.use_absolute_distance:
+                self._metric = abs(dist) < self._config.success_dist_threshold
+            else:
+                self._metric = dist < self._config.success_dist_threshold
 
 
 @registry.register_measure
@@ -216,16 +257,22 @@ class ArtObjSuccess(Measure):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        called_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
+        if self._config.must_call_stop:
+            called_stop = task.measurements.measures[
+                DoesWantTerminate.cls_uuid
+            ].get_metric()
 
         # If not absolute distance, we can have a joint state greater than the
         # target.
         self._metric = (
             is_art_obj_state_succ
-            and ee_to_rest_distance < self._config.rest_dist_threshold
-            and not self._sim.grasp_mgr.is_grasped
+            and (
+                ee_to_rest_distance < self._config.rest_dist_threshold
+                or self._config.rest_dist_threshold == -1
+            )
+            and (
+                not self._sim.grasp_mgr.is_grasped or self._config.gaze_method
+            )
         )
         if self._config.must_call_stop:
             if called_stop:
