@@ -235,7 +235,8 @@ class RemoteGuiInput:
 
                 connection_params_dict = client_state["connection_params_dict"]
                 validate_connection_params_dict(connection_params_dict)
-                self._connection_params = connection_params_dict
+                if len(connection_params_dict):
+                    self._connection_params = connection_params_dict
                 break
 
             elif "connection_params_query_string" in client_state:
@@ -246,9 +247,11 @@ class RemoteGuiInput:
                     # Convert each list of values to a single value (the first one)
                     return {k: v[0] for k, v in parsed_query.items()}
 
-                self._connection_params = query_string_to_dict(
+                connection_params = query_string_to_dict(
                     client_state["connection_params_query_string"]
                 )
+                if len(connection_params):
+                    self._connection_params = connection_params
                 break
 
     def update(self):
