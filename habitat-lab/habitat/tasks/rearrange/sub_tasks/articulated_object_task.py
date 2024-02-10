@@ -132,12 +132,14 @@ class SetArticulatedObjectTask(RearrangeTask):
             ao = marker.ao_parent
             T = ao.transformation
 
-        jms = marker.ao_parent.get_joint_motor_settings(marker.joint_idx)
+        # We need to disable the joint motor when using kinematic mode
+        if not self._sim._kinematic_mode:
+            jms = marker.ao_parent.get_joint_motor_settings(marker.joint_idx)
 
-        if self._config.joint_max_impulse > 0:
-            jms.velocity_target = 0.0
-            jms.max_impulse = self._config.joint_max_impulse
-        marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
+            if self._config.joint_max_impulse > 0:
+                jms.velocity_target = 0.0
+                jms.max_impulse = self._config.joint_max_impulse
+            marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
 
         num_timeout = 100
         self._disable_art_sleep()

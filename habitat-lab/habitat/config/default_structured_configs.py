@@ -988,6 +988,10 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
+    gaze_method: bool = False
+    center_cone_vector: Optional[List[float]] = None
+    gaze_distance_range: Optional[List[float]] = None
+    center_cone_angle_threshold: float = 0.0
 
 
 @dataclass
@@ -1013,6 +1017,7 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
     must_call_stop: bool = True
+    gaze_method: bool = False
 
 
 @dataclass
