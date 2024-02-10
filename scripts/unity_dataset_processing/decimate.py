@@ -116,16 +116,15 @@ def decimate(
     for i in range(importer.mesh_count):
         mesh = importer.mesh(i)
 
-        # Transform the mesh to its max scale in the scene. For quantized meshes
-        # this expands the position attribute to a floating-point Vector3.
-        scaled_mesh = meshtools.transform3d(
-            mesh, Matrix4.scaling(max_mesh_scaling.get(i, Vector3(1.0)))
-        )
-
         # Calculate total triangle area of the *transformed* mesh. You might want
         # to fiddle with this heuristics, another option is calculating the mesh
         # AABB but that won't do the right thing for planar meshes.
         if simplify:
+            # Transform the mesh to its max scale in the scene. For quantized meshes
+            # this expands the position attribute to a floating-point Vector3.
+            scaled_mesh = meshtools.transform3d(
+                mesh, Matrix4.scaling(max_mesh_scaling.get(i, Vector3(1.0)))
+            )
             if not scaled_mesh.is_indexed:
                 converter.end_file()
                 importer.close()
