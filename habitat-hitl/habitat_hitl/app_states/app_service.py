@@ -24,6 +24,7 @@ from habitat_sim.gfx import DebugLineRender
 class AppService:
     def __init__(
         self,
+        *,
         config,
         hitl_config,
         gui_input: GuiInput,
