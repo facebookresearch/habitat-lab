@@ -1,0 +1,37 @@
+# @package _global_
+
+defaults:
+  - social_rearrange: pop_play
+  - hitl_defaults
+  - _self_
+
+habitat:
+  # various config args to ensure the episode never ends
+  environment:
+    max_episode_steps: 0
+  task:
+    measurements:
+      rearrange_cooperate_reward:
+        end_on_collide: False
+      pddl_success:
+        must_call_stop: False
+
+habitat_baselines:
+  # todo: document these choices
+  eval:
+    should_load_ckpt: False
+  rl:
+    agent:
+      num_pool_agents_per_type: [1,1]
+
+habitat_hitl:
+  window:
+    title: "Rearrange"
+    width: 1300
+    height: 1000
+  gui_controlled_agent:
+    agent_index: 1
+    ang_speed: 300
+  hide_humanoid_in_gui: True
+  camera:
+    first_person_mode: True
