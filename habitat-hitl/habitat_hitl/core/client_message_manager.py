@@ -58,6 +58,9 @@ class ClientMessageManager:
         """
         self._message["isAppReady"] = True
 
+    def set_server_keyframe_id(self, keyframe_id):
+        self._message["serverKeyframeId"] = keyframe_id
+
     def update_navmesh_triangles(self, triangle_vertices):
         r"""
         Send a navmesh. triangle_vertices should be a list of vertices, 3 per triangle.
