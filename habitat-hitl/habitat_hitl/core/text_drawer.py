@@ -12,14 +12,14 @@ from typing import List, Tuple
 
 import magnum as mn
 
-disable_text_drawer = False
+use_headless_text_drawer = False
 try:
     from magnum import shaders, text
 except ImportError:
     print(
         "text_drawer.py warning: Failed to magnum.shaders,text. TextDrawer isn't available."
     )
-    disable_text_drawer = True
+    use_headless_text_drawer = True
 
 # the maximum number of chars displayable in the app window
 # using the magnum text module
@@ -62,12 +62,15 @@ class AbstractTextDrawer(ABC):
         """
 
 
-class StubTextDrawer(AbstractTextDrawer):
+class HeadlessTextDrawer(AbstractTextDrawer):
     """
     Stub TextDrawer class. Has no effect but allows user code to run without error.
 
     This is intended for use with habitat_hitl.headless. See also TextDrawer.
     """
+
+    def __init__(self):
+        self._service = None  # will be set later
 
     def add_text(
         self,
@@ -76,10 +79,16 @@ class StubTextDrawer(AbstractTextDrawer):
         text_delta_x: int = 0,
         text_delta_y: int = 0,
     ):
-        pass
+        align_y, align_x = alignment.value
+        if self._service is not None:
+            client_message_manager = self._service.client_message_manager
+            if client_message_manager:
+                client_message_manager.add_text(
+                    text_to_add, [align_x, align_y]
+                )
 
 
-if not disable_text_drawer:
+if not use_headless_text_drawer:
 
     class TextDrawer(AbstractTextDrawer):
         def __init__(
@@ -88,7 +97,7 @@ if not disable_text_drawer:
             relative_path_to_font: str,
             display_font_size: float,
             max_display_text_chars: int = MAX_DISPLAY_TEXT_CHARS,
-            service = None,
+            service=None,
         ) -> None:
             self._text_transform_pairs: List[Tuple[str, mn.Matrix3]] = []
             self._framebuffer_size = framebuffer_size
@@ -163,7 +172,9 @@ if not disable_text_drawer:
             if self._service is not None:
                 client_message_manager = self._service.client_message_manager
                 if client_message_manager:
-                    client_message_manager.add_text(text_to_add, [align_x , align_y])
+                    client_message_manager.add_text(
+                        text_to_add, [align_x, align_y]
+                    )
 
         def draw_text(self):
             # make magnum text background transparent
@@ -190,4 +201,3 @@ if not disable_text_drawer:
             # DebugLineRender) will be forced to enable and configure blending when they
             # render
             mn.gl.Renderer.disable(mn.gl.Renderer.Feature.BLENDING)
-
