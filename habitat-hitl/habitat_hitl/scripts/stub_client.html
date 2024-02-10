@@ -39,6 +39,8 @@
             var url = 'ws://' + ip + ':' + port;
             document.getElementById('serverUrl').textContent = 'Server URL: ' + url;
             ws = new WebSocket(url);
+            var sendIntervalId = null;  // Variable to hold the ID of the interval
+            var recentServerKeyframeId = null;
 
             ws.onopen = function() {
                 document.getElementById('status').textContent = 'Connected';
@@ -48,6 +50,18 @@
                 document.getElementById('serverPort').disabled = true;
                 document.getElementById('sendButton').disabled = false;
                 ws.send('client ready!');  // Send "client ready!" to the server
+
+                // Start sending messages at 10 Hz
+                sendIntervalId = setInterval(function() {
+                        var dict = {};  // Create an empty JavaScript object
+
+                        // Our stub client only sends recentServerKeyframeId. It doesn't send local GUI input or other client state.
+                        if (recentServerKeyframeId != null) {
+                            dict["recentServerKeyframeId"] = recentServerKeyframeId;
+                        }
+                        var message = JSON.stringify(dict);  // Convert the object to a JSON string
+                        ws.send(message);  // Send the JSON string
+                    }, 100);  // Repeat every 100 milliseconds
             };
 
             ws.onclose = function() {
@@ -57,10 +71,34 @@
                 document.getElementById('serverIp').disabled = false;
                 document.getElementById('serverPort').disabled = false;
                 document.getElementById('sendButton').disabled = true;
+
+                if (sendIntervalId) {
+                    clearInterval(sendIntervalId);
+                    sendIntervalId = null;
+                }
+                recentServerKeyframeId = null;
+
             };
 
             ws.onmessage = function() {
                 messageCount++;
+
+                var message = event.data;
+                var dict = JSON.parse(message);
+
+                // parse the latest serverKeyframeId from received keyframes
+                if ("keyframes" in dict) {
+                    keyframes = dict["keyframes"]
+                    if (keyframes.length) {
+                        keyframe = keyframes[keyframes.length - 1];
+                        if ("message" in keyframe) {
+                            message = keyframe["message"]
+                            if ("serverKeyframeId" in message) {
+                                recentServerKeyframeId = message["serverKeyframeId"];
+                            }
+                        }
+                    }
+                }
             };
         }
 
