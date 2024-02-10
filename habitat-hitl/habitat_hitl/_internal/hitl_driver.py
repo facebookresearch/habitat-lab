@@ -95,7 +95,7 @@ class HitlDriver(AppDriver):
             )
         self._gui_input = gui_input
 
-        line_render.set_line_width(3)
+        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
