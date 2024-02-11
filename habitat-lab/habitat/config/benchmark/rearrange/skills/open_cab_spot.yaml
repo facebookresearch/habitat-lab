@@ -1,0 +1,106 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+
+  - /habitat/task: task_config_base
+  - /habitat/task/rearrange/actions: spot_arm
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - end_effector_to_rest_distance
+    - ee_dist_to_marker
+    - art_obj_at_desired_state
+    - art_obj_state
+    - art_obj_success
+    - art_obj_reward
+    - num_steps
+    - did_violate_hold_constraint
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - articulated_agent_arm_depth
+      - joint
+      - ee_pos
+      - is_holding
+  task:
+    type: RearrangeOpenDrawerTask-v0
+    reward_measure: art_obj_reward
+    success_measure: art_obj_success
+    actions:
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        center_cone_vector: [0.0, 1.0, 0.0]
+        # We limit the joint angles to ensure that this is feasible in the real world
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        auto_grasp: False
+        should_clip: True
+    success_reward: 10.0
+    slack_reward: 0.0
+    success_state: 0.45
+    end_on_success: True
+    spawn_max_dist_to_obj: 2.0
+    base_angle_noise: 0.523599
+    measurements:
+      art_obj_at_desired_state:
+        use_absolute_distance: False
+        gaze_method: True
+        center_cone_vector: [0.0, 1.0, 0.0]
+        gaze_distance_range: [0.1, 0.3]
+        center_cone_angle_threshold: 15 # in degree
+      art_obj_reward:
+        wrong_grasp_end: True
+        grasp_reward: 5.0
+        art_at_desired_state_reward: 5.0
+        marker_dist_reward: 1.0
+        constraint_violate_pen: 1.0
+        force_pen: 0.0001
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+        # Collision penality for kinematic simulation
+        count_coll_pen: 0.01
+        max_count_colls: 1000
+        count_coll_end_pen: 1.0
+        # Use special gaze reward
+        gaze_method: True
+      art_obj_success:
+        must_call_stop: False
+        rest_dist_threshold: -1
+        gaze_method: True
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+    lab_sensors:
+      # We can only control 4 of the joints of Spot's arm
+      joint_sensor:
+        dimensionality: 4
+        arm_joint_mask: [1,1,0,1,0,1,0]
+  environment:
+    max_episode_steps: 200
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/in_drawer_1k_100.json.gz
+  simulator:
+    # We use the kinematic mode to train the policy
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    agents:
+      main_agent:
+        joint_start_noise: 0.1
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real-world gaze ready location
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
