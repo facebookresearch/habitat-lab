@@ -1049,6 +1049,7 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    gaze_method: bool = False
 
 
 @dataclass
