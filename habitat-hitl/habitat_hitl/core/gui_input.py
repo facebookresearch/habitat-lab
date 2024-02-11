@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # GuiInput relies on the magnum.platform.glfw.Application.KeyEvent.Key enum and similar for mouse buttons. On headless systems, we may be unable to import magnum.platform.glfw.Application. Fall back to a stub implementation of GuiInput in that case.
+do_agnostic_gui_input = False
 try:
     from magnum.platform.glfw import Application
 except ImportError:
@@ -12,9 +13,6 @@ except ImportError:
         "GuiInput warning: Failed to magnum.platform.glfw. Falling back to agnostic implementation for use with headless server. Local keyboard/mouse input won't work."
     )
     do_agnostic_gui_input = True
-
-# temp force agnostic
-do_agnostic_gui_input = True
 
 if do_agnostic_gui_input:
     from enum import Enum

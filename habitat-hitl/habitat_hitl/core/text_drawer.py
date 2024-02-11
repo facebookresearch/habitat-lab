@@ -17,7 +17,7 @@ try:
     from magnum import shaders, text
 except ImportError:
     print(
-        "text_drawer.py warning: Failed to magnum.shaders,text. TextDrawer isn't available."
+        "text_drawer.py warning: Failed to magnum.shaders,text. Falling back to headless text drawer."
     )
     use_headless_text_drawer = True
 

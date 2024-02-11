@@ -298,12 +298,14 @@ async def start_http_availability_server(network_mgr, networking_config):
             if network_mgr.has_connection()
             else networking_config.http_availability_server.code_available
         )
-        print(f"Returned availability HTTP code {code}")
+        # print(f"Returned availability HTTP code {code}")
         return aiohttp.web.Response(status=code)
 
     app = aiohttp.web.Application()
     app.router.add_get("/", http_handler)
-    runner = aiohttp.web.AppRunner(app)
+    runner = aiohttp.web.AppRunner(
+        app, access_log=None
+    )  # access_log=None to silence log spam
     await runner.setup()
     site = aiohttp.web.TCPSite(
         runner, "0.0.0.0", networking_config.http_availability_server.port
