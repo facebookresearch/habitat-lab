@@ -54,9 +54,15 @@ class ClientMessageManager:
 
     def signal_app_ready(self):
         r"""
-        See hitl_defaults.yaml wait_for_app_ready_signal documentation.
+        See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.
         """
         self._message["isAppReady"] = True
+
+    def signal_kick_client(self, connection_id):
+        r"""
+        Signal NetworkManager to kick a client identified by connection_id. See also RemoteGuiInput.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
+        """
+        self._message["kickClient"] = connection_id
 
     def set_server_keyframe_id(self, keyframe_id):
         self._message["serverKeyframeId"] = keyframe_id
