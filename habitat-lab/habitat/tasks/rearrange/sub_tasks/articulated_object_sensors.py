@@ -387,8 +387,12 @@ class ArtObjReward(RearrangeReward):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        cur_dist = abs(link_state - task.success_js_state)
-        prev_dist = abs(self._prev_art_state - task.success_js_state)
+        if not self._config.gaze_method:
+            cur_dist = 0
+            prev_dist = 0
+        else:
+            cur_dist = abs(link_state - task.success_js_state)
+            prev_dist = abs(self._prev_art_state - task.success_js_state)
 
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
@@ -415,13 +419,14 @@ class ArtObjReward(RearrangeReward):
             self._any_has_grasped = True
 
         if is_art_obj_state_succ:
-            if not self._any_at_desired_state:
-                reward += self._config.art_at_desired_state_reward
-                self._any_at_desired_state = True
-            # Give the reward based on distance to the resting position.
-            ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
-            reward += self._config.ee_dist_reward * ee_dist_change
-        elif not cur_has_grasped:
+            if not self._config.gaze_method:
+                if not self._any_at_desired_state:
+                    reward += self._config.art_at_desired_state_reward
+                    self._any_at_desired_state = True
+                # Give the reward based on distance to the resting position.
+                ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
+                reward += self._config.ee_dist_reward * ee_dist_change
+        elif not cur_has_grasped or self._config.gaze_method:
             # Give the reward based on distance to the handle
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
             reward += self._config.marker_dist_reward * dist_diff
