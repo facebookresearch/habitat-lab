@@ -64,6 +64,7 @@ class AppStateRearrangeV2(AppState):
         self._has_grasp_preview = False
         self._client_connection_id = None
         self._client_idle_frame_counter = None
+        self._show_idle_kick_warning = False
 
     def _get_navmesh_triangle_vertices(self):
         """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
@@ -215,7 +216,11 @@ class AppStateRearrangeV2(AppState):
         status_str = ""
 
         if self._paused:
-            status_str += "\npaused\n"
+            status_str += "\n\npaused\n"
+        if self._show_idle_kick_warning:
+            status_str += (
+                "\n\nAre you still there?\nPress any key to keep playing!\n"
+            )
 
         return status_str
 
@@ -255,6 +260,8 @@ class AppStateRearrangeV2(AppState):
             return
         hitl_config = self._app_service.hitl_config
 
+        self._show_idle_kick_warning = False
+
         connection_records = (
             self._app_service.remote_gui_input.get_new_connection_records()
         )
@@ -277,6 +284,9 @@ class AppStateRearrangeV2(AppState):
                     ),
                     1,
                 )
+
+                if self._client_idle_frame_counter > max_idle_frames * 0.5:
+                    self._show_idle_kick_warning = True
 
                 if self._client_idle_frame_counter > max_idle_frames:
                     self._app_service.client_message_manager.signal_kick_client(
