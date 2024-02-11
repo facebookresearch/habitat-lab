@@ -160,10 +160,16 @@ class ArtObjAtDesiredState(Measure):
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
         self._gaze_method = config.gaze_method
-        self._center_cone_vector = mn.Vector3(
-            config.center_cone_vector
-        ).normalized()
-        self._min_dist, self._max_dist = config.gaze_distance_range
+        if config.center_cone_vector is None:
+            self._center_cone_vector = None
+        else:
+            self._center_cone_vector = mn.Vector3(
+                config.center_cone_vector
+            ).normalized()
+        if config.gaze_distance_range is None:
+            self._min_dist, self._max_dist = 0, 0
+        else:
+            self._min_dist, self._max_dist = config.gaze_distance_range
         self._center_cone_angle_threshold = np.deg2rad(
             config.center_cone_angle_threshold
         )
