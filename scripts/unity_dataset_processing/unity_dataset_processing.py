@@ -363,7 +363,7 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.simplify = False
+            job.simplify = True
             jobs.append(job)
         else:
             job = Job()
@@ -371,7 +371,7 @@ def main():
             job.dest_path = os.path.join(
                 OUTPUT_DIR, hssd_hab_rel_dir, rel_path
             )
-            job.simplify = False
+            job.simplify = True
             jobs.append(job)
 
     # Add ycb objects
