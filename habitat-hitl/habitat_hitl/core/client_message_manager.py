@@ -61,7 +61,9 @@ class ClientMessageManager:
         assert len(pos) == 2
         if "texts" not in self._message:
             self._message["texts"] = []
-        self._message["texts"].append({"text": text, "position": [pos[0], pos[1]]})
+        self._message["texts"].append(
+            {"text": text, "position": [pos[0], pos[1]]}
+        )
 
     def change_humanoid_position(self, pos: List[float]) -> None:
         r"""
@@ -78,9 +80,15 @@ class ClientMessageManager:
 
     def signal_app_ready(self):
         r"""
-        See hitl_defaults.yaml wait_for_app_ready_signal documentation.
+        See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.
         """
         self._message["isAppReady"] = True
+
+    def signal_kick_client(self, connection_id):
+        r"""
+        Signal NetworkManager to kick a client identified by connection_id. See also RemoteGuiInput.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
+        """
+        self._message["kickClient"] = connection_id
 
     def set_server_keyframe_id(self, keyframe_id):
         self._message["serverKeyframeId"] = keyframe_id
@@ -98,7 +106,9 @@ class ClientMessageManager:
             component for sublist in triangle_vertices for component in sublist
         ]
 
-    def update_camera_transform(self, pos: List[float], rot_quat: List[float]) -> None:
+    def update_camera_transform(
+        self, pos: List[float], rot_quat: List[float]
+    ) -> None:
         r"""
         Update the camera transform.
         """
@@ -107,4 +117,9 @@ class ClientMessageManager:
 
         self._message["camera"] = {}
         self._message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
-        self._message["camera"]["rotation"] = [rot_quat[0], rot_quat[1], rot_quat[2], rot_quat[3]]
+        self._message["camera"]["rotation"] = [
+            rot_quat[0],
+            rot_quat[1],
+            rot_quat[2],
+            rot_quat[3],
+        ]

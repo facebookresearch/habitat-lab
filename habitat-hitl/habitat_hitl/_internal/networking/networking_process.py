@@ -110,10 +110,13 @@ class NetworkManager:
             )
 
     async def receive_client_states(self, websocket):
+        connection_id = id(websocket)
         async for message in websocket:
             try:
                 # Parse the received message as a JSON object
                 client_state = json.loads(message)
+
+                client_state["connectionId"] = connection_id
 
                 self._interprocess_record.send_client_state_to_main_thread(
                     client_state
@@ -146,15 +149,26 @@ class NetworkManager:
                         )
                     inc_keyframes = [tmp_con_keyframe]
 
-                # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
-                if (
-                    self._waiting_for_app_ready
-                    and "message" in inc_keyframes[0]
-                    and "isAppReady" in inc_keyframes[0]["message"]
-                ):
-                    self._waiting_for_app_ready = not inc_keyframes[0][
-                        "message"
-                    ]["isAppReady"]
+                if "message" in inc_keyframes[0]:
+                    message_dict = inc_keyframes[0]["message"]
+
+                    # for kickClient, we require the requester to include the connection_id. This ensures we don't kick the wrong client. E.g. the requester recently requested to kick an idle client, but NetworkManager already dropped that client and received a new client connection.
+                    if "kickClient" in message_dict:
+                        connection_id = message_dict["kickClient"]
+                        if connection_id in self._connected_clients:
+                            print(f"kicking client {connection_id}")
+                            await self._connected_clients[
+                                connection_id
+                            ].close()
+
+                    # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
+                    if (
+                        self._waiting_for_app_ready
+                        and self.has_connection()
+                        and "isAppReady" in message_dict
+                        and message_dict["isAppReady"]
+                    ):
+                        self._waiting_for_app_ready = False
 
                 wrapper_json = None
                 if self.is_okay_to_send_keyframes():
@@ -206,6 +220,19 @@ class NetworkManager:
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
+    def parse_connection_record(self, message):
+        connection_record = None
+        if message == "client ready!":
+            # legacy message format for initial client message
+            connection_record = {"isClientReady": True}
+        else:
+            connection_record = json.loads(message)
+            if "isClientReady" not in connection_record:
+                raise ValueError(
+                    "isClientReady key not found in initial client message."
+                )
+        return connection_record
+
     async def handle_connection(self, websocket):
         # we only support one connected client at a time
         if self.has_connection():
@@ -213,7 +240,8 @@ class NetworkManager:
             return
 
         # Store the client connection object in the dictionary
-        self._connected_clients[id(websocket)] = websocket
+        connection_id = id(websocket)
+        self._connected_clients[connection_id] = websocket
         self._waiting_for_client_ready = True
         self._waiting_for_app_ready = (
             self._networking_config.wait_for_app_ready_signal
@@ -223,20 +251,25 @@ class NetworkManager:
         print(f"Connection from client {websocket.remote_address}!")
 
         try:
-            print("Waiting for ready message from client...")
+            print("Waiting for connection record from client...")
             message = await websocket.recv()
 
-            if message == "client ready!":
-                print("Client is ready!")
-                self._waiting_for_client_ready = False
-                # On disconnect, receive_client_states will either terminate normally
-                # or raise an exception (this depends on how cleanly the client closes
-                # the connection). We handle either case in the finally block below.
-                await self.receive_client_states(websocket)
-            else:
+            try:
+                connection_record = self.parse_connection_record(message)
+            except Exception:
                 raise RuntimeError(
                     f"unexpected message from client: {message}"
                 )
+            print("Client is ready!")
+            connection_record["connectionId"] = connection_id
+            self._interprocess_record.send_connection_record_to_main_thread(
+                connection_record
+            )
+            self._waiting_for_client_ready = False
+            # On disconnect, receive_client_states will either terminate normally
+            # or raise an exception (this depends on how cleanly the client closes
+            # the connection). We handle either case in the finally block below.
+            await self.receive_client_states(websocket)
 
         except Exception as e:
             print(f"error receiving from client: {e}")

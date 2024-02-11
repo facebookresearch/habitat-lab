@@ -34,6 +34,9 @@ habitat_hitl:
       code_available: 200  # "Ok"
       code_unavailable: 503  # "Service Unavailable"
 
+    # Optionally kick an idle client after n seconds.
+    client_max_idle_duration: ~
+
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
 

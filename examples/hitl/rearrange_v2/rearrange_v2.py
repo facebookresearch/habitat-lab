@@ -62,6 +62,8 @@ class AppStateRearrangeV2(AppState):
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._has_grasp_preview = False
+        self._client_connection_id = None
+        self._client_idle_frame_counter = None
 
     def _get_navmesh_triangle_vertices(self):
         """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
@@ -245,6 +247,46 @@ class AppStateRearrangeV2(AppState):
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
+    def is_user_idle_this_frame(self):
+        return not self._app_service.gui_input.get_any_key_down()
+
+    def _update_for_remote_client_connect_and_idle(self):
+        if not self._app_service.hitl_config.networking.enable:
+            return
+        hitl_config = self._app_service.hitl_config
+
+        connection_records = (
+            self._app_service.remote_gui_input.get_new_connection_records()
+        )
+        if len(connection_records):
+            connection_record = connection_records[-1]
+            # new connection
+            self._client_connection_id = connection_record["connectionId"]
+            print(f"new connection_record: {connection_record}")
+            if hitl_config.networking.client_max_idle_duration is not None:
+                self._client_idle_frame_counter = 0
+
+        if self._client_idle_frame_counter is not None:
+            if self.is_user_idle_this_frame():
+                self._client_idle_frame_counter += 1
+                assert hitl_config.networking.client_max_idle_duration > 0
+                max_idle_frames = max(
+                    int(
+                        hitl_config.networking.client_max_idle_duration
+                        * hitl_config.target_sps
+                    ),
+                    1,
+                )
+
+                if self._client_idle_frame_counter > max_idle_frames:
+                    self._app_service.client_message_manager.signal_kick_client(
+                        self._client_connection_id
+                    )
+                    self._client_idle_frame_counter = None
+            else:
+                # reset counter whenever the client isn't idle
+                self._client_idle_frame_counter = 0
+
     def sim_update(self, dt, post_sim_update_dict):
         # Do NOT let the remote client make the server application exit!
         # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
@@ -269,6 +311,8 @@ class AppStateRearrangeV2(AppState):
         #             episode_id_by_scene_index[scene_idx]
         #         )
         #         self._app_service.end_episode(do_reset=True)
+
+        self._update_for_remote_client_connect_and_idle()
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
