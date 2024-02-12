@@ -274,8 +274,6 @@ def snap_down(
     if bb_ray_prescreen_results["surface_snap_point"] is not None:
         # accept the final location if a valid location exists
         obj.translation = bb_ray_prescreen_results["surface_snap_point"]
-        if dbv is not None:
-            dbv.debug_obs.append(dbv.get_observation(obj.translation))
         sim.perform_discrete_collision_detection()
         cps = sim.get_physics_contact_points()
         for cp in cps:
@@ -290,8 +288,12 @@ def snap_down(
                 )
             ):
                 obj.translation = cached_position
-                # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
-                # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
+                # print(
+                #     f" Failure: contact in final position w/ distance = {cp.contact_distance}."
+                # )
+                # print(
+                #     f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}."
+                # )
                 return False
         return True
     else:
