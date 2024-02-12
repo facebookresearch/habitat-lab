@@ -1217,12 +1217,26 @@ def debug_draw_selected_set(
 def on_floor(
     sim: habitat_sim.Simulator,
     objectA: habitat_sim.physics.ManagedRigidObject,
-    distance_threshold: float = 0.1,
+    distance_threshold: float = 0.04,
     alt_pathfinder: habitat_sim.nav.PathFinder = None,
+    island_index: int = -1,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
     """
     Gets whether or not the object is on the "floor" using the navmesh as an abstraction.
     NOTE: alt_pathfinder option can be used to provide an alternative navmesh sized for objects. This would allow objects to be, for example, under tables or in corners and still be considered on the navmesh.
+
+    :param sim: The Simulator instance.
+    :param objectA: The object instance.
+    :param distance_threshold: Maximum allow-able displacement between current object position and navmesh snapped position.
+    :param alt_pathfinder:Optionally provide an alternative PathFinder specifically configured for this check. Defaults to sim.pathfinder.
+    :param island_index: Optionally limit allowed navmesh to a specific island. Default (-1) is full navmesh.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+
+    :return: Truth if object is considered "on the floor" given the configuration.
     """
 
     if alt_pathfinder is None:
@@ -1232,12 +1246,16 @@ def on_floor(
 
     # TODO: pass along the link map and aobbs
     obj_size, center = get_obj_size_along(
-        sim, objectA.object_id, mn.Vector3(0.0, -1.0, 0.0)
+        sim,
+        objectA.object_id,
+        mn.Vector3(0.0, -1.0, 0.0),
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
     )
 
-    obj_snap = alt_pathfinder.snap_point(center)
+    obj_snap = alt_pathfinder.snap_point(center, island_index=island_index)
 
-    snap_disp = obj_snap - objectA.translation
+    snap_disp = obj_snap - center
     snap_dist = snap_disp.length() - obj_size
 
     if snap_dist > distance_threshold:

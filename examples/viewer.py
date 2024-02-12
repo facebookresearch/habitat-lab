@@ -199,6 +199,7 @@ class HabitatSimInteractiveViewer(Application):
             "nearby-L2",
             "nearby-geodesic",
             "size_regularized_distance",
+            "on_floor",
         ]
         self.demo_mode = "above"
         self.distance_threshold = 1.0
@@ -425,6 +426,57 @@ class HabitatSimInteractiveViewer(Application):
                         sim_utl.debug_draw_rigid_object_bb(
                             self.sim, closest_object, color=mn.Color4.blue()
                         )
+                return
+            elif self.demo_mode == "on_floor":
+                distance_threshold = 0.04
+                on_floor = sim_utl.on_floor(
+                    self.sim,
+                    selected_obj,
+                    island_index=self.largest_indoor_island_id,
+                    distance_threshold=distance_threshold,
+                    ao_link_map=self.ao_link_map,
+                    ao_aabbs=self.ao_aabbs,
+                )
+                sel_color = mn.Color4.yellow()
+                if on_floor:
+                    sel_color = mn.Color4.green()
+                radius, center = sim_utl.get_obj_size_along(
+                    self.sim,
+                    self.selected_object_id,
+                    mn.Vector3(0.0, -1.0, 0.0),
+                    self.ao_link_map,
+                    self.ao_aabbs,
+                )
+                self.sim.get_debug_line_render().draw_circle(
+                    translation=center,
+                    radius=radius,
+                    color=sel_color,
+                    normal=mn.Vector3(0, 1, 0),
+                )
+                # draw the snap point and displacement lines
+                obj_snap = self.sim.pathfinder.snap_point(
+                    center, island_index=self.largest_indoor_island_id
+                )
+                self.sim.get_debug_line_render().draw_circle(
+                    translation=obj_snap,
+                    radius=0.025,
+                    color=mn.Color4.magenta(),
+                    normal=mn.Vector3(0, 1, 0),
+                )
+                disp = obj_snap - center
+                dist = disp.length()
+                max_dist = distance_threshold + radius
+                self.sim.get_debug_line_render().draw_transformed_line(
+                    center,
+                    center + disp.normalized() * min(dist, max_dist),
+                    mn.Color4.green(),
+                )
+                if max_dist < dist:
+                    self.sim.get_debug_line_render().draw_transformed_line(
+                        center + disp,
+                        center + disp.normalized() * max_dist,
+                        mn.Color4.red(),
+                    )
                 return
             else:
                 return
