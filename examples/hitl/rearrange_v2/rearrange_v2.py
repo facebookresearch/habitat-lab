@@ -9,7 +9,11 @@ import hydra
 import magnum as mn
 
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl._internal.networking.average_rate_tracker import (
+    AverageRateTracker,
+)
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.core.average_helper import AverageHelper
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
@@ -62,9 +66,17 @@ class AppStateRearrangeV2(AppState):
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._has_grasp_preview = False
+        self._frame_counter = 0
         self._client_connection_id = None
         self._client_idle_frame_counter = None
         self._show_idle_kick_warning = False
+        self._sps_tracker = AverageRateTracker(2.0)
+
+        # todo: wrap these two into a helper class
+        self._client_frame_latency_avg_helper = AverageHelper(
+            window_size=10, output_rate=10
+        )
+        self._client_display_latency_ms = None
 
     def _get_navmesh_triangle_vertices(self):
         """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
@@ -204,6 +216,12 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             controls_str += "H: show.hide help text\n"
+            if self._sps_tracker.get_smoothed_rate() is not None:
+                controls_str += f"Server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+            if self._client_display_latency_ms:
+                controls_str += (
+                    f"latency: {self._client_display_latency_ms:.0f}ms\n"
+                )
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
             controls_str += "A, D: turn\n"
@@ -297,6 +315,25 @@ class AppStateRearrangeV2(AppState):
                 # reset counter whenever the client isn't idle
                 self._client_idle_frame_counter = 0
 
+        recent_server_keyframe_id = (
+            self._app_service.remote_gui_input.pop_recent_server_keyframe_id()
+        )
+        if recent_server_keyframe_id is not None:
+            new_avg = self._client_frame_latency_avg_helper.add(
+                self._frame_counter - recent_server_keyframe_id
+            )
+            if new_avg and self._sps_tracker.get_smoothed_rate() is not None:
+                latency_ms = (
+                    new_avg / self._sps_tracker.get_smoothed_rate() * 1000
+                )
+                self._client_display_latency_ms = latency_ms
+
+        if self._app_service.client_message_manager:
+            self._app_service.client_message_manager.set_server_keyframe_id(
+                self._frame_counter
+            )
+        self._frame_counter += 1
+
     def sim_update(self, dt, post_sim_update_dict):
         # Do NOT let the remote client make the server application exit!
         # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
@@ -321,6 +358,8 @@ class AppStateRearrangeV2(AppState):
         #             episode_id_by_scene_index[scene_idx]
         #         )
         #         self._app_service.end_episode(do_reset=True)
+
+        self._sps_tracker.increment()
 
         self._update_for_remote_client_connect_and_idle()
 
