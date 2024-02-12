@@ -164,7 +164,7 @@ def _headless_app_loop(hitl_config, driver):
         # Print step_count periodically. print less often as time goes by, to cut down on log spam.
         if step_count == next_step_count_to_debug_print:
             print(f"step {step_count}")
-            next_step_count_to_debug_print = next_step_count_to_debug_print * 2
+            next_step_count_to_debug_print = next_step_count_to_debug_print + 200
 
         post_sim_update_dict = driver.sim_update(dt)
 

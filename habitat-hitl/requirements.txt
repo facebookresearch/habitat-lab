@@ -1,2 +1,3 @@
 websockets
 aiohttp
+hydra-core
