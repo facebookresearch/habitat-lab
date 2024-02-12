@@ -1255,8 +1255,10 @@ def on_floor(
 
     obj_snap = alt_pathfinder.snap_point(center, island_index=island_index)
 
+    # include navmesh cell height error in the distance threshold.
+    navmesh_cell_height = alt_pathfinder.nav_mesh_settings.cell_height
     snap_disp = obj_snap - center
-    snap_dist = snap_disp.length() - obj_size
+    snap_dist = snap_disp.length() - obj_size - (navmesh_cell_height / 2.0)
 
     if snap_dist > distance_threshold:
         # TODO: needs more precision?

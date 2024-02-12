@@ -463,9 +463,14 @@ class HabitatSimInteractiveViewer(Application):
                     color=mn.Color4.magenta(),
                     normal=mn.Vector3(0, 1, 0),
                 )
+                navmesh_cell_height = (
+                    self.sim.pathfinder.nav_mesh_settings.cell_height
+                )
                 disp = obj_snap - center
                 dist = disp.length()
-                max_dist = distance_threshold + radius
+                max_dist = (
+                    distance_threshold + radius + (navmesh_cell_height / 2.0)
+                )
                 self.sim.get_debug_line_render().draw_transformed_line(
                     center,
                     center + disp.normalized() * min(dist, max_dist),
