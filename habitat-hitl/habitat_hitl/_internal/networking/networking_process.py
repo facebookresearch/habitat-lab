@@ -9,6 +9,7 @@ import json
 import os
 import signal
 import ssl
+from datetime import datetime, timedelta
 
 import aiohttp.web
 import websockets
@@ -102,6 +103,7 @@ class NetworkManager:
         self._waiting_for_client_ready = False
         self._needs_consolidated_keyframe = False
         self._waiting_for_app_ready = False
+        self._recent_connection_activity_timestamp = None
 
     def update_consolidated_keyframes(self, keyframes):
         for inc_keyframe in keyframes:
@@ -112,6 +114,7 @@ class NetworkManager:
     async def receive_client_states(self, websocket):
         connection_id = id(websocket)
         async for message in websocket:
+            self._recent_connection_activity_timestamp = datetime.now()
             try:
                 # Parse the received message as a JSON object
                 client_state = json.loads(message)
@@ -157,9 +160,9 @@ class NetworkManager:
                         connection_id = message_dict["kickClient"]
                         if connection_id in self._connected_clients:
                             print(f"kicking client {connection_id}")
-                            await self._connected_clients[
-                                connection_id
-                            ].close()
+                            websocket = self._connected_clients[connection_id]
+                            # Don't await this; we want to keep checking keyframes. Beware this means the connection will remain alive for some time after this.
+                            asyncio.create_task(websocket.close())
 
                     # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
                     if (
@@ -199,8 +202,11 @@ class NetworkManager:
                         # This will raise an exception if the connection is broken,
                         # e.g. if the server lost its network connection.
                         await websocket.send(wrapper_json)
-                    except Exception as e:
-                        print(f"error sending to client: {e}")
+                        self._recent_connection_activity_timestamp = (
+                            datetime.now()
+                        )
+                    except Exception:
+                        # print(f"error sending to client: {e}")
                         self.handle_disconnect()
 
                 # limit how often we send
@@ -212,11 +218,15 @@ class NetworkManager:
         return len(self._connected_clients) > 0
 
     def handle_disconnect(self):
+        """
+        To be called after a websocket has closed. Don't call this to close the websocket.
+        """
         if len(self._connected_clients) == 0:
             return
         assert len(self._connected_clients) == 1
         websocket_id = list(self._connected_clients.keys())[0]
         websocket = self._connected_clients[websocket_id]
+        # todo: assert that websocket is actually already closed
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
@@ -271,10 +281,33 @@ class NetworkManager:
             # the connection). We handle either case in the finally block below.
             await self.receive_client_states(websocket)
 
-        except Exception as e:
-            print(f"error receiving from client: {e}")
+        except Exception:
+            # print(f"error receiving from client: {e}")
+            pass
         finally:
             self.handle_disconnect()
+
+    # Sloppy: Connection sends/receives seem to sometimes hang for several minutes, making the server unresponsive to new connections. Let's try to detect when this happens and close the connection. Unclear if this is actually helping. I believe the underlying cause was improper configuration of the AWS load balancer and this has probably since been fixed.
+    async def check_close_broken_connection(self):
+        while True:
+            try:
+                await asyncio.sleep(5)
+                # print("check_close_broken_connection heartbeat")
+                if self.has_connection():
+                    current_time = datetime.now()
+                    if (
+                        current_time
+                        - self._recent_connection_activity_timestamp
+                        >= timedelta(seconds=10)
+                    ):
+                        for connection_id in self._connected_clients:
+                            print(f"closing broken connection {connection_id}")
+                            asyncio.create_task(
+                                self._connected_clients[connection_id].close()
+                            )
+            except Exception:
+                # print(f"recoverable error in check_close_broken_connection: {e}")
+                pass
 
 
 async def start_websocket_server(network_mgr, networking_config):
@@ -338,6 +371,10 @@ async def networking_main_async(interprocess_record):
         network_mgr.check_keyframe_queue()
     )
 
+    check_close_broken_connection_task = asyncio.ensure_future(
+        network_mgr.check_close_broken_connection()
+    )
+
     # Handle SIGTERM. We should get this signal when we do networking_process.terminate(). See terminate_networking_process.
     stop: asyncio.Future = asyncio.Future()
     loop = asyncio.get_event_loop()
@@ -354,6 +391,7 @@ async def networking_main_async(interprocess_record):
         await http_runner.cleanup()
 
     check_keyframe_queue_task.cancel()
+    check_close_broken_connection_task.cancel()
 
 
 def networking_main(interprocess_record):
