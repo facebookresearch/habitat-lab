@@ -553,11 +553,67 @@ def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
     return ao_link_map
 
 
-def get_object_global_keypoints(
+def get_global_keypoints_from_object_id(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get a list of object keypoints in global space given an object id.
+    0th point is the center of bb, others are bounding box corners.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject from which to extract keypoints.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    obj = get_obj_from_id(sim, object_id, ao_link_map)
+
+    if type(obj) == habitat_sim.physics.ManagedBulletRigidObject:
+        return get_rigid_object_global_keypoints(obj)
+    else:
+        # AO
+        return get_articulated_object_global_keypoints(obj, ao_aabbs)
+
+
+def get_articulated_object_global_keypoints(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get global bb keypoints for an ArticulatedObject.
+
+    :param objectA: The ManagedRigidObject from which to extract keypoints.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    ao_bb = None
+    if ao_aabbs is None:
+        ao_bb = get_ao_root_bb(objectA)
+    else:
+        ao_bb = ao_aabbs[objectA.object_id]
+
+    local_keypoints = [ao_bb.center()]
+    local_keypoints.extend(get_bb_corners(ao_bb))
+
+    global_keypoints = [
+        objectA.transformation.transform_point(key_point)
+        for key_point in local_keypoints
+    ]
+    return global_keypoints
+
+
+def get_rigid_object_global_keypoints(
     objectA: habitat_sim.physics.ManagedRigidObject,
 ) -> List[mn.Vector3]:
     """
-    Get a list of object keypoints in global space.
+    Get a list of rigid object keypoints in global space.
     0th point is the center of mass (CoM), others are bounding box corners.
 
     :param objectA: The ManagedRigidObject from which to extract keypoints.
@@ -596,7 +652,7 @@ def object_keypoint_cast(
         # default to downward raycast
         direction = mn.Vector3(0, -1, 0)
 
-    global_keypoints = get_object_global_keypoints(objectA)
+    global_keypoints = get_rigid_object_global_keypoints(objectA)
     return [
         sim.cast_ray(habitat_sim.geo.Ray(keypoint, direction))
         for keypoint in global_keypoints
@@ -893,7 +949,7 @@ def within(
     :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
     """
 
-    global_keypoints = get_object_global_keypoints(objectA)
+    global_keypoints = get_rigid_object_global_keypoints(objectA)
 
     # build axes vectors
     pos_axes = [mn.Vector3.x_axis(), mn.Vector3.y_axis(), mn.Vector3.z_axis()]
@@ -1264,3 +1320,76 @@ def on_floor(
         # TODO: needs more precision?
         return False
     return True
+
+
+def object_in_region(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    region: habitat_sim.scene.SemanticRegion,
+    containment_threshold=0.25,
+    center_only=False,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> Tuple[bool, float]:
+    """
+    Check if an object is within a region by checking region containment of keypoints.
+
+    :param sim: The Simulator instance.
+    :param objectA: The object instance.
+    :param region: The SemanticRegion to check.
+    :param containment_threshold: threshold ratio of keypoints which need to be in a region to count as containment.
+    :param center_only: If True, only use the BB center keypoint, all or nothing.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+
+    :return: boolean containment and the ratio of keypoints which are inside the region.
+    """
+
+    key_points = get_global_keypoints_from_object_id(
+        sim,
+        object_id=objectA.object_id,
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
+    )
+
+    if center_only:
+        key_points = key_points[0]
+
+    contained_points = [p for p in key_points if region.contains(p)]
+    ratio = len(contained_points) / float(len(key_points))
+
+    return ratio >= containment_threshold, ratio
+
+
+def get_object_regions(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[Tuple[int, float]]:
+    """
+    Get a sorted list of regions containing an object using bounding box keypoints.
+
+    :param sim: The Simulator instance.
+    :param objectA: The object instance.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A sorted list of region index, ratio pairs. First item in the list the primary containing region.
+    """
+
+    key_points = get_global_keypoints_from_object_id(
+        sim,
+        object_id=objectA.object_id,
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
+    )
+
+    return sim.semantic_scene.get_regions_for_points(key_points)

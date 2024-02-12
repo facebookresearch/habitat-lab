@@ -28,6 +28,14 @@ from habitat_sim.utils.common import quat_from_angle_axis
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
+def interp_color(c0: mn.Color4, c1: mn.Color4, t: float) -> mn.Color4:
+    """
+    Get a color between c0 and c1 based on t in range [0,1]
+    """
+    new_color = c0 + (c1 - c0) * t
+    return new_color
+
+
 class HabitatSimInteractiveViewer(Application):
     # the maximum number of chars displayable in the app window
     # using the magnum text module. These chars are used to
@@ -200,6 +208,7 @@ class HabitatSimInteractiveViewer(Application):
             "nearby-geodesic",
             "size_regularized_distance",
             "on_floor",
+            "regions",
         ]
         self.demo_mode = "above"
         self.distance_threshold = 1.0
@@ -251,6 +260,27 @@ class HabitatSimInteractiveViewer(Application):
                 radius=0.005,
                 color=yellow,
                 normal=camera_position - cp.position_on_b_in_ws,
+            )
+
+    def draw_region_debug(
+        self,
+        debug_line_render: Any,
+        region_index: int,
+        color: mn.Color4 = None,
+    ) -> None:
+        """
+        Draw the semantic region wireframe.
+        """
+        region = self.sim.semantic_scene.regions[region_index]
+        if color is None:
+            color = self.debug_semantic_colors.get(
+                region.id, mn.Color4.magenta()
+            )
+        for edge in region.volume_edges:
+            debug_line_render.draw_transformed_line(
+                edge[0],
+                edge[1],
+                color,
             )
 
     def debug_draw(self):
@@ -482,6 +512,21 @@ class HabitatSimInteractiveViewer(Application):
                         center + disp.normalized() * max_dist,
                         mn.Color4.red(),
                     )
+                return
+            elif self.demo_mode == "regions":
+                obj_regions = sim_utl.get_object_regions(
+                    self.sim, selected_obj, self.ao_link_map, self.ao_aabbs
+                )
+
+                for region_index, region_weight in obj_regions:
+                    self.draw_region_debug(
+                        self.sim.get_debug_line_render(),
+                        region_index,
+                        color=interp_color(
+                            mn.Color4.green(), mn.Color4.red(), region_weight
+                        ),
+                    )
+
                 return
             else:
                 return
