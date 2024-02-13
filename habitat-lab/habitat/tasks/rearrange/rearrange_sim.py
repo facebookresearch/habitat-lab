@@ -601,14 +601,14 @@ class RearrangeSim(HabitatSim):
             if should_add_objects:
 
                 # Get object path
-                object_template = otm.get_templates_by_handle_substring(obj_handle)
+                object_template = otm.get_first_matching_template_by_handle(obj_handle)
 
                 # Exit if template is invalid
                 if not object_template:
                     raise ValueError(f"Template not found for object with handle {obj_handle}")
 
                 # Get object path
-                object_path = list(object_template.keys())[0]
+                object_path =object_template.handle
 
                 # Get rigid object from the path
                 ro = rom.add_object_by_template_handle(object_path)
