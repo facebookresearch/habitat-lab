@@ -286,7 +286,7 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += f"Server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
             if self._client_display_latency_ms:
                 controls_str += (
                     f"latency: {self._client_display_latency_ms:.0f}ms\n"
@@ -409,15 +409,33 @@ class AppStateRearrangeV2(AppState):
         if self._paused:
             return
 
-        # use number keys to select episode
-        episode_id_by_key = {
-            GuiInput.KeyNS.ONE: "0",
-            GuiInput.KeyNS.TWO: "1",
+        # episode_id should be a string, e.g. "5"
+        episode_ids_by_dataset = {
+            "data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz": [
+                "23775",
+                "23776",
+            ]
         }
+        fallback_episode_ids = ["0", "1"]
+        dataset_key = self._app_service.config.habitat.dataset.data_path
+        episode_ids = (
+            episode_ids_by_dataset[dataset_key]
+            if dataset_key in episode_ids_by_dataset
+            else fallback_episode_ids
+        )
 
-        for key in episode_id_by_key:
+        # use number keys to select episode
+        episode_index_by_key = {
+            GuiInput.KeyNS.ONE: 0,
+            GuiInput.KeyNS.TWO: 1,
+        }
+        assert len(episode_index_by_key) == len(episode_ids)
+
+        for key in episode_index_by_key:
             if self._app_service.gui_input.get_key_down(key):
-                episode_id = episode_id_by_key[key]
+                episode_id = episode_ids[episode_index_by_key[key]]
+                # episode_id should be a string, e.g. "5"
+                assert isinstance(episode_id, str)
                 self._app_service.episode_helper.set_next_episode_by_id(
                     episode_id
                 )
