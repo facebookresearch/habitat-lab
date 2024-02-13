@@ -66,7 +66,9 @@ class AppStateRearrange(AppState):
         self._goal_positions = None
 
         self._camera_helper = CameraHelper(
-            self._app_service.hitl_config, self._app_service.gui_input, self._app_service.client_message_manager
+            self._app_service.hitl_config,
+            self._app_service.gui_input,
+            self._app_service.client_message_manager,
         )
         self._first_person_mode = (
             self._app_service.hitl_config.camera.first_person_mode

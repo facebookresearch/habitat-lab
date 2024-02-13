@@ -31,7 +31,9 @@ class AppStateBasicViewer(AppState):
         self._cam_transform = None
 
         self._camera_helper = CameraHelper(
-            self._app_service.hitl_config, self._app_service.gui_input, self._app_service.client_message_manager
+            self._app_service.hitl_config,
+            self._app_service.gui_input,
+            self._app_service.client_message_manager,
         )
         self._episode_helper = self._app_service.episode_helper
         self._paused = False

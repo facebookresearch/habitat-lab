@@ -19,7 +19,7 @@ if do_agnostic_gui_input:
 
     # physical key enum from USB HID Usage Tables
     # https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf, page 53
-    # add misisng keys here as necessary
+    # add missing keys here as necessary
     class AgnosticKeyNS(Enum):
         A = 0x04
         B = 0x05
@@ -47,7 +47,6 @@ if do_agnostic_gui_input:
         X = 0x1B
         Y = 0x1C
         Z = 0x1D
-        ZERO = 0x27
         ONE = 0x1E
         TWO = 0x1F
         THREE = 0x20
@@ -57,7 +56,11 @@ if do_agnostic_gui_input:
         SEVEN = 0x24
         EIGHT = 0x25
         NINE = 0x26
+        ZERO = 0x27
+        ENTER = 0x28
         ESC = 0x29
+        BACKSPACE = 0x2A
+        TAB = 0x2B
         SPACE = 0x2C
 
     class StubNSMeta(type):

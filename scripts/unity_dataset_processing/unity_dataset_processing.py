@@ -256,7 +256,9 @@ def simplify_models(jobs: List[Job], config: Config):
 
 def find_model_paths_in_scenes(hssd_hab_root_dir, scene_ids) -> List[str]:
     model_filepaths: Set[str] = set()
-    config_root_dir = os.path.join(hssd_hab_root_dir, "scenes-articulated-uncluttered")
+    config_root_dir = os.path.join(
+        hssd_hab_root_dir, "scenes-articulated-uncluttered"
+    )
     configs = find_files(config_root_dir, file_is_scene_config)
     obj_root_dir = os.path.join(hssd_hab_root_dir, "objects")
     glb_files = find_files(obj_root_dir, file_is_glb)
@@ -354,7 +356,9 @@ def main():
         rel_path = scene_model[len(args.hssd_hab_root_dir) :]
         if "decomposed" not in scene_model:
             job = Job()
-            source_path = os.path.join(args.hssd_models_root_dir, "glb", rel_path)
+            source_path = os.path.join(
+                args.hssd_models_root_dir, "glb", rel_path
+            )
             parts = source_path.split(
                 "/objects/"
             )  # Remove 'objects/' from path
@@ -387,7 +391,9 @@ def main():
     for filename in Path("data/raw_articulated_objects").rglob("*.glb"):
         rel_path = str(filename)[len("data/raw_articulated_objects/") :]
         job = Job()
-        job.source_path = os.path.join("data/raw_articulated_objects", rel_path)
+        job.source_path = os.path.join(
+            "data/raw_articulated_objects", rel_path
+        )
         job.dest_path = os.path.join(OUTPUT_DIR, "fpss/urdf", rel_path)
         job.simplify = False
         jobs.append(job)
