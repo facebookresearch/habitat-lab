@@ -656,7 +656,7 @@ class RearrangeSim(HabitatSim):
                     for motor_id in ao.existing_joint_motor_ids:
                         ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
-        
+
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, mn.Range3D]:
