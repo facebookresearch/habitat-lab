@@ -10,6 +10,7 @@ from typing import Dict, Set
 import hydra
 import magnum as mn
 
+import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -27,7 +28,11 @@ from habitat_hitl.environment.controllers.gui_controller import (
 )
 from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
+from habitat_hitl.environment.gui_placement_helper import GuiPlacementHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+
+# Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
+DO_HUMANOID_GRASP_OBJECTS = False
 
 
 class AppStateRearrangeV2(AppState):
@@ -52,9 +57,6 @@ class AppStateRearrangeV2(AppState):
         self._paused = False
         self._hide_gui_text = False
 
-        # will be set in on_environment_reset
-        self._target_obj_ids = None
-
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
             self._app_service.gui_input,
@@ -69,6 +71,8 @@ class AppStateRearrangeV2(AppState):
             self.get_gui_controlled_agent_index(),
             self._get_gui_agent_feet_height(),
         )
+
+        self._placement_helper = GuiPlacementHelper(self._app_service)
 
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
@@ -167,9 +171,6 @@ class AppStateRearrangeV2(AppState):
 
         self._held_obj_id = None
 
-        sim = self.get_sim()
-        self._target_obj_ids = sim._scene_obj_ids
-
         self._nav_helper.on_environment_reset()
         self._pick_helper.on_environment_reset(
             agent_feet_height=self._get_gui_agent_feet_height()
@@ -204,8 +205,11 @@ class AppStateRearrangeV2(AppState):
 
         if self._held_obj_id is not None:
             if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                # todo: placement heuristic. Do something with drop_pos?
-                drop_pos = self._get_gui_agent_translation()
+                if DO_HUMANOID_GRASP_OBJECTS:
+                    drop_pos = self._get_gui_agent_translation()
+                else:
+                    # GuiPlacementHelper has already placed this object, so nothing to do here
+                    pass
                 self._held_obj_id = None
         else:
             query_pos = self._get_gui_agent_translation()
@@ -216,7 +220,8 @@ class AppStateRearrangeV2(AppState):
                 if self._app_service.gui_input.get_key_down(
                     GuiInput.KeyNS.SPACE
                 ):
-                    grasp_object_id = obj_id
+                    if DO_HUMANOID_GRASP_OBJECTS:
+                        grasp_object_id = obj_id
                     self._held_obj_id = obj_id
                 else:
                     self._has_grasp_preview = True
@@ -418,6 +423,21 @@ class AppStateRearrangeV2(AppState):
                 )
                 self._app_service.end_episode(do_reset=True)
 
+    def _update_placement(self):
+        if not self._held_obj_id:
+            return
+
+        ray = habitat_sim.geo.Ray()
+        ray.origin = self._camera_helper.get_eye_pos()
+        ray.direction = (
+            self._camera_helper.get_lookat_pos()
+            - self._camera_helper.get_eye_pos()
+        ).normalized()
+
+        if self._placement_helper.update(ray, self._held_obj_id):
+            # sloppy: save another keyframe here since we just moved the held object
+            self.get_sim().gfx_replay_manager.save_keyframe()
+
     def sim_update(self, dt, post_sim_update_dict):
         if (
             not self._app_service.hitl_config.networking.enable
@@ -454,9 +474,13 @@ class AppStateRearrangeV2(AppState):
             # temp hack: manually add a keyframe while paused
             self.get_sim().gfx_replay_manager.save_keyframe()
 
-        self._pick_helper.viz_objects()
+        if self._held_obj_id is None:
+            self._pick_helper.viz_objects()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
+
+        # after camera update
+        self._update_placement()
 
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
