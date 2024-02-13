@@ -12,15 +12,15 @@ habitat:
     max_episode_steps: 0
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
-      shuffle: True
+      shuffle: False
   task:
     measurements:
       rearrange_cooperate_reward:
         end_on_collide: False
       pddl_success:
         must_call_stop: False
-  # dataset:
-  #   data_path: examples/hitl/rearrange_v2/config/demo.json.gz
+  dataset:
+    data_path: examples/hitl/rearrange_v2/config/demo.json.gz
 
 habitat_baselines:
   # todo: document these choices
