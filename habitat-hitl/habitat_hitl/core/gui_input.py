@@ -17,6 +17,9 @@ except ImportError:
 if do_agnostic_gui_input:
     from enum import Enum
 
+    # physical key enum from USB HID Usage Tables
+    # https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf, page 53
+    # add misisng keys here as necessary
     class AgnosticKeyNS(Enum):
         A = 0x04
         B = 0x05
@@ -54,6 +57,7 @@ if do_agnostic_gui_input:
         SEVEN = 0x24
         EIGHT = 0x25
         NINE = 0x26
+        ESC = 0x29
         SPACE = 0x2C
 
     class StubNSMeta(type):

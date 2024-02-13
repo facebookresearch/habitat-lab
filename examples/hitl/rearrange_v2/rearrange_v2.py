@@ -29,6 +29,9 @@ from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 
+from habitat.sims.habitat_simulator import sim_utilities
+from habitat_sim.physics import ManagedBulletArticulatedObject
+from typing import Dict, Optional, List, Set
 ENABLE_ARTICULATED_OPEN_CLOSE = False
 
 
@@ -410,30 +413,32 @@ class AppStateRearrangeV2(AppState):
             )
         self._frame_counter += 1
 
-    def sim_update(self, dt, post_sim_update_dict):
-        # Do NOT let the remote client make the server application exit!
-        # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-        #     self._app_service.end_episode()
-        #     post_sim_update_dict["application_exit"] = True
+    def _check_change_episode(self):
+        if self._paused:
+            return
 
-        # # use 1-5 keys to select certain episodes corresponding to our 5 scenes
-        # num_fetch_scenes = 5
-        # # hand-picked episodes from hitl_vr_sample_episodes.json.gz
-        # episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
-        # for scene_idx in range(num_fetch_scenes):
-        #     key_map = [
-        #         GuiInput.KeyNS.ONE,
-        #         GuiInput.KeyNS.TWO,
-        #         GuiInput.KeyNS.THREE,
-        #         GuiInput.KeyNS.FOUR,
-        #         GuiInput.KeyNS.FIVE,
-        #     ]
-        #     key = key_map[scene_idx]
-        #     if self._app_service.gui_input.get_key_down(key):
-        #         self._app_service.episode_helper.set_next_episode_by_id(
-        #             episode_id_by_scene_index[scene_idx]
-        #         )
-        #         self._app_service.end_episode(do_reset=True)
+        # use number keys to select episode
+        episode_id_by_key = {
+            GuiInput.KeyNS.ONE: "0",
+            GuiInput.KeyNS.TWO: "1",
+        }
+
+        for key in episode_id_by_key:
+            if self._app_service.gui_input.get_key_down(key):
+                episode_id = episode_id_by_key[key]
+                self._app_service.episode_helper.set_next_episode_by_id(
+                    episode_id
+                )
+                self._app_service.end_episode(do_reset=True)
+
+    def sim_update(self, dt, post_sim_update_dict):
+        if (
+            not self._app_service.hitl_config.networking.enable
+            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC)
+        ):
+            self._app_service.end_episode()
+            post_sim_update_dict["application_exit"] = True
+            return
 
         self._sps_tracker.increment()
 
@@ -444,6 +449,8 @@ class AppStateRearrangeV2(AppState):
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
+
+        self._check_change_episode()
 
         reachable_ao_handle = self._find_reachable_ao(
             self._app_service.gui_agent_controller

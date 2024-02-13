@@ -14,6 +14,9 @@ Articulated scenes:
 * Checkout the `articulated-scenes` branch.
 * Rename `data/fphab` to `data/fpss`
 
+## Controls
+See on-screen help text. Press `1` or `2` to select an episode.
+
 ## Example launch commands
 
 Local testing (local display and keyboard control):
