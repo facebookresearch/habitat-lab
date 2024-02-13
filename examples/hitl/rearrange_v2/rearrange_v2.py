@@ -5,10 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Dict, Set
+
 import hydra
 import magnum as mn
 
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
@@ -26,9 +29,6 @@ from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 
-from habitat.sims.habitat_simulator import sim_utilities
-from habitat_sim.physics import ManagedBulletArticulatedObject
-from typing import Dict, Optional, List, Set
 
 class AppStateRearrangeV2(AppState):
     """
@@ -103,19 +103,20 @@ class AppStateRearrangeV2(AppState):
         else:
             self._opened_ao_set.add(ao_handle)
 
-
     def _find_reachable_ao(self, player: GuiHumanoidController) -> str:
         """Returns the handle of the nearest reachable articulated object. Returns None if none is found."""
         max_distance = 2.0  # TODO: Const
-        player_root_node = player.get_articulated_agent().sim_obj.get_link_scene_node(-1)
+        player_root_node = (
+            player.get_articulated_agent().sim_obj.get_link_scene_node(-1)
+        )
         player_pos = player_root_node.absolute_translation
         player_pos_xz = mn.Vector3(player_pos.x, 0.0, player_pos.z)
-        min_dist: int = max_distance
-        output: str = None
+        min_dist = max_distance
+        output = None
 
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
-        for handle, bounding_box in self._ao_root_bbs.items():
+        for handle, _ in self._ao_root_bbs.items():
             ao = sim_utilities.get_obj_from_handle(self._sim, handle)
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
@@ -146,14 +147,15 @@ class AppStateRearrangeV2(AppState):
             )
             for point in pts
         ]
-    
+
     def _highlight_ao(self, handle: str):
         bb = self._ao_root_bbs[handle]
         ao = sim_utilities.get_obj_from_handle(self._sim, handle)
         ao_pos = ao.translation
         radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2.0
-        self._pick_helper._add_highlight_ring(ao_pos, mn.Color3(0, 1, 0), radius, True)
-
+        self._pick_helper._add_highlight_ring(
+            ao_pos, mn.Color3(0, 1, 0), radius, True
+        )
 
     def on_environment_reset(self, episode_recorder_dict):
         self._ao_root_bbs = sim_utilities.get_ao_root_bbs(self._sim)
@@ -398,30 +400,32 @@ class AppStateRearrangeV2(AppState):
             )
         self._frame_counter += 1
 
-    def sim_update(self, dt, post_sim_update_dict):
-        # Do NOT let the remote client make the server application exit!
-        # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-        #     self._app_service.end_episode()
-        #     post_sim_update_dict["application_exit"] = True
+    def _check_change_episode(self):
+        if self._paused:
+            return
 
-        # # use 1-5 keys to select certain episodes corresponding to our 5 scenes
-        # num_fetch_scenes = 5
-        # # hand-picked episodes from hitl_vr_sample_episodes.json.gz
-        # episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
-        # for scene_idx in range(num_fetch_scenes):
-        #     key_map = [
-        #         GuiInput.KeyNS.ONE,
-        #         GuiInput.KeyNS.TWO,
-        #         GuiInput.KeyNS.THREE,
-        #         GuiInput.KeyNS.FOUR,
-        #         GuiInput.KeyNS.FIVE,
-        #     ]
-        #     key = key_map[scene_idx]
-        #     if self._app_service.gui_input.get_key_down(key):
-        #         self._app_service.episode_helper.set_next_episode_by_id(
-        #             episode_id_by_scene_index[scene_idx]
-        #         )
-        #         self._app_service.end_episode(do_reset=True)
+        # use number keys to select episode
+        episode_id_by_key = {
+            GuiInput.KeyNS.ONE: "0",
+            GuiInput.KeyNS.TWO: "1",
+        }
+
+        for key in episode_id_by_key:
+            if self._app_service.gui_input.get_key_down(key):
+                episode_id = episode_id_by_key[key]
+                self._app_service.episode_helper.set_next_episode_by_id(
+                    episode_id
+                )
+                self._app_service.end_episode(do_reset=True)
+
+    def sim_update(self, dt, post_sim_update_dict):
+        if (
+            not self._app_service.hitl_config.networking.enable
+            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC)
+        ):
+            self._app_service.end_episode()
+            post_sim_update_dict["application_exit"] = True
+            return
 
         self._sps_tracker.increment()
 
@@ -433,7 +437,11 @@ class AppStateRearrangeV2(AppState):
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
-        reachable_ao_handle = self._find_reachable_ao(self._app_service.gui_agent_controller)
+        self._check_change_episode()
+
+        reachable_ao_handle = self._find_reachable_ao(
+            self._app_service.gui_agent_controller
+        )
         if reachable_ao_handle is not None:
             self._highlight_ao(reachable_ao_handle)
             if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Z):
