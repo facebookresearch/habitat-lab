@@ -6,7 +6,7 @@ SIRo's 2024H1 data-collection app. Work in progress.
 See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 
 Unity data:
-* Download Unity data folder (`data.zip`) from: https://drive.google.com/drive/folders/18I07T8o7cL9ZAtWV68EkgQynpzftlhKa
+* Download Unity data folder (`data.zip`) from: https://drive.google.com/drive/folders/12VLJGf5_ntr5nztZn1KjzyzBG_UKDPme
 * Extract `data.zip` to Unity client's `Assets/Resources/data`.
 
 Articulated scenes:
