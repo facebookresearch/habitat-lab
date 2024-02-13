@@ -593,19 +593,25 @@ class RearrangeSim(HabitatSim):
         if should_add_objects:
             self._scene_obj_ids = []
 
+        # Get Object template manager
+        otm = self.get_object_template_manager()
+
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             t_start = time.time()
             if should_add_objects:
-                template = None
-                for obj_path in self._additional_object_paths:
-                    template = osp.join(obj_path, obj_handle)
-                    if osp.isfile(template):
-                        break
-                assert (
-                    template is not None
-                ), f"Could not find config file for object {obj_handle}"
 
-                ro = rom.add_object_by_template_handle(template)
+                # Get object path
+                object_template = otm.get_templates_by_handle_substring(obj_handle)
+
+                # Exit if template is invalid
+                if not object_template:
+                    raise ValueError(f"Template not found for object with handle {obj_handle}")
+
+                # Get object path
+                object_path = list(object_template.keys())[0]
+
+                # Get rigid object from the path
+                ro = rom.add_object_by_template_handle(object_path)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
             self.add_perf_timing("create_asset", t_start)
@@ -650,7 +656,7 @@ class RearrangeSim(HabitatSim):
                     for motor_id in ao.existing_joint_motor_ids:
                         ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
-
+        
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, mn.Range3D]:
