@@ -156,9 +156,11 @@ class AppStateRearrangeV2(AppState):
         bb = self._ao_root_bbs[handle]
         ao = sim_utilities.get_obj_from_handle(self._sim, handle)
         ao_pos = ao.translation
+        ao_pos.y = 0.0  # project to ground
         radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2.0
+        # sloppy: use private GuiPickHelper._add_highlight_ring
         self._pick_helper._add_highlight_ring(
-            ao_pos, mn.Color3(0, 1, 0), radius, True
+            ao_pos, mn.Color3(0, 1, 0), radius, do_pulse=False, billboard=False
         )
 
     def on_environment_reset(self, episode_recorder_dict):
