@@ -3,6 +3,7 @@
 defaults:
   - social_rearrange: pop_play
   - hitl_defaults
+  - disable_spot_pick_and_move_backward
   - _self_
 
 habitat:
