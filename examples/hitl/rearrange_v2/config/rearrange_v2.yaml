@@ -9,12 +9,17 @@ habitat:
   # various config args to ensure the episode never ends
   environment:
     max_episode_steps: 0
+    iterator_options:
+      # For the demo, we want to showcase the episodes in the specified order
+      shuffle: False
   task:
     measurements:
       rearrange_cooperate_reward:
         end_on_collide: False
       pddl_success:
         must_call_stop: False
+  dataset:
+    data_path: data/demo.json.gz
 
 habitat_baselines:
   # todo: document these choices
