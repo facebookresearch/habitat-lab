@@ -5,15 +5,14 @@ SIRo's 2024H1 data-collection app. Work in progress.
 ## Installing and using HITL apps
 See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 
-Episodes and Unity data:
-* Download `demo.json.gz` and `data.zip` from: https://drive.google.com/drive/folders/18I07T8o7cL9ZAtWV68EkgQynpzftlhKa
-* Copy episodes to `data/demo.json.gz`.
+Unity data:
+* Download Unity data folder (`data.zip`) from: https://drive.google.com/drive/folders/18I07T8o7cL9ZAtWV68EkgQynpzftlhKa
 * Extract `data.zip` to Unity client's `Assets/Resources/data`.
 
 Articulated scenes:
-* Clone `fphab` to somewhere convenient: https://huggingface.co/datasets/fpss/fphab
+* Clone [fphab](https://huggingface.co/datasets/fpss/fphab) to `data/`
 * Checkout the `articulated-scenes` branch.
-* Create a symlink to the root of the repository (where dataset config files are found) here: `data/fpss`
+* Rename `data/fphab` to `data/fpss`
 
 ## Example launch commands
 
