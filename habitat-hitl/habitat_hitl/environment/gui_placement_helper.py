@@ -102,7 +102,10 @@ class GuiPlacementHelper:
 
         if success:
             self._draw_circle(
-                hint_pos, COLOR_PLACE_PREVIEW_VALID, RADIUS_PLACE_PREVIEW_VALID
+                hint_pos,
+                COLOR_PLACE_PREVIEW_VALID,
+                RADIUS_PLACE_PREVIEW_VALID,
+                billboard=False,
             )
         else:
             query_obj.translation = FAR_AWAY_HIDDEN_POSITION
@@ -110,11 +113,12 @@ class GuiPlacementHelper:
                 hint_pos,
                 COLOR_PLACE_PREVIEW_INVALID,
                 RADIUS_PLACE_PREVIEW_INVALID,
+                billboard=True,
             )
 
         return hint_pos if success else None
 
-    def _draw_circle(self, pos, color, radius):
+    def _draw_circle(self, pos, color, radius, billboard):
         num_segments = 24
         self._app_service.line_render.draw_circle(
             pos,
@@ -123,4 +127,6 @@ class GuiPlacementHelper:
             num_segments,
         )
         if self._app_service.client_message_manager:
-            self._app_service.client_message_manager.add_highlight(pos, radius)
+            self._app_service.client_message_manager.add_highlight(
+                pos, radius, billboard=billboard, color=color
+            )

@@ -14,8 +14,7 @@ COLOR_GRASPABLE: Final[mn.Color3] = mn.Color3(1, 0.75, 0)
 COLOR_GRASP_PREVIEW: Final[mn.Color3] = mn.Color3(0.5, 1, 0)
 COLOR_FOCUS_OBJECT: Final[mn.Color3] = mn.Color3(1, 1, 1)
 RADIUS_GRASPABLE: Final[float] = 0.15
-RADIUS_GRASP_PREVIEW: Final[float] = 0.15
-RADIUS_FOCUS_OBJECT: Final[float] = 0.2
+RADIUS_GRASP_PREVIEW: Final[float] = 0.2
 RING_PULSE_SIZE: Final[float] = 0.03
 
 
@@ -80,7 +79,7 @@ class GuiPickHelper:
             self._pick_candidate_index = None
             return None
 
-    def _draw_circle(self, pos, color, radius):
+    def _draw_circle(self, pos, color, radius, billboard):
         num_segments = 24
         self._app_service.line_render.draw_circle(
             pos,
@@ -89,26 +88,35 @@ class GuiPickHelper:
             num_segments,
         )
         if self._app_service.client_message_manager:
-            self._app_service.client_message_manager.add_highlight(pos, radius)
+            self._app_service.client_message_manager.add_highlight(
+                pos, radius, billboard=billboard, color=color
+            )
 
-    def _add_highlight_ring(self, pos, color, radius, do_pulse=False):
+    def _add_highlight_ring(
+        self, pos, color, radius, do_pulse=False, billboard=True
+    ):
         if do_pulse:
             radius += self._app_service.get_anim_fraction() * RING_PULSE_SIZE
-        self._draw_circle(pos, color, radius)
+        self._draw_circle(pos, color, radius, billboard)
 
     def viz_objects(self):
         obj_positions = self._get_object_positions()
-        for i in range(len(obj_positions)):
-            obj_id = self._obj_ids[i]
+
+        if self._pick_candidate_index is not None:
+            obj_id = self._obj_ids[self._pick_candidate_index]
             pos = self._rom.get_object_by_id(obj_id).transformation.translation
-            if i == self._pick_candidate_index:
-                self._add_highlight_ring(
-                    pos,
-                    COLOR_GRASP_PREVIEW,
-                    RADIUS_GRASP_PREVIEW,
-                    do_pulse=False,
-                )
-            else:
+            self._add_highlight_ring(
+                pos,
+                COLOR_GRASP_PREVIEW,
+                RADIUS_GRASP_PREVIEW,
+                do_pulse=False,
+            )
+        else:
+            for i in range(len(obj_positions)):
+                obj_id = self._obj_ids[i]
+                pos = self._rom.get_object_by_id(
+                    obj_id
+                ).transformation.translation
                 self._add_highlight_ring(
                     pos, COLOR_GRASPABLE, RADIUS_GRASPABLE, do_pulse=True
                 )
