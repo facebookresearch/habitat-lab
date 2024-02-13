@@ -26,6 +26,9 @@ from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 
+from habitat.sims.habitat_simulator import sim_utilities
+from habitat_sim.physics import ManagedBulletArticulatedObject
+from typing import Dict, Optional, List, Set
 
 class AppStateRearrangeV2(AppState):
     """
@@ -38,6 +41,10 @@ class AppStateRearrangeV2(AppState):
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
+
+        self._sim = app_service.sim
+        self._ao_root_bbs: Dict = None
+        self._opened_ao_set: Set = set()
 
         self._cam_transform = None
         self._held_obj_id = None
@@ -78,6 +85,47 @@ class AppStateRearrangeV2(AppState):
         )
         self._client_display_latency_ms = None
 
+    def _open_close_ao(self, ao_handle: str):
+        ao = sim_utilities.get_obj_from_handle(self._sim, ao_handle)
+
+        # Check whether the ao is opened
+        is_opened = ao_handle in self._opened_ao_set
+
+        # Set ao joint positions
+        joint_limits = ao.joint_position_limits
+        joint_limits = joint_limits[0] if is_opened else joint_limits[1]
+        ao.joint_positions = joint_limits
+        ao.clamp_joint_limits()
+
+        # Remove ao from opened set
+        if is_opened:
+            self._opened_ao_set.remove(ao_handle)
+        else:
+            self._opened_ao_set.add(ao_handle)
+
+
+    def _find_reachable_ao(self, player: GuiHumanoidController) -> str:
+        """Returns the handle of the nearest reachable articulated object. Returns None if none is found."""
+        max_distance = 2.0  # TODO: Const
+        player_root_node = player.get_articulated_agent().sim_obj.get_link_scene_node(-1)
+        player_pos = player_root_node.absolute_translation
+        player_pos_xz = mn.Vector3(player_pos.x, 0.0, player_pos.z)
+        min_dist: int = max_distance
+        output: str = None
+
+        # TODO: Caching
+        # TODO: Improve heuristic using bounding box sizes and view angle
+        for handle, bounding_box in self._ao_root_bbs.items():
+            ao = sim_utilities.get_obj_from_handle(self._sim, handle)
+            ao_pos = ao.translation
+            ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
+            dist_xz = (ao_pos_xz - player_pos_xz).length()
+            if dist_xz < max_distance and dist_xz < min_dist:
+                min_dist = dist_xz
+                output = handle
+
+        return output
+
     def _get_navmesh_triangle_vertices(self):
         """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
         largest_island_index = get_largest_island_index(
@@ -98,8 +146,23 @@ class AppStateRearrangeV2(AppState):
             )
             for point in pts
         ]
+    
+    def _highlight_ao(self, handle: str):
+        bb = self._ao_root_bbs[handle]
+        ao = sim_utilities.get_obj_from_handle(self._sim, handle)
+        ao_pos = ao.translation
+        radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2.0
+        self._pick_helper._add_highlight_ring(ao_pos, mn.Color3(0, 1, 0), radius, True)
+
 
     def on_environment_reset(self, episode_recorder_dict):
+        self._ao_root_bbs = sim_utilities.get_ao_root_bbs(self._sim)
+        # HACK: Remove humans and spot from the AO collections
+        handle_filter = ["male", "female", "hab_spot_arm"]
+        for key in list(self._ao_root_bbs.keys()):
+            if any(handle in key for handle in handle_filter):
+                del self._ao_root_bbs[key]
+
         self._held_obj_id = None
 
         sim = self.get_sim()
@@ -215,17 +278,18 @@ class AppStateRearrangeV2(AppState):
 
         controls_str: str = ""
         if not self._hide_gui_text:
-            controls_str += "H: show.hide help text\n"
             if self._sps_tracker.get_smoothed_rate() is not None:
                 controls_str += f"Server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
             if self._client_display_latency_ms:
                 controls_str += (
                     f"latency: {self._client_display_latency_ms:.0f}ms\n"
                 )
+            controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
             controls_str += "A, D: turn\n"
             controls_str += "W, S: walk\n"
+            controls_str += "Z: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
 
         return controls_str
@@ -368,6 +432,12 @@ class AppStateRearrangeV2(AppState):
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
+
+        reachable_ao_handle = self._find_reachable_ao(self._app_service.gui_agent_controller)
+        if reachable_ao_handle is not None:
+            self._highlight_ao(reachable_ao_handle)
+            if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Z):
+                self._open_close_ao(reachable_ao_handle)
 
         if not self._paused:
             self._update_grasping_and_set_act_hints()
