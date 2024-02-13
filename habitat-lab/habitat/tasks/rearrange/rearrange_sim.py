@@ -593,7 +593,7 @@ class RearrangeSim(HabitatSim):
         if should_add_objects:
             self._scene_obj_ids = []
 
-        # Get Object template manager.
+        # Get Object template manager
         otm = self.get_object_template_manager()
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
