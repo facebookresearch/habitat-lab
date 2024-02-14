@@ -687,6 +687,7 @@ class GoalSensorConfig(LabSensorConfig):
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
+    only_one_target: bool = False
 
 
 @dataclass

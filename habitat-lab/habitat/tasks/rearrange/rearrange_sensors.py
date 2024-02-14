@@ -185,14 +185,31 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
     cls_uuid: str = "obj_goal_sensor"
 
-    def get_observation(self, observations, episode, *args, **kwargs):
+    def _get_observation_space(self, *args, **kwargs):
+        if self.config.only_one_target:
+            n_targets = 1.0
+        else:
+            n_targets = self._task.get_n_targets()
+        return spaces.Box(
+            shape=(3 * n_targets,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
         global_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.ee_transform()
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
-        return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
+        if self.config.only_one_target:
+            return batch_transform_point(pos, T_inv, np.float32)[
+                [task.targ_idx]
+            ].reshape(-1)
+        else:
+            return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
 @registry.register_sensor
