@@ -187,7 +187,7 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
     def _get_observation_space(self, *args, **kwargs):
         if self.config.only_one_target:
-            n_targets = 1.0
+            n_targets = 1
         else:
             n_targets = self._task.get_n_targets()
         return spaces.Box(
