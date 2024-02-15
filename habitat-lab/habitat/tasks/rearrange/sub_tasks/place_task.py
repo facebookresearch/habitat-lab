@@ -5,12 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import magnum as mn
+import numpy as np
+import quaternion
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
-from habitat.utils.geometry_utils import quat_to_euler
 
 
 @registry.register_task(name="RearrangePlaceTask-v0")
@@ -35,19 +35,32 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             None
         ).articulated_agent.base_transformation
         # Get the local ee location (x,y,z)
-        local_obj_transform = base_transform.inverted() @ obj_transform
-        local_obj_quat = mn.Quaternion.from_matrix(
-            local_obj_transform.rotation()
+        base_T_obj_transform = base_transform.inverted() @ obj_transform
+
+        # Get the local ee orientation (roll, pitch, yaw)
+        local_obj_quat = quaternion.from_rotation_matrix(
+            base_T_obj_transform.rotation()
         )
-        local_obj_euler = quat_to_euler(
-            (
-                local_obj_quat.scalar,
-                local_obj_quat.vector[0],
-                local_obj_quat.vector[2],
-                local_obj_quat.vector[1],
-            )
-        )
-        return local_obj_euler
+        local_obj_euler = quaternion.as_euler_angles(local_obj_quat)
+
+        # Process roll
+        r = local_obj_euler[2]
+        if r > 0:
+            r = abs(r - np.pi)
+        else:
+            r = -abs(r + np.pi)
+
+        # Process pitch
+        p = -(local_obj_euler[1] - np.pi / 2.0)
+
+        # Process yaw
+        y = local_obj_euler[0]
+        if y > 0:
+            y = -abs(y - np.pi)
+        else:
+            y = abs(y + np.pi)
+
+        return np.array([r, p, y])
 
     def reset(self, episode: Episode):
         sim = self._sim
@@ -80,5 +93,4 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         _, self.init_ee_orientation = self._sim.get_agent_data(
             None
         ).articulated_agent.get_ee_local_pose()  # type: ignore
-
         return self._get_observations(episode)
