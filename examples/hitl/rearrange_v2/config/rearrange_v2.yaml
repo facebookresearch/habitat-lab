@@ -20,7 +20,7 @@ habitat:
       pddl_success:
         must_call_stop: False
   dataset:
-    data_path: examples/hitl/rearrange_v2/config/demo.json.gz
+    data_path: examples/hitl/rearrange_v2/app_data/demo.json.gz
 
 habitat_baselines:
   # todo: document these choices
