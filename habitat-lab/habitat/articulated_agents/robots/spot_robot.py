@@ -7,12 +7,12 @@ from typing import Dict, List, Optional, Set, Tuple
 import attr
 import magnum as mn
 import numpy as np
+import quaternion
 
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
 )
-from habitat.utils.geometry_utils import quat_to_euler
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -206,26 +206,37 @@ class SpotRobot(MobileManipulator):
                 "The current manipulator does not have enough end effectors"
             )
 
-        ef_link_transform = self.ee_transform()
+        ee_transform = self.ee_transform()
         base_transform = self.base_transformation
+        # Get transformation
+        base_T_ee_transform = base_transform.inverted() @ ee_transform
+
         # Get the local ee location (x,y,z)
-        local_ee_location = base_transform.inverted().transform_point(
-            ef_link_transform.translation
+        local_ee_location = base_T_ee_transform.translation
+
+        # Get the local ee orientation (roll, pitch, yaw)
+        local_ee_quat = quaternion.from_rotation_matrix(
+            base_T_ee_transform.rotation()
         )
-        # Get the local ee rotation (r,p,y)
-        local_ee_transform = base_transform.inverted() @ ef_link_transform
-        local_ee_quat = mn.Quaternion.from_matrix(
-            local_ee_transform.rotation()
-        )
-        local_ee_euler = quat_to_euler(
-            (
-                local_ee_quat.scalar,
-                local_ee_quat.vector[0],
-                local_ee_quat.vector[2],
-                local_ee_quat.vector[1],
-            )
-        )
-        return np.array(local_ee_location), np.array(local_ee_euler)
+        local_ee_euler = quaternion.as_euler_angles(local_ee_quat)
+
+        # Process roll
+        r = local_ee_euler[2]
+        if r > 0:
+            r = abs(r - np.pi)
+        else:
+            r = -abs(r + np.pi)
+
+        # Process pitch
+        p = -(local_ee_euler[1] - np.pi / 2.0)
+
+        # Process yaw
+        y = local_ee_euler[0]
+        if y > 0:
+            y = -abs(y - np.pi)
+        else:
+            y = abs(y + np.pi)
+        return np.array(local_ee_location), np.array([r, p, y])
 
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
