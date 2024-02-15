@@ -31,13 +31,9 @@ from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.gui_placement_helper import GuiPlacementHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 
-from habitat.sims.habitat_simulator import sim_utilities
-from habitat_sim.physics import ManagedBulletArticulatedObject
-from typing import Dict, Optional, List, Set
 ENABLE_ARTICULATED_OPEN_CLOSE = False
 # Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
 DO_HUMANOID_GRASP_OBJECTS = False
-
 
 
 class AppStateRearrangeV2(AppState):
@@ -311,7 +307,8 @@ class AppStateRearrangeV2(AppState):
             controls_str += "I, K: look up, down\n"
             controls_str += "A, D: turn\n"
             controls_str += "W, S: walk\n"
-            controls_str += "Z: open/close receptacle\n"
+            if ENABLE_ARTICULATED_OPEN_CLOSE:
+                controls_str += "Z: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
 
         return controls_str
