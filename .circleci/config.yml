@@ -275,7 +275,7 @@ jobs:
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              pytest test/hitl/test_hitl_main.py  --config CONFIG_FILE habtiat.dataset.type=RearrangeEpisodeDataset habtiat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_medium.json.gz
+              pytest test/hitl/test_hitl_main.py
 
       - run:
           name: Run api tests
