@@ -231,9 +231,9 @@ class ObjectToTargetOrientationDistance(Measure):
         if "roll" in config.target_orientation:
             self._ori_index.append(0)
         if "pitch" in config.target_orientation:
-            self._ori_index.append(2)
-        if "yaw" in config.target_orientation:
             self._ori_index.append(1)
+        if "yaw" in config.target_orientation:
+            self._ori_index.append(2)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
