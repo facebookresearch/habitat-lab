@@ -27,6 +27,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import angle_between_quaternions
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -411,7 +412,7 @@ class RelativeInitialEEOrientationSensor(
 
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
-            shape=(3,),
+            shape=(1,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -422,11 +423,14 @@ class RelativeInitialEEOrientationSensor(
             self.agent_id
         ).articulated_agent.get_ee_local_pose()
 
-        delta = task.init_ee_orientation - ee_orientation
-        if self._use_smallest_angle:
-            delta = (delta + np.pi) % (2 * np.pi) - np.pi
-
-        return np.array(delta, dtype=np.float32)
+        return np.array(
+            [
+                angle_between_quaternions(
+                    task.init_ee_orientation, ee_orientation
+                )
+            ],
+            dtype=np.float32,
+        )
 
 
 @registry.register_sensor
@@ -447,7 +451,7 @@ class RelativeTargetObjectOrientationSensor(
 
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
-            shape=(3,),
+            shape=(1,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -461,9 +465,14 @@ class RelativeTargetObjectOrientationSensor(
         # The target object orientation is initial object orientation
         target_object_orientation = task.init_obj_orientation
 
-        delta = target_object_orientation - ee_orientation
-        delta = (delta + np.pi) % (2 * np.pi) - np.pi
-        return np.array(delta, dtype=np.float32)
+        return np.array(
+            [
+                angle_between_quaternions(
+                    target_object_orientation, ee_orientation
+                )
+            ],
+            dtype=np.float32,
+        )
 
 
 @registry.register_sensor

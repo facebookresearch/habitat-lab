@@ -973,9 +973,6 @@ class ObjectToTargetOrientationDistanceMeasurementConfig(MeasurementConfig):
     """
 
     type: str = "ObjectToTargetOrientationDistance"
-    target_orientation: List[str] = field(
-        default_factory=lambda: ["roll", "pitch"]
-    )
 
 
 @dataclass

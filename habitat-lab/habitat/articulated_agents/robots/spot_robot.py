@@ -218,25 +218,8 @@ class SpotRobot(MobileManipulator):
         local_ee_quat = quaternion.from_rotation_matrix(
             base_T_ee_transform.rotation()
         )
-        local_ee_euler = quaternion.as_euler_angles(local_ee_quat)
 
-        # Process roll
-        r = local_ee_euler[2]
-        if r > 0:
-            r = abs(r - np.pi)
-        else:
-            r = -abs(r + np.pi)
-
-        # Process pitch
-        p = -(local_ee_euler[1] - np.pi / 2.0)
-
-        # Process yaw
-        y = local_ee_euler[0]
-        if y > 0:
-            y = -abs(y - np.pi)
-        else:
-            y = abs(y + np.pi)
-        return np.array(local_ee_location), np.array([r, p, y])
+        return np.array(local_ee_location), local_ee_quat
 
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
