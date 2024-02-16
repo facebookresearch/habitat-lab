@@ -75,6 +75,8 @@ __all__ = [
     "NavToPosSuccMeasurementConfig",
     "SocialNavStatsMeasurementConfig",
     "NavSeekSuccessMeasurementConfig",
+    #KL: add
+    "SocialNavToPosSuccMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -87,7 +89,10 @@ __all__ = [
     "PddlSuccessMeasurementConfig",
     # PROFILING MEASURES
     "RuntimePerfStatsMeasurementConfig",
+    #Add
+    # "HeadStereoLeftDepthSensorConfig",
 ]
+
 
 
 @dataclass
@@ -891,6 +896,10 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
 
+#KL: add
+@dataclass
+class SocialDistToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "SocialDistToGoal"
 
 @dataclass
 class BadCalledTerminateMeasurementConfig(MeasurementConfig):
@@ -906,7 +915,14 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
-
+#KL:
+@dataclass
+class SocialNavToPosSuccMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position.
+    """
+    type: str = "SocialNavToPosSucc"
+    success_distance: float = 1.5
 
 @dataclass
 class SocialNavStatsMeasurementConfig(MeasurementConfig):
@@ -2427,6 +2443,13 @@ cs.store(
     name="nav_to_pos_succ",
     node=NavToPosSuccMeasurementConfig,
 )
+#kl:
+cs.store(
+    package="habitat.task.measurements.social_nav_to_pos_succ",
+    group="habitat/task/measurements",
+    name="social_nav_to_pos_succ",
+    node=SocialNavToPosSuccMeasurementConfig,
+)
 cs.store(
     package="habitat.task.measurements.social_nav_stats",
     group="habitat/task/measurements",
@@ -2468,6 +2491,13 @@ cs.store(
     group="habitat/task/measurements",
     name="dist_to_goal",
     node=DistToGoalMeasurementConfig,
+)
+#KL:
+cs.store(
+    package="habitat.task.measurements.social_dist_to_goal",
+    group="habitat/task/measurements",
+    name="social_dist_to_goal",
+    node=SocialDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_reach_reward",

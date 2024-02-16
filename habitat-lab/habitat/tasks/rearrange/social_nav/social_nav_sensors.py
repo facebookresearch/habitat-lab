@@ -399,7 +399,7 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
 class SocialNavSeekSuccess(Measure):
     """Social nav seek success meassurement"""
 
-    cls_uuid: str = "nav_seek_success"
+    cls_uuid: str = "nav_seek_success"  #KL: add social
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -479,6 +479,75 @@ class SocialNavSeekSuccess(Measure):
             )
         else:
             self._metric = nav_pos_succ
+
+
+#############SocialNavToPosSucc######################
+
+@registry.register_measure
+class SocialDistToGoal(UsesArticulatedAgentInterface, Measure):
+    cls_uuid: str = "social_dist_to_goal"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        self._sim = sim
+        self._prev_dist = None
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._prev_dist = self._get_cur_geo_dist(task)
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def _get_cur_geo_dist(self, task):
+        return np.linalg.norm(
+            np.array(
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )[[0, 2]]
+            - task.nav_goal_pos[[0, 2]]  #KL: FIXME
+        )
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialDistToGoal.cls_uuid
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = self._get_cur_geo_dist(task)
+
+@registry.register_measure
+class SocialNavToPosSucc(Measure):
+    cls_uuid: str = "social_nav_to_pos_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavToPosSucc.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        super().__init__(*args, config=config, **kwargs)
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [SocialDistToGoal.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        dist = task.measurements.measures[SocialDistToGoal.cls_uuid].get_metric()
+        self._metric = dist < self._config.success_distance
+
+
+###########################################
+
+
+
 
 
 @registry.register_sensor

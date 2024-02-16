@@ -20,7 +20,8 @@ class FetchRobot(MobileManipulator):
             gripper_joints=[23, 24],
             wheel_joints=[2, 4],
             arm_init_params=np.array(
-                [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                # [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                [1.32, 1.40, -0.2, 1.72, 0.0, 1.66, 0.0],
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),

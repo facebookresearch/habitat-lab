@@ -53,15 +53,27 @@ class PddlSocialNavTask(PddlTask):
         if start_hold_obj_idx is None:
             # Select an object at random and navigate to that object.
             all_pos = self._sim.get_target_objs_start()
+            print("all_pos: ", all_pos)
             if force_idx is None:
                 nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
+                print("------no force_index: ", nav_to_pos)
+
             else:
                 nav_to_pos = all_pos[force_idx]
+                print("------has force_index: ", nav_to_pos)
         else:
             # Select a goal at random and navigate to that goal.
             _, all_pos = self._sim.get_targets()
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-
+            print("------- start_hold_obj_index: ", nav_to_pos)
+        # if(force_idx is None): #human agent
+        #     nav_to_pos = episode.start_position+np.array([1,1,0])
+        # else: #robot agent
+        #     nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
+        #         circle_center=episode.start_position, radius=5)
+        nav_to_pos = episode.start_position + np.array([1,1,0])
+        print("Set nav_to_pos: ", nav_to_pos, "start position: ", episode.start_position)
+        
         def filter_func(start_pos, _):
             return (
                 np.linalg.norm(start_pos - nav_to_pos)
@@ -92,10 +104,19 @@ class PddlSocialNavTask(PddlTask):
     def reset(self, episode: Episode):
         # Process the nav target
         for agent_id in range(self._sim.num_articulated_agents):
+            #KL
+            print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
+            # if agent_id == 0: #robot
+            #     self._nav_to_info = self._generate_nav_start_goal(
+            #         episode, force_idx=1
+            #     )
+            # else: #humanoids
+            #     self._nav_to_info = self._generate_nav_start_goal(
+            #         episode, force_idx=self.force_obj_to_idx
+            #     )
             self._nav_to_info = self._generate_nav_start_goal(
-                episode, force_idx=self.force_obj_to_idx
-            )
-
+                    episode, force_idx=self.force_obj_to_idx
+                )
             self._sim.get_agent_data(
                 agent_id
             ).articulated_agent.base_pos = (

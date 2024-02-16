@@ -84,7 +84,8 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
             nav_to_target_coord
         )
-
+        #KL: generate humanoidpath from here
+        final_nav_targ = np.array([1,1,0])
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
@@ -324,7 +325,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         return (start_pos, np.array(obj_pos))
 
     def step(self, *args, **kwargs):
-        max_tries = 10
+        max_tries = 1 #KL
         self.skill_done = False
 
         if self.coord_nav is None:

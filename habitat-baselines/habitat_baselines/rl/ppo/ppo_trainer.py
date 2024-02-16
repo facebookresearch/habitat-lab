@@ -182,6 +182,8 @@ class PPOTrainer(BaseRLTrainer):
             self.config = self._get_resume_state_config_or_new_config(
                 resume_state["config"]
             )
+        # print("--------------Printing Config Here-----------------")
+        # print(self.config)
 
         if self.config.habitat_baselines.rl.ddppo.force_distributed:
             self._is_distributed = True

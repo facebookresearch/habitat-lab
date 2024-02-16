@@ -15,9 +15,9 @@ habitat_baselines:
   video_dir: "video_dir"
   # To evaluate on all episodes, set this to -1
   test_episode_count: 2
-  eval_ckpt_path_dir: "data/new_checkpoints"
+  eval_ckpt_path_dir: "data/new_checkpoints1"
   num_environments: 1
-  checkpoint_folder: "data/new_checkpoints"
+  checkpoint_folder: "data/new_checkpoints1"
   num_updates: -1
   total_num_steps: 1e6
   log_interval: 10

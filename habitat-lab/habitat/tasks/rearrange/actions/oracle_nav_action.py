@@ -153,8 +153,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         value
         :param point: Vector3 indicating the target point
         """
+        # point = np.array([1,1,0])#KL
         agent_pos = self.cur_articulated_agent.base_pos
-
+        # print("TEST point", point)
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
         path.requested_end = point
@@ -177,6 +178,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )
+        print("TESTTTT: final_nav_targ: ", final_nav_targ)
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)

@@ -95,6 +95,9 @@ data
 /videos
 /train_dir
 /tb
+/tb_old
+/video_dir_old
+*.zip
 
 # outputs from other libraries
 /sandbox

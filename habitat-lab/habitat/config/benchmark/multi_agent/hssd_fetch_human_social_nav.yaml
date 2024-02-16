@@ -4,8 +4,8 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
   # Config agent sensors
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_head_rgbdp_arm_agent
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: fetch
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
   # Config agent hssd data
@@ -27,13 +27,15 @@ defaults:
     - rearrange_cooperate_reward
     - articulated_agent_force
     - force_terminate
-    - social_nav_reward
+    - social_nav_reward #KL: FIXME
     - object_to_goal_distance
     - articulated_agent_colls
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
-    - social_nav_seek_success
+    # - social_nav_seek_success
+    - social_dist_to_goal
+    - social_nav_to_pos_succ #KL: social nav to goal
     - social_nav_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
@@ -65,7 +67,8 @@ habitat:
     type: RearrangePddlSocialNavTask-v0
     min_start_distance: 4.0
     reward_measure: social_nav_reward
-    success_measure: nav_seek_success
+    # KL: success_measure: nav_seek_success
+    success_measure: social_nav_to_pos_success
     success_reward: 10.0
     slack_reward: -0.01
     end_on_success: False
@@ -120,9 +123,12 @@ habitat:
 
   gym:
     obs_keys:
-      - agent_0_articulated_agent_arm_depth
-      - agent_0_goal_to_agent_gps_compass
+      - agent_0_head_depth
+      - agent_0_obj_goal_sensor
       - agent_0_humanoid_detector_sensor
+      # added obs_keys
+      - agent_0_localization_sensor
+      
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -134,6 +140,8 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
+      # KL:humanoid detector sensor
+      # - agent_1_articulated_agent_arm_panoptic
 
   environment:
     max_episode_steps: 750
@@ -152,23 +160,18 @@ habitat:
       - agent_1
     agents:
       agent_0:
-        radius: 0.25
-        height: 1.41
-        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
-        articulated_agent_type: "SpotRobot"
+        radius: 0.3
+        height: 1.5
+        articulated_agent_urdf: data/robots/hab_fetch/robots/hab_fetch.urdf
+        articulated_agent_type: "FetchRobot"
         sim_sensors:
-          arm_rgb_sensor:
-            height: 480
-            width: 640
-            hfov: 47
-          arm_depth_sensor:
-            height: 224
-            width: 171
-            hfov: 55
-          arm_panoptic_sensor:
-            height: 224
-            width: 171
-            hfov: 55
+          # head_rgb_sensor:
+          #   height: 128
+          #   width: 128
+          head_depth_sensor:
+            height: 128
+            width: 128
+          
         joint_start_noise: 0.0
 
     kinematic_mode: True

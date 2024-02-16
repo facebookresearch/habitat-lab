@@ -48,6 +48,7 @@ class PointNavDatasetV1(Dataset):
         dataset_dir = os.path.dirname(
             config.data_path.format(split=config.split)
         )
+        # import pdb; pdb.set_trace()
         if not cls.check_config_paths_exist(config):
             raise FileNotFoundError(
                 f"Could not find dataset file `{dataset_dir}`"
