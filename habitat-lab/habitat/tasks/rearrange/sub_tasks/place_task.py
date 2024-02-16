@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 import quaternion
 
@@ -62,6 +63,15 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
 
         return np.array([r, p, y])
 
+    def get_keep_T(self, abs_obj_idx):
+        """This is simulate top down grasping"""
+        rom = self._sim.get_rigid_object_manager()
+        ro = rom.get_object_by_id(abs_obj_idx)
+        ee_T = self._sim.get_agent_data(None).articulated_agent.ee_transform()
+        obj_in_ee_T = ee_T.inverted() @ ro.transformation
+        obj_in_ee_T.translation = mn.Vector3(0, 0, 0)
+        return obj_in_ee_T
+
     def reset(self, episode: Episode):
         sim = self._sim
         # Remove whatever the agent is currently holding.
@@ -80,9 +90,16 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # Here, we teleport the target object to the gripper
         # The place task is to let Spot place the object in the original
         # object location
+        top_down_grasp = (
+            np.random.random() > 0.5 and self._config.top_down_grasp
+        )
+        if top_down_grasp:
+            # We do top down grasping here
+            sim.grasp_mgr._keep_T = self.get_keep_T(abs_obj_idx)
+        else:
+            # We do side grasping here
+            sim.grasp_mgr._keep_T = None
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-
-        # For the gripper to enforce the initial object orientation
 
         self.was_prev_holding = self.targ_idx
 
@@ -93,4 +110,10 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         _, self.init_ee_orientation = self._sim.get_agent_data(
             None
         ).articulated_agent.get_ee_local_pose()  # type: ignore
+
+        # We update the initial object orientation here to be the gripper orientation if
+        # it is top down grasping
+        if top_down_grasp:
+            self.init_obj_orientation = np.copy(self.init_ee_orientation)
+
         return self._get_observations(episode)

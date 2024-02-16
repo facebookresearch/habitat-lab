@@ -1605,6 +1605,8 @@ class TaskConfig(HabitatBaseConfig):
     # there is no minimal distance
     min_distance_start_agents: float = -1.0
     actions: Dict[str, ActionConfig] = MISSING
+    # For place task only
+    top_down_grasp: bool = False
 
 
 @dataclass
