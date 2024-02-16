@@ -28,7 +28,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         )
 
     def get_object_pose_by_id(self, obj_idx):
-        """Get the object euler angles for a given object index."""
+        """Get the object quaternion for a given object index."""
         # Get the object transformation
         rom = self._sim.get_rigid_object_manager()
         obj_transform = rom.get_object_by_id(obj_idx).transformation
@@ -42,26 +42,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         local_obj_quat = quaternion.from_rotation_matrix(
             base_T_obj_transform.rotation()
         )
-        local_obj_euler = quaternion.as_euler_angles(local_obj_quat)
-
-        # Process roll
-        r = local_obj_euler[2]
-        if r > 0:
-            r = abs(r - np.pi)
-        else:
-            r = -abs(r + np.pi)
-
-        # Process pitch
-        p = -(local_obj_euler[1] - np.pi / 2.0)
-
-        # Process yaw
-        y = local_obj_euler[0]
-        if y > 0:
-            y = -abs(y - np.pi)
-        else:
-            y = abs(y + np.pi)
-
-        return np.array([r, p, y])
+        return local_obj_quat
 
     def get_keep_T(self, abs_obj_idx):
         """This is simulate top down grasping"""

@@ -226,14 +226,6 @@ class ObjectToTargetOrientationDistance(Measure):
         self._sim = sim
         self._config = config
         super().__init__(**kwargs)
-        # Mapping
-        self._ori_index = []
-        if "roll" in config.target_orientation:
-            self._ori_index.append(0)
-        if "pitch" in config.target_orientation:
-            self._ori_index.append(1)
-        if "yaw" in config.target_orientation:
-            self._ori_index.append(2)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -246,7 +238,7 @@ class ObjectToTargetOrientationDistance(Measure):
         to_target = observations[
             RelativeTargetObjectOrientationSensor.cls_uuid
         ]
-        target_dist = np.linalg.norm(to_target[self._ori_index])
+        target_dist = np.linalg.norm(to_target)
         self._metric = target_dist
 
 
