@@ -101,3 +101,21 @@ class ClientMessageManager:
         self._message["navmeshVertices"] = [
             component for sublist in triangle_vertices for component in sublist
         ]
+
+    def update_camera_transform(
+        self, pos: List[float], rot_quat: List[float]
+    ) -> None:
+        r"""
+        Update the main camera transform.
+        """
+        assert len(pos) == 3
+        assert len(rot_quat) == 4
+
+        self._message["camera"] = {}
+        self._message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
+        self._message["camera"]["rotation"] = [
+            rot_quat[0],
+            rot_quat[1],
+            rot_quat[2],
+            rot_quat[3],
+        ]

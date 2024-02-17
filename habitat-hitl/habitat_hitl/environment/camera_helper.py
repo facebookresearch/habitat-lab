@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -52,9 +52,9 @@ class CameraHelper:
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
         self._min_zoom_dist = 0.02
-        self._eye_pos = None
-        self._lookat_pos = None
-        self._cam_transform = None
+        self._eye_pos: Optional[mn.Vector3] = None
+        self._lookat_pos: Optional[mn.Vector3] = None
+        self._cam_transform: Optional[mn.Matrix4] = None
         self._gui_input = gui_input
 
     def _camera_pitch_and_yaw_wasd_control(self):
@@ -152,15 +152,15 @@ class CameraHelper:
         forward_dir = forward_dir.normalized()
         return forward_dir
 
-    def get_cam_transform(self):
+    def get_cam_transform(self) -> Optional[mn.Matrix4]:
         assert self._cam_transform
         return self._cam_transform
 
-    def get_eye_pos(self):
+    def get_eye_pos(self) -> Optional[mn.Vector3]:
         assert self._eye_pos
         return self._eye_pos
 
-    def get_lookat_pos(self):
+    def get_lookat_pos(self) -> Optional[mn.Vector3]:
         assert self._lookat_pos
         return self._lookat_pos
 

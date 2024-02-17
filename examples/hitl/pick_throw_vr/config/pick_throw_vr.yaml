@@ -24,5 +24,9 @@ habitat_hitl:
   gui_controlled_agent:
     agent_index: 1
     ang_speed: 15
+  networking:
+    active_features:
+      # The client controls its own camera.
+      camera_sync: False
 
 pick_throw_vr:
