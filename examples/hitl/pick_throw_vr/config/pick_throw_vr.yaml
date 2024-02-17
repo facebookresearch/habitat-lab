@@ -28,5 +28,7 @@ habitat_hitl:
     client_sync:
       # The client controls its own camera.
       camera_transform: False
+      # This is a first-person application. We don't need to transmit skinned mesh poses.
+      skinning: False
 
 pick_throw_vr:

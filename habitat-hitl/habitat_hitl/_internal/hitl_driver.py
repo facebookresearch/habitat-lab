@@ -520,6 +520,10 @@ class HitlDriver(AppDriver):
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]
+                # Remove rigs from keyframe if skinning is disabled
+                if not self._hitl_config.networking.active_features.skinning:
+                    del keyframe_obj["rigCreations"]
+                    del keyframe_obj["rigUpdates"]
                 # Insert server->client message into the keyframe
                 message = self._client_message_manager.get_message_dict()
                 if len(message) > 0:
