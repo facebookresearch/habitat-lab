@@ -463,7 +463,7 @@ class RelativeTargetObjectOrientationSensor(
         ).articulated_agent.get_ee_local_pose()
 
         # The target object orientation is initial object orientation
-        target_object_orientation = task.init_obj_orientation
+        target_object_orientation = task.target_obj_orientation
 
         return np.array(
             [

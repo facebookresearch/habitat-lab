@@ -1598,6 +1598,9 @@ class TaskConfig(HabitatBaseConfig):
     actions: Dict[str, ActionConfig] = MISSING
     # For place task only
     top_down_grasp: bool = False
+    top_down_grasp_ratio: float = 0.5
+    fix_obj_rotation_change_arm_joint: bool = False
+    joint_start_noise: float = 0.1
 
 
 @dataclass

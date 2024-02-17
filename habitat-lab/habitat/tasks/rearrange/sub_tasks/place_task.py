@@ -53,6 +53,40 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         obj_in_ee_T.translation = mn.Vector3(0, 0, 0)
         return obj_in_ee_T
 
+    def random_arm(self):
+        """This function randomizes the arm joints to get a diverse training data"""
+        arm_joint_pos = self._sim.get_agent_data(
+            None
+        ).articulated_agent.arm_joint_pos
+        arm_joint_limit = self._config.actions.arm_action.arm_joint_limit
+        arm_joint_mask = self._config.actions.arm_action.arm_joint_mask
+        new_arm_joint_pos = []
+        j = 0
+        for i in range(len(arm_joint_pos)):
+            if arm_joint_mask[i]:
+                # Can change the arm joint angle
+                target_arm = (
+                    arm_joint_pos[i]
+                    + np.random.randn() * self._config.joint_start_noise
+                )
+                _min = arm_joint_limit[j][0]
+                _max = arm_joint_limit[j][1]
+                target_arm = np.clip(target_arm, _min, _max)
+                j += 1
+            else:
+                # Cannot change the arm joint angle
+                target_arm = arm_joint_pos[i]
+            new_arm_joint_pos.append(target_arm)
+
+        # Set the arm
+        self._sim.get_agent_data(
+            None
+        ).articulated_agent.arm_joint_pos = new_arm_joint_pos
+        # Update the initial ee orientation
+        _, self.init_ee_orientation = self._sim.get_agent_data(
+            None
+        ).articulated_agent.get_ee_local_pose()  # type: ignore
+
     def reset(self, episode: Episode):
         sim = self._sim
         # Remove whatever the agent is currently holding.
@@ -66,13 +100,14 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # This is the object orientation (in ee frame) at grasping moment
         # We will like the robot to match such init_obj_orientation when dropping the object
         # The sensor will be relative orientation to the initial object orientation
-        self.init_obj_orientation = self.get_object_pose_by_id(abs_obj_idx)
+        self.target_obj_orientation = self.get_object_pose_by_id(abs_obj_idx)
 
         # Here, we teleport the target object to the gripper
         # The place task is to let Spot place the object in the original
         # object location
         top_down_grasp = (
-            np.random.random() > 0.5 and self._config.top_down_grasp
+            np.random.random() > 1.0 - self._config.top_down_grasp_ratio
+            and self._config.top_down_grasp
         )
         if top_down_grasp:
             # We do top down grasping here
@@ -95,6 +130,12 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # We update the initial object orientation here to be the gripper orientation if
         # it is top down grasping
         if top_down_grasp:
-            self.init_obj_orientation = np.copy(self.init_ee_orientation)
+            self.target_obj_orientation = quaternion.quaternion(
+                self.init_ee_orientation
+            )
+
+        # We want to change the arm joint after doing top_down_grasp
+        if self._config.fix_obj_rotation_change_arm_joint and top_down_grasp:
+            self.random_arm()
 
         return self._get_observations(episode)
