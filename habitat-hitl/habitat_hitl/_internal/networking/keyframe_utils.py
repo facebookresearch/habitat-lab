@@ -73,7 +73,9 @@ def update_consolidated_keyframe(
     if "rigCreations" in inc_keyframe:
         if networking_config.active_features.skinning:
             ensure_list(consolidated_keyframe, "rigCreations")
-            consolidated_keyframe["rigCreations"] += inc_keyframe["rigCreations"]
+            consolidated_keyframe["rigCreations"] += inc_keyframe[
+                "rigCreations"
+            ]
         else:
             # Remove rigCreations if skinned mesh pose transmission is disabled.
             del inc_keyframe["rigCreations"]
