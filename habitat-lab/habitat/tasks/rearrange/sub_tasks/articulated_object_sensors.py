@@ -115,7 +115,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         # Get the camera info
         fs_w, fs_h, cam_pose = self.get_camera_param(target_key)
 
-        # Do projection
+        # Do projection from world coordinate into the camera frame
         point_cam_coord = np.linalg.inv(cam_pose) @ [
             point[0],
             point[1],
@@ -123,6 +123,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             1,
         ]
 
+        # From the camera frame into image pixel frame
         # For image width coordinate
         w = self._width / 2.0 + (
             fs_w * point_cam_coord[0] / point_cam_coord[-2]
