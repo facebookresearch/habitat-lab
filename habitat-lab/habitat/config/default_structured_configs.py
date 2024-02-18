@@ -662,6 +662,15 @@ class MarkerRelPosSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HandleBBoxSensorConfig(LabSensorConfig):
+    type: str = "HandleBBoxSensor"
+    height: int = 480
+    width: int = 640
+    score_threshold: float = 0.1
+    bbox_sixe: int = 10
+
+
+@dataclass
 class TargetStartSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the relative position from end effector to a target object that needs to be picked up.
@@ -2336,6 +2345,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.handle_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="handle_bbox_sensor",
+    node=HandleBBoxSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.arm_receptacle_semantic_sensor",

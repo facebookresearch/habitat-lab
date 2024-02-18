@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Tuple
+
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -22,6 +24,10 @@ from habitat.tasks.rearrange.utils import (
     get_camera_object_angle,
     get_camera_transform,
     rearrange_logger,
+)
+from habitat.utils.geometry_utils import (
+    cam_pose_from_opengl_to_opencv,
+    cam_pose_from_xzy_to_xyz,
 )
 
 
@@ -65,6 +71,132 @@ class MarkerRelPosSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
         return np.array(rel_marker_pos)
+
+
+@registry.register_sensor
+class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Detect handle and return bbox
+    """
+
+    cls_uuid: str = "handle_bbox"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+        self._height = config.height
+        self._width = config.width
+        self._bbox_sixe = config.bbox_sixe
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return HandleBBoxSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_image_coordinate_from_world_coordinate(
+        self, point: np.ndarray, target_key: str
+    ) -> Tuple[int, int, bool]:
+        """Project point in the world frame to the image plane"""
+        # Get the camera info
+        fs_w, fs_h, cam_pose = self.get_camera_param(target_key)
+
+        # Do projection
+        point_cam_coord = np.linalg.inv(cam_pose) @ [
+            point[0],
+            point[1],
+            point[2],
+            1,
+        ]
+
+        # For image width coordinate
+        w = self._width / 2.0 + (
+            fs_w * point_cam_coord[0] / point_cam_coord[-2]
+        )
+        # For image height coordinate
+        h = self._height / 2.0 + (
+            fs_h * point_cam_coord[1] / point_cam_coord[-2]
+        )
+
+        # check if the point is in front of the camera
+        is_in_front_of_camera = point_cam_coord[-2] > 0
+        return (w, h, is_in_front_of_camera)
+
+    def get_camera_param(
+        self, target_key: str
+    ) -> Tuple[float, float, np.ndarray]:
+        """Get the camera parameters from the agent's sensor"""
+        agent_id = 0 if self.agent_id is None else self.agent_id
+
+        # Get focal length
+        fov = (
+            float(self._sim.agents[agent_id]._sensors[target_key].hfov)
+            * np.pi
+            / 180
+        )
+        fs_w = self._width / (2 * np.tan(fov / 2.0))
+        fs_h = self._height / (2 * np.tan(fov / 2.0))
+
+        # Get the camera pose
+        hab_cam_T = (
+            self._sim.agents[agent_id]
+            ._sensors["articulated_agent_arm_rgb"]
+            .render_camera.camera_matrix.inverted()
+        )
+        world_T_cam = cam_pose_from_xzy_to_xyz(
+            cam_pose_from_opengl_to_opencv(np.array(hab_cam_T))
+        )
+        return fs_w, fs_h, world_T_cam
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_rgb"
+            assert target_key in observations
+        else:
+            target_key = f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+            assert target_key in observations
+
+        # Set the image size
+        img = np.zeros((self._height, self._width, 1))
+
+        # Get the handle location
+        handle_pos = self._task.get_use_marker().current_transform.translation
+        # We correct the coordinate from openGL to openCV
+        handle_pos = np.array([handle_pos[0], -handle_pos[2], handle_pos[1]])
+
+        # Get the pixel coordinate in 2D
+        (
+            w,
+            h,
+            is_in_front_of_camera,
+        ) = self.get_image_coordinate_from_world_coordinate(
+            handle_pos, target_key
+        )
+
+        if is_in_front_of_camera:
+            # Clip the width and length
+            w_low = int(np.clip(w - self._bbox_sixe, 0, self._width))
+            w_high = int(np.clip(w + self._bbox_sixe, 0, self._width))
+            h_low = int(np.clip(h - self._bbox_sixe, 0, self._height))
+            h_high = int(np.clip(h + self._bbox_sixe, 0, self._height))
+            img[h_low:h_high, w_low:w_high, 0] = 1.0
+
+        return np.float32(img)
 
 
 @registry.register_sensor
@@ -146,7 +278,7 @@ class ArtObjState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -186,7 +318,7 @@ class ArtObjAtDesiredState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def _get_camera_object_angle(self, obj_pos):
@@ -252,7 +384,7 @@ class ArtObjSuccess(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -305,7 +437,7 @@ class EndEffectorDistToMarker(UsesArticulatedAgentInterface, Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, task, **kwargs):
@@ -369,7 +501,7 @@ class ArtObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -378,7 +510,7 @@ class ArtObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         reward = self._metric
         link_state = task.measurements.measures[
