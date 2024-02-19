@@ -309,11 +309,20 @@ class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
         return [0.0, 0.0, 0.0]
 
     def _gen_start_state(self):
-        targ_link = self.get_use_marker().joint_idx
-        drawers = np.zeros((8,))
-        if np.random.random() > 0.5:
-            drawers[targ_link] = np.random.uniform(0.4, 0.5)
-        return drawers
+        if self._use_marker == "fridge_push_point":
+            state = np.zeros((2,))
+            if np.random.random() > 0.5:
+                # Open the fridge
+                state = np.array(
+                    [0, np.random.uniform(np.pi / 4, 2 * np.pi / 3)]
+                )
+        else:
+            targ_link = self.get_use_marker().joint_idx
+            state = np.zeros((8,))
+            if np.random.random() > 0.5:
+                # Open the drawer
+                state[targ_link] = np.random.uniform(0.4, 0.5)
+        return state
 
     def reset(self, episode: Episode):
         # There are 5 possible markers to use in replica_cad
