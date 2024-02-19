@@ -40,7 +40,7 @@ habitat:
       - is_holding
       - handle_bbox
   task:
-    type: RearrangeOpenDrawerTask-v0
+    type: RearrangeOpenCloseDrawerTask-v0
     reward_measure: art_obj_reward
     success_measure: art_obj_success
     actions:
@@ -55,8 +55,10 @@ habitat:
     slack_reward: 0.0
     success_state: 0.45
     end_on_success: True
+    # For learning in close drawer task, use larger spawn_max_dist_to_obj.
+    # Otherwise, the robot is goint to hit the drawer and cannot see handles
     spawn_max_dist_to_obj: 2.0
-    base_angle_noise: 0.0 #0.523599
+    base_angle_noise: 0.523599
     measurements:
       art_obj_at_desired_state:
         use_absolute_distance: False

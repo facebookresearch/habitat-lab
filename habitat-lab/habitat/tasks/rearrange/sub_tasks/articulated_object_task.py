@@ -232,7 +232,12 @@ class RearrangeOpenDrawerTaskV1(SetArticulatedObjectTask):
         return drawers
 
     def reset(self, episode: Episode):
-        self._use_marker = "cab_push_point_5"
+        # There are 5 possible markers to use in replica_cad
+        ids = np.random.choice([4, 5, 6, 7, 0])
+        if ids != 0:
+            self._use_marker = f"cab_push_point_{ids}"
+        else:
+            self._use_marker = "fridge_push_point"
         return super().reset(episode)
 
 
@@ -270,7 +275,12 @@ class RearrangeCloseDrawerTaskV1(SetArticulatedObjectTask):
         return drawers
 
     def reset(self, episode: Episode):
-        self._use_marker = "cab_push_point_5"
+        # There are 5 possible markers to use in replica_cad
+        ids = np.random.choice([4, 5, 6, 7, 0])
+        if ids != 0:
+            self._use_marker = f"cab_push_point_{ids}"
+        else:
+            self._use_marker = "fridge_push_point"
         return super().reset(episode)
 
 
@@ -287,4 +297,29 @@ class RearrangeCloseFridgeTaskV1(SetArticulatedObjectTask):
 
     def reset(self, episode: Episode):
         self._use_marker = "fridge_push_point"
+        return super().reset(episode)
+
+
+@registry.register_task(name="RearrangeOpenCloseDrawerTask-v0")
+class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
+    def _get_spawn_region(self):
+        return mn.Range2D([0.80, -0.35], [0.95, 0.35])
+
+    def _get_look_pos(self):
+        return [0.0, 0.0, 0.0]
+
+    def _gen_start_state(self):
+        targ_link = self.get_use_marker().joint_idx
+        drawers = np.zeros((8,))
+        if np.random.random() > 0.5:
+            drawers[targ_link] = np.random.uniform(0.4, 0.5)
+        return drawers
+
+    def reset(self, episode: Episode):
+        # There are 5 possible markers to use in replica_cad
+        ids = np.random.choice([4, 5, 6, 7, 0])
+        if ids != 0:
+            self._use_marker = f"cab_push_point_{ids}"
+        else:
+            self._use_marker = "fridge_push_point"
         return super().reset(episode)
