@@ -666,8 +666,10 @@ class HandleBBoxSensorConfig(LabSensorConfig):
     type: str = "HandleBBoxSensor"
     height: int = 480
     width: int = 640
-    score_threshold: float = 0.1
-    bbox_sixe: int = 10
+    # The pixel size (in cell) drawn in the image of reach handle point
+    pixel_size: int = 2
+    # Height - Width for the handle size in meter
+    handle_size: List[float] = field(default_factory=lambda: [0.02, 0.1])
 
 
 @dataclass

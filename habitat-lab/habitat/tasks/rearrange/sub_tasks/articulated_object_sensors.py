@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Tuple
+from typing import Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -87,7 +87,8 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._task = task
         self._height = config.height
         self._width = config.width
-        self._bbox_sixe = config.bbox_sixe
+        self._pixel_size = config.pixel_size
+        self._handle_size = config.handle_size
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -108,12 +109,12 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
-    def get_image_coordinate_from_world_coordinate(
+    def _get_image_coordinate_from_world_coordinate(
         self, point: np.ndarray, target_key: str
     ) -> Tuple[int, int, bool]:
         """Project point in the world frame to the image plane"""
         # Get the camera info
-        fs_w, fs_h, cam_pose = self.get_camera_param(target_key)
+        fs_w, fs_h, cam_pose = self._get_camera_param(target_key)
 
         # Do projection from world coordinate into the camera frame
         point_cam_coord = np.linalg.inv(cam_pose) @ [
@@ -137,7 +138,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         is_in_front_of_camera = point_cam_coord[-2] > 0
         return (w, h, is_in_front_of_camera)
 
-    def get_camera_param(
+    def _get_camera_param(
         self, target_key: str
     ) -> Tuple[float, float, np.ndarray]:
         """Get the camera parameters from the agent's sensor"""
@@ -163,6 +164,52 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         )
         return fs_w, fs_h, world_T_cam
 
+    def _get_image_pixel_from_point(
+        self, point: np.ndarray, target_key: str, img: np.ndarray
+    ):
+        """Get image pixcel from point"""
+        # Get the pixel coordinate in 2D
+        (
+            w,
+            h,
+            is_in_front_of_camera,
+        ) = self._get_image_coordinate_from_world_coordinate(point, target_key)
+
+        if is_in_front_of_camera:
+            # Clip the width and length
+            w_low = int(np.clip(w - self._pixel_size, 0, self._width))
+            w_high = int(np.clip(w + self._pixel_size, 0, self._width))
+            h_low = int(np.clip(h - self._pixel_size, 0, self._height))
+            h_high = int(np.clip(h + self._pixel_size, 0, self._height))
+            img[h_low:h_high, w_low:w_high, 0] = 1.0
+        return img
+
+    def _change_coordinate(
+        self, point: Union[np.ndarray, mn.Vector3]
+    ) -> np.ndarray:
+        """Change the coordinate system from openGL to openCV"""
+        return np.array([point[0], -point[2], point[1]])
+
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        bbox = np.zeros(img.shape)
+
+        # No handle
+        if np.sum(img) == 0:
+            return bbox
+
+        # Get the max and min value of each row and column
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+
+        # Get the bounding box
+        bbox = np.zeros(img.shape)
+        bbox[rmin:rmax, cmin:cmax] = 1.0
+
+        return bbox
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Get a correct observation space
         if self.agent_id is None:
@@ -175,27 +222,25 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         # Set the image size
         img = np.zeros((self._height, self._width, 1))
 
-        # Get the handle location
-        handle_pos = self._task.get_use_marker().current_transform.translation
-        # We correct the coordinate from openGL to openCV
-        handle_pos = np.array([handle_pos[0], -handle_pos[2], handle_pos[1]])
+        # Get the handle transformation
+        handle_T = self._task.get_use_marker().current_transform
 
-        # Get the pixel coordinate in 2D
-        (
-            w,
-            h,
-            is_in_front_of_camera,
-        ) = self.get_image_coordinate_from_world_coordinate(
-            handle_pos, target_key
-        )
+        # Draw the handle location in the image
+        height, width = self._handle_size[0] / 2, self._handle_size[1] / 2
+        granularity = 11
+        for height_offset, width_offset in zip(
+            np.linspace(-height, height, granularity),
+            np.linspace(-width, width, granularity),
+        ):
+            # Get the handle location on the left and right side
+            handle_pos = self._change_coordinate(
+                handle_T.transform_point([height_offset, 0.0, width_offset])
+            )
+            # Draw the handle location in the image
+            img = self._get_image_pixel_from_point(handle_pos, target_key, img)
 
-        if is_in_front_of_camera:
-            # Clip the width and length
-            w_low = int(np.clip(w - self._bbox_sixe, 0, self._width))
-            w_high = int(np.clip(w + self._bbox_sixe, 0, self._width))
-            h_low = int(np.clip(h - self._bbox_sixe, 0, self._height))
-            h_high = int(np.clip(h + self._bbox_sixe, 0, self._height))
-            img[h_low:h_high, w_low:w_high, 0] = 1.0
+        # Get the bbox
+        img = self._get_bbox(img)
 
         return np.float32(img)
 
