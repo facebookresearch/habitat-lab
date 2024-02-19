@@ -74,6 +74,10 @@ class PddlSocialNavTask(PddlTask):
         ) = self._sim.set_articulated_agent_base_to_random_point(
             filter_func=filter_func,
         )
+        articulated_agent_angle = 0.0
+        print(articulated_agent_angle)
+        print(articulated_agent_pos)
+        
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
             articulated_agent_start_pos=articulated_agent_pos,
