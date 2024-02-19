@@ -26,6 +26,7 @@ defaults:
     - is_holding_sensor
     - end_effector_sensor
     - relative_resting_pos_sensor
+    - handle_bbox_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -37,6 +38,7 @@ habitat:
       - joint
       - ee_pos
       - is_holding
+      - handle_bbox
   task:
     type: RearrangeOpenDrawerTask-v0
     reward_measure: art_obj_reward
@@ -54,7 +56,7 @@ habitat:
     success_state: 0.45
     end_on_success: True
     spawn_max_dist_to_obj: 2.0
-    base_angle_noise: 0.523599
+    base_angle_noise: 0.0 #0.523599
     measurements:
       art_obj_at_desired_state:
         use_absolute_distance: False
@@ -90,7 +92,7 @@ habitat:
         dimensionality: 4
         arm_joint_mask: [1,1,0,1,0,1,0]
   environment:
-    max_episode_steps: 200
+    max_episode_steps: 500
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/in_drawer_1k_100.json.gz
   simulator:
