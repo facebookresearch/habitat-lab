@@ -8,7 +8,7 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
 
   - /habitat/task: task_config_base
-  - /habitat/task/rearrange/actions: spot_arm
+  - /habitat/task/rearrange/actions: spot_base_arm_empty
   - /habitat/task/measurements:
     - articulated_agent_force
     - force_terminate
@@ -46,18 +46,32 @@ habitat:
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
+        arm_joint_mask: [1,1,0,1,0,1,0]
+        arm_joint_dimensionality: 4
+        grasp_thresh_dist: 0.15
+        delta_pos_limit: 0.0872665
+        gaze_distance_range: [0.05, 0.2]
+        center_cone_angle_threshold: 10.0
         center_cone_vector: [0.0, 1.0, 0.0]
-        # We limit the joint angles to ensure that this is feasible in the real world
         arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
         auto_grasp: False
         should_clip: True
+      base_velocity_non_cylinder:
+        lin_speed: 0.25
+        longitudinal_lin_speed: 0.5
+        lateral_lin_speed: 0.0
+        ang_speed: 0.25
+        allow_dyn_slide: False
+        collision_threshold: 1e-5
+        navmesh_offset: [[0.0, 0.0], [0.2, 0.0], [-0.2, 0.0]]
+        enable_lateral_move: False
     success_reward: 10.0
     slack_reward: 0.0
     success_state: 0.45
     end_on_success: True
     # For learning in close drawer task, use larger spawn_max_dist_to_obj.
     # Otherwise, the robot is goint to hit the drawer and cannot see handles
-    spawn_max_dist_to_obj: 2.0
+    spawn_max_dist_to_obj: 2.5
     base_angle_noise: 0.523599
     measurements:
       art_obj_at_desired_state:
@@ -101,7 +115,7 @@ habitat:
     # We use the kinematic mode to train the policy
     kinematic_mode: True
     ac_freq_ratio: 1
-    step_physics: False
+    ctrl_freq: 2 # We change this so that it has the same control frequency as the one in hardware
     agents:
       main_agent:
         joint_start_noise: 0.1
