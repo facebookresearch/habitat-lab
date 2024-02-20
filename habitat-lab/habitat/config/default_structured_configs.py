@@ -69,6 +69,7 @@ __all__ = [
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
+    "DistanceGoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
     "InitialGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
@@ -696,6 +697,18 @@ class GoalSensorConfig(LabSensorConfig):
     """
 
     type: str = "GoalSensor"
+    goal_format: str = "CARTESIAN"
+    dimensionality: int = 3
+    only_one_target: bool = False
+
+
+@dataclass
+class DistanceGoalSensorConfig(LabSensorConfig):
+    """
+    Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object.
+    """
+
+    type: str = "DistanceGoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
     only_one_target: bool = False
@@ -2425,6 +2438,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="goal_sensor",
     node=GoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.distance_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="distance_goal_sensor",
+    node=DistanceGoalSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.abs_target_start_sensor",
