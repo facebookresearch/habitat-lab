@@ -12,7 +12,6 @@ import magnum as mn
 from magnum.platform.glfw import Application
 
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 
 
 class GuiAppRenderer:
@@ -187,13 +186,9 @@ class GuiApplication(InputHandlerApplication):
             post_sim_update_dict = self._driver.sim_update(sim_dt)
             self._sim_input.on_frame_end()
             self._post_sim_update(post_sim_update_dict)
+            if "application_exit" in post_sim_update_dict:
+                return
             self._app_renderer.post_sim_update(post_sim_update_dict)
-
-        self._app_renderer._text_drawer.add_text(
-            f"SPS: {self._debug_sps:.1f}",
-            TextOnScreenAlignment.BOTTOM_LEFT,
-            text_delta_y=20,
-        )
 
         render_dt = 1 / 60.0  # todo: drive correctly
         did_render = self._app_renderer.render_update(render_dt)

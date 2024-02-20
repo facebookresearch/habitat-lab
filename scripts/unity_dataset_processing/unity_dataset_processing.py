@@ -152,8 +152,8 @@ def process_model(args):
     )
 
     result = {
-        "source_tris": str(source_tris),
-        "simplified_tris": str(simplified_tris),
+        "source_tris": source_tris,
+        "simplified_tris": simplified_tris,
         "source_path": job.source_path,
         "status": "ok",
     }

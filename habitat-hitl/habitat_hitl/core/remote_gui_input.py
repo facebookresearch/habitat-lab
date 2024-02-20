@@ -21,7 +21,7 @@ class RemoteGuiInput:
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
-        self._connection_params = None
+        self._new_connection_records = None
 
         # temp map VR button to key
         self._button_map = {
@@ -42,9 +42,6 @@ class RemoteGuiInput:
     def get_history_timestep(self):
         return 1 / 60
 
-    def get_connection_params(self):
-        return self._connection_params
-
     def pop_recent_server_keyframe_id(self):
         """
         Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
@@ -54,7 +51,7 @@ class RemoteGuiInput:
         if len(self._recent_client_states) == 0:
             return None
 
-        latest_client_state = self._recent_client_states[0]
+        latest_client_state = self._recent_client_states[-1]
         if "recentServerKeyframeId" not in latest_client_state:
             return None
 
@@ -62,11 +59,19 @@ class RemoteGuiInput:
         del latest_client_state["recentServerKeyframeId"]
         return retval
 
-    def get_head_pose(self, history_index=0):
+    def get_recent_client_state_by_history_index(self, history_index):
+        assert history_index >= 0
         if history_index >= len(self._recent_client_states):
-            return None, None
+            return None
 
-        client_state = self._recent_client_states[history_index]
+        return self._recent_client_states[-(1 + history_index)]
+
+    def get_head_pose(self, history_index=0):
+        client_state = self.get_recent_client_state_by_history_index(
+            history_index
+        )
+        if not client_state:
+            return None, None
 
         if "avatar" not in client_state:
             return None, None
@@ -83,10 +88,11 @@ class RemoteGuiInput:
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
-        if history_index >= len(self._recent_client_states):
+        client_state = self.get_recent_client_state_by_history_index(
+            history_index
+        )
+        if not client_state:
             return None, None
-
-        client_state = self._recent_client_states[history_index]
 
         if "avatar" not in client_state:
             return None, None
@@ -105,7 +111,7 @@ class RemoteGuiInput:
 
         return pos, rot_quat
 
-    def update_input_state_from_remote_client_states(self, client_states):
+    def _update_input_state(self, client_states):
         if not len(client_states):
             return
 
@@ -156,9 +162,6 @@ class RemoteGuiInput:
 
     def debug_visualize_client(self):
         if not self._debug_line_render:
-            return
-
-        if not len(self._recent_client_states):
             return
 
         avatar_color = mn.Color3(0.3, 1, 0.3)
@@ -215,66 +218,61 @@ class RemoteGuiInput:
 
                 self._debug_line_render.pop_transform()
 
-    def _update_connection_params(self, client_states):
-        # Note we only parse the first connection_params we find. The client is expected to only send this once.
-        for client_state in client_states:
-            if "connection_params_dict" in client_state:
+    def _clean_history_by_connection_id(self, client_states):
+        if not len(client_states):
+            return
 
-                def validate_connection_params_dict(obj):
-                    if not isinstance(obj, dict) and not (
-                        hasattr(obj, "keys") and callable(obj.keys)
-                    ):
-                        raise TypeError(
-                            "connection_params_dict is not dictionary-like."
-                        )
+        latest_client_state = client_states[-1]
+        latest_connection_id = latest_client_state["connectionId"]
 
-                    if not all(isinstance(key, str) for key in obj.keys()):
-                        raise ValueError(
-                            "All keys in connection_params_dict must be strings."
-                        )
-
-                connection_params_dict = client_state["connection_params_dict"]
-                validate_connection_params_dict(connection_params_dict)
-                self._connection_params = connection_params_dict
+        # discard older states that don't match the latest connection id
+        # iterate over items in reverse, starting with second-most recent client state
+        for i in range(len(client_states) - 2, -1, -1):
+            if client_states[i]["connectionId"] != latest_connection_id:
+                client_states = client_states[i + 1 :]
                 break
 
-            elif "connection_params_query_string" in client_state:
-                from urllib.parse import parse_qs
-
-                def query_string_to_dict(query):
-                    parsed_query = parse_qs(query)
-                    # Convert each list of values to a single value (the first one)
-                    return {k: v[0] for k, v in parsed_query.items()}
-
-                self._connection_params = query_string_to_dict(
-                    client_state["connection_params_query_string"]
-                )
-                break
+        # discard recent client states if they don't match the latest connection id
+        latest_recent_client_state = (
+            self.get_recent_client_state_by_history_index(0)
+        )
+        if (
+            latest_recent_client_state
+            and latest_recent_client_state["connectionId"]
+            != latest_connection_id
+        ):
+            self.clear_history()
 
     def update(self):
+        self._new_connection_records = (
+            self._interprocess_record.get_queued_connection_records()
+        )
+
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
 
-        if len(client_states) > self.get_history_length():
-            client_states = client_states[-self.get_history_length() :]
+        # We expect to only process ~1 new client state at a time. If this assert fails, something is going awry with networking.
+        # disabling because this happens all the time when debugging the main process
+        # assert len(client_states) < 100
 
+        self._clean_history_by_connection_id(client_states)
+
+        self._update_input_state(client_states)
+
+        # append to _recent_client_states, discarding old states to limit length to get_history_length()
         for client_state in client_states:
-            self._recent_client_states.insert(0, client_state)
-            if (
-                len(self._recent_client_states)
-                == self.get_history_length() + 1
-            ):
-                self._recent_client_states.pop()
-
-        self.update_input_state_from_remote_client_states(client_states)
-
-        self._update_connection_params(client_states)
+            self._recent_client_states.append(client_state)
+            if len(self._recent_client_states) > self.get_history_length():
+                self._recent_client_states.pop(0)
 
         self.debug_visualize_client()
 
+    def get_new_connection_records(self):
+        return self._new_connection_records
+
     def on_frame_end(self):
         self._gui_input.on_frame_end()
-        self._connection_params = None
+        self._new_connection_records = None
 
     def clear_history(self):
         self._recent_client_states.clear()

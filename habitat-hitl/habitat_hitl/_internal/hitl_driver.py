@@ -30,7 +30,6 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import (
@@ -95,7 +94,7 @@ class HitlDriver(AppDriver):
             )
         self._gui_input = gui_input
 
-        line_render.set_line_width(3)
+        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -450,15 +449,6 @@ class HitlDriver(AppDriver):
             + dt * self._hitl_config.viz_animation_speed
         ) % 1.0
 
-        # Navmesh visualization only works in the debug third-person view
-        # (--debug-third-person-width), not the main viewport. Navmesh
-        # visualization is only implemented for simulator-rendering, not replay-
-        # rendering.
-        if self._gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.get_sim().navmesh_visualization = (  # type: ignore
-                not self.get_sim().navmesh_visualization  # type: ignore
-            )
-
         self._app_state.sim_update(dt, post_sim_update_dict)
 
         if self._pending_cursor_style:
@@ -474,13 +464,6 @@ class HitlDriver(AppDriver):
         if self._save_gfx_replay_keyframes:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
-
-        # Manually save recorded gfx-replay keyframes.
-        if (
-            self._gui_input.get_key_down(GuiInput.KeyNS.EQUAL)
-            and self._save_gfx_replay_keyframes
-        ):
-            self._save_recorded_keyframes_to_file()
 
         if self._hitl_config.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this

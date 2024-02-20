@@ -1,0 +1,24 @@
+# @package _global_
+
+habitat:
+  task:
+    actions:
+      agent_0_arm_action:
+        disable_grip: true
+
+habitat_baselines:
+  rl:
+    policy:
+      agent_0:
+        hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_goal
+              - nav_to_obj
+              # - pick
+              # - place
+              - nav_to_receptacle_by_name
+              - turn_left
+              - turn_right
+              - move_forward
+              # - move_backward

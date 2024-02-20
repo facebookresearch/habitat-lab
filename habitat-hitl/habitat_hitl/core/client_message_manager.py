@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
+
+import magnum as mn
 
 
 class ClientMessageManager:
@@ -26,7 +28,13 @@ class ClientMessageManager:
         """
         self._message = {}
 
-    def add_highlight(self, pos: List[float], radius: float) -> None:
+    def add_highlight(
+        self,
+        pos: List[float],
+        radius: float,
+        billboard: bool = True,
+        color: Optional[Union[mn.Color4, mn.Color3]] = None,
+    ) -> None:
         r"""
         Draw a highlight circle around the specified position.
         """
@@ -35,9 +43,23 @@ class ClientMessageManager:
 
         if "highlights" not in self._message:
             self._message["highlights"] = []
-        self._message["highlights"].append(
-            {"t": [pos[0], pos[1], pos[2]], "r": radius}
-        )
+        highlight_dict = {"t": [pos[0], pos[1], pos[2]], "r": radius}
+        if billboard:
+            highlight_dict["b"] = 1
+        if color is not None:
+
+            def conv(channel):
+                # sloppy: using int 0-255 to reduce serialized data size
+                return int(channel * 255.0)
+
+            alpha = 1.0 if isinstance(color, mn.Color3) else color.a
+            highlight_dict["c"] = [
+                conv(color.r),
+                conv(color.g),
+                conv(color.b),
+                conv(alpha),
+            ]
+        self._message["highlights"].append(highlight_dict)
 
     def change_humanoid_position(self, pos: List[float]) -> None:
         r"""
@@ -54,9 +76,15 @@ class ClientMessageManager:
 
     def signal_app_ready(self):
         r"""
-        See hitl_defaults.yaml wait_for_app_ready_signal documentation.
+        See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.
         """
         self._message["isAppReady"] = True
+
+    def signal_kick_client(self, connection_id):
+        r"""
+        Signal NetworkManager to kick a client identified by connection_id. See also RemoteGuiInput.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
+        """
+        self._message["kickClient"] = connection_id
 
     def set_server_keyframe_id(self, keyframe_id):
         self._message["serverKeyframeId"] = keyframe_id
