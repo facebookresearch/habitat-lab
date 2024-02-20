@@ -107,6 +107,13 @@ habitat:
       joint_sensor:
         dimensionality: 4
         arm_joint_mask: [1,1,0,1,0,1,0]
+      handle_bbox_sensor:
+        # The size of bbox needs to be the same as the size
+        # of the all the other image sensors due to resnet design
+        height: 240
+        width: 228
+        pixel_size: 2
+        handle_size: [0.02,0.1]
   environment:
     max_episode_steps: 500
   dataset:
