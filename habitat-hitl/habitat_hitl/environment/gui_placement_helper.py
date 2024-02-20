@@ -23,11 +23,11 @@ DEFAULT_GRAVITY = mn.Vector3(0, -1, 0)
 class GuiPlacementHelper:
     """Helper for placing objects from the GUI."""
 
-    def __init__(self, gui_service, gravity_dir=DEFAULT_GRAVITY):
-        self._app_service = gui_service
+    def __init__(self, app_service, gravity_dir=DEFAULT_GRAVITY):
+        self._app_service = app_service
         self._gravity_dir = gravity_dir
 
-    def _find_snap_pos(self, ray, query_obj):
+    def _snap_or_hide_object(self, ray, query_obj) -> tuple[bool, mn.Vector3]:
         sim = self._app_service.sim
 
         assert query_obj.collidable
@@ -97,7 +97,7 @@ class GuiPlacementHelper:
         # sloppy: change the collision group so that contact_test will work. We should restore the original collision group after this query, but we can't because we don't have a get_collision_group API.
         query_obj.override_collision_group(CollisionGroups.Default)
 
-        success, hint_pos = self._find_snap_pos(ray, query_obj)
+        success, hint_pos = self._snap_or_hide_object(ray, query_obj)
         query_obj.collidable = cached_is_collidable
 
         if success:

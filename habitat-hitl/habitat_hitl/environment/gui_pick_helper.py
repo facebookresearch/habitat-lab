@@ -21,12 +21,11 @@ RING_PULSE_SIZE: Final[float] = 0.03
 class GuiPickHelper:
     """Helper for picking up objects from the GUI."""
 
-    def __init__(self, gui_service, agent_idx, agent_feet_height):
+    def __init__(self, gui_service, agent_idx):
         self._app_service = gui_service
         self._agent_idx = agent_idx
         self._rom = self._get_sim().get_rigid_object_manager()
         self._obj_ids = self._get_sim()._scene_obj_ids
-        self._agent_feet_height = agent_feet_height
         self._dist_to_highlight_obj = DIST_HIGHLIGHT
 
     def _get_sim(self):
@@ -46,11 +45,10 @@ class GuiPickHelper:
         distances = np.linalg.norm(closest_points - points, axis=1)
         return np.argmin(distances), np.min(distances)
 
-    def on_environment_reset(self, agent_feet_height=0.15):
+    def on_environment_reset(self):
         sim = self._get_sim()
         self._rom = sim.get_rigid_object_manager()
         self._obj_ids = sim._scene_obj_ids
-        self._agent_feet_height = agent_feet_height
 
     def _closest_point_and_dist_to_query_position(self, points, query_pos):
         distances = np.linalg.norm(points - query_pos, axis=1)

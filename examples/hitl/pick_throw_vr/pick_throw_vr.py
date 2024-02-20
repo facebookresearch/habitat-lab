@@ -23,7 +23,6 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
 )
 from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
-from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.gui_throw_helper import GuiThrowHelper
 from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
@@ -81,11 +80,6 @@ class AppStatePickThrowVr(AppState):
         self._throw_helper = GuiThrowHelper(
             self._app_service, self.get_gui_controlled_agent_index()
         )
-        self._pick_helper = GuiPickHelper(
-            self._app_service,
-            self.get_gui_controlled_agent_index(),
-            self._get_gui_agent_feet_height(),
-        )
 
         self._avatar_switch_helper = AvatarSwitcher(
             self._app_service, self._gui_agent_ctrl
@@ -128,9 +122,6 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = sim._scene_obj_ids
 
         self._nav_helper.on_environment_reset()
-        self._pick_helper.on_environment_reset(
-            agent_feet_height=self._get_gui_agent_feet_height()
-        )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self._count_tsteps_stop = 0
@@ -393,7 +384,7 @@ class AppStatePickThrowVr(AppState):
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
                 assert not self._gui_agent_ctrl.is_grasped
-                translation = self._get_gui_agent_translation()
+                translation = self._gui_agent_ctrl.get_base_translation()
 
                 min_dist = self._can_grasp_place_threshold
                 min_i = None
@@ -542,19 +533,13 @@ class AppStatePickThrowVr(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def _get_gui_agent_translation(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
-        return (
-            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
-        )
-
     def _get_gui_agent_feet_height(self):
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
             self._gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
         agent_feet_translation = (
-            self._get_gui_agent_translation() + base_offset
+            self._gui_agent_ctrl.get_base_translation() + base_offset
         )
         return agent_feet_translation[1]
 

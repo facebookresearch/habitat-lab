@@ -11,13 +11,12 @@ import hydra
 import magnum as mn
 
 import habitat_sim
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.average_helper import AverageHelper
+from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
@@ -69,25 +68,16 @@ class AppStateRearrangeV2(AppState):
         self._pick_helper = GuiPickHelper(
             self._app_service,
             self.get_gui_controlled_agent_index(),
-            self._get_gui_agent_feet_height(),
         )
-
         self._placement_helper = GuiPlacementHelper(self._app_service)
+        if self._app_service.hitl_config.networking.enable:
+            self._client_helper = ClientHelper(self._app_service)
 
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._has_grasp_preview = False
         self._frame_counter = 0
-        self._client_connection_id = None
-        self._client_idle_frame_counter = None
-        self._show_idle_kick_warning = False
         self._sps_tracker = AverageRateTracker(2.0)
-
-        # todo: wrap these two into a helper class
-        self._client_frame_latency_avg_helper = AverageHelper(
-            window_size=10, output_rate=10
-        )
-        self._client_display_latency_ms = None
 
     def _open_close_ao(self, ao_handle: str):
         if not ENABLE_ARTICULATED_OPEN_CLOSE:
@@ -137,27 +127,6 @@ class AppStateRearrangeV2(AppState):
 
         return output
 
-    def _get_navmesh_triangle_vertices(self):
-        """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
-        largest_island_index = get_largest_island_index(
-            self.get_sim().pathfinder, self.get_sim(), allow_outdoor=False
-        )
-        pts = self.get_sim().pathfinder.build_navmesh_vertices(
-            largest_island_index
-        )
-        assert len(pts) > 0
-        assert len(pts) % 3 == 0
-        assert len(pts[0]) == 3
-        navmesh_fixup_y = -0.17  # sloppy
-        return [
-            (
-                float(point[0]),
-                float(point[1]) + navmesh_fixup_y,
-                float(point[2]),
-            )
-            for point in pts
-        ]
-
     def _highlight_ao(self, handle: str):
         assert ENABLE_ARTICULATED_OPEN_CLOSE
         bb = self._ao_root_bbs[handle]
@@ -182,9 +151,7 @@ class AppStateRearrangeV2(AppState):
         self._held_obj_id = None
 
         self._nav_helper.on_environment_reset()
-        self._pick_helper.on_environment_reset(
-            agent_feet_height=self._get_gui_agent_feet_height()
-        )
+        self._pick_helper.on_environment_reset()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
@@ -216,13 +183,14 @@ class AppStateRearrangeV2(AppState):
         if self._held_obj_id is not None:
             if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                 if DO_HUMANOID_GRASP_OBJECTS:
-                    drop_pos = self._get_gui_agent_translation()
+                    # todo: better drop pos
+                    drop_pos = self._gui_agent_ctrl.get_base_translation()
                 else:
                     # GuiPlacementHelper has already placed this object, so nothing to do here
                     pass
                 self._held_obj_id = None
         else:
-            query_pos = self._get_gui_agent_translation()
+            query_pos = self._gui_agent_ctrl.get_base_translation()
             obj_id = self._pick_helper.get_pick_object_near_query_position(
                 query_pos
             )
@@ -268,22 +236,6 @@ class AppStateRearrangeV2(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def _get_gui_agent_translation(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
-        return (
-            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
-        )
-
-    def _get_gui_agent_feet_height(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
-        base_offset = (
-            self._gui_agent_ctrl.get_articulated_agent().params.base_offset
-        )
-        agent_feet_translation = (
-            self._get_gui_agent_translation() + base_offset
-        )
-        return agent_feet_translation[1]
-
     def _get_controls_text(self):
         def get_grasp_release_controls_text():
             if self._held_obj_id is not None:
@@ -297,10 +249,8 @@ class AppStateRearrangeV2(AppState):
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
                 controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
-            if self._client_display_latency_ms:
-                controls_str += (
-                    f"latency: {self._client_display_latency_ms:.0f}ms\n"
-                )
+            if self._client_helper.display_latency_ms:
+                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -317,7 +267,7 @@ class AppStateRearrangeV2(AppState):
 
         if self._paused:
             status_str += "\n\npaused\n"
-        if self._show_idle_kick_warning:
+        if self._client_helper.do_show_idle_kick_warning:
             status_str += (
                 "\n\nAre you still there?\nPress any key to keep playing!\n"
             )
@@ -338,12 +288,6 @@ class AppStateRearrangeV2(AppState):
                 TextOnScreenAlignment.TOP_CENTER,
             )
 
-    def _get_agent_pose(self):
-        agent_root = get_agent_art_obj_transform(
-            self.get_sim(), self.get_gui_controlled_agent_index()
-        )
-        return agent_root.translation, agent_root.rotation
-
     def _get_camera_lookat_pos(self):
         agent_root = get_agent_art_obj_transform(
             self.get_sim(), self.get_gui_controlled_agent_index()
@@ -354,67 +298,6 @@ class AppStateRearrangeV2(AppState):
 
     def is_user_idle_this_frame(self):
         return not self._app_service.gui_input.get_any_key_down()
-
-    def _update_for_remote_client_connect_and_idle(self):
-        if not self._app_service.hitl_config.networking.enable:
-            return
-        hitl_config = self._app_service.hitl_config
-
-        self._show_idle_kick_warning = False
-
-        connection_records = (
-            self._app_service.remote_gui_input.get_new_connection_records()
-        )
-        if len(connection_records):
-            connection_record = connection_records[-1]
-            # new connection
-            self._client_connection_id = connection_record["connectionId"]
-            print(f"new connection_record: {connection_record}")
-            if hitl_config.networking.client_max_idle_duration is not None:
-                self._client_idle_frame_counter = 0
-
-        if self._client_idle_frame_counter is not None:
-            if self.is_user_idle_this_frame():
-                self._client_idle_frame_counter += 1
-                assert hitl_config.networking.client_max_idle_duration > 0
-                max_idle_frames = max(
-                    int(
-                        hitl_config.networking.client_max_idle_duration
-                        * hitl_config.target_sps
-                    ),
-                    1,
-                )
-
-                if self._client_idle_frame_counter > max_idle_frames * 0.5:
-                    self._show_idle_kick_warning = True
-
-                if self._client_idle_frame_counter > max_idle_frames:
-                    self._app_service.client_message_manager.signal_kick_client(
-                        self._client_connection_id
-                    )
-                    self._client_idle_frame_counter = None
-            else:
-                # reset counter whenever the client isn't idle
-                self._client_idle_frame_counter = 0
-
-        recent_server_keyframe_id = (
-            self._app_service.remote_gui_input.pop_recent_server_keyframe_id()
-        )
-        if recent_server_keyframe_id is not None:
-            new_avg = self._client_frame_latency_avg_helper.add(
-                self._frame_counter - recent_server_keyframe_id
-            )
-            if new_avg and self._sps_tracker.get_smoothed_rate() is not None:
-                latency_ms = (
-                    new_avg / self._sps_tracker.get_smoothed_rate() * 1000
-                )
-                self._client_display_latency_ms = latency_ms
-
-        if self._app_service.client_message_manager:
-            self._app_service.client_message_manager.set_server_keyframe_id(
-                self._frame_counter
-            )
-        self._frame_counter += 1
 
     def _check_change_episode(self):
         if self._paused:
@@ -452,7 +335,7 @@ class AppStateRearrangeV2(AppState):
                 )
                 self._app_service.end_episode(do_reset=True)
 
-    def _update_placement(self):
+    def _update_held_object_placement(self):
         if not self._held_obj_id:
             return
 
@@ -478,7 +361,11 @@ class AppStateRearrangeV2(AppState):
 
         self._sps_tracker.increment()
 
-        self._update_for_remote_client_connect_and_idle()
+        if self._client_helper:
+            self._client_helper.update(
+                self.is_user_idle_this_frame(),
+                self._sps_tracker.get_smoothed_rate(),
+            )
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
@@ -509,7 +396,7 @@ class AppStateRearrangeV2(AppState):
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
         # after camera update
-        self._update_placement()
+        self._update_held_object_placement()
 
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform

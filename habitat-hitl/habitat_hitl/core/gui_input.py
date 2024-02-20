@@ -19,7 +19,7 @@ if do_agnostic_gui_input:
 
     # physical key enum from USB HID Usage Tables
     # https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf, page 53
-    # add misisng keys here as necessary
+    # add missing keys here as necessary
     class AgnosticKeyNS(Enum):
         A = 0x04
         B = 0x05
@@ -59,6 +59,7 @@ if do_agnostic_gui_input:
         NINE = 0x26
         ESC = 0x29
         SPACE = 0x2C
+        TAB = 0x2B
 
     class StubNSMeta(type):
         def __getattr__(cls, name):
