@@ -34,8 +34,14 @@ habitat_hitl:
       code_available: 200  # "Ok"
       code_unavailable: 503  # "Service Unavailable"
 
+    # Optionally kick an idle client after n seconds.
+    client_max_idle_duration: ~
+
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
+
+  # Width in pixels. Note that actual width depends on device/OpenGL, and large widths (10+) aren't usually supported.
+  debug_line_width: 3
 
   # Episodes filter in the form '0:10 12 14:20:2', where single integer number (`12` in this case) represents an episode id, colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range.
   episodes_filter: ~

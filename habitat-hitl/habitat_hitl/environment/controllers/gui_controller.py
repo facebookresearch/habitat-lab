@@ -221,6 +221,9 @@ class GuiHumanoidController(GuiController):
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
 
+    def get_base_translation(self):
+        return self._humanoid_controller.obj_transform_base.translation
+
     def on_environment_reset(self):
         super().on_environment_reset()
         base_trans = self.get_articulated_agent().base_transformation
