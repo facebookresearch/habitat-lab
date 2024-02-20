@@ -85,10 +85,12 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         super().__init__(config=config)
         self._sim = sim
         self._task = task
-        self._height = config.height
-        self._width = config.width
+        self._target_height = config.height
+        self._target_width = config.width
         self._pixel_size = config.pixel_size
         self._handle_size = config.handle_size
+        self._origin_height = None
+        self._origin_width = None
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -126,11 +128,11 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
 
         # From the camera frame into image pixel frame
         # For image width coordinate
-        w = self._width / 2.0 + (
+        w = self._origin_width / 2.0 + (
             fs_w * point_cam_coord[0] / point_cam_coord[-2]
         )
         # For image height coordinate
-        h = self._height / 2.0 + (
+        h = self._origin_height / 2.0 + (
             fs_h * point_cam_coord[1] / point_cam_coord[-2]
         )
 
@@ -150,8 +152,8 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             * np.pi
             / 180
         )
-        fs_w = self._width / (2 * np.tan(fov / 2.0))
-        fs_h = self._height / (2 * np.tan(fov / 2.0))
+        fs_w = self._origin_width / (2 * np.tan(fov / 2.0))
+        fs_h = self._origin_height / (2 * np.tan(fov / 2.0))
 
         # Get the camera pose
         hab_cam_T = (
@@ -177,10 +179,10 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
 
         if is_in_front_of_camera:
             # Clip the width and length
-            w_low = int(np.clip(w - self._pixel_size, 0, self._width))
-            w_high = int(np.clip(w + self._pixel_size, 0, self._width))
-            h_low = int(np.clip(h - self._pixel_size, 0, self._height))
-            h_high = int(np.clip(h + self._pixel_size, 0, self._height))
+            w_low = int(np.clip(w - self._pixel_size, 0, self._origin_width))
+            w_high = int(np.clip(w + self._pixel_size, 0, self._origin_width))
+            h_low = int(np.clip(h - self._pixel_size, 0, self._origin_height))
+            h_high = int(np.clip(h + self._pixel_size, 0, self._origin_height))
             img[h_low:h_high, w_low:w_high, 0] = 1.0
         return img
 
@@ -210,6 +212,16 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
 
         return bbox
 
+    def _crop_image(self, img):
+        """Crop the image based on the target size"""
+        height_start = int((self._origin_height - self._target_height) / 2)
+        width_start = int((self._origin_width - self._target_width) / 2)
+        img = img[
+            height_start : height_start + self._target_height,
+            width_start : width_start + self._target_width,
+        ]
+        return img
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Get a correct observation space
         if self.agent_id is None:
@@ -219,8 +231,11 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             target_key = f"agent_{self.agent_id}_articulated_agent_arm_rgb"
             assert target_key in observations
 
-        # Set the image size
-        img = np.zeros((self._height, self._width, 1))
+        # Get the image size
+        self._origin_height, self._origin_width, _ = observations[
+            target_key
+        ].shape
+        img = np.zeros((self._origin_height, self._origin_width, 1))
 
         # Get the handle transformation
         handle_T = self._task.get_use_marker().current_transform
@@ -241,6 +256,9 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
 
         # Get the bbox
         img = self._get_bbox(img)
+
+        # Crop the image
+        img = self._crop_image(img)
 
         return np.float32(img)
 
