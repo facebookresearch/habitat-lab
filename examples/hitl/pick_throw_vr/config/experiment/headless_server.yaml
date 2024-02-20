@@ -2,6 +2,10 @@
 
 habitat_hitl:
   window: ~
+  networking:
+    enable: True
+    http_availability_server:
+      enable: True
   experimental:
     headless:
       do_headless: True
@@ -10,4 +14,3 @@ habitat_hitl:
       #   num_frames_to_save: 50
       #   filepath_base: "./debug_video"
       # exit_after: 40
-  remote_gui_mode: True

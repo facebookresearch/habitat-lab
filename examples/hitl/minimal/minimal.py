@@ -7,6 +7,7 @@
 import hydra
 import magnum
 
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -19,7 +20,7 @@ class AppStateMinimal(AppState):
     a fixed overhead camera.
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
 
     def sim_update(self, dt, post_sim_update_dict):
