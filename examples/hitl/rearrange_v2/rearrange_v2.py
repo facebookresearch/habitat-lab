@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, Set
+from typing import Any, Dict, Set
 
 import hydra
 import magnum as mn
@@ -79,11 +79,16 @@ class AppStateRearrangeV2(AppState):
         self._frame_counter = 0
         self._sps_tracker = AverageRateTracker(2.0)
 
+    # needed to avoid spurious mypy attr-defined errors
+    @staticmethod
+    def get_sim_utilities() -> Any:
+        return sim_utilities
+
     def _open_close_ao(self, ao_handle: str):
         if not ENABLE_ARTICULATED_OPEN_CLOSE:
             return
 
-        ao = sim_utilities.get_obj_from_handle(self._sim, ao_handle)
+        ao = self.get_sim_utilities().get_obj_from_handle(self._sim, ao_handle)
 
         # Check whether the ao is opened
         is_opened = ao_handle in self._opened_ao_set
@@ -117,7 +122,9 @@ class AppStateRearrangeV2(AppState):
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
         for handle, _ in self._ao_root_bbs.items():
-            ao = sim_utilities.get_obj_from_handle(self._sim, handle)
+            ao = self.get_sim_utilities().get_obj_from_handle(
+                self._sim, handle
+            )
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
             dist_xz = (ao_pos_xz - player_pos_xz).length()
@@ -130,7 +137,7 @@ class AppStateRearrangeV2(AppState):
     def _highlight_ao(self, handle: str):
         assert ENABLE_ARTICULATED_OPEN_CLOSE
         bb = self._ao_root_bbs[handle]
-        ao = sim_utilities.get_obj_from_handle(self._sim, handle)
+        ao = self.get_sim_utilities().get_obj_from_handle(self._sim, handle)
         ao_pos = ao.translation
         ao_pos.y = 0.0  # project to ground
         radius = max(bb.size_x(), bb.size_y(), bb.size_z()) / 2.0
@@ -141,7 +148,9 @@ class AppStateRearrangeV2(AppState):
 
     def on_environment_reset(self, episode_recorder_dict):
         if ENABLE_ARTICULATED_OPEN_CLOSE:
-            self._ao_root_bbs = sim_utilities.get_ao_root_bbs(self._sim)
+            self._ao_root_bbs = self.get_sim_utilities().get_ao_root_bbs(
+                self._sim
+            )
             # HACK: Remove humans and spot from the AO collections
             handle_filter = ["male", "female", "hab_spot_arm"]
             for key in list(self._ao_root_bbs.keys()):
