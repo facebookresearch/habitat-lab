@@ -7,9 +7,7 @@
 from typing import Any
 
 
-def update_consolidated_keyframe(
-    consolidated_keyframe, inc_keyframe, networking_config
-):
+def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     """
     A "consolidated" keyframe is several incremental keyframes merged together.
     See nearly duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
@@ -49,20 +47,16 @@ def update_consolidated_keyframe(
 
     # add or update rigUpdates
     if "rigUpdates" in inc_keyframe:
-        if networking_config.active_features.skinning:
-            for rig_update in inc_keyframe["rigUpdates"]:
-                key = rig_update["id"]
-                pose = rig_update["pose"]
-                found = False
-                for con_rig_update in consolidated_keyframe["rigUpdates"]:
-                    if con_rig_update["id"] == key:
-                        con_rig_update["pose"] = pose
-                        found = True
-                if not found:
-                    consolidated_keyframe["rigUpdates"].append(rig_update)
-        else:
-            # Remove rigUpdates if skinned mesh pose transmission is disabled.
-            del inc_keyframe["rigUpdates"]
+        for rig_update in inc_keyframe["rigUpdates"]:
+            key = rig_update["id"]
+            pose = rig_update["pose"]
+            found = False
+            for con_rig_update in consolidated_keyframe["rigUpdates"]:
+                if con_rig_update["id"] == key:
+                    con_rig_update["pose"] = pose
+                    found = True
+            if not found:
+                consolidated_keyframe["rigUpdates"].append(rig_update)
 
     # append creations
     if "creations" in inc_keyframe:
@@ -71,14 +65,8 @@ def update_consolidated_keyframe(
 
     # append rigCreations if skinning transmission is enabled
     if "rigCreations" in inc_keyframe:
-        if networking_config.active_features.skinning:
-            ensure_list(consolidated_keyframe, "rigCreations")
-            consolidated_keyframe["rigCreations"] += inc_keyframe[
-                "rigCreations"
-            ]
-        else:
-            # Remove rigCreations if skinned mesh pose transmission is disabled.
-            del inc_keyframe["rigCreations"]
+        ensure_list(consolidated_keyframe, "rigCreations")
+        consolidated_keyframe["rigCreations"] += inc_keyframe["rigCreations"]
 
     # for a deletion, just remove all references to this instanceKey
     if "deletions" in inc_keyframe:

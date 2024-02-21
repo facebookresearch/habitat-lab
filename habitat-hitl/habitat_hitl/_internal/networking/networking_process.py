@@ -108,9 +108,7 @@ class NetworkManager:
     def update_consolidated_keyframes(self, keyframes):
         for inc_keyframe in keyframes:
             update_consolidated_keyframe(
-                self._consolidated_keyframe,
-                inc_keyframe,
-                self._networking_config,
+                self._consolidated_keyframe, inc_keyframe
             )
 
     async def receive_client_states(self, websocket):
@@ -150,9 +148,7 @@ class NetworkManager:
                 if len(inc_keyframes) > 1:
                     for i in range(1, len(inc_keyframes)):
                         update_consolidated_keyframe(
-                            tmp_con_keyframe,
-                            inc_keyframes[i],
-                            self._networking_config,
+                            tmp_con_keyframe, inc_keyframes[i]
                         )
                     inc_keyframes = [tmp_con_keyframe]
 
