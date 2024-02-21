@@ -89,7 +89,7 @@ class DebugVisualizer:
     dbv.get_observation().show()
     dbv.translate(mn.Vector3(1,0,0), show=True)
     dbv.peek_articulated_object(my_ao, show=True)
-    dbv.peek_rigid_object(my_ro, show_all_axis=True, show=True)
+    dbv.peek_rigid_object(my_ro, peek_all_axis=True, show=True)
     """
 
     def __init__(
@@ -133,7 +133,7 @@ class DebugVisualizer:
 
         debug_sensor_spec = habitat_sim.CameraSensorSpec()
         debug_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
-        debug_sensor_spec.position = [0.0, 0.0, 0.0]
+        debug_sensor_spec.position = [0, 0, 0]
         debug_sensor_spec.resolution = [resolution[0], resolution[1]]
         debug_sensor_spec.uuid = self.sensor_uuid
 
@@ -502,6 +502,10 @@ class DebugVisualizer:
 
         :return: a tuple containing saved filepath and the list of DebugObservations generated.
         """
+
+        # scene is best viewed from above by default
+        if cam_local_pos is None:
+            cam_local_pos = mn.Vector3(0, 1, 0)
 
         return self._peek_bb(
             bb_name=self.sim.curr_scene_name,
