@@ -7,6 +7,7 @@
 
 from collections import defaultdict, deque
 
+import magnum as mn
 import numpy as np
 import torch
 from gym import spaces
@@ -202,15 +203,35 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         global_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.ee_transform()
+
+        if self.config.use_base_transform:
+            base_T = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.base_transformation
+            # Make the ee location as the base location
+            base_T.translation = global_T.translation
+            global_T = mn.Matrix4(base_T)
+
+        # Inversion
         T_inv = global_T.inverted()
 
+        # Get the target position
         _, pos = self._sim.get_targets()
+
+        # [x,y,z]
+        # x: ee as origin, front is +; back is -
+        # y: ee as origin, left is +; right is -
+        # z: ee as origin, up is +; down is -
         if self.config.only_one_target:
-            return batch_transform_point(pos, T_inv, np.float32)[
+            pos_array = batch_transform_point(pos, T_inv, np.float32)[
                 [task.targ_idx]
             ].reshape(-1)
         else:
-            return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
+            pos_array = batch_transform_point(pos, T_inv, np.float32).reshape(
+                -1
+            )
+        print("pos_array:", pos_array)
+        return np.array(pos_array, dtype=np.float32)
 
 
 @registry.register_sensor
