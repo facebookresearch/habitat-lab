@@ -12,8 +12,9 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+import magnum as mn
 import numpy as np
 
 import habitat
@@ -503,6 +504,18 @@ class HitlDriver(AppDriver):
             self._remote_gui_input.on_frame_end()
 
         if self.network_server_enabled:
+            if (
+                self._hitl_config.networking.client_sync.camera_transform
+                and "cam_transform" in post_sim_update_dict
+            ):
+                cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
+                    "cam_transform"
+                ]
+                if cam_transform is not None:
+                    self._client_message_manager.update_camera_transform(
+                        cam_transform
+                    )
+
             for keyframe_json in keyframes:
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj

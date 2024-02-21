@@ -37,6 +37,10 @@ habitat_hitl:
     # Optionally kick an idle client after n seconds.
     client_max_idle_duration: ~
 
+    client_sync:
+      # If enabled, the main camera transform will be sent to the client. Disable if the client should control its own camera (e.g. VR).
+      camera_transform: True
+
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
 
