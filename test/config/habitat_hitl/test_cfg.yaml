@@ -21,4 +21,4 @@ habitat_hitl:
 
 habitat:
   dataset:
-    data_path: data/hab3_bench_assets/episode_datasets
+    data_path: data/hab3_bench_assets/episode_datasets/small_small.json.gz
