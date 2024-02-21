@@ -40,6 +40,8 @@ habitat_hitl:
     client_sync:
       # If enabled, the main camera transform will be sent to the client. Disable if the client should control its own camera (e.g. VR).
       camera_transform: True
+      # Enable transmission of skinned mesh poses. If 'camera.first_person_mode' is enabled, you should generally disable this as well as enable `hide_humanoid_in_gui` because the humanoid will occlude the camera.
+      skinning: True
 
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
