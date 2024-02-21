@@ -266,15 +266,19 @@ if __name__ == "__main__":
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
+    
     images = []
 
     my_env = sim_env(config)
-    embed()
-    my_env.start()
 
     rospy.Subscriber("/cmd_vel", Twist, callback, (my_env), queue_size=1)
-    while not rospy.is_shutdown():
+    for i in range (1000):
    
         my_env.update_agent_pos_vel()
+        im_0 = my_env.observations["agent_1_head_rgb"]
+
+        images.append(im_0)
+    images_to_video(images, "test", "trajectory")
+    print("Episode finished")
         # rospy.spin()
-        my_env._r_control.sleep()
+        

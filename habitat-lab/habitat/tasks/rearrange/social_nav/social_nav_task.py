@@ -61,7 +61,7 @@ class PddlSocialNavTask(PddlTask):
             # Select a goal at random and navigate to that goal.
             _, all_pos = self._sim.get_targets()
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-
+        print("Inside social nav task getting start and goal ", nav_to_pos)
         def filter_func(start_pos, _):
             return (
                 np.linalg.norm(start_pos - nav_to_pos)
@@ -77,7 +77,7 @@ class PddlSocialNavTask(PddlTask):
         articulated_agent_angle = 0.0
         print(articulated_agent_angle)
         print(articulated_agent_pos)
-        
+
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
             articulated_agent_start_pos=articulated_agent_pos,

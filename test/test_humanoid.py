@@ -305,6 +305,7 @@ def test_gym_humanoid():
     )
     hab_gym.reset()
     hab_gym.step(hab_gym.action_space.sample())
+    print("Action is ", hab_gym.action_space.sample())
     hab_gym.close()
 
     hab_gym = gym.make(
