@@ -102,20 +102,25 @@ class ClientMessageManager:
             component for sublist in triangle_vertices for component in sublist
         ]
 
-    def update_camera_transform(
-        self, pos: List[float], rot_quat: List[float]
-    ) -> None:
+    def update_camera_transform(self, cam_transform: mn.Matrix4) -> None:
         r"""
         Update the main camera transform.
         """
-        assert len(pos) == 3
-        assert len(rot_quat) == 4
+        pos = cam_transform.translation
+        cam_rotation = mn.Quaternion.from_matrix(cam_transform.rotation())
+        rot_vec = cam_rotation.vector
+        rot = [
+            cam_rotation.scalar,
+            rot_vec[0],
+            rot_vec[1],
+            rot_vec[2],
+        ]
 
         self._message["camera"] = {}
         self._message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
         self._message["camera"]["rotation"] = [
-            rot_quat[0],
-            rot_quat[1],
-            rot_quat[2],
-            rot_quat[3],
+            rot[0],
+            rot[1],
+            rot[2],
+            rot[3],
         ]
