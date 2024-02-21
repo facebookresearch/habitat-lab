@@ -724,9 +724,12 @@ def get_object_set_from_id_set(
     id_set: List[int],
     ao_link_map: Optional[Dict[int, int]] = None,
 ) -> List[
-    Union[
-        habitat_sim.physics.ManagedRigidObject,
-        habitat_sim.physics.ManagedArticulatedObject,
+    Tuple[
+        Union[
+            habitat_sim.physics.ManagedRigidObject,
+            habitat_sim.physics.ManagedArticulatedObject,
+        ],
+        Optional[int],
     ]
 ]:
     """
@@ -750,14 +753,15 @@ def get_object_set_from_id_set(
         for ro_id in id_set
         if rom.get_library_has_id(ro_id)
     ]
-    aos = [
-        (
-            aom.get_object_by_id(ao_link_map[ao_id]),
-            aom.get_object_by_id(ao_link_map[ao_id]).link_object_ids[ao_id],
-        )
-        for ao_id in id_set
-        if ao_id in ao_link_map
-    ]
+
+    aos = []
+    for ao_id in id_set:
+        if ao_id in ao_link_map:
+            ao = aom.get_object_by_id(ao_link_map[ao_id])
+            if ao_id not in ao.link_object_ids:
+                continue
+            link_index = ao.link_object_ids[ao_id]
+            aos.append((ao, link_index))
 
     return rigids + aos
 
@@ -864,7 +868,7 @@ def above(
     above_objects_links = [
         obj_link
         for obj_link in above_objects_links
-        if obj_link[0] != objectA.object_id
+        if obj_link[0].object_id != objectA.object_id
     ]
 
     return above_objects_links
@@ -915,7 +919,7 @@ def below(
     below_objects_links = [
         obj_link
         for obj_link in below_objects_links
-        if obj_link[0] != objectA.object_id
+        if obj_link[0].object_id != objectA.object_id
     ]
 
     return below_objects_links
@@ -1261,13 +1265,19 @@ def debug_draw_selected_set(
                     set_obj.transformation,
                     color=mn.Color4.blue(),
                 )
-            if link_id not in set_obj.get_link_ids():
-                raise AssertionError("Link id not found, should not get here.")
-            link_node = set_obj.get_link_scene_node(link_id)
-            link_transform = link_node.absolute_transformation()
-            debug_draw_bb(
-                sim, link_node.cumulative_bb, link_transform, mn.Color4.cyan()
-            )
+            if link_id is not None:
+                if link_id not in set_obj.get_link_ids():
+                    raise AssertionError(
+                        "Link id not found, should not get here."
+                    )
+                link_node = set_obj.get_link_scene_node(link_id)
+                link_transform = link_node.absolute_transformation()
+                debug_draw_bb(
+                    sim,
+                    link_node.cumulative_bb,
+                    link_transform,
+                    mn.Color4.cyan(),
+                )
 
 
 def on_floor(
