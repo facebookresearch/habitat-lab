@@ -230,7 +230,6 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             pos_array = batch_transform_point(pos, T_inv, np.float32).reshape(
                 -1
             )
-        print("pos_array:", pos_array)
         return np.array(pos_array, dtype=np.float32)
 
 
