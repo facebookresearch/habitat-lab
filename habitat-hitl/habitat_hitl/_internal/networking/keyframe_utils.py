@@ -45,25 +45,28 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
             if not found:
                 consolidated_keyframe["stateUpdates"].append(state_update)
 
-    # if "rigUpdates" in inc_keyframe:
-    #     for rig_update in inc_keyframe["rigUpdates"]:
-    #         id = rig_update["id"]
-    #         pose = rig_update["pose"]
-    #         found = False
-    #         for con_rig_update in consolidated_keyframe["rigUpdates"]:
-    #             if con_rig_update["id"] == id:
-    #                 con_rig_update["pose"] = pose
-    #                 found = True
-    #         if not found:
-    #             consolidated_keyframe["rigUpdates"].append(rig_update)
+    # add or update rigUpdates
+    if "rigUpdates" in inc_keyframe:
+        for rig_update in inc_keyframe["rigUpdates"]:
+            key = rig_update["id"]
+            pose = rig_update["pose"]
+            found = False
+            for con_rig_update in consolidated_keyframe["rigUpdates"]:
+                if con_rig_update["id"] == key:
+                    con_rig_update["pose"] = pose
+                    found = True
+            if not found:
+                consolidated_keyframe["rigUpdates"].append(rig_update)
 
     # append creations
     if "creations" in inc_keyframe:
         ensure_list(consolidated_keyframe, "creations")
         consolidated_keyframe["creations"] += inc_keyframe["creations"]
 
-    # if "rigCreations" in inc_keyframe:
-    #     consolidated_keyframe["rigCreations"] += inc_keyframe["rigCreations"]
+    # append rigCreations if skinning transmission is enabled
+    if "rigCreations" in inc_keyframe:
+        ensure_list(consolidated_keyframe, "rigCreations")
+        consolidated_keyframe["rigCreations"] += inc_keyframe["rigCreations"]
 
     # for a deletion, just remove all references to this instanceKey
     if "deletions" in inc_keyframe:
@@ -85,7 +88,7 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
                 ensure_list(consolidated_keyframe, "deletions")
                 consolidated_keyframe["deletions"].append(key)
 
-        # remote stateUpdates for the deleted keys
+        # remove stateUpdates for the deleted keys
         if "stateUpdates" in consolidated_keyframe:
             consolidated_keyframe["stateUpdates"] = [
                 entry
