@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 import magnum as mn
 import numpy as np
 
-from habitat.core.dataset import Episode
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
+from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
@@ -169,20 +168,11 @@ class PddlSimInfo:
     robot_ids: Dict[str, int]
 
     sim: RearrangeSim
-    dataset: RearrangeDatasetV0
     env: RearrangeTask
-    episode: Episode
-    obj_thresh: float
-    art_thresh: float
-    robot_at_thresh: float
     expr_types: Dict[str, ExprType]
     predicates: Dict[str, Any]
     all_entities: Dict[str, PddlEntity]
-    receptacles: Dict[str, mn.Range3D]
-
-    num_spawn_attempts: int
-    filter_colliding_states: bool
-    recep_place_shrink_factor: float
+    receptacles: Dict[str, Receptacle]
 
     pred_truth_cache: Optional[Dict[str, bool]] = None
 
@@ -231,7 +221,7 @@ class PddlSimInfo:
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             recep = self.receptacles[ename]
-            return np.array(recep.center())
+            return np.array(recep.get_global_transform(self.sim).translation)
         if self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
@@ -246,7 +236,7 @@ class PddlSimInfo:
 
     def search_for_entity(
         self, entity: PddlEntity
-    ) -> Union[int, str, MarkerInfo, mn.Range3D]:
+    ) -> Union[int, str, MarkerInfo, Receptacle]:
         """
         Returns underlying simulator information associated with a PDDL entity.
         Helper to match the PDDL entity to something from the simulator.
@@ -273,7 +263,6 @@ class PddlSimInfo:
         elif self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
-            asset_name = ename.split("_:")[0]
-            return self.receptacles[asset_name]
+            return self.receptacles[ename]
         else:
             raise ValueError(f"No type match for {entity}")

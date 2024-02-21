@@ -4,9 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import importlib
 import itertools
 import os.path as osp
 import time
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,11 +33,6 @@ from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalQuantifierType,
 )
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
-from habitat.tasks.rearrange.multi_task.pddl_sim_state import (
-    ArtSampler,
-    PddlRobotState,
-    PddlSimState,
-)
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ExprType,
     PddlEntity,
@@ -70,19 +67,6 @@ class PddlDomain:
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
         self._orig_actions: Dict[str, PddlAction] = {}
-
-        if read_config:
-            # Setup config properties
-            self._obj_succ_thresh = self._config.obj_succ_thresh
-            self._art_succ_thresh = self._config.art_succ_thresh
-            self._robot_at_thresh = self._config.robot_at_thresh
-            self._num_spawn_attempts = self._config.num_spawn_attempts
-            self._filter_colliding_states = (
-                self._config.filter_colliding_states
-            )
-            self._recep_place_shrink_factor = (
-                self._config.recep_place_shrink_factor
-            )
 
         if not osp.isabs(domain_file_path):
             parent_dir = osp.dirname(__file__)
@@ -155,41 +139,13 @@ class PddlDomain:
                 PddlEntity(arg["name"], self.expr_types[arg["expr_type"]])
                 for arg in pred_d["args"]
             ]
-            pred_entities = {e.name: e for e in arg_entities}
-            art_states = pred_d["set_state"].get("art_states", {})
-            obj_states = pred_d["set_state"].get("obj_states", {})
-            robot_states = pred_d["set_state"].get("robot_states", {})
 
-            all_entities = {**self.all_entities, **pred_entities}
-
-            art_states = {
-                all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
-            }
-            obj_states = {
-                all_entities[k]: all_entities[v] for k, v in obj_states.items()
-            }
-
-            use_robot_states = {}
-
-            def fetch_entity(s):
-                # Fetches the corresponding entity if the argument is a string
-                # referring to an entity.
-                if isinstance(s, str):
-                    return all_entities.get(s, s)
-                else:
-                    return s
-
-            for k, v in robot_states.items():
-                use_k = all_entities[k]
-
-                # Sub in any referred entities.
-                v = {sub_k: fetch_entity(sub_v) for sub_k, sub_v in v.items()}
-
-                use_robot_states[use_k] = PddlRobotState(**v)
-
-            set_state = PddlSimState(art_states, obj_states, use_robot_states)
-
-            pred = Predicate(pred_d["name"], set_state, arg_entities)
+            pred = Predicate(
+                pred_d["name"],
+                _parse_callable(pred_d["is_valid_fn"]),
+                _parse_callable(pred_d["set_state_fn"]),
+                arg_entities,
+            )
             self.predicates[pred.name] = pred
 
     def _parse_constants(self, domain_def) -> None:
@@ -215,6 +171,8 @@ class PddlDomain:
     def register_episode_entity(self, pddl_entity: PddlEntity) -> None:
         """
         Add an entity to appear in `self.all_entities`. Clears every episode.
+        Note that `pddl_entity.name` should be unique. Otherwise, it will
+        overide the existing object with that name.
         """
         self._added_entities[pddl_entity.name] = pddl_entity
 
@@ -250,13 +208,18 @@ class PddlDomain:
         return {**self._expr_types, **self._added_expr_types}
 
     def parse_predicate(
-        self, pred_str: str, existing_entities: Dict[str, PddlEntity]
+        self,
+        pred_str: str,
+        existing_entities: Optional[Dict[str, PddlEntity]] = None,
     ) -> Predicate:
         """
         Instantiates a predicate from call in string such as "in(X,Y)".
         :param pred_str: The string to parse such as "in(X,Y)".
-        :param existing_entities: The valid entities for arguments in the predicate.
+        :param existing_entities: The valid entities for arguments in the
+            predicate. If not specified, uses all defined entities.
         """
+        if existing_entities is None:
+            existing_entities = {}
 
         func_name, func_args = parse_func(pred_str)
         pred = self.predicates[func_name].clone()
@@ -336,9 +299,7 @@ class PddlDomain:
     def bind_to_instance(
         self,
         sim: RearrangeSim,
-        dataset: RearrangeDatasetV0,
         env: RearrangeTask,
-        episode: Episode,
     ) -> None:
         """
         Attach the domain to the simulator. This does not bind any entity
@@ -355,12 +316,7 @@ class PddlDomain:
 
         self._sim_info = PddlSimInfo(
             sim=sim,
-            dataset=dataset,
             env=env,
-            episode=episode,
-            obj_thresh=self._obj_succ_thresh,
-            art_thresh=self._art_succ_thresh,
-            robot_at_thresh=self._robot_at_thresh,
             expr_types=self.expr_types,
             obj_ids=sim.handle_to_object_id,
             target_ids={
@@ -375,10 +331,7 @@ class PddlDomain:
             },
             all_entities=self.all_entities,
             predicates=self.predicates,
-            num_spawn_attempts=self._num_spawn_attempts,
-            filter_colliding_states=self._filter_colliding_states,
             receptacles=sim.receptacles,
-            recep_place_shrink_factor=self._recep_place_shrink_factor,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -465,8 +418,7 @@ class PddlDomain:
 
                 use_pred = pred.clone()
                 use_pred.set_param_values(entity_input)
-                if use_pred.are_types_compatible(self.expr_types):
-                    poss_preds.append(use_pred)
+                poss_preds.append(use_pred)
         return sorted(poss_preds, key=lambda pred: pred.compact_str)
 
     def get_possible_actions(
@@ -582,9 +534,11 @@ class PddlDomain:
         """
 
         expr.sub_exprs = [
-            self.expand_quantifiers(subexpr)[0]
-            if isinstance(subexpr, LogicalExpr)
-            else subexpr
+            (
+                self.expand_quantifiers(subexpr)[0]
+                if isinstance(subexpr, LogicalExpr)
+                else subexpr
+            )
             for subexpr in expr.sub_exprs
         ]
 
@@ -706,3 +660,13 @@ class PddlProblem(PddlDomain):
     @property
     def all_entities(self) -> Dict[str, PddlEntity]:
         return {**self._objects, **super().all_entities}
+
+
+def _parse_callable(callable_d):
+
+    full_fn_name = callable_d.pop("_target_")
+    module_name, _, function_name = full_fn_name.rpartition(".")
+    module = importlib.import_module(module_name)
+    fn = getattr(module, function_name)
+
+    return partial(fn, **callable_d)

@@ -34,7 +34,7 @@ from habitat.core.simulator import AgentState, Observations
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
-    AABBReceptacle,
+    Receptacle,
     find_receptacles,
 )
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -77,9 +77,9 @@ class RearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[
-                            f"{agent_name}_{sensor_key}"
-                        ] = sensor_config
+                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
+                            sensor_config
+                        )
 
         super().__init__(config)
 
@@ -102,9 +102,9 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
         # The receptacle information cached between all scenes.
-        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        self._receptacles_cache: Dict[str, Dict[str, Receptacle]] = {}
         # The per episode receptacle information.
-        self._receptacles: Dict[str, mn.Range3D] = {}
+        self._receptacles: Dict[str, Receptacle] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
@@ -155,7 +155,7 @@ class RearrangeSim(HabitatSim):
         self._perf_logging_enabled = True
 
     @property
-    def receptacles(self) -> Dict[str, AABBReceptacle]:
+    def receptacles(self) -> Dict[str, Receptacle]:
         return self._receptacles
 
     @property
@@ -662,30 +662,16 @@ class RearrangeSim(HabitatSim):
 
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
-    ) -> Dict[str, mn.Range3D]:
+    ) -> Dict[str, Receptacle]:
         if scene_id not in self._receptacles_cache:
             receps = {}
             all_receps = find_receptacles(
                 self,
                 ignore_handles=ignore_handles,
             )
-            for recep in all_receps:
-                recep = cast(AABBReceptacle, recep)
-                local_bounds = recep.bounds
-                global_T = recep.get_global_transform(self)
-                # Some coordinates may be flipped by the global transformation,
-                # mixing the minimum and maximum bound coordinates.
-                bounds = np.stack(
-                    [
-                        global_T.transform_point(local_bounds.min),
-                        global_T.transform_point(local_bounds.max),
-                    ],
-                    axis=0,
-                )
-                receps[recep.unique_name] = mn.Range3D(
-                    np.min(bounds, axis=0), np.max(bounds, axis=0)
-                )
-            self._receptacles_cache[scene_id] = receps
+            self._receptacles_cache[scene_id] = {
+                recep.unique_name: recep for recep in all_receps
+            }
         return self._receptacles_cache[scene_id]
 
     def _create_obj_viz(self):
