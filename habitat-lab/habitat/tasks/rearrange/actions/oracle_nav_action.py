@@ -151,7 +151,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         Obtain path to reach the coordinate point. If agent_pos is not given
         the path starts at the agent base pos, otherwise it starts at the agent_pos
         value
-        :param point: Vector3 indicating the target point
+        :param point: np.array of length 3 indicating the target point
         """
         agent_pos = self.cur_articulated_agent.base_pos
 
