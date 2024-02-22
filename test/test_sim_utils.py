@@ -17,6 +17,7 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     get_ao_link_id_map,
     get_obj_from_handle,
     get_obj_from_id,
+    object_keypoint_cast,
     snap_down,
 )
 from habitat_sim import Simulator, built_with_bullet
@@ -273,3 +274,17 @@ def test_keypoint_cast_prepositions():
         for expected in expected_tv_above_strings:
             assert expected in tv_above_strings
         assert len(tv_above_strings) == len(expected_tv_above_strings)
+
+        # now define a custom keypoint cast from the mixer constructed to include tv in the set
+        mixer_to_tv = (
+            tv_object.translation - mixer_object.translation
+        ).normalized()
+        mixer_to_tv_object_ids = [
+            hit.object_id
+            for keypoint_raycast_result in object_keypoint_cast(
+                sim, mixer_object, direction=mixer_to_tv
+            )
+            for hit in keypoint_raycast_result.hits
+        ]
+        mixer_to_tv_object_ids = list(set(mixer_to_tv_object_ids))
+        assert tv_object.object_id in mixer_to_tv_object_ids
