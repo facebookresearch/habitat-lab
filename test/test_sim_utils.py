@@ -11,6 +11,11 @@ import pytest
 
 from habitat.sims.habitat_simulator.sim_utilities import (
     bb_ray_prescreen,
+    get_all_object_ids,
+    get_all_objects,
+    get_ao_link_id_map,
+    get_obj_from_handle,
+    get_obj_from_id,
     snap_down,
 )
 from habitat_sim import Simulator, built_with_bullet
@@ -155,3 +160,65 @@ def test_snap_down(support_margin, obj_margin, stage_support):
                 if stage_support:
                     # don't need 3 iterations for stage b/c no motion types to test
                     break
+
+
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Raycasting API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
+def test_object_getters():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
+    hab_cfg = make_cfg(sim_settings)
+    with Simulator(hab_cfg) as sim:
+        # scrape various lists from utils
+        all_objects = get_all_objects(sim)
+        all_object_ids = get_all_object_ids(sim)
+        ao_link_map = get_ao_link_id_map(sim)
+
+        # validate parity between util results
+        assert len(all_objects) == (
+            sim.get_rigid_object_manager().get_num_objects()
+            + sim.get_articulated_object_manager().get_num_objects()
+        )
+        for object_id in ao_link_map:
+            assert (
+                object_id in all_object_ids
+            ), f"Link or AO object id {object_id} is not found in the global object id map."
+        for obj in all_objects:
+            assert obj is not None
+            assert obj.is_alive
+            assert (
+                obj.object_id in all_object_ids
+            ), f"Object's object_id {object_id} is not found in the global object id map."
+            # check the wrapper getter functions
+            obj_from_id_getter = get_obj_from_id(
+                sim, obj.object_id, ao_link_map
+            )
+            obj_from_handle_getter = get_obj_from_handle(sim, obj.handle)
+            assert obj_from_id_getter.object_id == obj.object_id
+            assert obj_from_handle_getter.object_id == obj.object_id
+
+        # specifically validate link object_id mapping
+        aom = sim.get_articulated_object_manager()
+        for ao in aom.get_objects_by_handle_substring().values():
+            assert ao.object_id in all_object_ids
+            assert ao.object_id in ao_link_map
+            link_indices = ao.get_link_ids()
+            assert len(ao.link_object_ids) == len(link_indices)
+            for link_object_id, link_index in ao.link_object_ids.items():
+                assert link_object_id in ao_link_map
+                assert ao_link_map[link_object_id] == ao.object_id
+                assert link_index in link_indices
+                # links should return reference to parent object
+                obj_from_id_getter = get_obj_from_id(
+                    sim, link_object_id, ao_link_map
+                )
+                assert obj_from_id_getter.object_id == ao.object_id
