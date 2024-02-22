@@ -14,6 +14,8 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     get_all_object_ids,
     get_all_objects,
     get_ao_link_id_map,
+    get_obj_from_handle,
+    get_obj_from_id,
     snap_down,
 )
 from habitat_sim import Simulator, built_with_bullet
@@ -196,6 +198,13 @@ def test_object_getters():
             assert (
                 obj.object_id in all_object_ids
             ), f"Object's object_id {object_id} is not found in the global object id map."
+            # check the wrapper getter functions
+            obj_from_id_getter = get_obj_from_id(
+                sim, obj.object_id, ao_link_map
+            )
+            obj_from_handle_getter = get_obj_from_handle(sim, obj.handle)
+            assert obj_from_id_getter.object_id == obj.object_id
+            assert obj_from_handle_getter.object_id == obj.object_id
 
         # specifically validate link object_id mapping
         aom = sim.get_articulated_object_manager()
@@ -208,3 +217,8 @@ def test_object_getters():
                 assert link_object_id in ao_link_map
                 assert ao_link_map[link_object_id] == ao.object_id
                 assert link_index in link_indices
+                # links should return reference to parent object
+                obj_from_id_getter = get_obj_from_id(
+                    sim, link_object_id, ao_link_map
+                )
+                assert obj_from_id_getter.object_id == ao.object_id

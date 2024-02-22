@@ -374,3 +374,63 @@ def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
             ao_link_map[link_id] = ao.object_id
 
     return ao_link_map
+
+
+def get_obj_from_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from an object_id.
+
+    ArticulatedLink object_ids will return the ManagedArticulatedObject.
+    If you want link id, use ManagedArticulatedObject.link_object_ids[obj_id].
+
+    :param sim: The Simulator instance.
+    :param obj_id: object id for which ManagedObject is desired.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+
+    :return: a ManagedObject or None
+    """
+
+    if ao_link_map is None:
+        # Note: better to pre-compute this and pass it around
+        ao_link_map = get_ao_link_id_map(sim)
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_id(obj_id):
+        return rom.get_object_by_id(obj_id)
+    aom = sim.get_articulated_object_manager()
+    if obj_id in ao_link_map:
+        return aom.get_object_by_id(ao_link_map[obj_id])
+
+    return None
+
+
+def get_obj_from_handle(
+    sim: habitat_sim.Simulator, obj_handle: str
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from its instance handle.
+
+    :param sim: The Simulator instance.
+    :param obj_handle: object istance handle for which ManagedObject is desired.
+
+    :return: a ManagedObject or None
+    """
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_handle(obj_handle):
+        return rom.get_object_by_handle(obj_handle)
+    aom = sim.get_articulated_object_manager()
+    if aom.get_library_has_handle(obj_handle):
+        return aom.get_object_by_handle(obj_handle)
+
+    return None
