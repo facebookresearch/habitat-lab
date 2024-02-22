@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
 
@@ -302,7 +302,12 @@ def snap_down(
 def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
     """
     Generate a dict mapping all active object ids to a descriptive string containing the object instance handle and, for ArticulatedLinks, the link name.
+
+    :param sim: The Simulator instance.
+
+    :return: a dict mapping object ids to a descriptive string.
     """
+
     rom = sim.get_rigid_object_manager()
     aom = sim.get_articulated_object_manager()
 
@@ -321,3 +326,29 @@ def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
             )
 
     return object_id_map
+
+
+def get_all_objects(
+    sim: habitat_sim.Simulator,
+) -> List[
+    Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ]
+]:
+    """
+    Get a list of all ManagedRigidObjects and ManagedArticulatedObjects in the scene.
+
+    :param sim: The Simulator instance.
+
+    :return: a list of ManagedObject wrapper instances containing all objects currently instantiated in the scene.
+    """
+
+    managers = [
+        sim.get_rigid_object_manager(),
+        sim.get_articulated_object_manager(),
+    ]
+    all_objects = []
+    for mngr in managers:
+        all_objects.extend(mngr.get_objects_by_handle_substring().values())
+    return all_objects
