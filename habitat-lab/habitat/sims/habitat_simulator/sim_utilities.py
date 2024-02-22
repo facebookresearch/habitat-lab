@@ -352,3 +352,25 @@ def get_all_objects(
     for mngr in managers:
         all_objects.extend(mngr.get_objects_by_handle_substring().values())
     return all_objects
+
+
+def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
+    """
+    Construct a dict mapping ArticulatedLink object_id to parent ArticulatedObject object_id.
+    NOTE: also maps ao's root object id to itself for ease of use.
+
+    :param sim: The Simulator instance.
+
+    :return: dict mapping ArticulatedLink object ids to parent object ids.
+    """
+
+    aom = sim.get_articulated_object_manager()
+    ao_link_map: Dict[int, int] = {}
+    for ao in aom.get_objects_by_handle_substring().values():
+        # add the ao itself for ease of use
+        ao_link_map[ao.object_id] = ao.object_id
+        # add the links
+        for link_id in ao.link_object_ids:
+            ao_link_map[link_id] = ao.object_id
+
+    return ao_link_map
