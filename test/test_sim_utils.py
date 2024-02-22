@@ -10,12 +10,14 @@ import magnum as mn
 import pytest
 
 from habitat.sims.habitat_simulator.sim_utilities import (
+    above,
     bb_ray_prescreen,
     get_all_object_ids,
     get_all_objects,
     get_ao_link_id_map,
     get_obj_from_handle,
     get_obj_from_id,
+    object_keypoint_cast,
     snap_down,
 )
 from habitat_sim import Simulator, built_with_bullet
@@ -222,3 +224,67 @@ def test_object_getters():
                     sim, link_object_id, ao_link_map
                 )
                 assert obj_from_id_getter.object_id == ao.object_id
+
+
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Raycasting API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
+def test_keypoint_cast_prepositions():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
+    hab_cfg = make_cfg(sim_settings)
+    with Simulator(hab_cfg) as sim:
+        all_objects = get_all_object_ids(sim)
+
+        mixer_object = get_obj_from_handle(
+            sim, "frl_apartment_small_appliance_01_:0000"
+        )
+        mixer_above = above(sim, mixer_object)
+        mixer_above_strings = [
+            all_objects[obj_id] for obj_id in mixer_above if obj_id >= 0
+        ]
+        expected_mixer_above_strings = [
+            "kitchen_counter_:0000",
+            "kitchen_counter_:0000 -- drawer2_bottom",
+            "kitchen_counter_:0000 -- drawer2_middle",
+            "kitchen_counter_:0000 -- drawer2_top",
+        ]
+        for expected in expected_mixer_above_strings:
+            assert expected in mixer_above_strings
+        assert len(mixer_above_strings) == len(expected_mixer_above_strings)
+
+        tv_object = get_obj_from_handle(sim, "frl_apartment_tv_screen_:0000")
+        tv_above = above(sim, tv_object)
+        tv_above_strings = [
+            all_objects[obj_id] for obj_id in tv_above if obj_id >= 0
+        ]
+        expected_tv_above_strings = [
+            "frl_apartment_tvstand_:0000",
+            "frl_apartment_chair_01_:0000",
+        ]
+
+        for expected in expected_tv_above_strings:
+            assert expected in tv_above_strings
+        assert len(tv_above_strings) == len(expected_tv_above_strings)
+
+        # now define a custom keypoint cast from the mixer constructed to include tv in the set
+        mixer_to_tv = (
+            tv_object.translation - mixer_object.translation
+        ).normalized()
+        mixer_to_tv_object_ids = [
+            hit.object_id
+            for keypoint_raycast_result in object_keypoint_cast(
+                sim, mixer_object, direction=mixer_to_tv
+            )
+            for hit in keypoint_raycast_result.hits
+        ]
+        mixer_to_tv_object_ids = list(set(mixer_to_tv_object_ids))
+        assert tv_object.object_id in mixer_to_tv_object_ids

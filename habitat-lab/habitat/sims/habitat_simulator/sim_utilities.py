@@ -434,3 +434,88 @@ def get_obj_from_handle(
         return aom.get_object_by_handle(obj_handle)
 
     return None
+
+
+def get_rigid_object_global_keypoints(
+    objectA: habitat_sim.physics.ManagedRigidObject,
+) -> List[mn.Vector3]:
+    """
+    Get a list of rigid object keypoints in global space.
+    0th point is the bounding box center, others are bounding box corners.
+
+    :param objectA: The ManagedRigidObject from which to extract keypoints.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    bb = objectA.root_scene_node.cumulative_bb
+    local_keypoints = [bb.center()]
+    local_keypoints.extend(get_bb_corners(bb))
+    global_keypoints = [
+        objectA.transformation.transform_point(key_point)
+        for key_point in local_keypoints
+    ]
+    return global_keypoints
+
+
+def object_keypoint_cast(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedRigidObject,
+    direction: mn.Vector3 = None,
+) -> List[habitat_sim.physics.RaycastResults]:
+    """
+    Computes object global keypoints, casts rays from each in the specified direction and returns the resulting RaycastResults.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject from which to extract keypoints and raycast.
+    :param direction: Optionally provide a unit length global direction vector for the raycast. If None, default to -Y.
+
+    :return: A list of RaycastResults, one from each object keypoint.
+    """
+
+    if direction is None:
+        # default to downward raycast
+        direction = mn.Vector3(0, -1, 0)
+
+    global_keypoints = get_rigid_object_global_keypoints(objectA)
+    return [
+        sim.cast_ray(habitat_sim.geo.Ray(keypoint, direction))
+        for keypoint in global_keypoints
+    ]
+
+
+# ============================================================
+# Utilities for Querying Object Relationships
+# ============================================================
+
+
+def above(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+) -> List[int]:
+    """
+    Get a list of all objects that a particular objectA is 'above'.
+    Concretely, 'above' is defined as: a downward raycast of any object keypoint hits the object below.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'above' set.
+
+    :return: a list of object ids.
+    """
+
+    # get object ids of all objects below this one
+    above_object_ids = [
+        hit.object_id
+        for keypoint_raycast_result in object_keypoint_cast(sim, objectA)
+        for hit in keypoint_raycast_result.hits
+    ]
+    above_object_ids = list(set(above_object_ids))
+
+    # remove self from the list if present
+    if objectA.object_id in above_object_ids:
+        above_object_ids.remove(objectA.object_id)
+
+    return above_object_ids
