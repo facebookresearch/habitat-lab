@@ -399,12 +399,12 @@ def test_region_containment_utils():
         in_livingroom, livingroom_ratio = object_in_region(
             sim, desk_object, living_room_region
         )
-        in_bedroomroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = object_in_region(
             sim, desk_object, bedroom_region
         )
 
         assert in_livingroom
-        assert in_bedroomroom
+        assert in_bedroom
         assert (
             abs(livingroom_ratio + bedroom_ratio - 1.0) < 1e-5
         )  # eps for float error
@@ -430,12 +430,12 @@ def test_region_containment_utils():
         in_livingroom, livingroom_ratio = object_in_region(
             sim, desk_object, living_room_region, center_only=True
         )
-        in_bedroomroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = object_in_region(
             sim, desk_object, bedroom_region, center_only=True
         )
 
         assert not in_livingroom
-        assert in_bedroomroom
+        assert in_bedroom
         assert livingroom_ratio == 0
         assert bedroom_ratio == 1.0
 
@@ -443,12 +443,12 @@ def test_region_containment_utils():
         in_livingroom, livingroom_ratio = object_in_region(
             sim, desk_object, living_room_region, containment_threshold=0.51
         )
-        in_bedroomroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = object_in_region(
             sim, desk_object, bedroom_region, containment_threshold=0.51
         )
 
         assert not in_livingroom
-        assert in_bedroomroom
+        assert in_bedroom
         assert livingroom_ratio + bedroom_ratio == 1.0
         assert livingroom_ratio > 0
         assert livingroom_ratio < 0.51
