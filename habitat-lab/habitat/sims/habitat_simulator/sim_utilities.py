@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
@@ -519,3 +520,88 @@ def above(
         above_object_ids.remove(objectA.object_id)
 
     return above_object_ids
+
+
+def within(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    max_distance: float = 1.0,
+    keypoint_vote_threshold: int = 2,
+    center_ensures_containment: bool = True,
+) -> List[int]:
+    """
+    Get a list of all objects that a particular objectA is 'within'.
+    Concretely, 'within' is defined as: a threshold number of opposing keypoint raycasts hit the same object.
+    This function computes raycasts along all global axes from all keypoints and checks opposing rays for collision with the same object.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'within' set.
+    :param max_distance: The maximum ray distance to check in each opposing direction (this is half the "wingspan" of the check). Makes the raycast more efficienct and realistically containing objects will have a limited size.
+    :param keypoint_vote_threshold: The minimum number of keypoints which must indicate containment to qualify objectA as "within" another object.
+    :param center_ensures_containment: If True, positive test of objectA's center keypoint alone qualifies objectA as "within" another object.
+
+    :return: a list of object_id integers.
+    """
+
+    global_keypoints = get_rigid_object_global_keypoints(objectA)
+
+    # build axes vectors
+    pos_axes = [mn.Vector3.x_axis(), mn.Vector3.y_axis(), mn.Vector3.z_axis()]
+    neg_axes = [-1 * axis for axis in pos_axes]
+
+    # raycast for each axis for each keypoint
+    keypoint_intersect_set: List[List[int]] = [
+        [] for _ in range(len(global_keypoints))
+    ]
+    for k_ix, keypoint in enumerate(global_keypoints):
+        for a_ix in range(3):
+            pos_ids = [
+                hit.object_id
+                for hit in sim.cast_ray(
+                    habitat_sim.geo.Ray(keypoint, pos_axes[a_ix]),
+                    max_distance=max_distance,
+                ).hits
+            ]
+            neg_ids = [
+                hit.object_id
+                for hit in sim.cast_ray(
+                    habitat_sim.geo.Ray(keypoint, neg_axes[a_ix]),
+                    max_distance=max_distance,
+                ).hits
+            ]
+            intersect_ids = [obj_id for obj_id in pos_ids if obj_id in neg_ids]
+            keypoint_intersect_set[k_ix].extend(intersect_ids)
+        keypoint_intersect_set[k_ix] = list(set(keypoint_intersect_set[k_ix]))
+
+    containment_ids = []
+
+    # used to toggle "center" keypoint as a voting or overriding check
+    first_voting_keypoint = 0
+
+    if center_ensures_containment:
+        # initialize the list from keypoint 0 (center of bounding box) which gaurantees containment
+        containment_ids = list(keypoint_intersect_set[0])
+        first_voting_keypoint = 1
+
+    # "vote" for ids from keypoints
+    id_votes: defaultdict[int, int] = defaultdict(lambda: 0)
+    for k_ix in range(first_voting_keypoint, len(global_keypoints)):
+        for obj_id in keypoint_intersect_set[k_ix]:
+            id_votes[obj_id] += 1
+
+    # count votes and de-duplicate
+    containment_ids = containment_ids + [
+        obj_id
+        for obj_id in id_votes
+        if id_votes[obj_id] > keypoint_vote_threshold
+    ]
+    containment_ids = list(set(containment_ids))
+
+    # remove self from the list if present
+    if objectA.object_id in containment_ids:
+        containment_ids.remove(objectA.object_id)
+
+    return containment_ids

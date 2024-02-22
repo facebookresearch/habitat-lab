@@ -19,6 +19,7 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     get_obj_from_id,
     object_keypoint_cast,
     snap_down,
+    within,
 )
 from habitat_sim import Simulator, built_with_bullet
 from habitat_sim.metadata import MetadataMediator
@@ -288,3 +289,64 @@ def test_keypoint_cast_prepositions():
         ]
         mixer_to_tv_object_ids = list(set(mixer_to_tv_object_ids))
         assert tv_object.object_id in mixer_to_tv_object_ids
+
+        # now test "within" preposition
+
+        # the clock is sitting within the shelf object
+        clock_obj = get_obj_from_handle(sim, "frl_apartment_clock_:0000")
+        shelf_object = get_obj_from_handle(
+            sim, "frl_apartment_wall_cabinet_01_:0000"
+        )
+        clock_within = within(sim, clock_obj)
+        assert shelf_object.object_id in clock_within
+        assert len(clock_within) == 1
+
+        # now check borderline containment of a canister object in a basket
+        canister_object = get_obj_from_handle(
+            sim, "frl_apartment_kitchen_utensil_08_:0000"
+        )
+        basket_object = get_obj_from_handle(sim, "frl_apartment_basket_:0000")
+
+        # place the canister just above, but outside the basket
+        canister_object.translation = mn.Vector3(-2.01639, 1.35, 0.0410867)
+        canister_within = within(sim, canister_object)
+        assert len(canister_within) == 0
+
+        # move it slightly downward such that the extremal keypoints are contained.
+        canister_object.translation = mn.Vector3(-2.01639, 1.3, 0.0410867)
+        canister_within = within(sim, canister_object)
+        assert len(canister_within) == 1
+        assert basket_object.object_id in canister_within
+        # now make the check more strict, requring 6 keypoints
+        canister_within = within(
+            sim, canister_object, keypoint_vote_threshold=6
+        )
+        assert len(canister_within) == 0
+
+        # further lower the canister such that the center is contained
+        canister_object.translation = mn.Vector3(-2.01639, 1.2, 0.0410867)
+        # when center ensures contaiment this state is "within"
+        canister_within = within(
+            sim, canister_object, keypoint_vote_threshold=6
+        )
+        assert len(canister_within) == 1
+        assert basket_object.object_id in canister_within
+        # when center is part of the vote with threshold 6, this state is not "within"
+        canister_within = within(
+            sim,
+            canister_object,
+            keypoint_vote_threshold=6,
+            center_ensures_containment=False,
+        )
+        assert len(canister_within) == 0
+
+        # when the object is fully contained, it passes the strictest test
+        canister_object.translation = mn.Vector3(-2.01639, 1.1, 0.0410867)
+        canister_within = within(
+            sim,
+            canister_object,
+            keypoint_vote_threshold=6,
+            center_ensures_containment=False,
+        )
+        assert len(canister_within) == 1
+        assert basket_object.object_id in canister_within
