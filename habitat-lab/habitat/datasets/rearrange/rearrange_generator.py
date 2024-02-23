@@ -886,8 +886,8 @@ class RearrangeEpisodeGenerator:
             "rgb": {
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": camera_resolution,
-                "position": [0.0, 0.0, 0.0],
-                "orientation": [0.0, 0.0, 0.0],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0],
             }
         }
 
@@ -1057,7 +1057,8 @@ class RearrangeEpisodeGenerator:
             if obj_name in unstable_placements:
                 rec_num_obj_vs_unstable[rec]["num_unstable_objects"] += 1
         for rec, obj_in_rec in rec_num_obj_vs_unstable.items():
-            detailed_receptacle_stability_report += f"\n      receptacle '{rec.unique_name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
+            rec_unique_name = rec.unique_name if rec is not None else "floor"
+            detailed_receptacle_stability_report += f"\n      receptacle '{rec_unique_name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
 
         success = len(unstable_placements) == 0
 
