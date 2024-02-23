@@ -17,6 +17,8 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     get_ao_link_id_map,
     get_obj_from_handle,
     get_obj_from_id,
+    get_object_regions,
+    object_in_region,
     object_keypoint_cast,
     snap_down,
     within,
@@ -350,3 +352,104 @@ def test_keypoint_cast_prepositions():
         )
         assert len(canister_within) == 1
         assert basket_object.object_id in canister_within
+
+
+@pytest.mark.skipif(
+    not osp.exists("data/hab3_bench_assets/"),
+    reason="Requires HSSD benchmark mini dataset.",
+)
+def test_region_containment_utils():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/hab3_bench_assets/hab3-hssd/hab3-hssd.scene_dataset_config.json"
+    sim_settings["scene"] = "103997919_171031233"
+    hab_cfg = make_cfg(sim_settings)
+
+    with Simulator(hab_cfg) as sim:
+        assert len(sim.semantic_scene.regions) > 0
+
+        desk_object = get_obj_from_handle(
+            sim, "41d16010bfc200eb4d71aea6edaf6ad4bc548105_:0000"
+        )
+        desk_object.motion_type = MotionType.DYNAMIC
+
+        living_room_region_index = 0
+        bedroom_region_index = 3
+
+        living_room_region = sim.semantic_scene.regions[
+            living_room_region_index
+        ]
+        bedroom_region = sim.semantic_scene.regions[bedroom_region_index]
+
+        # the desk starts in completely in the living room
+        in_livingroom, ratio = object_in_region(
+            sim, desk_object, living_room_region
+        )
+
+        assert in_livingroom
+        assert (
+            ratio > 0
+        )  # won't be 1.0 because some AABB corners are inside the floor or walls
+
+        # move the desk most of the way into the bedroom
+        desk_object.translation = mn.Vector3(-3.77824, 0.405816, -2.30807)
+
+        # first validate standard region containment
+        in_livingroom, livingroom_ratio = object_in_region(
+            sim, desk_object, living_room_region
+        )
+        in_bedroom, bedroom_ratio = object_in_region(
+            sim, desk_object, bedroom_region
+        )
+
+        assert in_livingroom
+        assert in_bedroom
+        assert (
+            abs(livingroom_ratio + bedroom_ratio - 1.0) < 1e-5
+        )  # eps for float error
+        assert livingroom_ratio > 0
+        assert bedroom_ratio > 0
+        assert bedroom_ratio > livingroom_ratio
+
+        # compute aggregate containment in all scene regions
+        all_regions_containment = get_object_regions(sim, desk_object)
+
+        # this list should be sorted, so bedroom is first
+        assert all_regions_containment[0][0] == bedroom_region_index
+        assert (
+            abs(all_regions_containment[0][1] - bedroom_ratio) < 1e-5
+        )  # eps for float error
+        assert all_regions_containment[1][0] == living_room_region_index
+        assert (
+            abs(all_regions_containment[1][1] - livingroom_ratio) < 1e-5
+        )  # eps for float error
+        assert len(all_regions_containment) == 2
+
+        # "center_only" excludes the livingroom
+        in_livingroom, livingroom_ratio = object_in_region(
+            sim, desk_object, living_room_region, center_only=True
+        )
+        in_bedroom, bedroom_ratio = object_in_region(
+            sim, desk_object, bedroom_region, center_only=True
+        )
+
+        assert not in_livingroom
+        assert in_bedroom
+        assert livingroom_ratio == 0
+        assert bedroom_ratio == 1.0
+
+        # "containment_threshold" greater than half excludes the livingroom
+        in_livingroom, livingroom_ratio = object_in_region(
+            sim, desk_object, living_room_region, containment_threshold=0.51
+        )
+        in_bedroom, bedroom_ratio = object_in_region(
+            sim, desk_object, bedroom_region, containment_threshold=0.51
+        )
+
+        assert not in_livingroom
+        assert in_bedroom
+        assert livingroom_ratio + bedroom_ratio == 1.0
+        assert livingroom_ratio > 0
+        assert livingroom_ratio < 0.51
+        assert bedroom_ratio > 0.51
