@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 
@@ -355,6 +355,65 @@ def get_all_objects(
     return all_objects
 
 
+def get_ao_root_bb(
+    ao: habitat_sim.physics.ManagedArticulatedObject,
+) -> mn.Range3D:
+    """
+    Get the local bounding box of all links of an articulated object in the root frame.
+
+    :param ao: The ArticulatedObject instance.
+    """
+
+    # NOTE: we'd like to use SceneNode AABB, but this won't work because the links are not in the subtree of the root:
+    # ao.root_scene_node.compute_cumulative_bb()
+
+    ao_local_part_bb_corners = []
+
+    link_nodes = [ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)]
+    for link_node in link_nodes:
+        local_bb_corners = get_bb_corners(link_node.cumulative_bb)
+        global_bb_corners = [
+            link_node.absolute_transformation().transform_point(bb_corner)
+            for bb_corner in local_bb_corners
+        ]
+        ao_local_bb_corners = [
+            ao.transformation.inverted().transform_point(p)
+            for p in global_bb_corners
+        ]
+        ao_local_part_bb_corners.extend(ao_local_bb_corners)
+
+    # get min and max of each dimension
+    # TODO: use numpy arrays for more elegance...
+    max_vec = mn.Vector3(ao_local_part_bb_corners[0])
+    min_vec = mn.Vector3(ao_local_part_bb_corners[0])
+    for point in ao_local_part_bb_corners:
+        for dim in range(3):
+            max_vec[dim] = max(max_vec[dim], point[dim])
+            min_vec[dim] = min(min_vec[dim], point[dim])
+    return mn.Range3D(min_vec, max_vec)
+
+
+def get_ao_root_bbs(
+    sim: habitat_sim.Simulator,
+) -> Dict[int, mn.Range3D]:
+    """
+    Computes a dictionary mapping AO handles to a global bounding box of parts.
+    Must be updated when AO state changes to correctly bound the full set of links.
+
+    :param sim: The Simulator instance.
+
+    :return: dictionary mapping ArticulatedObjects' object_id to their bounding box in local space.
+    """
+
+    ao_local_bbs: Dict[
+        habitat_sim.physics.ManagedBulletArticulatedObject, mn.Range3D
+    ] = {}
+    aom = sim.get_articulated_object_manager()
+    for ao in aom.get_objects_by_handle_substring().values():
+        ao_local_bbs[ao.object_id] = get_ao_root_bb(ao)
+    return ao_local_bbs
+
+
 def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
     """
     Construct a dict mapping ArticulatedLink object_id to parent ArticulatedObject object_id.
@@ -437,6 +496,27 @@ def get_obj_from_handle(
     return None
 
 
+def get_global_keypoints_from_bb(
+    aabb: mn.Range3D, local_to_global: mn.Matrix4
+) -> List[mn.Vector3]:
+    """
+    Get a list of bounding box keypoints in global space.
+    0th point is the bounding box center, others are bounding box corners.
+
+    :param aabb: The local bounding box.
+    :param local_to_global: The local to global transformation matrix.
+
+    :return: A set of global 3D keypoints for the bounding box.
+    """
+    local_keypoints = [aabb.center()]
+    local_keypoints.extend(get_bb_corners(aabb))
+    global_keypoints = [
+        local_to_global.transform_point(key_point)
+        for key_point in local_keypoints
+    ]
+    return global_keypoints
+
+
 def get_rigid_object_global_keypoints(
     objectA: habitat_sim.physics.ManagedRigidObject,
 ) -> List[mn.Vector3]:
@@ -450,13 +530,79 @@ def get_rigid_object_global_keypoints(
     """
 
     bb = objectA.root_scene_node.cumulative_bb
-    local_keypoints = [bb.center()]
-    local_keypoints.extend(get_bb_corners(bb))
-    global_keypoints = [
-        objectA.transformation.transform_point(key_point)
-        for key_point in local_keypoints
-    ]
-    return global_keypoints
+    return get_global_keypoints_from_bb(bb, objectA.transformation)
+
+
+def get_articulated_object_global_keypoints(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get global bb keypoints for an ArticulatedObject.
+
+    :param objectA: The ManagedArticulatedObject from which to extract keypoints.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary. Must contain the subjects of the query.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    ao_bb = None
+    if ao_aabbs is None:
+        ao_bb = get_ao_root_bb(objectA)
+    else:
+        ao_bb = ao_aabbs[objectA.object_id]
+
+    return get_global_keypoints_from_bb(ao_bb, objectA.transformation)
+
+
+def get_articulated_link_global_keypoints(
+    objectA: habitat_sim.physics.ManagedArticulatedObject, link_index: int
+) -> List[mn.Vector3]:
+    """
+    Get global bb keypoints for an ArticulatedLink.
+
+    :param objectA: The parent ManagedArticulatedObject for the link.
+    :param link_index: The local index of the link within the parent ArticulatedObject. Not the object_id of the link.
+
+    :return: A set of global 3D keypoints for the link.
+    """
+    link_node = objectA.get_link_scene_node(link_index)
+
+    return get_global_keypoints_from_bb(
+        link_node.cumulative_bb, link_node.absolute_transformation()
+    )
+
+
+def get_global_keypoints_from_object_id(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get a list of object keypoints in global space given an object id.
+    0th point is the center of bb, others are bounding box corners.
+
+    :param sim: The Simulator instance.
+    :param object_id: The integer id for the object from which to extract keypoints.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id. If not provided, recomputed as necessary.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    obj = get_obj_from_id(sim, object_id, ao_link_map)
+
+    if isinstance(obj, habitat_sim.physics.ManagedBulletRigidObject):
+        return get_rigid_object_global_keypoints(obj)
+    elif obj.object_id != object_id:
+        # this is an ArticulatedLink
+        return get_articulated_link_global_keypoints(
+            obj, obj.link_object_ids[object_id]
+        )
+    else:
+        # ArticulatedObject
+        return get_articulated_object_global_keypoints(obj, ao_aabbs)
 
 
 def object_keypoint_cast(
@@ -605,3 +751,76 @@ def within(
         containment_ids.remove(objectA.object_id)
 
     return containment_ids
+
+
+def object_in_region(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    region: habitat_sim.scene.SemanticRegion,
+    containment_threshold=0.25,
+    center_only=False,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> Tuple[bool, float]:
+    """
+    Check if an object is within a region by checking region containment of keypoints.
+
+    :param sim: The Simulator instance.
+    :param objectA: The object instance.
+    :param region: The SemanticRegion to check.
+    :param containment_threshold: threshold ratio of keypoints which need to be in a region to count as containment.
+    :param center_only: If True, only use the BB center keypoint, all or nothing.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+
+    :return: boolean containment and the ratio of keypoints which are inside the region.
+    """
+
+    key_points = get_global_keypoints_from_object_id(
+        sim,
+        object_id=objectA.object_id,
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
+    )
+
+    if center_only:
+        key_points = [key_points[0]]
+
+    contained_points = [p for p in key_points if region.contains(p)]
+    ratio = len(contained_points) / float(len(key_points))
+
+    return ratio >= containment_threshold, ratio
+
+
+def get_object_regions(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[Tuple[int, float]]:
+    """
+    Get a sorted list of regions containing an object using bounding box keypoints.
+
+    :param sim: The Simulator instance.
+    :param objectA: The object instance.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A sorted list of region index, ratio pairs. First item in the list the primary containing region.
+    """
+
+    key_points = get_global_keypoints_from_object_id(
+        sim,
+        object_id=objectA.object_id,
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
+    )
+
+    return sim.semantic_scene.get_regions_for_points(key_points)
