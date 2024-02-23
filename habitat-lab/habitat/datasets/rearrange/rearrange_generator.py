@@ -887,7 +887,7 @@ class RearrangeEpisodeGenerator:
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": camera_resolution,
                 "position": [0, 0, 0],
-                "orientation": [0, 0, 0.0],
+                "orientation": [0, 0, 0],
             }
         }
 
