@@ -593,7 +593,7 @@ def get_global_keypoints_from_object_id(
 
     obj = get_obj_from_id(sim, object_id, ao_link_map)
 
-    if type(obj) == habitat_sim.physics.ManagedBulletRigidObject:
+    if isinstance(obj, habitat_sim.physics.ManagedBulletRigidObject):
         return get_rigid_object_global_keypoints(obj)
     elif obj.object_id != object_id:
         # this is an ArticulatedLink
