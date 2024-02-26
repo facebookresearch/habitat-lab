@@ -155,8 +155,8 @@ def bb_ray_prescreen(
     """
     if support_obj_ids is None:
         # set default support surface to stage/ground mesh
-        # STAGE ID IS 0
-        support_obj_ids = [0]
+        # STAGE ID IS habitat_sim.stage_id
+        support_obj_ids = [habitat_sim.stage_id]
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
     highest_support_impact: Optional[mn.Vector3] = None
@@ -218,7 +218,7 @@ def bb_ray_prescreen(
     margin_offset = 0
     if highest_support_impact_id is None:
         pass
-    elif highest_support_impact_id == 0:
+    elif highest_support_impact_id == habitat_sim.stage_id:
         margin_offset = sim.get_stage_initialization_template().margin
 
     surface_snap_point = (
@@ -261,7 +261,7 @@ def snap_down(
 
     if support_obj_ids is None:
         # set default support surface to stage/ground mesh
-        support_obj_ids = [0]
+        support_obj_ids = [habitat_sim.stage_id]
 
     bb_ray_prescreen_results = bb_ray_prescreen(
         sim, obj, support_obj_ids, check_all_corners=False
