@@ -24,5 +24,11 @@ habitat_hitl:
   gui_controlled_agent:
     agent_index: 1
     ang_speed: 15
+  networking:
+    client_sync:
+      # The client controls its own camera.
+      camera_transform: False
+      # This is a first-person application. We don't need to transmit skinned mesh poses.
+      skinning: False
 
 pick_throw_vr:

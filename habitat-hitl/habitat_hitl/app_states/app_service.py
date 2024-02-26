@@ -4,28 +4,44 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
+from typing import Callable, Optional
+
+from habitat import Env
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.serialize_utils import BaseRecorder
+from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.environment.controllers.controller_abc import GuiController
+from habitat_hitl.environment.episode_helper import EpisodeHelper
+from habitat_sim.gfx import DebugLineRender
+
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
 class AppService:
     def __init__(
         self,
+        *,
         config,
         hitl_config,
-        gui_input,
-        remote_gui_input,
-        line_render,
-        text_drawer,
-        get_anim_fraction,
-        env,
-        sim,
-        compute_action_and_step_env,
-        step_recorder,
-        get_metrics,
-        end_episode,
-        set_cursor_style,
-        episode_helper,
-        client_message_manager,
-        gui_agent_controller,
+        gui_input: GuiInput,
+        remote_gui_input: RemoteGuiInput,
+        line_render: DebugLineRender,
+        text_drawer: AbstractTextDrawer,
+        get_anim_fraction: Callable,
+        env: Env,
+        sim: RearrangeSim,
+        compute_action_and_step_env: Callable,
+        step_recorder: BaseRecorder,
+        get_metrics: Callable,
+        end_episode: Callable,
+        set_cursor_style: Callable,
+        episode_helper: EpisodeHelper,
+        client_message_manager: ClientMessageManager,
+        gui_agent_controller: Optional[GuiController],
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -54,61 +70,61 @@ class AppService:
         return self._hitl_config
 
     @property
-    def gui_input(self):
+    def gui_input(self) -> GuiInput:
         return self._gui_input
 
     @property
-    def remote_gui_input(self):
+    def remote_gui_input(self) -> RemoteGuiInput:
         return self._remote_gui_input
 
     @property
-    def line_render(self):
+    def line_render(self) -> DebugLineRender:
         return self._line_render
 
     @property
-    def text_drawer(self):
+    def text_drawer(self) -> AbstractTextDrawer:
         return self._text_drawer
 
     @property
-    def get_anim_fraction(self):
+    def get_anim_fraction(self) -> Callable:
         return self._get_anim_fraction
 
     @property
-    def env(self):
+    def env(self) -> Env:
         return self._env
 
     @property
-    def sim(self):
+    def sim(self) -> RearrangeSim:
         return self._sim
 
     @property
-    def compute_action_and_step_env(self):
+    def compute_action_and_step_env(self) -> Callable:
         return self._compute_action_and_step_env
 
     @property
-    def step_recorder(self):
+    def step_recorder(self) -> BaseRecorder:
         return self._step_recorder
 
     @property
-    def get_metrics(self):
+    def get_metrics(self) -> Callable:
         return self._get_metrics
 
     @property
-    def end_episode(self):
+    def end_episode(self) -> Callable:
         return self._end_episode
 
     @property
-    def set_cursor_style(self):
+    def set_cursor_style(self) -> Callable:
         return self._set_cursor_style
 
     @property
-    def episode_helper(self):
+    def episode_helper(self) -> EpisodeHelper:
         return self._episode_helper
 
     @property
-    def client_message_manager(self):
+    def client_message_manager(self) -> ClientMessageManager:
         return self._client_message_manager
 
     @property
-    def gui_agent_controller(self):
+    def gui_agent_controller(self) -> Optional[GuiController]:
         return self._gui_agent_controller

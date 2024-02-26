@@ -4,13 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Final
+from typing import Any, Final, List, Optional
 
 import hydra
 import magnum as mn
 import numpy as np
 
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -22,7 +23,6 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
 )
 from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
-from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.gui_throw_helper import GuiThrowHelper
 from habitat_hitl.environment.hablab_utils import (
     get_agent_art_obj_transform,
@@ -49,24 +49,24 @@ class AppStatePickThrowVr(AppState):
     See VR_HITL.md for instructions on controlling the human from a VR device.
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
-        self._gui_agent_ctrl = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
 
-        self._cam_transform = None
-        self._held_target_obj_idx = None
-        self._recent_reach_pos = None
-        self._paused = False
-        self._hide_gui_text = False
+        self._cam_transform: Optional[mn.Matrix4] = None
+        self._held_target_obj_idx: Optional[int] = None
+        self._recent_reach_pos: Optional[mn.Vector3] = None
+        self._paused: bool = False
+        self._hide_gui_text: bool = False
 
         # Index of the remote-controlled hand holding an object
-        self._remote_held_hand_idx = None
+        self._remote_held_hand_idx: Optional[int] = None
 
         # will be set in on_environment_reset
-        self._target_obj_ids = None
+        self._target_obj_ids: Optional[List[str]] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
@@ -80,11 +80,6 @@ class AppStatePickThrowVr(AppState):
         self._throw_helper = GuiThrowHelper(
             self._app_service, self.get_gui_controlled_agent_index()
         )
-        self._pick_helper = GuiPickHelper(
-            self._app_service,
-            self.get_gui_controlled_agent_index(),
-            self._get_gui_agent_feet_height(),
-        )
 
         self._avatar_switch_helper = AvatarSwitcher(
             self._app_service, self._gui_agent_ctrl
@@ -92,9 +87,9 @@ class AppStatePickThrowVr(AppState):
 
         self._gui_agent_ctrl.line_renderer = app_service.line_render
 
-        self._is_remote_active_toggle = False
-        self.count_tsteps_stop = 0
-        self._has_grasp_preview = False
+        self._is_remote_active_toggle: bool = False
+        self._count_tsteps_stop: int = 0
+        self._has_grasp_preview: bool = False
 
     def _is_remote_active(self):
         return self._is_remote_active_toggle
@@ -127,12 +122,9 @@ class AppStatePickThrowVr(AppState):
         self._target_obj_ids = sim._scene_obj_ids
 
         self._nav_helper.on_environment_reset()
-        self._pick_helper.on_environment_reset(
-            agent_feet_height=self._get_gui_agent_feet_height()
-        )
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-        self.count_tsteps_stop = 0
+        self._count_tsteps_stop = 0
 
         human_pos = (
             self.get_sim()
@@ -300,16 +292,16 @@ class AppStatePickThrowVr(AppState):
         # Count number of steps since we stopped, this is to reduce jitter
         # with IK
         if distance_multiplier == 0:
-            self.count_tsteps_stop += 1
+            self._count_tsteps_stop += 1
         else:
-            self.count_tsteps_stop = 0
+            self._count_tsteps_stop = 0
 
         reach_pos = None
         hand_idx = None
         if (
             self._held_target_obj_idx is not None
             and distance_multiplier == 0.0
-            and self.count_tsteps_stop > MIN_STEPS_STOP
+            and self._count_tsteps_stop > MIN_STEPS_STOP
         ):
             reach_pos = self._get_target_object_position(
                 self._held_target_obj_idx
@@ -392,7 +384,7 @@ class AppStatePickThrowVr(AppState):
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
                 assert not self._gui_agent_ctrl.is_grasped
-                translation = self._get_gui_agent_translation()
+                translation = self._gui_agent_ctrl.get_base_translation()
 
                 min_dist = self._can_grasp_place_threshold
                 min_i = None
@@ -541,19 +533,13 @@ class AppStatePickThrowVr(AppState):
     def get_gui_controlled_agent_index(self):
         return self._gui_agent_ctrl._agent_idx
 
-    def _get_gui_agent_translation(self):
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
-        return (
-            self._gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
-        )
-
     def _get_gui_agent_feet_height(self):
         assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
             self._gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
         agent_feet_translation = (
-            self._get_gui_agent_translation() + base_offset
+            self._gui_agent_ctrl.get_base_translation() + base_offset
         )
         return agent_feet_translation[1]
 
@@ -572,7 +558,7 @@ class AppStatePickThrowVr(AppState):
             controls_str += "1-5: select scene\n"
             controls_str += "R + drag: rotate camera\n"
             controls_str += "Scroll: zoom\n"
-            if self._app_service.hitl_config.remote_gui_mode:
+            if self._app_service.hitl_config.networking.enable:
                 controls_str += "T: toggle keyboard.VR\n"
             controls_str += "P: pause\n"
             if not self._is_remote_active_toggle:
@@ -585,7 +571,7 @@ class AppStatePickThrowVr(AppState):
     def _get_status_text(self):
         status_str = ""
 
-        if self._app_service.hitl_config.remote_gui_mode:
+        if self._app_service.hitl_config.networking.enable:
             status_str += (
                 "human control: VR\n"
                 if self._is_remote_active()
@@ -657,7 +643,7 @@ class AppStatePickThrowVr(AppState):
         # - must not be holding anything
         # - toggle on T keypress OR switch to remote if any remote button is pressed
         if (
-            self._app_service.hitl_config.remote_gui_mode
+            self._app_service.hitl_config.networking.enable
             and self._held_target_obj_idx is None
             and (
                 self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)

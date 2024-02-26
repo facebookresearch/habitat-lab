@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -17,8 +17,16 @@ from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
+# Trick to avoid circular import
+if TYPE_CHECKING:
+    from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
+
 
 class SimulatorObjectType(Enum):
+    """
+    Predefined entity types for which default predicate behavior is defined.
+    """
+
     MOVABLE_ENTITY = "movable_entity_type"
     STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
     ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
@@ -46,6 +54,11 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
 
 
 class ExprType:
+    """
+    Hierarchical type in the PDDL system. The user can define custom types and
+    the types in `SimulatorObjectType` are automatically defined.
+    """
+
     def __init__(self, name: str, parent: Optional["ExprType"]):
         assert isinstance(name, str)
         assert parent is None or isinstance(parent, ExprType)
@@ -72,6 +85,10 @@ class ExprType:
 
 @dataclass(frozen=True)
 class PddlEntity:
+    """
+    Abstract PDDL entity. This is linked to simulator via `PddlSimInfo`.
+    """
+
     name: str
     expr_type: ExprType
 
@@ -124,6 +141,27 @@ def ensure_entity_lists_match(
 
 @dataclass
 class PddlSimInfo:
+    """
+    Manages the mapping between the abstract PDDL and the underlying simulator
+    entities. This also provides some helper methods for accessing PDDL entity
+    simulator properties like object position (which could vary per entity type).
+
+    :property obj_ids: Mapping from the habitat instance handle to simulator ID.
+    :property target_ids: Mapping from target instance handle to simulator ID.
+        ONLY relevant for geometric goal. In the future we can probably remove this
+        distinction.
+    :property art_handles: The simulator articulated object asset handles.
+    :property obj_thresh: Setting that configures an object threshold in
+        predicate state evaluation.
+    :property receptacles: Simulator receptacle regions. See `receptacles` in `RearrangeSim`.
+    :property filter_colliding_states: Setting used for placing robot predicate state.
+    :property num_spawn_attempts: Setting used for placing robot predicate state.
+    :property pred_truth_cache: Used by the task to avoid evaluating the same
+        predicate multiple times.
+
+
+    """
+
     obj_ids: Dict[str, int]
     target_ids: Dict[str, int]
     art_handles: Dict[str, int]
@@ -139,7 +177,7 @@ class PddlSimInfo:
     robot_at_thresh: float
     expr_types: Dict[str, ExprType]
     predicates: Dict[str, Any]
-    all_entities: Dict[str, Any]
+    all_entities: Dict[str, PddlEntity]
     receptacles: Dict[str, mn.Range3D]
 
     num_spawn_attempts: int
@@ -149,15 +187,28 @@ class PddlSimInfo:
     pred_truth_cache: Optional[Dict[str, bool]] = None
 
     def reset_pred_truth_cache(self):
+        """
+        Task that uses the `pred_truth_cache` is responsible for calling
+        this.
+        """
+
         self.pred_truth_cache = {}
 
-    def get_predicate(self, pred_name: str):
+    def get_predicate(self, pred_name: str) -> "Predicate":
+        """
+        Look up predicate by name.
+        """
+
         return self.predicates[pred_name]
 
     def check_type_matches(self, entity: PddlEntity, match_name: str) -> bool:
         return entity.expr_type.is_subtype_of(self.expr_types[match_name])
 
     def get_entity_pos(self, entity: PddlEntity) -> np.ndarray:
+        """
+        Gets a simulator 3D point for an entity.
+        """
+
         ename = entity.name
         if self.check_type_matches(
             entity, SimulatorObjectType.ROBOT_ENTITY.value
@@ -196,6 +247,11 @@ class PddlSimInfo:
     def search_for_entity(
         self, entity: PddlEntity
     ) -> Union[int, str, MarkerInfo, mn.Range3D]:
+        """
+        Returns underlying simulator information associated with a PDDL entity.
+        Helper to match the PDDL entity to something from the simulator.
+        """
+
         ename = entity.name
 
         if self.check_type_matches(

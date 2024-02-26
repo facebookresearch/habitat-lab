@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import magnum as mn
-import numpy as np
 
 import habitat_sim
 from habitat_hitl._internal.gui_application import GuiAppRenderer
@@ -51,8 +50,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
                 self.window_size.y,
                 self.window_size.x,
             ]
-        camera_sensor_spec.position = np.array([0, 0, 0])
-        camera_sensor_spec.orientation = np.array([0, 0, 0])
+        camera_sensor_spec.position = [0.0, 0.0, 0.0]
+        camera_sensor_spec.orientation = [0.0, 0.0, 0.0]
         camera_sensor_spec.near = 0.2
         camera_sensor_spec.far = 50.0
 

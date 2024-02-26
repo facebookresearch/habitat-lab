@@ -88,7 +88,7 @@ def make_cfg(settings):
         camera_sensor_spec = habitat_sim.CameraSensorSpec()
         camera_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.resolution = [settings["height"], settings["width"]]
-        camera_sensor_spec.position = [0, settings["sensor_height"], 0]
+        camera_sensor_spec.position = [0.0, settings["sensor_height"], 0.0]
         for k in kw_args:
             setattr(camera_sensor_spec, k, kw_args[k])
         return camera_sensor_spec
@@ -172,7 +172,7 @@ def make_cfg(settings):
         # The default principal_point_offset is the middle of the image
         fisheye_sensor_spec.principal_point_offset = None
         # default: fisheye_sensor_spec.principal_point_offset = [i/2 for i in fisheye_sensor_spec.resolution]
-        fisheye_sensor_spec.position = [0, settings["sensor_height"], 0]
+        fisheye_sensor_spec.position = [0.0, settings["sensor_height"], 0.0]
         for k in kw_args:
             setattr(fisheye_sensor_spec, k, kw_args[k])
         return fisheye_sensor_spec
@@ -205,7 +205,7 @@ def make_cfg(settings):
             settings["height"],
             settings["width"],
         ]
-        equirect_sensor_spec.position = [0, settings["sensor_height"], 0]
+        equirect_sensor_spec.position = [0.0, settings["sensor_height"], 0.0]
         for k in kw_args:
             setattr(equirect_sensor_spec, k, kw_args[k])
         return equirect_sensor_spec

@@ -12,6 +12,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl.core.gui_input import GuiInput
 
 
+# todo: rename to RemoteClientState
 class RemoteGuiInput:
     def __init__(self, interprocess_record, debug_line_render):
         self._recent_client_states = []
@@ -19,6 +20,8 @@ class RemoteGuiInput:
         self._debug_line_render = debug_line_render
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
+
+        self._new_connection_records = None
 
         # temp map VR button to key
         self._button_map = {
@@ -39,13 +42,42 @@ class RemoteGuiInput:
     def get_history_timestep(self):
         return 1 / 60
 
-    def get_head_pose(self, history_index=0):
+    def pop_recent_server_keyframe_id(self):
+        """
+        Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
+
+        The removal behavior here is to help user code by only returning a keyframe ID when a new (unseen) one is available.
+        """
+        if len(self._recent_client_states) == 0:
+            return None
+
+        latest_client_state = self._recent_client_states[-1]
+        if "recentServerKeyframeId" not in latest_client_state:
+            return None
+
+        retval = int(latest_client_state["recentServerKeyframeId"])
+        del latest_client_state["recentServerKeyframeId"]
+        return retval
+
+    def get_recent_client_state_by_history_index(self, history_index):
+        assert history_index >= 0
         if history_index >= len(self._recent_client_states):
+            return None
+
+        return self._recent_client_states[-(1 + history_index)]
+
+    def get_head_pose(self, history_index=0):
+        client_state = self.get_recent_client_state_by_history_index(
+            history_index
+        )
+        if not client_state:
             return None, None
 
-        avatar_root_json = self._recent_client_states[history_index]["avatar"][
-            "root"
-        ]
+        if "avatar" not in client_state:
+            return None, None
+
+        avatar_root_json = client_state["avatar"]["root"]
+
         pos_json = avatar_root_json["position"]
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = avatar_root_json["rotation"]
@@ -56,10 +88,15 @@ class RemoteGuiInput:
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
-        if history_index >= len(self._recent_client_states):
+        client_state = self.get_recent_client_state_by_history_index(
+            history_index
+        )
+        if not client_state:
             return None, None
 
-        client_state = self._recent_client_states[history_index]
+        if "avatar" not in client_state:
+            return None, None
+
         assert "hands" in client_state["avatar"]
         hands_json = client_state["avatar"]["hands"]
         assert hand_idx >= 0 and hand_idx < len(hands_json)
@@ -74,7 +111,7 @@ class RemoteGuiInput:
 
         return pos, rot_quat
 
-    def update_input_state_from_remote_client_states(self, client_states):
+    def _update_input_state(self, client_states):
         if not len(client_states):
             return
 
@@ -127,13 +164,10 @@ class RemoteGuiInput:
         if not self._debug_line_render:
             return
 
-        if not len(self._recent_client_states):
-            return
-
         avatar_color = mn.Color3(0.3, 1, 0.3)
 
-        if True:
-            pos, rot_quat = self.get_head_pose()
+        pos, rot_quat = self.get_head_pose()
+        if pos is not None and rot_quat is not None:
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
             self._debug_line_render.push_transform(trans)
             color0 = avatar_color
@@ -171,39 +205,74 @@ class RemoteGuiInput:
 
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
-            trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-            self._debug_line_render.push_transform(trans)
-            pointer_len = 0.5
-            self._debug_line_render.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(0, 0, pointer_len),
-                color0,
-                color1,
-            )
+            if hand_pos is not None and hand_rot_quat is not None:
+                trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
+                self._debug_line_render.push_transform(trans)
+                pointer_len = 0.5
+                self._debug_line_render.draw_transformed_line(
+                    mn.Vector3(0, 0, 0),
+                    mn.Vector3(0, 0, pointer_len),
+                    color0,
+                    color1,
+                )
 
-            self._debug_line_render.pop_transform()
+                self._debug_line_render.pop_transform()
+
+    def _clean_history_by_connection_id(self, client_states):
+        if not len(client_states):
+            return
+
+        latest_client_state = client_states[-1]
+        latest_connection_id = latest_client_state["connectionId"]
+
+        # discard older states that don't match the latest connection id
+        # iterate over items in reverse, starting with second-most recent client state
+        for i in range(len(client_states) - 2, -1, -1):
+            if client_states[i]["connectionId"] != latest_connection_id:
+                client_states = client_states[i + 1 :]
+                break
+
+        # discard recent client states if they don't match the latest connection id
+        latest_recent_client_state = (
+            self.get_recent_client_state_by_history_index(0)
+        )
+        if (
+            latest_recent_client_state
+            and latest_recent_client_state["connectionId"]
+            != latest_connection_id
+        ):
+            self.clear_history()
 
     def update(self):
+        self._new_connection_records = (
+            self._interprocess_record.get_queued_connection_records()
+        )
+
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
 
-        if len(client_states) > self.get_history_length():
-            client_states = client_states[-self.get_history_length() :]
+        # We expect to only process ~1 new client state at a time. If this assert fails, something is going awry with networking.
+        # disabling because this happens all the time when debugging the main process
+        # assert len(client_states) < 100
 
+        self._clean_history_by_connection_id(client_states)
+
+        self._update_input_state(client_states)
+
+        # append to _recent_client_states, discarding old states to limit length to get_history_length()
         for client_state in client_states:
-            self._recent_client_states.insert(0, client_state)
-            if (
-                len(self._recent_client_states)
-                == self.get_history_length() + 1
-            ):
-                self._recent_client_states.pop()
-
-        self.update_input_state_from_remote_client_states(client_states)
+            self._recent_client_states.append(client_state)
+            if len(self._recent_client_states) > self.get_history_length():
+                self._recent_client_states.pop(0)
 
         self.debug_visualize_client()
 
+    def get_new_connection_records(self):
+        return self._new_connection_records
+
     def on_frame_end(self):
         self._gui_input.on_frame_end()
+        self._new_connection_records = None
 
     def clear_history(self):
         self._recent_client_states.clear()

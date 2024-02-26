@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, List, Optional
+
 import hydra
 import magnum as mn
 import numpy as np
 
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
 from habitat_hitl.core.gui_input import GuiInput
@@ -40,10 +43,10 @@ class AppStateRearrange(AppState):
 
     def __init__(
         self,
-        app_service,
+        app_service: AppService,
     ):
         self._app_service = app_service
-        self._gui_agent_ctrl = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
 
         # cache items from config; config is expensive to access at runtime
         config = self._app_service.config
@@ -55,15 +58,19 @@ class AppStateRearrange(AppState):
             self._app_service.hitl_config.can_grasp_place_threshold
         )
 
-        self._cam_transform = None
+        self._cam_transform: Optional[mn.Matrix4] = None
 
-        self._held_target_obj_idx = None
-        self._num_remaining_objects = None  # resting, not at goal location yet
-        self._num_busy_objects = None  # currently held by non-gui agents
+        self._held_target_obj_idx: Optional[int] = None
+
+        # resting, not at goal location yet
+        self._num_remaining_objects: Optional[int] = None
+
+        # currently held by non-gui agents
+        self._num_busy_objects: Optional[int] = None
 
         # will be set in on_environment_reset
-        self._target_obj_ids = None
-        self._goal_positions = None
+        self._target_obj_ids: Optional[List[str]] = None
+        self._goal_positions: Optional[List[mn.Vector3]] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input

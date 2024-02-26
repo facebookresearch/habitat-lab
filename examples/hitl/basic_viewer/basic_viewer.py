@@ -7,6 +7,7 @@
 import hydra
 import magnum as mn
 
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -18,7 +19,7 @@ from habitat_hitl.environment.camera_helper import CameraHelper
 class AppStateBasicViewer(AppState):
     def __init__(
         self,
-        app_service,
+        app_service: AppService,
     ):
         self._app_service = app_service
         self._gui_input = self._app_service.gui_input

@@ -147,10 +147,11 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
 def _headless_app_loop(hitl_config, driver):
     headless_config = hitl_config.experimental.headless
     frequency_limiter = FrequencyLimiter(hitl_config.target_sps)
-    rate_tracker = AverageRateTracker(1.0)
+    sps_rate_tracker = AverageRateTracker(1.0)
     dt = 1.0 / hitl_config.target_sps
 
     step_count = 0
+    next_step_count_to_debug_print = 100
 
     video_config = headless_config.debug_video_writer
     video_helper = None
@@ -160,6 +161,11 @@ def _headless_app_loop(hitl_config, driver):
         video_helper = DebugVideoWriter()
 
     while True:
+        # Print step_count periodically. print less often as time goes by, to cut down on log spam.
+        if step_count == next_step_count_to_debug_print:
+            print(f"step {step_count}")
+            next_step_count_to_debug_print = next_step_count_to_debug_print * 2
+
         post_sim_update_dict = driver.sim_update(dt)
 
         if "application_exit" in post_sim_update_dict:
@@ -173,9 +179,11 @@ def _headless_app_loop(hitl_config, driver):
 
         frequency_limiter.limit_frequency()
 
-        new_rate = rate_tracker.increment()
+        new_rate = sps_rate_tracker.increment()
         if new_rate is not None:
-            print(f"SPS: {new_rate:.1f}")
+            low_sps_warning_threshold = hitl_config.target_sps * 0.9
+            if new_rate < low_sps_warning_threshold:
+                print(f"low SPS: {new_rate:.1f}")
 
         step_count += 1
         if (
@@ -191,7 +199,7 @@ def _headless_app_loop(hitl_config, driver):
 
 
 def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
-    from habitat_hitl.core.text_drawer import StubTextDrawer
+    from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
         raise ValueError(
@@ -231,7 +239,7 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         config,
         GuiInput(),
         StubLineRender(),
-        StubTextDrawer(),
+        HeadlessTextDrawer(),
         create_app_state_lambda,
     )
 

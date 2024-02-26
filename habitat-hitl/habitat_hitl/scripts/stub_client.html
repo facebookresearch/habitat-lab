@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<!--
+    Stub client that connects to an HITL server by IP address, sends the "client ready!" message, receives server messages, and displays the incoming message rate. It does not send client state or attempt to render received gfx-replay keyframes.
+-->
+<html>
+<head>
+    <title>WebSocket Client</title>
+    <style>
+        #status {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <tr>
+            <td>
+                <label for="serverIp">Server IP:</label>
+            </td>
+            <td>
+                <input type="text" id="serverIp" placeholder="0.0.0.0" style="width: 500px">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="serverPort">Port:</label>
+            </td>
+            <td>
+                <input type="text" id="serverPort" placeholder="8888" style="width: 500px">
+            </td>
+        </tr>
+    </table>
+    <button id="connectButton">Connect</button>
+    <button id="disconnectButton" disabled>Disconnect</button>
+    <div id="serverUrl"></div>
+    <div id="status">Disconnected</div>
+    <div id="messageRate">Message Rate: 0</div>
+
+    <script>
+        var ws = null;
+        var messageCount = 0;
+        var lastUpdateTime = Date.now();
+
+        function connect() {
+            var ip = document.getElementById('serverIp').value;
+            var port = document.getElementById('serverPort').value;
+            var url = 'ws://' + ip + ':' + port;
+            document.getElementById('serverUrl').textContent = 'Server URL: ' + url;
+            ws = new WebSocket(url);
+            var sendIntervalId = null;  // Variable to hold the ID of the interval
+            var recentServerKeyframeId = null;
+
+            ws.onopen = function() {
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('connectButton').disabled = true;
+                document.getElementById('disconnectButton').disabled = false;
+                document.getElementById('serverIp').disabled = true;
+                document.getElementById('serverPort').disabled = true;
+
+                let connectionParams = {
+                    isClientReady: true
+                };
+                var message = JSON.stringify(connectionParams);  // Convert the object to a JSON string
+                ws.send(message);  // Send the JSON string
+
+                // Start sending messages at 10 Hz
+                sendIntervalId = setInterval(function() {
+                        var dict = {};  // Create an empty JavaScript object
+
+                        // Our stub client only sends recentServerKeyframeId. It doesn't send local GUI input or other client state.
+                        if (recentServerKeyframeId != null) {
+                            dict.recentServerKeyframeId = recentServerKeyframeId;
+                        }
+                        var message = JSON.stringify(dict);  // Convert the object to a JSON string
+                        ws.send(message);  // Send the JSON string
+                    }, 100);  // Repeat every 100 milliseconds
+            };
+
+            ws.onclose = function() {
+                document.getElementById('status').textContent = 'Disconnected';
+                document.getElementById('connectButton').disabled = false;
+                document.getElementById('disconnectButton').disabled = true;
+                document.getElementById('serverIp').disabled = false;
+                document.getElementById('serverPort').disabled = false;
+
+                if (sendIntervalId) {
+                    clearInterval(sendIntervalId);
+                    sendIntervalId = null;
+                }
+                recentServerKeyframeId = null;
+
+            };
+
+            ws.onmessage = function() {
+                messageCount++;
+
+                var message = event.data;
+                var dict = JSON.parse(message);
+
+                // parse the latest serverKeyframeId from received keyframes
+                if ("keyframes" in dict) {
+                    keyframes = dict["keyframes"]
+                    if (keyframes.length) {
+                        keyframe = keyframes[keyframes.length - 1];
+                        if ("message" in keyframe) {
+                            message = keyframe["message"]
+                            if ("serverKeyframeId" in message) {
+                                recentServerKeyframeId = message["serverKeyframeId"];
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        function updateMessageRate() {
+            var now = Date.now();
+            var deltaTime = (now - lastUpdateTime) / 1000;  // Convert to seconds
+            var messageRate = messageCount / deltaTime;
+            document.getElementById('messageRate').textContent = 'Message Rate: ' + messageRate.toFixed(1);
+            messageCount = 0;
+            lastUpdateTime = now;
+        }
+
+        document.getElementById('connectButton').addEventListener('click', connect);
+        document.getElementById('disconnectButton').addEventListener('click', disconnect);
+        setInterval(updateMessageRate, 2000);  // Update message rate every 2 seconds
+    </script>
+</body>
+</html>

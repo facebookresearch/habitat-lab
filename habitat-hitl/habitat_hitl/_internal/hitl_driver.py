@@ -12,8 +12,9 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+import magnum as mn
 import numpy as np
 
 import habitat
@@ -30,7 +31,6 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import (
@@ -95,7 +95,7 @@ class HitlDriver(AppDriver):
             )
         self._gui_input = gui_input
 
-        line_render.set_line_width(3)
+        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -175,26 +175,30 @@ class HitlDriver(AppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
-        self._app_service = AppService(
-            config,
-            self._hitl_config,
-            gui_input,
-            self._remote_gui_input,
-            line_render,
-            text_drawer,
-            lambda: self._viz_anim_fraction,
-            self.habitat_env,
-            self.get_sim(),
-            lambda: self._compute_action_and_step_env(),
-            self._step_recorder,
-            lambda: self._get_recent_metrics(),
-            local_end_episode,
-            lambda: self._set_cursor_style,
-            self._episode_helper,
-            self._client_message_manager,
+        gui_agent_controller: Any = (
             self.ctrl_helper.get_gui_agent_controller()
             if self.ctrl_helper
-            else None,
+            else None
+        )
+
+        self._app_service = AppService(
+            config=config,
+            hitl_config=self._hitl_config,
+            gui_input=gui_input,
+            remote_gui_input=self._remote_gui_input,
+            line_render=line_render,
+            text_drawer=text_drawer,
+            get_anim_fraction=lambda: self._viz_anim_fraction,
+            env=self.habitat_env,
+            sim=self.get_sim(),
+            compute_action_and_step_env=lambda: self._compute_action_and_step_env(),
+            step_recorder=self._step_recorder,
+            get_metrics=lambda: self._get_recent_metrics(),
+            end_episode=local_end_episode,
+            set_cursor_style=self._set_cursor_style,
+            episode_helper=self._episode_helper,
+            client_message_manager=self._client_message_manager,
+            gui_agent_controller=gui_agent_controller,
         )
 
         self._app_state: AppState = None
@@ -208,7 +212,7 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.remote_gui_mode
+        return self._hitl_config.networking.enable
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
@@ -219,7 +223,9 @@ class HitlDriver(AppDriver):
             # simulation rate in the presence of unreliable network comms.
             # See also server.py max_send_rate
             max_steps_ahead = 5
-            self._interprocess_record = InterprocessRecord(max_steps_ahead)
+            self._interprocess_record = InterprocessRecord(
+                self._hitl_config.networking, max_steps_ahead
+            )
             launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
                 self._interprocess_record, line_render
@@ -444,15 +450,6 @@ class HitlDriver(AppDriver):
             + dt * self._hitl_config.viz_animation_speed
         ) % 1.0
 
-        # Navmesh visualization only works in the debug third-person view
-        # (--debug-third-person-width), not the main viewport. Navmesh
-        # visualization is only implemented for simulator-rendering, not replay-
-        # rendering.
-        if self._gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.get_sim().navmesh_visualization = (  # type: ignore
-                not self.get_sim().navmesh_visualization  # type: ignore
-            )
-
         self._app_state.sim_update(dt, post_sim_update_dict)
 
         if self._pending_cursor_style:
@@ -468,13 +465,6 @@ class HitlDriver(AppDriver):
         if self._save_gfx_replay_keyframes:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
-
-        # Manually save recorded gfx-replay keyframes.
-        if (
-            self._gui_input.get_key_down(GuiInput.KeyNS.EQUAL)
-            and self._save_gfx_replay_keyframes
-        ):
-            self._save_recorded_keyframes_to_file()
 
         if self._hitl_config.hide_humanoid_in_gui:
             # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
@@ -514,10 +504,28 @@ class HitlDriver(AppDriver):
             self._remote_gui_input.on_frame_end()
 
         if self.network_server_enabled:
+            if (
+                self._hitl_config.networking.client_sync.camera_transform
+                and "cam_transform" in post_sim_update_dict
+            ):
+                cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
+                    "cam_transform"
+                ]
+                if cam_transform is not None:
+                    self._client_message_manager.update_camera_transform(
+                        cam_transform
+                    )
+
             for keyframe_json in keyframes:
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]
+                # Remove rigs from keyframe if skinning is disabled
+                if not self._hitl_config.networking.client_sync.skinning:
+                    if "rigCreations" in keyframe_obj:
+                        del keyframe_obj["rigCreations"]
+                    if "rigUpdates" in keyframe_obj:
+                        del keyframe_obj["rigUpdates"]
                 # Insert server->client message into the keyframe
                 message = self._client_message_manager.get_message_dict()
                 if len(message) > 0:

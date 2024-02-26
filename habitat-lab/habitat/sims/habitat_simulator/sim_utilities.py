@@ -310,6 +310,7 @@ def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
 
     :return: a dict mapping object ids to a descriptive string.
     """
+
     rom = sim.get_rigid_object_manager()
     aom = sim.get_articulated_object_manager()
 
@@ -340,7 +341,12 @@ def get_all_objects(
 ]:
     """
     Get a list of all ManagedRigidObjects and ManagedArticulatedObjects in the scene.
+
+    :param sim: The Simulator instance.
+
+    :return: a list of ManagedObject wrapper instances containing all objects currently instantiated in the scene.
     """
+
     managers = [
         sim.get_rigid_object_manager(),
         sim.get_articulated_object_manager(),
@@ -477,14 +483,13 @@ def get_ao_root_bb(
     :param ao: The ArticulatedObject instance.
     """
 
-    ao_local_part_bb_corners = []
-    # NOTE: this is empty because the links are not in the subtree of the root
+    # NOTE: we'd like to use SceneNode AABB, but this won't work because the links are not in the subtree of the root:
     # ao.root_scene_node.compute_cumulative_bb()
-    # print(f"ao {ao.handle} cumulative_bb = {ao.root_scene_node.cumulative_bb}")
-    # print(f"ao {ao.handle} cumulative_bb should be = {ao.root_scene_node.compute_cumulative_bb()}")
+
+    ao_local_part_bb_corners = []
+
     link_nodes = [ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)]
     for link_node in link_nodes:
-        # print(f"    - link cumulative_bb = {link_node.cumulative_bb}")
         local_bb_corners = get_bb_corners(link_node.cumulative_bb)
         global_bb_corners = [
             link_node.absolute_transformation().transform_point(bb_corner)
@@ -528,15 +533,14 @@ def get_ao_root_bbs(
     return ao_local_bbs
 
 
-# Prepositional Logic Functions:
 def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
     """
-    Construct a map of ao_link object ids to their parent ao's object id.
+    Construct a dict mapping ArticulatedLink object_id to parent ArticulatedObject object_id.
     NOTE: also maps ao's root object id to itself for ease of use.
 
     :param sim: The Simulator instance.
 
-    :return: dictionary mapping ArticulatedLink object ids to their parent's object id.
+    :return: dict mapping ArticulatedLink object ids to parent object ids.
     """
 
     aom = sim.get_articulated_object_manager()
@@ -548,115 +552,7 @@ def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
         for link_id in ao.link_object_ids:
             ao_link_map[link_id] = ao.object_id
 
-    # print(f"ao_link_map = {ao_link_map}")
-
     return ao_link_map
-
-
-def get_global_keypoints_from_object_id(
-    sim: habitat_sim.Simulator,
-    object_id: int,
-    ao_link_map: Optional[Dict[int, int]] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
-) -> List[mn.Vector3]:
-    """
-    Get a list of object keypoints in global space given an object id.
-    0th point is the center of bb, others are bounding box corners.
-
-    :param sim: The Simulator instance.
-    :param objectA: The ManagedRigidObject from which to extract keypoints.
-    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
-    :return: A set of global 3D keypoints for the object.
-    """
-
-    obj = get_obj_from_id(sim, object_id, ao_link_map)
-
-    if type(obj) == habitat_sim.physics.ManagedBulletRigidObject:
-        return get_rigid_object_global_keypoints(obj)
-    else:
-        # AO
-        return get_articulated_object_global_keypoints(obj, ao_aabbs)
-
-
-def get_articulated_object_global_keypoints(
-    objectA: habitat_sim.physics.ManagedArticulatedObject,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
-) -> List[mn.Vector3]:
-    """
-    Get global bb keypoints for an ArticulatedObject.
-
-    :param objectA: The ManagedRigidObject from which to extract keypoints.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
-    :return: A set of global 3D keypoints for the object.
-    """
-
-    ao_bb = None
-    if ao_aabbs is None:
-        ao_bb = get_ao_root_bb(objectA)
-    else:
-        ao_bb = ao_aabbs[objectA.object_id]
-
-    local_keypoints = [ao_bb.center()]
-    local_keypoints.extend(get_bb_corners(ao_bb))
-
-    global_keypoints = [
-        objectA.transformation.transform_point(key_point)
-        for key_point in local_keypoints
-    ]
-    return global_keypoints
-
-
-def get_rigid_object_global_keypoints(
-    objectA: habitat_sim.physics.ManagedRigidObject,
-) -> List[mn.Vector3]:
-    """
-    Get a list of rigid object keypoints in global space.
-    0th point is the center of mass (CoM), others are bounding box corners.
-
-    :param objectA: The ManagedRigidObject from which to extract keypoints.
-
-    :return: A set of global 3D keypoints for the object.
-    """
-
-    local_keypoints = [mn.Vector3(0)]
-    local_keypoints.extend(
-        get_bb_corners(objectA.root_scene_node.cumulative_bb)
-    )
-    global_keypoints = [
-        objectA.transformation.transform_point(key_point)
-        for key_point in local_keypoints
-    ]
-    return global_keypoints
-
-
-def object_keypoint_cast(
-    sim: habitat_sim.Simulator,
-    objectA: habitat_sim.physics.ManagedRigidObject,
-    direction: mn.Vector3 = None,
-) -> List[habitat_sim.physics.RaycastResults]:
-    """
-    Compute's object global keypoints, casts rays from each in the specified direction and returns the resulting RaycastResults.
-    Index 0 in the list is the CoM, others are corners.
-
-    :param sim: The Simulator instance.
-    :param objectA: The ManagedRigidObject from which to extract keypoints and raycast.
-    :param direction: Optionally provide a unit length global direction vector for the raycast. If None, default to -Y.
-
-    :return: A list of RaycastResults, one from each object keypoint.
-    """
-
-    if direction is None:
-        # default to downward raycast
-        direction = mn.Vector3(0, -1, 0)
-
-    global_keypoints = get_rigid_object_global_keypoints(objectA)
-    return [
-        sim.cast_ray(habitat_sim.geo.Ray(keypoint, direction))
-        for keypoint in global_keypoints
-    ]
 
 
 def get_obj_from_id(
@@ -701,7 +597,7 @@ def get_obj_from_handle(
     habitat_sim.physics.ManagedArticulatedObject,
 ]:
     """
-    Get a ManagedRigidObject or ManagedArticulatedObject from its handle.
+    Get a ManagedRigidObject or ManagedArticulatedObject from its instance handle.
 
     :param sim: The Simulator instance.
     :param obj_handle: object istance handle for which ManagedObject is desired.
@@ -825,31 +721,161 @@ def get_obj_contact_pairs(
     # get_obj_contact_pairs(self.sim,new_objs[0][0])
 
 
+def get_global_keypoints_from_bb(
+    aabb: mn.Range3D, local_to_global: mn.Matrix4
+) -> List[mn.Vector3]:
+    """
+    Get a list of bounding box keypoints in global space.
+    0th point is the bounding box center, others are bounding box corners.
+
+    :param aabb: The local bounding box.
+    :param local_to_global: The local to global transformation matrix.
+
+    :return: A set of global 3D keypoints for the bounding box.
+    """
+    local_keypoints = [aabb.center()]
+    local_keypoints.extend(get_bb_corners(aabb))
+    global_keypoints = [
+        local_to_global.transform_point(key_point)
+        for key_point in local_keypoints
+    ]
+    return global_keypoints
+
+
+def get_rigid_object_global_keypoints(
+    objectA: habitat_sim.physics.ManagedRigidObject,
+) -> List[mn.Vector3]:
+    """
+    Get a list of rigid object keypoints in global space.
+    0th point is the bounding box center, others are bounding box corners.
+
+    :param objectA: The ManagedRigidObject from which to extract keypoints.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    bb = objectA.root_scene_node.cumulative_bb
+    return get_global_keypoints_from_bb(bb, objectA.transformation)
+
+
+def get_articulated_object_global_keypoints(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get global bb keypoints for an ArticulatedObject.
+
+    :param objectA: The ManagedArticulatedObject from which to extract keypoints.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary. Must contain the subjects of the query.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    ao_bb = None
+    if ao_aabbs is None:
+        ao_bb = get_ao_root_bb(objectA)
+    else:
+        ao_bb = ao_aabbs[objectA.object_id]
+
+    return get_global_keypoints_from_bb(ao_bb, objectA.transformation)
+
+
+def get_articulated_link_global_keypoints(
+    objectA: habitat_sim.physics.ManagedArticulatedObject, link_index: int
+) -> List[mn.Vector3]:
+    """
+    Get global bb keypoints for an ArticulatedLink.
+
+    :param objectA: The parent ManagedArticulatedObject for the link.
+    :param link_index: The local index of the link within the parent ArticulatedObject. Not the object_id of the link.
+
+    :return: A set of global 3D keypoints for the link.
+    """
+    link_node = objectA.get_link_scene_node(link_index)
+
+    return get_global_keypoints_from_bb(
+        link_node.cumulative_bb, link_node.absolute_transformation()
+    )
+
+
+def get_global_keypoints_from_object_id(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> List[mn.Vector3]:
+    """
+    Get a list of object keypoints in global space given an object id.
+    0th point is the center of bb, others are bounding box corners.
+
+    :param sim: The Simulator instance.
+    :param object_id: The integer id for the object from which to extract keypoints.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id. If not provided, recomputed as necessary.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: A set of global 3D keypoints for the object.
+    """
+
+    obj = get_obj_from_id(sim, object_id, ao_link_map)
+
+    if isinstance(obj, habitat_sim.physics.ManagedBulletRigidObject):
+        return get_rigid_object_global_keypoints(obj)
+    elif obj.object_id != object_id:
+        # this is an ArticulatedLink
+        return get_articulated_link_global_keypoints(
+            obj, obj.link_object_ids[object_id]
+        )
+    else:
+        # ArticulatedObject
+        return get_articulated_object_global_keypoints(obj, ao_aabbs)
+
+
+def object_keypoint_cast(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedRigidObject,
+    direction: mn.Vector3 = None,
+) -> List[habitat_sim.physics.RaycastResults]:
+    """
+    Computes object global keypoints, casts rays from each in the specified direction and returns the resulting RaycastResults.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject from which to extract keypoints and raycast.
+    :param direction: Optionally provide a unit length global direction vector for the raycast. If None, default to -Y.
+
+    :return: A list of RaycastResults, one from each object keypoint.
+    """
+
+    if direction is None:
+        # default to downward raycast
+        direction = mn.Vector3(0, -1, 0)
+
+    global_keypoints = get_rigid_object_global_keypoints(objectA)
+    return [
+        sim.cast_ray(habitat_sim.geo.Ray(keypoint, direction))
+        for keypoint in global_keypoints
+    ]
+
+
+# ============================================================
+# Utilities for Querying Object Relationships
+# ============================================================
+
+
 def above(
     sim: habitat_sim.Simulator,
     objectA: Union[
         habitat_sim.physics.ManagedRigidObject,
         habitat_sim.physics.ManagedArticulatedObject,
     ],
-    ao_link_map: Optional[Dict[int, int]] = None,
-) -> List[
-    Tuple[
-        Union[
-            habitat_sim.physics.ManagedRigidObject,
-            habitat_sim.physics.ManagedArticulatedObject,
-        ],
-        Optional[int],
-    ]
-]:
+) -> List[int]:
     """
     Get a list of all objects that a particular objectA is 'above'.
     Concretely, 'above' is defined as: a downward raycast of any object keypoint hits the object below.
 
     :param sim: The Simulator instance.
     :param objectA: The ManagedRigidObject for which to query the 'above' set.
-    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
 
-    :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
+    :return: a list of object ids.
     """
 
     # get object ids of all objects below this one
@@ -860,69 +886,11 @@ def above(
     ]
     above_object_ids = list(set(above_object_ids))
 
-    above_objects_links = get_object_set_from_id_set(
-        sim, above_object_ids, ao_link_map
-    )
+    # remove self from the list if present
+    if objectA.object_id in above_object_ids:
+        above_object_ids.remove(objectA.object_id)
 
-    # attempt to remove self from the list if present
-    above_objects_links = [
-        obj_link
-        for obj_link in above_objects_links
-        if obj_link[0].object_id != objectA.object_id
-    ]
-
-    return above_objects_links
-
-
-def below(
-    sim: habitat_sim.Simulator,
-    objectA: Union[
-        habitat_sim.physics.ManagedRigidObject,
-        habitat_sim.physics.ManagedArticulatedObject,
-    ],
-    ao_link_map: Optional[Dict[int, int]] = None,
-) -> List[
-    Tuple[
-        Union[
-            habitat_sim.physics.ManagedRigidObject,
-            habitat_sim.physics.ManagedArticulatedObject,
-        ],
-        Optional[int],
-    ]
-]:
-    """
-    Get a list of all objects that a particular objectA is 'below'.
-    Concretely, 'below' is defined as: an upward raycast of any object keypoint hits the object above.
-
-    :param sim: The Simulator instance.
-    :param objectA: The ManagedRigidObject for which to query the 'above' set.
-    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-
-    :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
-    """
-
-    # get object ids of all objects below this one
-    below_object_ids = [
-        hit.object_id
-        for keypoint_raycast_result in object_keypoint_cast(
-            sim, objectA, direction=mn.Vector3(0, 1, 0)
-        )
-        for hit in keypoint_raycast_result.hits
-    ]
-    below_object_ids = list(set(below_object_ids))
-
-    below_objects_links = get_object_set_from_id_set(
-        sim, below_object_ids, ao_link_map
-    )
-
-    # attempt to remove self from the list if present
-    below_objects_links = [
-        obj_link
-        for obj_link in below_objects_links
-        if obj_link[0].object_id != objectA.object_id
-    ]
-
-    return below_objects_links
+    return above_object_ids
 
 
 def within(
@@ -931,26 +899,22 @@ def within(
         habitat_sim.physics.ManagedRigidObject,
         habitat_sim.physics.ManagedArticulatedObject,
     ],
-    ao_link_map: Optional[Dict[int, int]] = None,
-) -> List[
-    Tuple[
-        Union[
-            habitat_sim.physics.ManagedRigidObject,
-            habitat_sim.physics.ManagedArticulatedObject,
-        ],
-        Optional[int],
-    ]
-]:
+    max_distance: float = 1.0,
+    keypoint_vote_threshold: int = 2,
+    center_ensures_containment: bool = True,
+) -> List[int]:
     """
     Get a list of all objects that a particular objectA is 'within'.
-    Concretely, 'within' is defined as: a threshold number of opposing keypoing raycasts hit the same object.
+    Concretely, 'within' is defined as: a threshold number of opposing keypoint raycasts hit the same object.
     This function computes raycasts along all global axes from all keypoints and checks opposing rays for collision with the same object.
 
     :param sim: The Simulator instance.
     :param objectA: The ManagedRigidObject for which to query the 'within' set.
-    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param max_distance: The maximum ray distance to check in each opposing direction (this is half the "wingspan" of the check). Makes the raycast more efficienct and realistically containing objects will have a limited size.
+    :param keypoint_vote_threshold: The minimum number of keypoints which must indicate containment to qualify objectA as "within" another object.
+    :param center_ensures_containment: If True, positive test of objectA's center keypoint alone qualifies objectA as "within" another object.
 
-    :return: a list of tuples, first element is a ManagedObject, second is an optional link index.
+    :return: a list of object_id integers.
     """
 
     global_keypoints = get_rigid_object_global_keypoints(objectA)
@@ -965,60 +929,53 @@ def within(
     ]
     for k_ix, keypoint in enumerate(global_keypoints):
         for a_ix in range(3):
-            [
-                hit.object_id
-                for keypoint_raycast_result in object_keypoint_cast(
-                    sim, objectA
-                )
-                for hit in keypoint_raycast_result.hits
-            ]
             pos_ids = [
                 hit.object_id
                 for hit in sim.cast_ray(
                     habitat_sim.geo.Ray(keypoint, pos_axes[a_ix]),
-                    max_distance=1.0,
+                    max_distance=max_distance,
                 ).hits
             ]
             neg_ids = [
                 hit.object_id
                 for hit in sim.cast_ray(
                     habitat_sim.geo.Ray(keypoint, neg_axes[a_ix]),
-                    max_distance=1.0,
+                    max_distance=max_distance,
                 ).hits
             ]
             intersect_ids = [obj_id for obj_id in pos_ids if obj_id in neg_ids]
             keypoint_intersect_set[k_ix].extend(intersect_ids)
         keypoint_intersect_set[k_ix] = list(set(keypoint_intersect_set[k_ix]))
 
-    # initialize the list from keypoint 0 (center of mass) which gaurantees containment
-    containment_ids = list(keypoint_intersect_set[0])
-    # "vote" for ids from other keypoints
-    id_votes: defaultdict[int, int] = defaultdict(lambda: 0)
-    for k_ix in range(1, len(global_keypoints)):
-        for k_ix_2 in range(1, len(global_keypoints)):
-            if k_ix < k_ix_2:
-                for obj_id in keypoint_intersect_set[k_ix]:
-                    if obj_id in keypoint_intersect_set[k_ix_2]:
-                        id_votes[obj_id] += 1
+    containment_ids = []
 
-    # count votes for other keypoints and de-duplicate
+    # used to toggle "center" keypoint as a voting or overriding check
+    first_voting_keypoint = 0
+
+    if center_ensures_containment:
+        # initialize the list from keypoint 0 (center of bounding box) which gaurantees containment
+        containment_ids = list(keypoint_intersect_set[0])
+        first_voting_keypoint = 1
+
+    # "vote" for ids from keypoints
+    id_votes: defaultdict[int, int] = defaultdict(lambda: 0)
+    for k_ix in range(first_voting_keypoint, len(global_keypoints)):
+        for obj_id in keypoint_intersect_set[k_ix]:
+            id_votes[obj_id] += 1
+
+    # count votes and de-duplicate
     containment_ids = containment_ids + [
-        obj_id for obj_id in id_votes if id_votes[obj_id] > 2
+        obj_id
+        for obj_id in id_votes
+        if id_votes[obj_id] > keypoint_vote_threshold
     ]
     containment_ids = list(set(containment_ids))
 
-    within_objects_links = get_object_set_from_id_set(
-        sim, containment_ids, ao_link_map
-    )
+    # remove self from the list if present
+    if objectA.object_id in containment_ids:
+        containment_ids.remove(objectA.object_id)
 
-    # attempt to remove self from the list if present
-    within_objects_links = [
-        obj_link
-        for obj_link in within_objects_links
-        if obj_link[0] != objectA.object_id
-    ]
-
-    return within_objects_links
+    return containment_ids
 
 
 def ontop(
@@ -1367,7 +1324,7 @@ def object_in_region(
     )
 
     if center_only:
-        key_points = key_points[0]
+        key_points = [key_points[0]]
 
     contained_points = [p for p in key_points if region.contains(p)]
     ratio = len(contained_points) / float(len(key_points))
