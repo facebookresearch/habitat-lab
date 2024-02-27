@@ -253,7 +253,7 @@ def test_keypoint_cast_prepositions():
         )
         mixer_above = above(sim, mixer_object)
         mixer_above_strings = [
-            all_objects[obj_id] for obj_id in mixer_above if obj_id >= 0
+            all_objects[obj_id] for obj_id in mixer_above if obj_id > stage_id
         ]
         expected_mixer_above_strings = [
             "kitchen_counter_:0000",
@@ -268,7 +268,7 @@ def test_keypoint_cast_prepositions():
         tv_object = get_obj_from_handle(sim, "frl_apartment_tv_screen_:0000")
         tv_above = above(sim, tv_object)
         tv_above_strings = [
-            all_objects[obj_id] for obj_id in tv_above if obj_id >= 0
+            all_objects[obj_id] for obj_id in tv_above if obj_id > stage_id
         ]
         expected_tv_above_strings = [
             "frl_apartment_tvstand_:0000",
