@@ -155,7 +155,8 @@ def bb_ray_prescreen(
     """
     if support_obj_ids is None:
         # set default support surface to stage/ground mesh
-        support_obj_ids = [-1]
+        # STAGE ID IS habitat_sim.stage_id
+        support_obj_ids = [habitat_sim.stage_id]
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
     highest_support_impact: Optional[mn.Vector3] = None
@@ -217,7 +218,7 @@ def bb_ray_prescreen(
     margin_offset = 0
     if highest_support_impact_id is None:
         pass
-    elif highest_support_impact_id == -1:
+    elif highest_support_impact_id == habitat_sim.stage_id:
         margin_offset = sim.get_stage_initialization_template().margin
 
     surface_snap_point = (
@@ -246,7 +247,7 @@ def snap_down(
 
     :param sim: The Simulator instance.
     :param obj: The RigidObject instance.
-    :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (-1).
+    :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (0).
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
 
     Reject invalid placements by checking for penetration with other existing objects.
@@ -260,7 +261,7 @@ def snap_down(
 
     if support_obj_ids is None:
         # set default support surface to stage/ground mesh
-        support_obj_ids = [-1]
+        support_obj_ids = [habitat_sim.stage_id]
 
     bb_ray_prescreen_results = bb_ray_prescreen(
         sim, obj, support_obj_ids, check_all_corners=False
