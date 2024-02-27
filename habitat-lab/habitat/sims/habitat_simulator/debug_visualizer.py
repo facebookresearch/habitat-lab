@@ -133,7 +133,7 @@ class DebugVisualizer:
 
         debug_sensor_spec = habitat_sim.CameraSensorSpec()
         debug_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
-        debug_sensor_spec.position = [0, 0, 0]
+        debug_sensor_spec.position = [0.0, 0.0, 0.0]
         debug_sensor_spec.resolution = [resolution[0], resolution[1]]
         debug_sensor_spec.uuid = self.sensor_uuid
 
