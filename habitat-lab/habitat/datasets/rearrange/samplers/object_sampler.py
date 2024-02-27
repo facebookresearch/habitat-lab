@@ -300,7 +300,7 @@ class ObjectSampler:
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
             if snap_down:
-                support_object_ids = [-1]
+                support_object_ids = [habitat_sim.stage_id]
                 # add support object ids for non-stage receptacles
                 if receptacle.is_parent_object_articulated:
                     ao_instance = sim.get_articulated_object_manager().get_object_by_handle(

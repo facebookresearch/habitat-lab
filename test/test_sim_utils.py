@@ -23,7 +23,7 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     snap_down,
     within,
 )
-from habitat_sim import Simulator, built_with_bullet
+from habitat_sim import Simulator, built_with_bullet, stage_id
 from habitat_sim.metadata import MetadataMediator
 from habitat_sim.physics import MotionType
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
@@ -104,7 +104,8 @@ def test_snap_down(support_margin, obj_margin, stage_support):
 
         # add the cube objects
         cube_stage_obj = None
-        support_obj_ids = [-1]
+        # stage defaults to ID specified as constant in habitat_sim.stage_id
+        support_obj_ids = [stage_id]
         if not stage_support:
             cube_stage_obj = rom.add_object_by_template_handle(
                 cube_stage_template_handle

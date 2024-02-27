@@ -107,7 +107,7 @@ class CompositeArticulatedObjectStateSampler(ArticulatedObjectStateSampler):
         On failure, return None.
         """
         ids_to_names = sutils.get_all_object_ids(sim)
-        ids_to_names[-1] = "_stage"
+        ids_to_names[habitat_sim.stage_id] = "_stage"
         logger.info(ids_to_names)
         # first collect all instances associated with requested samplers
         aom = sim.get_articulated_object_manager()
