@@ -825,3 +825,161 @@ def get_object_regions(
     )
 
     return sim.semantic_scene.get_regions_for_points(key_points)
+
+
+def get_global_link_marker_set(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    link_id: int,
+    marker_set_name: str,
+    ao_marker_sets: Dict[int, Dict[str, List[mn.Vector3]]] = None,
+) -> List[mn.Vector3]:
+    """
+    Convert a local marker set to a global marker set by applying the link transformation.
+
+    :param objectA: The ManagedArticulatedObject instance.
+    :param link_id: The internal link index. Not the ArticulatedLink's object_id.
+    :param marker_set_name: The name of the marker set to convert.
+    :param ao_marker_sets: Pre-computed marker set dictionary. If not provided, it will be re-computed.
+
+    :return: a set of global marker positions.
+    """
+
+    assert isinstance(objectA, habitat_sim.physics.ManagedArticulatedObject)
+
+    if ao_marker_sets is None:
+        ao_marker_sets = get_ao_marker_sets(objectA)
+
+    specified_marker_set = ao_marker_sets[link_id][marker_set_name]
+    link_local_to_global = objectA.get_link_scene_node(link_id).transformation
+
+    return [
+        link_local_to_global.transform_point(marker)
+        for marker in specified_marker_set
+    ]
+
+
+def get_ao_marker_sets(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+) -> Dict[int, Dict[str, List[mn.Vector3]]]:
+    """
+    Parse the marker set metadata from a single ArticulatedObject instance.
+
+    :return: A dict mapping local link indices to marker sets with local offsets.
+
+    Example output:
+        0: {
+            "link0_marker_set_0": [vec ...],
+            "link0_marker_set_1": [vec ...],
+        },
+        1: {...}
+    """
+
+    assert isinstance(objectA, habitat_sim.physics.ManagedArticulatedObject)
+
+    marker_set: Dict[int, Dict[str, List[mn.Vector3]]] = {}
+
+    user_metadata = objectA.user_attributes
+
+    link_names_to_ids = {}
+    for link_id in objectA.get_link_ids():
+        link_names_to_ids[objectA.get_link_name(link_id)] = link_id
+
+    if "marker_sets" in user_metadata.get_subconfig_keys():
+        marker_set_metadata = user_metadata.get_subconfig("marker_sets")
+        if len(marker_set_metadata.get_subconfig_keys()) > 0:
+            # note: config should store this by handle since link id order may change based on import options
+            for link_handle in marker_set_metadata.get_subconfig_keys():
+                # we want to use link_id internally, so swap the handle for id in the output map
+                link_id = link_names_to_ids[link_handle]
+                if link_id not in marker_set:
+                    marker_set[link_id] = {}
+                link_marker_sets = marker_set_metadata.get_subconfig(
+                    link_handle
+                )
+                for marker_set_name in link_marker_sets.get_subconfig_keys():
+                    marker_set_config = link_marker_sets.get_subconfig(
+                        marker_set_name
+                    )
+                    marker_set[link_id][marker_set_name] = []
+                    for p_name in marker_set_config.get_keys_and_types():
+                        marker_set[link_id][marker_set_name].append(
+                            marker_set_config.get(p_name)
+                        )
+
+    return marker_set
+
+
+def write_ao_marker_sets(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    ao_marker_sets: Dict[int, Dict[str, List[mn.Vector3]]],
+) -> None:
+    """
+    Write a marker set dict to a ManagedArticulatedObjects's user attributes Configuration struct.
+
+    NOTE: This is necessary because the config is not a dict, but a set of wrapped C++ string maps. Also we need to convert link_ids back into handles for serialization.
+    """
+
+    ao_marker_sets_config = (
+        habitat_sim._ext.habitat_sim_bindings.Configuration()
+    )
+
+    for link_id in ao_marker_sets:
+        link_marker_sets_config = (
+            habitat_sim._ext.habitat_sim_bindings.Configuration()
+        )
+        for marker_set_name in ao_marker_sets[link_id]:
+            marker_set_config = (
+                habitat_sim._ext.habitat_sim_bindings.Configuration()
+            )
+            for ix, marker in enumerate(
+                ao_marker_sets[link_id][marker_set_name]
+            ):
+                marker_set_config.set(str(ix), marker)
+            link_marker_sets_config.save_subconfig(
+                marker_set_name, marker_set_config
+            )
+        ao_marker_sets_config.save_subconfig(
+            objectA.get_link_name(link_id), link_marker_sets_config
+        )
+
+    objectA.user_attributes.save_subconfig(
+        "marker_sets", ao_marker_sets_config
+    )
+
+
+def parse_scene_marker_sets(
+    sim: habitat_sim.Simulator,
+) -> Dict[str, Dict[int, Dict[str, List[mn.Vector3]]]]:
+    """
+    Parse the marker set metadata from all objects in the scene.
+
+    :return: A dict mapping ArticulatedObject instance handle to a dict of per-link marker sets with local offsets.
+
+    Example output:
+    {
+        "fridge:0000": {
+            0: {
+                "link0_marker_set_0": [vec ...],
+                "link0_marker_set_1": [vec ...],
+            },
+            1: {...}
+        },
+        "cabinet:0000: {...},
+        ...
+    }
+    """
+
+    marker_sets = {}
+
+    for ao in (
+        sim.get_articulated_object_manager()
+        .get_objects_by_handle_substring()
+        .values()
+    ):
+        ao_marker_set = get_ao_marker_sets(ao)
+        if len(ao_marker_set) > 0:
+            marker_sets[ao.handle] = ao_marker_set
+
+    print(marker_sets)
+
+    return marker_sets
