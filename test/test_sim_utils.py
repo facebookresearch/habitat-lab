@@ -9,20 +9,7 @@ import os.path as osp
 import magnum as mn
 import pytest
 
-from habitat.sims.habitat_simulator.sim_utilities import (
-    above,
-    bb_ray_prescreen,
-    get_all_object_ids,
-    get_all_objects,
-    get_ao_link_id_map,
-    get_obj_from_handle,
-    get_obj_from_id,
-    get_object_regions,
-    object_in_region,
-    object_keypoint_cast,
-    snap_down,
-    within,
-)
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat_sim import Simulator, built_with_bullet, stage_id
 from habitat_sim.metadata import MetadataMediator
 from habitat_sim.physics import MotionType
@@ -131,7 +118,7 @@ def test_snap_down(support_margin, obj_margin, stage_support):
                 # snap will fail because object COM is inside the support surface shape so raycast won't detect the support surface
                 initial_translation = mn.Vector3(0, 0, 0.1)
                 cube_obj.translation = initial_translation
-                snap_success = snap_down(
+                snap_success = sutils.snap_down(
                     sim, cube_obj, support_obj_ids=support_obj_ids
                 )
                 assert not snap_success
@@ -140,18 +127,18 @@ def test_snap_down(support_margin, obj_margin, stage_support):
                 ).length() < 1e-5, (
                     "Translation should not be changed after snap failure."
                 )
-                bb_ray_prescreen_results = bb_ray_prescreen(
+                bb_ray_prescreen_results = sutils.bb_ray_prescreen(
                     sim, cube_obj, support_obj_ids=support_obj_ids
                 )
                 assert bb_ray_prescreen_results["surface_snap_point"] is None
 
                 # with object above the support, snap will succeed.
                 cube_obj.translation = mn.Vector3(0, 0.2, 0)
-                snap_success = snap_down(
+                snap_success = sutils.snap_down(
                     sim, cube_obj, support_obj_ids=support_obj_ids
                 )
                 assert snap_success
-                bb_ray_prescreen_results = bb_ray_prescreen(
+                bb_ray_prescreen_results = sutils.bb_ray_prescreen(
                     sim, cube_obj, support_obj_ids=support_obj_ids
                 )
                 assert (
@@ -185,9 +172,9 @@ def test_object_getters():
     hab_cfg = make_cfg(sim_settings)
     with Simulator(hab_cfg) as sim:
         # scrape various lists from utils
-        all_objects = get_all_objects(sim)
-        all_object_ids = get_all_object_ids(sim)
-        ao_link_map = get_ao_link_id_map(sim)
+        all_objects = sutils.get_all_objects(sim)
+        all_object_ids = sutils.get_all_object_ids(sim)
+        ao_link_map = sutils.get_ao_link_id_map(sim)
 
         # validate parity between util results
         assert len(all_objects) == (
@@ -205,10 +192,12 @@ def test_object_getters():
                 obj.object_id in all_object_ids
             ), f"Object's object_id {object_id} is not found in the global object id map."
             # check the wrapper getter functions
-            obj_from_id_getter = get_obj_from_id(
+            obj_from_id_getter = sutils.get_obj_from_id(
                 sim, obj.object_id, ao_link_map
             )
-            obj_from_handle_getter = get_obj_from_handle(sim, obj.handle)
+            obj_from_handle_getter = sutils.get_obj_from_handle(
+                sim, obj.handle
+            )
             assert obj_from_id_getter.object_id == obj.object_id
             assert obj_from_handle_getter.object_id == obj.object_id
 
@@ -224,7 +213,7 @@ def test_object_getters():
                 assert ao_link_map[link_object_id] == ao.object_id
                 assert link_index in link_indices
                 # links should return reference to parent object
-                obj_from_id_getter = get_obj_from_id(
+                obj_from_id_getter = sutils.get_obj_from_id(
                     sim, link_object_id, ao_link_map
                 )
                 assert obj_from_id_getter.object_id == ao.object_id
@@ -246,12 +235,12 @@ def test_keypoint_cast_prepositions():
     sim_settings["scene"] = "apt_0"
     hab_cfg = make_cfg(sim_settings)
     with Simulator(hab_cfg) as sim:
-        all_objects = get_all_object_ids(sim)
+        all_objects = sutils.get_all_object_ids(sim)
 
-        mixer_object = get_obj_from_handle(
+        mixer_object = sutils.get_obj_from_handle(
             sim, "frl_apartment_small_appliance_01_:0000"
         )
-        mixer_above = above(sim, mixer_object)
+        mixer_above = sutils.above(sim, mixer_object)
         mixer_above_strings = [
             all_objects[obj_id] for obj_id in mixer_above if obj_id > stage_id
         ]
@@ -265,8 +254,10 @@ def test_keypoint_cast_prepositions():
             assert expected in mixer_above_strings
         assert len(mixer_above_strings) == len(expected_mixer_above_strings)
 
-        tv_object = get_obj_from_handle(sim, "frl_apartment_tv_screen_:0000")
-        tv_above = above(sim, tv_object)
+        tv_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_tv_screen_:0000"
+        )
+        tv_above = sutils.above(sim, tv_object)
         tv_above_strings = [
             all_objects[obj_id] for obj_id in tv_above if obj_id > stage_id
         ]
@@ -285,7 +276,7 @@ def test_keypoint_cast_prepositions():
         ).normalized()
         mixer_to_tv_object_ids = [
             hit.object_id
-            for keypoint_raycast_result in object_keypoint_cast(
+            for keypoint_raycast_result in sutils.object_keypoint_cast(
                 sim, mixer_object, direction=mixer_to_tv
             )
             for hit in keypoint_raycast_result.hits
@@ -296,32 +287,36 @@ def test_keypoint_cast_prepositions():
         # now test "within" preposition
 
         # the clock is sitting within the shelf object
-        clock_obj = get_obj_from_handle(sim, "frl_apartment_clock_:0000")
-        shelf_object = get_obj_from_handle(
+        clock_obj = sutils.get_obj_from_handle(
+            sim, "frl_apartment_clock_:0000"
+        )
+        shelf_object = sutils.get_obj_from_handle(
             sim, "frl_apartment_wall_cabinet_01_:0000"
         )
-        clock_within = within(sim, clock_obj)
+        clock_within = sutils.within(sim, clock_obj)
         assert shelf_object.object_id in clock_within
         assert len(clock_within) == 1
 
         # now check borderline containment of a canister object in a basket
-        canister_object = get_obj_from_handle(
+        canister_object = sutils.get_obj_from_handle(
             sim, "frl_apartment_kitchen_utensil_08_:0000"
         )
-        basket_object = get_obj_from_handle(sim, "frl_apartment_basket_:0000")
+        basket_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_basket_:0000"
+        )
 
         # place the canister just above, but outside the basket
         canister_object.translation = mn.Vector3(-2.01639, 1.35, 0.0410867)
-        canister_within = within(sim, canister_object)
+        canister_within = sutils.within(sim, canister_object)
         assert len(canister_within) == 0
 
         # move it slightly downward such that the extremal keypoints are contained.
         canister_object.translation = mn.Vector3(-2.01639, 1.3, 0.0410867)
-        canister_within = within(sim, canister_object)
+        canister_within = sutils.within(sim, canister_object)
         assert len(canister_within) == 1
         assert basket_object.object_id in canister_within
         # now make the check more strict, requring 6 keypoints
-        canister_within = within(
+        canister_within = sutils.within(
             sim, canister_object, keypoint_vote_threshold=6
         )
         assert len(canister_within) == 0
@@ -329,13 +324,13 @@ def test_keypoint_cast_prepositions():
         # further lower the canister such that the center is contained
         canister_object.translation = mn.Vector3(-2.01639, 1.2, 0.0410867)
         # when center ensures contaiment this state is "within"
-        canister_within = within(
+        canister_within = sutils.within(
             sim, canister_object, keypoint_vote_threshold=6
         )
         assert len(canister_within) == 1
         assert basket_object.object_id in canister_within
         # when center is part of the vote with threshold 6, this state is not "within"
-        canister_within = within(
+        canister_within = sutils.within(
             sim,
             canister_object,
             keypoint_vote_threshold=6,
@@ -345,7 +340,7 @@ def test_keypoint_cast_prepositions():
 
         # when the object is fully contained, it passes the strictest test
         canister_object.translation = mn.Vector3(-2.01639, 1.1, 0.0410867)
-        canister_within = within(
+        canister_within = sutils.within(
             sim,
             canister_object,
             keypoint_vote_threshold=6,
@@ -370,7 +365,7 @@ def test_region_containment_utils():
     with Simulator(hab_cfg) as sim:
         assert len(sim.semantic_scene.regions) > 0
 
-        desk_object = get_obj_from_handle(
+        desk_object = sutils.get_obj_from_handle(
             sim, "41d16010bfc200eb4d71aea6edaf6ad4bc548105_:0000"
         )
         desk_object.motion_type = MotionType.DYNAMIC
@@ -384,7 +379,7 @@ def test_region_containment_utils():
         bedroom_region = sim.semantic_scene.regions[bedroom_region_index]
 
         # the desk starts in completely in the living room
-        in_livingroom, ratio = object_in_region(
+        in_livingroom, ratio = sutils.object_in_region(
             sim, desk_object, living_room_region
         )
 
@@ -397,10 +392,10 @@ def test_region_containment_utils():
         desk_object.translation = mn.Vector3(-3.77824, 0.405816, -2.30807)
 
         # first validate standard region containment
-        in_livingroom, livingroom_ratio = object_in_region(
+        in_livingroom, livingroom_ratio = sutils.object_in_region(
             sim, desk_object, living_room_region
         )
-        in_bedroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = sutils.object_in_region(
             sim, desk_object, bedroom_region
         )
 
@@ -414,7 +409,7 @@ def test_region_containment_utils():
         assert bedroom_ratio > livingroom_ratio
 
         # compute aggregate containment in all scene regions
-        all_regions_containment = get_object_regions(sim, desk_object)
+        all_regions_containment = sutils.get_object_regions(sim, desk_object)
 
         # this list should be sorted, so bedroom is first
         assert all_regions_containment[0][0] == bedroom_region_index
@@ -428,10 +423,10 @@ def test_region_containment_utils():
         assert len(all_regions_containment) == 2
 
         # "center_only" excludes the livingroom
-        in_livingroom, livingroom_ratio = object_in_region(
+        in_livingroom, livingroom_ratio = sutils.object_in_region(
             sim, desk_object, living_room_region, center_only=True
         )
-        in_bedroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = sutils.object_in_region(
             sim, desk_object, bedroom_region, center_only=True
         )
 
@@ -441,10 +436,10 @@ def test_region_containment_utils():
         assert bedroom_ratio == 1.0
 
         # "containment_threshold" greater than half excludes the livingroom
-        in_livingroom, livingroom_ratio = object_in_region(
+        in_livingroom, livingroom_ratio = sutils.object_in_region(
             sim, desk_object, living_room_region, containment_threshold=0.51
         )
-        in_bedroom, bedroom_ratio = object_in_region(
+        in_bedroom, bedroom_ratio = sutils.object_in_region(
             sim, desk_object, bedroom_region, containment_threshold=0.51
         )
 
