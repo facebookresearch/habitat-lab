@@ -12,7 +12,7 @@ import pytest
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat_sim import Simulator, built_with_bullet
 from habitat_sim.metadata import MetadataMediator
-from habitat_sim.physics import MotionType
+from habitat_sim.physics import JointType, MotionType
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
@@ -448,3 +448,75 @@ def test_region_containment_utils():
         assert livingroom_ratio > 0
         assert livingroom_ratio < 0.51
         assert bedroom_ratio > 0.51
+
+
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Raycasting API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
+def test_ao_open_close_queries():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
+    hab_cfg = make_cfg(sim_settings)
+    with Simulator(hab_cfg) as sim:
+        # for revolute hinge doors
+        fridge = sutils.get_obj_from_handle(sim, "fridge_:0000")
+
+        # for prismatic drawers
+        kitchen_counter = sutils.get_obj_from_handle(
+            sim, "kitchen_counter_:0000"
+        )
+
+        # for prismatic (sliding) doors
+        cabinet = sutils.get_obj_from_handle(sim, "cabinet_:0000")
+
+        objects = [fridge, kitchen_counter, cabinet]
+        for obj in objects:
+            for link_id in obj.get_link_ids():
+                if obj.get_link_joint_type(link_id) in [
+                    JointType.Revolute,
+                    JointType.Prismatic,
+                ]:
+                    if (
+                        "cabinet" in obj.handle
+                        and "right_door" in obj.get_link_name(link_id)
+                    ):
+                        print(
+                            "TODO: Skipping 'cabinet's right_door' link because it does not follow conventions. Axis should be inverted."
+                        )
+                        continue
+                    assert sutils.link_is_closed(
+                        obj, link_id
+                    ), f"Object '{obj.handle}' link {link_id}:'{obj.get_link_name(link_id)}' should be closed with state {sutils.get_link_normalized_joint_position(obj, link_id)}."
+                    assert not sutils.link_is_open(obj, link_id)
+                    sutils.open_link(obj, link_id)
+                    assert sutils.link_is_open(obj, link_id)
+                    assert not sutils.link_is_closed(obj, link_id)
+                    sutils.close_link(obj, link_id)
+                    assert not sutils.link_is_open(obj, link_id)
+                    assert sutils.link_is_closed(obj, link_id)
+                    # test an intermediate position and the normalized setter utils
+                    sutils.set_link_normalized_joint_position(
+                        obj, link_id, 0.35
+                    )
+                    assert not sutils.link_is_open(obj, link_id)
+                    assert not sutils.link_is_closed(obj, link_id)
+                    assert sutils.link_is_open(obj, link_id, threshold=0.34)
+                    assert sutils.link_is_closed(obj, link_id, threshold=0.36)
+                    assert (
+                        abs(
+                            sutils.get_link_normalized_joint_position(
+                                obj, link_id
+                            )
+                            - 0.35
+                        )
+                        < 1e-5
+                    )
+                    sutils.close_link(obj, link_id)  # debug reset state
