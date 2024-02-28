@@ -785,3 +785,21 @@ def get_camera_lookat_relative_to_vertial_line(
     # Get angle between location and the vector
     angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
     return angle
+
+
+def get_angle_to_pos_xyz(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 1]]
+    rel_pos = rel_pos[[0, 1]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle

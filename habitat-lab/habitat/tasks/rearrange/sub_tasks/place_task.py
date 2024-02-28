@@ -12,6 +12,7 @@ import quaternion
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
+from habitat.tasks.rearrange.utils import get_angle_to_pos_xyz
 
 
 @registry.register_task(name="RearrangePlaceTask-v0")
@@ -41,6 +42,39 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # Get the local ee orientation (roll, pitch, yaw)
         local_obj_quat = quaternion.from_rotation_matrix(
             base_T_obj_transform.rotation()
+        )
+        return local_obj_quat
+
+    def get_object_pose_by_target(self):
+        """Get the object quaternion for a given object index."""
+
+        # Get the object transformation
+        obj_transform = self._sim._get_target_trans()[self.targ_idx][-1]
+
+        # Get the base transformation
+        base_transform = self._sim.get_agent_data(
+            None
+        ).articulated_agent.base_transformation
+
+        # Get the ee transformation
+        ee_transform = self._sim.get_agent_data(
+            None
+        ).articulated_agent.ee_transform()
+
+        # Compute the rotation offset from the base to target object
+        local_obj = base_transform.inverted() @ obj_transform
+        angle_to_object = get_angle_to_pos_xyz(local_obj.translation)
+
+        # Rotate the base transform by the angle
+        base_rotate_trans = mn.Matrix4.rotation_z(mn.Rad(angle_to_object))
+        base_transform = base_transform @ base_rotate_trans
+
+        # Get the local ee location relative to base
+        base_T_ee_transform = base_transform.inverted() @ ee_transform
+
+        # Get the local ee orientation (roll, pitch, yaw)
+        local_obj_quat = quaternion.from_rotation_matrix(
+            base_T_ee_transform.rotation()
         )
         return local_obj_quat
 
@@ -100,7 +134,12 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # This is the object orientation (in ee frame) at grasping moment
         # We will like the robot to match such init_obj_orientation when dropping the object
         # The sensor will be relative orientation to the initial object orientation
-        self.target_obj_orientation = self.get_object_pose_by_id(abs_obj_idx)
+        if self._config.enable_rotation_target:
+            self.target_obj_orientation = self.get_object_pose_by_target()
+        else:
+            self.target_obj_orientation = self.get_object_pose_by_id(
+                abs_obj_idx
+            )
 
         # Here, we teleport the target object to the gripper
         # The place task is to let Spot place the object in the original
@@ -129,7 +168,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
 
         # We update the initial object orientation here to be the gripper orientation if
         # it is top down grasping
-        if top_down_grasp:
+        if top_down_grasp and not self._config.enable_rotation_target:
             self.target_obj_orientation = quaternion.quaternion(
                 self.init_ee_orientation
             )
