@@ -621,7 +621,7 @@ class DebugVisualizer:
             self.output_path,
             additional_savefile_prefix + "peek_6x_" + bb_name + ".png",
         )
-        stitched_image.save(save_path)
+        # stitched_image.save(save_path)
         return save_path, axis_obs
 
     def make_debug_video(
