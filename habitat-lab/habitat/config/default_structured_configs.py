@@ -1633,6 +1633,7 @@ class TaskConfig(HabitatBaseConfig):
     top_down_grasp_ratio: float = 0.5
     fix_obj_rotation_change_arm_joint: bool = False
     joint_start_noise: float = 0.1
+    joint_start_noise_multiplier: Optional[List[int]] = None
 
 
 @dataclass
