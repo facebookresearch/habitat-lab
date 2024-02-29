@@ -875,6 +875,10 @@ def set_link_normalized_joint_position(
         habitat_sim.physics.JointType.Prismatic,
     ], f"Invalid joint type '{objectA.get_link_joint_type(link_ix)}'. Open/closed not a valid check for multi-dimensional or fixed joints."
 
+    assert (
+        normalized_pos <= 1.0 and normalized_pos >= 0
+    ), "values outside the range [0,1] are by definition beyond the joint limits."
+
     joint_pos_ix = objectA.get_link_joint_pos_offset(link_ix)
     limits = objectA.joint_position_limits
     joint_positions = objectA.joint_positions
