@@ -947,6 +947,24 @@ def write_ao_marker_sets(
     )
 
 
+def write_ao_marker_set_to_template(
+    sim: habitat_sim.Simulator,
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+) -> None:
+    """
+    Writes the ao's current marker set to its creation attributes template.
+    """
+
+    ca = objectA.creation_attributes
+    template_user_config = ca.get_user_config()
+    object_user_config = objectA.user_attributes
+    if "marker_sets" in object_user_config.get_subconfig_keys():
+        template_user_config.save_subconfig(
+            "marker_sets", object_user_config.get_subconfig("marker_sets")
+        )
+    sim.metadata_mediator.ao_template_manager.save_template_to_file(ca, True)
+
+
 def parse_scene_marker_sets(
     sim: habitat_sim.Simulator,
 ) -> Dict[str, Dict[int, Dict[str, List[mn.Vector3]]]]:
