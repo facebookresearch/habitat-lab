@@ -94,6 +94,11 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         ).articulated_agent.arm_joint_pos
         arm_joint_limit = self._config.actions.arm_action.arm_joint_limit
         arm_joint_mask = self._config.actions.arm_action.arm_joint_mask
+        assert (
+            len(arm_joint_mask)
+            == len(self._config.joint_start_noise_multiplier)
+            or self._config.joint_start_noise_multiplier is None
+        ), "Arm noise size mismatch"
         new_arm_joint_pos = []
         j = 0
         for i in range(len(arm_joint_pos)):
@@ -101,7 +106,9 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
                 # Can change the arm joint angle
                 target_arm = (
                     arm_joint_pos[i]
-                    + np.random.randn() * self._config.joint_start_noise
+                    + np.random.uniform(-1, 1)
+                    * self._config.joint_start_noise
+                    * self._config.joint_start_noise_multiplier[i]
                 )
                 _min = arm_joint_limit[j][0]
                 _max = arm_joint_limit[j][1]
