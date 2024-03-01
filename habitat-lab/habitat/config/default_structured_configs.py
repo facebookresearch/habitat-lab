@@ -624,6 +624,7 @@ class RelativeTargetObjectOrientationSensorConfig(LabSensorConfig):
     """
 
     type: str = "RelativeTargetObjectOrientationSensor"
+    offset_yaw: bool = False
 
 
 @dataclass
