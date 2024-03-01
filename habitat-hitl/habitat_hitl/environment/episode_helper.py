@@ -36,6 +36,9 @@ class EpisodeHelper:
     def set_next_episode_by_id(self, episode_id) -> None:
         self._episode_iterator.set_next_episode_by_id(episode_id)
 
+    def set_next_episode_by_index(self, episode_index: int) -> None:
+        self._episode_iterator.set_next_episode_by_index(episode_index)
+
     def next_episode_exists(self) -> bool:
         return self._num_episodes_done < self._num_iter_episodes - 1
 

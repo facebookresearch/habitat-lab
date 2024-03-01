@@ -9,15 +9,16 @@ import magnum as mn
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
-from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.gui_input import AgnosticKeyNS, GuiInput
 
 
 # todo: rename to RemoteClientState
 class RemoteGuiInput:
-    def __init__(self, interprocess_record, debug_line_render):
+    def __init__(self, interprocess_record, debug_line_render, gui_input):
         self._recent_client_states = []
         self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
+        self._gui_input = gui_input
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
@@ -31,7 +32,11 @@ class RemoteGuiInput:
             3: GuiInput.KeyNS.THREE,
         }
 
-        self._gui_input = GuiInput()
+        self._mouse_button_map = {
+            0: GuiInput.MouseNS.LEFT,
+            1: GuiInput.MouseNS.RIGHT,
+            2: GuiInput.MouseNS.MIDDLE,
+        }
 
     def get_gui_input(self):
         return self._gui_input
@@ -118,47 +123,54 @@ class RemoteGuiInput:
         # gather all recent keyDown and keyUp events
         for client_state in client_states:
             # Beware client_state input has dicts of bools (unlike GuiInput, which uses sets)
-            if "input" not in client_state:
-                continue
 
-            input_json = client_state["input"]
-
-            if "buttonHeld" not in input_json:
-                continue
+            input_json = (
+                client_state["input"] if "input" in client_state else None
+            )  # TODO: Split keyboard and VR
+            mouse_json = (
+                client_state["mouse"] if "mouse" in client_state else None
+            )
 
             # assume button containers are sets of buttonIndices
-            for button in input_json["buttonDown"]:
-                if button not in self._button_map:
-                    print(f"button {button} not mapped!")
-                    continue
-                if True:
-                    self._gui_input._key_down.add(self._button_map[button])
-            for button in input_json["buttonUp"]:
-                if button not in self._button_map:
-                    print(f"key {button} not mapped!")
-                    continue
-                if True:
-                    self._gui_input._key_up.add(self._button_map[button])
+            if input_json:
+                for button in input_json["buttonDown"]:
+                    if int(button) in AgnosticKeyNS:
+                        self._gui_input._key_down.add(AgnosticKeyNS(button))
+                for button in input_json["buttonUp"]:
+                    if int(button) in AgnosticKeyNS:
+                        self._gui_input._key_up.add(AgnosticKeyNS(button))
+
+            if (
+                mouse_json
+                and "buttons" in mouse_json
+                and "scrollDelta" in mouse_json
+            ):
+                delta = mouse_json["scrollDelta"]
+                if len(delta) == 2:
+                    self._gui_input._mouse_scroll_offset += (
+                        delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
+                    )
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
-        if "input" not in client_state:
-            return
 
-        input_json = client_state["input"]
-
-        if "buttonHeld" not in input_json:
-            return
+        input_json = (
+            client_state["input"] if "input" in client_state else None
+        )  # TODO: Split keyboard and VR
+        mouse_json = client_state["mouse"] if "mouse" in client_state else None
 
         self._gui_input._key_held.clear()
+        self._gui_input._mouse_button_held.clear()
 
-        for button in input_json["buttonHeld"]:
-            if button not in self._button_map:
-                print(f"button {button} not mapped!")
-                continue
-            if True:  # input_json["buttonHeld"][button]:
-                self._gui_input._key_held.add(self._button_map[button])
+        if input_json:
+            for button in input_json["buttonHeld"]:
+                if int(button) in AgnosticKeyNS:
+                    self._gui_input._key_held.add(AgnosticKeyNS(button))
+
+        # TODO: Implement headless-compatible mouse handling.
+        # if "mousePosition" in input_json:
+        #     ...
 
     def debug_visualize_client(self):
         if not self._debug_line_render:

@@ -463,6 +463,17 @@ class EpisodeIterator(Iterator[T]):
         else:
             raise ValueError(f"Episode with ID {episode_id} not found.")
 
+    def set_next_episode_by_index(self, episode_index):
+        self._iterator = iter(self.episodes)
+        if episode_index >= 0 and episode_index < len(self.episodes):
+            for _ in range(episode_index):
+                next(self._iterator, None)
+        else:
+            next(self._iterator, None)
+            raise ValueError(
+                f"Episode with index {str(episode_index)} not found."
+            )
+
     def _forced_scene_switch(self) -> None:
         r"""Internal method to switch the scene. Moves remaining episodes
         from current scene to the end and switch to next scene episodes.

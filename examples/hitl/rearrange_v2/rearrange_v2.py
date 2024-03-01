@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from random import randrange
 from typing import Any, Dict, Set
 
 import hydra
@@ -17,7 +18,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 )
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_helper import ClientHelper
-from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.gui_input import AgnosticKeyNS
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
@@ -190,7 +191,7 @@ class AppStateRearrangeV2(AppState):
         self._has_grasp_preview = False
 
         if self._held_obj_id is not None:
-            if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            if self._app_service.gui_input.get_key_down(AgnosticKeyNS.SPACE):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._gui_agent_ctrl.get_base_translation()
@@ -205,7 +206,7 @@ class AppStateRearrangeV2(AppState):
             )
             if obj_id:
                 if self._app_service.gui_input.get_key_down(
-                    GuiInput.KeyNS.SPACE
+                    AgnosticKeyNS.SPACE
                 ):
                     if DO_HUMANOID_GRASP_OBJECTS:
                         grasp_object_id = obj_id
@@ -312,37 +313,47 @@ class AppStateRearrangeV2(AppState):
         if self._paused:
             return
 
-        # episode_id should be a string, e.g. "5"
-        episode_ids_by_dataset = {
-            "data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz": [
-                "23775",
-                "23776",
-            ]
-        }
-        fallback_episode_ids = ["0", "1"]
-        dataset_key = self._app_service.config.habitat.dataset.data_path
-        episode_ids = (
-            episode_ids_by_dataset[dataset_key]
-            if dataset_key in episode_ids_by_dataset
-            else fallback_episode_ids
-        )
+        ## episode_id should be a string, e.g. "5"
+        # episode_ids_by_dataset = {
+        #    "data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz": [
+        #        "23775",
+        #        "23776",
+        #    ]
+        # }
+        # fallback_episode_ids = ["0", "1"]
+        # dataset_key = self._app_service.config.habitat.dataset.data_path
+        # episode_ids = (
+        #    episode_ids_by_dataset[dataset_key]
+        #    if dataset_key in episode_ids_by_dataset
+        #    else fallback_episode_ids
+        # )
 
         # use number keys to select episode
-        episode_index_by_key = {
-            GuiInput.KeyNS.ONE: 0,
-            GuiInput.KeyNS.TWO: 1,
-        }
-        assert len(episode_index_by_key) == len(episode_ids)
+        # TODO Get actual episode count
+        episode_count = 36
+        if self._app_service.gui_input.get_key_down(AgnosticKeyNS.ONE):
+            random_episode = randrange(episode_count)
+            self._app_service.episode_helper.set_next_episode_by_index(
+                random_episode
+            )
+            self._app_service.end_episode(do_reset=True)
 
-        for key in episode_index_by_key:
-            if self._app_service.gui_input.get_key_down(key):
-                episode_id = episode_ids[episode_index_by_key[key]]
-                # episode_id should be a string, e.g. "5"
-                assert isinstance(episode_id, str)
-                self._app_service.episode_helper.set_next_episode_by_id(
-                    episode_id
-                )
-                self._app_service.end_episode(do_reset=True)
+        # episode_index_by_key = {
+        #    AgnosticKeyNS.ONE: 0,
+        #    AgnosticKeyNS.TWO: 1,
+        # }
+        # assert len(episode_index_by_key) == len(episode_ids)
+
+    #
+    # for key in episode_index_by_key:
+    #    if self._app_service.gui_input.get_key_down(key):
+    #        episode_id = episode_ids[episode_index_by_key[key]]
+    #        # episode_id should be a string, e.g. "5"
+    #        assert isinstance(episode_id, str)
+    #        self._app_service.episode_helper.set_next_episode_by_id(
+    #            episode_id
+    #        )
+    #        self._app_service.end_episode(do_reset=True)
 
     def _update_held_object_placement(self):
         if not self._held_obj_id:
@@ -362,7 +373,7 @@ class AppStateRearrangeV2(AppState):
     def sim_update(self, dt, post_sim_update_dict):
         if (
             not self._app_service.hitl_config.networking.enable
-            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC)
+            and self._app_service.gui_input.get_key_down(AgnosticKeyNS.ESC)
         ):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
@@ -376,10 +387,10 @@ class AppStateRearrangeV2(AppState):
                 self._sps_tracker.get_smoothed_rate(),
             )
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        if self._app_service.gui_input.get_key_down(AgnosticKeyNS.P):
             self._paused = not self._paused
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
+        if self._app_service.gui_input.get_key_down(AgnosticKeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
         self._check_change_episode()
@@ -389,7 +400,7 @@ class AppStateRearrangeV2(AppState):
         )
         if reachable_ao_handle is not None:
             self._highlight_ao(reachable_ao_handle)
-            if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Z):
+            if self._app_service.gui_input.get_key_down(AgnosticKeyNS.Z):
                 self._open_close_ao(reachable_ao_handle)
 
         if not self._paused:

@@ -5,7 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 # GuiInput relies on the magnum.platform.glfw.Application.KeyEvent.Key enum and similar for mouse buttons. On headless systems, we may be unable to import magnum.platform.glfw.Application. Fall back to a stub implementation of GuiInput in that case.
-do_agnostic_gui_input = False
+from enum import EnumMeta
+
+do_agnostic_gui_input = True
 try:
     from magnum.platform.glfw import Application
 except ImportError:
@@ -17,10 +19,19 @@ except ImportError:
 if do_agnostic_gui_input:
     from enum import Enum
 
+    class AgnosticKeyNSMeta(EnumMeta):
+        def __contains__(cls, item):
+            try:
+                cls(item)
+            except ValueError:
+                return False
+            else:
+                return True
+
     # physical key enum from USB HID Usage Tables
     # https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf, page 53
     # add missing keys here as necessary
-    class AgnosticKeyNS(Enum):
+    class AgnosticKeyNS(Enum, metaclass=AgnosticKeyNSMeta):
         A = 0x04
         B = 0x05
         C = 0x06
