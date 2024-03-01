@@ -23,6 +23,7 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
+    get_angle_to_pos_xyz,
     get_camera_object_angle,
     get_camera_transform,
     rearrange_logger,
@@ -518,18 +519,42 @@ class RelativeTargetObjectOrientationSensor(
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        _, ee_orientation = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.get_ee_local_pose()
+        agent = self._sim.get_agent_data(self.agent_id).articulated_agent
+
+        _, ee_orientation = agent.get_ee_local_pose()
 
         # The target object orientation is initial object orientation
         target_object_orientation = task.target_obj_orientation
+
+        offset = 0.0
+        if self.config.offset_yaw:
+            # If we want to remove the angle in yaw direction
+            # Get all the transformations
+            base_transform = agent.base_transformation
+            ee_transform = agent.ee_transform()
+            armbase_transform = agent.sim_obj.get_link_scene_node(
+                0
+            ).transformation
+            # Offset the base based on the armbase transform
+            base_transform.translation = base_transform.transform_point(
+                (base_transform.inverted() @ armbase_transform).translation
+            )
+            # Do transformation
+            ee_position = (
+                base_transform.inverted() @ ee_transform
+            ).translation
+            # Process the ee_position input
+            ee_position = abs(np.array(ee_position))
+            # If norm is too small, then we do not do anything
+            if np.linalg.norm(ee_position[[0, 1]]) > 0.1:
+                offset = abs(get_angle_to_pos_xyz(ee_position))
 
         return np.array(
             [
                 angle_between_quaternions(
                     target_object_orientation, ee_orientation
                 )
+                - offset
             ],
             dtype=np.float32,
         )
