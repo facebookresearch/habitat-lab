@@ -140,10 +140,20 @@ class PddlDomain:
                 for arg in pred_d["args"]
             ]
 
+            if "set_state_fn" not in pred_d:
+                set_state_fn = None
+            else:
+                set_state_fn = _parse_callable(pred_d["set_state_fn"])
+
+            if "is_valid_fn" not in pred_d:
+                is_valid_fn = None
+            else:
+                is_valid_fn = _parse_callable(pred_d["is_valid_fn"])
+
             pred = Predicate(
                 pred_d["name"],
-                _parse_callable(pred_d["is_valid_fn"]),
-                _parse_callable(pred_d["set_state_fn"]),
+                is_valid_fn,
+                set_state_fn,
                 arg_entities,
             )
             self.predicates[pred.name] = pred
@@ -182,14 +192,23 @@ class PddlDomain:
         """
 
         # Always add the default `expr_types` from the simulator.
+        base_entity = ExprType(SimulatorObjectType.BASE_ENTITY.value, None)
         self._expr_types: Dict[str, ExprType] = {
-            obj_type.value: ExprType(obj_type.value, None)
-            for obj_type in SimulatorObjectType
+            SimulatorObjectType.BASE_ENTITY.value: base_entity
         }
+        self._expr_types.update(
+            {
+                obj_type.value: ExprType(obj_type.value, base_entity)
+                for obj_type in SimulatorObjectType
+                if obj_type.value != SimulatorObjectType.BASE_ENTITY.value
+            }
+        )
 
         for parent_type, sub_types in domain_def["types"].items():
             if parent_type not in self._expr_types:
-                self._expr_types[parent_type] = ExprType(parent_type, None)
+                self._expr_types[parent_type] = ExprType(
+                    parent_type, base_entity
+                )
             for sub_type in sub_types:
                 if sub_type in self._expr_types:
                     self._expr_types[sub_type].parent = self._expr_types[

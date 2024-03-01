@@ -26,6 +26,7 @@ class SimulatorObjectType(Enum):
     Predefined entity types for which default predicate behavior is defined.
     """
 
+    BASE_ENTITY = "entity_type"
     MOVABLE_ENTITY = "movable_entity_type"
     STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
     ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
