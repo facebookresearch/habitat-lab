@@ -22,6 +22,24 @@ habitat:
   dataset:
     data_path: examples/hitl/rearrange_v2/app_data/demo.json.gz
 
+  gym:
+    obs_keys:
+      # - agent_0_articulated_agent_arm_depth
+      # - agent_0_spot_head_stereo_depth_sensor
+      # - agent_0_humanoid_detector_sensor
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+
+
 habitat_baselines:
   # todo: document these choices
   eval:

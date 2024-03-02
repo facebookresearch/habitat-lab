@@ -85,8 +85,6 @@ class AppStatePickThrowVr(AppState):
             self._app_service, self._gui_agent_ctrl
         )
 
-        self._gui_agent_ctrl.line_renderer = app_service.line_render
-
         self._is_remote_active_toggle: bool = False
         self._count_tsteps_stop: int = 0
         self._has_grasp_preview: bool = False

@@ -8,6 +8,7 @@ import os
 
 import magnum as mn
 
+from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
 from habitat_hitl._internal.hitl_driver import HitlDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -51,6 +52,8 @@ def hitl_main(app_config, create_app_state_lambda=None):
             "HITL apps expect 'data/' directory to exist. "
             "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
         )
+
+    app_config = patch_config(app_config)
 
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 

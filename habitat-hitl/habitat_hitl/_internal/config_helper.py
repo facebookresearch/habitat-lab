@@ -59,13 +59,13 @@ def update_config(
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[gui_controlled_agent_index]
-            if (
-                sim_config.agents[gui_agent_key].articulated_agent_type
-                != "KinematicHumanoid"
-            ):
+            agent_type = sim_config.agents[
+                gui_agent_key
+            ].articulated_agent_type
+            if agent_type != "KinematicHumanoid" and agent_type != "SpotRobot":
                 print(
                     f"Selected agent for GUI control is of type {sim_config.agents[gui_agent_key].articulated_agent_type}, "
-                    "but only KinematicHumanoid is supported at the moment."
+                    "but only KinematicHumanoid and SpotRobot are supported at the moment."
                 )
                 exit()
 
@@ -98,6 +98,7 @@ def update_config(
                 if measurement_name in task_config.measurements:
                     task_config.measurements.pop(measurement_name)
 
+            # todo: decide whether to fix up config here versus validate config
             sim_sensor_names = ["head_depth", "head_rgb"]
             for sensor_name in sim_sensor_names + lab_sensor_names:
                 sensor_name = (
@@ -108,21 +109,22 @@ def update_config(
                 if sensor_name in gym_obs_keys:
                     gym_obs_keys.remove(sensor_name)
 
-            # use humanoidjoint_action for GUI-controlled KinematicHumanoid
-            # for example, humanoid oracle-planner-based policy uses following actions:
-            # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
-            task_actions = task_config.actions
-            action_prefix = (
-                "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
-            )
-            gui_agent_actions = [
-                action_key
-                for action_key in task_actions.keys()
-                if action_key.startswith(action_prefix)
-            ]
-            for action_key in gui_agent_actions:
-                task_actions.pop(action_key)
+            if agent_type == "KinematicHumanoid":
+                # use humanoidjoint_action for GUI-controlled KinematicHumanoid
+                # for example, humanoid oracle-planner-based policy uses following actions:
+                # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
+                task_actions = task_config.actions
+                action_prefix = (
+                    "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
+                )
+                gui_agent_actions = [
+                    action_key
+                    for action_key in task_actions.keys()
+                    if action_key.startswith(action_prefix)
+                ]
+                for action_key in gui_agent_actions:
+                    task_actions.pop(action_key)
 
-            task_actions[
-                f"{action_prefix}humanoidjoint_action"
-            ] = HumanoidJointActionConfig()
+                task_actions[
+                    f"{action_prefix}humanoidjoint_action"
+                ] = HumanoidJointActionConfig()

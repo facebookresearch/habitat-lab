@@ -10,7 +10,6 @@ import magnum as mn
 import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
-from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.environment.controllers.controller_abc import GuiController
@@ -24,27 +23,62 @@ from habitat_sim.physics import (
 class GuiRobotController(GuiController):
     """Controller for robot agent."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._hint_walk_dir = None
+        self._hint_distance_multiplier = None
+        self._cam_yaw = None
+        self._hint_target_dir = None
+
+    def set_act_hints(
+        self,
+        walk_dir,
+        distance_multiplier,
+        grasp_obj_idx,
+        do_drop,
+        cam_yaw=None,
+        throw_vel=None,
+        reach_pos=None,
+        hand_idx=None,
+        target_dir=None,
+    ):
+        assert (
+            throw_vel is None or do_drop is None
+        ), "You can not set throw_velocity and drop_position at the same time"
+        self._hint_walk_dir = walk_dir
+        self._hint_distance_multiplier = distance_multiplier
+
+        # grasping, dropping, throwing, and reaching aren't supported yet in GuiRobotController
+        assert grasp_obj_idx is None
+        assert do_drop is None
+        assert throw_vel is None
+        assert reach_pos is None
+        assert hand_idx is None
+
+        self._cam_yaw = cam_yaw
+        self._hint_target_dir = target_dir
+
     def act(self, obs, env):
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
         else:
             agent_k = ""
-        arm_k = f"{agent_k}arm_action"
-        grip_k = f"{agent_k}grip_action"
+        # arm_k = f"{agent_k}arm_action"
+        # grip_k = f"{agent_k}grip_action"
         base_k = f"{agent_k}base_vel"
-        arm_name = f"{agent_k}arm_action"
+        # arm_name = f"{agent_k}arm_action"
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
 
-        if arm_name in ac_spaces:
-            arm_action_space = ac_spaces[arm_name][arm_k]
-            arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
-            arm_action = np.zeros(arm_action_space.shape[0])
-            grasp = 0
-        else:
-            arm_ctrlr = None
-            arm_action = None
-            grasp = None
+        # if arm_name in ac_spaces:
+        #     arm_action_space = ac_spaces[arm_name][arm_k]
+        #     arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
+        #     arm_action = np.zeros(arm_action_space.shape[0])
+        #     grasp = 0
+        # else:
+        #     arm_ctrlr = None
+        #     arm_action = None
+        #     grasp = None
 
         base_action: Any = None
         if base_name in ac_spaces:
@@ -57,81 +91,102 @@ class GuiRobotController(GuiController):
         gui_input = self._gui_input
 
         if base_action is not None:
-            # Base control
-            base_action = [0, 0]
-            if gui_input.get_key(KeyNS.J):
-                # Left
-                base_action[1] += 1
-            if gui_input.get_key(KeyNS.L):
-                # Right
-                base_action[1] -= 1
-            if gui_input.get_key(KeyNS.K):
-                # Back
-                base_action[0] -= 1
-            if gui_input.get_key(KeyNS.I):
-                # Forward
+            # sloppy: read gui_input directly instead of using _hint_walk_dir
+            if gui_input.get_key(KeyNS.W):
+                # walk forward in the camera yaw direction
                 base_action[0] += 1
+            if gui_input.get_key(KeyNS.S):
+                # walk forward in the opposite to camera yaw direction
+                base_action[0] -= 1
 
-        if isinstance(arm_ctrlr, ArmEEAction):
-            EE_FACTOR = 0.5
-            # End effector control
-            if gui_input.get_key_down(KeyNS.D):
-                arm_action[1] -= EE_FACTOR
-            elif gui_input.get_key_down(KeyNS.A):
-                arm_action[1] += EE_FACTOR
-            elif gui_input.get_key_down(KeyNS.W):
-                arm_action[0] += EE_FACTOR
-            elif gui_input.get_key_down(KeyNS.S):
-                arm_action[0] -= EE_FACTOR
-            elif gui_input.get_key_down(KeyNS.Q):
-                arm_action[2] += EE_FACTOR
-            elif gui_input.get_key_down(KeyNS.E):
-                arm_action[2] -= EE_FACTOR
-        else:
-            # Velocity control. A different key for each joint
-            if gui_input.get_key_down(KeyNS.Q):
-                arm_action[0] = 1.0
-            elif gui_input.get_key_down(KeyNS.ONE):
-                arm_action[0] = -1.0
+            # reference code to interpret self._cam_yaw
+            # rot_y_rad = -self._cam_yaw + np.pi
+            # rotation = mn.Quaternion.rotation(
+            #     mn.Rad(rot_y_rad),
+            #     mn.Vector3(0, 1, 0),
+            # )
+            # humancontroller_base_user_input = np.array(
+            #     rotation.transform_vector(
+            #         mn.Vector3(humancontroller_base_user_input)
+            #     )
+            # )
 
-            elif gui_input.get_key_down(KeyNS.W):
-                arm_action[1] = 1.0
-            elif gui_input.get_key_down(KeyNS.TWO):
-                arm_action[1] = -1.0
+        # if base_action is not None:
+        #     # Base control
+        #     base_action = [0, 0]
+        #     if gui_input.get_key(KeyNS.J):
+        #         # Left
+        #         base_action[1] += 1
+        #     if gui_input.get_key(KeyNS.L):
+        #         # Right
+        #         base_action[1] -= 1
+        #     if gui_input.get_key(KeyNS.K):
+        #         # Back
+        #         base_action[0] -= 1
+        #     if gui_input.get_key(KeyNS.I):
+        #         # Forward
+        #         base_action[0] += 1
 
-            elif gui_input.get_key_down(KeyNS.E):
-                arm_action[2] = 1.0
-            elif gui_input.get_key_down(KeyNS.THREE):
-                arm_action[2] = -1.0
+        # if isinstance(arm_ctrlr, ArmEEAction):
+        #     EE_FACTOR = 0.5
+        #     # End effector control
+        #     if gui_input.get_key_down(KeyNS.D):
+        #         arm_action[1] -= EE_FACTOR
+        #     elif gui_input.get_key_down(KeyNS.A):
+        #         arm_action[1] += EE_FACTOR
+        #     elif gui_input.get_key_down(KeyNS.W):
+        #         arm_action[0] += EE_FACTOR
+        #     elif gui_input.get_key_down(KeyNS.S):
+        #         arm_action[0] -= EE_FACTOR
+        #     elif gui_input.get_key_down(KeyNS.Q):
+        #         arm_action[2] += EE_FACTOR
+        #     elif gui_input.get_key_down(KeyNS.E):
+        #         arm_action[2] -= EE_FACTOR
+        # else:
+        #     # Velocity control. A different key for each joint
+        #     if gui_input.get_key_down(KeyNS.Q):
+        #         arm_action[0] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.ONE):
+        #         arm_action[0] = -1.0
 
-            elif gui_input.get_key_down(KeyNS.R):
-                arm_action[3] = 1.0
-            elif gui_input.get_key_down(KeyNS.FOUR):
-                arm_action[3] = -1.0
+        #     elif gui_input.get_key_down(KeyNS.W):
+        #         arm_action[1] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.TWO):
+        #         arm_action[1] = -1.0
 
-            elif gui_input.get_key_down(KeyNS.T):
-                arm_action[4] = 1.0
-            elif gui_input.get_key_down(KeyNS.FIVE):
-                arm_action[4] = -1.0
+        #     elif gui_input.get_key_down(KeyNS.E):
+        #         arm_action[2] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.THREE):
+        #         arm_action[2] = -1.0
 
-            elif gui_input.get_key_down(KeyNS.Y):
-                arm_action[5] = 1.0
-            elif gui_input.get_key_down(KeyNS.SIX):
-                arm_action[5] = -1.0
+        #     elif gui_input.get_key_down(KeyNS.R):
+        #         arm_action[3] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.FOUR):
+        #         arm_action[3] = -1.0
 
-            elif gui_input.get_key_down(KeyNS.U):
-                arm_action[6] = 1.0
-            elif gui_input.get_key_down(KeyNS.SEVEN):
-                arm_action[6] = -1.0
+        #     elif gui_input.get_key_down(KeyNS.T):
+        #         arm_action[4] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.FIVE):
+        #         arm_action[4] = -1.0
 
-        if gui_input.get_key_down(KeyNS.P):
-            # logger.info("[play.py]: Unsnapping")
-            # Unsnap
-            grasp = -1
-        elif gui_input.get_key_down(KeyNS.O):
-            # Snap
-            # logger.info("[play.py]: Snapping")
-            grasp = 1
+        #     elif gui_input.get_key_down(KeyNS.Y):
+        #         arm_action[5] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.SIX):
+        #         arm_action[5] = -1.0
+
+        #     elif gui_input.get_key_down(KeyNS.U):
+        #         arm_action[6] = 1.0
+        #     elif gui_input.get_key_down(KeyNS.SEVEN):
+        #         arm_action[6] = -1.0
+
+        # if gui_input.get_key_down(KeyNS.P):
+        #     # logger.info("[play.py]: Unsnapping")
+        #     # Unsnap
+        #     grasp = -1
+        # elif gui_input.get_key_down(KeyNS.O):
+        #     # Snap
+        #     # logger.info("[play.py]: Snapping")
+        #     grasp = 1
 
         # reference code
         # if gui_input.get_key_down(KeyNS.PERIOD):
@@ -161,14 +216,14 @@ class GuiRobotController(GuiController):
                     base_k: base_action,
                 }
             )
-        if arm_action is not None:
-            action_names.append(arm_name)
-            action_args.update(
-                {
-                    arm_k: arm_action,
-                    grip_k: grasp,
-                }
-            )
+        # if arm_action is not None:
+        #     action_names.append(arm_name)
+        #     action_args.update(
+        #         {
+        #             arm_k: arm_action,
+        #             grip_k: grasp,
+        #         }
+        #     )
         if len(action_names) == 0:
             raise ValueError("No active actions for human controller.")
 
@@ -406,7 +461,7 @@ class GuiHumanoidController(GuiController):
         gui_input = self._gui_input
 
         humancontroller_base_user_input = np.zeros(3)
-        # temp keyboard controls to test humanoid controller
+        # sloppy: read gui_input directly instead of using _hint_walk_dir
         if gui_input.get_key(KeyNS.W):
             # walk forward in the camera yaw direction
             humancontroller_base_user_input[0] += 1

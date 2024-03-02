@@ -24,6 +24,7 @@ from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
+    GuiRobotController,
 )
 from habitat_hitl.environment.gui_navigation_helper import GuiNavigationHelper
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
@@ -73,8 +74,6 @@ class AppStateRearrangeV2(AppState):
         self._client_helper = None
         if self._app_service.hitl_config.networking.enable:
             self._client_helper = ClientHelper(self._app_service)
-
-        self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._has_grasp_preview = False
         self._frame_counter = 0
@@ -182,6 +181,11 @@ class AppStateRearrangeV2(AppState):
     def get_sim(self):
         return self._app_service.sim
 
+    def _get_gui_agent_translation(self):
+        return get_agent_art_obj_transform(
+            self.get_sim(), self.get_gui_controlled_agent_index()
+        ).translation
+
     def _update_grasping_and_set_act_hints(self):
         drop_pos = None
         grasp_object_id = None
@@ -194,13 +198,17 @@ class AppStateRearrangeV2(AppState):
             if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
-                    drop_pos = self._gui_agent_ctrl.get_base_translation()
+                    drop_pos = (
+                        self._get_gui_agent_translation()
+                    )  # self._gui_agent_ctrl.get_base_translation()
                 else:
                     # GuiPlacementHelper has already placed this object, so nothing to do here
                     pass
                 self._held_obj_id = None
         else:
-            query_pos = self._gui_agent_ctrl.get_base_translation()
+            query_pos = (
+                self._get_gui_agent_translation()
+            )  # self._gui_agent_ctrl.get_base_translation()
             obj_id = self._pick_helper.get_pick_object_near_query_position(
                 query_pos
             )
@@ -230,7 +238,9 @@ class AppStateRearrangeV2(AppState):
         #     walk_dir = candidate_walk_dir
         #     distance_multiplier = candidate_distance_multiplier
 
-        assert isinstance(self._gui_agent_ctrl, GuiHumanoidController)
+        assert isinstance(
+            self._gui_agent_ctrl, (GuiHumanoidController, GuiRobotController)
+        )
         self._gui_agent_ctrl.set_act_hints(
             walk_dir,
             distance_multiplier,

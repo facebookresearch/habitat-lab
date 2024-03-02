@@ -180,6 +180,8 @@ class HitlDriver(AppDriver):
             if self.ctrl_helper
             else None
         )
+        if gui_agent_controller:
+            gui_agent_controller.line_render = line_render
 
         self._app_service = AppService(
             config=config,
