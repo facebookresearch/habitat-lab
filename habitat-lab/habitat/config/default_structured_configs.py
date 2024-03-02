@@ -1003,6 +1003,7 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     center_cone_vector: Optional[List[float]] = None
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
+    pose_angle_threshold: float = -1.0
 
 
 @dataclass
@@ -1061,6 +1062,8 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
     gaze_method: bool = False
+    early_grasp_pen: float = 5.0
+    ee_orientation_reward: float = 0.0
 
 
 @dataclass
