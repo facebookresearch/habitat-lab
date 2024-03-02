@@ -9,6 +9,7 @@ from typing import Any, Dict, Tuple
 
 import magnum as mn
 import numpy as np
+import quaternion
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -311,18 +312,52 @@ class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
     def _gen_start_state(self):
         if self._use_marker == "fridge_push_point":
             state = np.zeros((2,))
-            if np.random.random() > 0.5:
-                # Open the fridge
-                state = np.array(
-                    [0, np.random.uniform(np.pi / 4, 2 * np.pi / 3)]
-                )
+            # TODO: Disable the open for now
+            # if np.random.random() > 0.5:
+            #     # Open the fridge
+            #     state = np.array(
+            #         [0, np.random.uniform(np.pi / 4, 2 * np.pi / 3)]
+            #     )
         else:
             targ_link = self.get_use_marker().joint_idx
             state = np.zeros((8,))
             if np.random.random() > 0.5:
                 # Open the drawer
-                state[targ_link] = np.random.uniform(0.4, 0.5)
+                state[targ_link] = np.random.uniform(0.0, 0.1)
         return state
+
+    def _random_arm(self):
+        """Randomly set the arm joint angles."""
+        # Get the current arm joint angles
+        arm_joint_pos = self._sim.get_agent_data(
+            None
+        ).articulated_agent.arm_joint_pos
+        # Get the arm joint limit
+        arm_joint_limit = self._config.actions.arm_action.arm_joint_limit
+        # Get the arm joint mask
+        arm_joint_mask = self._config.actions.arm_action.arm_joint_mask
+        # Loop over the joint mask
+        new_arm_joint_pos = []
+        j = 0
+        for i in range(len(arm_joint_mask)):
+            if arm_joint_mask[i]:
+                # Can change the arm joint angle
+                target_arm = (
+                    arm_joint_pos[i]
+                    + np.random.uniform(-1, 1) * self._config.joint_start_noise
+                )
+                _min = arm_joint_limit[j][0]
+                _max = arm_joint_limit[j][1]
+                target_arm = np.clip(target_arm, _min, _max)
+                j += 1
+            else:
+                # Cannot change the arm joint angle
+                target_arm = arm_joint_pos[i]
+            new_arm_joint_pos.append(target_arm)
+        # Set the arm
+        self._sim.get_agent_data(
+            None
+        ).articulated_agent.arm_joint_pos = new_arm_joint_pos
 
     def reset(self, episode: Episode):
         # There are 5 possible markers to use in replica_cad
@@ -331,4 +366,19 @@ class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
             self._use_marker = f"cab_push_point_{ids}"
         else:
             self._use_marker = "fridge_push_point"
-        return super().reset(episode)
+
+        observation = super().reset(episode)
+
+        # Get the initial agent's ee pose
+        agent = self._sim.articulated_agent
+        ee_transform = agent.ee_transform()
+        base_transform = agent.base_transformation
+        # Get transformation
+        base_T_ee_transform = base_transform.inverted() @ ee_transform
+        # Get the local ee orientation (roll, pitch, yaw)
+        local_ee_quat = quaternion.from_rotation_matrix(
+            base_T_ee_transform.rotation()
+        )
+        self.init_pose = local_ee_quat
+        self._random_arm()
+        return observation

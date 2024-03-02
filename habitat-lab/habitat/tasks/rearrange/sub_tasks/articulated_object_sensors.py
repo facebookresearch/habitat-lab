@@ -9,6 +9,7 @@ from typing import Tuple, Union
 
 import magnum as mn
 import numpy as np
+import quaternion
 from gym import spaces
 
 from habitat.core.embodied_task import Measure
@@ -25,10 +26,70 @@ from habitat.tasks.rearrange.utils import (
     get_camera_transform,
     rearrange_logger,
 )
+from habitat.tasks.utils import get_angle
 from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
     cam_pose_from_opengl_to_opencv,
     cam_pose_from_xzy_to_xyz,
 )
+
+
+def get_angle_to_pos_xyz(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 1]]
+    rel_pos = rel_pos[[0, 1]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle
+
+
+def get_gripper_state(agent):
+    """Simple helpful function to get gripper orientation"""
+
+    ee_transform = agent.ee_transform()
+    base_transform = agent.base_transformation
+    # Get transformation
+    base_T_ee_transform = base_transform.inverted() @ ee_transform
+
+    # Get the local ee location (x,y,z)
+    local_ee_location = base_T_ee_transform.translation
+
+    # Get the local ee orientation (roll, pitch, yaw)
+    local_ee_quat = quaternion.from_rotation_matrix(
+        base_T_ee_transform.rotation()
+    )
+    return local_ee_location, local_ee_quat
+
+
+def offset_in_yaw(agent):
+    """A simple helper function to get the offset in yaw"""
+    # If we want to remove the angle in yaw direction
+    # Get all the transformations
+    base_transform = agent.base_transformation
+    ee_transform = agent.ee_transform()
+    armbase_transform = agent.sim_obj.get_link_scene_node(0).transformation
+    # Offset the base based on the armbase transform
+    base_transform.translation = base_transform.transform_point(
+        (base_transform.inverted() @ armbase_transform).translation
+    )
+    # Do transformation
+    ee_position = (base_transform.inverted() @ ee_transform).translation
+    # Process the ee_position input
+    ee_position = abs(np.array(ee_position))
+    # If norm is too small, then we do not do anything
+    offset = 0.0
+    if np.linalg.norm(ee_position[[0, 1]]) > 0.1:
+        offset = abs(get_angle_to_pos_xyz(ee_position))
+    return offset
 
 
 @registry.register_sensor
@@ -406,11 +467,20 @@ class ArtObjAtDesiredState(Measure):
             dist = np.linalg.norm(handle_pos - ee_pos)
             # Get gaze angle
             obj_angle = self._get_camera_object_angle(handle_pos)
+            # Get the gripper state
+            _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+            pose_angle = abs(
+                angle_between_quaternions(task.init_pose, ee_ang)
+            ) - offset_in_yaw(self._sim.articulated_agent)
             # Return metric
             if (
                 dist > self._min_dist
                 and dist < self._max_dist
                 and obj_angle < self._center_cone_angle_threshold
+                and (
+                    pose_angle < self._config.pose_angle_threshold
+                    or self._config.pose_angle_threshold == -1
+                )
             ):
                 self._metric = True
             else:
@@ -466,16 +536,30 @@ class ArtObjSuccess(Measure):
 
         # If not absolute distance, we can have a joint state greater than the
         # target.
-        self._metric = (
-            is_art_obj_state_succ
-            and (
-                ee_to_rest_distance < self._config.rest_dist_threshold
-                or self._config.rest_dist_threshold == -1
+        if self._config.gaze_method:
+            self._metric = (
+                is_art_obj_state_succ  # Current the robot is looking at the drawer handle
+                and (
+                    ee_to_rest_distance < self._config.rest_dist_threshold
+                    or self._config.rest_dist_threshold == -1
+                )
+                and (
+                    self._sim.grasp_mgr.is_grasped
+                )  # Current the robot is grasping something
+                and (
+                    task._sim.grasp_mgr.snapped_marker_id
+                    == task.use_marker_name
+                )  # current grasp mgr is holding the correct drawers
             )
-            and (
-                not self._sim.grasp_mgr.is_grasped or self._config.gaze_method
+        else:
+            self._metric = (
+                is_art_obj_state_succ
+                and (
+                    ee_to_rest_distance < self._config.rest_dist_threshold
+                    or self._config.rest_dist_threshold == -1
+                )
+                and (not self._sim.grasp_mgr.is_grasped)
             )
-        )
         if self._config.must_call_stop:
             if called_stop:
                 task.should_end = True
@@ -560,6 +644,7 @@ class ArtObjReward(RearrangeReward):
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
         self._any_at_desired_state = False
+        self._prev_ee_orientation_delta = 0
         super().reset_metric(
             *args,
             episode=episode,
@@ -589,7 +674,7 @@ class ArtObjReward(RearrangeReward):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        if not self._config.gaze_method:
+        if self._config.gaze_method:
             cur_dist = 0
             prev_dist = 0
         else:
@@ -598,7 +683,7 @@ class ArtObjReward(RearrangeReward):
 
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
-        if not is_art_obj_state_succ:
+        if not is_art_obj_state_succ and not self._config.gaze_method:
             reward += self._config.art_dist_reward * dist_diff
 
         cur_has_grasped = task._sim.grasp_mgr.is_grasped
@@ -620,6 +705,16 @@ class ArtObjReward(RearrangeReward):
                 reward += self._config.grasp_reward
             self._any_has_grasped = True
 
+        # Check if the robot calls grasping early
+        if (
+            task.actions["arm_action"].grip_ctrlr.does_call_grasp
+            and self._config.gaze_method
+            and not cur_has_grasped
+        ):
+            # early call to close the gripper
+            reward -= self._config.early_grasp_pen
+            task.should_end = True
+
         if is_art_obj_state_succ:
             if not self._config.gaze_method:
                 if not self._any_at_desired_state:
@@ -632,9 +727,17 @@ class ArtObjReward(RearrangeReward):
             # Give the reward based on distance to the handle
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
             reward += self._config.marker_dist_reward * dist_diff
+            # Give the reward based on orientation change
+            _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+            cur_angle = abs(
+                angle_between_quaternions(task.init_pose, ee_ang)
+            ) - offset_in_yaw(self._sim.articulated_agent)
+            ori_diff = self._prev_ee_orientation_delta - cur_angle
+            reward += self._config.ee_orientation_reward * ori_diff
 
         self._prev_ee_to_rest = ee_to_rest_distance
 
         self._prev_ee_dist_to_marker = cur_ee_dist_to_marker
+        self._prev_ee_orientation_delta = cur_angle
         self._prev_art_state = link_state
         self._metric = reward
