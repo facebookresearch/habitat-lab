@@ -42,6 +42,7 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
 
+from IPython import embed
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
@@ -321,6 +322,7 @@ class RearrangeEpisodeGenerator:
             unified_scene_set: List[str] = []
             # concatenate all requested scene sets
             for set_name in self.cfg.scene_sampler.params.scene_sets:
+                print("GET set_name: ", set_name)
                 if (
                     self._limit_scene_set is not None
                     and set_name != self._limit_scene_set
@@ -450,6 +452,34 @@ class RearrangeEpisodeGenerator:
             self.vdb.look_at(sampled_look_target)
             self.vdb.get_observation()
 
+    def get_island_sampled_point(self, island_idx = None):
+        print("---------------get island sampled point----------")
+        # start_navigable = self.sim.pathfinder.get_random_navigable_point(
+        #     island_index=island_idx
+        #     )
+        dist = 10
+        while(dist > 5 or dist < 2):
+            start_navigable = self.sim.pathfinder.get_random_navigable_point(
+                island_index=island_idx
+                )
+            goal_navigable = self.sim.pathfinder.get_random_navigable_point(
+                island_index=island_idx
+                )
+            # start_navigable = self.sim.pathfinder.get_random_navigable_point_near(
+            #     circle_center=goal_navigable,
+            #     radius=2,
+            #     island_index=island_idx
+            #     )
+            path = habitat_sim.ShortestPath()
+            path.requested_start = start_navigable
+            path.requested_end = goal_navigable
+            found_path = self.sim.pathfinder.find_path(path)
+            dist = path.geodesic_distance
+            # embed()
+        robot_start = goal_navigable
+        print("----FOUND start_navigable: ", start_navigable, " goal_navigable: ", goal_navigable, "robot_start: ", robot_start, "----------")
+        return robot_start, start_navigable, goal_navigable
+
     def generate_episodes(
         self, num_episodes: int = 1, verbose: bool = False
     ) -> List[RearrangeEpisode]:
@@ -458,6 +488,7 @@ class RearrangeEpisodeGenerator:
         """
         generated_episodes: List[RearrangeEpisode] = []
         failed_episodes = 0
+        
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
@@ -479,7 +510,7 @@ class RearrangeEpisodeGenerator:
         logger.info(
             f"Generated {num_episodes} episodes in {num_episodes+failed_episodes} tries."
         )
-
+        
         return generated_episodes
 
     def generate_single_episode(self) -> Optional[RearrangeEpisode]:
@@ -552,6 +583,11 @@ class RearrangeEpisodeGenerator:
         largest_indoor_island_id = get_largest_island_index(
             self.sim.pathfinder, self.sim, allow_outdoor=False
         )
+        #KL
+        robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
+            largest_indoor_island_id
+        )
+        print("Get largest indoor island sample: ", robot_sampled_start, sampled_start, sampled_goal)
 
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
@@ -857,7 +893,7 @@ class RearrangeEpisodeGenerator:
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
             episode_id=str(self.num_ep_generated - 1),
-            start_position=[0, 0, 0],
+            start_position=sampled_goal, #KL
             start_rotation=[
                 0,
                 0,
@@ -872,7 +908,7 @@ class RearrangeEpisodeGenerator:
             goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
             name_to_receptacle=name_to_receptacle,
-            info={"object_labels": target_refs},
+            info={"object_labels": target_refs, "human_start": sampled_start, "human_goal": sampled_goal},
         )
 
     def initialize_sim(self, scene_name: str, dataset_path: str) -> None:

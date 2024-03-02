@@ -98,6 +98,7 @@ data
 /tb_old
 /video_dir_old
 *.zip
+/test
 
 # outputs from other libraries
 /sandbox

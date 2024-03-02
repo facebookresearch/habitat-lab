@@ -15,7 +15,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
   # Config agent sensor
   - /habitat/task/measurements:
@@ -105,13 +105,13 @@ habitat:
         ang_speed: 5.0
         enable_rotation_check_for_dyn_slide: False
 
-      agent_1_oracle_nav_action:
-        type: OracleNavAction
-        motion_control: human_joints
-        spawn_max_dist_to_obj: -1.0
-        dist_thresh: 0.5
-        lin_speed: 10.0
-        ang_speed: 10.0
+      # agent_1_oracle_nav_action:
+      #   type: OracleNavAction
+      #   motion_control: human_joints
+      #   spawn_max_dist_to_obj: -1.0
+      #   dist_thresh: 0.5
+      #   lin_speed: 10.0
+      #   ang_speed: 10.0
 
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
@@ -182,5 +182,6 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    data_path: data/social_nav_episode_4.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz
