@@ -497,13 +497,13 @@ class ArtObjAtDesiredState(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Check if the robot gazes the target
         if self._gaze_method:
-            # Get distance
+            # Get distance from the handle to the EE
             handle_pos = task.get_use_marker().get_current_position()
             ee_pos = self._sim.articulated_agent.ee_transform().translation
             dist = np.linalg.norm(handle_pos - ee_pos)
-            # Get gaze angle
+            # Get gaze angle between the EE camera to the gripper
             obj_angle = self._get_camera_object_angle(handle_pos)
-            # Get the gripper state
+            # Get the gripper state (orientation)
             _, ee_ang = get_gripper_state(self._sim.articulated_agent)
             pose_angle = abs(
                 angle_between_quaternions(task.init_pose, ee_ang)
@@ -751,6 +751,12 @@ class ArtObjReward(RearrangeReward):
             reward -= self._config.early_grasp_pen
             task.should_end = True
 
+        # Get the current angle between the initial pose and the current pose
+        _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+        cur_angle = abs(
+            angle_between_quaternions(task.init_pose, ee_ang)
+        ) - offset_in_yaw(self._sim.articulated_agent)
+
         if is_art_obj_state_succ:
             if not self._config.gaze_method:
                 if not self._any_at_desired_state:
@@ -764,10 +770,6 @@ class ArtObjReward(RearrangeReward):
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
             reward += self._config.marker_dist_reward * dist_diff
             # Give the reward based on orientation change
-            _, ee_ang = get_gripper_state(self._sim.articulated_agent)
-            cur_angle = abs(
-                angle_between_quaternions(task.init_pose, ee_ang)
-            ) - offset_in_yaw(self._sim.articulated_agent)
             ori_diff = self._prev_ee_orientation_delta - cur_angle
             reward += self._config.ee_orientation_reward * ori_diff
 
