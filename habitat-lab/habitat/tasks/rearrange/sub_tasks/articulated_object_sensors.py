@@ -381,6 +381,42 @@ class ArtJointSensorNoVel(Sensor):
         return np.array([js]).reshape((1,))
 
 
+@registry.register_sensor
+class ArtPoseDeltaSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Gets the delta angle between the target to the current pose of the articulated object.
+    In the art task, the init pose is the target pose
+    """
+
+    cls_uuid: str = "art_pose_delta_sensor"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArtPoseDeltaSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+        pose_angle = abs(
+            angle_between_quaternions(self._task.init_pose, ee_ang)
+        ) - offset_in_yaw(self._sim.articulated_agent)
+        return np.array([pose_angle]).reshape((1,))
+
+
 @registry.register_measure
 class ArtObjState(Measure):
     """
