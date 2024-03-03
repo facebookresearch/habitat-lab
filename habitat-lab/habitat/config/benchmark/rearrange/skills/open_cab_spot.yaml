@@ -27,6 +27,7 @@ defaults:
     - end_effector_sensor
     - relative_resting_pos_sensor
     - handle_bbox_sensor
+    - art_pose_delta_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -34,11 +35,12 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - articulated_agent_arm_depth
-      - joint
-      - ee_pos
-      - is_holding
-      - handle_bbox
+      - articulated_agent_arm_depth # depth image
+      - joint # joint angles
+      - ee_pos # ee location x,y,z
+      - is_holding # if the robot is holding the object
+      - handle_bbox # the handle bounding box
+      - art_pose_delta_sensor # the angle between the init and current ee orientation
   task:
     type: RearrangeOpenCloseDrawerTask-v0
     reward_measure: art_obj_reward

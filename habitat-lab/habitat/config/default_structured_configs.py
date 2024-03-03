@@ -659,6 +659,11 @@ class ArtJointSensorNoVelSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ArtPoseDeltaSensorConfig(LabSensorConfig):
+    type: str = "ArtPoseDeltaSensor"
+
+
+@dataclass
 class MarkerRelPosSensorConfig(LabSensorConfig):
     type: str = "MarkerRelPosSensor"
 
@@ -2529,6 +2534,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="joint_velocity_sensor",
     node=JointVelocitySensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.art_pose_delta_sensor",
+    group="habitat/task/lab_sensors",
+    name="art_pose_delta_sensor",
+    node=ArtPoseDeltaSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_gps_compass_sensor",

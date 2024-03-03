@@ -367,8 +367,6 @@ class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
         else:
             self._use_marker = "fridge_push_point"
 
-        observation = super().reset(episode)
-
         # Get the initial agent's ee pose
         agent = self._sim.articulated_agent
         ee_transform = agent.ee_transform()
@@ -380,5 +378,7 @@ class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
             base_T_ee_transform.rotation()
         )
         self.init_pose = local_ee_quat
+
+        observation = super().reset(episode)
         self._random_arm()
         return observation
