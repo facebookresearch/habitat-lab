@@ -70,6 +70,7 @@ class AppStateRearrangeV2(AppState):
             self.get_gui_controlled_agent_index(),
         )
         self._placement_helper = GuiPlacementHelper(self._app_service)
+        self._client_helper = None
         if self._app_service.hitl_config.networking.enable:
             self._client_helper = ClientHelper(self._app_service)
 
@@ -258,7 +259,7 @@ class AppStateRearrangeV2(AppState):
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
                 controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
-            if self._client_helper.display_latency_ms:
+            if self._client_helper and self._client_helper.display_latency_ms:
                 controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
@@ -276,7 +277,10 @@ class AppStateRearrangeV2(AppState):
 
         if self._paused:
             status_str += "\n\npaused\n"
-        if self._client_helper.do_show_idle_kick_warning:
+        if (
+            self._client_helper
+            and self._client_helper.do_show_idle_kick_warning
+        ):
             status_str += (
                 "\n\nAre you still there?\nPress any key to keep playing!\n"
             )
