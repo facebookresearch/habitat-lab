@@ -26,7 +26,7 @@ class GuiPickHelper:
         self._rom = self._get_sim().get_rigid_object_manager()
         self._obj_ids = self._get_sim()._scene_obj_ids
         self._dist_to_highlight_obj = DIST_HIGHLIGHT
-        self._pick_candidate_indexes = []
+        self._pick_candidate_indices = []
 
     def _get_sim(self):
         return self._app_service.sim
@@ -49,7 +49,7 @@ class GuiPickHelper:
         sim = self._get_sim()
         self._rom = sim.get_rigid_object_manager()
         self._obj_ids = sim._scene_obj_ids
-        self._pick_candidate_indexes = []
+        self._pick_candidate_indices = []
 
     def _closest_point_and_dist_to_query_position(self, points, query_pos):
         distances = np.linalg.norm(points - query_pos, axis=1)
@@ -72,7 +72,7 @@ class GuiPickHelper:
             obj_positions, query_pos
         )
         if distance < self._app_service.hitl_config.can_grasp_place_threshold:
-            self._pick_candidate_indexes.append(obj_index)
+            self._pick_candidate_indices.append(obj_index)
             return self._obj_ids[obj_index]
         else:
             return None
@@ -100,8 +100,8 @@ class GuiPickHelper:
     def viz_objects(self):
         obj_positions = self._get_object_positions()
 
-        if len(self._pick_candidate_indexes) > 0:
-            for candidate_index in self._pick_candidate_indexes:
+        if len(self._pick_candidate_indices) > 0:
+            for candidate_index in self._pick_candidate_indices:
                 obj_id = self._obj_ids[candidate_index]
                 pos = self._rom.get_object_by_id(
                     obj_id
@@ -112,7 +112,7 @@ class GuiPickHelper:
                     RADIUS_GRASP_PREVIEW,
                     do_pulse=False,
                 )
-            self._pick_candidate_indexes = []
+            self._pick_candidate_indices = []
         else:
             for i in range(len(obj_positions)):
                 obj_id = self._obj_ids[i]

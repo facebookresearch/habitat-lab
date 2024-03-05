@@ -39,17 +39,12 @@ class ControllerHelper:
         gui_input,
         recorder,
     ):
+        self._hitl_config = hitl_config
         self._gym_habitat_env: GymHabitatEnv = gym_habitat_env
         self._env: habitat.Env = gym_habitat_env.unwrapped.habitat_env
-        # todo: update habitat_hitl config to support list of gui-controlled agent indices
-        self._gui_controlled_agent_indices = [
-            1,
-            0,
-        ]  # temp # config.habitat_hitl.gui_controlled_agent.agent_index
-
         self.n_agents: int = len(self._env._sim.agents_mgr)  # type: ignore[attr-defined]
         self.n_user_controlled_agents: int = len(
-            self._gui_controlled_agent_indices
+            hitl_config.gui_controlled_agents
         )
         assert self.n_user_controlled_agents <= self.n_agents
         self.n_policy_controlled_agents: int = (
@@ -87,7 +82,10 @@ class ControllerHelper:
             for agent_index in range(
                 len(self._env.sim.habitat_config.agents_order)
             ):
-                if agent_index in self._gui_controlled_agent_indices:
+                gui_controlled_agent_config = (
+                    self._find_gui_controlled_agent_config(agent_index)
+                )
+                if gui_controlled_agent_config:
                     agent_name: str = (
                         self._env.sim.habitat_config.agents_order[agent_index]
                     )
@@ -105,8 +103,8 @@ class ControllerHelper:
                             gui_input=gui_input,
                             env=self._env,
                             walk_pose_path=hitl_config.walk_pose_path,
-                            lin_speed=hitl_config.gui_controlled_agent.lin_speed,
-                            ang_speed=hitl_config.gui_controlled_agent.ang_speed,
+                            lin_speed=gui_controlled_agent_config.lin_speed,
+                            ang_speed=gui_controlled_agent_config.ang_speed,
                             recorder=recorder.get_nested_recorder(
                                 "gui_humanoid"
                             ),
@@ -169,10 +167,25 @@ class ControllerHelper:
                         )
                     )
 
+    def _find_gui_controlled_agent_config(self, agent_index):
+        for (
+            gui_controlled_agent_config
+        ) in self._hitl_config.gui_controlled_agents:
+            if gui_controlled_agent_config.agent_index == agent_index:
+                return gui_controlled_agent_config
+        return None
+
     def get_gui_agent_controllers(self) -> List[Controller]:
+        """
+        Return list of controllers indexed by user index. Beware the difference between user index and agent index. For example, user 0 may control agent 1.
+        """
         gui_agent_controllers = []
-        for agent_index in self._gui_controlled_agent_indices:
-            gui_agent_controllers.append(self.controllers[agent_index])
+        for (
+            gui_controlled_agent_config
+        ) in self._hitl_config.gui_controlled_agents:
+            gui_agent_controllers.append(
+                self.controllers[gui_controlled_agent_config.agent_index]
+            )
         return gui_agent_controllers
 
     def update(self, obs):

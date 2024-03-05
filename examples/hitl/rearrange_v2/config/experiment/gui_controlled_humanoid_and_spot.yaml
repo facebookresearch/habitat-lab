@@ -1,0 +1,9 @@
+# @package _global_
+
+habitat_hitl:
+  gui_controlled_agents:
+    - agent_index: 1
+      lin_speed: 10.0
+      ang_speed: 300
+    - agent_index: 0
+  hide_humanoid_in_gui: False

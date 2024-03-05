@@ -132,15 +132,6 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         create_app_state_lambda,
     )
 
-    # sanity check if there are no agents with camera sensors
-    # todo: fix this logic to handle multiple gui-controlled agents
-    if (
-        len(app_config.habitat.simulator.agents) == 1
-        and app_config.habitat_hitl.gui_controlled_agent.agent_index
-        is not None
-    ):
-        assert driver.get_sim().renderer is None
-
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     gui_app_wrapper.exec()
@@ -246,13 +237,6 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         HeadlessTextDrawer(),
         create_app_state_lambda,
     )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(config.habitat.simulator.agents) == 1
-        and config.habitat_hitl.gui_controlled_agent.agent_index is not None
-    ):
-        assert driver.get_sim().renderer is None
 
     _headless_app_loop(hitl_config, driver)
 

@@ -112,10 +112,18 @@ class HitlDriver(AppDriver):
             self.gym_habitat_env.unwrapped.habitat_env
         )
 
-        if self._hitl_config.gui_controlled_agent.agent_index is not None:
+        # If all agents are gui-controlled, we should have no camera sensors and thus no renderer.
+        if len(config.habitat_hitl.gui_controlled_agents) == len(
+            config.habitat.simulator.agents
+        ):
+            assert self.get_sim().renderer is None
+
+        for (
+            gui_controlled_agent_config
+        ) in self._hitl_config.gui_controlled_agents:
             sim_config = config.habitat.simulator
             gui_agent_key = sim_config.agents_order[
-                self._hitl_config.gui_controlled_agent.agent_index
+                gui_controlled_agent_config.agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if (
