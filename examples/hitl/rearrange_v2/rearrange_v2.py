@@ -77,7 +77,6 @@ class AppStateRearrangeV2(AppState):
         self._sps_tracker = AverageRateTracker(2.0)
 
         self._task_instruction = ""
-        self._change_episode = False
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -133,7 +132,9 @@ class AppStateRearrangeV2(AppState):
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
         for handle, _ in self._ao_root_bbs.items():
-            ao = self.get_sim_utilities().get_obj_from_handle(self._sim, handle)
+            ao = self.get_sim_utilities().get_obj_from_handle(
+                self._sim, handle
+            )
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
             dist_xz = (ao_pos_xz - player_pos_xz).length()
@@ -173,10 +174,11 @@ class AppStateRearrangeV2(AppState):
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
         # Set the task instruction
-        self._task_instruction = self._app_service.env.current_episode.info[
-            "extra_info"
-        ]["instruction"]
-        self._change_episode = False
+        current_episode = self._app_service.env.current_episode
+        if current_episode.info.get("extra_info") is not None:
+            self._task_instruction = current_episode.info["extra_info"][
+                "instruction"
+            ]
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
@@ -280,13 +282,9 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += (
-                    f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
-                )
+                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
             if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += (
-                    f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
-                )
+                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -302,8 +300,10 @@ class AppStateRearrangeV2(AppState):
         return controls_str
 
     def _get_status_text(self):
-        status_str = "Instruction: " + self._task_instruction + "\n"
+        status_str = ""
 
+        if len(self._task_instruction) > 0:
+            status_str += "\nInstruction: " + self._task_instruction + "\n"
         if self._paused:
             status_str += "\n\npaused\n"
         if (
@@ -345,10 +345,9 @@ class AppStateRearrangeV2(AppState):
         return not self._app_service.gui_input.get_any_key_down()
 
     def _check_change_episode(self):
-        if self._paused:
-            return
-
-        if not self._change_episode:
+        if self._paused or not self._app_service.gui_input.get_key_down(
+            GuiInput.KeyNS.N
+        ):
             return
 
         if self._app_service.episode_helper.next_episode_exists():
@@ -391,9 +390,6 @@ class AppStateRearrangeV2(AppState):
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
-
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self._change_episode = True
 
         self._check_change_episode()
 
@@ -438,7 +434,9 @@ class AppStateRearrangeV2(AppState):
         self._update_help_text()
 
 
-@hydra.main(version_base=None, config_path="config", config_name="rearrange_v2")
+@hydra.main(
+    version_base=None, config_path="config", config_name="rearrange_v2"
+)
 def main(config):
     hitl_main(
         config,

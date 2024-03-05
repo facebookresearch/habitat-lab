@@ -16,6 +16,20 @@ mv fphab fpss
 
 Run `rearrange_v2` from the Habitat-lab root directory. It will expect `data/` for Habitat-lab data, and it will also look for `examples/hitl/rearrange_v2/app_data/demo.json.gz` (included alongside source files in our git repo).
 
+
+To test the Habitat-LLM episodes in `rearrange_v2` you'll need to download and unzip the following [episode dataset](https://drive.google.com/file/d/1zFCBiWE_XFY0Ry9CZOV_NF_rfxBw1y-F/view?usp=sharing) in Habitat-Lab root directory. In addition, you'll need YCB, GSO, AI2THOR, and ABO object assets. To download these assets use the following commands:
+
+```
+cd data
+git clone https://huggingface.co/datasets/ai-habitat/OVMM_objects objects --recursive
+cd objects
+git checkout 3893a735352b92d46505f35d759553f5fc82a39b
+```
+
+To test the app use:
+
+
+
 ## Example launch commands
 
 Local testing (local display and keyboard control):
@@ -31,6 +45,11 @@ python examples/hitl/rearrange_v2/rearrange_v2.py habitat_hitl.networking.enable
 Headless server:
 ```bash
 python examples/hitl/rearrange_v2/rearrange_v2.py +experiment=headless_server
+```
+
+Testing Habitat-LLM episodes using a headed server:
+```bash
+python examples/hitl/rearrange_v2/rearrange_v2.py --config-name rearrange_v2_humanoid_only habitat_hitl.networking.enable=True
 ```
 
 ## Controls

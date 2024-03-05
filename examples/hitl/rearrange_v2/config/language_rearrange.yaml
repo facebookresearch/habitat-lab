@@ -1,3 +1,4 @@
+# This config is derived from habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human.yaml
 # @package _global_
 
 defaults:
@@ -49,7 +50,6 @@ habitat:
     robot_at_thresh: 3.0
   gym:
     obs_keys:
-      # - articulated_agent_arm_depth
       - head_depth
       - relative_resting_position
       - obj_start_sensor
@@ -84,4 +84,4 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    data_path: data/datasets/hssd/llm_rearrange/train/test_dataset_curated.json.gz
