@@ -23,12 +23,28 @@ from habitat_sim.physics import (
 class GuiRobotController(GuiController):
     """Controller for robot agent."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        gui_input,
+        articulated_agent,
+        num_actions,
+        base_vel_action_idx,
+        num_base_vel_actions,
+        turn_scale,
+    ):
+        super().__init__(agent_idx, is_multi_agent, gui_input)
+        self._articulated_agent = articulated_agent
         self._hint_walk_dir = None
         self._hint_distance_multiplier = None
         self._cam_yaw = None
         self._hint_target_dir = None
+        self._base_vel_action_idx = base_vel_action_idx
+        self._num_base_vel_actions = num_base_vel_actions
+        self._turn_scale = turn_scale
+
+        self._actions = np.zeros((num_actions,))
 
     def set_act_hints(
         self,
@@ -57,6 +73,34 @@ class GuiRobotController(GuiController):
 
         self._cam_yaw = cam_yaw
         self._hint_target_dir = target_dir
+
+    def angle_from_sim_obj_foward_dir_to_target_yaw(self, sim_obj, target_yaw):
+        dir_a = sim_obj.rotation.transform_vector_normalized(
+            mn.Vector3(1, 0, 0)
+        )
+        dir_b = mn.Vector3(
+            mn.math.cos(mn.Rad(target_yaw)), 0, mn.math.sin(mn.Rad(target_yaw))
+        )
+        return self.angle_from_dir_a_to_b(dir_a, dir_b)
+
+    # todo: find a better home for this utility
+    def angle_from_dir_a_to_b(self, a: mn.Vector3, b: mn.Vector3):
+        assert a.is_normalized() and b.is_normalized()
+
+        # Dot product of vectors a and b
+        dot_product = mn.math.dot(a, b)
+
+        # Ensure the dot product does not exceed the range [-1, 1]
+        dot_product = max(min(dot_product, 1.0), -1.0)
+
+        # Angle from a to b
+        angle = float(mn.math.acos(dot_product))
+
+        # Determinant (2D cross product) of vectors a and b to find direction
+        det = a[0] * b[2] - a[2] * b[0]
+
+        # Adjust the angle based on the direction
+        return angle if det >= 0 else -angle
 
     def act(self, obs, env):
         if self._is_multi_agent:
@@ -90,14 +134,23 @@ class GuiRobotController(GuiController):
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
+        # Note addition of 180 degrees due to our camera convention
+        turn_angle = self.angle_from_sim_obj_foward_dir_to_target_yaw(
+            self._articulated_agent.sim_obj,
+            self._cam_yaw + float(mn.Rad(mn.Deg(180))),
+        )
+
         if base_action is not None:
             # sloppy: read gui_input directly instead of using _hint_walk_dir
-            if gui_input.get_key(KeyNS.W):
+            if gui_input.get_key(KeyNS.F):
                 # walk forward in the camera yaw direction
                 base_action[0] += 1
-            if gui_input.get_key(KeyNS.S):
+            if gui_input.get_key(KeyNS.V):
                 # walk forward in the opposite to camera yaw direction
                 base_action[0] -= 1
+
+            # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so we may not turn as much as computed here in the next step.
+            base_action[1] = -turn_angle * self._turn_scale
 
             # reference code to interpret self._cam_yaw
             # rot_y_rad = -self._cam_yaw + np.pi
@@ -227,7 +280,14 @@ class GuiRobotController(GuiController):
         if len(action_names) == 0:
             raise ValueError("No active actions for human controller.")
 
-        return {"action": action_names, "action_args": action_args}
+        assert len(base_action) == self._num_base_vel_actions
+
+        self._actions[
+            self._base_vel_action_idx : self._base_vel_action_idx
+            + self._num_base_vel_actions
+        ] = base_action
+
+        return self._actions
 
 
 class GuiHumanoidController(GuiController):

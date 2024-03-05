@@ -98,9 +98,9 @@ habitat_hitl:
   gui_controlled_agent:
     # GUI-controlled agent index (must be None or >= 0 and < number of agents). Defaults to None, indicating that all the agents are policy-controlled.
     agent_index: ~
-    # linear speed
+    # linear speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.ang_speed.
     lin_speed: 10.0
-    # angular speed
+    # angular speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.lin_speed.
     ang_speed: 10.0
 
   data_collection:

@@ -133,6 +133,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
     )
 
     # sanity check if there are no agents with camera sensors
+    # todo: fix this logic to handle multiple gui-controlled agents
     if (
         len(app_config.habitat.simulator.agents) == 1
         and app_config.habitat_hitl.gui_controlled_agent.agent_index

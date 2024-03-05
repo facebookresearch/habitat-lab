@@ -175,13 +175,13 @@ class HitlDriver(AppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
-        gui_agent_controller: Any = (
-            self.ctrl_helper.get_gui_agent_controller()
+        gui_agent_controllers: Any = (
+            self.ctrl_helper.get_gui_agent_controllers()
             if self.ctrl_helper
-            else None
+            else []
         )
-        if gui_agent_controller:
-            gui_agent_controller.line_render = line_render
+        for controller in gui_agent_controllers:
+            controller.line_render = line_render
 
         self._app_service = AppService(
             config=config,
@@ -200,7 +200,7 @@ class HitlDriver(AppDriver):
             set_cursor_style=self._set_cursor_style,
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
-            gui_agent_controller=gui_agent_controller,
+            gui_agent_controllers=gui_agent_controllers,
         )
 
         self._app_state: AppState = None
