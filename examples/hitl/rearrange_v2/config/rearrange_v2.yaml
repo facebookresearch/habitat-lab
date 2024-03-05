@@ -1,9 +1,9 @@
 # @package _global_
 
 defaults:
-  - social_rearrange: pop_play
+  - pop_play
   - hitl_defaults
-  - disable_spot_pick_and_move_backward
+  # - disable_spot_pick_and_move_backward # Disabling temporarily as the spot agent is not initialized
   - _self_
 
 habitat:
@@ -13,14 +13,9 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
-  task:
-    measurements:
-      rearrange_cooperate_reward:
-        end_on_collide: False
-      pddl_success:
-        must_call_stop: False
+
   dataset:
-    data_path: examples/hitl/rearrange_v2/app_data/demo.json.gz
+    data_path: "data/datasets/hssd/llm_rearrange/train/test_dataset_curated.json.gz"
 
 
 
