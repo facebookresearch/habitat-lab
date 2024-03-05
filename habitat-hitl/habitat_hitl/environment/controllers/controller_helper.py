@@ -129,9 +129,7 @@ class ControllerHelper:
                         assert len(action_space.shape) == 1
                         num_actions = action_space.shape[0]
 
-                        articulated_agent = self._env._sim.agents_mgr[
-                            agent_index
-                        ].articulated_agent
+                        articulated_agent = self._env._sim.agents_mgr[agent_index].articulated_agent  # type: ignore[attr-defined]
 
                         # sloppy: derive turn scale. This is the change in yaw (in radians) corresponding to a base ang vel action of 1.0. See also Habitat-lab BaseVelAction.
                         turn_scale = (
