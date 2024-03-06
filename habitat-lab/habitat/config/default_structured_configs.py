@@ -675,6 +675,8 @@ class HandleBBoxSensorConfig(LabSensorConfig):
     pixel_size: int = 2
     # Height - Width for the handle size in meter
     handle_size: List[float] = field(default_factory=lambda: [0.02, 0.1])
+    # Target sensor's parameters. If users want to use a specific target sensor, they can specify it here
+    target_sensor: Optional[str] = None
 
 
 @dataclass
@@ -1036,6 +1038,7 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     rest_dist_threshold: float = 0.15
     must_call_stop: bool = True
     gaze_method: bool = False
+    do_not_check_grasp: bool = False
 
 
 @dataclass
@@ -1070,6 +1073,8 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     gaze_method: bool = False
     early_grasp_pen: float = 5.0
     ee_orientation_reward: float = 0.0
+    # If we want to check the robot actually grasps the object
+    do_not_check_grasp: bool = False
 
 
 @dataclass
