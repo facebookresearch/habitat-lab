@@ -209,7 +209,7 @@ class HitlDriver(AppDriver):
         if hasattr(
             self.get_sim().gfx_replay_manager, "set_max_decimal_places"
         ):
-            self.get_sim().gfx_replay_manager.set_max_decimal_places(3)
+            self.get_sim().gfx_replay_manager.set_max_decimal_places(4)
 
         self._reset_environment()
 
