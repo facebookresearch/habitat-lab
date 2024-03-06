@@ -486,7 +486,6 @@ class ArtObjAtDesiredState(Measure):
         """Calculates angle between gripper line-of-sight and given global position."""
         # Get the camera transformation
         cam_T = get_camera_transform(self._sim.articulated_agent)
-        print("cam_T:", cam_T.translation)
         # Get angle between (normalized) location and the vector that the camera should
         # look at
         obj_angle = get_camera_object_angle(
