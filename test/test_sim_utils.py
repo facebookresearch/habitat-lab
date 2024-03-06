@@ -9,6 +9,7 @@ import os.path as osp
 import magnum as mn
 import pytest
 
+from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.sims.habitat_simulator.sim_utilities import (
     above,
     bb_ray_prescreen,
@@ -454,3 +455,16 @@ def test_region_containment_utils():
         assert livingroom_ratio > 0
         assert livingroom_ratio < 0.51
         assert bedroom_ratio > 0.51
+
+
+def test_ontop_util():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene"
+    ] = "data/test_assets/scenes/simple_room.stage_config.json"
+    hab_cfg = make_cfg(sim_settings)
+
+    with Simulator(hab_cfg) as sim:
+        # rom = sim.get_rigid_object_manager()
+        dbv = DebugVisualizer(sim)
+        dbv.peek_scene(show=True)

@@ -754,6 +754,62 @@ def within(
     return containment_ids
 
 
+def ontop(
+    sim: habitat_sim.Simulator,
+    objectA: Union[
+        habitat_sim.physics.ManagedRigidObject,
+        habitat_sim.physics.ManagedArticulatedObject,
+    ],
+    ao_link_map: Optional[Dict[int, int]] = None,
+    do_collision_detection: bool = True,
+    vertical_normal_error_threshold: float = 0.75,
+) -> List[int]:
+    """
+    Get a list of all object ids or objects that are "ontop" of a particular objectA.
+    Concretely, 'ontop' is defined as: contact points between objectA and objectB have vertical normals "upward" relative to objectA.
+    This function uses collision points to determine which objects are resting on or contacting the surface of objectA.
+
+    :param sim: The Simulator instance.
+    :param objectA: The ManagedRigidObject for which to query the 'ontop' set.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param do_collision_detection: If True, a fresh discrete collision detection is run before the contact point query. Pass False to skip if a recent sim step or pre-process has run a collision detection pass on the current state.
+    :param vertical_normal_error_threshold: The allowed error in normal alignment for a contact point to be considered "vertical" for this check. Functionally, if dot(contact normal, Y) <= threshold, the contact is ignored.
+
+    :return: a list of integer object_ids for the set of objects "ontop" of objectA.
+    """
+
+    if ao_link_map is None:
+        ao_link_map = get_ao_link_id_map(sim)
+
+    if do_collision_detection:
+        sim.perform_discrete_collision_detection()
+
+    yup = mn.Vector3(0.0, 1.0, 0.0)
+
+    ontop_object_ids = []
+    for cp in sim.get_physics_contact_points():
+        contacting_obj_id = None
+        obj_is_b = False
+        if cp.object_id_a == objectA.object_id:
+            contacting_obj_id = cp.object_id_b
+        if cp.object_id_b == objectA.object_id:
+            contacting_obj_id = cp.object_id_a
+            obj_is_b = True
+        if contacting_obj_id is not None:
+            contact_dir_me = (
+                cp.contact_normal_on_b_in_ws
+                if obj_is_b
+                else -cp.contact_normal_on_b_in_ws
+            )
+            if (
+                mn.math.dot(contact_dir_me, yup)
+                > vertical_normal_error_threshold
+            ):
+                ontop_object_ids.append(contacting_obj_id)
+
+    return ontop_object_ids
+
+
 def object_in_region(
     sim: habitat_sim.Simulator,
     objectA: Union[
