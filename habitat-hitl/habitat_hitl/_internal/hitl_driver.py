@@ -205,6 +205,12 @@ class HitlDriver(AppDriver):
         assert create_app_state_lambda is not None
         self._app_state = create_app_state_lambda(self._app_service)
 
+        # Limit the number of float decimals in JSON transmissions
+        if hasattr(
+            self.get_sim().gfx_replay_manager, "set_max_decimal_places"
+        ):
+            self.get_sim().gfx_replay_manager.set_max_decimal_places(4)
+
         self._reset_environment()
 
     def close(self):
