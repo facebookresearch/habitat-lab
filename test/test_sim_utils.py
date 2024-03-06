@@ -9,7 +9,6 @@ import os.path as osp
 import magnum as mn
 import pytest
 
-from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.sims.habitat_simulator.sim_utilities import (
     above,
     bb_ray_prescreen,
@@ -21,6 +20,7 @@ from habitat.sims.habitat_simulator.sim_utilities import (
     get_object_regions,
     object_in_region,
     object_keypoint_cast,
+    ontop,
     snap_down,
     within,
 )
@@ -457,14 +457,89 @@ def test_region_containment_utils():
         assert bedroom_ratio > 0.51
 
 
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Collision detection API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
 def test_ontop_util():
     sim_settings = default_sim_settings.copy()
     sim_settings[
-        "scene"
-    ] = "data/test_assets/scenes/simple_room.stage_config.json"
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
     hab_cfg = make_cfg(sim_settings)
-
     with Simulator(hab_cfg) as sim:
-        # rom = sim.get_rigid_object_manager()
-        dbv = DebugVisualizer(sim)
-        dbv.peek_scene(show=True)
+        # a rigid object to test
+        table_object = get_obj_from_handle(sim, "frl_apartment_table_02_:0000")
+
+        # an articulated object to test
+        counter_object = get_obj_from_handle(sim, "kitchen_counter_:0000")
+
+        # the link to test
+        drawer_link_id = 7
+
+        drawer_link_object_ids = [
+            obj_id
+            for obj_id in counter_object.link_object_ids.keys()
+            if counter_object.link_object_ids[obj_id] == drawer_link_id
+        ]
+        assert len(drawer_link_object_ids) == 1
+        drawer_link_object_id = drawer_link_object_ids[0]
+
+        # open the drawer
+        drawer_link_dof = counter_object.get_link_joint_pos_offset(
+            drawer_link_id
+        )
+        joint_positions = counter_object.joint_positions
+        joint_positions[drawer_link_dof] = 0.5
+        counter_object.joint_positions = joint_positions
+
+        # drop an object into the open drawer
+        container_object = get_obj_from_handle(
+            sim, "frl_apartment_kitchen_utensil_08_:0000"
+        )
+        container_object.translation = mn.Vector3(-1.7, 0.6, 0.2)
+
+        # in the initial state:
+        # objects are on the table
+        assert ontop(sim, table_object) == [102, 103, 51, 52, 53, 55]
+        assert ontop(sim, table_object) == ontop(sim, table_object.object_id)
+        # objects about the counter are floating slightly and don't register
+        assert len(ontop(sim, counter_object)) == 0
+        assert len(ontop(sim, drawer_link_object_id)) == 0
+
+        # after some simulation, object settle onto the counter and drawer
+        sim.step_physics(0.75)
+
+        # objects are on the table
+        assert ontop(sim, table_object) == [102, 103, 51, 52, 53, 55]
+        assert ontop(sim, table_object) == ontop(sim, table_object.object_id)
+        on_counter = ontop(sim, counter_object)
+        assert on_counter == [
+            65,
+            1,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            66,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            63,
+        ]
+        assert container_object.object_id in on_counter
+        assert ontop(sim, drawer_link_object_id) == [
+            container_object.object_id
+        ]
+        assert ontop(sim, counter_object.object_id) == on_counter

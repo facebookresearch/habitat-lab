@@ -759,8 +759,8 @@ def ontop(
     objectA: Union[
         habitat_sim.physics.ManagedRigidObject,
         habitat_sim.physics.ManagedArticulatedObject,
+        int,
     ],
-    ao_link_map: Optional[Dict[int, int]] = None,
     do_collision_detection: bool = True,
     vertical_normal_error_threshold: float = 0.75,
 ) -> List[int]:
@@ -770,16 +770,22 @@ def ontop(
     This function uses collision points to determine which objects are resting on or contacting the surface of objectA.
 
     :param sim: The Simulator instance.
-    :param objectA: The ManagedRigidObject for which to query the 'ontop' set.
-    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param objectA: The ManagedRigidObject or object id for which to query the 'ontop' set.
     :param do_collision_detection: If True, a fresh discrete collision detection is run before the contact point query. Pass False to skip if a recent sim step or pre-process has run a collision detection pass on the current state.
     :param vertical_normal_error_threshold: The allowed error in normal alignment for a contact point to be considered "vertical" for this check. Functionally, if dot(contact normal, Y) <= threshold, the contact is ignored.
 
     :return: a list of integer object_ids for the set of objects "ontop" of objectA.
     """
 
-    if ao_link_map is None:
-        ao_link_map = get_ao_link_id_map(sim)
+    link_id = None
+    if isinstance(objectA, int):
+        subject_object = get_obj_from_id(sim, objectA)
+        if subject_object is None:
+            raise AssertionError(f"The passed object_id {objectA} is invalid.")
+        if subject_object.object_id != objectA:
+            # objectA is a link
+            link_id = subject_object.link_object_ids[objectA]
+        objectA = subject_object
 
     if do_collision_detection:
         sim.perform_discrete_collision_detection()
@@ -790,9 +796,13 @@ def ontop(
     for cp in sim.get_physics_contact_points():
         contacting_obj_id = None
         obj_is_b = False
-        if cp.object_id_a == objectA.object_id:
+        if cp.object_id_a == objectA.object_id and (
+            link_id is None or link_id == cp.link_id_a
+        ):
             contacting_obj_id = cp.object_id_b
-        if cp.object_id_b == objectA.object_id:
+        elif cp.object_id_b == objectA.object_id and (
+            link_id is None or link_id == cp.link_id_b
+        ):
             contacting_obj_id = cp.object_id_a
             obj_is_b = True
         if contacting_obj_id is not None:
@@ -806,6 +816,8 @@ def ontop(
                 > vertical_normal_error_threshold
             ):
                 ontop_object_ids.append(contacting_obj_id)
+
+    ontop_object_ids = list(set(ontop_object_ids))
 
     return ontop_object_ids
 
