@@ -150,6 +150,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._target_width = config.width
         self._pixel_size = config.pixel_size
         self._handle_size = config.handle_size
+        self._target_sensor = config.target_sensor
         self._origin_height = None
         self._origin_width = None
 
@@ -219,7 +220,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         # Get the camera pose
         hab_cam_T = (
             self._sim.agents[agent_id]
-            ._sensors["articulated_agent_arm_rgb"]
+            ._sensors[target_key]
             .render_camera.camera_matrix.inverted()
         )
         world_T_cam = cam_pose_from_xzy_to_xyz(
@@ -286,10 +287,18 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Get a correct observation space
         if self.agent_id is None:
-            target_key = "articulated_agent_arm_rgb"
+            target_key = (
+                "articulated_agent_arm_rgb"
+                if self._target_sensor is None
+                else self._target_sensor
+            )
             assert target_key in observations
         else:
-            target_key = f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+                if self._target_sensor is None
+                else f"agent_{self.agent_id}_{self._target_sensor}"
+            )
             assert target_key in observations
 
         # Get the image size
@@ -589,10 +598,12 @@ class ArtObjSuccess(Measure):
                 )
                 and (
                     self._sim.grasp_mgr.is_grasped
+                    or self._config.do_not_check_grasp
                 )  # Current the robot is grasping something
                 and (
                     task._sim.grasp_mgr.snapped_marker_id
                     == task.use_marker_name
+                    or self._config.do_not_check_grasp
                 )  # current grasp mgr is holding the correct drawers
             )
         else:
@@ -735,7 +746,11 @@ class ArtObjReward(RearrangeReward):
         cur_ee_dist_to_marker = task.measurements.measures[
             EndEffectorDistToMarker.cls_uuid
         ].get_metric()
-        if cur_has_grasped and not self._any_has_grasped:
+        if (
+            cur_has_grasped
+            and not self._any_has_grasped
+            and not self._config.do_not_check_grasp
+        ):
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker
                 reward -= self._config.wrong_grasp_pen
@@ -754,6 +769,7 @@ class ArtObjReward(RearrangeReward):
             task.actions["arm_action"].grip_ctrlr.does_call_grasp
             and self._config.gaze_method
             and not cur_has_grasped
+            and not self._config.do_not_check_grasp
         ):
             # early call to close the gripper
             reward -= self._config.early_grasp_pen
