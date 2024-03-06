@@ -58,7 +58,7 @@ class DebugObservation:
         """
         Save the Image as png to a given location.
 
-        :param output_path: Optional directory path for saving debug images and videos. Otherwise use self.output_path.
+        :param output_path: Directory path for saving the image.
         :param prefix: Optional prefix for output filename. Filename format: "<prefix>month_day_year_hourminutesecondmicrosecond.png"
 
         :return: file path of the saved image.
@@ -88,8 +88,7 @@ class DebugVisualizer:
     dbv = DebugVisualizer(sim)
     dbv.get_observation().show()
     dbv.translate(mn.Vector3(1,0,0), show=True)
-    dbv.peek_articulated_object(my_ao, show=True)
-    dbv.peek_rigid_object(my_ro, peek_all_axis=True, show=True)
+    dbv.peek(my_object, peek_all_axis=True).show()
     """
 
     def __init__(
