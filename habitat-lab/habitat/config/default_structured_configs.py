@@ -1024,6 +1024,7 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
     pose_angle_threshold: float = -1.0
+    height_delta_threshold: float = -1.0
 
 
 @dataclass
