@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
 
 import magnum as mn
 import numpy as np
@@ -29,10 +28,10 @@ class GuiRobotController(GuiController):
         is_multi_agent,
         gui_input,
         articulated_agent,
-        num_actions,
-        base_vel_action_idx,
-        num_base_vel_actions,
-        turn_scale,
+        num_actions: int,
+        base_vel_action_idx: int,
+        num_base_vel_actions: int,
+        turn_scale: float,
     ):
         super().__init__(agent_idx, is_multi_agent, gui_input)
         self._articulated_agent = articulated_agent
@@ -114,6 +113,7 @@ class GuiRobotController(GuiController):
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
 
+        # reference code in case we want to control the arm in the future
         # if arm_name in ac_spaces:
         #     arm_action_space = ac_spaces[arm_name][arm_k]
         #     arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
@@ -124,61 +124,29 @@ class GuiRobotController(GuiController):
         #     arm_action = None
         #     grasp = None
 
-        base_action: Any = None
-        if base_name in ac_spaces:
-            base_action_space = ac_spaces[base_name][base_k]
-            base_action = np.zeros(base_action_space.shape[0])
-        else:
-            base_action = None
+        assert base_name in ac_spaces
+        base_action_space = ac_spaces[base_name][base_k]
+        base_action = np.zeros(base_action_space.shape[0])
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        # Note addition of 180 degrees due to our camera convention
+        # Add 180 degrees due to our camera convention. See camera_helper.py _get_eye_and_lookat. Our camera yaw is used to offset the camera eye pos away from the lookat pos, so the resulting look direction yaw (from eye to lookat) is actually 180 degrees away from this yaw.
         turn_angle = self.angle_from_sim_obj_foward_dir_to_target_yaw(
             self._articulated_agent.sim_obj,
             self._cam_yaw + float(mn.Rad(mn.Deg(180))),
         )
 
-        if base_action is not None:
-            # sloppy: read gui_input directly instead of using _hint_walk_dir
-            if gui_input.get_key(KeyNS.F):
-                # walk forward in the camera yaw direction
-                base_action[0] += 1
-            if gui_input.get_key(KeyNS.V):
-                # walk forward in the opposite to camera yaw direction
-                base_action[0] -= 1
+        # sloppy: read gui_input directly instead of using _hint_walk_dir
+        if gui_input.get_key(KeyNS.F):
+            # walk forward in the camera yaw direction
+            base_action[0] += 1
+        if gui_input.get_key(KeyNS.V):
+            # walk forward in the opposite to camera yaw direction
+            base_action[0] -= 1
 
-            # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so we may not turn as much as computed here in the next step.
-            base_action[1] = -turn_angle * self._turn_scale
-
-            # reference code to interpret self._cam_yaw
-            # rot_y_rad = -self._cam_yaw + np.pi
-            # rotation = mn.Quaternion.rotation(
-            #     mn.Rad(rot_y_rad),
-            #     mn.Vector3(0, 1, 0),
-            # )
-            # humancontroller_base_user_input = np.array(
-            #     rotation.transform_vector(
-            #         mn.Vector3(humancontroller_base_user_input)
-            #     )
-            # )
-
-        # if base_action is not None:
-        #     # Base control
-        #     base_action = [0, 0]
-        #     if gui_input.get_key(KeyNS.J):
-        #         # Left
-        #         base_action[1] += 1
-        #     if gui_input.get_key(KeyNS.L):
-        #         # Right
-        #         base_action[1] -= 1
-        #     if gui_input.get_key(KeyNS.K):
-        #         # Back
-        #         base_action[0] -= 1
-        #     if gui_input.get_key(KeyNS.I):
-        #         # Forward
-        #         base_action[0] += 1
+        # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so, in the next env step, we may not turn as much as computed here. This can cause the Spot facing direction to slightly lag behind the camera yaw as yaw changes, which is fine.
+        base_action[1] = -turn_angle * self._turn_scale
 
         # if isinstance(arm_ctrlr, ArmEEAction):
         #     EE_FACTOR = 0.5
@@ -260,28 +228,7 @@ class GuiRobotController(GuiController):
 
         #     # logger.info(f"Robot arm joint state: {joint_state}")
 
-        action_names = []
-        action_args: Any = {}
-        if base_action is not None:
-            action_names.append(base_name)
-            action_args.update(
-                {
-                    base_k: base_action,
-                }
-            )
-        # if arm_action is not None:
-        #     action_names.append(arm_name)
-        #     action_args.update(
-        #         {
-        #             arm_k: arm_action,
-        #             grip_k: grasp,
-        #         }
-        #     )
-        if len(action_names) == 0:
-            raise ValueError("No active actions for human controller.")
-
         assert len(base_action) == self._num_base_vel_actions
-
         self._actions[
             self._base_vel_action_idx : self._base_vel_action_idx
             + self._num_base_vel_actions
