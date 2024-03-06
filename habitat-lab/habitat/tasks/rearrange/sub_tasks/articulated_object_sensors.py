@@ -486,7 +486,7 @@ class ArtObjAtDesiredState(Measure):
         """Calculates angle between gripper line-of-sight and given global position."""
         # Get the camera transformation
         cam_T = get_camera_transform(self._sim.articulated_agent)
-
+        print("cam_T:", cam_T.translation)
         # Get angle between (normalized) location and the vector that the camera should
         # look at
         obj_angle = get_camera_object_angle(
@@ -508,11 +508,20 @@ class ArtObjAtDesiredState(Measure):
             pose_angle = abs(
                 angle_between_quaternions(task.init_pose, ee_ang)
             ) - offset_in_yaw(self._sim.articulated_agent)
+            # Compute the height delta
+            height_delta = abs(handle_pos[1] - ee_pos[1])
             # Return metric
             if (
                 dist > self._min_dist
                 and dist < self._max_dist
-                and obj_angle < self._center_cone_angle_threshold
+                and (
+                    obj_angle < self._center_cone_angle_threshold
+                    or self._center_cone_angle_threshold < 0
+                )
+                and (
+                    height_delta < self._config.height_delta_threshold
+                    or self._config.height_delta_threshold == -1
+                )
                 and (
                     pose_angle < self._config.pose_angle_threshold
                     or self._config.pose_angle_threshold == -1
