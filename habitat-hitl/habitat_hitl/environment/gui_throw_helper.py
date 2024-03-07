@@ -66,7 +66,7 @@ class GuiThrowHelper:
         vel_vector, path_points = self.compute_velocity_throw(
             robot_root, target_on_floor
         )
-        # TODO: Only render on server.
+        # Sloppy: Use internal debug_line_render to render on server only.
         line_renderer = (
             self._app_service.gui_drawer.get_sim_debug_line_render()
         )

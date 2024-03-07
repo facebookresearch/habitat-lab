@@ -190,6 +190,7 @@ class RemoteClientState:
 
     def debug_visualize_client(self):
         """Visualize the received VR inputs (head and hands)."""
+        # Sloppy: Use internal debug_line_render to render on server only.
         line_renderer = self._gui_drawer.get_sim_debug_line_render()
         if not line_renderer:
             return
