@@ -19,16 +19,19 @@ habitat_baselines:
     should_load_ckpt: False
   rl:
     agent:
-      num_pool_agents_per_type: [1,1]
+      num_pool_agents_per_type: [1, 1]
+    policy:
+
 
 habitat_hitl:
   window:
     title: "Rearrange"
     width: 1300
     height: 1000
-  gui_controlled_agent:
-    agent_index: 0
-    ang_speed: 300
+  gui_controlled_agents:
+    - agent_index: 0
+      lin_speed: 10.0
+      ang_speed: 300
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
