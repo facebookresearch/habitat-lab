@@ -73,7 +73,9 @@ class GuiRobotController(GuiController):
         self._cam_yaw = cam_yaw
         self._hint_target_dir = target_dir
 
-    def angle_from_sim_obj_foward_dir_to_target_yaw(self, sim_obj, target_yaw):
+    def angle_from_sim_obj_forward_dir_to_target_yaw(
+        self, sim_obj, target_yaw
+    ):
         dir_a = sim_obj.rotation.transform_vector_normalized(
             mn.Vector3(1, 0, 0)
         )
@@ -132,7 +134,7 @@ class GuiRobotController(GuiController):
         gui_input = self._gui_input
 
         # Add 180 degrees due to our camera convention. See camera_helper.py _get_eye_and_lookat. Our camera yaw is used to offset the camera eye pos away from the lookat pos, so the resulting look direction yaw (from eye to lookat) is actually 180 degrees away from this yaw.
-        turn_angle = self.angle_from_sim_obj_foward_dir_to_target_yaw(
+        turn_angle = self.angle_from_sim_obj_forward_dir_to_target_yaw(
             self._articulated_agent.sim_obj,
             self._cam_yaw + float(mn.Rad(mn.Deg(180))),
         )
