@@ -10,7 +10,6 @@ from typing import Any
 import magnum as mn
 
 from habitat.config.default import patch_config
-
 from habitat_hitl._internal.config_helper import update_config
 from habitat_hitl._internal.hitl_bare_sim_driver import HitlBareSimDriver
 from habitat_hitl._internal.hitl_driver import HitlDriver
@@ -20,9 +19,10 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
-from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
+
 
 def _parse_debug_third_person(hitl_config, viewport_multiplier=(1, 1)):
     assert viewport_multiplier[0] > 0 and viewport_multiplier[1] > 0
@@ -110,7 +110,9 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         "relative_path_to_font": hitl_config.window.display_font_path,
     }
 
-    video_recorder = FramebufferVideoRecorder(hitl_config.video_recorder.output_file_path_prefix)
+    video_recorder = FramebufferVideoRecorder(
+        hitl_config.video_recorder.output_file_path_prefix
+    )
 
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
@@ -118,7 +120,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         viewport_rect,
         hitl_config.experimental.use_batch_renderer,
         text_drawer_kwargs=text_drawer_kwargs,
-        video_recorder=video_recorder
+        video_recorder=video_recorder,
     )
 
     # todo: move to HitlDriver
@@ -146,7 +148,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
         create_app_state_lambda,
-        video_recorder=video_recorder
+        video_recorder=video_recorder,
     )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)

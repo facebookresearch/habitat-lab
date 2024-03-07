@@ -10,6 +10,7 @@ from typing import Callable, Optional
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
@@ -18,7 +19,7 @@ from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.episode_helper import EpisodeHelper
 from habitat_sim.gfx import DebugLineRender
-from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
+
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
 class AppService:
@@ -100,7 +101,7 @@ class AppService:
     @property
     def sim(self) -> RearrangeSim:
         return self._sim
-    
+
     @property
     def reconfigure_sim(self) -> Callable:
         return self._reconfigure_sim

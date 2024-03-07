@@ -46,7 +46,11 @@ class AppStateRearrange(AppState):
         app_service: AppService,
     ):
         self._app_service = app_service
-        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl: Any = (
+            self._app_service.gui_agent_controllers[0]
+            if len(self._app_service.gui_agent_controllers)
+            else None
+        )
 
         # cache items from config; config is expensive to access at runtime
         config = self._app_service.config

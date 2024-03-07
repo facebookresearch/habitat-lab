@@ -200,9 +200,9 @@ class AppStateBasicViewer(AppState):
     version_base=None, config_path="config", config_name="basic_viewer"
 )
 def main(config):
-    if config.habitat_hitl.gui_controlled_agent.agent_index is not None:
+    if len(config.habitat_hitl.gui_controlled_agents) > 0:
         raise ValueError(
-            "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
+            "habitat_hitl.gui_controlled_agents is not supported for basic_viewer"
         )
 
     hitl_main(

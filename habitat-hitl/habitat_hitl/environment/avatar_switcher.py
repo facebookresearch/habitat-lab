@@ -157,9 +157,14 @@ class AvatarSwitcher:
         humanoid_controller = HumanoidRearrangeController(
             walk_pose_path=model[1]
         )
+        # todo: support for multiple gui-controlled agents here
+        assert len(self._app_service.hitl_config.gui_controlled_agents) == 1
+        gui_controlled_agent_config = (
+            self._app_service.hitl_config.gui_controlled_agents[0]
+        )
         humanoid_controller.set_framerate_for_linspeed(
-            self._app_service.hitl_config.gui_controlled_agent.lin_speed,
-            self._app_service.hitl_config.gui_controlled_agent.ang_speed,
+            gui_controlled_agent_config.lin_speed,
+            gui_controlled_agent_config.ang_speed,
             sim.ctrl_freq,
         )
 
