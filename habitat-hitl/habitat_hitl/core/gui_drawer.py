@@ -105,19 +105,23 @@ class GuiDrawer:
         color: mn.Color4,
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
+        billboard: bool = False,
     ) -> None:
         """
         Draw a circle in world-space or local-space (see pushTransform).
         The circle is an approximation; see numSegments.
         """
+        # If server rendering is enabled:
         if self._sim_debug_line_render:
             self._sim_debug_line_render.draw_circle(
                 translation, radius, color, num_segments, normal
             )
 
+        # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            self._client_message_manager.add_highlight(
+                translation, radius, billboard=billboard, color=color
+            )
 
     def draw_transformed_line(
         self,
