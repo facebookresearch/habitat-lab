@@ -166,7 +166,7 @@ class HitlDriver(AppDriver):
         self._debug_images = self._hitl_config.debug_images
 
         self._viz_anim_fraction: float = 0.0
-        self._pending_cursor_style = None
+        self._pending_cursor_style: Optional[Any] = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 

@@ -18,7 +18,6 @@ from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.episode_helper import EpisodeHelper
-from habitat_sim.gfx import DebugLineRender
 
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
