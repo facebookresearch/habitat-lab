@@ -11,6 +11,7 @@ from typing import Callable, List
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
@@ -29,7 +30,7 @@ class AppService:
         hitl_config,
         gui_input: GuiInput,
         remote_client_state: RemoteClientState,
-        line_render: DebugLineRender,
+        gui_drawer: GuiDrawer,
         text_drawer: AbstractTextDrawer,
         get_anim_fraction: Callable,
         env: Env,
@@ -47,7 +48,7 @@ class AppService:
         self._hitl_config = hitl_config
         self._gui_input = gui_input
         self._remote_client_state = remote_client_state
-        self._line_render = line_render
+        self._gui_drawer = gui_drawer
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
         self._env = env
@@ -78,8 +79,8 @@ class AppService:
         return self._remote_client_state
 
     @property
-    def line_render(self) -> DebugLineRender:
-        return self._line_render
+    def gui_drawer(self) -> GuiDrawer:
+        return self._gui_drawer
 
     @property
     def text_drawer(self) -> AbstractTextDrawer:

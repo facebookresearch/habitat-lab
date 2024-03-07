@@ -17,6 +17,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 
@@ -124,12 +125,16 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         debug_third_person_height=debug_third_person_height,
     )
 
+    debug_line_drawer = app_renderer._replay_renderer.debug_line_render(
+        0
+    )  # TODO: Null if headless
+
     driver = HitlDriver(
-        app_config,
-        gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
-        app_renderer._text_drawer,
-        create_app_state_lambda,
+        config=app_config,
+        gui_input=gui_app_wrapper.get_sim_input(),
+        debug_line_drawer=debug_line_drawer,
+        text_drawer=app_renderer._text_drawer,
+        create_app_state_lambda=create_app_state_lambda,
     )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)

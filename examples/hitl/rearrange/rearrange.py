@@ -120,7 +120,7 @@ class AppStateRearrange(AppState):
         if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             goal_position = self._goal_positions[self._held_target_obj_idx]
-            self._app_service.line_render.draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 goal_position, end_radius, color, 24
             )
 
@@ -134,7 +134,7 @@ class AppStateRearrange(AppState):
             # draw can place area
             can_place_position = mn.Vector3(goal_position)
             can_place_position[1] = self._get_agent_feet_height()
-            self._app_service.line_render.draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 can_place_position,
                 self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
@@ -252,7 +252,7 @@ class AppStateRearrange(AppState):
                 box_offset = mn.Vector3(
                     box_half_size, box_half_size, box_half_size
                 )
-                self._app_service.line_render.draw_box(
+                self._app_service.gui_drawer.draw_box(
                     this_target_pos - box_offset,
                     this_target_pos + box_offset,
                     color,
@@ -268,7 +268,7 @@ class AppStateRearrange(AppState):
                 # draw can grasp area
                 can_grasp_position = mn.Vector3(this_target_pos)
                 can_grasp_position[1] = self._get_agent_feet_height()
-                self._app_service.line_render.draw_circle(
+                self._app_service.gui_drawer.draw_circle(
                     can_grasp_position,
                     self._can_grasp_place_threshold,
                     mn.Color3(255 / 255, 255 / 255, 0),

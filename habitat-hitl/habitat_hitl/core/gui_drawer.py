@@ -8,7 +8,7 @@ from typing import Final, List, Optional
 
 import magnum as mn
 
-from habitat_hitl.core import ClientMessageManager
+from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_sim.gfx import DebugLineRender
 
 
@@ -17,7 +17,6 @@ class GuiDrawer:
     Renders UI elements.
     """
 
-    ID_BROADCAST: Final[int] = -1
     DEFAULT_SEGMENT_COUNT: Final[int] = 24
     DEFAULT_NORMAL: mn.Vector3 = mn.Vector3(0.0, 1.0, 0.0)
 
@@ -29,15 +28,21 @@ class GuiDrawer:
         """
         Construct the UI drawer.
         If sim_debug_line_render is defined, uses the habitat-sim DebugLineRender to render on the server viewport.
-        If client_message_manager is defined, sends render messages to the clients.
+        If client_message_manager is defined, sends render messages to the client.
         """
         self._sim_debug_line_render = sim_debug_line_render
         self._client_message_manager = client_message_manager
 
+    def get_sim_debug_line_render(self) -> Optional[DebugLineRender]:
+        """
+        Set the internal 'sim_debug_line_render' object, used for rendering lines onto the server.
+        Returns None if server rendering is disabled.
+        """
+        return self._sim_debug_line_render
+
     def set_line_width(
         self,
         line_width: float,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Set global line width for all lines rendered by GuiDrawer.
@@ -52,7 +57,6 @@ class GuiDrawer:
     def push_transform(
         self,
         transform: mn.Matrix4,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Push (multiply) a transform onto the transform stack, affecting all line-drawing until popped.
@@ -67,7 +71,6 @@ class GuiDrawer:
 
     def pop_transform(
         self,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         See push_transform.
@@ -84,7 +87,6 @@ class GuiDrawer:
         min_extent: mn.Vector3,
         max_extent: mn.Vector3,
         color: mn.Color4,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Draw a box in world-space or local-space (see pushTransform).
@@ -103,7 +105,6 @@ class GuiDrawer:
         color: mn.Color4,
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Draw a circle in world-space or local-space (see pushTransform).
@@ -124,7 +125,6 @@ class GuiDrawer:
         to_pos: mn.Vector3,
         from_color: mn.Color4,
         to_color: mn.Color4 = None,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Draw a line segment in world-space or local-space (see pushTransform) with interpolated color.
@@ -151,7 +151,6 @@ class GuiDrawer:
         color: mn.Color4,
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
-        destination_id: int = ID_BROADCAST,
     ) -> None:
         """
         Draw a sequence of line segments with circles at the two endpoints.
