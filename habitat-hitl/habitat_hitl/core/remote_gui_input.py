@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
+
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -87,7 +88,9 @@ class RemoteGuiInput:
         )
         # Beware that this is an agent-space quaternion.
         # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
-        rot_quat = rot_quat * mn.Quaternion.rotation(mn.Rad(math.pi), mn.Vector3(0, 1.0, 0))
+        rot_quat = rot_quat * mn.Quaternion.rotation(
+            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
+        )
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
@@ -113,7 +116,9 @@ class RemoteGuiInput:
         )
         # Beware that this is an agent-space quaternion.
         # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
-        rot_quat = rot_quat * mn.Quaternion.rotation(mn.Rad(math.pi), mn.Vector3(0, 1.0, 0))
+        rot_quat = rot_quat * mn.Quaternion.rotation(
+            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
+        )
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
