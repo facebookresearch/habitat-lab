@@ -56,15 +56,9 @@ Headless server:
 python examples/hitl/rearrange_v2/rearrange_v2.py +experiment=headless_server
 ```
 
-<<<<<<< HEAD
 To test Habitat-LLM episodes using a user-controlled humanoid use:
 ```bash
 python examples/hitl/rearrange_v2/rearrange_v2.py --config-name lang_rearrange_humanoid_only
-=======
-To testing Habitat-LLM episodes using a user-controlled humanoid use:
-```bash
-python examples/hitl/rearrange_v2/rearrange_v2.py --config-name rearrange_v2_humanoid_only
->>>>>>> cc45fdda6 (Update readme)
 ```
 
 ## Controls
