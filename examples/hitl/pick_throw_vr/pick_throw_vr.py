@@ -51,7 +51,11 @@ class AppStatePickThrowVr(AppState):
 
     def __init__(self, app_service: AppService):
         self._app_service = app_service
-        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl: Any = (
+            self._app_service.gui_agent_controllers[0]
+            if len(self._app_service.gui_agent_controllers)
+            else None
+        )
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
@@ -84,8 +88,6 @@ class AppStatePickThrowVr(AppState):
         self._avatar_switch_helper = AvatarSwitcher(
             self._app_service, self._gui_agent_ctrl
         )
-
-        self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._is_remote_active_toggle: bool = False
         self._count_tsteps_stop: int = 0

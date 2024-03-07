@@ -16,7 +16,11 @@ class AppStateTutorial(AppState):
         app_service,
     ):
         self._app_service = app_service
-        self._gui_agent_ctrl = self._app_service.gui_agent_controller
+        self._gui_agent_ctrl = (
+            self._app_service.gui_agent_controllers[0]
+            if len(self._app_service.gui_agent_controllers)
+            else None
+        )
         self._cam_transform = None
 
     def get_sim(self):

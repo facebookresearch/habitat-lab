@@ -95,13 +95,14 @@ habitat_hitl:
     max_look_up_angle: 15.0
     min_look_down_angle: -60.0
 
-  gui_controlled_agent:
-    # GUI-controlled agent index (must be None or >= 0 and < number of agents). Defaults to None, indicating that all the agents are policy-controlled.
-    agent_index: ~
-    # linear speed
-    lin_speed: 10.0
-    # angular speed
-    ang_speed: 10.0
+  # list of gui-controlled agents. Each list item should be a dict following the commented-out reference format below. Beware some apps only support one (or zero!) gui-controlled agent. For each Habitat env agent *without* a corresponding entry here, it will be policy-controlled.
+  gui_controlled_agents: []
+    # agent index corresponding to a Habitat env agent
+    # - agent_index: 0
+    # linear speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.ang_speed.
+    #   lin_speed: 10.0
+    # angular speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.lin_speed.
+    #   ang_speed: 10.0
 
   data_collection:
     # Filepath base used for saving various session data files, e.g. `my_output/my_session`. Specify a full path including basename, but not an extension.

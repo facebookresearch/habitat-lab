@@ -21,9 +21,10 @@ habitat_hitl:
     title: "Pick_throw_vr"
     width: 1300
     height: 1000
-  gui_controlled_agent:
-    agent_index: 1
-    ang_speed: 15
+  gui_controlled_agents:
+    - agent_index: 1
+      lin_speed: 10.0
+      ang_speed: 15
   networking:
     client_sync:
       # The client controls its own camera.

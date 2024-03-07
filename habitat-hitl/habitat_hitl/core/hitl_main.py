@@ -8,6 +8,7 @@ import os
 
 import magnum as mn
 
+from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
 from habitat_hitl._internal.hitl_driver import HitlDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -51,6 +52,8 @@ def hitl_main(app_config, create_app_state_lambda=None):
             "HITL apps expect 'data/' directory to exist. "
             "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
         )
+
+    app_config = patch_config(app_config)
 
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 
@@ -128,14 +131,6 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         app_renderer._text_drawer,
         create_app_state_lambda,
     )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(app_config.habitat.simulator.agents) == 1
-        and app_config.habitat_hitl.gui_controlled_agent.agent_index
-        is not None
-    ):
-        assert driver.get_sim().renderer is None
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
@@ -242,13 +237,6 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         HeadlessTextDrawer(),
         create_app_state_lambda,
     )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(config.habitat.simulator.agents) == 1
-        and config.habitat_hitl.gui_controlled_agent.agent_index is not None
-    ):
-        assert driver.get_sim().renderer is None
 
     _headless_app_loop(hitl_config, driver)
 

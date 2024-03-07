@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, List
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -41,7 +41,7 @@ class AppService:
         set_cursor_style: Callable,
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
-        gui_agent_controller: Optional[GuiController],
+        gui_agent_controllers: List[GuiController],
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -59,7 +59,7 @@ class AppService:
         self._set_cursor_style = set_cursor_style
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
-        self._gui_agent_controller = gui_agent_controller
+        self._gui_agent_controllers = gui_agent_controllers
 
     @property
     def config(self):
@@ -126,5 +126,5 @@ class AppService:
         return self._client_message_manager
 
     @property
-    def gui_agent_controller(self) -> Optional[GuiController]:
-        return self._gui_agent_controller
+    def gui_agent_controllers(self) -> List[GuiController]:
+        return self._gui_agent_controllers
