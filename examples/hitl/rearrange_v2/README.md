@@ -35,9 +35,9 @@ cd objects
 git checkout 3893a735352b92d46505f35d759553f5fc82a39b
 ```
 
-To test the app use:
+## Data directory
 
-
+Run `rearrange_v2` from the Habitat-lab root directory. It will expect `data/` for Habitat-lab data, and it will also look for `examples/hitl/rearrange_v2/app_data/demo.json.gz` (included alongside source files in our git repo).
 
 ## Example launch commands
 
@@ -56,9 +56,15 @@ Headless server:
 python examples/hitl/rearrange_v2/rearrange_v2.py +experiment=headless_server
 ```
 
+<<<<<<< HEAD
 To test Habitat-LLM episodes using a user-controlled humanoid use:
 ```bash
 python examples/hitl/rearrange_v2/rearrange_v2.py --config-name lang_rearrange_humanoid_only
+=======
+To testing Habitat-LLM episodes using a user-controlled humanoid use:
+```bash
+python examples/hitl/rearrange_v2/rearrange_v2.py --config-name rearrange_v2_humanoid_only
+>>>>>>> cc45fdda6 (Update readme)
 ```
 
 ## Controls
