@@ -230,6 +230,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
         self.coord_nav = self._task.nav_goal_pos
+        # self.coord_nav = None
         print("TEST COORD_NAV nav_goal_pos: ", self.coord_nav)
 
     def _find_path_given_start_end(self, start, end):

@@ -39,6 +39,7 @@ import threading
 
 from IPython import embed
 import cv2
+import matplotlib.pyplot as plt
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play/play.yaml"
@@ -69,81 +70,20 @@ class sim_env(threading.Thread):
         self.linear_velocity = [0,0,0]
         self.angular_velocity = [0,0,0]
 
-    def run(self):
-        """Publish sensor readings through ROS on a different thread.
-            This method defines what the thread does when the start() method
-            of the threading class is called
-        """
-        while not self._stop_event.is_set():
-            lock.acquire()
-            rgb_with_res = np.concatenate(
-                (
-                    np.float32(self.observations["agent_0_third_rgb"].ravel()),
-                    np.array(
-                        [512,512]
-                    ),
-                )
-            )
-            rgb2_with_res = np.concatenate(
-                (
-                    np.float32(self.observations["agent_1_head_rgb"].ravel()),
-                    np.array(
-                        [224,224]
-                    ),
-                )
-            )
-            # multiply by 10 to get distance in meters
-            depth_with_res = np.concatenate(
-                (
-                    np.float32(self.observations["agent_0_head_depth"].ravel() * 10),
-                    np.array(
-                        [
-                            128,128
-                        ]
-                    ),
-                )
-            )       
-            
-            lock.release()
-            time.sleep(0.1)
-
-    def update_agent_pos_vel(self): # KL:implement on this function
+    def update_agent_pos_vel(self, mid_door_pos: np.ndarray): # KL:implement on this function
+        embed()
         lin_vel = self.linear_velocity[2]
         ang_vel = self.angular_velocity[1]
         base_vel = [lin_vel, ang_vel]
         self.env._episode_over = False
         k = 'agent_1_oracle_nav_randcoord_action'
         # my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
-        # my_env.env.task.actions[k].coord_nav = np.array([0,0,2]) #FIXME: how to get goal_position from episode
+        my_env.env.task.actions[k].coord_nav = np.array(mid_door_pos)
         # print("ROBOT position: ", self.observations['agent_0_localization_sensor'][:3])
         self.env.task.actions[k].step()
         self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
     
-    def stop():
-        self._stop_event.set()
-
-
-# class ShortestPathFollowerAgent(Agent):
-#     r"""Implementation of the :ref:`habitat.core.agent.Agent` interface that
-#     uses :ref`habitat.tasks.nav.shortest_path_follower.ShortestPathFollower` utility class
-#     for extracting the action on the shortest path to the goal.
-#     """
-
-#     def __init__(self, env: habitat.Env, goal_radius: float):
-#         self.env = env
-#         self.shortest_path_follower = ShortestPathFollower(
-#             sim=cast("HabitatSim", env.sim),
-#             goal_radius=goal_radius,
-#             return_one_hot=False,
-#         )
-
-#     def act(self, observations: "Observations") -> Union[int, np.ndarray]:
-#         return self.shortest_path_follower.get_next_action(
-#             cast(NavigationEpisode, self.env.current_episode).goals[0].position
-#         )
-
-#     def reset(self) -> None:
-#         pass
+    
 
 def callback(vel, my_env):
     #### Robot Control ####
@@ -282,27 +222,177 @@ if __name__ == "__main__":
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
     
+    
+    my_env = sim_env(config)
+    
+    # save the top down map
+    # top_down_map = maps.get_topdown_map_from_sim(
+    #     cast("HabitatSim", my_env.env.sim), map_resolution=5000
+    # )
+    pathfinder = my_env.env.sim.pathfinder
+    top_down_map = maps.get_topdown_map(
+            pathfinder, height=0.0, meters_per_pixel=0.025
+        )
+
+    recolor_map = np.array(
+        [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
+    )
+    top_down_map = recolor_map[top_down_map]
+    cv2.imwrite("top_down_map_test.jpg", top_down_map)
+    
+    
+    image = plt.imread("top_down_map_test.jpg")
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(image)
+    plt.title('Click on the image to get coordinates')
+
+    coords = []
+    def onclick(event):
+        global coords
+        ix, iy = int(event.xdata), int(event.ydata)  # Convert float coordinates to integers
+        print(f'x = {ix}, y = {iy}')
+
+        coords.append([ix, iy])
+        
+        if len(coords) == 2:
+            fig.canvas.mpl_disconnect(cid)
+    # Connect the onclick function to the mouse click event
+    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    # Display the image
+    plt.show()
+
+
+    def to_grid(pathfinder, points, grid_dimensions):
+        map_points = maps.to_grid(
+                            points[2],
+                            points[0],
+                            grid_dimensions,
+                            pathfinder=pathfinder,
+                        )
+        return ([map_points[1], map_points[0]])
+    def from_grid(pathfinder, points, grid_dimensions):
+        floor_y = 0.0
+        map_points = maps.from_grid(
+                            points[1],
+                            points[0],
+                            grid_dimensions,
+                            pathfinder=pathfinder,
+                        )
+        map_points_3d = np.array([map_points[1], floor_y, map_points[0]])
+        map_points_3d = pathfinder.snap_point(map_points_3d)
+        return map_points_3d
+    
+    # Get the end point for door_line
+    
+    print("-------Coords for Door position----------")
+    grid_dim = (top_down_map.shape[0], top_down_map.shape[1])
+    # embed()
+    door1 = from_grid(pathfinder, coords[0], grid_dim)
+    door2 = from_grid(pathfinder, coords[1], grid_dim)
+    
+    #TODO: test door distance
+    z1 = my_env.observations['agent_0_localization_sensor'][1] #from robot_pos height
+    door1_pos = np.array([door1[0], z1, door1[2]])
+    door2_pos = np.array([door2[0], z1, door2[2]])
+    mid_door_pos = (door1_pos + door2_pos) / 2.0
+    print("Get Door position: ", door1_pos, door2_pos)
+    print("Mid Door position: ", mid_door_pos)
+    
+    # Visualize door line
+    cv2.line(
+        top_down_map,
+        [coords[0][0], coords[0][1]],
+        [coords[1][0], coords[1][1]],
+        1,
+        thickness=2
+        )
+    robot_pos = my_env.observations['agent_0_localization_sensor'][:3]
+    robot_xy = to_grid(pathfinder, robot_pos, grid_dim)
+    human_pos = my_env.observations['agent_1_localization_sensor'][:3]
+    human_xy = to_grid(pathfinder, human_pos, grid_dim)
+    print("TEST ROBOT, HUMAN xy position: ", robot_xy, human_xy)
+    cv2.circle(top_down_map, [int(robot_xy[0]), int(robot_xy[1])], 10, (0, 255, 0), -1) #green points
+    cv2.circle(top_down_map, [int(human_xy[0]), int(human_xy[1])], 10, (255, 0, 255), -1) #green opposite points
+    #visualize goal position
+    mid_door_xy = to_grid(pathfinder, mid_door_pos, grid_dim)
+    cv2.circle(top_down_map, [int(mid_door_xy[0]), int(mid_door_xy[1])], 10, (255, 255, 0), -1)
+    cv2.imwrite("top_down_map_door.jpg", top_down_map)
+    
+    
+    
+    #check mid_door_pos to obstacle in realword
+    im_1 = my_env.observations["agent_0_third_rgb"]
+    cv2.imwrite("top_down_map_robot_view.jpg", im_1)
+    dist_to_obs = pathfinder.distance_to_closest_obstacle(
+        mid_door_pos,
+        max_search_radius=10.0
+        )
+    print("Test distance door to obstacle: ", dist_to_obs)
+
+    # def sample_points_helper(x, y, radius, num_points=10):
+    #     # Generate random angles
+    #     angles = np.linspace(0, 2*np.pi, num_points)
+    #     # Calculate coordinates of sampled points
+    #     points = [(x + radius * np.cos(angle), y + radius * np.sin(angle)) for angle in angles]
+
+    #     return points
+    
+    def get_opposite_points():
+        sampled_points_a = []
+        sampled_points_b = []
+        # samples = sample_points_helper(mid_door_pos[:1], mid_door_pos[1:2], 5)
+        # for point in samples:
+        #     x, y = point
+        #     det = (x - r1) * (c2 - c1) - (y - c1) * (r2 - r1)
+        #     if det > 0:
+        #         sampled_points_a.append(point)
+        #     else:
+        #         sampled_points_b.append(point)
+        
+        for i in range(10):
+            sample = pathfinder.get_random_navigable_point_near(
+                circle_center=mid_door_pos, radius=2 #TODO
+            )
+            print(sample)
+            x = sample[0]
+            y = sample[2]
+            r1, r2 = door1[0], door2[0]
+            c1, c2 = door1[2], door2[2]
+            det = (x - r1) * (c2 - c1) - (y - c1) * (r2 - r1)
+            if det > 0:
+                sampled_points_a.append(sample)
+            else:
+                sampled_points_b.append(sample)
+        print("TEST a, b groups: ", sampled_points_a, sampled_points_b)
+        # Visualize the points
+        for a in sampled_points_a:
+            i, j = to_grid(pathfinder, a, grid_dim)
+            cv2.circle(top_down_map, [i, j], 5, (0, 0, 255), -1)  #red points
+        for b in sampled_points_b:
+            i, j = to_grid(pathfinder, b, grid_dim)
+            cv2.circle(top_down_map, [i, j], 5, (255, 0, 0), -1) #blue points
+        cv2.imwrite("top_down_map_door_samples.jpg", top_down_map)
+    
+    get_opposite_points()
+    
+    
+    # divide from and to points
+    print("Generate pos from map finished")
+    
+    #-----Play agent
     human_images = []
     robot_images = []
-    my_env = sim_env(config)
-    # print("TEST Observations", my_env.observations)
-    
-    for i in range (800):
+    print("ROBOT position: ", my_env.observations['agent_0_localization_sensor'][:3])
+    for i in range (1000):
    
-        my_env.update_agent_pos_vel()
+        my_env.update_agent_pos_vel(mid_door_pos)
         im_0 = my_env.observations["agent_1_head_rgb"]
         im_1 = my_env.observations["agent_0_third_rgb"]
-        # top_down_map = maps.get_topdown_map_from_sim(
-        #     cast("HabitatSim", my_env.env.sim), map_resolution=1024
-        # )
-        # recolor_map = np.array(
-        #     [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
-        # )
-        # top_down_map = recolor_map[top_down_map]
 
         human_images.append(im_0)
         robot_images.append(im_1)
-    # cv2.imwrite("top_down_map.jpg", top_down_map)
+
     images_to_video(human_images, "test", "human_trajectory")
     images_to_video(robot_images, "test", "robot_trajectory")
     print("Episode finished")

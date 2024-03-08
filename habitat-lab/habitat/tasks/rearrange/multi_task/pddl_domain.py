@@ -49,6 +49,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+from IPython import embed
 
 class PddlDomain:
     """

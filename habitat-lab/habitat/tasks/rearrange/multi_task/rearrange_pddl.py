@@ -17,6 +17,8 @@ from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
+from IPython import embed
+
 
 class SimulatorObjectType(Enum):
     MOVABLE_ENTITY = "movable_entity_type"

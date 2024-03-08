@@ -99,6 +99,8 @@ data
 /video_dir_old
 *.zip
 /test
+navmeshes/
+*.jpg
 
 # outputs from other libraries
 /sandbox

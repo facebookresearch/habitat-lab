@@ -34,6 +34,7 @@ from habitat.datasets.rearrange.navmesh_utils import (
     get_largest_island_index,
     path_is_navigable_given_robot,
 )
+from IPython import embed
 
 def get_config_defaults() -> "DictConfig":
     """

@@ -13,6 +13,8 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
+from IPython import embed
+
 
 @registry.register_task(name="RearrangePddlTask-v0")
 class PddlTask(RearrangeTask):
@@ -36,6 +38,7 @@ class PddlTask(RearrangeTask):
 
     def reset(self, episode: Episode):
         super().reset(episode, fetch_observations=False)
+        # embed()
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )
