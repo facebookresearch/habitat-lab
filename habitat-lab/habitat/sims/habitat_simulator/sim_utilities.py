@@ -218,6 +218,61 @@ def get_obj_size_along(
     return local_vec_size, center
 
 
+def size_regularized_distance(
+    sim: habitat_sim.Simulator,
+    object_id_a: int,
+    object_id_b: int,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> float:
+    """
+    Get the heuristic surface-to-surface distance between two objects (regularized by their individual heuristic sizes).
+    Uses each object's bounding box to estimate the distance from center to boundary along the line between object centers. These object sizes are then subtracted from the center-to-center distance as a heuristic for surface-to-surface distance.
+
+    :param sim: The Simulator instance.
+    :param object_id_a: integer id of the first object
+    :param object_id_b: integer id of the second object
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: The heuristic surface-2-surface distance between the objects.
+    """
+
+    # distance to self
+    if object_id_a == object_id_b:
+        return 0
+
+    assert (
+        object_id_a != habitat_sim.stage_id
+        and object_id_b != habitat_sim.stage_id
+    ), "Cannot compute distance between the scene and its contents."
+
+    obja_bb, transform_a = get_bb_for_object_id(
+        sim, object_id_a, ao_link_map, ao_aabbs
+    )
+    objb_bb, transform_b = get_bb_for_object_id(
+        sim, object_id_b, ao_link_map, ao_aabbs
+    )
+
+    a_center = transform_a.transform_point(obja_bb.center())
+    b_center = transform_b.transform_point(objb_bb.center())
+
+    disp = a_center - b_center
+    dist = disp.length()
+    disp_dir = disp / dist
+
+    local_scale_a = mn.Matrix4.scaling(obja_bb.size() / 2.0)
+    local_vec_a = transform_a.inverted().transform_vector(disp_dir)
+    local_vec_size_a = local_scale_a.transform_vector(local_vec_a).length()
+
+    local_scale_b = mn.Matrix4.scaling(objb_bb.size() / 2.0)
+    local_vec_b = transform_b.inverted().transform_vector(disp_dir)
+    local_vec_size_b = local_scale_b.transform_vector(local_vec_b).length()
+
+    # if object bounding boxes are significantly overlapping then distance may be negative, clamp to 0
+    return max(0, dist - local_vec_size_a - local_vec_size_b)
+
+
 def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
