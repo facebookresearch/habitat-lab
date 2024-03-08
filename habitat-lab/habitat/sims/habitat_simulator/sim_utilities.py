@@ -139,6 +139,56 @@ def get_ao_global_bb(
     return cumulative_global_bb
 
 
+def get_bb_for_object_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> Tuple[mn.Range3D, mn.Matrix4]:
+    """
+    Wrapper to get a bb and global transform directly from an object id.
+    Handles RigidObject and ArticulatedLink ids.
+
+    :param sim: The Simulator instance.
+    :param obj_id: The integer id of the object or link.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: tuple (local_aabb, global_transform)
+    """
+
+    # stage bounding box
+    if obj_id == habitat_sim.stage_id:
+        return (
+            sim.get_active_scene_graph().get_root_node().cumulative_bb,
+            mn.Matrix4.identity_init(),
+        )
+
+    obj = get_obj_from_id(sim, obj_id, ao_link_map)
+
+    assert (
+        obj is not None
+    ), f"object id {obj_id} is not found, this is unexpected. Invalid/stale object id?"
+
+    if isinstance(obj, habitat_sim.physics.ManagedRigidObject):
+        return (obj.root_scene_node.cumulative_bb, obj.transformation)
+
+    # ManagedArticulatedObject
+    if obj.object_id == obj_id:
+        # this is the AO itself
+        ao_aabb = None
+        if ao_aabbs is None or obj_id not in ao_aabbs:
+            ao_aabb = get_ao_root_bb(obj)
+        else:
+            ao_aabb = ao_aabbs[obj_id]
+        return (ao_aabb, obj.transformation)
+
+    # this is a link
+    link_node = obj.get_link_scene_node(obj.link_object_ids[obj_id])
+    link_transform = link_node.absolute_transformation()
+    return (link_node.cumulative_bb, link_transform)
+
+
 def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
@@ -458,13 +508,14 @@ def get_obj_from_id(
     :return: a ManagedObject or None
     """
 
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_id(obj_id):
+        return rom.get_object_by_id(obj_id)
+
     if ao_link_map is None:
         # Note: better to pre-compute this and pass it around
         ao_link_map = get_ao_link_id_map(sim)
 
-    rom = sim.get_rigid_object_manager()
-    if rom.get_library_has_id(obj_id):
-        return rom.get_object_by_id(obj_id)
     aom = sim.get_articulated_object_manager()
     if obj_id in ao_link_map:
         return aom.get_object_by_id(ao_link_map[obj_id])
@@ -548,7 +599,7 @@ def get_articulated_object_global_keypoints(
     """
 
     ao_bb = None
-    if ao_aabbs is None:
+    if ao_aabbs is None or object_a.object_id not in ao_aabbs:
         ao_bb = get_ao_root_bb(object_a)
     else:
         ao_bb = ao_aabbs[object_a.object_id]
