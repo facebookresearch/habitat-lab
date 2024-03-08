@@ -197,7 +197,7 @@ def get_obj_size_along(
     ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> Tuple[float, mn.Vector3]:
     """
-    Uses object bounding box as a heuristic to estimate object size in a particular global direction.
+    Uses object bounding box ellipsoid scale as a heuristic to estimate object size in a particular global direction.
 
     :param sim: The Simulator instance.
     :param object_id: The integer id of the object or link.
@@ -205,7 +205,7 @@ def get_obj_size_along(
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
 
-    :return: distance along the specified direction and center of bounding box from which distance was estimated.
+    :return: distance along the specified direction and global center of bounding box from which distance was estimated.
     """
 
     obj_bb, transform = get_bb_for_object_id(
@@ -213,7 +213,7 @@ def get_obj_size_along(
     )
     center = transform.transform_point(obj_bb.center())
     local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
-    local_vec = transform.inverted().transform_vector(global_vec)
+    local_vec = transform.inverted().transform_vector(global_vec).normalized()
     local_vec_size = local_scale.transform_vector(local_vec).length()
     return local_vec_size, center
 
@@ -962,6 +962,58 @@ def ontop(
     ontop_object_ids = list(set(ontop_object_ids))
 
     return ontop_object_ids
+
+
+def on_floor(
+    sim: habitat_sim.Simulator,
+    object_a: habitat_sim.physics.ManagedRigidObject,
+    distance_threshold: float = 0.04,
+    alt_pathfinder: habitat_sim.nav.PathFinder = None,
+    island_index: int = -1,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> bool:
+    """
+    Gets whether or not the object is on the "floor" using the navmesh as an abstraction.
+    NOTE: alt_pathfinder option can be used to provide an alternative navmesh sized for objects. This would allow objects to be, for example, under tables or in corners and still be considered on the navmesh.
+
+    :param sim: The Simulator instance.
+    :param object_a: The object instance.
+    :param distance_threshold: Maximum allow-able displacement between current object position and navmesh snapped position.
+    :param alt_pathfinder:Optionally provide an alternative PathFinder specifically configured for this check. Defaults to sim.pathfinder.
+    :param island_index: Optionally limit allowed navmesh to a specific island. Default (-1) is full navmesh.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: Whether or not the object is considered "on the floor" given the configuration.
+    """
+
+    assert isinstance(
+        object_a, habitat_sim.physics.ManagedRigidObject
+    ), "Object must be ManagedRigidObject, not implemented for ArticulatedObjects or links."
+
+    if alt_pathfinder is None:
+        alt_pathfinder = sim.pathfinder
+
+    assert alt_pathfinder.is_loaded
+
+    # use the object's heuristic size to estimate distance from the object center to the navmesh in order to regularize the navigability constraint for larger objects
+    obj_size, center = get_obj_size_along(
+        sim,
+        object_a.object_id,
+        mn.Vector3(0.0, -1.0, 0.0),
+        ao_link_map=ao_link_map,
+        ao_aabbs=ao_aabbs,
+    )
+
+    obj_snap = alt_pathfinder.snap_point(center, island_index=island_index)
+
+    # include navmesh cell height error in the distance threshold.
+    navmesh_cell_height = alt_pathfinder.nav_mesh_settings.cell_height
+    snap_disp = obj_snap - center
+    snap_dist = snap_disp.length() - obj_size - (navmesh_cell_height / 2.0)
+
+    return snap_dist <= distance_threshold
 
 
 def object_in_region(
