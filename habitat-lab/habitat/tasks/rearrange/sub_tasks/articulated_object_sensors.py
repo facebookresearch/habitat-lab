@@ -151,6 +151,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._pixel_size = config.pixel_size
         self._handle_size = config.handle_size
         self._target_sensor = config.target_sensor
+        self._drop_frame_rate = config.drop_frame_rate
         self._origin_height = None
         self._origin_width = None
 
@@ -305,7 +306,17 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._origin_height, self._origin_width, _ = observations[
             target_key
         ].shape
+
+        # Init image
         img = np.zeros((self._origin_height, self._origin_width, 1))
+
+        # If we want to drop this frame, return an empty observation
+        # This is to simulate the case where the real world object detection
+        # is not working properly
+        drop_random_num = np.random.uniform()
+        if drop_random_num >= 1.0 - self._drop_frame_rate:
+            img = self._crop_image(img)
+            return img
 
         # Get the handle transformation
         handle_T = self._task.get_use_marker().current_transform

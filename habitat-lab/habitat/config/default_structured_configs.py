@@ -677,6 +677,8 @@ class HandleBBoxSensorConfig(LabSensorConfig):
     handle_size: List[float] = field(default_factory=lambda: [0.02, 0.1])
     # Target sensor's parameters. If users want to use a specific target sensor, they can specify it here
     target_sensor: Optional[str] = None
+    # Drop frame rate: Zero means there is no frame rate dropping
+    drop_frame_rate: float = 0.0
 
 
 @dataclass
