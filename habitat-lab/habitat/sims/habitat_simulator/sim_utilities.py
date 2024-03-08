@@ -808,13 +808,13 @@ def ontop(
             contacting_obj_id = cp.object_id_a
             obj_is_b = True
         if contacting_obj_id is not None:
-            contact_dir_me = (
+            contact_normal = (
                 cp.contact_normal_on_b_in_ws
                 if obj_is_b
                 else -cp.contact_normal_on_b_in_ws
             )
             if (
-                mn.math.dot(contact_dir_me, yup)
+                mn.math.dot(contact_normal, yup)
                 > vertical_normal_error_threshold
             ):
                 ontop_object_ids.append(contacting_obj_id)
