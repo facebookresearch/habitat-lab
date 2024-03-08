@@ -506,19 +506,24 @@ def test_ontop_util():
 
         # in the initial state:
         # objects are on the table
-        assert ontop(sim, table_object) == [102, 103, 51, 52, 53, 55]
-        assert ontop(sim, table_object) == ontop(sim, table_object.object_id)
+        assert ontop(sim, table_object, True) == [102, 103, 51, 52, 53, 55]
+        assert ontop(sim, table_object, False) == ontop(
+            sim, table_object.object_id, False
+        )
         # objects about the counter are floating slightly and don't register
-        assert len(ontop(sim, counter_object)) == 0
-        assert len(ontop(sim, drawer_link_object_id)) == 0
+        assert len(ontop(sim, counter_object, False)) == 0
+        assert len(ontop(sim, drawer_link_object_id, False)) == 0
 
         # after some simulation, object settle onto the counter and drawer
         sim.step_physics(0.75)
 
         # objects are on the table
-        assert ontop(sim, table_object) == [102, 103, 51, 52, 53, 55]
-        assert ontop(sim, table_object) == ontop(sim, table_object.object_id)
-        on_counter = ontop(sim, counter_object)
+        # NOTE: we only do collision detection on the first query after a state change
+        assert ontop(sim, table_object, True) == [102, 103, 51, 52, 53, 55]
+        assert ontop(sim, table_object, False) == ontop(
+            sim, table_object.object_id, False
+        )
+        on_counter = ontop(sim, counter_object, False)
         assert on_counter == [
             65,
             1,
@@ -539,7 +544,7 @@ def test_ontop_util():
             63,
         ]
         assert container_object.object_id in on_counter
-        assert ontop(sim, drawer_link_object_id) == [
+        assert ontop(sim, drawer_link_object_id, False) == [
             container_object.object_id
         ]
-        assert ontop(sim, counter_object.object_id) == on_counter
+        assert ontop(sim, counter_object.object_id, False) == on_counter

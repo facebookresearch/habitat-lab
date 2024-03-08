@@ -761,7 +761,7 @@ def ontop(
         habitat_sim.physics.ManagedArticulatedObject,
         int,
     ],
-    do_collision_detection: bool = True,
+    do_collision_detection: bool,
     vertical_normal_error_threshold: float = 0.75,
 ) -> List[int]:
     """
