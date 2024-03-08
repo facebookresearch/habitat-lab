@@ -189,6 +189,35 @@ def get_bb_for_object_id(
     return (link_node.cumulative_bb, link_transform)
 
 
+def get_obj_size_along(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    global_vec: mn.Vector3,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> Tuple[float, mn.Vector3]:
+    """
+    Uses object bounding box as a heuristic to estimate object size in a particular global direction.
+
+    :param sim: The Simulator instance.
+    :param object_id: The integer id of the object or link.
+    :param global_vec: Vector in global space indicating the direction to approximate object size.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: distance along the specified direction and center of bounding box from which distance was estimated.
+    """
+
+    obj_bb, transform = get_bb_for_object_id(
+        sim, object_id, ao_link_map, ao_aabbs
+    )
+    center = transform.transform_point(obj_bb.center())
+    local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
+    local_vec = transform.inverted().transform_vector(global_vec)
+    local_vec_size = local_scale.transform_vector(local_vec).length()
+    return local_vec_size, center
+
+
 def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
@@ -202,7 +231,10 @@ def bb_ray_prescreen(
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection.
     :param check_all_corners: Optionally cast rays from all bounding box corners instead of only casting a ray from the center of mass.
+
+    :return: a dict of raycast metadata: "base_rel_height","surface_snap_point", "raycast_results"
     """
+
     if support_obj_ids is None:
         # set default support surface to stage/ground mesh
         # STAGE ID IS habitat_sim.stage_id
@@ -300,13 +332,15 @@ def snap_down(
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (0).
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
 
+    :return: boolean placement success.
+
     Reject invalid placements by checking for penetration with other existing objects.
-    Returns boolean success.
     If placement is successful, the object state is updated to the snapped location.
     If placement is rejected, object position is not modified and False is returned.
 
     To use this utility, generate an initial placement for any object above any of the designated support surfaces and call this function to attempt to snap it onto the nearest surface in the gravity direction.
     """
+
     cached_position = obj.translation
 
     if support_obj_ids is None:
