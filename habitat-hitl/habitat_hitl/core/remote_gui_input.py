@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
+
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -84,7 +86,11 @@ class RemoteGuiInput:
         rot_quat = mn.Quaternion(
             mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
         )
-
+        # Beware that this is an agent-space quaternion.
+        # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
+        rot_quat = rot_quat * mn.Quaternion.rotation(
+            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
+        )
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
@@ -108,7 +114,11 @@ class RemoteGuiInput:
         rot_quat = mn.Quaternion(
             mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
         )
-
+        # Beware that this is an agent-space quaternion.
+        # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
+        rot_quat = rot_quat * mn.Quaternion.rotation(
+            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
+        )
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
@@ -175,7 +185,8 @@ class RemoteGuiInput:
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
             )
             size = 0.5
-            # draw a frustum (forward is z+)
+
+            # Draw a frustum (forward is flipped (z+))
             self._debug_line_render.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, size, size),
@@ -203,6 +214,7 @@ class RemoteGuiInput:
 
             self._debug_line_render.pop_transform()
 
+        # Draw controller rays (forward is flipped (z+))
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             if hand_pos is not None and hand_rot_quat is not None:
