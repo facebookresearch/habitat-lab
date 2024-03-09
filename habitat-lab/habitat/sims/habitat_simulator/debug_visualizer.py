@@ -359,7 +359,7 @@ class DebugVisualizer:
         ] = None,
     ) -> DebugObservation:
         """
-        Generic "peek" function taking as input all reasonable ways to define a subject to peek.
+        Generic "peek" function generating a DebugObservation image or a set of images centered on a subject and taking as input all reasonable ways to define a subject to peek. Use this function to quickly "peek" at an object or the top-down view of the full scene.
 
         :param subject: The subject to visualize. One of: ManagedRigidObject, ManagedArticulatedObject, an object_id integer, a string "stage", "scene", or handle of an object instance.
         :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.

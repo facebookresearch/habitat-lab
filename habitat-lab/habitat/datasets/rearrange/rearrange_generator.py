@@ -1013,6 +1013,7 @@ class RearrangeEpisodeGenerator:
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
                 if self._render_debug_obs:
+                    # NOTE: if debugging visualization is on, any unstable objects will have a peek image prefixed "unstable_" generated to aid debugging
                     self.dbv.peek(
                         new_object,
                         peek_all_axis=True,
