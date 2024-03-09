@@ -659,8 +659,28 @@ class ArtJointSensorNoVelSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ArtPoseDeltaSensorConfig(LabSensorConfig):
+    type: str = "ArtPoseDeltaSensor"
+
+
+@dataclass
 class MarkerRelPosSensorConfig(LabSensorConfig):
     type: str = "MarkerRelPosSensor"
+
+
+@dataclass
+class HandleBBoxSensorConfig(LabSensorConfig):
+    type: str = "HandleBBoxSensor"
+    height: int = 480
+    width: int = 640
+    # The pixel size (in cell) drawn in the image of reach handle point
+    pixel_size: int = 2
+    # Height - Width for the handle size in meter
+    handle_size: List[float] = field(default_factory=lambda: [0.02, 0.1])
+    # Target sensor's parameters. If users want to use a specific target sensor, they can specify it here
+    target_sensor: Optional[str] = None
+    # Drop frame rate: Zero means there is no frame rate dropping
+    drop_frame_rate: float = 0.0
 
 
 @dataclass
@@ -1003,6 +1023,12 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
+    gaze_method: bool = False
+    center_cone_vector: Optional[List[float]] = None
+    gaze_distance_range: Optional[List[float]] = None
+    center_cone_angle_threshold: float = 0.0
+    pose_angle_threshold: float = -1.0
+    height_delta_threshold: float = -1.0
 
 
 @dataclass
@@ -1028,6 +1054,8 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
     must_call_stop: bool = True
+    gaze_method: bool = False
+    do_not_check_grasp: bool = False
 
 
 @dataclass
@@ -1059,6 +1087,11 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    gaze_method: bool = False
+    early_grasp_pen: float = 5.0
+    ee_orientation_reward: float = 0.0
+    # If we want to check the robot actually grasps the object
+    do_not_check_grasp: bool = False
 
 
 @dataclass
@@ -2349,6 +2382,12 @@ cs.store(
     node=ArmDepthBBoxSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.handle_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="handle_bbox_sensor",
+    node=HandleBBoxSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.arm_receptacle_semantic_sensor",
     group="habitat/task/lab_sensors",
     name="arm_receptacle_semantic_sensor",
@@ -2503,6 +2542,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="joint_velocity_sensor",
     node=JointVelocitySensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.art_pose_delta_sensor",
+    group="habitat/task/lab_sensors",
+    name="art_pose_delta_sensor",
+    node=ArtPoseDeltaSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_gps_compass_sensor",

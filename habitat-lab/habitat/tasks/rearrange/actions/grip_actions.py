@@ -37,6 +37,10 @@ class GripSimulatorTaskAction(ArticulatedAgentAction):
 
 @registry.register_task_action
 class MagicGraspAction(GripSimulatorTaskAction):
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.does_call_grasp = False
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -88,6 +92,12 @@ class MagicGraspAction(GripSimulatorTaskAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
+
+        # A useful flag to indicate whether the robot calls grasp or ungrasp.
+        if grip_action >= 0:
+            self.does_call_grasp = True
+        else:
+            self.does_call_grasp = False
 
         if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()

@@ -187,3 +187,65 @@ def is_point_in_triangle(
     if np.dot(v, w) < 0.0:
         return False
     return True
+
+
+def cam_pose_from_opengl_to_opencv(cam_pose: np.ndarray) -> np.ndarray:
+    """
+    Convert pose matrix from OpenGL (habitat) to OpenCV convention.
+    """
+    assert cam_pose.shape == (4, 4), f"Invalid pose shape {cam_pose.shape}"
+    transform = np.array(
+        [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
+    )
+    cam_pose = cam_pose @ transform
+    return cam_pose
+
+
+def cam_pose_from_xzy_to_xyz(camera_pose_xzy: np.ndarray) -> np.ndarray:
+    """
+    Convert from habitat to common convention
+    """
+    assert camera_pose_xzy.shape == (
+        4,
+        4,
+    ), f"Invalid pose shape {camera_pose_xzy.shape}"
+    # Extract rotation matrix and translation vector from the camera pose
+    rotation_matrix_xzy = camera_pose_xzy[:3, :3]
+    translation_vector_xzy = camera_pose_xzy[:3, 3]
+
+    # Convert rotation matrix from XZ-Y to XYZ convention
+    rotation_matrix_xyz = np.array(
+        [
+            [
+                rotation_matrix_xzy[0, 0],
+                rotation_matrix_xzy[0, 1],
+                rotation_matrix_xzy[0, 2],
+            ],
+            [
+                -rotation_matrix_xzy[2, 0],
+                -rotation_matrix_xzy[2, 1],
+                -rotation_matrix_xzy[2, 2],
+            ],
+            [
+                rotation_matrix_xzy[1, 0],
+                rotation_matrix_xzy[1, 1],
+                rotation_matrix_xzy[1, 2],
+            ],
+        ]
+    )
+
+    # Convert translation vector from XZ-Y to XYZ convention
+    translation_vector_xyz = np.array(
+        [
+            translation_vector_xzy[0],
+            -translation_vector_xzy[2],
+            translation_vector_xzy[1],
+        ]
+    )
+
+    # Create the new camera pose matrix in XYZ convention
+    camera_pose_xyz = np.eye(4)
+    camera_pose_xyz[:3, :3] = rotation_matrix_xyz
+    camera_pose_xyz[:3, 3] = translation_vector_xyz
+
+    return camera_pose_xyz

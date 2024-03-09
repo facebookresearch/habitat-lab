@@ -1,0 +1,140 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+
+  - /habitat/simulator: rearrange_sim
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+
+  - /habitat/task: task_config_base
+  - /habitat/task/rearrange/actions: spot_base_arm_empty
+  - /habitat/task/measurements:
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - end_effector_to_rest_distance
+    - ee_dist_to_marker
+    - art_obj_at_desired_state
+    - art_obj_state
+    - art_obj_success
+    - art_obj_reward
+    - num_steps
+    - did_violate_hold_constraint
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+    - handle_bbox_sensor
+    - art_pose_delta_sensor
+
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - articulated_agent_arm_depth # depth image
+      - joint # joint angles
+      - ee_pos # ee location x,y,z
+      - is_holding # if the robot is holding the object
+      - handle_bbox # the handle bounding box
+      - art_pose_delta_sensor # the angle between the init and current ee orientation
+  task:
+    type: RearrangeOpenCloseDrawerTask-v0
+    reward_measure: art_obj_reward
+    success_measure: art_obj_success
+    actions:
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        grip_controller: "MagicGraspAction"
+        arm_joint_mask: [1,1,0,1,0,1,0]
+        arm_joint_dimensionality: 4
+        grasp_thresh_dist: 0.15
+        delta_pos_limit: 0.01667
+        gaze_distance_range: [0.05, 0.2]
+        center_cone_angle_threshold: 10.0
+        center_cone_vector: [0.0, 1.0, 0.0]
+        arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708]]
+        auto_grasp: False
+        should_clip: True
+      base_velocity_non_cylinder:
+        lin_speed: 1
+        longitudinal_lin_speed: 1
+        lateral_lin_speed: 0.0
+        ang_speed: 1
+        allow_dyn_slide: False
+        collision_threshold: 1e-5
+        navmesh_offset: [[0.0, 0.0], [0.2, 0.0], [-0.2, 0.0]]
+        enable_lateral_move: False
+    success_reward: 10.0
+    slack_reward: -0.01
+    success_state: 0.45
+    end_on_success: True
+    joint_start_noise: 0.1
+    # For learning in close drawer task, use larger spawn_max_dist_to_obj.
+    # Otherwise, the robot is goint to hit the drawer and cannot see handles
+    spawn_max_dist_to_obj: 3.5
+    base_angle_noise: 0.523599 # 30 degree
+    measurements:
+      art_obj_at_desired_state:
+        use_absolute_distance: False
+        gaze_method: True
+        center_cone_vector: [0.0, 1.0, 0.0]
+        gaze_distance_range: [0.0, 0.1]
+        center_cone_angle_threshold: 15 # in degree
+        pose_angle_threshold: 0.15
+      art_obj_reward:
+        wrong_grasp_end: True
+        wrong_grasp_pen: 5
+        early_grasp_pen: 5
+        grasp_reward: 10.0
+        marker_dist_reward: 20.0
+        ee_orientation_reward: 10.0
+        constraint_violate_pen: 1.0
+        # Collision penality for kinematic simulation
+        count_coll_pen: 0.1
+        max_count_colls: 5
+        count_coll_end_pen: 8
+        # Use special gaze reward
+        gaze_method: True
+        art_at_desired_state_reward: 0.0
+        force_pen: 0.0
+        max_force_pen: 0.0
+        force_end_pen: 0.0
+      art_obj_success:
+        must_call_stop: False
+        rest_dist_threshold: -1
+        gaze_method: True
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+    lab_sensors:
+      # We let robot see 5 joints
+      joint_sensor:
+        dimensionality: 5
+        arm_joint_mask: [1,1,0,1,0,1,1]
+      handle_bbox_sensor:
+        # The size of bbox needs to be the same as the size
+        # of the all the other image sensors due to resnet design
+        height: 240
+        width: 228
+        pixel_size: 2
+        handle_size: [0.02,0.1]
+  environment:
+    max_episode_steps: 1000
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/in_drawer_1k_100.json.gz
+  simulator:
+    # We use the kinematic mode to train the policy
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    ctrl_freq: 120 # We change this so that it has the same control frequency as the one in hardware
+    agents:
+      main_agent:
+        joint_start_noise: 0.0
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real world stow location
+        joint_start_override: [0, -3.14, 0, 3.14, 0, 0, 0]
+        joint_start_override_random: [[0, -3.14, 0, 3.14, 0, 0, 0], [0, -3.14, 0, 3.14, 0, 0, 1.5708], [0, -3.14, 0, 3.14, 0, 0, -1.5708]]

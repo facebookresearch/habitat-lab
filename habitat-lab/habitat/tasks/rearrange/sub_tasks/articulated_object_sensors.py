@@ -5,7 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Tuple, Union
+
+import magnum as mn
 import numpy as np
+import quaternion
 from gym import spaces
 
 from habitat.core.embodied_task import Measure
@@ -18,8 +22,74 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 )
 from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
+    get_camera_object_angle,
+    get_camera_transform,
     rearrange_logger,
 )
+from habitat.tasks.utils import get_angle
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    cam_pose_from_opengl_to_opencv,
+    cam_pose_from_xzy_to_xyz,
+)
+
+
+def get_angle_to_pos_xyz(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 1]]
+    rel_pos = rel_pos[[0, 1]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle
+
+
+def get_gripper_state(agent):
+    """Simple helpful function to get gripper orientation"""
+
+    ee_transform = agent.ee_transform()
+    base_transform = agent.base_transformation
+    # Get transformation
+    base_T_ee_transform = base_transform.inverted() @ ee_transform
+
+    # Get the local ee location (x,y,z)
+    local_ee_location = base_T_ee_transform.translation
+
+    # Get the local ee orientation (roll, pitch, yaw)
+    local_ee_quat = quaternion.from_rotation_matrix(
+        base_T_ee_transform.rotation()
+    )
+    return local_ee_location, local_ee_quat
+
+
+def offset_in_yaw(agent):
+    """A simple helper function to get the offset in yaw"""
+    # If we want to remove the angle in yaw direction
+    # Get all the transformations
+    base_transform = agent.base_transformation
+    ee_transform = agent.ee_transform()
+    armbase_transform = agent.sim_obj.get_link_scene_node(0).transformation
+    # Offset the base based on the armbase transform
+    base_transform.translation = base_transform.transform_point(
+        (base_transform.inverted() @ armbase_transform).translation
+    )
+    # Do transformation
+    ee_position = (base_transform.inverted() @ ee_transform).translation
+    # Process the ee_position input
+    ee_position = abs(np.array(ee_position))
+    # If norm is too small, then we do not do anything
+    offset = 0.0
+    if np.linalg.norm(ee_position[[0, 1]]) > 0.1:
+        offset = abs(get_angle_to_pos_xyz(ee_position))
+    return offset
 
 
 @registry.register_sensor
@@ -62,6 +132,216 @@ class MarkerRelPosSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
         return np.array(rel_marker_pos)
+
+
+@registry.register_sensor
+class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Detect handle and return bbox
+    """
+
+    cls_uuid: str = "handle_bbox"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+        self._target_height = config.height
+        self._target_width = config.width
+        self._pixel_size = config.pixel_size
+        self._handle_size = config.handle_size
+        self._target_sensor = config.target_sensor
+        self._drop_frame_rate = config.drop_frame_rate
+        self._origin_height = None
+        self._origin_width = None
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return HandleBBoxSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_image_coordinate_from_world_coordinate(
+        self, point: np.ndarray, target_key: str
+    ) -> Tuple[int, int, bool]:
+        """Project point in the world frame to the image plane"""
+        # Get the camera info
+        fs_w, fs_h, cam_pose = self._get_camera_param(target_key)
+
+        # Do projection from world coordinate into the camera frame
+        point_cam_coord = np.linalg.inv(cam_pose) @ [
+            point[0],
+            point[1],
+            point[2],
+            1,
+        ]
+
+        # From the camera frame into image pixel frame
+        # For image width coordinate
+        w = self._origin_width / 2.0 + (
+            fs_w * point_cam_coord[0] / point_cam_coord[-2]
+        )
+        # For image height coordinate
+        h = self._origin_height / 2.0 + (
+            fs_h * point_cam_coord[1] / point_cam_coord[-2]
+        )
+
+        # check if the point is in front of the camera
+        is_in_front_of_camera = point_cam_coord[-2] > 0
+        return (w, h, is_in_front_of_camera)
+
+    def _get_camera_param(
+        self, target_key: str
+    ) -> Tuple[float, float, np.ndarray]:
+        """Get the camera parameters from the agent's sensor"""
+        agent_id = 0 if self.agent_id is None else self.agent_id
+
+        # Get focal length
+        fov = (
+            float(self._sim.agents[agent_id]._sensors[target_key].hfov)
+            * np.pi
+            / 180
+        )
+        fs_w = self._origin_width / (2 * np.tan(fov / 2.0))
+        fs_h = self._origin_height / (2 * np.tan(fov / 2.0))
+
+        # Get the camera pose
+        hab_cam_T = (
+            self._sim.agents[agent_id]
+            ._sensors[target_key]
+            .render_camera.camera_matrix.inverted()
+        )
+        world_T_cam = cam_pose_from_xzy_to_xyz(
+            cam_pose_from_opengl_to_opencv(np.array(hab_cam_T))
+        )
+        return fs_w, fs_h, world_T_cam
+
+    def _get_image_pixel_from_point(
+        self, point: np.ndarray, target_key: str, img: np.ndarray
+    ):
+        """Get image pixcel from point"""
+        # Get the pixel coordinate in 2D
+        (
+            w,
+            h,
+            is_in_front_of_camera,
+        ) = self._get_image_coordinate_from_world_coordinate(point, target_key)
+
+        if is_in_front_of_camera:
+            # Clip the width and length
+            w_low = int(np.clip(w - self._pixel_size, 0, self._origin_width))
+            w_high = int(np.clip(w + self._pixel_size, 0, self._origin_width))
+            h_low = int(np.clip(h - self._pixel_size, 0, self._origin_height))
+            h_high = int(np.clip(h + self._pixel_size, 0, self._origin_height))
+            img[h_low:h_high, w_low:w_high, 0] = 1.0
+        return img
+
+    def _change_coordinate(
+        self, point: Union[np.ndarray, mn.Vector3]
+    ) -> np.ndarray:
+        """Change the coordinate system from openGL to openCV"""
+        return np.array([point[0], -point[2], point[1]])
+
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        bbox = np.zeros(img.shape)
+
+        # No handle
+        if np.sum(img) == 0:
+            return bbox
+
+        # Get the max and min value of each row and column
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+
+        # Get the bounding box
+        bbox = np.zeros(img.shape)
+        bbox[rmin:rmax, cmin:cmax] = 1.0
+
+        return bbox
+
+    def _crop_image(self, img):
+        """Crop the image based on the target size"""
+        height_start = int((self._origin_height - self._target_height) / 2)
+        width_start = int((self._origin_width - self._target_width) / 2)
+        img = img[
+            height_start : height_start + self._target_height,
+            width_start : width_start + self._target_width,
+        ]
+        return img
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = (
+                "articulated_agent_arm_rgb"
+                if self._target_sensor is None
+                else self._target_sensor
+            )
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_rgb"
+                if self._target_sensor is None
+                else f"agent_{self.agent_id}_{self._target_sensor}"
+            )
+            assert target_key in observations
+
+        # Get the image size
+        self._origin_height, self._origin_width, _ = observations[
+            target_key
+        ].shape
+
+        # Init image
+        img = np.zeros((self._origin_height, self._origin_width, 1))
+
+        # If we want to drop this frame, return an empty observation
+        # This is to simulate the case where the real world object detection
+        # is not working properly
+        drop_random_num = np.random.uniform()
+        if drop_random_num >= 1.0 - self._drop_frame_rate:
+            img = self._crop_image(img)
+            return np.float32(img)
+
+        # Get the handle transformation
+        handle_T = self._task.get_use_marker().current_transform
+
+        # Draw the handle location in the image
+        height, width = self._handle_size[0] / 2, self._handle_size[1] / 2
+        granularity = 11
+        for height_offset, width_offset in zip(
+            np.linspace(-height, height, granularity),
+            np.linspace(-width, width, granularity),
+        ):
+            # Get the handle location on the left and right side
+            handle_pos = self._change_coordinate(
+                handle_T.transform_point([height_offset, 0.0, width_offset])
+            )
+            # Draw the handle location in the image
+            img = self._get_image_pixel_from_point(handle_pos, target_key, img)
+
+        # Get the bbox
+        img = self._get_bbox(img)
+
+        # Crop the image
+        img = self._crop_image(img)
+
+        return np.float32(img)
 
 
 @registry.register_sensor
@@ -121,6 +401,42 @@ class ArtJointSensorNoVel(Sensor):
         return np.array([js]).reshape((1,))
 
 
+@registry.register_sensor
+class ArtPoseDeltaSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Gets the delta angle between the target to the current pose of the articulated object.
+    In the art task, the init pose is the target pose
+    """
+
+    cls_uuid: str = "art_pose_delta_sensor"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._task = task
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArtPoseDeltaSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+        pose_angle = abs(
+            angle_between_quaternions(self._task.init_pose, ee_ang)
+        ) - offset_in_yaw(self._sim.articulated_agent)
+        return np.array([pose_angle]).reshape((1,))
+
+
 @registry.register_measure
 class ArtObjState(Measure):
     """
@@ -143,7 +459,7 @@ class ArtObjState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -156,6 +472,21 @@ class ArtObjAtDesiredState(Measure):
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
+        self._gaze_method = config.gaze_method
+        if config.center_cone_vector is None:
+            self._center_cone_vector = None
+        else:
+            self._center_cone_vector = mn.Vector3(
+                config.center_cone_vector
+            ).normalized()
+        if config.gaze_distance_range is None:
+            self._min_dist, self._max_dist = 0, 0
+        else:
+            self._min_dist, self._max_dist = config.gaze_distance_range
+        self._center_cone_angle_threshold = np.deg2rad(
+            config.center_cone_angle_threshold
+        )
+        self._sim = sim
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -168,18 +499,64 @@ class ArtObjAtDesiredState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.success_js_state - task.get_use_marker().get_targ_js()
+    def _get_camera_object_angle(self, obj_pos):
+        """Calculates angle between gripper line-of-sight and given global position."""
+        # Get the camera transformation
+        cam_T = get_camera_transform(self._sim.articulated_agent)
+        # Get angle between (normalized) location and the vector that the camera should
+        # look at
+        obj_angle = get_camera_object_angle(
+            cam_T, obj_pos, self._center_cone_vector
+        )
+        return obj_angle
 
-        # If not absolute distance, we can have a joint state greater than the
-        # target.
-        if self._config.use_absolute_distance:
-            self._metric = abs(dist) < self._config.success_dist_threshold
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        # Check if the robot gazes the target
+        if self._gaze_method:
+            # Get distance from the handle to the EE
+            handle_pos = task.get_use_marker().get_current_position()
+            ee_pos = self._sim.articulated_agent.ee_transform().translation
+            dist = np.linalg.norm(handle_pos - ee_pos)
+            # Get gaze angle between the EE camera to the gripper
+            obj_angle = self._get_camera_object_angle(handle_pos)
+            # Get the gripper state (orientation)
+            _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+            pose_angle = abs(
+                angle_between_quaternions(task.init_pose, ee_ang)
+            ) - offset_in_yaw(self._sim.articulated_agent)
+            # Compute the height delta
+            height_delta = abs(handle_pos[1] - ee_pos[1])
+            # Return metric
+            if (
+                dist > self._min_dist
+                and dist < self._max_dist
+                and (
+                    obj_angle < self._center_cone_angle_threshold
+                    or self._center_cone_angle_threshold < 0
+                )
+                and (
+                    height_delta < self._config.height_delta_threshold
+                    or self._config.height_delta_threshold == -1
+                )
+                and (
+                    pose_angle < self._config.pose_angle_threshold
+                    or self._config.pose_angle_threshold == -1
+                )
+            ):
+                self._metric = True
+            else:
+                self._metric = False
         else:
-            self._metric = dist < self._config.success_dist_threshold
+            dist = task.success_js_state - task.get_use_marker().get_targ_js()
+            # If not absolute distance, we can have a joint state greater than the
+            # target.
+            if self._config.use_absolute_distance:
+                self._metric = abs(dist) < self._config.success_dist_threshold
+            else:
+                self._metric = dist < self._config.success_dist_threshold
 
 
 @registry.register_measure
@@ -205,7 +582,7 @@ class ArtObjSuccess(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -216,17 +593,39 @@ class ArtObjSuccess(Measure):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        called_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
+        if self._config.must_call_stop:
+            called_stop = task.measurements.measures[
+                DoesWantTerminate.cls_uuid
+            ].get_metric()
 
         # If not absolute distance, we can have a joint state greater than the
         # target.
-        self._metric = (
-            is_art_obj_state_succ
-            and ee_to_rest_distance < self._config.rest_dist_threshold
-            and not self._sim.grasp_mgr.is_grasped
-        )
+        if self._config.gaze_method:
+            self._metric = (
+                is_art_obj_state_succ  # Current the robot is looking at the drawer handle
+                and (
+                    ee_to_rest_distance < self._config.rest_dist_threshold
+                    or self._config.rest_dist_threshold == -1
+                )
+                and (
+                    self._sim.grasp_mgr.is_grasped
+                    or self._config.do_not_check_grasp
+                )  # Current the robot is grasping something
+                and (
+                    task._sim.grasp_mgr.snapped_marker_id
+                    == task.use_marker_name
+                    or self._config.do_not_check_grasp
+                )  # current grasp mgr is holding the correct drawers
+            )
+        else:
+            self._metric = (
+                is_art_obj_state_succ
+                and (
+                    ee_to_rest_distance < self._config.rest_dist_threshold
+                    or self._config.rest_dist_threshold == -1
+                )
+                and (not self._sim.grasp_mgr.is_grasped)
+            )
         if self._config.must_call_stop:
             if called_stop:
                 task.should_end = True
@@ -252,7 +651,7 @@ class EndEffectorDistToMarker(UsesArticulatedAgentInterface, Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, task, **kwargs):
@@ -311,12 +710,13 @@ class ArtObjReward(RearrangeReward):
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
         self._any_at_desired_state = False
+        self._prev_ee_orientation_delta = 0
         super().reset_metric(
             *args,
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -325,7 +725,7 @@ class ArtObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         reward = self._metric
         link_state = task.measurements.measures[
@@ -340,12 +740,16 @@ class ArtObjReward(RearrangeReward):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        cur_dist = abs(link_state - task.success_js_state)
-        prev_dist = abs(self._prev_art_state - task.success_js_state)
+        if self._config.gaze_method:
+            cur_dist = 0
+            prev_dist = 0
+        else:
+            cur_dist = abs(link_state - task.success_js_state)
+            prev_dist = abs(self._prev_art_state - task.success_js_state)
 
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
-        if not is_art_obj_state_succ:
+        if not is_art_obj_state_succ and not self._config.gaze_method:
             reward += self._config.art_dist_reward * dist_diff
 
         cur_has_grasped = task._sim.grasp_mgr.is_grasped
@@ -353,7 +757,11 @@ class ArtObjReward(RearrangeReward):
         cur_ee_dist_to_marker = task.measurements.measures[
             EndEffectorDistToMarker.cls_uuid
         ].get_metric()
-        if cur_has_grasped and not self._any_has_grasped:
+        if (
+            cur_has_grasped
+            and not self._any_has_grasped
+            and not self._config.do_not_check_grasp
+        ):
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker
                 reward -= self._config.wrong_grasp_pen
@@ -367,20 +775,42 @@ class ArtObjReward(RearrangeReward):
                 reward += self._config.grasp_reward
             self._any_has_grasped = True
 
+        # Check if the robot calls grasping early
+        if (
+            task.actions["arm_action"].grip_ctrlr.does_call_grasp
+            and self._config.gaze_method
+            and not cur_has_grasped
+            and not self._config.do_not_check_grasp
+        ):
+            # early call to close the gripper
+            reward -= self._config.early_grasp_pen
+            task.should_end = True
+
+        # Get the current angle between the initial pose and the current pose
+        _, ee_ang = get_gripper_state(self._sim.articulated_agent)
+        cur_angle = abs(
+            angle_between_quaternions(task.init_pose, ee_ang)
+        ) - offset_in_yaw(self._sim.articulated_agent)
+
         if is_art_obj_state_succ:
-            if not self._any_at_desired_state:
-                reward += self._config.art_at_desired_state_reward
-                self._any_at_desired_state = True
-            # Give the reward based on distance to the resting position.
-            ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
-            reward += self._config.ee_dist_reward * ee_dist_change
-        elif not cur_has_grasped:
+            if not self._config.gaze_method:
+                if not self._any_at_desired_state:
+                    reward += self._config.art_at_desired_state_reward
+                    self._any_at_desired_state = True
+                # Give the reward based on distance to the resting position.
+                ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
+                reward += self._config.ee_dist_reward * ee_dist_change
+        elif not cur_has_grasped or self._config.gaze_method:
             # Give the reward based on distance to the handle
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
             reward += self._config.marker_dist_reward * dist_diff
+            # Give the reward based on orientation change
+            ori_diff = self._prev_ee_orientation_delta - cur_angle
+            reward += self._config.ee_orientation_reward * ori_diff
 
         self._prev_ee_to_rest = ee_to_rest_distance
 
         self._prev_ee_dist_to_marker = cur_ee_dist_to_marker
+        self._prev_ee_orientation_delta = cur_angle
         self._prev_art_state = link_state
         self._metric = reward
