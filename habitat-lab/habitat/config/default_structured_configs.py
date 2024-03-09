@@ -1634,6 +1634,9 @@ class TaskConfig(HabitatBaseConfig):
     top_down_grasp_ratio: float = 0.5
     fix_obj_rotation_change_arm_joint: bool = False
     joint_start_noise: float = 0.1
+    # For the open_close_drawer task
+    # The format is [x_min, y_min, x_max, y_max]
+    rectangle_spawn_region: Optional[List[float]] = None
 
 
 @dataclass

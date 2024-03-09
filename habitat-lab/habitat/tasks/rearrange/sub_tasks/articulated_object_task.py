@@ -304,7 +304,12 @@ class RearrangeCloseFridgeTaskV1(SetArticulatedObjectTask):
 @registry.register_task(name="RearrangeOpenCloseDrawerTask-v0")
 class RearrangeOpenCloseDrawerTaskV1(SetArticulatedObjectTask):
     def _get_spawn_region(self):
-        return mn.Range2D([0.80, -0.35], [0.95, 0.35])
+        v = self._config.rectangle_spawn_region
+        if v is not None:
+            assert len(v) == 4
+            return mn.Range2D([v[0], v[1]], [v[2], v[3]])
+        else:
+            return mn.Range2D([0.80, -0.35], [0.95, 0.35])
 
     def _get_look_pos(self):
         return [0.0, 0.0, 0.0]
