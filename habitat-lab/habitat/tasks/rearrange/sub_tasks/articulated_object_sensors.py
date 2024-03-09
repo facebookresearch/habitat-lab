@@ -316,7 +316,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         drop_random_num = np.random.uniform()
         if drop_random_num >= 1.0 - self._drop_frame_rate:
             img = self._crop_image(img)
-            return img
+            return np.float32(img)
 
         # Get the handle transformation
         handle_T = self._task.get_use_marker().current_transform
