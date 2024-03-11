@@ -124,7 +124,7 @@ class AppStateRearrange(AppState):
                 goal_position, end_radius, color, 24
             )
 
-            self._nav_helper._draw_nav_hint_from_agent(
+            self._nav_helper.draw_nav_hint_from_agent(
                 self._camera_helper.get_xz_forward(),
                 mn.Vector3(goal_position),
                 end_radius,
@@ -258,7 +258,7 @@ class AppStateRearrange(AppState):
                     color,
                 )
 
-                self._nav_helper._draw_nav_hint_from_agent(
+                self._nav_helper.draw_nav_hint_from_agent(
                     self._camera_helper.get_xz_forward(),
                     mn.Vector3(this_target_pos),
                     end_radius,
