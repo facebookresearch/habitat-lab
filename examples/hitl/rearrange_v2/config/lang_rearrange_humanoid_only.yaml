@@ -22,7 +22,6 @@ habitat_baselines:
       num_pool_agents_per_type: [1, 1]
     policy:
 
-
 habitat_hitl:
   window:
     title: "Rearrange"
@@ -35,3 +34,9 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+  campaign_server:
+    url: "http://localhost:22362"
+    endpoints:
+      initialize_task: "api/v0/initialize_task"
+      update_task: "api/v0/update_task"
+      end_task: "api/v0/end_task"

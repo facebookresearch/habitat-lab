@@ -30,6 +30,7 @@ from habitat_hitl._internal.networking.networking_process import (
 )
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.campaign_service import CampaignService
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -192,6 +193,12 @@ class HitlDriver(AppDriver):
         # TODO: Dependency injection
         text_drawer._client_message_manager = self._client_message_manager
 
+        campaign_service = CampaignService(
+            hitl_config=self._hitl_config,
+            get_metrics=lambda: self._get_recent_metrics(),
+            episode_helper=self._episode_helper,
+        )
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
@@ -210,6 +217,7 @@ class HitlDriver(AppDriver):
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=gui_agent_controllers,
+            campaign_service=campaign_service,
         )
 
         self._app_state: AppState = None

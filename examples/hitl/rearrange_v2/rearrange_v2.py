@@ -15,7 +15,9 @@ from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.campaign_service import TaskStatus
 from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -40,7 +42,7 @@ class AppStateRearrangeV2(AppState):
     Todo
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
         self._num_users = len(self._gui_agent_controllers)
@@ -77,6 +79,9 @@ class AppStateRearrangeV2(AppState):
         self._sps_tracker = AverageRateTracker(2.0)
 
         self._task_instruction = ""
+        self._num_episodes_completed = 0
+
+        self._app_service.campaign_service.initialize_session()
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -350,6 +355,7 @@ class AppStateRearrangeV2(AppState):
         ):
             return
 
+        self._num_episodes_completed += 1
         if self._app_service.episode_helper.next_episode_exists():
             self._app_service.end_episode(do_reset=True)
 
@@ -432,6 +438,20 @@ class AppStateRearrangeV2(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+        if (
+            self._num_episodes_completed
+            > self._app_service.campaign_service.max_episodes_per_session
+        ):
+            self.end_task()
+
+    def end_task(self):
+        self._app_service.campaign_service.end_task(
+            {
+                "task_status": TaskStatus.COMPLETED.value,
+                **self._app_service.campaign_service.session_meta,
+            }
+        )
 
 
 @hydra.main(
