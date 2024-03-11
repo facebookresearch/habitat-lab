@@ -11,12 +11,21 @@ import magnum as mn
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl._internal.networking.interprocess_record import (
+    InterprocessRecord,
+)
 from habitat_hitl.core.gui_input import GuiInput
 
 
 # todo: rename to RemoteClientState
 class RemoteGuiInput:
-    def __init__(self, interprocess_record, debug_line_render):
+    def __init__(
+        self,
+        interprocess_record: InterprocessRecord,
+        debug_line_render,
+        gui_input: GuiInput,
+    ):
+        self._gui_input = gui_input
         self._recent_client_states = []
         self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
@@ -32,8 +41,6 @@ class RemoteGuiInput:
             2: GuiInput.KeyNS.TWO,
             3: GuiInput.KeyNS.THREE,
         }
-
-        self._gui_input = GuiInput()
 
     def get_gui_input(self):
         return self._gui_input

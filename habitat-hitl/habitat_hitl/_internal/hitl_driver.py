@@ -31,6 +31,7 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import (
@@ -167,7 +168,7 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        self._check_init_server(line_render)
+        self._check_init_server(line_render, gui_input)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -223,7 +224,7 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.networking.enable
 
-    def _check_init_server(self, line_render):
+    def _check_init_server(self, line_render, gui_input: GuiInput):
         self._remote_gui_input = None
         self._interprocess_record = None
         if self.network_server_enabled:
@@ -237,7 +238,7 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_gui_input = RemoteGuiInput(
-                self._interprocess_record, line_render
+                self._interprocess_record, line_render, gui_input
             )
 
     def _check_terminate_server(self):
