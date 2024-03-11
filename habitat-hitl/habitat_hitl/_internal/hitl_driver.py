@@ -86,13 +86,6 @@ class HitlDriver(AppDriver):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
-        if (
-            not self._hitl_config.experimental.headless
-            and gui_input.is_stub_implementation
-        ):
-            raise RuntimeError(
-                "HitlDriver with experimental.headless=False requires a non-stub-implementation GuiInput."
-            )
         self._gui_input = gui_input
 
         line_render.set_line_width(self._hitl_config.debug_line_width)
