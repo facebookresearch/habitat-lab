@@ -34,6 +34,9 @@ class GuiNavigationHelper:
         end_radius: float,
         color: mn.Color3,
     ) -> None:
+        """
+        Draw navigation hints for an agent.
+        """
         assert forward_dir
         agent_idx = self._agent_idx
         assert agent_idx is not None
@@ -61,6 +64,7 @@ class GuiNavigationHelper:
     def _get_humanoid_walk_path_to(
         self, target_pos: mn.Vector3
     ) -> Tuple[bool, ShortestPath]:
+        """Get the shorted path required for an agent to travel to."""
         agent_root = get_agent_art_obj_transform(
             self._get_sim(), self._agent_idx
         )
@@ -85,11 +89,13 @@ class GuiNavigationHelper:
     def _get_humanoid_walk_dir_from_path(
         self, path: ShortestPath
     ) -> mn.Vector3:
+        """Get the humanoid current walking direction from the specified path."""
         assert len(path.points) >= 2
         walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
         return walk_dir
 
     def _viz_humanoid_walk_path(self, path: ShortestPath) -> None:
+        """Draw the specified path."""
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12
 
@@ -108,6 +114,7 @@ class GuiNavigationHelper:
     def get_humanoid_walk_hints_from_remote_gui_input(
         self, visualize_path: bool = True
     ) -> Tuple[Optional[mn.Vector3], float, Optional[mn.Vector3]]:
+        """Get humanoid controller hints using the remote client head pose."""
         walk_dir = None
         distance_multiplier = 1.0
 
@@ -133,6 +140,7 @@ class GuiNavigationHelper:
     def get_humanoid_walk_hints_from_ray_cast(
         self, visualize_path: bool = True
     ) -> Tuple[Optional[mn.Vector3], float]:
+        """Get humanoid controller hints using raycasting."""
         walk_dir = None
         distance_multiplier = 1.0
 
@@ -158,6 +166,7 @@ class GuiNavigationHelper:
         target_rot_quat: mn.Quaternion,
         visualize_path=True,
     ) -> Tuple[Optional[mn.Vector3], float, Optional[mn.Vector3]]:
+        """Get humanoid controller hints."""
         walk_dir = None
         distance_multiplier = 1.0
         geodesic_dist_threshold = 0.05
@@ -193,6 +202,7 @@ class GuiNavigationHelper:
         return walk_dir, distance_multiplier, forward_gaze
 
     def _get_target_pos_from_ray_cast(self) -> mn.Vector3:
+        """Get a target position from raycasting."""
         ray = self._app_service.gui_input.mouse_ray
 
         floor_y = 0.15  # hardcoded to ReplicaCAD
@@ -208,6 +218,7 @@ class GuiNavigationHelper:
     def _compute_forward_dir(
         self, target_rot_quat: mn.Quaternion
     ) -> mn.Vector3:
+        """Multiply a forward vector by the specified quaternion."""
         direction_vector = mn.Vector3(0.0, 0.0, 1.0)
         heading_vector = target_rot_quat.transform_vector(direction_vector)
         heading_vector.y = 0
@@ -219,6 +230,7 @@ class GuiNavigationHelper:
     def _evaluate_cubic_bezier(
         ctrl_pts: List[mn.Vector3], t: float
     ) -> mn.Vector3:
+        """Evaluate a cubic bezier spline."""
         assert len(ctrl_pts) == 4
         weights = (
             pow(1 - t, 3),
@@ -242,6 +254,7 @@ class GuiNavigationHelper:
         color: mn.Color3,
         anim_fraction: float,
     ) -> None:
+        """Draw a navigation path segment."""
         bias_weight = 0.5
         biased_dir = (
             start_dir + (end_pos - start_pos).normalized() * bias_weight
