@@ -4,11 +4,21 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from enum import Enum
-from typing import Any, Dict, Optional
+from enum import EnumMeta, IntEnum
+from typing import Any, Dict, Optional, Set
 
 
-class KeyCode(Enum):
+class KeyCodeMetaEnum(EnumMeta):
+    keycode_value_cache: Set[int] = None
+
+    # Override 'in' keyword to check whether the specified integer exists in 'KeyCode'.
+    def __contains__(cls, value) -> bool:
+        if KeyCodeMetaEnum.keycode_value_cache == None:
+            KeyCodeMetaEnum.keycode_value_cache = set(KeyCode)
+        return value in KeyCodeMetaEnum.keycode_value_cache
+
+
+class KeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
     """
     Input keys available to control habitat-hitl.
     """
