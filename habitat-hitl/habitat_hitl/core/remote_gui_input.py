@@ -5,19 +5,30 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
+from typing import Any, List
 
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl._internal.networking.interprocess_record import (
+    InterprocessRecord,
+)
 from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import KeyCode
 
 
 # todo: rename to RemoteClientState
 class RemoteGuiInput:
-    def __init__(self, interprocess_record, debug_line_render):
-        self._recent_client_states = []
+    def __init__(
+        self,
+        interprocess_record: InterprocessRecord,
+        debug_line_render,
+        gui_input: GuiInput,
+    ):
+        self._gui_input = gui_input
+        self._recent_client_states: List[Any] = []
         self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
 
@@ -32,8 +43,6 @@ class RemoteGuiInput:
             2: GuiInput.KeyNS.TWO,
             3: GuiInput.KeyNS.THREE,
         }
-
-        self._gui_input = GuiInput()
 
     def get_gui_input(self):
         return self._gui_input
@@ -125,50 +134,41 @@ class RemoteGuiInput:
         if not len(client_states):
             return
 
-        # gather all recent keyDown and keyUp events
+        # Gather all recent keyDown and keyUp events
         for client_state in client_states:
-            # Beware client_state input has dicts of bools (unlike GuiInput, which uses sets)
-            if "input" not in client_state:
-                continue
+            input_json = (
+                client_state["input"] if "input" in client_state else None
+            )
+            # TODO: Add mouse support
+            # mouse_json = (
+            #    client_state["mouse"] if "mouse" in client_state else None
+            # )
 
-            input_json = client_state["input"]
-
-            if "buttonHeld" not in input_json:
-                continue
-
-            # assume button containers are sets of buttonIndices
             for button in input_json["buttonDown"]:
-                if button not in self._button_map:
-                    print(f"button {button} not mapped!")
+                if button not in KeyCode:
                     continue
-                if True:
-                    self._gui_input._key_down.add(self._button_map[button])
+                self._gui_input._key_down.add(KeyCode(button))
             for button in input_json["buttonUp"]:
-                if button not in self._button_map:
-                    print(f"key {button} not mapped!")
+                if button not in KeyCode:
                     continue
-                if True:
-                    self._gui_input._key_up.add(self._button_map[button])
+                self._gui_input._key_up.add(KeyCode(button))
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
-        if "input" not in client_state:
-            return
 
-        input_json = client_state["input"]
+        input_json = client_state["input"] if "input" in client_state else None
+        # TODO: Add mouse support
+        # mouse_json = client_state["mouse"] if "mouse" in client_state else None
 
+        self._gui_input._key_held.clear()
         if "buttonHeld" not in input_json:
             return
 
-        self._gui_input._key_held.clear()
-
         for button in input_json["buttonHeld"]:
-            if button not in self._button_map:
-                print(f"button {button} not mapped!")
+            if button not in KeyCode:
                 continue
-            if True:  # input_json["buttonHeld"][button]:
-                self._gui_input._key_held.add(self._button_map[button])
+            self._gui_input._key_held.add(KeyCode(button))
 
     def debug_visualize_client(self):
         if not self._debug_line_render:
