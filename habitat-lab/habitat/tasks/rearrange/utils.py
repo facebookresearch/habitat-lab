@@ -13,11 +13,10 @@ from functools import wraps
 from typing import List, Optional, Tuple
 
 import attr
+import habitat_sim
 import magnum as mn
 import numpy as np
 import quaternion
-
-import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
@@ -741,8 +740,13 @@ def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
         cam_info.attached_link_id
     ).transformation
     # Get the camera offset transformation
-    offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-    cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+    # offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+    cam_offset_transform = mn.Matrix4.look_at(
+        cam_info.cam_offset_pos,
+        cam_info.cam_look_at_pos,
+        mn.Vector3(0, 1, 0),
+    )
+    cam_trans = link_trans @ cam_offset_transform @ cam_info.relative_transform
     return cam_trans
 
 
