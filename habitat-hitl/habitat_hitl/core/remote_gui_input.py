@@ -4,8 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
-
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -88,13 +86,8 @@ class RemoteGuiInput:
         rot_quat = mn.Quaternion(
             mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
         )
-        # Beware that this is an agent-space quaternion.
-        # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
-        rot_quat = rot_quat * mn.Quaternion.rotation(
-            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
-        )
-        return pos, rot_quat
 
+        return pos, rot_quat
 
     def get_articulated_hand_pose(self, hand_idx, history_index=0):
         """
@@ -129,7 +122,7 @@ class RemoteGuiInput:
             XR_HAND_JOINT_LITTLE_TIP_EXT = 25,
             XR_HAND_JOINT_MAX_ENUM_EXT = 0x7FFFFFFF
         } XrHandJointEXT;
-        """        
+        """
         client_state = self.get_recent_client_state_by_history_index(
             history_index
         )
@@ -153,16 +146,22 @@ class RemoteGuiInput:
         positions = []
         rotations = []
         for i in range(num_positions):
-            pos = mn.Vector3(pos_json[i * 3 + 0], pos_json[i * 3 + 1], pos_json[i * 3 + 2])
+            pos = mn.Vector3(
+                pos_json[i * 3 + 0], pos_json[i * 3 + 1], pos_json[i * 3 + 2]
+            )
             positions.append(pos)
 
             rot_quat = mn.Quaternion(
-                mn.Vector3(rot_json[i * 4 + 1], rot_json[i * 4 + 2], rot_json[i * 4 + 3]), rot_json[i * 4 + 0]
+                mn.Vector3(
+                    rot_json[i * 4 + 1],
+                    rot_json[i * 4 + 2],
+                    rot_json[i * 4 + 3],
+                ),
+                rot_json[i * 4 + 0],
             )
             rotations.append(rot_quat)
 
         return positions, rotations
-
 
     def get_hand_pose(self, hand_idx, history_index=0):
         client_state = self.get_recent_client_state_by_history_index(
@@ -185,11 +184,7 @@ class RemoteGuiInput:
         rot_quat = mn.Quaternion(
             mn.Vector3(rot_json[1], rot_json[2], rot_json[3]), rot_json[0]
         )
-        # Beware that this is an agent-space quaternion.
-        # Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
-        rot_quat = rot_quat * mn.Quaternion.rotation(
-            mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
-        )
+
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
@@ -256,8 +251,7 @@ class RemoteGuiInput:
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
             )
             size = 0.5
-
-            # Draw a frustum (forward is flipped (z+))
+            # draw a frustum (forward is z+)
             self._debug_line_render.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, size, size),
@@ -285,7 +279,6 @@ class RemoteGuiInput:
 
             self._debug_line_render.pop_transform()
 
-        # Draw controller rays (forward is flipped (z+))
         for hand_idx in range(2):
             # hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             # if hand_pos is not None and hand_rot_quat is not None:
@@ -300,13 +293,20 @@ class RemoteGuiInput:
             #     )
             #     self._debug_line_render.pop_transform()
 
-            art_hand_positions, art_hand_rotations = self.get_articulated_hand_pose(hand_idx)
-            if art_hand_positions is not None and art_hand_rotations is not None:
+            art_hand_positions, art_hand_rotations = (
+                self.get_articulated_hand_pose(hand_idx)
+            )
+            if (
+                art_hand_positions is not None
+                and art_hand_rotations is not None
+            ):
                 num_bones = len(art_hand_positions)
                 for i in range(num_bones):
                     bone_pos = art_hand_positions[i]
                     bone_rot_quat = art_hand_rotations[i]
-                    trans = mn.Matrix4.from_(bone_rot_quat.to_matrix(), bone_pos)
+                    trans = mn.Matrix4.from_(
+                        bone_rot_quat.to_matrix(), bone_pos
+                    )
                     self._debug_line_render.push_transform(trans)
                     pointer_len = 0.02
                     self._debug_line_render.draw_transformed_line(
@@ -315,7 +315,7 @@ class RemoteGuiInput:
                         color0,
                         color1,
                     )
-                    self._debug_line_render.pop_transform()                
+                    self._debug_line_render.pop_transform()
 
     def _clean_history_by_connection_id(self, client_states):
         if not len(client_states):

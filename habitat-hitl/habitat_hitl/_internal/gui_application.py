@@ -12,6 +12,7 @@ import magnum as mn
 from magnum.platform.glfw import Application
 
 from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import MagnumKeyConverter
 
 
 class GuiAppRenderer:
@@ -37,21 +38,22 @@ class InputHandlerApplication(Application):
         self._gui_inputs.append(gui_input)
 
     def key_press_event(self, event: Application.KeyEvent) -> None:
-        key = event.key
-        GuiInput.validate_key(key)
-        for wrapper in self._gui_inputs:
-            # If the key is already held, this is a repeat press event and we should
-            # ignore it.
-            if key not in wrapper._key_held:
-                wrapper._key_held.add(key)
-                wrapper._key_down.add(key)
+        key = MagnumKeyConverter.convert(event.key)
+        if key:
+            for wrapper in self._gui_inputs:
+                # If the key is already held, this is a repeat press event and we should
+                # ignore it.
+                if key not in wrapper._key_held:
+                    wrapper._key_held.add(key)
+                    wrapper._key_down.add(key)
 
     def key_release_event(self, event: Application.KeyEvent) -> None:
-        key = event.key
-        GuiInput.validate_key(key)
-        for wrapper in self._gui_inputs:
-            wrapper._key_held.remove(key)
-            wrapper._key_up.add(key)
+        key = MagnumKeyConverter.convert(event.key)
+        if key:
+            for wrapper in self._gui_inputs:
+                if key in wrapper._key_held:
+                    wrapper._key_held.remove(key)
+                wrapper._key_up.add(key)
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
         mouse_button = event.button
