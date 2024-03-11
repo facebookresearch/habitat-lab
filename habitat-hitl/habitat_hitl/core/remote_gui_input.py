@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
+from typing import Any, List
 
 import magnum as mn
 
@@ -27,7 +28,7 @@ class RemoteGuiInput:
         gui_input: GuiInput,
     ):
         self._gui_input = gui_input
-        self._recent_client_states = []
+        self._recent_client_states: List[Any] = []
         self._interprocess_record = interprocess_record
         self._debug_line_render = debug_line_render
 
