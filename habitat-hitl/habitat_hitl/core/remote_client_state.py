@@ -20,7 +20,7 @@ from habitat_hitl.core.key_mapping import KeyCode
 
 
 # todo: rename to RemoteClientState
-class RemoteGuiInput:
+class RemoteClientState:
     def __init__(
         self,
         interprocess_record: InterprocessRecord,

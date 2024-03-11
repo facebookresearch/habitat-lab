@@ -82,7 +82,7 @@ class ClientMessageManager:
 
     def signal_kick_client(self, connection_id):
         r"""
-        Signal NetworkManager to kick a client identified by connection_id. See also RemoteGuiInput.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
+        Signal NetworkManager to kick a client identified by connection_id. See also RemoteClientState.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
         """
         self._message["kickClient"] = connection_id
 

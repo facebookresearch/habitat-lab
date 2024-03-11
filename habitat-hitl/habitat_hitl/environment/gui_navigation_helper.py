@@ -111,7 +111,7 @@ class GuiNavigationHelper:
             path_points, path_endpoint_radius, path_color
         )
 
-    def get_humanoid_walk_hints_from_remote_gui_input(
+    def get_humanoid_walk_hints_from_remote_client_state(
         self, visualize_path: bool = True
     ) -> Tuple[Optional[mn.Vector3], float, Optional[mn.Vector3]]:
         """Get humanoid controller hints using the remote client head pose."""
@@ -121,7 +121,7 @@ class GuiNavigationHelper:
         (
             target_pos,
             target_rot_quat,
-        ) = self._app_service.remote_gui_input.get_head_pose()
+        ) = self._app_service.remote_client_state.get_head_pose()
 
         forward_dir = None
         if target_pos and target_rot_quat:
