@@ -13,7 +13,7 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_abc import GuiController
@@ -29,7 +29,7 @@ class AppService:
         config,
         hitl_config,
         gui_input: GuiInput,
-        remote_gui_input: RemoteGuiInput,
+        remote_client_state: RemoteClientState,
         line_render: DebugLineRender,
         text_drawer: AbstractTextDrawer,
         get_anim_fraction: Callable,
@@ -49,7 +49,7 @@ class AppService:
         self._config = config
         self._hitl_config = hitl_config
         self._gui_input = gui_input
-        self._remote_gui_input = remote_gui_input
+        self._remote_client_state = remote_client_state
         self._line_render = line_render
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
@@ -79,8 +79,8 @@ class AppService:
         return self._gui_input
 
     @property
-    def remote_gui_input(self) -> RemoteGuiInput:
-        return self._remote_gui_input
+    def remote_client_state(self) -> RemoteClientState:
+        return self._remote_client_state
 
     @property
     def line_render(self) -> DebugLineRender:

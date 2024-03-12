@@ -37,7 +37,7 @@ class ClientHelper:
         self._show_idle_kick_warning = False
 
         connection_records = (
-            self._app_service.remote_gui_input.get_new_connection_records()
+            self._app_service.remote_client_state.get_new_connection_records()
         )
         if len(connection_records):
             assert (
@@ -76,7 +76,7 @@ class ClientHelper:
 
     def _update_frame_counter_and_display_latency(self, server_sps):
         recent_server_keyframe_id = (
-            self._app_service.remote_gui_input.pop_recent_server_keyframe_id()
+            self._app_service.remote_client_state.pop_recent_server_keyframe_id()
         )
         if recent_server_keyframe_id is not None:
             new_avg = self._client_frame_latency_avg_helper.add(
