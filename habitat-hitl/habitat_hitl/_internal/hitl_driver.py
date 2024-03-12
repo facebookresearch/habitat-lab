@@ -223,7 +223,10 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.networking.enable
+        return (
+            self._hitl_config.networking.enable
+            and self._hitl_config.networking.max_client_count > 0
+        )
 
     def _check_init_server(self, gui_drawer: GuiDrawer, gui_input: GuiInput):
         self._remote_client_state = None
