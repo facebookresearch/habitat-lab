@@ -4,7 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+try:
+    sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+except:
+    pass
 import argparse
 import os
 import os.path as osp
@@ -270,7 +273,7 @@ if __name__ == "__main__":
     images = []
 
     my_env = sim_env(config)
-
+    embed()
     rospy.Subscriber("/cmd_vel", Twist, callback, (my_env), queue_size=1)
     for i in range (1000):
    
