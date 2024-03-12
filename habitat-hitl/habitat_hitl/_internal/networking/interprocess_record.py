@@ -13,6 +13,10 @@ from typing import Any, List, Optional
 class InterprocessRecord:
     """
     Utility that stores incoming (client state) and outgoing (keyframe) data such as it can be used by concurrent threads.
+    
+    networking_config: "habitat_hitl.networking" config. 
+    max_step_ahead: How many frames we can simulate "ahead" of what keyframes have been sent.
+                    A larger value increases lag on the client, while ensuring a more reliable simulation rate in the presence of unreliable network comms.
     """
 
     def __init__(self, networking_config, max_steps_ahead: int) -> None:
