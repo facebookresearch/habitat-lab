@@ -183,6 +183,6 @@ habitat:
       enable_physics: True
   dataset:
     # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
-    data_path: data/social_nav_episode_5.json.gz
+    data_path: data/social_nav_episode_6_1.json.gz
     # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz
