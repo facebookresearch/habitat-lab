@@ -3,10 +3,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    ExprType,
     PddlEntity,
     PddlSimInfo,
     do_entity_lists_match,

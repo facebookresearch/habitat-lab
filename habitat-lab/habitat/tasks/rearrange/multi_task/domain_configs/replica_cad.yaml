@@ -26,34 +26,32 @@ predicates:
     args:
       - name: obj
         expr_type: obj_type
-      - name: receptacle
+      - name: recep
         expr_type: art_receptacle_entity_type
-    is_valid_fn: 
+    is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_inside
-    set_state_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_inside
 
   - name: holding
     args:
       - name: obj
         expr_type: movable_entity_type
-      - name: robot_id
+      - name: robot
         expr_type: robot_entity_type
-    is_valid_fn: 
+    is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
       hold_state: True
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
       hold_state: True
 
   - name: not_holding
     args:
-      - name: robot_id
+      - name: robot
         expr_type: robot_entity_type
-    is_valid_fn: 
+    is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
       hold_state: False
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
       hold_state: False
 
@@ -61,12 +59,12 @@ predicates:
     args:
       - name: art_obj
         expr_type: cab_type
-    is_valid_fn: 
+    is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.45
       cmp: 'greater'
       dist_thresh: 0.1
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 0.45
 
@@ -74,12 +72,12 @@ predicates:
     args:
       - name: art_obj
         expr_type: cab_type
-    is_valid_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_closed
+    is_valid_fn:
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.0
       cmp: 'close'
       dist_thresh: 0.15
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 0.0
 
@@ -87,12 +85,12 @@ predicates:
     args:
       - name: art_obj
         expr_type: fridge_type
-    is_valid_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_closed
+    is_valid_fn:
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 1.22
       cmp: 'greater'
       dist_thresh: 0.15
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 1.22
 
@@ -100,8 +98,8 @@ predicates:
     args:
       - name: art_obj
         expr_type: fridge_type
-    is_valid_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_closed
+    is_valid_fn:
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.0
       cmp: 'close'
       dist_thresh: 0.15
@@ -112,11 +110,11 @@ predicates:
         expr_type: static_obj_type
       - name: robot
         expr_type: robot_entity_type
-    is_valid_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
+    is_valid_fn:
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_at_position
       dist_thresh: 2.0
-    set_state_fn: 
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
+    set_state_fn:
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_position
       dist_thresh: 2.0
 
   - name: at
@@ -125,10 +123,10 @@ predicates:
         expr_type: movable_entity_type
       - name: at_entity
         expr_type: static_obj_type
-    is_valid_fn: 
+    is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_object_at
       dist_thresh: 0.3
-    set_state_fn: 
+    set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_object_at
 
 actions:

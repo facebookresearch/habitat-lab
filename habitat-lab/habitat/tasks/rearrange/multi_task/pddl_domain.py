@@ -24,8 +24,6 @@ from typing import (
 import yaml  # type: ignore[import]
 
 from habitat.config.default import get_full_habitat_config_path
-from habitat.core.dataset import Episode
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
@@ -682,7 +680,6 @@ class PddlProblem(PddlDomain):
 
 
 def _parse_callable(callable_d):
-
     full_fn_name = callable_d.pop("_target_")
     module_name, _, function_name = full_fn_name.rpartition(".")
     module = importlib.import_module(module_name)

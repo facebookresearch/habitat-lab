@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -77,9 +76,9 @@ class RearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
-                            sensor_config
-                        )
+                        agent_cfg.sim_sensors[
+                            f"{agent_name}_{sensor_key}"
+                        ] = sensor_config
 
         super().__init__(config)
 
@@ -664,7 +663,6 @@ class RearrangeSim(HabitatSim):
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, Receptacle]:
         if scene_id not in self._receptacles_cache:
-            receps = {}
             all_receps = find_receptacles(
                 self,
                 ignore_handles=ignore_handles,

@@ -98,6 +98,10 @@ def test_rearrange_dataset():
 
 
 def test_pddl():
+    """
+    Tests the PDDL system is working correctly.
+    """
+
     config = get_config(
         "habitat-lab/habitat/config/benchmark/rearrange/multi_task/rearrange_easy.yaml",
         [

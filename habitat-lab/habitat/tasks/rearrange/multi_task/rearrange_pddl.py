@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-import magnum as mn
 import numpy as np
 
 from habitat.datasets.rearrange.samplers.receptacle import Receptacle

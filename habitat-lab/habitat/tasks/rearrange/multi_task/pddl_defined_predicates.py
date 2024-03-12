@@ -1,14 +1,20 @@
-from typing import Any, Dict, Optional, cast
+from typing import Optional, cast
 
-import habitat_sim
 import magnum as mn
 import numpy as np
+
+import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    PddlEntity, PddlSimInfo, SimulatorObjectType)
-from habitat.tasks.rearrange.utils import (place_agent_at_dist_from_pos,
-                                           rearrange_logger)
+    PddlEntity,
+    PddlSimInfo,
+    SimulatorObjectType,
+)
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 # TODO: Deprecate these and instead represent them as articulated object entity type.
 CAB_TYPE = "cab_type"
@@ -16,31 +22,42 @@ FRIDGE_TYPE = "fridge_type"
 
 
 def is_robot_hold_match(
-    robot,
-    sim_info,
+    robot: PddlEntity,
+    sim_info: PddlSimInfo,
     hold_state: bool,
-    obj=None,
-):
+    obj: Optional[PddlEntity] = None,
+) -> bool:
+    """
+    Check if the robot is holding the desired object in the desired hold state.
+    :param hold_state: True if the robot should be holding the object.
+    """
+
     robot_id = cast(
         int,
         sim_info.search_for_entity(robot),
     )
     grasp_mgr = sim_info.sim.get_agent_data(robot_id).grasp_mgr
 
-    assert not (obj is not None and hold_state)
+    if hold_state:
+        if obj is not None:
+            # Robot must hold specific object.
+            obj_idx = cast(int, sim_info.search_for_entity(obj))
+            abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
+            return grasp_mgr.snap_idx == abs_obj_id
+        else:
+            # Robot can hold any object.
+            return grasp_mgr.snap_idx != None
+    else:
+        # Robot must hold no object.
+        return grasp_mgr.snap_idx == None
 
-    if obj is not None:
-        # Robot must be holding desired object.
-        obj_idx = cast(int, sim_info.search_for_entity(obj))
-        abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
-        if grasp_mgr.snap_idx != abs_obj_id:
-            return False
-    elif hold_state and grasp_mgr.snap_idx != None:
-        return False
-    return True
 
-
-def set_robot_holding(robot, sim_info, hold_state: bool, obj=None):
+def set_robot_holding(
+    robot: PddlEntity,
+    sim_info: PddlSimInfo,
+    hold_state: bool,
+    obj: Optional[PddlEntity] = None,
+) -> None:
     robot_id = cast(
         int,
         sim_info.search_for_entity(robot),
@@ -59,14 +76,16 @@ def set_robot_holding(robot, sim_info, hold_state: bool, obj=None):
         sim.internal_step(-1)
 
 
-def is_inside(obj, recep, sim_info):
-    assert sim_info.check_type_matches(
-        obj, SimulatorObjectType.MOVABLE_ENTITY.value
-    ), f"Bad type {obj=}"
+def is_inside(
+    obj: PddlEntity, recep: PddlEntity, sim_info: PddlSimInfo
+) -> bool:
+    """
+    Check if an entity is inside the receptacle.
+    """
+
     assert sim_info.check_type_matches(
         recep, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
     ), f"Bad type {recep=}"
-    pass
 
     entity_pos = sim_info.get_entity_pos(obj)
     check_marker = cast(
@@ -74,7 +93,7 @@ def is_inside(obj, recep, sim_info):
         sim_info.search_for_entity(recep),
     )
     # Hack to see if an object is inside the fridge.
-    if sim_info.check_type_matches(recep, "fridge_type"):
+    if sim_info.check_type_matches(recep, FRIDGE_TYPE):
         global_bb = get_ao_global_bb(check_marker.ao_parent)
     else:
         bb = check_marker.link_node.cumulative_bb
@@ -83,10 +102,6 @@ def is_inside(obj, recep, sim_info):
         )
 
     return global_bb.contains(entity_pos)
-
-
-def set_inside(obj, recep, sim_info):
-    raise NotImplemented()
 
 
 def is_robot_at_position(
@@ -135,16 +150,21 @@ def is_robot_at_position(
 
 
 def set_robot_position(
-    at_entity,
-    sim_info,
+    at_entity: PddlEntity,
+    sim_info: PddlSimInfo,
     dist_thresh: float,
-    robot=None,
+    robot: Optional[PddlEntity] = None,
     filter_colliding_states: bool = True,
     angle_noise: float = 0.0,
     num_spawn_attempts: int = 200,
 ):
+    """
+    Set the robot transformation to be within `dist_thresh` of
+    """
+
+    sim = sim_info.sim
     if robot is None:
-        agent_data = sim_info.sim.get_agent_data(None)
+        agent_data = sim.get_agent_data(None)
     else:
         robot_id = cast(
             int,
@@ -152,7 +172,6 @@ def set_robot_position(
         )
         agent_data = sim.get_agent_data(robot_id)
     targ_pos = sim_info.get_entity_pos(at_entity)
-    sim = sim_info.sim
 
     # Place some distance away from the object.
     start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
@@ -173,9 +192,29 @@ def set_robot_position(
     agent_data.grasp_mgr.update_object_to_grasp()
 
 
-def is_object_at(obj, at_entity, sim_info, dist_thresh):
+def is_object_at(
+    obj: PddlEntity,
+    at_entity: PddlEntity,
+    sim_info: PddlSimInfo,
+    dist_thresh: float,
+) -> bool:
+    """
+    Checks if an object entity is logically at another entity. At an object
+    means within a threshold of that object. At a receptacle means on the
+    receptacle. At a articulated receptacle means inside of it.
+    """
+
     entity_pos = sim_info.get_entity_pos(obj)
-    if sim_info.check_type_matches(at_entity, SimulatorObjectType.GOAL_ENTITY.value):
+
+    if sim_info.check_type_matches(
+        at_entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
+    ):
+        # Object is rigid and target is receptacle, we are checking if
+        # an object is inside of a receptacle.
+        return is_inside(obj, at_entity, sim_info)
+    elif sim_info.check_type_matches(
+        at_entity, SimulatorObjectType.GOAL_ENTITY.value
+    ):
         targ_idx = cast(
             int,
             sim_info.search_for_entity(at_entity),
@@ -183,52 +222,58 @@ def is_object_at(obj, at_entity, sim_info, dist_thresh):
         idxs, pos_targs = sim_info.sim.get_targets()
         targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
-        dist = np.linalg.norm(entity_pos - targ_pos)
-        if dist >= sim_info.obj_thresh:
-            return False
+        dist = float(np.linalg.norm(entity_pos - targ_pos))
+        return dist < dist_thresh
     elif sim_info.check_type_matches(
         at_entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
     ):
-        # TODO: Fix this logic to be using sim utilities.
-        breakpoint()
+        # TODO: Fix this logic to be using
+        # habitat/sims/habitat_simulator/sim_utilities.py
         recep = cast(mn.Range3D, sim_info.search_for_entity(at_entity))
         return recep.contains(entity_pos)
     else:
-        raise ValueError(f"Got unexpected combination of {obj} and {at_entity}")
-    return True
+        raise ValueError(
+            f"Got unexpected combination of {obj} and {at_entity}"
+        )
 
 
-def _place_obj_on_goal(target: PddlEntity, sim_info: PddlSimInfo) -> mn.Matrix4:
+def set_object_at(
+    obj: PddlEntity,
+    at_entity: PddlEntity,
+    sim_info: PddlSimInfo,
+    recep_place_shrink_factor: float = 0.8,
+) -> None:
     """
-    Place an object at a goal position.
+    Sets a movable PDDL entity to match the transformation of a desired
+    `at_entity` which can be a receptacle or goal.
+
+    :param recep_place_shrink_factor: How much to shrink the size of the
+        receptacle by when placing the entity on a receptacle.
     """
 
-    sim = sim_info.sim
-    targ_idx = cast(
-        int,
-        sim_info.search_for_entity(target),
-    )
-    all_targ_idxs, pos_targs = sim.get_targets()
-    targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
-    return mn.Matrix4.translation(targ_pos)
-
-
-def set_object_at(obj, at_entity, sim_info, recep_place_shrink_factor: float = 0.8):
     sim = sim_info.sim
 
     # The source object must be movable.
-    if not sim_info.check_type_matches(obj, SimulatorObjectType.MOVABLE_ENTITY.value):
+    if not sim_info.check_type_matches(
+        obj, SimulatorObjectType.MOVABLE_ENTITY.value
+    ):
         raise ValueError(f"Got unexpected obj {obj}")
 
-    elif sim_info.check_type_matches(at_entity, SimulatorObjectType.GOAL_ENTITY.value):
-        set_T = _place_obj_on_goal(at_entity, sim_info)
+    elif sim_info.check_type_matches(
+        at_entity, SimulatorObjectType.GOAL_ENTITY.value
+    ):
+        targ_idx = cast(
+            int,
+            sim_info.search_for_entity(at_entity),
+        )
+        all_targ_idxs, pos_targs = sim.get_targets()
+        targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
+        set_T = mn.Matrix4.translation(targ_pos)
     elif sim_info.check_type_matches(
         at_entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
     ):
         # Place object on top of receptacle.
         recep = cast(mn.Range3D, sim_info.search_for_entity(at_entity))
-        # TODO: This is actually a receptacle type.
-        breakpoint()
 
         # Divide by 2 because the `from_center` creates from the half size.
         shrunk_recep = mn.Range3D.from_center(
@@ -255,8 +300,17 @@ def set_object_at(obj, at_entity, sim_info, recep_place_shrink_factor: float = 0
 
 
 def is_articulated_object_at_state(
-    art_obj, sim_info, target_val: float, cmp: str, dist_thresh: float = 0.1
-):
+    art_obj: PddlEntity,
+    sim_info: PddlSimInfo,
+    target_val: float,
+    cmp: str,
+    dist_thresh: float = 0.1,
+) -> bool:
+    """
+    Checks if an articulated object matches a joint state condition.
+
+    :param cmp: The comparison to use. Can be "greater", "less", or "close".
+    """
 
     if not sim_info.check_type_matches(
         art_obj,
@@ -278,10 +332,15 @@ def is_articulated_object_at_state(
         return abs(cur_value - target_val) < dist_thresh
     else:
         raise ValueError(f"Unrecognized comparison {cmp}")
-    return False
 
 
-def set_articulated_object_at_state(art_obj, sim_info, target_val: float):
+def set_articulated_object_at_state(
+    art_obj: PddlEntity, sim_info: PddlSimInfo, target_val: float
+) -> None:
+    """
+    Sets an articulated object joint state to `target_val`.
+    """
+
     sim = sim_info.sim
     rom = sim.get_rigid_object_manager()
 
