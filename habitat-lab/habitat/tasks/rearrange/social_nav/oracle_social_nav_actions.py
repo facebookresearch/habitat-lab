@@ -23,7 +23,7 @@ from habitat.tasks.rearrange.social_nav.utils import (
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
 
-
+from IPython import embed
 @registry.register_task_action
 class OracleNavCoordAction(OracleNavAction):  # type: ignore
     """
@@ -229,7 +229,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
-        self.coord_nav = None
+        # self.coord_nav = self._task.episodes[0].info
 
     def _find_path_given_start_end(self, start, end):
         """Helper function to find the path given starting and end locations"""

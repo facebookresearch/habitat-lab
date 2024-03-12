@@ -103,7 +103,7 @@
         excluded_receptacle_substrings: []
 
     scene_sampler:
-      type: scene_balanced
+      type: single
       params:
         scene_sets:
         - train

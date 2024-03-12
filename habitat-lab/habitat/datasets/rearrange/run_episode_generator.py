@@ -9,7 +9,6 @@ import os.path as osp
 import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
-
 import numpy as np
 from omegaconf import OmegaConf
 
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class SceneSamplerParamsConfig:
-    scene: str = "v3_sc1_staging_00"
+    scene: str = "102344049"
     scene_sets: List[Any] = field(default_factory=list)
 
 
