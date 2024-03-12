@@ -20,7 +20,6 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode
 
 
-# todo: rename to RemoteClientState
 class RemoteClientState:
     """
     Class that tracks the state of a remote client.
@@ -40,7 +39,7 @@ class RemoteClientState:
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
-        self._new_connection_records = None
+        self._new_connection_records: List[Any] = []
 
         # temp map VR button to key
         self._button_map = {
