@@ -97,9 +97,9 @@ def test_rearrange_dataset():
     check_binary_serialization(dataset)
 
 
-def test_pddl():
+def _get_test_pddl():
     """
-    Tests the PDDL system is working correctly.
+    Helper to get a test PDDL instance.
     """
 
     config = get_config(
@@ -115,7 +115,29 @@ def test_pddl():
         env_class=env_class, config=config
     )
     env.reset()
-    pddl = env.env.env._env.task.pddl_problem  # type: ignore
+    return env.env.env._env.task.pddl_problem  # type: ignore
+
+
+def test_pddl_actions():
+    """
+    Checks we can execute all PDDL actions.
+    """
+
+    pddl = _get_test_pddl()
+    sim_info = pddl.sim_info
+
+    poss_actions = pddl.get_possible_actions()
+    for action in poss_actions:
+        action.apply_if_true(sim_info)
+
+
+def test_pddl_action_postconds():
+    """
+    Tests the PDDL system action post conditions have the expected outcome in
+    the simulator.
+    """
+
+    pddl = _get_test_pddl()
     sim_info = pddl.sim_info
 
     # Check that the predicates are registering that the robot is not holding

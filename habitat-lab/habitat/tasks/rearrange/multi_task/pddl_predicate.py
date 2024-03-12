@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlEntity,
@@ -19,8 +19,8 @@ class Predicate:
     def __init__(
         self,
         name: str,
-        is_valid_fn: Callable,
-        set_state_fn: Callable,
+        is_valid_fn: Optional[Callable],
+        set_state_fn: Optional[Callable],
         args: List[PddlEntity],
     ):
         """
@@ -28,10 +28,12 @@ class Predicate:
             predicates have the same name but different arguments.
         :param is_valid_fn: Function that returns if the predicate is true in
             the current state. This function must return a bool and
-            take as input the predicate parameters specified by `args`.
+            take as input the predicate parameters specified by `args`. If
+            None, then this always returns True.
         :param set_state_fn: Function that sets the state to satisfy the
             predicate. This function must return nothing and take as input the
-            values set in the predicate parameters specified by `args`.
+            values set in the predicate parameters specified by `args`. If
+            None, then no simulator state is set.
         :param args: The names of the arguments to the predicate. Note that
             these are only placeholders. Actual entities are substituted in later
             via `self.set_param_values`.
@@ -103,7 +105,12 @@ class Predicate:
             return sim_info.pred_truth_cache[self_repr]
 
         # Recompute and potentially cache the result.
-        result = self._is_valid_fn(sim_info=sim_info, **self._create_kwargs())
+        if self._is_valid_fn is None:
+            result = True
+        else:
+            result = self._is_valid_fn(
+                sim_info=sim_info, **self._create_kwargs()
+            )
         if sim_info.pred_truth_cache is not None:
             sim_info.pred_truth_cache[self_repr] = result
         return result
@@ -112,7 +119,8 @@ class Predicate:
         """
         Sets the simulator state to satisfy the predicate.
         """
-        self._set_state_fn(sim_info=sim_info, **self._create_kwargs())
+        if self._set_state_fn is not None:
+            self._set_state_fn(sim_info=sim_info, **self._create_kwargs())
 
     def _create_kwargs(self):
         return {
