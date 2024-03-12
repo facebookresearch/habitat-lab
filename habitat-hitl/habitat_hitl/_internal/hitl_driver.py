@@ -33,7 +33,7 @@ from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
-from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import (
     BaseRecorder,
     NullRecorder,
@@ -189,7 +189,7 @@ class HitlDriver(AppDriver):
             config=config,
             hitl_config=self._hitl_config,
             gui_input=gui_input,
-            remote_gui_input=self._remote_gui_input,
+            remote_client_state=self._remote_client_state,
             line_render=line_render,
             text_drawer=text_drawer,
             get_anim_fraction=lambda: self._viz_anim_fraction,
@@ -225,7 +225,7 @@ class HitlDriver(AppDriver):
         return self._hitl_config.networking.enable
 
     def _check_init_server(self, line_render, gui_input: GuiInput):
-        self._remote_gui_input = None
+        self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
             # How many frames we can simulate "ahead" of what keyframes have been sent.
@@ -237,7 +237,7 @@ class HitlDriver(AppDriver):
                 self._hitl_config.networking, max_steps_ahead
             )
             launch_networking_process(self._interprocess_record)
-            self._remote_gui_input = RemoteGuiInput(
+            self._remote_client_state = RemoteClientState(
                 self._interprocess_record, line_render, gui_input
             )
 
@@ -354,7 +354,7 @@ class HitlDriver(AppDriver):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
         if self.network_server_enabled:
-            self._remote_gui_input.clear_history()
+            self._remote_client_state.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
         if self.ctrl_helper:
@@ -451,8 +451,8 @@ class HitlDriver(AppDriver):
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
 
-        if self._remote_gui_input:
-            self._remote_gui_input.update()
+        if self._remote_client_state:
+            self._remote_client_state.update()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         self._viz_anim_fraction = (
@@ -510,8 +510,8 @@ class HitlDriver(AppDriver):
             np.flipud(image) for image in debug_images
         ]
 
-        if self._remote_gui_input:
-            self._remote_gui_input.on_frame_end()
+        if self._remote_client_state:
+            self._remote_client_state.on_frame_end()
 
         if self.network_server_enabled:
             if (

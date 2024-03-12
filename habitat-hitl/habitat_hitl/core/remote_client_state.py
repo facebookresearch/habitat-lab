@@ -20,7 +20,12 @@ from habitat_hitl.core.key_mapping import KeyCode
 
 
 # todo: rename to RemoteClientState
-class RemoteGuiInput:
+class RemoteClientState:
+    """
+    Class that tracks the state of a remote client.
+    This includes handling of remote input and client messages.
+    """
+
     def __init__(
         self,
         interprocess_record: InterprocessRecord,
@@ -45,12 +50,15 @@ class RemoteGuiInput:
         }
 
     def get_gui_input(self):
+        """Internal GuiInput class."""
         return self._gui_input
 
     def get_history_length(self):
+        """Length of client state history preserved. Anything beyond this horizon is discarded."""
         return 4
 
     def get_history_timestep(self):
+        """Frequency at which client states are read."""
         return 1 / 60
 
     def pop_recent_server_keyframe_id(self):
@@ -78,6 +86,10 @@ class RemoteGuiInput:
         return self._recent_client_states[-(1 + history_index)]
 
     def get_head_pose(self, history_index=0):
+        """
+        Get the latest head transform.
+        Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
+        """
         client_state = self.get_recent_client_state_by_history_index(
             history_index
         )
@@ -103,6 +115,10 @@ class RemoteGuiInput:
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
+        """
+        Get the latest hand transforms.
+        Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
+        """
         client_state = self.get_recent_client_state_by_history_index(
             history_index
         )
@@ -131,6 +147,7 @@ class RemoteGuiInput:
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
+        """Update mouse/keyboard input based on new client states."""
         if not len(client_states):
             return
 
@@ -171,6 +188,7 @@ class RemoteGuiInput:
             self._gui_input._key_held.add(KeyCode(button))
 
     def debug_visualize_client(self):
+        """Visualize the received VR inputs (head and hands)."""
         if not self._debug_line_render:
             return
 
@@ -231,6 +249,10 @@ class RemoteGuiInput:
                 self._debug_line_render.pop_transform()
 
     def _clean_history_by_connection_id(self, client_states):
+        """
+        Clear history by connection id.
+        Typically done after a client disconnect.
+        """
         if not len(client_states):
             return
 
@@ -256,6 +278,7 @@ class RemoteGuiInput:
             self.clear_history()
 
     def update(self):
+        """Get the latest received remote client states."""
         self._new_connection_records = (
             self._interprocess_record.get_queued_connection_records()
         )
