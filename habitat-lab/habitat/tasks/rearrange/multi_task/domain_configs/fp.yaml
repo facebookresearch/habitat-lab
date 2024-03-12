@@ -14,6 +14,23 @@ constants: {}
 
 
 predicates:
+  - name: holding
+    args:
+      - name: obj
+        expr_type: movable_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    is_valid_fn:
+      # Function that checks if the predicate is satisfied. See
+      # `pddl_defined_predicates.py` for the pre-defined instances of these
+      # functions.
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
+      hold_state: True
+    set_state_fn:
+      # Funtion that sets simulator state based on predicate arguments.
+      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
+      hold_state: True
+
   - name: in
     args:
       - name: obj
@@ -22,19 +39,6 @@ predicates:
         expr_type: art_receptacle_entity_type
     is_valid_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_inside
-
-  - name: holding
-    args:
-      - name: obj
-        expr_type: movable_entity_type
-      - name: robot
-        expr_type: robot_entity_type
-    is_valid_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
-      hold_state: True
-    set_state_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
-      hold_state: True
 
   - name: not_holding
     args:

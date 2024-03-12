@@ -26,6 +26,15 @@ class Predicate:
         """
         :param name: Predicate identifier. Does not need to be unique because
             predicates have the same name but different arguments.
+        :param is_valid_fn: Function that returns if the predicate is true in
+            the current state. This function must return a bool and
+            take as input the predicate parameters specified by `args`.
+        :param set_state_fn: Function that sets the state to satisfy the
+            predicate. This function must return nothing and take as input the
+            values set in the predicate parameters specified by `args`.
+        :param args: The names of the arguments to the predicate. Note that
+            these are only placeholders. Actual entities are substituted in later
+            via `self.set_param_values`.
         """
 
         self._name = name
