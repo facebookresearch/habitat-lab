@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from collections import defaultdict
 from typing import Any, Dict, List, Union
 
 import magnum as mn
@@ -450,6 +451,37 @@ class ObjectSateMachine:
                 obj = sutils.get_obj_from_handle(sim, obj_handle)
                 for state in states:
                     state.update_state(sim, obj, dt)
+
+    def get_snapshot_dict(
+        self, sim: habitat_sim.Simulator
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Scrape all active ObjectStateSpecs to collect a snapshot of the current state of all objects.
+
+        :return: The state snapshot as a Dict keyed by object state unique name, value is another dict mapping object instance handles to state values.
+
+        Example:
+        {
+            "is_powered_on": {
+                "my_lamp.0001": True,
+                "my_oven": False,
+                ...
+            },
+            "is_clean": {
+                "my_dish.0002:" False,
+                ...
+            },
+            ...
+        }
+        """
+        snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
+        for object_handle, states in self.objects_with_states.items():
+            obj = sutils.get_obj_from_handle(sim, object_handle)
+            for state in states:
+                snapshot[state.name][object_handle] = get_state_of_obj(
+                    obj, state.name
+                )
+        return dict(snapshot)
 
     def report_tracked_states(self, sim: habitat_sim.Simulator) -> None:
         """
