@@ -120,13 +120,10 @@ class GuiPlacementHelper:
 
     def _draw_circle(self, pos, color, radius, billboard):
         num_segments = 24
-        self._app_service.line_render.draw_circle(
+        self._app_service.gui_drawer.draw_circle(
             pos,
             radius,
             color,
             num_segments,
+            billboard=billboard,
         )
-        if self._app_service.client_message_manager:
-            self._app_service.client_message_manager.add_highlight(
-                pos, radius, billboard=billboard, color=color
-            )

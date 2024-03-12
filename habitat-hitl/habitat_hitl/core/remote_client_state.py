@@ -17,11 +17,11 @@ class RemoteGuiInput:
     def __init__(self, interprocess_record, debug_line_render):
         self._recent_client_states = []
         self._interprocess_record = interprocess_record
-        self._debug_line_render = debug_line_render
+        self._gui_drawer = gui_drawer
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
-        self._new_connection_records = None
+        self._new_connection_records: List[Any] = []
 
         # temp map VR button to key
         self._button_map = {
@@ -250,7 +250,9 @@ class RemoteGuiInput:
 
     def debug_visualize_client(self):
         """Visualize the received VR inputs (head and hands)."""
-        if not self._debug_line_render:
+        # Sloppy: Use internal debug_line_render to render on server only.
+        line_renderer = self._gui_drawer.get_sim_debug_line_render()
+        if not line_renderer:
             return
 
         avatar_color = mn.Color3(0.3, 1, 0.3)
@@ -258,7 +260,7 @@ class RemoteGuiInput:
         pos, rot_quat = self.get_head_pose()
         if pos is not None and rot_quat is not None:
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            self._debug_line_render.push_transform(trans)
+            line_renderer.push_transform(trans)
             color0 = avatar_color
             color1 = mn.Color4(
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
@@ -271,26 +273,26 @@ class RemoteGuiInput:
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            line_renderer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, size, size),
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            line_renderer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, -size, size),
                 color0,
                 color1,
             )
-            self._debug_line_render.draw_transformed_line(
+            line_renderer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, -size, size),
                 color0,
                 color1,
             )
 
-            self._debug_line_render.pop_transform()
+            line_renderer.pop_transform()
 
         for hand_idx in range(2):
             # hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)

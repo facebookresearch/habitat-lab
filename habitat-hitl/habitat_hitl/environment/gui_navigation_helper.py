@@ -107,7 +107,7 @@ class GuiNavigationHelper:
                 adjusted_point.y = mn.Vector3(path.points[path_i + 1]).y
             path_points.append(adjusted_point)
 
-        self._app_service.line_render.draw_path_with_endpoint_circles(
+        self._app_service.gui_drawer.draw_path_with_endpoint_circles(
             path_points, path_endpoint_radius, path_color
         )
 
@@ -297,7 +297,7 @@ class GuiNavigationHelper:
                 normal = (pos - prev_pos).normalized()
                 color_with_alpha = mn.Color4(color)
                 color_with_alpha[3] *= alpha
-                self._app_service.line_render.draw_circle(
+                self._app_service.gui_drawer.draw_circle(
                     pos, radius, color_with_alpha, num_segments, normal
                 )
             prev_pos = pos
