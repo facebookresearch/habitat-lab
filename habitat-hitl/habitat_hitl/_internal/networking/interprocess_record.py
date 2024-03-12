@@ -69,10 +69,10 @@ class InterprocessRecord:
 
         return items
 
-    def get_queued_client_states(self) -> List:
+    def get_queued_client_states(self) -> List[Any]:
         """Dequeue all client states."""
         return self._dequeue_all(self._client_state_queue)
 
-    def get_queued_connection_records(self) -> List:
+    def get_queued_connection_records(self) -> List[Any]:
         """Dequeue all connection records."""
         return self._dequeue_all(self._connection_record_queue)

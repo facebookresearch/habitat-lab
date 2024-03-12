@@ -69,7 +69,7 @@ class AppStateBasicViewer(AppState):
 
         # draw lookat point
         radius = 0.15
-        self._app_service.line_render.draw_circle(
+        self._app_service.gui_drawer.draw_circle(
             self._get_camera_lookat_pos(),
             radius,
             mn.Color3(255 / 255, 0 / 255, 0 / 255),

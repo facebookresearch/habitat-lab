@@ -12,7 +12,7 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -31,6 +31,7 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_client_state import RemoteClientState
@@ -42,10 +43,12 @@ from habitat_hitl.core.serialize_utils import (
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
+from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
 )
 from habitat_hitl.environment.episode_helper import EpisodeHelper
+from habitat_sim.gfx import DebugLineRender
 
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
@@ -73,11 +76,12 @@ class AppDriver:
 class HitlDriver(AppDriver):
     def __init__(
         self,
+        *,
         config,
-        gui_input,
-        line_render,
-        text_drawer,
-        create_app_state_lambda,
+        gui_input: GuiInput,
+        debug_line_drawer: Optional[DebugLineRender],
+        text_drawer: AbstractTextDrawer,
+        create_app_state_lambda: Callable,
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -88,8 +92,6 @@ class HitlDriver(AppDriver):
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
         self._gui_input = gui_input
-
-        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -164,33 +166,32 @@ class HitlDriver(AppDriver):
         self._debug_images = self._hitl_config.debug_images
 
         self._viz_anim_fraction: float = 0.0
-        self._pending_cursor_style = None
+        self._pending_cursor_style: Optional[Any] = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
-
-        self._check_init_server(line_render, gui_input)
-
-        def local_end_episode(do_reset=False):
-            self._end_episode(do_reset)
 
         self._client_message_manager = None
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager()
 
+        gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
+        gui_drawer.set_line_width(self._hitl_config.debug_line_width)
+
+        self._check_init_server(gui_drawer, gui_input)
+
+        def local_end_episode(do_reset=False):
+            self._end_episode(do_reset)
+
         gui_agent_controllers: Any = (
             self.ctrl_helper.get_gui_agent_controllers()
-            if self.ctrl_helper
-            else []
         )
-        for controller in gui_agent_controllers:
-            controller.line_render = line_render
 
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
             gui_input=gui_input,
             remote_client_state=self._remote_client_state,
-            line_render=line_render,
+            gui_drawer=gui_drawer,
             text_drawer=text_drawer,
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
@@ -224,7 +225,7 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.networking.enable
 
-    def _check_init_server(self, line_render, gui_input: GuiInput):
+    def _check_init_server(self, gui_drawer: GuiDrawer, gui_input: GuiInput):
         self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
@@ -238,7 +239,7 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record, line_render, gui_input
+                self._interprocess_record, gui_drawer, gui_input
             )
 
     def _check_terminate_server(self):

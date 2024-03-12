@@ -484,7 +484,7 @@ class AppStatePickThrowVr(AppState):
 
     def _draw_circle(self, pos, color, radius):
         num_segments = 24
-        self._app_service.line_render.draw_circle(
+        self._app_service.gui_drawer.draw_circle(
             pos,
             radius,
             color,

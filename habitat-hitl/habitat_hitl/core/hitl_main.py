@@ -124,12 +124,14 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         debug_third_person_height=debug_third_person_height,
     )
 
+    debug_line_drawer = app_renderer._replay_renderer.debug_line_render(0)
+
     driver = HitlDriver(
-        app_config,
-        gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
-        app_renderer._text_drawer,
-        create_app_state_lambda,
+        config=app_config,
+        gui_input=gui_app_wrapper.get_sim_input(),
+        debug_line_drawer=debug_line_drawer,
+        text_drawer=app_renderer._text_drawer,
+        create_app_state_lambda=create_app_state_lambda,
     )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
@@ -214,28 +216,12 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height=debug_third_person_height,
     )
 
-    class StubLineRender:
-        """
-        Stub version of DebugLineRender that does nothing.
-
-        DebugLineRender has a large public interface. Rather than duplicate it, let's just
-        allow any method to be called.
-        """
-
-        def __getattr__(self, name):
-            # This method is called for any attribute not found on the object
-            def any_method(*args, **kwargs):
-                # This function accepts any arguments and does nothing
-                return None
-
-            return any_method
-
     driver = HitlDriver(
-        config,
-        GuiInput(),
-        StubLineRender(),
-        HeadlessTextDrawer(),
-        create_app_state_lambda,
+        config=config,
+        gui_input=GuiInput(),
+        debug_line_drawer=None,
+        text_drawer=HeadlessTextDrawer(),
+        create_app_state_lambda=create_app_state_lambda,
     )
 
     _headless_app_loop(hitl_config, driver)
