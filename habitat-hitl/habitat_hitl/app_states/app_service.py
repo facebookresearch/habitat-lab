@@ -6,18 +6,18 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, List
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.episode_helper import EpisodeHelper
-from habitat_sim.gfx import DebugLineRender
 
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
@@ -28,8 +28,8 @@ class AppService:
         config,
         hitl_config,
         gui_input: GuiInput,
-        remote_gui_input: RemoteGuiInput,
-        line_render: DebugLineRender,
+        remote_client_state: RemoteClientState,
+        gui_drawer: GuiDrawer,
         text_drawer: AbstractTextDrawer,
         get_anim_fraction: Callable,
         env: Env,
@@ -41,13 +41,13 @@ class AppService:
         set_cursor_style: Callable,
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
-        gui_agent_controller: Optional[GuiController],
+        gui_agent_controllers: List[GuiController],
     ):
         self._config = config
         self._hitl_config = hitl_config
         self._gui_input = gui_input
-        self._remote_gui_input = remote_gui_input
-        self._line_render = line_render
+        self._remote_client_state = remote_client_state
+        self._gui_drawer = gui_drawer
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
         self._env = env
@@ -59,7 +59,7 @@ class AppService:
         self._set_cursor_style = set_cursor_style
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
-        self._gui_agent_controller = gui_agent_controller
+        self._gui_agent_controllers = gui_agent_controllers
 
     @property
     def config(self):
@@ -74,12 +74,12 @@ class AppService:
         return self._gui_input
 
     @property
-    def remote_gui_input(self) -> RemoteGuiInput:
-        return self._remote_gui_input
+    def remote_client_state(self) -> RemoteClientState:
+        return self._remote_client_state
 
     @property
-    def line_render(self) -> DebugLineRender:
-        return self._line_render
+    def gui_drawer(self) -> GuiDrawer:
+        return self._gui_drawer
 
     @property
     def text_drawer(self) -> AbstractTextDrawer:
@@ -126,5 +126,5 @@ class AppService:
         return self._client_message_manager
 
     @property
-    def gui_agent_controller(self) -> Optional[GuiController]:
-        return self._gui_agent_controller
+    def gui_agent_controllers(self) -> List[GuiController]:
+        return self._gui_agent_controllers

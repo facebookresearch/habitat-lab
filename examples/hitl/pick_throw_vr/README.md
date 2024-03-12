@@ -19,7 +19,8 @@ This is an example HITL application that allows a user to interact with a scene,
   - [Launch Command](#launch-command)
   - [Unity Data Folder](#unity-data-folder)
     - [Dataset Processing](#dataset-processing)
-      - [Installation](#installation-1)
+      - [Magnum Installation for Mac](#magnum-installation-for-mac)
+      - [Magnum Installation for Linux](#magnum-installation-for-linux)
       - [Usage](#usage)
       - [Importing Data Into Unity](#importing-data-into-unity)
   - [Running Locally from Unity](#running-locally-from-unity)
@@ -101,13 +102,23 @@ Therefore, a script is provided so that you can process your datasets and add th
 
 ### Dataset Processing
 
-#### Installation
+The dataset processing script requires latest Magnum binaries, which should be installed separately from Habitat as described below.
 
-This step requires [Magnum](https://github.com/mosra/magnum) data processing tools. They are not built along with Habitat.
+#### Magnum Installation for Mac
+
+Magnum is easiest to install on Mac via Homebrew.
+
+1. Follow [magnum-bindings installation instructions](https://doc.magnum.graphics/python/building/#homebrew-formulas-for-macos).
+   * In addition to `corrade`, `magnum`, and `magnum-bindings`, you may need `magnum-plugins`.
+2. Test your install: `python -c "from magnum import math, meshtools, scenetools, trade"`.
+   * Beware homebrew installs python packages like magnum to its own Python location, not your current conda environment's Python.
+   * Depending on how Homebrew has installed Python, you may need to use `python3` instead of `python`.
+
+#### Magnum Installation for Linux
 
 It is recommended that you create a new `conda` environment so that it can be reused in the future without interfering with Habitat.
 
-1. Get the latest `magnum-tools`.
+1. Install magnum binaries for Linux.
    * Navigate to the [Magnum CI](https://github.com/mosra/magnum-ci/actions/workflows/magnum-tools.yml).
    * Select the latest green workflow run.
    * Scroll down to "Artifacts".
@@ -117,19 +128,19 @@ It is recommended that you create a new `conda` environment so that it can be re
 ```
 conda create --name magnum python=3.10
 ```
-3. Navigate to the `site-packages` of your new environment, e.g. `~/anaconda/envs/magnum/lib/python3.10/site-packages/`.
-4. Create a `magnum.pth` file in this directory.
-5. Add the absolute path to `magnum-tools`'s `python` folder to this file, e.g:
+1. Navigate to the `site-packages` of your new environment, e.g. `~/anaconda/envs/magnum/lib/python3.10/site-packages/`.
+2. Create a `magnum.pth` file in this directory.
+3. Add the absolute path to `magnum-tools`'s `python` folder to this file, e.g:
 ```
 /home/USER/Documents/magnum-tools/linux-x64/python/
 ```
-6. The Magnum libraries will now be included upon activating your `magnum` environment. You may validate by assessing that the following commands don't return errors:
+1. The Magnum libraries will now be included upon activating your `magnum` environment. You may validate by assessing that the following commands don't return errors:
    * `conda activate magnum`
    * `python -c "from magnum import math, meshtools, scenetools, trade"`
 
 #### Usage
 
-To process the dataset, activate your `magnum` conda environment and navigate to your `habitat-lab` root directory. Run the following command:
+To process the dataset, navigate to your `habitat-lab` root directory. Run the following command:
 
 ```
 python ./scripts/unity_dataset_processing/unity_dataset_processing.py \

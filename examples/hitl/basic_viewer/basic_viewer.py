@@ -69,7 +69,7 @@ class AppStateBasicViewer(AppState):
 
         # draw lookat point
         radius = 0.15
-        self._app_service.line_render.draw_circle(
+        self._app_service.gui_drawer.draw_circle(
             self._get_camera_lookat_pos(),
             radius,
             mn.Color3(255 / 255, 0 / 255, 0 / 255),
@@ -200,9 +200,9 @@ class AppStateBasicViewer(AppState):
     version_base=None, config_path="config", config_name="basic_viewer"
 )
 def main(config):
-    if config.habitat_hitl.gui_controlled_agent.agent_index is not None:
+    if len(config.habitat_hitl.gui_controlled_agents) > 0:
         raise ValueError(
-            "habitat_hitl.gui_controlled_agent.agent_index is not supported for basic_viewer"
+            "habitat_hitl.gui_controlled_agents is not supported for basic_viewer"
         )
 
     hitl_main(

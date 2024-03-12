@@ -1013,10 +1013,10 @@ class RearrangeEpisodeGenerator:
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
                 if self._render_debug_obs:
-                    self.dbv.peek_rigid_object(
-                        obj=new_object,
+                    # NOTE: if debugging visualization is on, any unstable objects will have a peek image prefixed "unstable_" generated to aid debugging
+                    self.dbv.peek(
+                        new_object,
                         peek_all_axis=True,
-                        additional_savefile_prefix="unstable_",
                         debug_lines=[
                             (
                                 [
@@ -1026,7 +1026,7 @@ class RearrangeEpisodeGenerator:
                                 mn.Color4.red(),
                             )
                         ],
-                    )
+                    ).save(self.dbv.output_path, prefix="unstable_")
         logger.info(
             f" : unstable={len(unstable_placements)}|{len(self.ep_sampled_objects)} ({len(unstable_placements)/len(self.ep_sampled_objects)*100}%) : {unstable_placements}."
         )
@@ -1128,7 +1128,9 @@ class RearrangeEpisodeGenerator:
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
-                self.dbv.peek_rigid_object(obj, peek_all_axis=True)
+                self.dbv.peek(obj, peek_all_axis=True).save(
+                    self.dbv.output_path
+                )
 
         # return success or failure
         return success

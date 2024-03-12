@@ -8,6 +8,7 @@ import os
 
 import magnum as mn
 
+from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
 from habitat_hitl._internal.hitl_driver import HitlDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -51,6 +52,8 @@ def hitl_main(app_config, create_app_state_lambda=None):
             "HITL apps expect 'data/' directory to exist. "
             "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
         )
+
+    app_config = patch_config(app_config)
 
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 
@@ -121,21 +124,15 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         debug_third_person_height=debug_third_person_height,
     )
 
-    driver = HitlDriver(
-        app_config,
-        gui_app_wrapper.get_sim_input(),
-        app_renderer._replay_renderer.debug_line_render(0),
-        app_renderer._text_drawer,
-        create_app_state_lambda,
-    )
+    debug_line_drawer = app_renderer._replay_renderer.debug_line_render(0)
 
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(app_config.habitat.simulator.agents) == 1
-        and app_config.habitat_hitl.gui_controlled_agent.agent_index
-        is not None
-    ):
-        assert driver.get_sim().renderer is None
+    driver = HitlDriver(
+        config=app_config,
+        gui_input=gui_app_wrapper.get_sim_input(),
+        debug_line_drawer=debug_line_drawer,
+        text_drawer=app_renderer._text_drawer,
+        create_app_state_lambda=create_app_state_lambda,
+    )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
@@ -147,10 +144,11 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
 def _headless_app_loop(hitl_config, driver):
     headless_config = hitl_config.experimental.headless
     frequency_limiter = FrequencyLimiter(hitl_config.target_sps)
-    rate_tracker = AverageRateTracker(1.0)
+    sps_rate_tracker = AverageRateTracker(1.0)
     dt = 1.0 / hitl_config.target_sps
 
     step_count = 0
+    next_step_count_to_debug_print = 100
 
     video_config = headless_config.debug_video_writer
     video_helper = None
@@ -160,6 +158,11 @@ def _headless_app_loop(hitl_config, driver):
         video_helper = DebugVideoWriter()
 
     while True:
+        # Print step_count periodically. print less often as time goes by, to cut down on log spam.
+        if step_count == next_step_count_to_debug_print:
+            print(f"step {step_count}")
+            next_step_count_to_debug_print = next_step_count_to_debug_print * 2
+
         post_sim_update_dict = driver.sim_update(dt)
 
         if "application_exit" in post_sim_update_dict:
@@ -173,9 +176,11 @@ def _headless_app_loop(hitl_config, driver):
 
         frequency_limiter.limit_frequency()
 
-        new_rate = rate_tracker.increment()
+        new_rate = sps_rate_tracker.increment()
         if new_rate is not None:
-            print(f"SPS: {new_rate:.1f}")
+            low_sps_warning_threshold = hitl_config.target_sps * 0.9
+            if new_rate < low_sps_warning_threshold:
+                print(f"low SPS: {new_rate:.1f}")
 
         step_count += 1
         if (
@@ -191,7 +196,7 @@ def _headless_app_loop(hitl_config, driver):
 
 
 def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
-    from habitat_hitl.core.text_drawer import StubTextDrawer
+    from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
         raise ValueError(
@@ -211,36 +216,13 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height=debug_third_person_height,
     )
 
-    class StubLineRender:
-        """
-        Stub version of DebugLineRender that does nothing.
-
-        DebugLineRender has a large public interface. Rather than duplicate it, let's just
-        allow any method to be called.
-        """
-
-        def __getattr__(self, name):
-            # This method is called for any attribute not found on the object
-            def any_method(*args, **kwargs):
-                # This function accepts any arguments and does nothing
-                return None
-
-            return any_method
-
     driver = HitlDriver(
-        config,
-        GuiInput(),
-        StubLineRender(),
-        StubTextDrawer(),
-        create_app_state_lambda,
+        config=config,
+        gui_input=GuiInput(),
+        debug_line_drawer=None,
+        text_drawer=HeadlessTextDrawer(),
+        create_app_state_lambda=create_app_state_lambda,
     )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(config.habitat.simulator.agents) == 1
-        and config.habitat_hitl.gui_controlled_agent.agent_index is not None
-    ):
-        assert driver.get_sim().renderer is None
 
     _headless_app_loop(hitl_config, driver)
 
