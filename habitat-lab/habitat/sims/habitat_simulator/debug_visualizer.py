@@ -436,10 +436,6 @@ class DebugVisualizer:
                     f"The subject, '{subject}', is not a supported value. Should be an object, object handle, object_id integer, or one of 'stage' or 'scene'."
                 )
 
-        # scene is best viewed from above by default
-        if cam_local_pos is None:
-            cam_local_pos = mn.Vector3(0, 1, 0)
-
         return self._peek_bb(
             bb=subject_bb,
             world_transform=subject_transform,
