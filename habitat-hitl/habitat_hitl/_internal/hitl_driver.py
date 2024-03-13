@@ -172,7 +172,7 @@ class HitlDriver(AppDriver):
 
         self._client_message_manager = None
         if self.network_server_enabled:
-            self._client_message_manager = ClientMessageManager()
+            self._client_message_manager = ClientMessageManager(self._hitl_config.networking.max_client_count)
 
         gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
@@ -541,10 +541,15 @@ class HitlDriver(AppDriver):
                     if "rigUpdates" in keyframe_obj:
                         del keyframe_obj["rigUpdates"]
                 # Insert server->client message into the keyframe
-                message = self._client_message_manager.get_message_dict()
-                if len(message) > 0:
-                    keyframe_obj["message"] = message
-                    self._client_message_manager.clear_message_dict()
+                messages = self._client_message_manager.get_messages()
+                for user_index in range(messages):
+                    message = messages[user_index]
+                    if len(message) > 0:
+                        # [0mdc/multiplayer] TODO: Keyframe consolidation, documentation.
+                        # Create one keyframe key per user for consolidation.
+                        # This is unwrapped on a per-user basis before sending to the respective client.
+                        keyframe_obj[str(user_index)] = message
+                self._client_message_manager.clear_messages()
                 # Send the keyframe
                 self._interprocess_record.send_keyframe_to_networking_thread(
                     keyframe_obj
