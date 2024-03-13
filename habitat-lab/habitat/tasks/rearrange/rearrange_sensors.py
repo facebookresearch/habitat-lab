@@ -21,6 +21,8 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
+    get_camera_object_angle,
+    get_camera_transform,
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
@@ -206,6 +208,7 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        self._arm_joint_mask = config.arm_joint_mask
 
     def _get_uuid(self, *args, **kwargs):
         return "joint"
@@ -214,6 +217,8 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, config, **kwargs):
+        if config.arm_joint_mask is not None:
+            assert config.dimensionality == np.sum(config.arm_joint_mask)
         return spaces.Box(
             shape=(config.dimensionality,),
             low=np.finfo(np.float32).min,
@@ -221,10 +226,20 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
+    def _get_mask_joint(self, joints_pos):
+        """Select the joint location"""
+        mask_joints_pos = []
+        for i in range(len(self._arm_joint_mask)):
+            if self._arm_joint_mask[i]:
+                mask_joints_pos.append(joints_pos[i])
+        return mask_joints_pos
+
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.arm_joint_pos
+        if self._arm_joint_mask is not None:
+            joints_pos = self._get_mask_joint(joints_pos)
         return np.array(joints_pos, dtype=np.float32)
 
 
@@ -602,6 +617,11 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
+        assert (
+            self._config.center_cone_vector is not None
+            if self._config.if_consider_gaze_angle
+            else True
+        ), "Want to consider grasping gaze angle but a target center_cone_vector is not provided in the config."
         super().__init__(**kwargs)
 
     @staticmethod
@@ -624,6 +644,61 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
+        # Ensure the gripper maintains a desirable distance
+        distances = abs(
+            distances - self._config.desire_distance_between_gripper_object
+        )
+
+        if self._config.if_consider_gaze_angle:
+            # Get the camera transformation
+            cam_T = get_camera_transform(
+                self._sim.get_agent_data(self.agent_id).articulated_agent
+            )
+            # Get angle between (normalized) location and the vector that the camera should
+            # look at
+            obj_angle = get_camera_object_angle(
+                cam_T, target_pos[0], self._config.center_cone_vector
+            )
+            distances += obj_angle
+
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
+
+
+@registry.register_measure
+class BaseToObjectDistance(UsesArticulatedAgentInterface, Measure):
+    """
+    Gets the distance between the base and all current target object COMs.
+    """
+
+    cls_uuid: str = "base_to_object_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return BaseToObjectDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+        base_pos = np.array(
+            (
+                self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_pos
+            )
+        )
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = np.array(scene_pos[idxs])
+        distances = np.linalg.norm(
+            target_pos[:, [0, 2]] - base_pos[[0, 2]], ord=2, axis=-1
+        )
         self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
@@ -778,6 +853,7 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         articulated_agent_force, _, overall_force = self._task.get_coll_forces(
             self.agent_id
         )
+
         if self._count_obj_collisions:
             self._cur_force = overall_force
         else:
@@ -941,16 +1017,18 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         self._task = task
         self._force_pen = self._config.force_pen
         self._max_force_pen = self._config.max_force_pen
+        self._count_coll_pen = self._config.count_coll_pen
+        self._max_count_colls = self._config.max_count_colls
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                RobotForce.cls_uuid,
-                ForceTerminate.cls_uuid,
-            ],
-        )
+        self._prev_count_coll = 0
+
+        target_measure = [RobotForce.cls_uuid, ForceTerminate.cls_uuid]
+        if self._want_count_coll():
+            target_measure.append(RobotCollisions.cls_uuid)
+
+        task.measurements.check_measure_dependencies(self.uuid, target_measure)
 
         self.update_metric(
             *args,
@@ -963,13 +1041,20 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
 
+        # For force collision reward (userful for dynamic simulation)
         reward += self._get_coll_reward()
 
+        # For count-based collision reward and termination (userful for kinematic simulation)
+        if self._want_count_coll():
+            reward += self._get_count_coll_reward()
+
+        # For hold constraint violation
         if self._sim.get_agent_data(
             self.agent_id
         ).grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.constraint_violate_pen
 
+        # For force termination
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
@@ -991,6 +1076,39 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
                 self._max_force_pen,
             ),
         )
+        return reward
+
+    def _want_count_coll(self):
+        """Check if we want to consider penality from count-based collisions"""
+        return self._count_coll_pen != -1 or self._max_count_colls != -1
+
+    def _get_count_coll_reward(self):
+        """Count-based collision reward"""
+        reward = 0
+
+        count_coll_metric = self._task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ]
+        cur_total_colls = count_coll_metric.get_metric()["total_collisions"]
+
+        # Check the step collision
+        if (
+            self._count_coll_pen != -1.0
+            and cur_total_colls - self._prev_count_coll > 0
+        ):
+            reward -= self._count_coll_pen
+
+        # Check the max count collision
+        if (
+            self._max_count_colls != -1.0
+            and cur_total_colls > self._max_count_colls
+        ):
+            reward -= self._config.count_coll_end_pen
+            self._task.should_end = True
+
+        # update the counter
+        self._prev_count_coll = cur_total_colls
+
         return reward
 
 
@@ -1145,3 +1263,79 @@ class HasFinishedHumanoidPickSensor(UsesArticulatedAgentInterface, Sensor):
         nav_action = self._task.actions[use_k]
 
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
+@registry.register_sensor
+class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
+    """Bounding box sensor to check if the object is in frame"""
+
+    cls_uuid: str = "arm_depth_bbox_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        self._height = config.height
+        self._width = config.width
+
+    def _get_uuid(self, *args, **kwargs):
+        return ArmDepthBBoxSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(
+                config.height,
+                config.width,
+                1,
+            ),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        return rmin, rmax, cmin, cmax
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get a correct observation space
+        if self.agent_id is None:
+            target_key = "articulated_agent_arm_panoptic"
+            assert target_key in observations
+        else:
+            target_key = (
+                f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+            )
+            assert target_key in observations
+
+        img_seg = observations[target_key]
+
+        # Check the size of the observation
+        assert (
+            img_seg.shape[0] == self._height
+            and img_seg.shape[1] == self._width
+        )
+
+        # Check if task has the attribute of the abs_targ_idx
+        assert hasattr(task, "abs_targ_idx")
+
+        # Get the target from sim, and ensure that the index is offset
+        tgt_idx = (
+            self._sim.scene_obj_ids[task.abs_targ_idx]
+            + self._sim.habitat_config.object_ids_start
+        )
+        tgt_mask = (img_seg == tgt_idx).astype(int)
+
+        # Get the bounding box
+        bbox = np.zeros(tgt_mask.shape)
+        if np.sum(tgt_mask) != 0:
+            rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
+            bbox[rmin:rmax, cmin:cmax] = 1.0
+
+        return np.float32(bbox)

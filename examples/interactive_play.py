@@ -92,6 +92,7 @@ def step_env(env, action_name, action_args):
 
 def get_input_vel_ctlr(
     skip_pygame,
+    cfg,
     arm_action,
     env,
     not_block_input,
@@ -113,7 +114,10 @@ def get_input_vel_ctlr(
         base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
-        base_action_name = f"{agent_k}base_velocity"
+        if "spot" in cfg:
+            base_action_name = f"{agent_k}base_velocity_non_cylinder"
+        else:
+            base_action_name = f"{agent_k}base_velocity"
         arm_key = "arm_action"
         grip_key = "grip_action"
         base_key = "base_vel"
@@ -124,7 +128,7 @@ def get_input_vel_ctlr(
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
-    elif "stretch" in DEFAULT_CFG:
+    elif "stretch" in cfg:
         arm_action_space = np.zeros(10)
         arm_ctrlr = None
         base_action = [0, 0]
@@ -202,6 +206,29 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+
+        elif arm_action_space.shape[0] == 4:
+            # Velocity control. A different key for each joint
+            # This is for Spot robot which a user can only control the effective arm in the real robot
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
 
         elif arm_action_space.shape[0] == 10:
             # Velocity control. A different key for each joint
@@ -331,6 +358,7 @@ def get_input_vel_ctlr(
         logger.info(f"Agent arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
+
     if base_action is not None and base_action_name in env.action_space.spaces:
         name = base_action_name
         args = {base_key: base_action}
@@ -493,6 +521,7 @@ def play_env(env, args, config):
 
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
+            args.cfg,
             use_arm_actions[update_idx]
             if use_arm_actions is not None
             else None,

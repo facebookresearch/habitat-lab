@@ -1,7 +1,20 @@
 # @package _global_
 defaults:
   - play
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_head_rgbdp_arm_agent
+  - /habitat/task/lab_sensors:
+    - arm_depth_bbox_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - _self_
+
+habitat:
+  task:
+    lab_sensors:
+      arm_depth_bbox_sensor:
+        height: 240
+        width: 228
+    actions:
+      arm_action:
+        center_cone_vector: [0.0, 1.0, 0.0]
+        auto_grasp: True

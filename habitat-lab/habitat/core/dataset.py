@@ -45,6 +45,7 @@ class BaseEpisode:
     Base class for episode specification that includes only the episode_id
     and scene id. This class allows passing the minimum required episode
     information to identify the episode (unique key) to the habitat baseline process, thus saving evaluation time.
+
     :property episode_id: id of episode in the dataset, usually episode number.
     :property scene_id: id of scene in dataset.
     """
@@ -452,6 +453,15 @@ class EpisodeIterator(Iterator[T]):
 
         self._prev_scene_id = next_episode.scene_id
         return next_episode
+
+    def set_next_episode_by_id(self, episode_id):
+        self._iterator = iter(self.episodes)
+        for episode in self.episodes:
+            if episode.episode_id == episode_id:
+                break
+            next(self._iterator, None)
+        else:
+            raise ValueError(f"Episode with ID {episode_id} not found.")
 
     def _forced_scene_switch(self) -> None:
         r"""Internal method to switch the scene. Moves remaining episodes

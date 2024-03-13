@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:
+  - social_rearrange: pop_play
+  - hitl_defaults
+  - _self_
+
+habitat:
+  environment:
+    iterator_options:
+      # for manual inspection of episodes by a user, it makes sense to disable shuffle
+      shuffle: False
+
+habitat_baselines:
+  # todo: document these choices
+  eval:
+    should_load_ckpt: False
+  rl:
+    agent:
+      num_pool_agents_per_type: [1,1]
+
+habitat_hitl:
+  window:
+    title: "Basic_viewer"
+  debug_third_person_viewport:
+    width: 256
+  debug_images: ["agent_1_head_depth"]

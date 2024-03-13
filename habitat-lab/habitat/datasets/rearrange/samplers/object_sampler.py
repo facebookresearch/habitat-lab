@@ -230,7 +230,7 @@ class ObjectSampler:
         object_handle: str,
         receptacle: Receptacle,
         snap_down: bool = False,
-        vdb: Optional[DebugVisualizer] = None,
+        dbv: Optional[DebugVisualizer] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         """
         Attempt to sample a valid placement of the object in/on a receptacle given an object handle and receptacle information.
@@ -239,7 +239,7 @@ class ObjectSampler:
         :param object_handle: The handle of the object template for instantiation and attempted placement.
         :param receptacle: The Receptacle instance on which to sample a placement position.
         :param snap_down: Whether or not to use the snap_down utility to place the object.
-        :param vdb: Optionally provide a debug visualizer (vdb)
+        :param dbv: Optionally provide a DebugVisualizer(dbv)
 
         :return: The newly instanced rigid object or None if placement sampling failed.
         """
@@ -320,7 +320,7 @@ class ObjectSampler:
                     sim,
                     new_object,
                     support_object_ids,
-                    vdb=vdb,
+                    dbv=dbv,
                 )
                 if snap_success:
                     logger.info(
@@ -374,7 +374,7 @@ class ObjectSampler:
         sim: habitat_sim.Simulator,
         recep_tracker: ReceptacleTracker,
         snap_down: bool = False,
-        vdb: Optional[DebugVisualizer] = None,
+        dbv: Optional[DebugVisualizer] = None,
         fixed_target_receptacle=None,
         fixed_obj_handle: Optional[str] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
@@ -384,7 +384,7 @@ class ObjectSampler:
         :param sim: The active Simulator instance.
         :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
         :param snap_down: Whether or not to use the snap_down utility to place the objects.
-        :param vdb: Optionally provide a debug visualizer (vdb)
+        :param dbv: Optionally provide a DebugVisualizer (dbv)
         :param fixed_target_receptacle: Optionally provide a pre-selected Receptacle instead of sampling. For example, when a target object's receptacle is selected in advance.
         :param fixed_obj_handle: Optionally provide a pre-selected object instead of sampling. For example, when sampling the goal position for a known target object.
 
@@ -406,7 +406,7 @@ class ObjectSampler:
         )
 
         new_object = self.sample_placement(
-            sim, object_handle, target_receptacle, snap_down, vdb
+            sim, object_handle, target_receptacle, snap_down, dbv
         )
 
         return new_object, target_receptacle
@@ -428,7 +428,7 @@ class ObjectSampler:
         recep_tracker: ReceptacleTracker,
         target_receptacles: List[Receptacle],
         snap_down: bool = False,
-        vdb: Optional[DebugVisualizer] = None,
+        dbv: Optional[DebugVisualizer] = None,
         target_object_handles: Optional[List[str]] = None,
         object_idx_to_recep: Optional[Dict[int, Receptacle]] = None,
     ) -> List[Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]:
@@ -439,7 +439,7 @@ class ObjectSampler:
         :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
         :param target_receptacles: A list of pre-selected Receptacles for target object placement. These will be sampled first.
         :param snap_down: Whether or not to use the snap_down utility to place the objects.
-        :param vdb: Optionally provide a debug visualizer (vdb)
+        :param dbv: Optionally provide a DebugVisualizer (dbv)
 
         :return: The list of new (object,receptacle) pairs placed by the sampler.
         """
@@ -475,7 +475,7 @@ class ObjectSampler:
                     sim,
                     recep_tracker,
                     snap_down,
-                    vdb,
+                    dbv,
                     target_receptacles[cur_obj_idx],
                     fixed_obj_handle=fixed_obj_handle,
                 )
@@ -486,7 +486,7 @@ class ObjectSampler:
                     sim,
                     recep_tracker,
                     snap_down,
-                    vdb,
+                    dbv,
                     fixed_target_receptacle=object_idx_to_recep.get(
                         cur_obj_idx, None
                     ),

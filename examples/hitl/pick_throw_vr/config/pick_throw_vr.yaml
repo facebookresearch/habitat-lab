@@ -1,0 +1,28 @@
+# @package _global_
+
+defaults:
+  - social_rearrange: pop_play
+  - hitl_defaults
+  - _self_
+
+habitat:
+  # todo: document these choices
+  environment:
+    max_episode_steps: 0
+  task:
+    measurements:
+      rearrange_cooperate_reward:
+        end_on_collide: False
+      pddl_success:
+        must_call_stop: False
+
+habitat_hitl:
+  window:
+    title: "Pick_throw_vr"
+    width: 1300
+    height: 1000
+  gui_controlled_agent:
+    agent_index: 1
+    ang_speed: 15
+
+pick_throw_vr:

@@ -501,7 +501,6 @@ def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
     Filter all but position data and interleave a mesh to reduce overall memory footprint.
     Convert triangle like primitives into triangles and assert only triangles remain.
 
-    NOTE: Modifies the mesh data in-place
     :return: The modified mesh for easy of use.
     """
 
@@ -521,7 +520,9 @@ def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
     )
 
     # reformat the mesh data after filtering
-    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
+    mesh = mn.meshtools.interleave(
+        mesh, flags=mn.meshtools.InterleaveFlags.NONE
+    )
 
     return mesh
 
@@ -590,7 +591,7 @@ def parse_receptacles_from_user_config(
 
     :param user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
     :param parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
-    :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
+    :param parent_template_directory: The filesystem directory path containing the configuration file. Used to construct the absolute asset path from the relative asset path.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
     :param ao_uniform_scaling: Uniform scaling applied to the parent AO is applied directly to the Receptacle.
 
@@ -756,6 +757,9 @@ def find_receptacles(
         obj = ao_mgr.get_object_by_handle(obj_handle)
         # TODO: no way to get filepath from AO currently. Add this API.
         source_template_file = ""
+        creation_attr = obj.creation_attributes
+        if creation_attr is not None:
+            source_template_file = creation_attr.file_directory
         user_attr = obj.user_attributes
         receptacles.extend(
             parse_receptacles_from_user_config(

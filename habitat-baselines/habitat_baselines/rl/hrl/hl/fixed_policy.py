@@ -139,3 +139,20 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 self._next_sol_idxs[batch_idx] += 1
 
         return next_skill, skill_args_data, immediate_end, PolicyActionData()
+
+    def filter_envs(self, curr_envs_to_keep_active):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+        self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
+        parse_solution_actions = [
+            self._parse_solution_actions() for _ in range(self._num_envs)
+        ]
+        self._update_solution_actions(
+            [
+                parse_solution_actions[i]
+                for i in range(curr_envs_to_keep_active.shape[0])
+                if curr_envs_to_keep_active[i]
+            ]
+        )

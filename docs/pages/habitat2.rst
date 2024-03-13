@@ -5,7 +5,7 @@ Habitat 2.0 Overview
 
 `Quick Start`_
 ========================
-To get started with Habitat 2.0, see the `quick start Colab tutorial <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/Habitat2_Quickstart.ipynb>`__ and the `Gym API tutorial <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb>`__.
+To get started with Habitat 2.0, see the `quick start Jupyter notebook tutorial <https://github.com/facebookresearch/habitat-lab/blob/main/examples/tutorials/notebooks/Habitat2_Quickstart.ipynb>`__ and the `Gym API tutorial <https://github.com/facebookresearch/habitat-lab/blob/main/examples/tutorials/notebooks/habitat2_gym_tutorial.ipynb>`__.
 
 `Local Installation`_
 ======================

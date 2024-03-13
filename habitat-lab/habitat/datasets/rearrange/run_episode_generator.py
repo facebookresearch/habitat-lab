@@ -9,7 +9,6 @@ import os.path as osp
 import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
-
 import numpy as np
 from omegaconf import OmegaConf
 
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class SceneSamplerParamsConfig:
-    scene: str = "v3_sc1_staging_00"
+    scene: str = "102344049"
     scene_sets: List[Any] = field(default_factory=list)
 
 
@@ -378,7 +377,7 @@ if __name__ == "__main__":
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)
-        ep_gen.vdb.output_path = osp.abspath(args.db_output)
+        ep_gen.dbv.output_path = osp.abspath(args.db_output)
 
         # Simulator has been initialized and SceneDataset is populated
         if args.list:

@@ -17,6 +17,7 @@ from habitat.articulated_agents.mobile_manipulator import (
 @attr.s(auto_attribs=True, slots=True)
 class SpotParams:
     """Data to configure a mobile manipulator.
+
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property arm_init_params: The starting joint angles of the arm. If None,

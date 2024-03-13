@@ -4,4 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = ["visualizations", "geometry_utils", "common"]
+__all__ = [
+    "visualizations",
+    "geometry_utils",
+    "common",
+    "env_utils",
+    "pickle5_multiprocessing",
+    "profiling_wrapper",
+]

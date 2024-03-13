@@ -30,4 +30,6 @@ __all__ = [
     "ArticulatedAgentCameraParams",
     "StaticManipulator",
     "StaticManipulatorParams",
+    "humanoids",
+    "robots",
 ]

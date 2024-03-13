@@ -6,7 +6,7 @@
 #   gpuClass: standard
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: nb_python//py:percent,colabs//ipynb
+#     formats: nb_python//py:percent,notebooks//ipynb
 #     notebook_metadata_filter: all
 #     text_representation:
 #       extension: .py
@@ -26,32 +26,20 @@
 #     name: python
 #     nbconvert_exporter: python
 #     pygments_lexer: ipython3
-#     version: 3.10.4
+#     version: 3.9.17
 # ---
 
-# %%
-# %%capture
-# @title Install Dependencies { display-mode: "form" }
-
-# !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=false bash -s
-
 # %% [markdown]
-# Download (testing) 3D scenes:
-
-# %%
-# !python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes --data-path data/
-
-# %% [markdown]
-# Download point-goal navigation episodes for the test scenes:
-
-# %%
-# !python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+# # Habitat Lab: Topdown Map Visualization
+#
+# ## Initial setup and imports:
 
 # %%
 # [setup]
 import os
 from typing import TYPE_CHECKING, Union, cast
 
+import git
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -80,11 +68,28 @@ if TYPE_CHECKING:
     from habitat.core.simulator import Observations
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
-
-output_path = "examples/tutorials/habitat_lab_visualization/"
-if not os.path.exists(output_path):
-    os.makedirs(output_path)
+repo = git.Repo(".", search_parent_directories=True)
+dir_path = repo.working_tree_dir
+data_path = os.path.join(dir_path, "data")
+output_path = os.path.join(
+    dir_path, "examples/tutorials/habitat_lab_visualization/"
+)
+os.makedirs(output_path, exist_ok=True)
+os.chdir(dir_path)
 # [/setup]
+
+
+# %% [markdown]
+# ### Download (testing) 3D scenes:
+
+# %%
+# !python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes --data-path {data_path} --no-replace
+
+# %% [markdown]
+# ### Download point-goal navigation episodes for the test scenes:
+
+# %%
+# !python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path {data_path} --no-replace
 
 
 # %%
@@ -169,7 +174,10 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
 def example_get_topdown_map():
     # Create habitat config
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        config_path=os.path.join(
+            dir_path,
+            "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        )
     )
     # Create dataset
     dataset = habitat.make_dataset(
@@ -228,7 +236,10 @@ class ShortestPathFollowerAgent(Agent):
 def example_top_down_map_measure():
     # Create habitat config
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        config_path=os.path.join(
+            dir_path,
+            "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        )
     )
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):

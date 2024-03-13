@@ -673,7 +673,7 @@ class RearrangeSim(HabitatSim):
                     ],
                     axis=0,
                 )
-                receps[recep.name] = mn.Range3D(
+                receps[recep.unique_name] = mn.Range3D(
                     np.min(bounds, axis=0), np.max(bounds, axis=0)
                 )
             self._receptacles_cache[scene_id] = receps

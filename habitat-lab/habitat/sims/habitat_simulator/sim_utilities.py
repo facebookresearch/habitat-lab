@@ -117,18 +117,24 @@ def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
 
 def get_ao_global_bb(
     obj: habitat_sim.physics.ManagedArticulatedObject,
-) -> mn.Range3D:
+) -> Optional[mn.Range3D]:
     """
     Compute the cumulative bounding box of an ArticulatedObject by merging all link bounding boxes.
     """
-    cumulative_global_bb = mn.Range3D()
+
+    cumulative_global_bb: mn.Range3D = None
     for link_ix in range(-1, obj.num_links):
         link_node = obj.get_link_scene_node(link_ix)
         bb = link_node.cumulative_bb
         global_bb = habitat_sim.geo.get_transformed_bb(
-            bb, link_node.transformation
+            bb, link_node.absolute_transformation()
         )
-        cumulative_global_bb = mn.math.join(cumulative_global_bb, global_bb)
+        if cumulative_global_bb is None:
+            cumulative_global_bb = global_bb
+        else:
+            cumulative_global_bb = mn.math.join(
+                cumulative_global_bb, global_bb
+            )
     return cumulative_global_bb
 
 
@@ -232,7 +238,7 @@ def snap_down(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
-    vdb: Optional[DebugVisualizer] = None,
+    dbv: Optional[DebugVisualizer] = None,
 ) -> bool:
     """
     Attempt to project an object in the gravity direction onto the surface below it.
@@ -240,7 +246,7 @@ def snap_down(
     :param sim: The Simulator instance.
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (-1).
-    :param vdb: Optionally provide a DebugVisualizer (vdb) to render debug images of each object's computed snap position before collision culling.
+    :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
 
     Reject invalid placements by checking for penetration with other existing objects.
     Returns boolean success.
@@ -267,8 +273,8 @@ def snap_down(
     if bb_ray_prescreen_results["surface_snap_point"] is not None:
         # accept the final location if a valid location exists
         obj.translation = bb_ray_prescreen_results["surface_snap_point"]
-        if vdb is not None:
-            vdb.get_observation(obj.translation)
+        if dbv is not None:
+            dbv.debug_obs.append(dbv.get_observation(obj.translation))
         sim.perform_discrete_collision_detection()
         cps = sim.get_physics_contact_points()
         for cp in cps:

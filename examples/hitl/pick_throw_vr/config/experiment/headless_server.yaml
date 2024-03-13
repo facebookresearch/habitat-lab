@@ -1,0 +1,16 @@
+# @package _global_
+
+habitat_hitl:
+  window: ~
+  networking:
+    enable: True
+    http_availability_server:
+      enable: True
+  experimental:
+    headless:
+      do_headless: True
+      # reference for debugging
+      # debug_video_writer:
+      #   num_frames_to_save: 50
+      #   filepath_base: "./debug_video"
+      # exit_after: 40

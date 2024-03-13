@@ -7,7 +7,7 @@
 #     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
-#     formats: nb_python//py:percent,colabs//ipynb
+#     formats: nb_python//py:percent,notebooks//ipynb
 #     notebook_metadata_filter: all
 #     text_representation:
 #       extension: .py
@@ -15,8 +15,19 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
+#     language: python
 #     name: python3
+#   language_info:
+#     codemirror_mode:
+#       name: ipython
+#       version: 3
+#     file_extension: .py
+#     mimetype: text/x-python
+#     name: python
+#     nbconvert_exporter: python
+#     pygments_lexer: ipython3
+#     version: 3.9.17
 # ---
 
 # %% [markdown]
@@ -25,17 +36,9 @@
 # See [here for Habitat 2.0 installation instructions and more tutorials.](https://aihabitat.org/docs/habitat2/)
 
 # %%
-# %%capture
-# @title Install Dependencies (if on Colab) { display-mode: "form" }
-# @markdown (double click to show code)
-
 import os
 
-if "COLAB_GPU" in os.environ:
-    print("Setting up Habitat")
-    # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=true bash -s
-# %%
-import os
+import git
 
 if "COLAB_GPU" in os.environ:
     print("Setting Habitat base path")
@@ -53,7 +56,13 @@ from habitat_sim.utils import viz_utils as vut
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
 
-
+repo = git.Repo(".", search_parent_directories=True)
+dir_path = repo.working_tree_dir
+output_path = os.path.join(
+    dir_path, "examples/tutorials/habitat_lab_visualization/"
+)
+os.makedirs(output_path, exist_ok=True)
+os.chdir(dir_path)
 # If the import block below fails due to an error like "'PIL.TiffTags' has no attribute
 # 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 
@@ -71,7 +80,7 @@ import habitat.gym
 # %%
 env = gym.make("HabitatRenderPick-v0")
 
-video_file_path = "data/example_interact.mp4"
+video_file_path = os.path.join(output_path, "example_interact.mp4")
 video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
 
 done = False

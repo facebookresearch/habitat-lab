@@ -80,11 +80,142 @@ First download the necessary data with `python -m habitat_sim.utils.datasets_dow
 
 ## Social Navigation
 
-To run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets.
-- `python habitat_baselines/run.py --config-name=social_nav/social_nav.yaml`
+In the social navigation task, a robot is tasked with finding and following a human. The goal is to train a neural network policy that takes the input of (1) Spot's arm depth image, (2) the humanoid detector sensor, and (3) Spot's depth stereo cameras, and outputs the linear and angular velocities.
 
-For evaluating the trained Spot robot's policy
-- `python habitat_baselines/run.py --config-name=social_nav/social_nav.yaml habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir=/checkpoints/latest.pth habitat_baselines.eval.should_load_ckpt=True`
+### Observation
+The observation of the social nav policy is defined under `habitat.gym.obs_keys` with the prefix of `agent_0` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. In this yaml, `agent_0_articulated_agent_arm_depth` is the robot's arm depth camera, and `agent_0_humanoid_detector_sensor` is a humanoid detector that returns either a human's segmentation or bounding box given an arm RGB camera. For `humanoid_detector_sensor`, please see `HumanoidDetectorSensorConfig` in `habitat-lab/habitat/config/default_structured_configs.py` to learn more about how to configure the sensor (e.g., do you want the return to be bounding box or segmentation). Finally, `agent_0_spot_head_stereo_depth_sensor` is a Spot's body stereo depth image.
+
+Note that if you want to add more or use other observation sensors, you can do that by adding sensors into `habitat.gym.obs_keys`. For example, you can provide a humanoid GPS to a policy's input by adding `agent_0_nav_goal_sensor` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`. Notice that the observation key in `habitat.gym.obs_keys` must be a subset of sensors in `/habitat/task/lab_sensors`. Finally, another example would be adding an arm RGB sensor. You can do that by adding `agent_0_articulated_agent_arm_rgb` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`.
+
+### Action
+The action space of the social nav policy is defined under `/habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. The action consists of linear and angular velocities. You can learn more about the hyperparameters for this action under `BaseVelocityNonCylinderActionConfig` in `habitat-lab/habitat/config/default_structured_configs.py`.
+
+### Reward
+The reward function of the social nav policy is defined in `social_nav_reward`. It encourages the robot to find the human as soon as possible while maintaining a safe distance from the human after finding the human. You can learn more about the hyperparameters for this reward function under `SocialNavReward` in `habitat-lab/habitat/config/default_structured_configs.py`.
+
+### Command
+We have released a [checkpoint](https://huggingface.co/datasets/ai-habitat/hab3_episodes/tree/main/checkpoint) based on the below command. To reproduce this, run multi-agent training with a Spot robot's policy being a low-level navigation policy and a humanoid's policy being a fixed (non-trainable) policy that navigates a sequence of navigation targets (please make sure the `tensorboard_dir`, `video_dir`, `checkpoint_folder`, `eval_ckpt_path_dir` are the paths you want):
+
+```bash
+python -u -m habitat_baselines.run \
+    --config-name=social_nav/social_nav.yaml \
+    benchmark/multi_agent=hssd_spot_human_social_nav \
+    habitat_baselines.evaluate=False \
+    habitat_baselines.num_checkpoints=5000 \
+    habitat_baselines.total_num_steps=1.0e9 \
+    habitat_baselines.num_environments=24 \
+    habitat_baselines.tensorboard_dir=tb_social_nav \
+    habitat_baselines.video_dir=video_social_nav \
+    habitat_baselines.checkpoint_folder=checkpoints_social_nav \
+    habitat_baselines.eval_ckpt_path_dir=checkpoints_social_nav \
+    habitat.task.actions.agent_0_base_velocity.longitudinal_lin_speed=10.0 \
+    habitat.task.actions.agent_0_base_velocity.ang_speed=10.0 \
+    habitat.task.actions.agent_0_base_velocity.allow_dyn_slide=True \
+    habitat.task.actions.agent_0_base_velocity.enable_rotation_check_for_dyn_slide=False \
+    habitat.task.actions.agent_1_oracle_nav_randcoord_action.lin_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_randcoord_action.ang_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_action.lin_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_action.ang_speed=10.0 \
+    habitat.task.measurements.social_nav_reward.facing_human_reward=3.0 \
+    habitat.task.measurements.social_nav_reward.count_coll_pen=0.01 \
+    habitat.task.measurements.social_nav_reward.max_count_colls=-1 \
+    habitat.task.measurements.social_nav_reward.count_coll_end_pen=5 \
+    habitat.task.measurements.social_nav_reward.use_geo_distance=True \
+    habitat.task.measurements.social_nav_reward.facing_human_dis=3.0 \
+    habitat.task.measurements.social_nav_seek_success.following_step_succ_threshold=400 \
+    habitat.task.measurements.social_nav_seek_success.need_to_face_human=True \
+    habitat.task.measurements.social_nav_seek_success.use_geo_distance=True \
+    habitat.task.measurements.social_nav_seek_success.facing_threshold=0.5 \
+    habitat.task.lab_sensors.humanoid_detector_sensor.return_image=True \
+    habitat.task.lab_sensors.humanoid_detector_sensor.is_return_image_bbox=True \
+    habitat.task.success_reward=10.0 \
+    habitat.task.end_on_success=True \
+    habitat.task.slack_reward=-0.1 \
+    habitat.environment.max_episode_steps=1500 \
+    habitat.simulator.kinematic_mode=True \
+    habitat.simulator.ac_freq_ratio=4 \
+    habitat.simulator.ctrl_freq=120 \
+    habitat.simulator.agents.agent_0.joint_start_noise=0.0
+```
+
+It is expected to observe the following reward training (learning) curve:
+![Social Nav Reward Training Curve](/res/img/habitat3_social_nav_training_reward.png) In addition, under the following slurm job batch script setting:
+```bash
+#SBATCH --gres gpu:4
+#SBATCH --cpus-per-task 10
+#SBATCH --nodes 1
+#SBATCH --ntasks-per-node 4
+#SBATCH --mem-per-cpu=6GB
+```
+we have the following training wall clock time versus reward:
+![Social Nav Reward Training Curve versus Time](/res/img/habitat3_social_nav_training_reward_time.png)
+
+We have the following training FPS:
+![Social Nav Training FPS](/res/img/habitat3_social_nav_training_fps.png)
+
+For evaluating the trained Spot robot's policy based on 500 episodes, run (please make sure `video_dir` and `eval_ckpt_path_dir` are the paths you want and the checkpoint is there):
+
+```bash
+python -u -m habitat_baselines.run \
+    --config-name=social_nav/social_nav.yaml \
+    benchmark/multi_agent=hssd_spot_human_social_nav \
+    habitat_baselines.evaluate=True \
+    habitat_baselines.num_checkpoints=5000 \
+    habitat_baselines.total_num_steps=1.0e9 \
+    habitat_baselines.num_environments=12 \
+    habitat_baselines.video_dir=video_social_nav \
+    habitat_baselines.checkpoint_folder=checkpoints_social_nav \
+    habitat_baselines.eval_ckpt_path_dir=checkpoints_social_nav/social_nav_latest.pth \
+    habitat.task.actions.agent_0_base_velocity.longitudinal_lin_speed=10.0 \
+    habitat.task.actions.agent_0_base_velocity.ang_speed=10.0 \
+    habitat.task.actions.agent_0_base_velocity.allow_dyn_slide=True \
+    habitat.task.actions.agent_0_base_velocity.enable_rotation_check_for_dyn_slide=False \
+    habitat.task.actions.agent_1_oracle_nav_randcoord_action.human_stop_and_walk_to_robot_distance_threshold=-1.0 \
+    habitat.task.actions.agent_1_oracle_nav_randcoord_action.lin_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_randcoord_action.ang_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_action.lin_speed=10.0 \
+    habitat.task.actions.agent_1_oracle_nav_action.ang_speed=10.0 \
+    habitat.task.measurements.social_nav_reward.facing_human_reward=3.0 \
+    habitat.task.measurements.social_nav_reward.count_coll_pen=0.01 \
+    habitat.task.measurements.social_nav_reward.max_count_colls=-1 \
+    habitat.task.measurements.social_nav_reward.count_coll_end_pen=5 \
+    habitat.task.measurements.social_nav_reward.use_geo_distance=True \
+    habitat.task.measurements.social_nav_reward.facing_human_dis=3.0 \
+    habitat.task.measurements.social_nav_seek_success.following_step_succ_threshold=400 \
+    habitat.task.measurements.social_nav_seek_success.need_to_face_human=True \
+    habitat.task.measurements.social_nav_seek_success.use_geo_distance=True \
+    habitat.task.measurements.social_nav_seek_success.facing_threshold=0.5 \
+    habitat.task.lab_sensors.humanoid_detector_sensor.return_image=True \
+    habitat.task.lab_sensors.humanoid_detector_sensor.is_return_image_bbox=True \
+    habitat.task.success_reward=10.0 \
+    habitat.task.end_on_success=False \
+    habitat.task.slack_reward=-0.1 \
+    habitat.environment.max_episode_steps=1500 \
+    habitat.simulator.kinematic_mode=True \
+    habitat.simulator.ac_freq_ratio=4 \
+    habitat.simulator.ctrl_freq=120 \
+    habitat.simulator.agents.agent_0.joint_start_noise=0.0 \
+    habitat_baselines.load_resume_state_config=False \
+    habitat_baselines.test_episode_count=500 \
+    habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor.height=1080 \
+    habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor.width=1920
+```
+
+The evaluation is expected to produce values similar to those below:
+
+```bash
+Average episode social_nav_reward: 1.8821
+Average episode social_nav_stats.has_found_human: 0.9020
+Average episode social_nav_stats.found_human_rate_after_encounter_over_epi: 0.6423
+Average episode social_nav_stats.found_human_rate_over_epi: 0.4275
+Average episode social_nav_stats.first_encounter_steps: 376.0420
+Average episode social_nav_stats.follow_human_steps_after_first_encounter: 398.6340
+Average episode social_nav_stats.avg_robot_to_human_after_encounter_dis_over_epi: 1.4969
+Average episode social_nav_stats.avg_robot_to_human_dis_over_epi: 3.6885
+Average episode social_nav_stats.backup_ratio: 0.1889
+Average episode social_nav_stats.yield_ratio: 0.0192
+Average episode num_agents_collide: 0.7020
+```
 
 ## Social Rearrangement
 

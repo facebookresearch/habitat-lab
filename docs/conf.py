@@ -23,15 +23,71 @@ gym.Env.__annotations__["_np_random"] = typing.Optional[
 
 # Overrides the __all__ as that one pulls everything into the root module
 # and doesn't expose any submodules
-habitat.__all__ = ["config", "core", "Agent", "Benchmark", "gym"]
+habitat.__all__ = [
+    "config",
+    "core",
+    "gym",
+    "articulated_agent_controllers",
+    "articulated_agents",
+    "datasets",
+    "sims",
+    "tasks",
+    "utils",
+]
+
 habitat.core.__all__ = [
+    "agent",
+    "benchmark",
     "env",
     "embodied_task",
     "dataset",
     "simulator",
     "registry",
     "vector_env",
+    "batch_rendering",
+    "challenge",
+    "environments",
+    "logging",
+    "utils",
 ]
+
+habitat.datasets.__all__ = [
+    "eqa",
+    "image_nav",
+    "object_nav",
+    "pointnav",
+    "rearrange",
+    "vln",
+    "utils",
+    "registration",
+]
+
+habitat.datasets.rearrange.__all__ = [
+    "navmesh_utils",
+    "rearrange_dataset",
+    "samplers",
+]
+
+habitat.datasets.object_nav.__all__ = [
+    "object_nav_dataset",
+]
+
+habitat.datasets.pointnav.__all__ = [
+    "pointnav_dataset",
+]
+
+habitat.sims.__all__ = [
+    "pyrobot",
+    "habitat_simulator",
+    "registration",
+]
+
+habitat.utils.visualizations.__all__ = [
+    "fog_of_war",
+    "maps",
+    "utils",
+]
+
 
 PROJECT_TITLE = "Habitat"
 PROJECT_SUBTITLE = "Lab Docs"

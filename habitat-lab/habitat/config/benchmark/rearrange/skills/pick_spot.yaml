@@ -1,0 +1,84 @@
+# @package _global_
+defaults:
+  - pick
+  - /habitat/task/measurements:
+    - base_to_object_distance
+  - /habitat/task/lab_sensors:
+    - arm_depth_bbox_sensor
+    - spot_head_stereo_depth_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  - _self_
+
+# This yaml is designed specifically for learning a mobile gaze policy for the Boston Dynamics Spot robot.
+# It uses the base pick yaml to define the basic measurements and sensors,
+# and defines the needed observation keys and reward function here to train the policy.
+# The major changes compared to the base pick yaml are the following:
+# (1) obs_keys: we ensure these observations can be obtained from the real robot (Spot)
+# (2) pick_reward: pick reward considers collisions based on a kinematic simulation
+# (3) actions: Spot uses gaze action to pick up the object
+# (4) simulator: we simulate the environment via the kinematic mode to facilitate sim2real transfer
+habitat:
+  gym:
+    obs_keys:
+      - arm_depth_bbox_sensor
+      - articulated_agent_arm_depth
+      - spot_head_stereo_depth_sensor
+      - joint
+  task:
+    measurements:
+      end_effector_to_object_distance:
+        if_consider_gaze_angle: True
+        center_cone_vector: [0.0, 1.0, 0.0]
+        desire_distance_between_gripper_object: 0.4
+      pick_reward:
+        force_pen: 0.0001
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+        use_diff: True
+        drop_obj_should_end: True
+        wrong_pick_should_end: True
+        # Collision penality for kinematic simulation
+        count_coll_pen: 0.01
+        max_count_colls: 1000
+        count_coll_end_pen: 1.0
+        wrong_pick_pen: 5.0
+        dist_reward: 20.0
+      force_terminate:
+        # We ignore the force here since in kinematic simulation, there is no force
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+      pick_success:
+        ee_resting_success_threshold: -1.0
+    lab_sensors:
+      arm_depth_bbox_sensor:
+        height: 240
+        width: 228
+      # We can only control 4 of the joints of Spot's arm
+      joint_sensor:
+        dimensionality: 4
+        arm_joint_mask: [1,1,0,1,0,1,0]
+    actions:
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        center_cone_vector: [0.0, 1.0, 0.0]
+        # We limit the joint angles to ensure that this is feasible in the real world
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        auto_grasp: True
+        should_clip: True
+    success_reward: 10.0
+    slack_reward: -0.01
+    spawn_max_dist_to_obj: 2.0
+    base_angle_noise: 0.523599
+  simulator:
+    # We use the kinematic mode to train the policy
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    agents:
+      main_agent:
+        joint_start_noise: 0.1
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real-world gaze ready location
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]

@@ -44,6 +44,8 @@ __all__ = [
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
     "HumanoidDetectorSensorConfig",
+    "ArmDepthBBoxSensorConfig",
+    "SpotHeadStereoDepthSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -52,6 +54,7 @@ __all__ = [
     "HumanoidPickActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
+    "SelectBaseOrArmActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
     "IsHoldingSensorConfig",
@@ -61,6 +64,7 @@ __all__ = [
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
+    "InitialGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
@@ -235,6 +239,7 @@ class ArmActionConfig(ActionConfig):
 
     :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
     :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property arm_joint_limit: If the user specify the joint limits. The dimension needs to be the same as arm_joint_dimensionality. Format: [[min_limit, max_limit]]
     :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
     :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
     :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
@@ -244,6 +249,7 @@ class ArmActionConfig(ActionConfig):
     grip_controller: Optional[str] = None
     arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
+    arm_joint_limit: Optional[List[float]] = None
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
     delta_pos_limit: float = 0.0125
@@ -253,6 +259,7 @@ class ArmActionConfig(ActionConfig):
     gaze_distance_range: Optional[List[float]] = None
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
+    auto_grasp: bool = False
 
 
 @dataclass
@@ -353,6 +360,17 @@ class OracleNavActionConfig(ActionConfig):
     allow_back: bool = True
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+    # For social nav training only. It controls the distance threshold
+    # between the robot and the human and decide if the human wants to walk or not
+    human_stop_and_walk_to_robot_distance_threshold: float = -1.0
+
+
+@dataclass
+class SelectBaseOrArmActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
+    type: str = "SelectBaseOrArmAction"
 
 
 # -----------------------------------------------------------------------------
@@ -397,6 +415,30 @@ class HumanoidDetectorSensorConfig(LabSensorConfig):
     human_id: int = 100
     # How many pixels needed to consider that human is in frame
     human_pixel_threshold: int = 1000
+    # Image based or binary based
+    return_image: bool = False
+    # Is the return image bounding box or not
+    is_return_image_bbox: bool = False
+
+
+@dataclass
+class ArmDepthBBoxSensorConfig(LabSensorConfig):
+    r"""
+    Bounding box sensor to check if the object is in frame
+    """
+    type: str = "ArmDepthBBoxSensor"
+    height: int = 480
+    width: int = 640
+
+
+@dataclass
+class SpotHeadStereoDepthSensorConfig(LabSensorConfig):
+    r"""
+    For Spot only. Sensor fusion for inputs of Spot stereo pair depth sensor
+    """
+    type: str = "SpotHeadStereoDepthSensor"
+    height: int = 240
+    width: int = 228
 
 
 @dataclass
@@ -477,6 +519,7 @@ class JointSensorConfig(LabSensorConfig):
     """
     type: str = "JointSensor"
     dimensionality: int = 7
+    arm_joint_mask: Optional[List[int]] = None
 
 
 @dataclass
@@ -625,6 +668,14 @@ class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
     """
     type: str = "TargetStartGpsCompassSensor"
+
+
+@dataclass
+class InitialGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the relative distance to the initial starting location of the agent in 2D polar coordinates.
+    """
+    type: str = "InitialGpsCompassSensor"
 
 
 @dataclass
@@ -803,6 +854,22 @@ class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
 @dataclass
 class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
+    # Normally, we compute the L2 distance between the gripper and the object. However,
+    # sometimes we also want to make sure that the gripper is facing the object with a right angle/orientation.
+    # For instance, the gripper could face vertically on top of the object.
+    if_consider_gaze_angle: bool = False
+    # The vector that the camera's line of sight should be when grasping the object.
+    center_cone_vector: Optional[List[float]] = None
+    # Normally, you want the L2 distance between the gripper and the object as small as possible.
+    # However, there are cases where you want to constrain the distance to be close to a specific value.
+    desire_distance_between_gripper_object: float = 0.0
+
+
+@dataclass
+class BaseToObjectDistanceMeasurementConfig(MeasurementConfig):
+    """L2 distance between the base and the object"""
+
+    type: str = "BaseToObjectDistance"
 
 
 @dataclass
@@ -882,6 +949,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -998,6 +1068,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1069,6 +1142,9 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1083,6 +1159,13 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
     :property drop_obj_should_end: If true, the task will end if the robot drops the object.
     :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    :property max_target_distance: default: -1. If it is positive, then we terminate the episode if the robot distance to object is above this value.
+    :property max_target_distance_pen: If the robot is too far away, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos_dis: default: -1. If positive, we terminate the episode if the robot moves the arm below this threshold
+    :property non_desire_ee_local_pos_pen: If the robot moves the arm there, then we terminate the episode by giving the penality.
+    :property non_desire_ee_local_pos: If given, we do not want the robot to move the arm there
+    :property camera_looking_down_angle: default: -1. If positive, we check the robot camera looking angle to the ground
+    :property camera_looking_down_pen: If the robot camera looking angle is too small (the robot looks down), we terminate the episode and with this much penality
     """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
@@ -1096,12 +1179,24 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
+    max_target_distance: float = -1.0
+    max_target_distance_pen: float = 1.0
+    non_desire_ee_local_pos_dis: float = -1.0
+    non_desire_ee_local_pos_pen: float = 1.0
+    non_desire_ee_local_pos: Optional[List[float]] = None
+    camera_looking_down_angle: float = -1.0
+    camera_looking_down_pen: float = 1.0
 
 
 @dataclass
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+
+    :property ee_resting_success_threshold: -1 if we do not consider resetting the arm to the resting location
     """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
@@ -1141,6 +1236,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
 
 
 @dataclass
@@ -1222,12 +1320,27 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     # -1 means that there is no facing_human_reward
     facing_human_reward: float = -1.0
+    # toward_human_reward defualt is 1.0
+    toward_human_reward: float = 1.0
+    # -1 means that there is no near_human_bonus
+    near_human_bonus: float = -1.0
+    # -1 means that there is no exploration reward
+    explore_reward: float = -1.0
     # If we want to use geo distance to measure the distance
     # between the robot and the human
     use_geo_distance: bool = False
     # Set the id of the agent
     robot_idx: int = 0
     human_idx: int = 1
+    constraint_violate_pen: float = 10.0
+    force_pen: float = 0.0
+    max_force_pen: float = 1.0
+    force_end_pen: float = 10.0
+    # Collision based penality for kinematic simulation
+    count_coll_pen: float = -1.0
+    max_count_colls: int = -1
+    count_coll_end_pen: float = 1.0
+    collide_penalty: float = 1.0
 
 
 @dataclass
@@ -1344,6 +1457,7 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    spawn_max_dist_to_obj_delta: float = 0.02
     # Factor to shrink the receptacle sampling volume when predicates place
     # objects on top of receptacles.
     recep_place_shrink_factor: float = 0.8
@@ -1489,6 +1603,20 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadStereoLeftDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_left_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class HeadStereoRightDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "head_stereo_right_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "head_panoptic"
     width: int = 256
@@ -1541,6 +1669,7 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
+    joint_that_can_control: Optional[List[int]] = None
     # Hard-code the robot joint start. `joint_start_noise` still applies.
     joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: Optional[str] = None
@@ -1887,6 +2016,12 @@ cs.store(
     node=RearrangeStopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.a_selection_of_base_or_arm",
+    group="habitat/task/actions",
+    name="a_selection_of_base_or_arm",
+    node=SelectBaseOrArmActionConfig,
+)
+cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",
@@ -1971,6 +2106,19 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="head_stereo_right_depth_sensor",
+    node=HeadStereoRightDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_stereo_left_depth_sensor",
+    node=HeadStereoLeftDepthSensorConfig,
+)
+
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="head_rgb_sensor",
     node=HeadRGBSensorConfig,
 )
@@ -2024,6 +2172,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="humanoid_detector_sensor",
     node=HumanoidDetectorSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.arm_depth_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="arm_depth_bbox_sensor",
+    node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
+    group="habitat/task/lab_sensors",
+    name="spot_head_stereo_depth_sensor",
+    node=SpotHeadStereoDepthSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.objectgoal_sensor",
@@ -2138,6 +2298,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_start_gps_compass_sensor",
     node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.initial_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="initial_gps_compass_sensor",
+    node=InitialGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.multi_agent_all_predicates",
@@ -2262,6 +2428,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_object_distance",
     node=EndEffectorToObjectDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.base_to_object_distance",
+    group="habitat/task/measurements",
+    name="base_to_object_distance",
+    node=BaseToObjectDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_rest_distance",

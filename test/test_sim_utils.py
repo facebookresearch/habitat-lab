@@ -83,7 +83,7 @@ def test_snap_down(support_margin, obj_margin, stage_support):
 
     # Test snapping a cube object onto another object
     sim_settings = default_sim_settings.copy()
-    sim_settings["sensor_height"] = 0
+    sim_settings["sensor_height"] = 0.0
     sim_settings["scene"] = "NONE"
     if stage_support:
         sim_settings["scene"] = plane_stage_template_handle

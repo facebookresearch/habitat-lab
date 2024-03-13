@@ -20,6 +20,8 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,
+    get_camera_object_angle,
+    get_camera_transform,
 )
 
 
@@ -183,55 +185,29 @@ class GazeGraspAction(MagicGraspAction):
         self.center_cone_vector = mn.Vector3(
             config.center_cone_vector
         ).normalized()
+        self.auto_grasp = config.auto_grasp
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(1,), high=1.0, low=-1.0)
+        if self.auto_grasp:
+            return None
+        else:
+            return spaces.Box(shape=(1,), high=1.0, low=-1.0)
 
-    @staticmethod
-    def angle_between(v1, v2):
-        cosine = np.clip(np.dot(v1, v2), -1.0, 1.0)
-        object_angle = np.arccos(cosine)
-        return object_angle
-
-    def get_camera_object_angle(self, obj_pos):
+    def _get_camera_object_angle(self, obj_pos):
         """Calculates angle between gripper line-of-sight and given global position."""
-
         # Get the camera transformation
-        cam_T = self.get_camera_transform()
-
-        # Get object location in camera frame
-        cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
+        cam_T = get_camera_transform(self.cur_articulated_agent)
 
         # Get angle between (normalized) location and the vector that the camera should
         # look at
-        obj_angle = self.angle_between(cam_obj_pos, self.center_cone_vector)
+        obj_angle = get_camera_object_angle(
+            cam_T, obj_pos, self.center_cone_vector
+        )
 
         return obj_angle
 
-    def get_camera_transform(self):
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            cam_info = self.cur_articulated_agent.params.cameras[
-                "articulated_agent_arm_depth"
-            ]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            cam_info = self.cur_articulated_agent.params.cameras["head"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Get the camera's attached link
-        link_trans = self.cur_articulated_agent.sim_obj.get_link_scene_node(
-            cam_info.attached_link_id
-        ).transformation
-        # Get the camera offset transformation
-        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
-
-        return cam_trans
-
-    def determine_center_object(self):
+    def _determine_center_object(self):
         """Determine if an object is at the center of the frame and in range"""
         if isinstance(self.cur_articulated_agent, SpotRobot):
             cam_pos = (
@@ -266,8 +242,9 @@ class GazeGraspAction(MagicGraspAction):
             )
 
         height, width = panoptic_img.shape[:2]
+        # Note that panoptic_img is a 3D array
         center_obj_id = (
-            panoptic_img[height // 2, width // 2]
+            panoptic_img[height // 2, width // 2, 0]
             - self._sim.habitat_config.object_ids_start
         )
 
@@ -281,7 +258,7 @@ class GazeGraspAction(MagicGraspAction):
                 return None, None
 
             # Skip if not in the central cone
-            obj_angle = self.get_camera_object_angle(obj_pos)
+            obj_angle = self._get_camera_object_angle(obj_pos)
             if abs(obj_angle) > self.center_cone_angle_threshold:
                 return None, None
 
@@ -291,7 +268,7 @@ class GazeGraspAction(MagicGraspAction):
 
     def _grasp(self):
         # Check if the object is in the center of the camera
-        center_obj_idx, center_obj_pos = self.determine_center_object()
+        center_obj_idx, center_obj_pos = self._determine_center_object()
 
         # If there is nothing to grasp, then we return
         if center_obj_idx is None:
@@ -311,6 +288,10 @@ class GazeGraspAction(MagicGraspAction):
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
+        if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
+            self._grasp()
+            return
+
         if grip_action is None:
             return
 

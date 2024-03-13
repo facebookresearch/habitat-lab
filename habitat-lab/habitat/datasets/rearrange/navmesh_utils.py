@@ -266,7 +266,7 @@ def record_robot_nav_debug_image(
     robot_navmesh_offsets: List[Tuple[float, float]],
     robot_navmesh_radius: float,
     in_collision: bool,
-    vdb: DebugVisualizer,
+    dbv: DebugVisualizer,
     obs_cache: List[Any],
 ) -> None:
     """
@@ -277,7 +277,7 @@ def record_robot_nav_debug_image(
     :param robot_navmesh_offsets: Robot embodiement approximation. List of 2D points XZ in robot local space.
     :param robot_navmesh_radius: The radius of each point approximating the robot embodiement.
     :param in_collision: Whether or not the robot is in collision with the environment. If so, embodiement is rendered red.
-    :param vdb: The DebugVisualizer instance.
+    :param dbv: The DebugVisualizer instance.
     :param obs_cache: The observation cache for later video rendering.
     """
 
@@ -291,10 +291,10 @@ def record_robot_nav_debug_image(
                     mn.Color4.cyan(),
                 )
             )
-    vdb.render_debug_lines(debug_lines=path_point_render_lines)
+    dbv.render_debug_lines(debug_lines=path_point_render_lines)
 
     # draw the local coordinate axis ofthe robot
-    vdb.render_debug_frame(
+    dbv.render_debug_frame(
         axis_length=0.3, transformation=robot_transformation
     )
 
@@ -307,7 +307,7 @@ def record_robot_nav_debug_image(
         np.array([xz[0], robot_transformation.translation[1], xz[2]])
         for xz in cur_pos
     ]
-    vdb.render_debug_circles(
+    dbv.render_debug_circles(
         [
             (
                 pos,
@@ -321,12 +321,13 @@ def record_robot_nav_debug_image(
 
     # render 3rd person viewer into the observation cache
     robot_position = robot_transformation.translation
-    vdb.get_observation(
-        look_at=robot_position,
-        # 3rd person viewpoint from behind and above the robot
-        look_from=robot_position
-        + robot_transformation.transform_vector(mn.Vector3(0, 1.5, 1.5)),
-        obs_cache=obs_cache,
+    obs_cache.append(
+        dbv.get_observation(
+            look_at=robot_position,
+            # 3rd person viewpoint from behind and above the robot
+            look_from=robot_position
+            + robot_transformation.transform_vector(mn.Vector3(0, 1.5, 1.5)),
+        )
     )
 
 
@@ -341,7 +342,7 @@ def path_is_navigable_given_robot(
     angular_speed: float = 1.0,
     distance_threshold: float = 0.25,
     linear_speed: float = 1.0,
-    vdb: Optional[DebugVisualizer] = None,
+    dbv: Optional[DebugVisualizer] = None,
     render_debug_video: bool = False,
 ) -> bool:
     """
@@ -357,7 +358,7 @@ def path_is_navigable_given_robot(
     :param angular_speed: The constant angular speed for turning (radians/sec)
     :param distance_threshold: The euclidean distance between the robot and the target within which navigation is considered successful and the function returns.
     :param linear_speed: The constant linear speed for translation (meters/sec).
-    :param vdb: An optional DebugVisualizer if rendering and video export are desired.
+    :param dbv: An optional DebugVisualizer if rendering and video export are desired.
     :param render_debug_video: Whether or not to render and export a visualization of the navigation. If True, requires a DebugVisualizer instance.
 
     :return: Whether or not the ratio of time-steps where collisions were detected is within the provided threshold.
@@ -377,7 +378,7 @@ def path_is_navigable_given_robot(
     )
 
     if render_debug_video:
-        assert vdb is not None, "Need a vdb for visual debugging."
+        assert dbv is not None, "Need a dbv for visual debugging."
         sim.navmesh_visualization = True
 
     # Create a new pathfinder with slightly stricter radius to provide nav buffer from collision
@@ -489,7 +490,7 @@ def path_is_navigable_given_robot(
                 robot_navmesh_offsets=robot_navmesh_offsets,
                 robot_navmesh_radius=robot_navmesh_radius,
                 in_collision=collision[-1],
-                vdb=vdb,
+                dbv=dbv,
                 obs_cache=debug_video_frames,
             )
         time_since_debug_frame += 1.0 / vc._integration_frequency
@@ -497,7 +498,7 @@ def path_is_navigable_given_robot(
     collision_rate = np.average(collision)
 
     if render_debug_video:
-        vdb.make_debug_video(
+        dbv.make_debug_video(
             output_path="spot_nav_debug",
             prefix=f"{collision_rate}",
             fps=debug_framerate,

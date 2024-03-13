@@ -14,22 +14,18 @@ from habitat_sim.simulator import Simulator
 
 @attr.s(auto_attribs=True, slots=True)
 class StaticManipulatorParams:
-    """Data to configure a static manipulator.
+    """
+    Data to configure a static manipulator.
+
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
-    :property arm_init_params: The starting joint angles of the arm. If None,
-        resets to 0.
-    :property gripper_init_params: The starting joint positions of the gripper. If None,
-        resets to 0.
-    :property ee_offset: The 3D offset from the end-effector link to the true
-        end-effector position.
+    :property arm_init_params: The starting joint angles of the arm. If None, resets to 0.
+    :property gripper_init_params: The starting joint positions of the gripper. If None, resets to 0.
+    :property ee_offset: The 3D offset from the end-effector link to the true end-effector position.
     :property ee_links: A list with the Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
-        lower limits for each end-effector joint where N is the arm DOF.
-    :property gripper_closed_state: All gripper joints must achieve this
-        state for the gripper to be considered closed.
-    :property gripper_open_state: All gripper joints must achieve this
-        state for the gripper to be considered open.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and lower limits for each end-effector joint where N is the arm DOF.
+    :property gripper_closed_state: All gripper joints must achieve this state for the gripper to be considered closed.
+    :property gripper_open_state: All gripper joints must achieve this state for the gripper to be considered open.
     :property gripper_state_eps: Error margin for detecting whether gripper is closed.
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.

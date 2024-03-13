@@ -147,10 +147,26 @@ class ArticulatedAgentManager:
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
         """
         for agent_data in self._all_agent_data:
-            agent_data.articulated_agent.params.arm_init_params = (
+            target_arm_init_params = (
                 agent_data.start_js
                 + agent_data.cfg.joint_start_noise
                 * np.random.randn(len(agent_data.start_js))
+            )
+
+            # We only randomly set the location of the particular joint if that joint can be controlled
+            # and given joint_that_can_control value.
+            if agent_data.cfg.joint_that_can_control is not None:
+                assert len(agent_data.start_js) == len(
+                    agent_data.cfg.joint_that_can_control
+                )
+                for i in range(len(agent_data.cfg.joint_that_can_control)):
+                    # We cannot control this joint
+                    if agent_data.cfg.joint_that_can_control[i] == 0:
+                        # The initial parameter for this joint should be the original angle
+                        target_arm_init_params[i] = agent_data.start_js[i]
+
+            agent_data.articulated_agent.params.arm_init_params = (
+                target_arm_init_params
             )
             agent_data.articulated_agent.reset()
 

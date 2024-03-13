@@ -19,6 +19,8 @@ import quaternion
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
@@ -246,6 +248,19 @@ def get_ao_link_aabb(
             link_bb, link_node.absolute_transformation()
         )
     return link_bb
+
+
+def get_aabb(obj_id, sim, transformed=False):
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
+    obj_node = obj.root_scene_node
+    obj_bb = obj_node.cumulative_bb
+    if transformed:
+        obj_bb = habitat_sim.geo.get_transformed_bb(
+            obj_node.cumulative_bb, obj_node.transformation
+        )
+    return obj_bb
 
 
 def euler_to_quat(rpy):
@@ -540,6 +555,18 @@ def place_robot_at_closest_point_with_navmesh(
     return agent_pos, desired_angle, False
 
 
+def set_agent_base_via_obj_trans(position: np.ndarray, rotation: float, agent):
+    """Set the agent's base position and rotation via object transformation"""
+    position = position - agent.sim_obj.transformation.transform_vector(
+        agent.params.base_offset
+    )
+    quat = mn.Quaternion.rotation(
+        mn.Rad(rotation), mn.Vector3(0, 1, 0)
+    ).to_matrix()
+    target_trans = mn.Matrix4.from_(quat, position)
+    agent.sim_obj.transformation = target_trans
+
+
 def _get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
@@ -577,29 +604,37 @@ def _get_robot_spawns(
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         # Place within `distance_threshold` of the object.
-        agent.base_pos = sim.pathfinder.get_random_navigable_point_near(
-            target_position,
-            distance_threshold,
-            island_index=sim.largest_island_idx,
+        candidate_navmesh_position = (
+            sim.pathfinder.get_random_navigable_point_near(
+                target_position,
+                distance_threshold,
+                island_index=sim.largest_island_idx,
+            )
         )
         # get_random_navigable_point_near() can return NaNs for start_position.
+        # If we assign nan position into agent.base_pos, we cannot revert it back
         # We want to make sure that the generated start_position is valid
-        if np.isnan(agent.base_pos).any():
+        if np.isnan(candidate_navmesh_position).any():
             continue
 
         # get the horizontal distance (XZ planar projection) to the target position
-        hor_disp = agent.base_pos - target_position
+        hor_disp = candidate_navmesh_position - target_position
         hor_disp[1] = 0
-        target_distance = hor_disp.length()
+        target_distance = np.linalg.norm(hor_disp)
 
         if target_distance > distance_threshold:
             continue
 
         # Face the robot towards the object.
-        relative_target = target_position - agent.base_pos
+        relative_target = target_position - candidate_navmesh_position
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        agent.base_rot = angle_to_object + rotation_noise
+        angle_to_object += rotation_noise
+
+        # Set the agent position and rotation
+        set_agent_base_via_obj_trans(
+            candidate_navmesh_position, angle_to_object, agent
+        )
 
         is_feasible_state = True
         if filter_colliding_states:
@@ -616,12 +651,10 @@ def _get_robot_spawns(
             is_feasible_state = details.robot_scene_colls == 0
 
         if is_feasible_state:
-            propsed_pos = agent.base_pos
-            proposed_rot = agent.base_rot
             # found a feasbile state: reset state and return proposed stated
             agent.base_pos = start_position
             agent.base_rot = start_rotation
-            return propsed_pos, proposed_rot, False
+            return candidate_navmesh_position, angle_to_object, False
 
     # failure to sample a feasbile state: reset state and return initial conditions
     agent.base_pos = start_position
@@ -690,3 +723,65 @@ def add_perf_timing_func(name: Optional[str] = None):
         return wrapper
 
     return perf_time
+
+
+def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
+    """Get the camera transformation"""
+    if isinstance(cur_articulated_agent, SpotRobot):
+        cam_info = cur_articulated_agent.params.cameras[
+            "articulated_agent_arm_depth"
+        ]
+    elif isinstance(cur_articulated_agent, StretchRobot):
+        cam_info = cur_articulated_agent.params.cameras["head"]
+    else:
+        raise NotImplementedError("This robot does not have GazeGraspAction.")
+
+    # Get the camera's attached link
+    link_trans = cur_articulated_agent.sim_obj.get_link_scene_node(
+        cam_info.attached_link_id
+    ).transformation
+    # Get the camera offset transformation
+    offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+    cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+    return cam_trans
+
+
+def angle_between(
+    v1: Tuple[mn.Vector3, np.ndarray, List],
+    v2: Tuple[mn.Vector3, np.ndarray, List],
+) -> float:
+    """Angle (in radians) between two vectors"""
+    cosine = np.clip(np.dot(v1, v2), -1.0, 1.0)
+    object_angle = np.arccos(cosine)
+    return object_angle
+
+
+def get_camera_object_angle(
+    cam_T: mn.Matrix4,
+    obj_pos: Tuple[mn.Vector3, np.ndarray, List],
+    center_cone_vector: Tuple[mn.Vector3, np.ndarray, List],
+) -> float:
+    """Calculates angle between camera line-of-sight and given global position"""
+    # Get object location in camera frame
+    cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
+    # Get angle between (normalized) location and the vector that the camera should
+    # look at
+    obj_angle = angle_between(cam_obj_pos, center_cone_vector)
+    return obj_angle
+
+
+def get_camera_lookat_relative_to_vertial_line(
+    agent,
+) -> float:
+    """Get the camera looking angles to a vertical line to the ground"""
+    # Get the camera transformation
+    cam_T = get_camera_transform(agent)
+    # Get the camera position
+    camera_pos = cam_T.translation
+    # Cast a ray from the camera location to the ground
+    vertical_dir = mn.Vector3(camera_pos[0], 0, camera_pos[2])
+    # A true vertical line to the ground
+    local_vertical_dir = mn.Vector3([0.0, 1.0, 0.0])
+    # Get angle between location and the vector
+    angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
+    return angle

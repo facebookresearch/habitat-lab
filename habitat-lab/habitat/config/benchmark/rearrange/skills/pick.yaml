@@ -11,6 +11,7 @@ defaults:
   - /habitat/task/rearrange/actions: fetch_suction_arm_base
   - /habitat/task/measurements:
     - articulated_agent_force
+    - articulated_agent_colls
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
