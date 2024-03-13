@@ -60,21 +60,17 @@ class UserMaskIterator():
         """
         Execute a function for each user in a specified UserMask.
         """
-        bitset = user_mask & self.max_user_mask
-        while bitset != 0:
-            user_bit = bitset & -bitset
-            user_index = log2(user_bit)
-            function(int(user_index))
-            bitset ^= user_bit
+        for user_index in self.user_indices(user_mask):
+            function(user_index)
 
     def user_indices(self, user_mask: UserMask) -> Generator[float, Any, None]:
         """
-        Generator function to get indices from a UserMask.
+        Generator that allows to iterate on UserMask.
         E.g.: for user_index in user_mask_iterator.user_indices(mask)
         """
         bitset = user_mask & self.max_user_mask
         while bitset != 0:
             user_bit = bitset & -bitset
             user_index = log2(user_bit)
-            yield user_index
+            yield int(user_index)
             bitset ^= user_bit
