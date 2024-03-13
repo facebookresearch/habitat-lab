@@ -166,9 +166,10 @@ def get_bb_for_object_id(
 
     obj = get_obj_from_id(sim, obj_id, ao_link_map)
 
-    assert (
-        obj is not None
-    ), f"object id {obj_id} is not found, this is unexpected. Invalid/stale object id?"
+    if obj is None:
+        raise AssertionError(
+            f"object id {obj_id} is not found, this is unexpected. Invalid/stale object id?"
+        )
 
     if isinstance(obj, habitat_sim.physics.ManagedRigidObject):
         return (obj.root_scene_node.cumulative_bb, obj.transformation)
@@ -974,14 +975,14 @@ def on_floor(
     ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
     """
-    Gets whether or not the object is on the "floor" using the navmesh as an abstraction.
+    Checks if the object is heuristically considered to be "on the floor" using the navmesh as an abstraction. This function assumes the PathFinder and parameters provided approximate the navigable floor space well.
     NOTE: alt_pathfinder option can be used to provide an alternative navmesh sized for objects. This would allow objects to be, for example, under tables or in corners and still be considered on the navmesh.
 
     :param sim: The Simulator instance.
     :param object_a: The object instance.
     :param distance_threshold: Maximum allow-able displacement between current object position and navmesh snapped position.
     :param alt_pathfinder:Optionally provide an alternative PathFinder specifically configured for this check. Defaults to sim.pathfinder.
-    :param island_index: Optionally limit allowed navmesh to a specific island. Default (-1) is full navmesh.
+    :param island_index: Optionally limit allowed navmesh to a specific island. Default (-1) is full navmesh. Note the default is likely not good since large furniture objets could have isolated islands on them which are not the floor.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
 
