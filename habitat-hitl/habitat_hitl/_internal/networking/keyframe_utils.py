@@ -96,14 +96,19 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
                 if entry["instanceKey"] not in inc_deletions
             ]
 
-    if "message" in inc_keyframe:
-        inc_message = inc_keyframe["message"]
-        # add/update all messages
-        for message_key in inc_message:
-            ensure_dict(consolidated_keyframe, "message")
-            consolidated_keyframe["message"][message_key] = inc_message[
-                message_key
-            ]
+    # Consolidate messages on a per-user basis.
+    # Messages are stored as user indices until they are sent to their respective client.
+    assert "message" not in inc_keyframe
+    for user_index in range(32):  # Sloppy: Get user count.
+        user_message_key = str(user_index)
+        if user_message_key in inc_keyframe:
+            inc_message = inc_keyframe[user_message_key]
+            # add/update all messages
+            for message_item_key in inc_message:
+                ensure_dict(consolidated_keyframe, user_message_key)
+                consolidated_keyframe[user_message_key][message_item_key] = inc_message[
+                    message_item_key
+                ]
 
     # todo: lights, userTransforms
 
