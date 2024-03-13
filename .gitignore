@@ -95,8 +95,15 @@ data
 /videos
 /train_dir
 /tb
+/tb_old
+/video_dir_old
+*.zip
+/test
+navmeshes/
+*.jpg
 
 # outputs from other libraries
 /sandbox
 /plots/outputs
 /wandb/
+ up

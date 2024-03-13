@@ -179,7 +179,10 @@ class RearrangeTask(NavigationTask):
                 self._articulated_agent_pos_start
             )
 
-    def _set_articulated_agent_start(self, agent_idx: int) -> None:
+    def _set_articulated_agent_start(self, agent_idx: int,
+                                     agent_pos: np.ndarray,
+                                     agent_rot: float) -> None:
+        print("being called")
         articulated_agent_start = self._get_cached_articulated_agent_start(
             agent_idx
         )
@@ -228,11 +231,14 @@ class RearrangeTask(NavigationTask):
         articulated_agent = self._sim.get_agent_data(
             agent_idx
         ).articulated_agent
-        articulated_agent.base_pos = articulated_agent_pos
-        articulated_agent.base_rot = articulated_agent_rot
+        #KL
+        articulated_agent.base_pos = articulated_agent_pos if agent_pos is None else agent_pos
+        articulated_agent.base_rot = agent_rot
+        print("TEST final start base_pos & base_rot: ", articulated_agent.base_pos, articulated_agent.base_rot)
 
     @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
+        print("reset being called in rearrange_task")
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
 
@@ -241,10 +247,18 @@ class RearrangeTask(NavigationTask):
             for action_instance in self.actions.values():
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
-
+            
+            #KL: 
             if self._should_place_articulated_agent:
                 for agent_idx in range(self._sim.num_articulated_agents):
-                    self._set_articulated_agent_start(agent_idx)
+                    if agent_idx == 0:#robot
+                        agent_pos = np.array(episode.start_position)
+                        agent_rot = episode.start_rotation[0]*1.0
+                    if agent_idx == 1:#agent
+                        agent_pos = np.array(episode.info["human_start"])
+                        agent_rot = 0
+                    self._set_articulated_agent_start(agent_idx, agent_pos, agent_rot)
+        print("TEST articulated_agent_pos_start: ", self._articulated_agent_pos_start)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

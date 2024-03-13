@@ -34,9 +34,9 @@ defaults:
     - dist_to_goal
     - nav_to_pos_succ
     # - social_nav_seek_success
-    # - social_dist_to_goal
-    # - social_nav_to_pos_succ #KL: social nav to goal
-    # - social_nav_stats
+    - social_dist_to_goal
+    - social_nav_to_pos_succ #KL: social nav to goal
+    - social_nav_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -182,6 +182,7 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: /habitat-lab/data/social_nav_episode_2.json.gz
-
+    # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    data_path: data/social_nav_episode_6_1.json.gz
+    # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz

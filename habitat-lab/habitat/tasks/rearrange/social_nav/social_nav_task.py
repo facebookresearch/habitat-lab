@@ -8,6 +8,7 @@ import random
 from typing import Optional, cast
 
 import numpy as np
+import magnum as mn
 
 from habitat.articulated_agents.humanoids.kinematic_humanoid import (
     KinematicHumanoid,
@@ -40,7 +41,7 @@ class PddlSocialNavTask(PddlTask):
         target_idxs, _ = self._sim.get_targets()
         return self._sim.scene_obj_ids[target_idxs[0]]
 
-    def _generate_nav_start_goal(self, episode, force_idx=None) -> NavToInfo:
+    def _generate_nav_start_goal(self, episode, agent_idx, force_idx=None) -> NavToInfo:
         """
         Returns the starting information for a navigate to object task.
         """
@@ -53,37 +54,55 @@ class PddlSocialNavTask(PddlTask):
             and random.random() < self._object_in_hand_sample_prob
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
+        print("start_hold_obj_idx: ", start_hold_obj_idx)
+        # if start_hold_obj_idx is None:
+        #     # Select an object at random and navigate to that object.
+        #     all_pos = self._sim.get_target_objs_start()
+        #     print("all_pos: ", all_pos)
+        #     if force_idx is None:
+        #         nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
 
-        if start_hold_obj_idx is None:
-            # Select an object at random and navigate to that object.
-            all_pos = self._sim.get_target_objs_start()
-            if force_idx is None:
-                nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-            else:
-                nav_to_pos = all_pos[force_idx]
-        else:
-            # Select a goal at random and navigate to that goal.
-            _, all_pos = self._sim.get_targets()
-            nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-        print("Inside social nav task getting start and goal ", nav_to_pos)
+        #     else:
+        #         nav_to_pos = all_pos[force_idx]
+        # else:
+        #     # Select a goal at random and navigate to that goal.
+        #     _, all_pos = self._sim.get_targets()
+        #     nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
+        
+        #KL: since we are not considering hold object or force idx
+        human_goal_pos = np.array(episode.info["human_goal"])
+        #for robot nav_to_pos: 
+        nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
+            circle_center=human_goal_pos,
+            radius=2
+            )
+        
+        
         def filter_func(start_pos, _):
             return (
                 np.linalg.norm(start_pos - nav_to_pos)
                 > self._min_start_distance
             )
-
-        (
-            articulated_agent_pos,
-            articulated_agent_angle,
-        ) = self._sim.set_articulated_agent_base_to_random_point(
-            filter_func=filter_func,
-        )
-        articulated_agent_angle = 0.0
-        print(articulated_agent_angle)
-        print(articulated_agent_pos)
-
+        
+        # (
+        #     articulated_agent_pos,
+        #     articulated_agent_angle,
+        # ) = self._sim.set_articulated_agent_base_to_random_point(
+        #     filter_func=filter_func,
+        # )
+        #set robot pose to robot start position
+        if agent_idx == 0: #robot
+            articulated_agent_pos = np.array(episode.start_position)
+            articulated_agent_angle = episode.start_rotation[3]*1.0
+            nav_to_pos = np.array(episode.info["human_start"])
+        elif agent_idx == 1: #human
+            articulated_agent_pos = np.array(episode.info["human_start"])
+            articulated_agent_angle = episode.start_rotation[3]*1.0
+            nav_to_pos = np.array(episode.info["human_goal"])
+        print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)
+        
         return NavToInfo(
-            nav_goal_pos=nav_to_pos,
+            nav_goal_pos=nav_to_pos, #KL
             articulated_agent_start_pos=articulated_agent_pos,
             articulated_agent_start_angle=articulated_agent_angle,
             start_hold_obj_idx=start_hold_obj_idx,
@@ -107,16 +126,22 @@ class PddlSocialNavTask(PddlTask):
 
     def reset(self, episode: Episode):
         # Process the nav target
+        print("TEST ORIGINAL agent base_pos:")
+        print("robot base_pos: ", self._sim.get_agent_data(0).articulated_agent.base_pos)
+        print("human base_pos: ", self._sim.get_agent_data(1).articulated_agent.base_pos)
         for agent_id in range(self._sim.num_articulated_agents):
+            #KL
+            print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
             self._nav_to_info = self._generate_nav_start_goal(
-                episode, force_idx=self.force_obj_to_idx
-            )
-
+                    episode, agent_id, force_idx=self.force_obj_to_idx
+                )
             self._sim.get_agent_data(
                 agent_id
             ).articulated_agent.base_pos = (
                 self._nav_to_info.articulated_agent_start_pos
+                
             )
+                
             self._sim.get_agent_data(
                 agent_id
             ).articulated_agent.base_rot = (

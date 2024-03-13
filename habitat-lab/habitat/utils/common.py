@@ -9,6 +9,7 @@ from os import path as osp
 from typing import Any, Dict, List, Tuple
 
 from habitat.core.logging import logger
+from IPython import embed
 
 
 def check_make_dir(directory_path: str) -> bool:

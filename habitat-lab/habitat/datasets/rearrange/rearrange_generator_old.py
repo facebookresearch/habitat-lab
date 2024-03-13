@@ -42,8 +42,6 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
 
-from IPython import embed
-from habitat.datasets.rearrange.door_sampler import door_samples
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
@@ -94,7 +92,7 @@ class RearrangeEpisodeGenerator:
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.dbv: DebugVisualizer = (
+        self.vdb: DebugVisualizer = (
             None  # visual debugger initialized with sim
         )
 
@@ -150,11 +148,6 @@ class RearrangeEpisodeGenerator:
                 scene_set["included_substrings"],
                 scene_set["excluded_substrings"],
             )
-            #KL: define manually for mp3d
-            # self._scene_sets[
-            #     scene_set["name"]
-            # ] = ['/habitat-lab/data/scene_datasets/mp3d_example/17DRP5sb8fy/17DRP5sb8fy.glb']
-            
 
         # object sets
         for object_set in self.cfg.object_sets:
@@ -328,7 +321,6 @@ class RearrangeEpisodeGenerator:
             unified_scene_set: List[str] = []
             # concatenate all requested scene sets
             for set_name in self.cfg.scene_sampler.params.scene_sets:
-                print("GET set_name: ", set_name)
                 if (
                     self._limit_scene_set is not None
                     and set_name != self._limit_scene_set
@@ -455,36 +447,8 @@ class RearrangeEpisodeGenerator:
             sampled_look_target = receptacle.sample_uniform_global(
                 self.sim, 1.0
             )
-            self.dbv.look_at(sampled_look_target)
-            self.dbv.debug_obs.append(self.dbv.get_observation())
-
-    def get_island_sampled_point(self, island_idx = None):
-        print("---------------get island sampled point----------")
-        # start_navigable = self.sim.pathfinder.get_random_navigable_point(
-        #     island_index=island_idx
-        #     )
-        dist = 10
-        while(dist > 5 or dist < 2):
-            start_navigable = self.sim.pathfinder.get_random_navigable_point(
-                island_index=island_idx
-                )
-            goal_navigable = self.sim.pathfinder.get_random_navigable_point(
-                island_index=island_idx
-                )
-            # start_navigable = self.sim.pathfinder.get_random_navigable_point_near(
-            #     circle_center=goal_navigable,
-            #     radius=2,
-            #     island_index=island_idx
-            #     )
-            path = habitat_sim.ShortestPath()
-            path.requested_start = start_navigable
-            path.requested_end = goal_navigable
-            found_path = self.sim.pathfinder.find_path(path)
-            dist = path.geodesic_distance
-            # embed()
-        robot_start = goal_navigable
-        print("----FOUND start_navigable: ", start_navigable, " goal_navigable: ", goal_navigable, "robot_start: ", robot_start, "----------")
-        return robot_start, start_navigable, goal_navigable
+            self.vdb.look_at(sampled_look_target)
+            self.vdb.get_observation()
 
     def generate_episodes(
         self, num_episodes: int = 1, verbose: bool = False
@@ -494,7 +458,6 @@ class RearrangeEpisodeGenerator:
         """
         generated_episodes: List[RearrangeEpisode] = []
         failed_episodes = 0
-        
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
@@ -516,7 +479,7 @@ class RearrangeEpisodeGenerator:
         logger.info(
             f"Generated {num_episodes} episodes in {num_episodes+failed_episodes} tries."
         )
-        
+
         return generated_episodes
 
     def generate_single_episode(self) -> Optional[RearrangeEpisode]:
@@ -589,13 +552,7 @@ class RearrangeEpisodeGenerator:
         largest_indoor_island_id = get_largest_island_index(
             self.sim.pathfinder, self.sim, allow_outdoor=False
         )
-        #KL
-        # robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
-        #     largest_indoor_island_id
-        # )
-        sampled_start, sampled_goal, robot_sampled_start = door_samples(self.sim.pathfinder, self.cfg)
-        print("Get DOOR final samples: ", robot_sampled_start, sampled_start, sampled_goal)
-        
+
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
@@ -698,7 +655,7 @@ class RearrangeEpisodeGenerator:
         # visualize after setting AO states to correctly see scene state
         if self._render_debug_obs:
             self.visualize_scene_receptacles()
-            self.dbv.make_debug_video(prefix="receptacles_")
+            self.vdb.make_debug_video(prefix="receptacles_")
 
         # track a list of target objects to be used for settle culling later
         target_object_names: List[str] = []
@@ -710,7 +667,7 @@ class RearrangeEpisodeGenerator:
                 recep_tracker,
                 target_receptacles[sampler_name],
                 snap_down=True,
-                dbv=(self.dbv if self._render_debug_obs else None),
+                vdb=(self.vdb if self._render_debug_obs else None),
             )
             if len(object_sample_data) == 0:
                 return None
@@ -745,8 +702,8 @@ class RearrangeEpisodeGenerator:
                     f"Generating debug images for {len(new_objects)} objects..."
                 )
                 for new_object in new_objects:
-                    self.dbv.look_at(new_object.translation)
-                    self.dbv.debug_obs.append(self.dbv.get_observation())
+                    self.vdb.look_at(new_object.translation)
+                    self.vdb.get_observation()
                 logger.info(
                     f"... done generating the debug images for {len(new_objects)} objects."
                 )
@@ -785,7 +742,7 @@ class RearrangeEpisodeGenerator:
                 self.sim,
                 recep_tracker,
                 snap_down=True,
-                dbv=self.dbv,
+                vdb=self.vdb,
                 target_receptacles=target_receptacles[obj_sampler_name],
                 goal_receptacles=goal_receptacles[sampler_name],
                 object_to_containing_receptacle=self.object_to_containing_receptacle,
@@ -818,7 +775,7 @@ class RearrangeEpisodeGenerator:
                         angular_speed=self.cfg.angular_velocity,
                         distance_threshold=self.cfg.distance_threshold,
                         linear_speed=self.cfg.linear_velocity,
-                        dbv=self.dbv,
+                        vdb=self.vdb,
                         render_debug_video=False,
                     )
                     if not is_navigable:
@@ -854,15 +811,15 @@ class RearrangeEpisodeGenerator:
                         size=target_bb_size / 2.0,
                         transform=target_transform,
                     )
-                    self.dbv.look_at(target_transform.translation)
-                    self.dbv.debug_line_render.set_line_width(2.0)
-                    self.dbv.debug_line_render.draw_transformed_line(
+                    self.vdb.look_at(target_transform.translation)
+                    self.vdb.debug_line_render.set_line_width(2.0)
+                    self.vdb.debug_line_render.draw_transformed_line(
                         target_transform.translation,
                         rom.get_object_by_handle(instance_handle).translation,
                         mn.Color4(1.0, 0.0, 0.0, 1.0),
                         mn.Color4(1.0, 0.0, 0.0, 1.0),
                     )
-                    self.dbv.debug_obs.append(self.dbv.get_observation())
+                    self.vdb.get_observation()
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
@@ -900,7 +857,7 @@ class RearrangeEpisodeGenerator:
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
             episode_id=str(self.num_ep_generated - 1),
-            start_position=robot_sampled_start, #KL
+            start_position=[0, 0, 0],
             start_rotation=[
                 0,
                 0,
@@ -915,7 +872,7 @@ class RearrangeEpisodeGenerator:
             goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
             name_to_receptacle=name_to_receptacle,
-            info={"object_labels": target_refs, "human_start": sampled_start, "human_goal": sampled_goal},
+            info={"object_labels": target_refs},
         )
 
     def initialize_sim(self, scene_name: str, dataset_path: str) -> None:
@@ -929,8 +886,8 @@ class RearrangeEpisodeGenerator:
             "rgb": {
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": camera_resolution,
-                "position": [0.0, 0.0, 0.0],
-                "orientation": [0.0, 0.0, 0.0],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
             }
         }
 
@@ -992,10 +949,10 @@ class RearrangeEpisodeGenerator:
         # initialize the debug visualizer
         output_path = (
             "rearrange_ep_gen_output/"
-            if self.dbv is None
-            else self.dbv.output_path
+            if self.vdb is None
+            else self.vdb.output_path
         )
-        self.dbv = DebugVisualizer(self.sim, output_path=output_path)
+        self.vdb = DebugVisualizer(self.sim, output_path=output_path)
 
     def settle_sim(
         self,
@@ -1024,16 +981,16 @@ class RearrangeEpisodeGenerator:
         new_obj_centroid /= len(self.ep_sampled_objects)
         settle_db_obs: List[Any] = []
         if self._render_debug_obs:
-            settle_db_obs.append(
-                self.dbv.get_observation(
-                    look_at=new_obj_centroid, look_from=scene_bb.center()
-                )
+            self.vdb.get_observation(
+                look_at=new_obj_centroid,
+                look_from=scene_bb.center(),
+                obs_cache=settle_db_obs,
             )
 
         while self.sim.get_world_time() < duration:
             self.sim.step_world(1.0 / 30.0)
             if self._render_debug_obs:
-                settle_db_obs.append(self.dbv.get_observation())
+                self.vdb.get_observation(obs_cache=settle_db_obs)
 
         logger.info(
             f"   ...done with placement stability analysis in {time.time()-settle_start_time} seconds."
@@ -1056,7 +1013,7 @@ class RearrangeEpisodeGenerator:
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
                 if self._render_debug_obs:
-                    self.dbv.peek_rigid_object(
+                    self.vdb.peek_rigid_object(
                         obj=new_object,
                         peek_all_axis=True,
                         additional_savefile_prefix="unstable_",
@@ -1079,7 +1036,7 @@ class RearrangeEpisodeGenerator:
         # TODO: maybe draw/display trajectory tubes for the displacements?
 
         if self._render_debug_obs and make_video:
-            self.dbv.make_debug_video(
+            self.vdb.make_debug_video(
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
 
@@ -1170,7 +1127,7 @@ class RearrangeEpisodeGenerator:
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
-                self.dbv.peek_rigid_object(obj, peek_all_axis=True)
+                self.vdb.peek_rigid_object(obj, peek_all_axis=True)
 
         # return success or failure
         return success
