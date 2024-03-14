@@ -234,7 +234,7 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # the config file from the checkpoint file.
     force_config_file: str = ""
     at_resting_threshold: float = 0.15
-    # If true, this willapply the post-conditions of the skill after it
+    # If true, this will apply the post-conditions of the skill after it
     # terminates.
     apply_postconds: bool = False
 
@@ -380,7 +380,7 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     self_play_batched: bool = False
     # If specified, this will load the policies for the type 1 population from
     # the checkpoint file at the start of training. Used to independently train
-    # the type 1 population, and then train a seperate against this population.
+    # the type 1 population, and then train a separate against this population.
     load_type1_pop_ckpts: Optional[List[str]] = None
     ###############################
 

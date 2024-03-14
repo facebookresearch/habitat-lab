@@ -55,7 +55,7 @@ habitat_baselines:
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:
-      # Motify the action distribution
+      # Modify the action distribution
       agent_0:
         name: "PointNavResNetPolicy"
         action_distribution_type: "gaussian"
