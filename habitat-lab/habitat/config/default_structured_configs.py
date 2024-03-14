@@ -292,7 +292,7 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
-    # If the condition of sliding includs the checking of rotation
+    # If the condition of sliding includes the checking of rotation
     enable_rotation_check_for_dyn_slide: bool = True
 
 
@@ -997,9 +997,9 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     total_steps: int = 1500
     # If we want to compute the shortest path to human
     enable_shortest_path_computation: bool = False
-    # The min distance for considering backup and yiled motions
+    # The min distance for considering backup and yield motions
     dis_threshold_for_backup_yield: float = 1.5
-    # The min vel for considering yiled motion
+    # The min vel for considering yield motion
     min_abs_vel_for_yield: float = 1.0
     # The dot product value for considering that the robot is facing human
     robot_face_human_threshold: float = 0.5
@@ -1304,7 +1304,7 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     # -1 means that there is no facing_human_reward
     facing_human_reward: float = -1.0
-    # toward_human_reward defualt is 1.0
+    # toward_human_reward default is 1.0
     toward_human_reward: float = 1.0
     # -1 means that there is no near_human_bonus
     near_human_bonus: float = -1.0
