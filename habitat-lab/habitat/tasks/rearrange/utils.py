@@ -13,10 +13,11 @@ from functools import wraps
 from typing import List, Optional, Tuple
 
 import attr
-import habitat_sim
 import magnum as mn
 import numpy as np
 import quaternion
+
+import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
@@ -724,7 +725,9 @@ def add_perf_timing_func(name: Optional[str] = None):
     return perf_time
 
 
-def get_camera_transform(cur_articulated_agent, camera_name:str=None) -> mn.Matrix4:
+def get_camera_transform(
+    cur_articulated_agent, camera_name: str = None
+) -> mn.Matrix4:
     """Get the camera transformation"""
     if camera_name is not None:
         cam_info = cur_articulated_agent.params.cameras[camera_name]
