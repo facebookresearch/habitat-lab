@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Set
 import attr
 import magnum as mn
 import numpy as np
-
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
@@ -160,7 +159,7 @@ class SpotRobot(MobileManipulator):
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_jaw_rgb": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.023, -0.095),
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
