@@ -146,7 +146,7 @@ LINKS_NAVBAR2 = [
 ]
 
 FINE_PRINT = f"""
-| {PROJECT_TITLE} {PROJECT_SUBTITLE}. Copyright © 2021 Facebook AI Research.
+| {PROJECT_TITLE} {PROJECT_SUBTITLE}. Copyright © Meta Platforms.
 | `Terms of Use </terms-of-use>`_ `Data Policy </data-policy>`_ `Cookie Policy </cookie-policy>`_
 | Created with `m.css Python doc generator <https://mcss.mosra.cz/documentation/python/>`_."""
 
