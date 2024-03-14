@@ -724,9 +724,11 @@ def add_perf_timing_func(name: Optional[str] = None):
     return perf_time
 
 
-def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
+def get_camera_transform(cur_articulated_agent, camera_name:str=None) -> mn.Matrix4:
     """Get the camera transformation"""
-    if isinstance(cur_articulated_agent, SpotRobot):
+    if camera_name is not None:
+        cam_info = cur_articulated_agent.params.cameras[camera_name]
+    elif isinstance(cur_articulated_agent, SpotRobot):
         cam_info = cur_articulated_agent.params.cameras[
             "articulated_agent_arm_depth"
         ]
@@ -741,11 +743,21 @@ def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
     ).transformation
     # Get the camera offset transformation
     # offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-    cam_offset_transform = mn.Matrix4.look_at(
-        cam_info.cam_offset_pos,
-        cam_info.cam_look_at_pos,
-        mn.Vector3(0, 1, 0),
-    )
+    cam_offset_transform = None
+    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+        pos = cam_info.cam_offset_pos
+        ori = cam_info.cam_orientation
+        Mt = mn.Matrix4.translation(pos)
+        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+        cam_offset_transform = Mt @ Mz @ My @ Mx
+    else:
+        cam_offset_transform = mn.Matrix4.look_at(
+            cam_info.cam_offset_pos,
+            cam_info.cam_look_at_pos,
+            mn.Vector3(0, 1, 0),
+        )
     cam_trans = link_trans @ cam_offset_transform @ cam_info.relative_transform
     return cam_trans
 
