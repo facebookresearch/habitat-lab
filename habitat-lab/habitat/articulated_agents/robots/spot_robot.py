@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Set
 import attr
 import magnum as mn
 import numpy as np
+
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
