@@ -161,7 +161,7 @@ class AppStatePickThrowVr(AppState):
         hand_positions = []
         num_hands = 2
         for i in range(num_hands):
-            hand_pos, _ = remote_client_state.get_hand_pose(i)
+            hand_pos, _ = remote_client_state.get_hand_pose(i, user_index=0)
             if hand_pos:
                 hand_positions.append(hand_pos)
         if len(hand_positions) == 0:
@@ -170,7 +170,7 @@ class AppStatePickThrowVr(AppState):
 
         grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
 
-        remote_button_input = remote_client_state.get_gui_input()
+        remote_button_input = remote_client_state.get_gui_input(0)
 
         found_obj_idx = None
         found_hand_idx = None
@@ -230,7 +230,7 @@ class AppStatePickThrowVr(AppState):
         assert self._remote_held_hand_idx is not None
 
         remote_client_state = self._app_service.remote_client_state
-        remote_button_input = remote_client_state.get_gui_input()
+        remote_button_input = remote_client_state.get_gui_input(0)
 
         do_throw = False
         for key in self.get_grasp_keys_by_hand(self._remote_held_hand_idx):
@@ -248,10 +248,10 @@ class AppStatePickThrowVr(AppState):
             assert history_len >= 2
             history_offset = 1
             pos1, _ = remote_client_state.get_hand_pose(
-                hand_idx, history_index=history_offset
+                hand_idx, user_index=0, history_index=history_offset
             )
             pos0, _ = remote_client_state.get_hand_pose(
-                hand_idx, history_index=history_len - 1
+                hand_idx, user_index=0, history_index=history_len - 1
             )
             if pos0 and pos1:
                 vel = (pos1 - pos0) / (
@@ -267,7 +267,7 @@ class AppStatePickThrowVr(AppState):
         else:
             # snap to hand
             hand_pos, hand_rotation = remote_client_state.get_hand_pose(
-                self._remote_held_hand_idx
+                self._remote_held_hand_idx, user_index=0
             )
             assert hand_pos is not None
 
@@ -651,7 +651,7 @@ class AppStatePickThrowVr(AppState):
                 self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
                 or (
                     not self._is_remote_active_toggle
-                    and self._app_service.remote_client_state.get_gui_input().get_any_key_down()
+                    and self._app_service.remote_client_state.get_gui_input().get_any_key_down(0)
                 )
             )
         ):
