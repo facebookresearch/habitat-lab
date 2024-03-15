@@ -37,9 +37,12 @@ habitat_hitl:
     height: 1000
   gui_controlled_agents:
     - agent_index: 1
-      lin_speed: 10.0
-      ang_speed: 300
-  hide_humanoid_in_gui: True
+      lin_speed: 4.0
+      ang_speed: 250
+    - agent_index: 0
+      lin_speed: 4.0
+      ang_speed: 250
+  hide_humanoid_in_gui: False
   camera:
     first_person_mode: True
   networking:
