@@ -65,14 +65,17 @@ class AppStateRearrangeV2(AppState):
 
         self._gui_inputs: List[GuiInput] = app_service.remote_client_state.get_gui_inputs()
 
+        # TODO: Create per-user data object.
         self._held_obj_ids: List[Optional[Any]] = []  # TODO: Unknown type.
         self._has_grasp_preview: List[bool] = []
+        self._hide_gui_text: List[bool] = []
         self._cam_transforms: List[mn.Matrix4] = []
         self._camera_helpers: List[CameraHelper] = []
         self._client_helpers: List[ClientHelper] = []
         for user_index in range(self._num_users):
             self._held_obj_ids.append(None)
             self._has_grasp_preview.append(False)
+            self._hide_gui_text.append(False)
             self._cam_transforms.append(mn.Matrix4())
             self._camera_helpers.append(CameraHelper(
                 self._app_service.hitl_config,
@@ -85,7 +88,6 @@ class AppStateRearrangeV2(AppState):
             
             
         # TODO: These variables need to be per-user
-        self._hide_gui_text = False
 
         self._pick_helper = GuiPickHelper(
             self._app_service,
@@ -179,7 +181,7 @@ class AppStateRearrangeV2(AppState):
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
-            client_message_manager.signal_scene_change(UserMask.BROADCAST)
+            client_message_manager.signal_scene_change(destination_mask=UserMask.BROADCAST)
 
     def get_sim(self):
         return self._app_service.sim
@@ -266,7 +268,7 @@ class AppStateRearrangeV2(AppState):
                 return ""
 
         controls_str: str = ""
-        if not self._hide_gui_text:
+        if not self._hide_gui_text[user_index]:
             if self._sps_tracker.get_smoothed_rate() is not None:
                 controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
             if user_index in self._client_helpers and self._client_helpers[user_index].display_latency_ms:
@@ -304,7 +306,7 @@ class AppStateRearrangeV2(AppState):
         if len(controls_str) > 0:
             # TODO: Vectorize text_drawer
             self._app_service.text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
+                controls_str, TextOnScreenAlignment.TOP_LEFT, destination=UserMask.from_index(user_index)
             )
 
         status_str = self._get_status_text(user_index)
@@ -312,7 +314,7 @@ class AppStateRearrangeV2(AppState):
             # TODO: Vectorize text_drawer
             self._app_service.text_drawer.add_text(
                 status_str,
-                TextOnScreenAlignment.TOP_CENTER,
+                TextOnScreenAlignment.TOP_CENTER, destination=UserMask.from_index(user_index)
             )
 
     def _get_camera_lookat_pos(self, user_index: int) -> mn.Vector3:
@@ -398,9 +400,9 @@ class AppStateRearrangeV2(AppState):
         if self._server_gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
 
-        # TODO: Per-user
-        if self._server_gui_input.get_key_down(GuiInput.KeyNS.H):
-            self._hide_gui_text = not self._hide_gui_text
+        for user_index in range(self._num_users):
+            if self._gui_inputs[user_index].get_key_down(GuiInput.KeyNS.H):
+                self._hide_gui_text[user_index] = not self._hide_gui_text[user_index]
 
         self._check_change_episode()
 
@@ -424,7 +426,7 @@ class AppStateRearrangeV2(AppState):
         # todo: visualize objects properly for each user (this requires a separate debug_line_render per user!), or find a reasonable debug line visualization that can be shared between both users every frame.
         for user_index in range(self._num_users):
             if self._held_obj_ids[user_index] is None:
-                self._pick_helper.viz_objects()
+                self._pick_helper.viz_objects(destination=UserMask.from_index(user_index))
 
         # Switch the server-controller user.
         if (
@@ -449,7 +451,7 @@ class AppStateRearrangeV2(AppState):
         if self._app_service.hitl_config.networking.enable:
             for user_index in range(self._num_users):
                 self._app_service._client_message_manager.update_camera_transform(
-                    self._cam_transforms[user_index], UserMask.from_index(user_index)
+                    self._cam_transforms[user_index], destination_mask=UserMask.from_index(user_index)
                 )
 
 
