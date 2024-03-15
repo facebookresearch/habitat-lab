@@ -36,7 +36,7 @@ class ClientMessageManager:
         """
         self._messages = []
         for _ in range(self._max_user_count):
-            self._message.append({})
+            self._messages.append({})
 
     def add_highlight(
         self,
