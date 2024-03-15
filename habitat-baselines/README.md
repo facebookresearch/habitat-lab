@@ -87,6 +87,11 @@ The observation of the social nav policy is defined under `habitat.gym.obs_keys`
 
 Note that if you want to add more or use other observation sensors, you can do that by adding sensors into `habitat.gym.obs_keys`. For example, you can provide a humanoid GPS to a policy's input by adding `agent_0_goal_to_agent_gps_compass` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`. Notice that the observation key in `habitat.gym.obs_keys` must be a subset of sensors in `/habitat/task/lab_sensors`. Finally, another example would be adding an arm RGB sensor. You can do that by adding `agent_0_articulated_agent_arm_rgb` into `habitat.gym.obs_keys` in `hssd_spot_human_social_nav.yaml`.
 
+For more advanced users, if you want to create a new sensor for social nav agents, there are three steps.
+- Step 1. Define a new sensor config class in `habitat.config.default_structured_configs.py`.
+- Step 2. Based on `type` string you define in `habitat.config.default_structured_configs.py`, create the same sensor name in sensor file using `@registry.register_sensor` method. See examples in `habitat.tasks.rearrange.social_nav.social_nav_sensors.py`.
+- Step 3. Register the new sensor in `hssd_spot_human_social_nav.yaml` for using it. It should be defined in `/habitat/task/lab_sensors` in config yaml, and in `habitat.gym.obs_keys` using `agent_0_{your_sensor_name}`.
+
 ### Action
 The action space of the social nav policy is defined under `/habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity_non_cylinder` in `habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human_social_nav.yaml`. The action consists of linear and angular velocities. You can learn more about the hyperparameters for this action under `BaseVelocityNonCylinderActionConfig` in `habitat-lab/habitat/config/default_structured_configs.py`.
 
@@ -152,6 +157,7 @@ we have the following training wall clock time versus reward:
 
 We have the following training FPS:
 ![Social Nav Training FPS](/res/img/habitat3_social_nav_training_fps.png)
+Note the training FPS depends on multiple factors such as the number of GPUs and the number of environments.
 
 For evaluating the trained Spot robot's policy based on 500 episodes, run (please make sure `video_dir` and `eval_ckpt_path_dir` are the paths you want and the checkpoint is there):
 
@@ -216,6 +222,8 @@ Average episode social_nav_stats.backup_ratio: 0.1889
 Average episode social_nav_stats.yield_ratio: 0.0192
 Average episode num_agents_collide: 0.7020
 ```
+
+Note that in Habitat-3.0 paper, we report our numbers in the full evaluation dataset (1200 episodes). As a result, the number could be a bit different than the ones in the paper.
 
 ## Social Rearrangement
 
