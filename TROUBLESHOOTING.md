@@ -46,6 +46,8 @@ NVIDIA A100 GPUs may caused Habitat sensors to render black rectangular artifact
 
 If this manifests on your setup, update your CUDA drivers to a recent version (at least 12.2).
 
+See: https://github.com/facebookresearch/habitat-sim/issues/2310
+
 ## Graphics Troubleshooting Tips
 
 These steps aim to narrow down your graphics-related issues.
