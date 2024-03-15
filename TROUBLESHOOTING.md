@@ -52,9 +52,14 @@ These steps aim to narrow down your graphics-related issues.
 
 #### General Tips
 
-1. Enable verbose logging.
+1. Increase logging verbosity.
 
-    Launch the application with the following environment variables: `MAGNUM_LOG=verbose` and `MAGNUM_GPU_VALIDATION=ON`. This will print additional information to the logs that often indicate the problem.
+    Launch the application with the following environment variables:
+    * `HABITAT_SIM_LOG=Debug`
+      * Possible values, most verbose first: `VeryVerbose`, `Verbose`/`Debug`, `Warning` *(default)*, `Error`.
+    * `MAGNUM_LOG=verbose`
+      * Possible values, most verbose first: `verbose`, `default`, `quiet`.
+    * `MAGNUM_GPU_VALIDATION=ON`
 
 2. Get test assets.
 
