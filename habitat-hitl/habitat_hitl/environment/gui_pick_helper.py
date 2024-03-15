@@ -6,6 +6,7 @@
 
 from typing import Final
 
+from habitat_hitl.core.user_mask import UserMask
 import magnum as mn
 import numpy as np
 
@@ -77,20 +78,20 @@ class GuiPickHelper:
         else:
             return None
 
-    def _draw_circle(self, pos, color, radius, billboard):
+    def _draw_circle(self, pos, color, radius, billboard, destination:UserMask = UserMask.BROADCAST):
         num_segments = 24
         self._app_service.gui_drawer.draw_circle(
-            pos, radius, color, num_segments, billboard=billboard
+            pos, radius, color, num_segments, billboard=billboard, destination=destination
         )
 
     def _add_highlight_ring(
-        self, pos, color, radius, do_pulse=False, billboard=True
+        self, pos, color, radius, do_pulse=False, billboard=True, destination:UserMask = UserMask.BROADCAST
     ):
         if do_pulse:
             radius += self._app_service.get_anim_fraction() * RING_PULSE_SIZE
-        self._draw_circle(pos, color, radius, billboard)
+        self._draw_circle(pos, color, radius, billboard, destination)
 
-    def viz_objects(self):
+    def viz_objects(self, destination: UserMask = UserMask.BROADCAST):
         obj_positions = self._get_object_positions()
 
         if len(self._pick_candidate_indices) > 0:
@@ -104,6 +105,7 @@ class GuiPickHelper:
                     COLOR_GRASP_PREVIEW,
                     RADIUS_GRASP_PREVIEW,
                     do_pulse=False,
+                    destination = destination,
                 )
             self._pick_candidate_indices = []
         else:
@@ -113,7 +115,7 @@ class GuiPickHelper:
                     obj_id
                 ).transformation.translation
                 self._add_highlight_ring(
-                    pos, COLOR_GRASPABLE, RADIUS_GRASPABLE, do_pulse=True
+                    pos, COLOR_GRASPABLE, RADIUS_GRASPABLE, do_pulse=True, destination=destination
                 )
 
     # Reference code

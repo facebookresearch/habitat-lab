@@ -188,6 +188,9 @@ class HitlDriver(AppDriver):
             self.ctrl_helper.get_gui_agent_controllers()
         )
 
+        # TODO: Dependency injection
+        text_drawer._client_message_manager = self._client_message_manager
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
@@ -555,6 +558,7 @@ class HitlDriver(AppDriver):
             messages = self._client_message_manager.get_messages()
             self._client_message_manager.clear_messages()
             # Send the keyframe
+            # TODO: Extremely expensive.
             self._interprocess_record.send_keyframe_to_networking_thread(
                 KeyframeAndMessages(keyframe_obj, messages)
             )

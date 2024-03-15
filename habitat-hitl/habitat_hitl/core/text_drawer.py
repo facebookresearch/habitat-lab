@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Tuple
 
+from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.user_mask import UserMask
 import magnum as mn
 
 use_headless_text_drawer = False
@@ -56,6 +58,7 @@ class AbstractTextDrawer(ABC):
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
+        destination: UserMask = UserMask.BROADCAST,
     ):
         """
         Draw text on-screen.
@@ -70,7 +73,7 @@ class HeadlessTextDrawer(AbstractTextDrawer):
     """
 
     def __init__(self):
-        self._service = None  # will be set later
+        self._client_message_manager: ClientMessageManager = None
 
     def add_text(
         self,
@@ -78,14 +81,13 @@ class HeadlessTextDrawer(AbstractTextDrawer):
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
+        destination: UserMask = UserMask.BROADCAST,
     ):
         align_y, align_x = alignment.value
-        if self._service is not None:
-            client_message_manager = self._service.client_message_manager
-            if client_message_manager:
-                client_message_manager.add_text(
-                    text_to_add, [align_x, align_y]
-                )
+        if self._client_message_manager:
+            self._client_message_manager.add_text(
+                text_to_add, [align_x, align_y], destination
+            )
 
 
 if not use_headless_text_drawer:
@@ -97,7 +99,9 @@ if not use_headless_text_drawer:
             relative_path_to_font: str,
             display_font_size: float,
             max_display_text_chars: int = MAX_DISPLAY_TEXT_CHARS,
+            client_message_manager: ClientMessageManager = None, # TODO: Dependency injection
         ) -> None:
+            self._client_message_manager = client_message_manager
             self._text_transform_pairs: List[Tuple[str, mn.Matrix3]] = []
             self._framebuffer_size = framebuffer_size
 
@@ -144,6 +148,7 @@ if not use_headless_text_drawer:
             alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
             text_delta_x: int = 0,
             text_delta_y: int = 0,
+            destination: UserMask = UserMask.BROADCAST,
         ):
             """
             Adds `text_to_add` and corresponding window text transform to `self._text_transform_pairs`.
@@ -166,6 +171,12 @@ if not use_headless_text_drawer:
             self._text_transform_pairs.append(
                 (text_to_add, window_text_transform)
             )
+
+            if self._client_message_manager is not None:
+                if self._client_message_manager:
+                    self._client_message_manager.add_text(
+                        text_to_add, [align_x, align_y], destination
+                    )
 
         def draw_text(self):
             # make magnum text background transparent

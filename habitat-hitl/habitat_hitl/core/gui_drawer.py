@@ -6,6 +6,7 @@
 
 from typing import Final, List, Optional
 
+from habitat_hitl.core.user_mask import UserMask
 import magnum as mn
 
 from habitat_hitl.core.client_message_manager import ClientMessageManager
@@ -114,6 +115,8 @@ class GuiDrawer:
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
         billboard: bool = False,
+        destination: UserMask = UserMask.BROADCAST,
+
     ) -> None:
         """
         Draw a circle in world-space or local-space (see pushTransform).
@@ -128,7 +131,7 @@ class GuiDrawer:
         # If remote rendering is enabled:
         if self._client_message_manager:
             self._client_message_manager.add_highlight(
-                translation, radius, billboard=billboard, color=color
+                translation, radius, billboard=billboard, color=color, destination_mask=destination
             )
 
     def draw_transformed_line(
