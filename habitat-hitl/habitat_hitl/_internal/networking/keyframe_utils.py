@@ -4,8 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
+from typing import Any, List
 
+from habitat_hitl._internal.networking.interprocess_record import Keyframe, KeyframeAndMessages, Message
+
+def ensure_list(keyframe, key):
+        if key not in keyframe:
+            keyframe[key] = []
+
+def ensure_dict(keyframe, key):
+    if key not in keyframe:
+        keyframe[key] = {}
 
 def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     """
@@ -17,14 +26,6 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     """
     assert consolidated_keyframe is not None
     assert inc_keyframe is not None
-
-    def ensure_list(keyframe, key):
-        if key not in keyframe:
-            keyframe[key] = []
-
-    def ensure_dict(keyframe, key):
-        if key not in keyframe:
-            keyframe[key] = {}
 
     # append loads
     if "loads" in inc_keyframe:
@@ -95,23 +96,34 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
                 for entry in consolidated_keyframe["stateUpdates"]
                 if entry["instanceKey"] not in inc_deletions
             ]
-
-    # Consolidate messages on a per-user basis.
-    # Messages are stored as user indices until they are sent to their respective client.
+    
     assert "message" not in inc_keyframe
-    for user_index in range(32):  # Sloppy: Get user count.
-        user_message_key = str(user_index)
-        if user_message_key in inc_keyframe:
-            inc_message = inc_keyframe[user_message_key]
-            # add/update all messages
-            for message_item_key in inc_message:
-                ensure_dict(consolidated_keyframe, user_message_key)
-                consolidated_keyframe[user_message_key][message_item_key] = inc_message[
-                    message_item_key
-                ]
 
     # todo: lights, userTransforms
 
+
+def update_consolidated_message(consolidated_message: Message, inc_message: Message) -> None:
+    # Consolidate single message.
+    for message_item_key in inc_message:
+        consolidated_message[message_item_key] = inc_message[message_item_key]
+
+def update_consolidated_messages(consolidated_messages: List[Message], inc_messages: List[Message]) -> None:
+    # Consolidate messages on a per-user basis.
+    assert(len(consolidated_messages) == len(inc_messages))
+    for user_index in range(len(inc_messages)):
+        inc_message = inc_messages[user_index]
+        consolidated_message = consolidated_messages[user_index]
+        update_consolidated_message(consolidated_message, inc_message)
+
+
+def get_user_keyframe(input: KeyframeAndMessages, user_index: int) -> Keyframe:
+    """
+    Create a new keyframe containing user-specific message dict as "message" key.
+    """
+    assert "message" not in input.keyframe
+    output: Keyframe = input.keyframe.copy()
+    output["message"] = input.messages[user_index]
+    return output
 
 def get_empty_keyframe():
     keyframe: Any = dict()

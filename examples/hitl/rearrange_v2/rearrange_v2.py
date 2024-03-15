@@ -5,7 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Optional, Set
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import UserMask
+from habitat_hitl.environment.controllers.controller_abc import GuiController
 
 import hydra
 import magnum as mn
@@ -40,9 +43,13 @@ class AppStateRearrangeV2(AppState):
     Todo
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
+        # We don't sync the server camera. Instead, we maintain one camera per user.
+        assert(app_service.hitl_config.networking.client_sync.camera_transform == False)
+
+        # Sloppy: _num_users is defined as the number of agents.
         self._app_service = app_service
-        self._gui_agent_controllers = self._app_service.gui_agent_controllers
+        self._gui_agent_controllers: List[GuiController] = self._app_service.gui_agent_controllers
         self._num_users = len(self._gui_agent_controllers)
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
@@ -51,28 +58,40 @@ class AppStateRearrangeV2(AppState):
         self._sim = app_service.sim
         self._ao_root_bbs: Dict = None
         self._opened_ao_set: Set = set()
-
-        self._cam_transform = None
-        self._camera_user_index = 0
-        self._held_obj_id = None
-        self._recent_reach_pos = None
         self._paused = False
-        self._hide_gui_text = False
 
-        self._camera_helper = CameraHelper(
-            self._app_service.hitl_config,
-            self._app_service.gui_input,
-        )
+        self._server_user_index = 0
+        self._server_gui_input = self._app_service.gui_input
+
+        self._gui_inputs: List[GuiInput] = app_service.remote_client_state.get_gui_inputs()
+
+        self._held_obj_ids: List[Optional[Any]] = []  # TODO: Unknown type.
+        self._has_grasp_preview: List[bool] = []
+        self._cam_transforms: List[mn.Matrix4] = []
+        self._camera_helpers: List[CameraHelper] = []
+        self._client_helpers: List[ClientHelper] = []
+        for user_index in range(self._num_users):
+            self._held_obj_ids.append(None)
+            self._has_grasp_preview.append(False)
+            self._cam_transforms.append(mn.Matrix4())
+            self._camera_helpers.append(CameraHelper(
+                self._app_service.hitl_config,
+                self._gui_inputs[user_index],
+            ))
+            if self._app_service.hitl_config.networking.enable:
+                self._client_helpers.append(ClientHelper(self._app_service, user_index))
+            # HACK: Inject GuiInput into agents
+            self._gui_agent_controllers[user_index]._gui_input = self._gui_inputs[user_index]
+            
+            
+        # TODO: These variables need to be per-user
+        self._hide_gui_text = False
 
         self._pick_helper = GuiPickHelper(
             self._app_service,
         )
         self._placement_helper = GuiPlacementHelper(self._app_service)
-        self._client_helper = None
-        if self._app_service.hitl_config.networking.enable:
-            self._client_helper = ClientHelper(self._app_service)
 
-        self._has_grasp_preview = False
         self._frame_counter = 0
         self._sps_tracker = AverageRateTracker(2.0)
 
@@ -80,21 +99,6 @@ class AppStateRearrangeV2(AppState):
     @staticmethod
     def get_sim_utilities() -> Any:
         return sim_utilities
-
-    def _remap_key(self, user_index, key):
-        key_remap = {
-            GuiInput.KeyNS.SPACE: GuiInput.KeyNS.N,
-            GuiInput.KeyNS.Z: GuiInput.KeyNS.X,
-        }
-        if user_index == 1:
-            assert key in key_remap
-            key = key_remap[key]
-        return key
-
-    def _get_user_key_down(self, user_index, key):
-        return self._app_service.gui_input.get_key_down(
-            self._remap_key(user_index, key)
-        )
 
     def _open_close_ao(self, ao_handle: str):
         if not ENABLE_ARTICULATED_OPEN_CLOSE:
@@ -165,32 +169,24 @@ class AppStateRearrangeV2(AppState):
                 if any(handle in key for handle in handle_filter):
                     del self._ao_root_bbs[key]
 
-        self._held_obj_id = None
+        for user_index in range(self._num_users):
+            self._held_obj_ids[user_index] = None
 
         self._pick_helper.on_environment_reset()
 
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        for user_index in range(self._num_users):
+            self._camera_helpers[user_index].update(self._get_camera_lookat_pos(user_index), dt=0)
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
-            client_message_manager.signal_scene_change()
-            # Not currently needed since the browser client doesn't have a notion of a humanoid. Here for reference.
-            # human_pos = (
-            #     self.get_sim()
-            #     .get_agent_data(self.get_gui_controlled_agent_index())
-            #     .articulated_agent.base_pos
-            # )
-            # client_message_manager.change_humanoid_position(human_pos)
-            # client_message_manager.update_navmesh_triangles(
-            #     self._get_navmesh_triangle_vertices()
-            # )
+            client_message_manager.signal_scene_change(UserMask.BROADCAST)
 
     def get_sim(self):
         return self._app_service.sim
 
     def _get_gui_agent_translation(self, user_index):
         return get_agent_art_obj_transform(
-            self.get_sim(), self.get_gui_controlled_agent_index(user_index)
+            self.get_sim(), self.get_agent_index_from_user_index(user_index)
         ).translation
 
     def _update_grasping_and_set_act_hints(self, user_index):
@@ -199,11 +195,10 @@ class AppStateRearrangeV2(AppState):
         throw_vel = None
         reach_pos = None
 
-        self._has_grasp_preview = False
+        self._has_grasp_preview[user_index] = False
 
-        # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
-        if self._held_obj_id is not None:
-            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+        if self._held_obj_ids[user_index] is not None:
+            if self._gui_inputs[user_index].get_key_down(GuiInput.KeyNS.SPACE):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._get_gui_agent_translation(
@@ -212,19 +207,19 @@ class AppStateRearrangeV2(AppState):
                 else:
                     # GuiPlacementHelper has already placed this object, so nothing to do here
                     pass
-                self._held_obj_id = None
+                self._held_obj_ids[user_index] = None
         else:
             query_pos = self._get_gui_agent_translation(user_index)
             obj_id = self._pick_helper.get_pick_object_near_query_position(
                 query_pos
             )
             if obj_id:
-                if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+                if self._gui_inputs[user_index].get_key_down(GuiInput.KeyNS.SPACE):
                     if DO_HUMANOID_GRASP_OBJECTS:
                         grasp_object_id = obj_id
-                    self._held_obj_id = obj_id
+                    self._held_obj_ids[user_index] = obj_id
                 else:
-                    self._has_grasp_preview = True
+                    self._has_grasp_preview[user_index] = True
 
         walk_dir = None
         distance_multiplier = 1.0
@@ -251,21 +246,21 @@ class AppStateRearrangeV2(AppState):
             distance_multiplier,
             grasp_object_id,
             drop_pos,
-            self._camera_helper.lookat_offset_yaw,
+            self._camera_helpers[user_index].lookat_offset_yaw,
             throw_vel=throw_vel,
             reach_pos=reach_pos,
         )
 
         return drop_pos
-
-    def get_gui_controlled_agent_index(self, user_index):
+    
+    def get_agent_index_from_user_index(self, user_index: int) -> int:
         return self._gui_agent_controllers[user_index]._agent_idx
 
-    def _get_controls_text(self):
+    def _get_controls_text(self, user_index: int) -> str:
         def get_grasp_release_controls_text():
-            if self._held_obj_id is not None:
+            if self._held_obj_ids[user_index] is not None:
                 return "Space/N: put down\n"
-            elif self._has_grasp_preview:
+            elif self._has_grasp_preview[user_index]:
                 return "Space/N: pick up\n"
             else:
                 return ""
@@ -274,8 +269,8 @@ class AppStateRearrangeV2(AppState):
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
                 controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
-            if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+            if user_index in self._client_helpers and self._client_helpers[user_index].display_latency_ms:
+                controls_str += f"latency: {self._client_helpers[user_index].display_latency_ms:.0f}ms\n"
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -284,19 +279,19 @@ class AppStateRearrangeV2(AppState):
             if ENABLE_ARTICULATED_OPEN_CLOSE:
                 controls_str += "Z/X: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
-            if self._num_users > 1 and self._held_obj_id is None:
+            if self._num_users > 1 and self._held_obj_ids[user_index] is None:
                 controls_str += "T: toggle camera user\n"
 
         return controls_str
 
-    def _get_status_text(self):
+    def _get_status_text(self, user_index: int) -> str:
         status_str = ""
 
         if self._paused:
             status_str += "\n\npaused\n"
         if (
-            self._client_helper
-            and self._client_helper.do_show_idle_kick_warning
+            user_index in self._client_helpers
+            and self._client_helpers[user_index].do_show_idle_kick_warning
         ):
             status_str += (
                 "\n\nAre you still there?\nPress any key to keep playing!\n"
@@ -304,31 +299,33 @@ class AppStateRearrangeV2(AppState):
 
         return status_str
 
-    def _update_help_text(self):
-        controls_str = self._get_controls_text()
+    def _update_help_text(self, user_index: int) -> None:
+        controls_str = self._get_controls_text(user_index)
         if len(controls_str) > 0:
+            # TODO: Vectorize text_drawer
             self._app_service.text_drawer.add_text(
                 controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
-        status_str = self._get_status_text()
+        status_str = self._get_status_text(user_index)
         if len(status_str) > 0:
+            # TODO: Vectorize text_drawer
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
             )
 
-    def _get_camera_lookat_pos(self):
+    def _get_camera_lookat_pos(self, user_index: int) -> mn.Vector3:
         agent_root = get_agent_art_obj_transform(
             self.get_sim(),
-            self.get_gui_controlled_agent_index(self._camera_user_index),
+            self.get_agent_index_from_user_index(user_index),
         )
         lookat_y_offset = mn.Vector3(0, 1, 0)
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
-    def is_user_idle_this_frame(self):
-        return not self._app_service.gui_input.get_any_key_down()
+    def is_user_idle_this_frame(self, user_index: int) -> bool:
+        return not self._gui_inputs[user_index].get_any_key_down()
 
     def _check_change_episode(self):
         if self._paused:
@@ -356,8 +353,9 @@ class AppStateRearrangeV2(AppState):
         }
         assert len(episode_index_by_key) == len(episode_ids)
 
+        # TODO: add random episode picker
         for key in episode_index_by_key:
-            if self._app_service.gui_input.get_key_down(key):
+            if self._server_gui_input.get_key_down(key):
                 episode_id = episode_ids[episode_index_by_key[key]]
                 # episode_id should be a string, e.g. "5"
                 assert isinstance(episode_id, str)
@@ -366,25 +364,24 @@ class AppStateRearrangeV2(AppState):
                 )
                 self._app_service.end_episode(do_reset=True)
 
-    def _update_held_object_placement(self):
-        if not self._held_obj_id:
+    def _update_held_object_placement(self, user_index: int) -> None:
+        if not self._held_obj_ids[user_index]:
             return
 
         ray = habitat_sim.geo.Ray()
-        ray.origin = self._camera_helper.get_eye_pos()
+        ray.origin = self._camera_helpers[user_index].get_eye_pos()
         ray.direction = (
-            self._camera_helper.get_lookat_pos()
-            - self._camera_helper.get_eye_pos()
+            self._camera_helpers[user_index].get_lookat_pos()
+            - self._camera_helpers[user_index].get_eye_pos()
         ).normalized()
 
-        if self._placement_helper.update(ray, self._held_obj_id):
+        if self._placement_helper.update(ray, self._held_obj_ids[user_index]):
             # sloppy: save another keyframe here since we just moved the held object
             self.get_sim().gfx_replay_manager.save_keyframe()
 
     def sim_update(self, dt, post_sim_update_dict):
         if (
-            not self._app_service.hitl_config.networking.enable
-            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC)
+            self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
         ):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
@@ -392,30 +389,31 @@ class AppStateRearrangeV2(AppState):
 
         self._sps_tracker.increment()
 
-        if self._client_helper:
-            self._client_helper.update(
-                self.is_user_idle_this_frame(),
+        for user_index in range(self._num_users):
+            self._client_helpers[user_index].update(
+                self.is_user_idle_this_frame(user_index),
                 self._sps_tracker.get_smoothed_rate(),
             )
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        if self._server_gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
+        # TODO: Per-user
+        if self._server_gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
         self._check_change_episode()
 
-        for user_index in range(self._num_users):
-            reachable_ao_handle = self._find_reachable_ao(
-                self._get_gui_agent_translation(user_index)
-            )
-            if reachable_ao_handle is not None:
-                self._highlight_ao(reachable_ao_handle)
-                if self._get_user_key_down(user_index, GuiInput.KeyNS.Z):
-                    self._open_close_ao(reachable_ao_handle)
-
         if not self._paused:
+            for user_index in range(self._num_users):
+                reachable_ao_handle = self._find_reachable_ao(
+                    self._get_gui_agent_translation(user_index)
+                )
+                if reachable_ao_handle is not None:
+                    self._highlight_ao(reachable_ao_handle)
+                    if self._gui_inputs[user_index].get_key_down(GuiInput.KeyNS.Z):
+                        self._open_close_ao(reachable_ao_handle)
+
             for user_index in range(self._num_users):
                 self._update_grasping_and_set_act_hints(user_index)
             self._app_service.compute_action_and_step_env()
@@ -424,27 +422,35 @@ class AppStateRearrangeV2(AppState):
             self.get_sim().gfx_replay_manager.save_keyframe()
 
         # todo: visualize objects properly for each user (this requires a separate debug_line_render per user!), or find a reasonable debug line visualization that can be shared between both users every frame.
-        if self._held_obj_id is None:
-            self._pick_helper.viz_objects()
+        for user_index in range(self._num_users):
+            if self._held_obj_ids[user_index] is None:
+                self._pick_helper.viz_objects()
 
+        # Switch the server-controller user.
         if (
-            self._num_users > 1
-            and self._held_obj_id is None
-            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
+            self._num_users > 0 and
+            self._server_gui_input.get_key_down(GuiInput.KeyNS.T)
         ):
-            self._camera_user_index = (
-                self._camera_user_index + 1
+            self._server_user_index = (
+                self._server_user_index + 1
             ) % self._num_users
+        
+        for user_index in range(self._num_users):
+            self._camera_helpers[user_index].update(self._get_camera_lookat_pos(user_index), dt)
+            # after camera update
+            self._update_held_object_placement(user_index)
 
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt)
+        for user_index in range(self._num_users):
+            self._cam_transforms[user_index] = self._camera_helpers[user_index].get_cam_transform()
+            self._update_help_text(user_index)
+        
+        post_sim_update_dict["cam_transform"] = self._cam_transforms[self._server_user_index]
 
-        # after camera update
-        self._update_held_object_placement()
-
-        self._cam_transform = self._camera_helper.get_cam_transform()
-        post_sim_update_dict["cam_transform"] = self._cam_transform
-
-        self._update_help_text()
+        if self._app_service.hitl_config.networking.enable:
+            for user_index in range(self._num_users):
+                self._app_service._client_message_manager.update_camera_transform(
+                    self._cam_transforms[user_index], UserMask.from_index(user_index)
+                )
 
 
 @hydra.main(

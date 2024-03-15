@@ -6,6 +6,9 @@
 
 
 from habitat_hitl.core.average_helper import AverageHelper
+from habitat_hitl.core.remote_client_state import RemoteClientState
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import UserMask
 
 
 class ClientHelper:
@@ -13,8 +16,9 @@ class ClientHelper:
     Tracks connected remote clients. Displays client latency and kicks idle clients.
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService, user_index: int) -> None:
         self._app_service = app_service
+        self._user_index = user_index
         self._show_idle_kick_warning = False
         self._idle_frame_counter = None
         self._frame_counter = 0
@@ -39,16 +43,14 @@ class ClientHelper:
         connection_records = (
             self._app_service.remote_client_state.get_new_connection_records()
         )
-        if len(connection_records):
-            assert (
-                len(connection_records) == 1
-            )  # todo: expand this to support multiple connections
-            connection_record = connection_records[-1]
-            # new connection
-            self._client_connection_id = connection_record["connectionId"]
-            print(f"new connection_record: {connection_record}")
-            if hitl_config.networking.client_max_idle_duration is not None:
-                self._idle_frame_counter = 0
+        for connection_record in connection_records:
+            if self._user_index == connection_record["userId"]:
+                # new connection
+                self._client_connection_id = connection_record["connectionId"]
+                print(f"New connection_record: {connection_record}")
+                if hitl_config.networking.client_max_idle_duration is not None:
+                    self._idle_frame_counter = 0
+                break
 
         if self._idle_frame_counter is not None:
             if is_user_idle_this_frame:
@@ -76,7 +78,7 @@ class ClientHelper:
 
     def _update_frame_counter_and_display_latency(self, server_sps):
         recent_server_keyframe_id = (
-            self._app_service.remote_client_state.pop_recent_server_keyframe_id()
+            self._app_service.remote_client_state.pop_recent_server_keyframe_id(self._user_index)
         )
         if recent_server_keyframe_id is not None:
             new_avg = self._client_frame_latency_avg_helper.add(
@@ -88,7 +90,7 @@ class ClientHelper:
 
         if self._app_service.client_message_manager:
             self._app_service.client_message_manager.set_server_keyframe_id(
-                self._frame_counter
+                self._frame_counter, UserMask.from_index(self._user_index)
             )
         self._frame_counter += 1
 

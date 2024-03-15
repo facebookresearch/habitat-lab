@@ -23,6 +23,8 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
+    Keyframe,
+    KeyframeAndMessages,
 )
 from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
@@ -242,7 +244,7 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record, gui_drawer, gui_input
+                self._interprocess_record, gui_drawer
             )
 
     def _check_terminate_server(self):
@@ -530,29 +532,29 @@ class HitlDriver(AppDriver):
                         cam_transform
                     )
 
-            for keyframe_json in keyframes:
-                obj = json.loads(keyframe_json)
-                assert "keyframe" in obj
-                keyframe_obj = obj["keyframe"]
-                # Remove rigs from keyframe if skinning is disabled
-                if not self._hitl_config.networking.client_sync.skinning:
-                    if "rigCreations" in keyframe_obj:
-                        del keyframe_obj["rigCreations"]
-                    if "rigUpdates" in keyframe_obj:
-                        del keyframe_obj["rigUpdates"]
-                # Insert server->client message into the keyframe
-                messages = self._client_message_manager.get_messages()
-                for user_index in range(messages):
-                    message = messages[user_index]
-                    if len(message) > 0:
-                        # [0mdc/multiplayer] TODO: Keyframe consolidation, documentation.
-                        # Create one keyframe key per user for consolidation.
-                        # This is unwrapped on a per-user basis before sending to the respective client.
-                        keyframe_obj[str(user_index)] = message
-                self._client_message_manager.clear_messages()
-                # Send the keyframe
-                self._interprocess_record.send_keyframe_to_networking_thread(
-                    keyframe_obj
-                )
+            self._send_keyframes(keyframes)
 
         return post_sim_update_dict
+    
+    def _send_keyframes(self, keyframes_json: List[str]):
+        assert(self.network_server_enabled)
+        for keyframe_json in keyframes_json:
+            obj = json.loads(keyframe_json)
+            assert "keyframe" in obj
+            keyframe_obj: Keyframe = obj["keyframe"]
+
+            # Remove rigs from keyframe if skinning is disabled
+            # TODO: Do this on a per-used basis in a later pass.
+            #if not self._hitl_config.networking.client_sync.skinning:
+            #    if "rigCreations" in keyframe_obj:
+            #        del keyframe_obj["rigCreations"]
+            #    if "rigUpdates" in keyframe_obj:
+            #        del keyframe_obj["rigUpdates"]
+
+            # Insert server->client message into the keyframe
+            messages = self._client_message_manager.get_messages()
+            self._client_message_manager.clear_messages()
+            # Send the keyframe
+            self._interprocess_record.send_keyframe_to_networking_thread(
+                KeyframeAndMessages(keyframe_obj, messages)
+            )
