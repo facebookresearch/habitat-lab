@@ -41,7 +41,7 @@ WindowlessContext: Unable to create windowless context
 This is typically caused by:
 * Outdated, missing or invalid graphics drivers.
 * On Linux, this can be due to a missing or incomplete `libglvnd` installation.
- 
+
 Follow the graphics troubleshooting steps [below](#graphics-troubleshooting-tips). If the issue persists, feel free to file a Github issue.
 
 ### Black squares on NVIDIA A100
