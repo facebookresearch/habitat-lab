@@ -31,14 +31,18 @@ This is an ongoing issue related to how the underlying `pygame` library interact
 
 ### Unable to create context
 
-Driver or graphics configuration issues commonly manifest as such:
+On some systems, a valid GPU cannot be found:
 
 ```
 Platform::WindowlessEglApplication::tryCreateContext(): unable to find CUDA device 0 among 2 EGL devices in total
 WindowlessContext: Unable to create windowless context
 ```
 
-On Linux, this is often caused by an invalid driver or `libglvnd` installation. Follow the troubleshooting steps [below](#troubleshooting-tips). If the issue persists, feel free to file a Github issue.
+This is typically caused by:
+* Outdated, missing or invalid graphics drivers.
+* On Linux, this can be due to a missing or incomplete `libglvnd` installation.
+ 
+Follow the graphics troubleshooting steps [below](#graphics-troubleshooting-tips). If the issue persists, feel free to file a Github issue.
 
 ### Black squares on NVIDIA A100
 
