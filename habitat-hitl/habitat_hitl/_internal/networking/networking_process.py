@@ -86,16 +86,16 @@ class ClientEntry:
     connection_id: int
     connection_timestamp: datetime
     recent_connection_activity_timestamp: datetime
-    waiting_for_client_ready = False
-    needs_consolidated_keyframe = False
+    waiting_for_client_ready: bool
+    needs_consolidated_keyframe: bool
 
     def __init__(self, websocket: ClientConnection):
         self.websocket = websocket
         self.connection_id = id(websocket)
         self.connection_timestamp = datetime.now()
         self.recent_connection_activity_timestamp = self.connection_timestamp
-        # TODO: self.waiting_for_client_ready = True ?
-        # TODO: self.needs_consolidated_keyframe = True ?
+        self.waiting_for_client_ready = True
+        self.needs_consolidated_keyframe = True
 
 
 class NetworkManager:
@@ -184,6 +184,10 @@ class NetworkManager:
                 for user_index, client in self._user_slots.items():
                     if client.connection_id == connection_id:
                         client_state["userId"] = user_index
+                # TODO: This can happen in some cases (right after disconnect?).
+                if "userId" not in client_state:
+                    print("Invalid client state!")
+                    client_state["userId"] = 0
 
                 self._interprocess_record.send_client_state_to_main_thread(
                     client_state
@@ -268,13 +272,13 @@ class NetworkManager:
 
     def process_kick_and_app_ready_message(self, message: Message) -> None:
         # for kickClient, we require the requester to include the connection_id. This ensures we don't kick the wrong client. E.g. the requester recently requested to kick an idle client, but NetworkManager already dropped that client and received a new client connection.
-        if "kickClient" in message:
-            connection_id = message["kickClient"]
-            if connection_id in self._connected_clients:
-                print(f"Kicking client {connection_id}.")
-                websocket = self._connected_clients[connection_id]
+        #if "kickClient" in message:
+        #    connection_id = message["kickClient"]
+        #    if connection_id in self._connected_clients:
+        #        print(f"Kicking client {connection_id}.")
+        #        websocket = self._connected_clients[connection_id]
                 # Don't await this; we want to keep checking keyframes. Beware this means the connection will remain alive for some time after this.
-                asyncio.create_task(websocket.close())
+        #        asyncio.create_task(websocket.close())
 
         # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
         if (
