@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from multiprocessing import Queue
+from multiprocessing import Manager, Queue
 from multiprocessing import Semaphore as create_semaphore
 from multiprocessing.synchronize import Semaphore
 from typing import Any, Dict, List, Optional, Tuple
@@ -34,15 +34,16 @@ class InterprocessRecord:
 
     def __init__(self, networking_config: DataDict, max_steps_ahead: int) -> None:
         self._networking_config = networking_config
+        # TODO: https://stackoverflow.com/questions/47085458/why-is-multiprocessing-queue-get-so-slow
         self._keyframe_queue: Queue[KeyframeAndMessages] = Queue()
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
-        self._step_semaphore: Semaphore = create_semaphore(max_steps_ahead)
+        #self._step_semaphore: Semaphore = create_semaphore(max_steps_ahead)
 
     def send_keyframe_to_networking_thread(self, global_keyframe: KeyframeAndMessages) -> None:
         """Send a keyframe (outgoing data) to the networking thread."""
         # Acquire the semaphore to ensure the simulation doesn't advance too far ahead
-        self._step_semaphore.acquire()
+        #self._step_semaphore.acquire()
         self._keyframe_queue.put(global_keyframe)
 
     def send_client_state_to_main_thread(self, client_state) -> None:
@@ -62,7 +63,7 @@ class InterprocessRecord:
         while not self._keyframe_queue.empty():
             keyframe = self._keyframe_queue.get(block=False)
             keyframes.append(keyframe)
-            self._step_semaphore.release()
+            #self._step_semaphore.release()
 
         return keyframes
 
@@ -72,7 +73,7 @@ class InterprocessRecord:
             return None
 
         keyframe = self._keyframe_queue.get(block=False)
-        self._step_semaphore.release()
+        #self._step_semaphore.release()
         return keyframe
 
     @staticmethod
