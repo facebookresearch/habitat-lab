@@ -1,13 +1,17 @@
-# Troubleshooting and FAQ
+# Troubleshooting
 
-This is a list of common issues, FAQs and troubleshooting steps.
+This is a list of common issues along with troubleshooting tips.
 
-If filing a Github issue, please include your environment and the troubleshooting steps that you have attempted.
+If filing a Github issue, please include:
+* Information about your environment (OS, GPU, ...).
+* Troubleshooting steps that you have already attempted.
+* Screenshots, if applicable.
 
 - [Common Issues](#common-issues)
   - [Habitat-Lab interactive\_play.py](#habitat-lab-interactive_playpy)
   - [Unable to create context](#unable-to-create-context)
-- [Troubleshooting tips](#troubleshooting-tips)
+  - [Black squares on NVIDIA A100](#black-squares-on-nvidia-a100)
+- [Graphics Troubleshooting Tips](#graphics-troubleshooting-tips)
     - [General Tips](#general-tips)
     - [Linux](#linux)
     - [Windows](#windows)
@@ -23,7 +27,7 @@ On some systems, `examples/interactive_play.py` crashes due to the following err
 X Error of failed request:  BadAccess (attempt to access private resource denied)
 ```
 
-This is an ongoing issue related to how the underlying `pygame` library interacts with Habitat. A replacement for the `interactive_play` script is on the roadmap.
+This is an ongoing issue related to how the underlying `pygame` library interacts with Habitat. A replacement for the `interactive_play` script is [on the roadmap](habitat-hitl/README.md).
 
 ### Unable to create context
 
@@ -36,7 +40,13 @@ WindowlessContext: Unable to create windowless context
 
 On Linux, this is often caused by an invalid driver or `libglvnd` installation. Follow the troubleshooting steps [below](#troubleshooting-tips). If the issue persists, feel free to file a Github issue.
 
-## Troubleshooting tips
+### Black squares on NVIDIA A100
+
+NVIDIA A100 GPUs may caused Habitat sensors to render black rectangular artifacts on some environments.
+
+If this manifests on your setup, update your CUDA drivers to a recent version (at least 12.2).
+
+## Graphics Troubleshooting Tips
 
 These steps aim to narrow down your graphics-related issues.
 
@@ -57,6 +67,8 @@ These steps aim to narrow down your graphics-related issues.
 
     * Using `habitat-sim` built from source:
       * `MAGNUM_LOG=verbose MAGNUM_GPU_VALIDATION=ON {habitat-sim}/build/viewer data/scene_datasets/habitat-test-scenes/skokloster-castle.glb`
+
+4. Create a new conda environment from scratch. After some time, the environment may diverge from baseline, causing conflicts to emerge.
 
 #### Linux
 
@@ -88,8 +100,7 @@ These steps aim to narrow down your graphics-related issues.
         * The `library_path` field should point at the correct NVIDIA EGL library. It can be found with the command `ldconfig -p | grep libEGL`. The library `libEGL_nvidia` is packaged with the NVIDIA driver - if it's missing, reinstall your drivers. If multiple instances exist, the driver may be incorrectly installed.
 4. *(CPU Rendering)* If you don't have a GPU, make sure that your CPU graphics drivers are working.
 5. If running on Wayland, try using X11, and vice-versa. While Habitat should work fine with either display protocol, this may shed light on the issue.
-6. Create a new conda environment from scratch. Occasionally, third party dependencies in the environment may interfere and cause errors.
 
 #### Windows
 
-Windows is not officially supported. Habitat was reported to be working from within the linux subsystem (WSL) or virtual machines.
+Windows is not officially supported. Habitat was reported work from within the linux subsystem (WSL) or virtual machines.
