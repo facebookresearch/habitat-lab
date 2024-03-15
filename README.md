@@ -199,7 +199,7 @@ We provide docker containers for Habitat, updated approximately once per year fo
     ```
 
 ### Questions?
-Can't find the answer to your question? Try asking the developers and community on our [Discussions forum](https://github.com/facebookresearch/habitat-lab/discussions).
+Can't find the answer to your question? Look up for [common issues](./TROUBLESHOOTING.md) or try asking the developers and community on our [Discussions forum](https://github.com/facebookresearch/habitat-lab/discussions).
 
 ## Datasets
 
