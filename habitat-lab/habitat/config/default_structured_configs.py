@@ -1615,6 +1615,13 @@ class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
 
 
 @dataclass
+class JawPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "articulated_agent_jaw_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
@@ -1624,6 +1631,20 @@ class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
 @dataclass
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "articulated_agent_arm_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class JawRGBSensorConfig(HabitatSimRGBSensorConfig):
+    uuid: str = "articulated_agent_jaw_rgb"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class JawDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "articulated_agent_jaw_depth"
     width: int = 256
     height: int = 256
 
@@ -2084,6 +2105,18 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="jaw_depth_sensor",
+    node=JawDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_rgb_sensor",
+    node=JawRGBSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="head_depth_sensor",
     node=HeadDepthSensorConfig,
 )
@@ -2117,6 +2150,12 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="arm_panoptic_sensor",
     node=ArmPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_panoptic_sensor",
+    node=JawPanopticSensorConfig,
 )
 
 cs.store(
