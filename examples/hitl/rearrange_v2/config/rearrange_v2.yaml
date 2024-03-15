@@ -22,8 +22,6 @@ habitat:
   dataset:
     data_path: examples/hitl/rearrange_v2/app_data/demo.json.gz
 
-
-
 habitat_baselines:
   # todo: document these choices
   eval:
@@ -44,3 +42,7 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+  networking:
+    client_sync:
+      # We handle one camera per user, instead of synchronizing the server camera.
+      camera_transform: False
