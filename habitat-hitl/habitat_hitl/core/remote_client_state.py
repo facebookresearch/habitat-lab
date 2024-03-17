@@ -100,7 +100,6 @@ class RemoteClientState:
             return None, None
 
         avatar_root_json = client_state["avatar"]["root"]
-
         pos_json = avatar_root_json["position"]
         pos = mn.Vector3(pos_json[0], pos_json[1], pos_json[2])
         rot_json = avatar_root_json["rotation"]
@@ -112,6 +111,9 @@ class RemoteClientState:
         rot_quat = rot_quat * mn.Quaternion.rotation(
             mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
         )
+        # TODO: Send the location into the real spot robot using ROS
+        # Or in spot-sim2real, we can import this guy
+        print(f"head pos {pos}")
         return pos, rot_quat
 
     def get_hand_pose(self, hand_idx, history_index=0):
@@ -144,6 +146,10 @@ class RemoteClientState:
         rot_quat = rot_quat * mn.Quaternion.rotation(
             mn.Rad(math.pi), mn.Vector3(0, 1.0, 0)
         )
+        # TODO: Send the location into the real spot robot using ROS
+        # Or in spot-sim2real, we can import this guy
+        print(f"hand {hand_idx}, {pos}")
+        breakpoint()
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
@@ -300,8 +306,6 @@ class RemoteClientState:
             self._recent_client_states.append(client_state)
             if len(self._recent_client_states) > self.get_history_length():
                 self._recent_client_states.pop(0)
-
-        self.debug_visualize_client()
 
     def get_new_connection_records(self):
         return self._new_connection_records

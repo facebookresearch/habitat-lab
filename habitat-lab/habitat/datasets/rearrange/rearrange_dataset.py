@@ -59,14 +59,14 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             logger.info(
                 "Rearrange task assets are not downloaded locally, downloading and extracting now..."
             )
-            data_downloader.main(
-                [
-                    "--uids",
-                    "rearrange_task_assets",
-                    "--no-replace",
-                    "--no-prune",
-                ]
-            )
+            # data_downloader.main(
+            #     [
+            #         "--uids",
+            #         "rearrange_task_assets",
+            #         "--no-replace",
+            #         "--no-prune",
+            #     ]
+            # )
             logger.info("Downloaded and extracted the data.")
 
         check_and_gen_physics_config()
