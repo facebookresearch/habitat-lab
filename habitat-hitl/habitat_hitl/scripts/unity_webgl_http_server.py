@@ -6,7 +6,7 @@
 
 import argparse
 import os
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 
 class UnityRequestHandler(SimpleHTTPRequestHandler):
@@ -46,6 +46,7 @@ class UnityRequestHandler(SimpleHTTPRequestHandler):
         else:
             super().do_GET()
 
+
 def start_server(path: str, hostname: str, port: int) -> None:
     """Start the server."""
     os.chdir(path)
@@ -56,29 +57,32 @@ def start_server(path: str, hostname: str, port: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog = "Unity WebGL HTTP Server",
-        description = (
+        prog="Unity WebGL HTTP Server",
+        description=(
             """
             Simple HTTP server that serves Unity WebGL builds.
             Designed for local emulation of content provision services like S3.
             Unlike a normal HTTP server, it sets the Content-Type and Content-Encoding headers required by browsers.
             """
-        )
+        ),
     )
-    parser.add_argument("--path",
-                        type=str,
-                        help="Path to the Unity WebGL build (where 'index.html' is located).",
-                        )
-    parser.add_argument("--hostname",
-                        type=str,
-                        default="localhost",
-                        help="Server hostname.",
-                        )
-    parser.add_argument("--port",
-                        type=int,
-                        default=3333,
-                        help="Server port.",
-                        )
-    
+    parser.add_argument(
+        "--path",
+        type=str,
+        help="Path to the Unity WebGL build (where 'index.html' is located).",
+    )
+    parser.add_argument(
+        "--hostname",
+        type=str,
+        default="localhost",
+        help="Server hostname.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=3333,
+        help="Server port.",
+    )
+
     args = parser.parse_args()
     start_server(args.path, args.hostname, args.port)
