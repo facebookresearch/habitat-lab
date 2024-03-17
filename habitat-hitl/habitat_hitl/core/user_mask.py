@@ -5,9 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 from __future__ import annotations
+
 from enum import IntFlag
 from math import log2
 from typing import Any, Final, Generator, List
+
 
 class Mask(IntFlag):
     """
@@ -17,6 +19,7 @@ class Mask(IntFlag):
     .. code-block:: python
     user_1_and_3 = Mask.from_index(1) | Mask.from_index(3)
     """
+
     NONE: Final[int] = 0
     ALL: Final[int] = ~0
     MAX_VALUE: Final[int] = 32
@@ -25,7 +28,7 @@ class Mask(IntFlag):
     def from_index(index: int) -> Mask:
         """Create a Mask from an index."""
         return Mask(1 << index)
-    
+
     @staticmethod
     def from_indices(indices: List[int]) -> Mask:
         """Create a Mask from a list of indices."""
@@ -37,29 +40,33 @@ class Mask(IntFlag):
     @staticmethod
     def all_except_index(index: int) -> Mask:
         """Create a Mask for all indices except one."""
-        return ~(Mask.from_index(index))
-    
+        return Mask(~Mask.from_index(index))
+
     @staticmethod
     def all_except_indices(indices: List[int]) -> Mask:
         """Create a Mask for all indices except a list of indices."""
-        return ~(Mask.from_indices(indices))
+        return Mask(~Mask.from_indices(indices))
 
-class Users():
+
+class Users:
     """
     Represents a set of users with a max_user_count upper bound.
     """
+
     _max_user_mask: Mask
     _max_user_count: int
 
     def __init__(self, max_user_count: int) -> None:
-        assert(max_user_count >= 0)
-        assert(max_user_count <= Mask.MAX_VALUE)
+        assert max_user_count >= 0
+        assert max_user_count <= Mask.MAX_VALUE
         self._max_user_count = max_user_count
-        self._max_user_mask = 0
-        for _ in range(max_user_count):
-            self._max_user_mask = (self._max_user_mask << 1) + 1
 
-    def indices(self, user_mask: Mask) -> Generator[float, Any, None]:
+        max_user_mask = 0
+        for _ in range(max_user_count):
+            max_user_mask = (max_user_mask << 1) + 1
+        self._max_user_mask = Mask(max_user_mask)
+
+    def indices(self, user_mask: Mask) -> Generator[int, Any, None]:
         """
         Generator that allows for iterating upon the specified Mask.
         - Example:\n
@@ -74,13 +81,13 @@ class Users():
             yield int(user_index)
             bitset ^= user_bit
 
-    def to_index_list(self, user_mask: Mask) -> List[float]:
+    def to_index_list(self, user_mask: Mask) -> List[int]:
         """Returns a list of user indices from the specified Mask."""
-        output: List[float] = []
+        output: List[int] = []
         for user_index in self.indices(user_mask):
             output.append(user_index)
         return output
-    
+
     @property
     def max_user_count(self) -> int:
         """Returns the size of the user set."""
@@ -90,45 +97,49 @@ class Users():
 if __name__ == "__main__":
     # TODO: Move this to a unit test when testing is added habitat-hitl.
     four_users = Users(4)
-    assert(4 == four_users.max_user_count)
-    assert(4 == len(four_users.to_index_list(Mask.ALL)))
-    assert(0 == len(four_users.to_index_list(Mask.NONE)))
-    user_indices = four_users.to_index_list(Mask.from_index(1) | Mask.from_index(2) | Mask.from_index(11))
-    assert(1 in user_indices)
-    assert(2 in user_indices)
-    assert(11 not in user_indices)
+    assert four_users.max_user_count == 4
+    assert len(four_users.to_index_list(Mask.ALL)) == 4
+    assert len(four_users.to_index_list(Mask.NONE)) == 0
+    user_indices = four_users.to_index_list(
+        Mask.from_index(1) | Mask.from_index(2) | Mask.from_index(11)
+    )
+    assert 1 in user_indices
+    assert 2 in user_indices
+    assert 11 not in user_indices
     user_indices = four_users.to_index_list(Mask.all_except_index(1))
-    assert(0 in user_indices)
-    assert(1 not in user_indices)
-    assert(2 in user_indices)
-    assert(3 in user_indices)
-    assert(4 not in user_indices)
+    assert 0 in user_indices
+    assert 1 not in user_indices
+    assert 2 in user_indices
+    assert 3 in user_indices
+    assert 4 not in user_indices
 
     six_users = Users(6)
-    assert(6 == six_users.max_user_count)
-    assert(6 == len(six_users.to_index_list(Mask.ALL)))
-    assert(0 == len(six_users.to_index_list(Mask.NONE)))
-    user_indices = six_users.to_index_list(Mask.all_except_indices([0,2]))
-    assert(0 not in user_indices)
-    assert(1 in user_indices)
-    assert(2 not in user_indices)
-    assert(3 in user_indices)
-    assert(4 in user_indices)
-    assert(5 in user_indices)
-    assert(6 not in user_indices)
+    assert six_users.max_user_count == 6
+    assert len(six_users.to_index_list(Mask.ALL)) == 6
+    assert len(six_users.to_index_list(Mask.NONE)) == 0
+    user_indices = six_users.to_index_list(Mask.all_except_indices([0, 2]))
+    assert 0 not in user_indices
+    assert 1 in user_indices
+    assert 2 not in user_indices
+    assert 3 in user_indices
+    assert 4 in user_indices
+    assert 5 in user_indices
+    assert 6 not in user_indices
 
     two_users = Users(2)
-    assert(2 == two_users.max_user_count)
-    assert(2 == len(two_users.to_index_list(Mask.ALL)))
-    assert(0 == len(two_users.to_index_list(Mask.NONE)))
-    user_indices = two_users.to_index_list(Mask.from_indices([1,2]))
-    assert(0 not in user_indices)
-    assert(1 in user_indices)
-    assert(2 not in user_indices)
+    assert two_users.max_user_count == 2
+    assert len(two_users.to_index_list(Mask.ALL)) == 2
+    assert len(two_users.to_index_list(Mask.NONE)) == 0
+    user_indices = two_users.to_index_list(Mask.from_indices([1, 2]))
+    assert 0 not in user_indices
+    assert 1 in user_indices
+    assert 2 not in user_indices
 
     max_users = Users(32)
-    assert(32 == max_users.max_user_count)
-    assert(32 == len(max_users.to_index_list(Mask.ALL)))
-    assert(0 == len(max_users.to_index_list(Mask.NONE)))
-    assert(30 == len(max_users.to_index_list(Mask.all_except_indices([17, 22]))))
-    assert(2 == len(max_users.to_index_list(Mask.from_indices([3, 15]))))
+    assert max_users.max_user_count == 32
+    assert len(max_users.to_index_list(Mask.ALL)) == 32
+    assert len(max_users.to_index_list(Mask.NONE)) == 0
+    assert (
+        len(max_users.to_index_list(Mask.all_except_indices([17, 22]))) == 30
+    )
+    assert len(max_users.to_index_list(Mask.from_indices([3, 15]))) == 2
