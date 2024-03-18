@@ -531,6 +531,7 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
+    _manager.set_preferred_plugins("StanfordImporter", ["AssimpImporter"])
     importer = _manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(mesh_file)
 
