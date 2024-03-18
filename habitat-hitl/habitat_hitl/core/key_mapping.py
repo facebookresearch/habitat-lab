@@ -69,7 +69,7 @@ class KeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
     # fmt: on
 
 
-class MouseKeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
+class MouseButton(IntEnum, metaclass=KeyCodeMetaEnum):
     """
     Mouse buttons available to control habitat-hitl.
     """
@@ -136,11 +136,11 @@ if magnum_enabled:
         # fmt: on
     }
 
-    magnum_mouse_keymap: Dict[Application.KeyEvent.Key, MouseKeyCode] = {
+    magnum_mouse_keymap: Dict[Application.KeyEvent.Key, MouseButton] = {
         # fmt: off
-        Application.MouseEvent.Button.LEFT   : MouseKeyCode.LEFT  ,
-        Application.MouseEvent.Button.RIGHT  : MouseKeyCode.RIGHT ,
-        Application.MouseEvent.Button.MIDDLE : MouseKeyCode.MIDDLE,
+        Application.MouseEvent.Button.LEFT   : MouseButton.LEFT  ,
+        Application.MouseEvent.Button.RIGHT  : MouseButton.RIGHT ,
+        Application.MouseEvent.Button.MIDDLE : MouseButton.MIDDLE,
         # fmt: on
     }
 
@@ -151,7 +151,7 @@ class MagnumKeyConverter:
             return magnum_keymap[key]
         return None
 
-    def convert_mouse_key(key: Any) -> Optional[MouseKeyCode]:
+    def convert_mouse_key(key: Any) -> Optional[MouseButton]:
         if magnum_enabled and key in magnum_mouse_keymap:
             return magnum_mouse_keymap[key]
         return None

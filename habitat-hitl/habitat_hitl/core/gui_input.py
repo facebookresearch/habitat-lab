@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_hitl.core.key_mapping import KeyCode, MouseKeyCode
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 
 
 class GuiInput:
@@ -15,7 +15,7 @@ class GuiInput:
     """
 
     KeyNS = KeyCode
-    MouseNS = MouseKeyCode
+    MouseNS = MouseButton
 
     def __init__(self):
         self._key_held = set()
@@ -49,7 +49,7 @@ class GuiInput:
         return key in self._key_up
 
     def validate_mouse_button(mouse_button):
-        assert isinstance(mouse_button, MouseKeyCode)
+        assert isinstance(mouse_button, MouseButton)
 
     def get_mouse_button(self, mouse_button):
         GuiInput.validate_mouse_button(mouse_button)
