@@ -516,7 +516,7 @@ class HitlDriver(AppDriver):
 
         if self.network_server_enabled:
             if (
-                self._hitl_config.networking.client_sync.camera_transform
+                self._hitl_config.networking.client_sync.server_camera
                 and "cam_transform" in post_sim_update_dict
             ):
                 cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
