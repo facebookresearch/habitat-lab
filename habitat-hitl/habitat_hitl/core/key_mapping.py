@@ -69,6 +69,18 @@ class KeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
     # fmt: on
 
 
+class MouseKeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
+    """
+    Mouse buttons available to control habitat-hitl.
+    """
+
+    # fmt: off
+    LEFT   = 0
+    RIGHT  = 1
+    MIDDLE = 2
+    # fmt: on
+
+
 # On headless systems, we may be unable to import magnum.platform.glfw.Application.
 try:
     from magnum.platform.glfw import Application
@@ -124,9 +136,22 @@ if magnum_enabled:
         # fmt: on
     }
 
+    magnum_mouse_keymap: Dict[Application.KeyEvent.Key, MouseKeyCode] = {
+        # fmt: off
+        Application.MouseEvent.Button.LEFT   : MouseKeyCode.LEFT  ,
+        Application.MouseEvent.Button.RIGHT  : MouseKeyCode.RIGHT ,
+        Application.MouseEvent.Button.MIDDLE : MouseKeyCode.MIDDLE,
+        # fmt: on
+    }
+
 
 class MagnumKeyConverter:
-    def convert(key: Any) -> Optional[KeyCode]:
+    def convert_key(key: Any) -> Optional[KeyCode]:
         if magnum_enabled and key in magnum_keymap:
             return magnum_keymap[key]
+        return None
+
+    def convert_mouse_key(key: Any) -> Optional[MouseKeyCode]:
+        if magnum_enabled and key in magnum_mouse_keymap:
+            return magnum_mouse_keymap[key]
         return None
