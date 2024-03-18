@@ -44,6 +44,7 @@ from habitat_hitl.core.serialize_utils import (
     save_as_pickle_gzip,
 )
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
 )
@@ -172,7 +173,9 @@ class HitlDriver(AppDriver):
 
         self._client_message_manager = None
         if self.network_server_enabled:
-            self._client_message_manager = ClientMessageManager()
+            # TODO: Only one user is currently supported.
+            users = Users(1)
+            self._client_message_manager = ClientMessageManager(users)
 
         gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
@@ -538,10 +541,11 @@ class HitlDriver(AppDriver):
                     if "rigUpdates" in keyframe_obj:
                         del keyframe_obj["rigUpdates"]
                 # Insert server->client message into the keyframe
-                message = self._client_message_manager.get_message_dict()
+                # TODO: Only one user is currently supported.
+                message = self._client_message_manager.get_messages()[0]
                 if len(message) > 0:
                     keyframe_obj["message"] = message
-                    self._client_message_manager.clear_message_dict()
+                    self._client_message_manager.clear_messages()
                 # Send the keyframe
                 self._interprocess_record.send_keyframe_to_networking_thread(
                     keyframe_obj
