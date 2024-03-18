@@ -161,31 +161,35 @@ class RemoteClientState:
             #    client_state["mouse"] if "mouse" in client_state else None
             # )
 
-            for button in input_json["buttonDown"]:
-                if button not in KeyCode:
-                    continue
-                self._gui_input._key_down.add(KeyCode(button))
-            for button in input_json["buttonUp"]:
-                if button not in KeyCode:
-                    continue
-                self._gui_input._key_up.add(KeyCode(button))
+            if input_json is not None:
+                for button in input_json["buttonDown"]:
+                    if button not in KeyCode:
+                        continue
+                    self._gui_input._key_down.add(KeyCode(button))
+                for button in input_json["buttonUp"]:
+                    if button not in KeyCode:
+                        continue
+                    self._gui_input._key_up.add(KeyCode(button))
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
-        client_state = client_states[-1]
+        last_client_state = client_states[-1]
 
-        input_json = client_state["input"] if "input" in client_state else None
+        input_json = (
+            last_client_state["input"]
+            if "input" in last_client_state
+            else None
+        )
         # TODO: Add mouse support
-        # mouse_json = client_state["mouse"] if "mouse" in client_state else None
+        # mouse_json = last_client_state["mouse"] if "mouse" in last_client_state else None
 
         self._gui_input._key_held.clear()
-        if "buttonHeld" not in input_json:
-            return
 
-        for button in input_json["buttonHeld"]:
-            if button not in KeyCode:
-                continue
-            self._gui_input._key_held.add(KeyCode(button))
+        if input_json is not None:
+            for button in input_json["buttonHeld"]:
+                if button not in KeyCode:
+                    continue
+                self._gui_input._key_held.add(KeyCode(button))
 
     def debug_visualize_client(self):
         """Visualize the received VR inputs (head and hands)."""
