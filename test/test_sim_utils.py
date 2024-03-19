@@ -701,7 +701,7 @@ def test_on_floor_util():
         for obj_handle in objects_in_table:
             obj = sutils.get_obj_from_handle(sim, obj_handle)
             l2_dist = (obj.translation - table_object.translation).length()
-            reg_dist = sutils.size_regularized_distance(
+            reg_dist = sutils.size_regularized_object_distance(
                 sim,
                 table_object.object_id,
                 obj.object_id,
@@ -720,7 +720,7 @@ def test_on_floor_util():
         for obj_handle in objects_on_table:
             obj = sutils.get_obj_from_handle(sim, obj_handle)
             l2_dist = (obj.translation - table_object.translation).length()
-            reg_dist = sutils.size_regularized_distance(
+            reg_dist = sutils.size_regularized_object_distance(
                 sim,
                 table_object.object_id,
                 obj.object_id,
@@ -739,7 +739,7 @@ def test_on_floor_util():
         shelf = sutils.get_obj_from_handle(
             sim, "frl_apartment_wall_cabinet_01_:0000"
         )
-        reg_dist = sutils.size_regularized_distance(
+        reg_dist = sutils.size_regularized_object_distance(
             sim, sofa.object_id, shelf.object_id, ao_link_map, ao_aabbs
         )
         assert (

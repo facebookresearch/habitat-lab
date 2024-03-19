@@ -219,7 +219,49 @@ def get_obj_size_along(
     return local_vec_size, center
 
 
-def size_regularized_distance(
+def size_regularized_bb_distance(
+    bb_a: mn.Range3D,
+    bb_b: mn.Range3D,
+    transform_a: mn.Matrix4 = None,
+    transform_b: mn.Matrix4 = None,
+) -> float:
+    """
+    Get the heuristic surface-to-surface distance between two bounding boxes (regularized by their individual heuristic sizes).
+    Estimate the distance from center to boundary along the line between bb centers. These sizes are then subtracted from the center-to-center distance as a heuristic for surface-to-surface distance.
+
+    :param bb_a: local bounding box of one object
+    :param bb_b: local bounding box of another object
+    :param transform_a: local to global transform for the first object. Default is identity.
+    :param transform_b: local to global transform for the second object. Default is identity.
+
+    :return: heuristic surface-to-surface distance.
+    """
+
+    if transform_a is None:
+        transform_a = mn.Matrix4.identity_init()
+    if transform_b is None:
+        transform_b = mn.Matrix4.identity_init()
+
+    a_center = transform_a.transform_point(bb_a.center())
+    b_center = transform_b.transform_point(bb_b.center())
+
+    disp = a_center - b_center
+    dist = disp.length()
+    disp_dir = disp / dist
+
+    local_scale_a = mn.Matrix4.scaling(bb_a.size() / 2.0)
+    local_vec_a = transform_a.inverted().transform_vector(disp_dir)
+    local_vec_size_a = local_scale_a.transform_vector(local_vec_a).length()
+
+    local_scale_b = mn.Matrix4.scaling(bb_b.size() / 2.0)
+    local_vec_b = transform_b.inverted().transform_vector(disp_dir)
+    local_vec_size_b = local_scale_b.transform_vector(local_vec_b).length()
+
+    # if object bounding boxes are significantly overlapping then distance may be negative, clamp to 0
+    return max(0, dist - local_vec_size_a - local_vec_size_b)
+
+
+def size_regularized_object_distance(
     sim: habitat_sim.Simulator,
     object_id_a: int,
     object_id_b: int,
@@ -255,23 +297,9 @@ def size_regularized_distance(
         sim, object_id_b, ao_link_map, ao_aabbs
     )
 
-    a_center = transform_a.transform_point(obja_bb.center())
-    b_center = transform_b.transform_point(objb_bb.center())
-
-    disp = a_center - b_center
-    dist = disp.length()
-    disp_dir = disp / dist
-
-    local_scale_a = mn.Matrix4.scaling(obja_bb.size() / 2.0)
-    local_vec_a = transform_a.inverted().transform_vector(disp_dir)
-    local_vec_size_a = local_scale_a.transform_vector(local_vec_a).length()
-
-    local_scale_b = mn.Matrix4.scaling(objb_bb.size() / 2.0)
-    local_vec_b = transform_b.inverted().transform_vector(disp_dir)
-    local_vec_size_b = local_scale_b.transform_vector(local_vec_b).length()
-
-    # if object bounding boxes are significantly overlapping then distance may be negative, clamp to 0
-    return max(0, dist - local_vec_size_a - local_vec_size_b)
+    return size_regularized_bb_distance(
+        obja_bb, objb_bb, transform_a, transform_b
+    )
 
 
 def bb_ray_prescreen(
@@ -1217,3 +1245,50 @@ def open_link(
     """
 
     set_link_normalized_joint_position(objectA, link_ix, 1.0)
+
+
+def next_to(
+    bb_a: mn.Range3D,
+    bb_b: mn.Range3D,
+    transform_a: mn.Matrix4 = None,
+    transform_b: mn.Matrix4 = None,
+    vertical_threshold=0.1,
+    l2_threshold=0.3,
+) -> bool:
+    """
+    Check whether or not two bounding boxes should be considered "next to" one another.
+    Concretely, consists of two checks:
+     1. height difference between the lowest points on the two objects to check that they are approximately resting on the same surface.
+     2. regularized L2 distance between object centers. Regularized in this case means displacement vector is truncted by each object's heuristic size.
+
+    :param bb_a: local bounding box of one object
+    :param bb_b: local bounding box of another object
+    :param transform_a: local to global transform for the first object. Default is identity.
+    :param transform_b: local to global transform for the second object. Default is identity.
+    :param vertical_threshold: vertical distance allowed between objects' lowest points.
+    :param l2_threshold: regularized L2 distance allow between the objects' centers.
+
+    :return: Whether or not the objects are heuristically "next to" one another.
+    """
+
+    if transform_a is None:
+        transform_a = mn.Matrix4.identity_init()
+    if transform_b is None:
+        transform_b = mn.Matrix4.identity_init()
+
+    keypoints_a = get_global_keypoints_from_bb(bb_a, transform_a)
+    keypoints_b = get_global_keypoints_from_bb(bb_b, transform_b)
+
+    lowest_height_a = min([p[1] for p in keypoints_a])
+    lowest_height_b = min([p[1] for p in keypoints_b])
+
+    if abs(lowest_height_a - lowest_height_b) > vertical_threshold:
+        return False
+
+    if (
+        size_regularized_bb_distance(bb_a, bb_b, transform_a, transform_b)
+        > l2_threshold
+    ):
+        return False
+
+    return True
