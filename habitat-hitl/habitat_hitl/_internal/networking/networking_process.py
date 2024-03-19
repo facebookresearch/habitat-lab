@@ -10,13 +10,19 @@ import os
 import signal
 import ssl
 from datetime import datetime, timedelta
+from multiprocessing import Process
+from typing import Any, Dict, Optional
 
 import aiohttp.web
 import websockets
+from websockets.client import ClientConnection
+from websockets.server import WebSocketServer
 
-from habitat_hitl._internal.networking import multiprocessing_config
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
+)
+from habitat_hitl._internal.networking.interprocess_record import (
+    InterprocessRecord,
 )
 from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
@@ -29,29 +35,23 @@ use_ssl = False
 networking_process = None
 
 
-def launch_networking_process(interprocess_record):
-    # see multiprocessing_config to switch between real and dummy multiprocessing
-
+def launch_networking_process(interprocess_record: InterprocessRecord) -> None:
     global networking_process
 
-    # we don't support dummy multiprocessing at this time
-    assert not multiprocessing_config.use_dummy
-
-    networking_process = multiprocessing_config.Process(
+    networking_process = Process(
         target=networking_main, args=(interprocess_record,)
     )
     networking_process.start()
 
 
-def terminate_networking_process():
+def terminate_networking_process() -> None:
     global networking_process
-    assert not multiprocessing_config.use_dummy
     if networking_process:
         networking_process.terminate()
         networking_process = None
 
 
-def create_ssl_context():
+def create_ssl_context() -> ssl.SSLContext:
     """
     Create an SSL context.
 
@@ -86,11 +86,13 @@ class NetworkManager:
     A network error (e.g. closed socket due to client disconnect) will result in an exception handled either in check_keyframe_queue or serve (the caller of receive_client_states). The error is handled identically in either case.
     """
 
-    def __init__(self, interprocess_record):
-        self._connected_clients = {}  # Dictionary to store connected clients
+    def __init__(self, interprocess_record: InterprocessRecord):
+        self._connected_clients: Dict[
+            int, ClientConnection
+        ] = {}  # Dictionary to store connected clients
 
         self._interprocess_record = interprocess_record
-        self._networking_config = interprocess_record.networking_config
+        self._networking_config = interprocess_record._networking_config
 
         # Limit how many messages/sec we send. Note the current server implementation sends
         # messages "one at a time" (waiting for confirmation of receipt from the
@@ -103,15 +105,15 @@ class NetworkManager:
         self._waiting_for_client_ready = False
         self._needs_consolidated_keyframe = False
         self._waiting_for_app_ready = False
-        self._recent_connection_activity_timestamp = None
+        self._recent_connection_activity_timestamp: Optional[datetime] = None
 
-    def update_consolidated_keyframes(self, keyframes):
+    def update_consolidated_keyframes(self, keyframes) -> None:
         for inc_keyframe in keyframes:
             update_consolidated_keyframe(
                 self._consolidated_keyframe, inc_keyframe
             )
 
-    async def receive_client_states(self, websocket):
+    async def receive_client_states(self, websocket: ClientConnection) -> None:
         connection_id = id(websocket)
         async for message in websocket:
             self._recent_connection_activity_timestamp = datetime.now()
@@ -130,14 +132,14 @@ class NetworkManager:
             except Exception as e:
                 print(f"Error processing received pose data: {e}")
 
-    def is_okay_to_send_keyframes(self):
+    def is_okay_to_send_keyframes(self) -> bool:
         return (
             self.has_connection()
             and not self._waiting_for_client_ready
             and not self._waiting_for_app_ready
         )
 
-    async def check_keyframe_queue(self):
+    async def check_keyframe_queue(self) -> None:
         # this runs continuously even when there is no client connection
         while True:
             inc_keyframes = self._interprocess_record.get_queued_keyframes()
@@ -214,10 +216,10 @@ class NetworkManager:
 
             await asyncio.sleep(0.02)
 
-    def has_connection(self):
+    def has_connection(self) -> bool:
         return len(self._connected_clients) > 0
 
-    def handle_disconnect(self):
+    def handle_disconnect(self) -> None:
         """
         To be called after a websocket has closed. Don't call this to close the websocket.
         """
@@ -230,7 +232,7 @@ class NetworkManager:
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
-    def parse_connection_record(self, message):
+    def parse_connection_record(self, message: str) -> Any:
         connection_record = None
         if message == "client ready!":
             # legacy message format for initial client message
@@ -243,7 +245,7 @@ class NetworkManager:
                 )
         return connection_record
 
-    async def handle_connection(self, websocket):
+    async def handle_connection(self, websocket: ClientConnection) -> None:
         # we only support one connected client at a time
         if self.has_connection():
             await websocket.close()
@@ -288,7 +290,7 @@ class NetworkManager:
             self.handle_disconnect()
 
     # Sloppy: Connection sends/receives seem to sometimes hang for several minutes, making the server unresponsive to new connections. Let's try to detect when this happens and close the connection. Unclear if this is actually helping. I believe the underlying cause was improper configuration of the AWS load balancer and this has probably since been fixed.
-    async def check_close_broken_connection(self):
+    async def check_close_broken_connection(self) -> None:
         while True:
             try:
                 await asyncio.sleep(5)
@@ -310,7 +312,9 @@ class NetworkManager:
                 pass
 
 
-async def start_websocket_server(network_mgr, networking_config):
+async def start_websocket_server(
+    network_mgr: NetworkManager, networking_config
+) -> WebSocketServer:
     global use_ssl
     network_mgr_lambda = lambda ws, path: network_mgr.handle_connection(ws)
     ssl_context = create_ssl_context() if use_ssl else None
@@ -323,7 +327,9 @@ async def start_websocket_server(network_mgr, networking_config):
     return websocket_server
 
 
-async def start_http_availability_server(network_mgr, networking_config):
+async def start_http_availability_server(
+    network_mgr: NetworkManager, networking_config
+) -> aiohttp.web.AppRunner:
     async def http_handler(request):
         # return an HTTP code to indicate available or not
         code = (
@@ -351,8 +357,10 @@ async def start_http_availability_server(network_mgr, networking_config):
     return runner
 
 
-async def networking_main_async(interprocess_record):
-    networking_config = interprocess_record.networking_config
+async def networking_main_async(
+    interprocess_record: InterprocessRecord,
+) -> None:
+    networking_config = interprocess_record._networking_config
     assert networking_config.enable
 
     network_mgr = NetworkManager(interprocess_record)
@@ -394,7 +402,7 @@ async def networking_main_async(interprocess_record):
     check_close_broken_connection_task.cancel()
 
 
-def networking_main(interprocess_record):
+def networking_main(interprocess_record: InterprocessRecord) -> None:
     # Set up the event loop and run the main coroutine
     loop = asyncio.get_event_loop()
     loop.run_until_complete(networking_main_async(interprocess_record))

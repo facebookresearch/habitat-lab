@@ -39,7 +39,7 @@ While you can control the humanoid avatars by directly setting joint rotations, 
 
 ### HumanoidRearrangeController
 
-The [HumanoidRearrangeController](../../articulated_agent_controllers/humanoid_rearrange_controller.py) controller, designed to drive the humanoid to navigate around a scene, or pick and place objects. This controller is used for the Social Navigation and Social Rearrangement tasks. It allows generation of walk cycle animations, that drive the agent to particular object positions, and reaching motions, which change the agent pose so that the right or left hand reaches a specific realtive position. You can test the controller by running:
+The [HumanoidRearrangeController](../../articulated_agent_controllers/humanoid_rearrange_controller.py) controller, designed to drive the humanoid to navigate around a scene, or pick and place objects. This controller is used for the Social Navigation and Social Rearrangement tasks. It allows generation of walk cycle animations, that drive the agent to particular object positions, and reaching motions, which change the agent pose so that the right or left hand reaches a specific relative position. You can test the controller by running:
 
 ```
 python -m pytest test/test_humanoid.py:test_humanoid_controller

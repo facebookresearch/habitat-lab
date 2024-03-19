@@ -12,6 +12,8 @@ from typing import List, Tuple
 
 import magnum as mn
 
+from habitat_hitl.core.client_message_manager import ClientMessageManager
+
 use_headless_text_drawer = False
 try:
     from magnum import shaders, text
@@ -49,6 +51,9 @@ class TextOnScreenAlignment(Enum):
 
 
 class AbstractTextDrawer(ABC):
+    # TODO: Inject via constructor
+    _client_message_manager: ClientMessageManager
+
     @abstractmethod
     def add_text(
         self,
@@ -69,9 +74,6 @@ class HeadlessTextDrawer(AbstractTextDrawer):
     This is intended for use with habitat_hitl.headless. See also TextDrawer.
     """
 
-    def __init__(self):
-        self._service = None  # will be set later
-
     def add_text(
         self,
         text_to_add,
@@ -79,13 +81,11 @@ class HeadlessTextDrawer(AbstractTextDrawer):
         text_delta_x: int = 0,
         text_delta_y: int = 0,
     ):
-        align_y, align_x = alignment.value
-        if self._service is not None:
-            client_message_manager = self._service.client_message_manager
-            if client_message_manager:
-                client_message_manager.add_text(
-                    text_to_add, [align_x, align_y]
-                )
+        if self._client_message_manager:
+            align_y, align_x = alignment.value
+            self._client_message_manager.add_text(
+                text_to_add, [align_x, align_y]
+            )
 
 
 if not use_headless_text_drawer:
@@ -166,6 +166,11 @@ if not use_headless_text_drawer:
             self._text_transform_pairs.append(
                 (text_to_add, window_text_transform)
             )
+
+            if self._client_message_manager:
+                self._client_message_manager.add_text(
+                    text_to_add, [align_x, align_y]
+                )
 
         def draw_text(self):
             # make magnum text background transparent
