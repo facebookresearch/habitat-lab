@@ -189,6 +189,9 @@ class HitlDriver(AppDriver):
             self.ctrl_helper.get_gui_agent_controllers()
         )
 
+        # TODO: Dependency injection
+        text_drawer._client_message_manager = self._client_message_manager
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
