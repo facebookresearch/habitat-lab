@@ -191,7 +191,6 @@ class RemoteClientState:
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         last_client_state = client_states[-1]
 
-
         input_json = (
             last_client_state["input"]
             if "input" in last_client_state
