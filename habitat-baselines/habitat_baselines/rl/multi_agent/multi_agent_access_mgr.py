@@ -22,7 +22,7 @@ from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
-
+from IPython import embed
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -331,8 +331,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         for agent_i, agent in enumerate(self._agents):
             if not agent.actor_critic.should_load_agent_state:
                 continue
-            agent.load_state_dict(state[str(agent_i)])
-
+            try:
+                agent.load_state_dict(state[str(agent_i)])
+            except:
+                print("-----------idk why str wont work----------------")
+                agent.load_state_dict(state[agent_i])
     def load_ckpt_state_dict(self, ckpt):
         for agent in self._agents:
             agent.load_ckpt_state_dict(ckpt)

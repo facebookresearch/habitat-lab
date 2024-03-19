@@ -73,7 +73,7 @@ habitat:
         return_image: False
         is_return_image_bbox: False
     type: RearrangePddlSocialNavTask-v0
-    min_start_distance: 4.0
+    min_start_distance: 0.0
     reward_measure: social_nav_reward
     success_measure: nav_seek_success
     success_reward: 10.0
@@ -82,7 +82,7 @@ habitat:
     task_spec_base_path: benchmark/multi_agent/
     task_spec: pddl/multi_agent_social_nav
     pddl_domain_def: fp
-    min_distance_start_agents: 5.0
+    min_distance_start_agents: 0.0
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
 

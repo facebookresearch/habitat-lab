@@ -112,58 +112,61 @@ class SocialNavReward(RearrangeReward):
         # Start social nav reward
         social_nav_reward = 0.0
 
+        ### CADRL Reward structure ###
+
+        
         # Componet 1: Social nav reward three stage design
-        if dis >= self._safe_dis_min and dis < self._safe_dis_max:
-            # If the distance is within the safety interval
-            social_nav_reward += self._safe_dis_reward
-        elif dis < self._safe_dis_min:
-            # If the distance is too samll
-            social_nav_reward += dis - self._prev_dist
-        else:
-            # if the distance is too large
-            social_nav_reward += self._prev_dist - dis
-        social_nav_reward = (
-            self._config.toward_human_reward * social_nav_reward
-        )
+        # if dis >= self._safe_dis_min and dis < self._safe_dis_max:
+        #     # If the distance is within the safety interval
+        #     social_nav_reward += self._safe_dis_reward
+        # elif dis < self._safe_dis_min:
+        #     # If the distance is too samll
+        #     social_nav_reward += dis - self._prev_dist
+        # else:
+        #     # if the distance is too large
+        #     social_nav_reward += self._prev_dist - dis
+        # social_nav_reward = (
+        #     self._config.toward_human_reward * social_nav_reward
+        # )
 
-        # Componet 2: Social nav reward for facing human
-        if dis < self._facing_human_dis and self._facing_human_reward != -1:
-            base_T = self._sim.get_agent_data(
-                self.agent_id
-            ).articulated_agent.base_transformation
-            # Dot product
-            social_nav_reward += (
-                self._facing_human_reward
-                * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
-            )
+        # # Componet 2: Social nav reward for facing human
+        # if dis < self._facing_human_dis and self._facing_human_reward != -1:
+        #     base_T = self._sim.get_agent_data(
+        #         self.agent_id
+        #     ).articulated_agent.base_transformation
+        #     # Dot product
+        #     social_nav_reward += (
+        #         self._facing_human_reward
+        #         * robot_human_vec_dot_product(robot_pos, human_pos, base_T)
+        #     )
 
-        # Componet 3: Social nav reward bonus for getting closer to human
-        if (
-            dis < self._facing_human_dis
-            and self._facing_human_reward != -1
-            and self._near_human_bonus != -1
-        ):
-            social_nav_reward += self._near_human_bonus
+        # # Componet 3: Social nav reward bonus for getting closer to human
+        # if (
+        #     dis < self._facing_human_dis
+        #     and self._facing_human_reward != -1
+        #     and self._near_human_bonus != -1
+        # ):
+        #     social_nav_reward += self._near_human_bonus
 
-        # Componet 4: Social nav reward for exploration
-        # There is no exploration reward once the agent finds the human
-        # round off float to nearest 0.5 in python
-        robot_pos_key = (
-            round(robot_pos[0] * 2) / 2,
-            round(robot_pos[2] * 2) / 2,
-        )
-        social_nav_stats = task.measurements.measures[
-            SocialNavStats.cls_uuid
-        ].get_metric()
-        if (
-            self._explore_reward != -1
-            and robot_pos_key not in self._visited_pos
-            and social_nav_stats is not None
-            and not social_nav_stats["has_found_human"]
-        ):
-            self._visited_pos.add(robot_pos_key)
-            # Give the reward if the agent visits the new location
-            social_nav_reward += self._explore_reward
+        # # Componet 4: Social nav reward for exploration
+        # # There is no exploration reward once the agent finds the human
+        # # round off float to nearest 0.5 in python
+        # robot_pos_key = (
+        #     round(robot_pos[0] * 2) / 2,
+        #     round(robot_pos[2] * 2) / 2,
+        # )
+        # social_nav_stats = task.measurements.measures[
+        #     SocialNavStats.cls_uuid
+        # ].get_metric()
+        # if (
+        #     self._explore_reward != -1
+        #     and robot_pos_key not in self._visited_pos
+        #     and social_nav_stats is not None
+        #     and not social_nav_stats["has_found_human"]
+        # ):
+        #     self._visited_pos.add(robot_pos_key)
+        #     # Give the reward if the agent visits the new location
+        #     social_nav_reward += self._explore_reward
 
         if self._prev_dist < 0:
             social_nav_reward = 0.0
@@ -175,6 +178,10 @@ class SocialNavReward(RearrangeReward):
         if did_collide:
             task.should_end = True
             social_nav_reward -= self._collide_penalty
+        #### CADRL style reward ####
+        else:
+            if dis <self._safe_dis_min:
+                social_nav_reward -= (self._safe_dis_min - dis)
 
         self._metric += social_nav_reward
 

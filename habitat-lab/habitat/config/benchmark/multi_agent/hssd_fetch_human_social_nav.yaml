@@ -27,13 +27,13 @@ defaults:
     - rearrange_cooperate_reward
     - articulated_agent_force
     - force_terminate
-    - social_nav_reward #KL: FIXME
     - object_to_goal_distance
     - articulated_agent_colls
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
     # - social_nav_seek_success
+    - social_nav_reward #KL: FIXME
     - social_dist_to_goal
     - social_nav_to_pos_succ #KL: social nav to goal
     - social_nav_stats
@@ -71,7 +71,7 @@ habitat:
     success_measure: social_nav_to_pos_success
     success_reward: 10.0
     slack_reward: -0.01
-    end_on_success: False
+    end_on_success: True
     task_spec_base_path: benchmark/multi_agent/
     task_spec: pddl/multi_agent_tidy_house
     pddl_domain_def: fp
@@ -87,6 +87,11 @@ habitat:
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
+      social_nav_reward:
+        count_coll_pen: 0.25
+        max_count_colls: 1000
+        count_coll_end_pen: 1.0
+        safe_dis_min: 0.2
 
     actions:
       agent_0_base_velocity:
@@ -183,6 +188,6 @@ habitat:
       enable_physics: True
   dataset:
     # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
-    data_path: data/social_nav_episode_6_1.json.gz
+    data_path: /habitat-lab/data/social_nav_episode_6_1000.json.gz
     # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz

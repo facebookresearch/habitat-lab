@@ -24,7 +24,7 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/checkpoints"
+  eval_ckpt_path_dir: "data/checkpoints/latest.pth"
   num_environments: 12  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e7

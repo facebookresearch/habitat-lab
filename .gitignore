@@ -96,6 +96,7 @@ data
 /train_dir
 /tb
 /tb_old
+/tb*
 /video_dir_old
 *.zip
 /test

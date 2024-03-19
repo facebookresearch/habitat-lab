@@ -24,6 +24,7 @@ from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.ppo import PPO
 from habitat_baselines.rl.ppo.updater import Updater
+from IPython import embed 
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -206,7 +207,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 self._config.habitat_baselines.rl.ddppo.pretrained_weights,
                 map_location="cpu",
             )
-
         if self._config.habitat_baselines.rl.ddppo.pretrained:
             actor_critic.load_state_dict(
                 {  # type: ignore

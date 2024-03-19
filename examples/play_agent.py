@@ -188,9 +188,9 @@ class sim_env(threading.Thread):
         lin_vel = self.linear_velocity[2]
         ang_vel = self.angular_velocity[1]
         base_vel = [lin_vel, ang_vel]
-        self.env._episode_over = False
+        # self.env._episode_over = False
         k = 'agent_1_oracle_nav_randcoord_action'
-        my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
+        # my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
         self.env.task.actions[k].step()
         self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
 
@@ -310,13 +310,15 @@ class sim_env(threading.Thread):
         p = [point_map[0]+1, point_map[1]+1]
         point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
         print("Placing human at ",point_3d)
-        my_env.objs[1].base_pos = point_3d
+        k = 'agent_1_oracle_nav_randcoord_action'
+        my_env.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
         
 
 def callback(vel, my_env):
     #### Robot Control ####
     my_env.linear_velocity = np.array([(1.0 * vel.linear.y), 0.0, (1.0 * vel.linear.x)])
     my_env.angular_velocity = np.array([0, vel.angular.z, 0])
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--no-render", action="store_true", default=True)
