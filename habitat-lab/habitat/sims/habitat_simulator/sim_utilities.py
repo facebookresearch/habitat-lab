@@ -1088,3 +1088,132 @@ def get_object_regions(
     )
 
     return sim.semantic_scene.get_regions_for_points(key_points)
+
+
+def get_link_normalized_joint_position(
+    objectA: habitat_sim.physics.ManagedArticulatedObject, link_ix: int
+) -> float:
+    """
+    Normalize the joint limit range [min, max] -> [0,1] and return the current joint state in this range.
+
+    :param objectA: The parent ArticulatedObject of the link.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+
+    :return: normalized joint position [0,1]
+    """
+
+    assert objectA.get_link_joint_type(link_ix) in [
+        habitat_sim.physics.JointType.Revolute,
+        habitat_sim.physics.JointType.Prismatic,
+    ], f"Invalid joint type '{objectA.get_link_joint_type(link_ix)}'. Open/closed not a valid check for multi-dimensional or fixed joints."
+
+    joint_pos_ix = objectA.get_link_joint_pos_offset(link_ix)
+    joint_pos = objectA.joint_positions[joint_pos_ix]
+    limits = objectA.joint_position_limits
+
+    # compute the normalized position [0,1]
+    n_pos = (joint_pos - limits[0][joint_pos_ix]) / (
+        limits[1][joint_pos_ix] - limits[0][joint_pos_ix]
+    )
+    return n_pos
+
+
+def set_link_normalized_joint_position(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    link_ix: int,
+    normalized_pos: float,
+) -> None:
+    """
+    Set the joint's state within its limits from a normalized range [0,1] -> [min, max]
+
+    Assumes the joint has valid joint limits.
+
+    :param objectA: The parent ArticulatedObject of the link.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+    :param normalized_pos: The normalized position [0,1] to set.
+    """
+
+    assert objectA.get_link_joint_type(link_ix) in [
+        habitat_sim.physics.JointType.Revolute,
+        habitat_sim.physics.JointType.Prismatic,
+    ], f"Invalid joint type '{objectA.get_link_joint_type(link_ix)}'. Open/closed not a valid check for multi-dimensional or fixed joints."
+
+    assert (
+        normalized_pos <= 1.0 and normalized_pos >= 0
+    ), "values outside the range [0,1] are by definition beyond the joint limits."
+
+    joint_pos_ix = objectA.get_link_joint_pos_offset(link_ix)
+    limits = objectA.joint_position_limits
+    joint_positions = objectA.joint_positions
+    joint_positions[joint_pos_ix] = limits[0][joint_pos_ix] + (
+        normalized_pos * (limits[1][joint_pos_ix] - limits[0][joint_pos_ix])
+    )
+    objectA.joint_positions = joint_positions
+
+
+def link_is_open(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    link_ix: int,
+    threshold: float = 0.4,
+) -> bool:
+    """
+    Check whether a particular AO link is in the "open" state.
+    We assume that joint limits define the closed state (min) and open state (max).
+
+    :param objectA: The parent ArticulatedObject of the link to check.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+    :param threshold: The normalized threshold ratio of joint ranges which are considered "open". E.g. 0.8 = 80%
+
+    :return: Whether or not the link is considered "open".
+    """
+
+    return get_link_normalized_joint_position(objectA, link_ix) >= threshold
+
+
+def link_is_closed(
+    objectA: habitat_sim.physics.ManagedArticulatedObject,
+    link_ix: int,
+    threshold: float = 0.1,
+) -> bool:
+    """
+    Check whether a particular AO link is in the "closed" state.
+    We assume that joint limits define the closed state (min) and open state (max).
+
+    :param objectA: The parent ArticulatedObject of the link to check.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+    :param threshold: The normalized threshold ratio of joint ranges which are considered "closed". E.g. 0.1 = 10%
+
+    :return: Whether or not the link is considered "closed".
+    """
+
+    return get_link_normalized_joint_position(objectA, link_ix) <= threshold
+
+
+def close_link(
+    objectA: habitat_sim.physics.ManagedArticulatedObject, link_ix: int
+) -> None:
+    """
+    Set a link to the "closed" state. Sets the joint position to the minimum joint limit.
+
+    TODO: does not do any collision checking to validate the state or move any other objects which may be contained in or supported by this link.
+
+    :param objectA: The parent ArticulatedObject of the link to check.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+    """
+
+    set_link_normalized_joint_position(objectA, link_ix, 0)
+
+
+def open_link(
+    objectA: habitat_sim.physics.ManagedArticulatedObject, link_ix: int
+) -> None:
+    """
+    Set a link to the "open" state. Sets the joint position to the maximum joint limit.
+
+    TODO: does not do any collision checking to validate the state or move any other objects which may be contained in or supported by this link.
+
+    :param objectA: The parent ArticulatedObject of the link to check.
+    :param link_ix: The index of the link within the parent object. Not the link's object_id.
+    """
+
+    set_link_normalized_joint_position(objectA, link_ix, 1.0)
