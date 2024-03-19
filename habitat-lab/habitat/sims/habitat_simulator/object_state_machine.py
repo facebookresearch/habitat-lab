@@ -93,6 +93,7 @@ class ObjectStateSpec:
         :return: Whether or not the object has this state affordance.
         """
 
+        # TODO: This is a placeholder until semantic_class can be officially supported or replaced by something else
         if (
             get_state_of_obj(obj, "semantic_class")
             in self.accepted_semantic_classes
@@ -328,23 +329,10 @@ class ObjectSateMachine:
         for object_handle, states in self.objects_with_states.items():
             obj = sutils.get_obj_from_handle(sim, object_handle)
             for state in states:
-                snapshot[state.name][object_handle] = get_state_of_obj(
-                    obj, state.name
+                obj_state = get_state_of_obj(obj, state.name)
+                snapshot[state.name][object_handle] = (
+                    obj_state
+                    if obj_state is not None
+                    else state.default_value()
                 )
         return dict(snapshot)
-
-    def report_tracked_states(self, sim: habitat_sim.Simulator) -> None:
-        """
-        Print a list of all tracked objects and their states.
-
-        :param sim: The Simulator instance.
-        """
-
-        print("Object State Machine Report:")
-        for obj_handle, states in self.objects_with_states.items():
-            print(f"  - '{obj_handle}':")
-            obj = sutils.get_obj_from_handle(sim, obj_handle)
-            for state in states:
-                print(
-                    f"      {state.name} = {get_state_of_obj(obj, state.name)}"
-                )
