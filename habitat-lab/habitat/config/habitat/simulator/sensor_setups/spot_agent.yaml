@@ -7,6 +7,9 @@ defaults:
   - /habitat/simulator/sim_sensors@sim_sensors.arm_panoptic_sensor: arm_panoptic_sensor
   - /habitat/simulator/sim_sensors@sim_sensors.head_stereo_left_depth_sensor: head_stereo_left_depth_sensor
   - /habitat/simulator/sim_sensors@sim_sensors.head_stereo_right_depth_sensor: head_stereo_right_depth_sensor
+  - /habitat/simulator/sim_sensors@sim_sensors.jaw_rgb_sensor: jaw_rgb_sensor
+  - /habitat/simulator/sim_sensors@sim_sensors.jaw_depth_sensor: jaw_depth_sensor
+  - /habitat/simulator/sim_sensors@sim_sensors.jaw_panoptic_sensor: jaw_panoptic_sensor
 
 sim_sensors:
   arm_rgb_sensor:
@@ -35,3 +38,17 @@ sim_sensors:
     hfov: 58
     min_depth: 0.0
     max_depth: 3.5
+  jaw_rgb_sensor:
+    height: 240
+    width: 228
+    hfov: 60
+  jaw_depth_sensor:
+    height: 240
+    width: 228
+    hfov: 60
+    min_depth: 0.0
+    max_depth: 1.7
+  jaw_panoptic_sensor:
+    height: 240
+    width: 228
+    hfov: 60
