@@ -11,7 +11,7 @@ import numpy as np
 from habitat.articulated_agents.articulated_agent_interface import (
     ArticulatedAgentInterface,
 )
-from habitat.tasks.rearrange.utils import (
+from habitat.articulated_agents.utils import (
     get_articulated_agent_camera_transform_from_cam_info,
 )
 from habitat_sim.physics import JointMotorSettings, MotionType

@@ -14,7 +14,7 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
 )
-from habitat.tasks.rearrange.utils import (
+from habitat.articulated_agents.utils import (
     get_articulated_agent_camera_transform_from_cam_info,
 )
 from habitat_sim.utils.common import orthonormalize_rotation_shear
