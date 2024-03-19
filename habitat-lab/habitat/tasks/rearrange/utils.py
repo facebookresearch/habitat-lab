@@ -11,7 +11,7 @@ import pickle
 import time
 import warnings
 from functools import wraps
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import attr
 import magnum as mn
@@ -22,7 +22,6 @@ import habitat_sim
 from habitat.articulated_agents.humanoids.kinematic_humanoid import (
     KinematicHumanoid,
 )
-from habitat.articulated_agents.manipulator import Manipulator
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
@@ -812,9 +811,7 @@ def get_camera_lookat_relative_to_vertial_line(
 
 
 def get_articulated_agent_camera_transform_from_cam_info(
-    articulated_agent: Union[
-        MobileManipulator, KinematicHumanoid, Manipulator
-    ],
+    articulated_agent,
     cam_info,
 ):
     # Get the camera's attached link
