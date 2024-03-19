@@ -9,8 +9,9 @@ import os
 import os.path as osp
 import pickle
 import time
+import warnings
 from functools import wraps
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import attr
 import magnum as mn
@@ -18,6 +19,10 @@ import numpy as np
 import quaternion
 
 import habitat_sim
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
+from habitat.articulated_agents.manipulator import Manipulator
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
@@ -726,11 +731,18 @@ def add_perf_timing_func(name: Optional[str] = None):
 
 
 def get_camera_transform(
-    cur_articulated_agent, camera_name: str = None
+    cur_articulated_agent,
+    camera_name: str = None,
+    deprecated_logic: bool = False,
 ) -> mn.Matrix4:
     """Get the camera transformation"""
     if camera_name is not None:
-        cam_info = cur_articulated_agent.params.cameras[camera_name]
+        try:
+            cam_info = cur_articulated_agent.params.cameras[camera_name]
+        except KeyError:
+            raise Exception(
+                f"Camera name {camera_name} not found in the agent's camera list."
+            )
     elif isinstance(cur_articulated_agent, SpotRobot):
         cam_info = cur_articulated_agent.params.cameras[
             "articulated_agent_arm_depth"
@@ -740,28 +752,21 @@ def get_camera_transform(
     else:
         raise NotImplementedError("This robot does not have GazeGraspAction.")
 
-    # Get the camera's attached link
-    link_trans = cur_articulated_agent.sim_obj.get_link_scene_node(
-        cam_info.attached_link_id
-    ).transformation
-    # Get the camera offset transformation
-    # offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-    cam_offset_transform = None
-    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-        pos = cam_info.cam_offset_pos
-        ori = cam_info.cam_orientation
-        Mt = mn.Matrix4.translation(pos)
-        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-        cam_offset_transform = Mt @ Mz @ My @ Mx
-    else:
-        cam_offset_transform = mn.Matrix4.look_at(
-            cam_info.cam_offset_pos,
-            cam_info.cam_look_at_pos,
-            mn.Vector3(0, 1, 0),
+    cam_trans = None
+
+    if deprecated_logic:
+        warnings.warn(
+            "[habitat.tasks.rearrange.utils.get_camera_transform] Using deprecated logic to get-camera-transform. Only for legacy reasons, planned to phase out in next version."
         )
-    cam_trans = link_trans @ cam_offset_transform @ cam_info.relative_transform
+        link_trans = cur_articulated_agent.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+    else:
+        cam_trans = get_articulated_agent_camera_transform_from_cam_info(
+            cur_articulated_agent, cam_info
+        )
     return cam_trans
 
 
@@ -804,3 +809,48 @@ def get_camera_lookat_relative_to_vertial_line(
     # Get angle between location and the vector
     angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
     return angle
+
+
+def get_articulated_agent_camera_transform_from_cam_info(
+    articulated_agent: Union[
+        MobileManipulator, KinematicHumanoid, Manipulator
+    ],
+    cam_info,
+):
+    # Get the camera's attached link
+    if cam_info.attached_link_id == -1:
+        link_trans = articulated_agent.sim_obj.transformation
+    elif cam_info.attached_link_id == -2:
+        if isinstance(articulated_agent, KinematicHumanoid):
+            rot_offset = articulated_agent.offset_transform_base.inverted()
+            link_trans = articulated_agent.base_transformation @ rot_offset
+        else:
+            raise Exception(
+                f"Did not expect cam_info.attached_link_id to be -2 for {articulated_agent} of type:{type(articulated_agent)}."
+            )
+    else:
+        link_trans = articulated_agent.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+    # Get the camera offset transformation
+    cam_offset_transform = None
+    if cam_info.cam_look_at_pos == None:
+        # if cam_info.cam_look_at_pos is None that means the camera's pose-transform
+        # is described as a position and orientation in the world
+        pos = cam_info.cam_offset_pos
+        ori = cam_info.cam_orientation
+        Mt = mn.Matrix4.translation(pos)
+        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+        cam_offset_transform = Mt @ Mz @ My @ Mx
+    else:
+        # if cam_info.look_at_pos is not None then we calculate the camera
+        # pose-transform as a look-at transform
+        cam_offset_transform = mn.Matrix4.look_at(
+            cam_info.cam_offset_pos,
+            cam_info.cam_look_at_pos,
+            mn.Vector3(0, 1, 0),
+        )
+    cam_trans = link_trans @ cam_offset_transform @ cam_info.relative_transform
+    return cam_trans
