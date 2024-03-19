@@ -73,6 +73,23 @@ class ClientMessageManager:
                 ]
             message["highlights"].append(highlight_dict)
 
+    def add_text(
+        self, text: str, pos: list[float], destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        Draw text at the specified screen coordinates.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if len(text) == 0:
+                return
+            assert len(pos) == 2
+            if "texts" not in message:
+                message["texts"] = []
+            message["texts"].append(
+                {"text": text, "position": [pos[0], pos[1]]}
+            )
+
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
     ) -> None:
