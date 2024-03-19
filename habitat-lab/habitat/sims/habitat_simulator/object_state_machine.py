@@ -55,13 +55,7 @@ def set_state_of_obj(
     """
 
     user_attr = obj.user_attributes
-    obj_state_config = None
-    if "object_states" not in user_attr.get_subconfig_keys():
-        obj_state_config = (
-            habitat_sim._ext.habitat_sim_bindings.Configuration()
-        )
-    else:
-        obj_state_config = user_attr.get_subconfig("object_states")
+    obj_state_config = user_attr.get_subconfig("object_states")
     obj_state_config.set(state_name, state_val)
     user_attr.save_subconfig("object_states", obj_state_config)
 
