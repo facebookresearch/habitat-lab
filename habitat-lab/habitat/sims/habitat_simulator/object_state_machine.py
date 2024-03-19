@@ -14,7 +14,6 @@ import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
-from habitat.sims.habitat_simulator.metadata_interface import MetadataInterface
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 ##################################################
@@ -65,39 +64,6 @@ def set_state_of_obj(
         obj_state_config = user_attr.get_subconfig("object_states")
     obj_state_config.set(state_name, state_val)
     user_attr.save_subconfig("object_states", obj_state_config)
-
-
-def set_all_object_semantic_classes_as_states(
-    sim: habitat_sim.Simulator, metadata_interface: MetadataInterface
-) -> None:
-    """
-    Sets the semantic class of each object as an object state 'semantic_class'.
-
-    :param sim: The Simulator instance.
-    :param metadata_interface: The MetadataInterface object used to map objects to their external semantics.
-    """
-
-    all_objs = sutils.get_all_objects(sim)
-    for obj in all_objs:
-        set_object_semantic_class_as_state(obj, metadata_interface)
-
-
-def set_object_semantic_class_as_state(
-    obj: Union[ManagedArticulatedObject, ManagedRigidObject],
-    metadata_interface: MetadataInterface,
-) -> None:
-    """
-    Sets the semantic class of an object as object state 'semantic_class'.
-
-    :param obj: The ManagedObject instance.
-    :param metadata_interface: The MetadataInterface object used to map objects to their external semantics.
-    """
-
-    obj_sem_class = metadata_interface.get_object_category(
-        sutils.object_shortname_from_handle(obj.handle)
-    )
-    if obj_sem_class is not None:
-        set_state_of_obj(obj, "semantic_class", obj_sem_class)
 
 
 ##################################################
@@ -262,111 +228,8 @@ class ObjectIsClean(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_clean"
-        # TODO: should be a broader set of categories
-        self.accepted_semantic_classes = ["drinkware"]
-        # store a map of object handles to local faucet points
-        # TODO: should be another metadata pathway annotated for individual objects
-        self.faucet_annotations: Dict[str, List[mn.Vector3]] = None
-        # list of global positions which count as "faucets" for cleaning
-        self.global_faucet_points = None
-        # min distance from a faucet for an object to become "clean"
-        self.faucet_range = 0.2
-
-    def compute_global_faucet_points(
-        self,
-        sim: habitat_sim.Simulator,
-        obj_faucet_points: Dict[str, List[mn.Vector3]],
-    ) -> None:
-        """
-        Computes and caches a set of global 3D positions where an object could be cleaned from a map of objects to local faucet annotation points.
-
-        :param sim: Simulator instance.
-        :param obj_faucet_points: The map of object handles to local faucet point annotations.
-        """
-
-        self.global_faucet_points = []
-        all_objects = sutils.get_all_objects(sim)
-        for obj in all_objects:
-            obj_hash = sutils.object_shortname_from_handle(obj.handle)
-            if obj_hash in obj_faucet_points:
-                self.global_faucet_points.append(
-                    obj.transformation.transform_point(
-                        obj_faucet_points[obj_hash]
-                    )
-                )
-        print(f"compute_global_faucet_points: {self.global_faucet_points}")
-
-    def update_state_context(self, sim: habitat_sim.Simulator) -> None:
-        """
-        Parse any faucet states from the active scene.
-
-        :param sim: Simulator instance.
-        """
-        if self.global_faucet_points is None:
-            self.compute_global_faucet_points(sim, self.faucet_annotations)
-
-    def update_state(
-        self,
-        sim: habitat_sim.Simulator,
-        obj: Union[ManagedArticulatedObject, ManagedRigidObject],
-        dt: float,
-    ) -> None:
-        """
-        Objects can become dirty by touching the floor and clean by getting close enough to a faucet.
-
-        :param sim: The Simulator instance.
-        :param obj: The ManagedObject instance.
-        :param dt: The timestep over which to update.
-        """
-
-        cur_state = get_state_of_obj(obj, self.name)
-        cur_state = self.default_value() if (cur_state is None) else cur_state
-        if cur_state:
-            # this is clean now, check if "on the floor"
-            # NOTE: "on the floor" heuristic -> touching the "stage" includes walls, etc...
-            cps = sim.get_physics_contact_points()
-            for cp in cps:
-                if (
-                    cp.object_id_a == obj.object_id
-                    or cp.object_id_b == obj.object_id
-                ) and (
-                    cp.object_id_a == habitat_sim.stage_id
-                    or cp.object_id_b == habitat_sim.stage_id
-                ):
-                    set_state_of_obj(obj, self.name, False)
-                    return
-        else:
-            # this is dirty, check if close enough to a faucet to clean
-            # NOTE: uses L2 distance to faucet points to check if object can be cleaned
-            # TODO: size_regularized_distance would be better
-            obj_pos = obj.translation
-            for point in self.global_faucet_points:
-                dist = (obj_pos - point).length()
-                if dist <= self.faucet_range:
-                    set_state_of_obj(obj, self.name, True)
-                    return
-
-    def draw_context(
-        self,
-        debug_line_render: habitat_sim.gfx.DebugLineRender,
-        camera_transform: mn.Matrix4,
-    ) -> None:
-        """
-        Draw any context cues which are independent of individual objects' state.
-        Draw the faucet points with yellow circle highlights.
-
-        :param debug_line_render: The DebugLineRender instance for the Simulator.
-        :param camera_transform: The Matrix4 camera transform.
-        """
-
-        if self.global_faucet_points is not None:
-            for point in self.global_faucet_points:
-                debug_line_render.draw_circle(
-                    translation=point,
-                    radius=self.faucet_range,
-                    color=mn.Color4.yellow(),
-                    normal=camera_transform.translation - point,
-                )
+        # TODO: set the semantic class membership list
+        self.accepted_semantic_classes = []
 
 
 class ObjectIsPoweredOn(BooleanObjectState):
@@ -377,15 +240,8 @@ class ObjectIsPoweredOn(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_powered_on"
-        # TODO: not an exaustive list
-        self.accepted_semantic_classes = [
-            "toaster",
-            "tv",
-            "range_hood",
-            "coffee_maker",
-            "floor_lamp",
-            "washer_dryer",
-        ]
+        # TODO: set the semantic class membership list
+        self.accepted_semantic_classes = []
 
     def default_value(self) -> Any:
         """
