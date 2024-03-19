@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 
 
+
 class SimulatorObjectType(Enum):
     """
     Predefined entity types for which default predicate behavior is defined.

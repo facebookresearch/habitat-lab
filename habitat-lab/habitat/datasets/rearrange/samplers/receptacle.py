@@ -24,6 +24,8 @@ from habitat.utils.geometry_utils import random_triangle_point
 from habitat_sim.utils.common import quat_from_two_vectors as qf2v
 from habitat_sim.utils.common import quat_to_magnum as qtm
 
+from IPython import embed
+
 # global module singleton for mesh importing instantiated upon first import
 _manager = mn.trade.ImporterManager()
 

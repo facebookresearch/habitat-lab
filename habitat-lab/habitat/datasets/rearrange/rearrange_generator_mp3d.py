@@ -43,7 +43,6 @@ from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
 
 from IPython import embed
-from habitat.datasets.rearrange.door_sampler import door_samples
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
@@ -94,7 +93,7 @@ class RearrangeEpisodeGenerator:
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
-        self.dbv: DebugVisualizer = (
+        self.vdb: DebugVisualizer = (
             None  # visual debugger initialized with sim
         )
 
@@ -150,10 +149,10 @@ class RearrangeEpisodeGenerator:
                 scene_set["included_substrings"],
                 scene_set["excluded_substrings"],
             )
-            #KL: define manually for mp3d
-            # self._scene_sets[
-            #     scene_set["name"]
-            # ] = ['/habitat-lab/data/scene_datasets/mp3d_example/17DRP5sb8fy/17DRP5sb8fy.glb']
+            #KL: define manually
+            self._scene_sets[
+                scene_set["name"]
+            ] = ['/habitat-lab/data/scene_datasets/mp3d_example/17DRP5sb8fy/17DRP5sb8fy.glb']
             
 
         # object sets
@@ -455,8 +454,8 @@ class RearrangeEpisodeGenerator:
             sampled_look_target = receptacle.sample_uniform_global(
                 self.sim, 1.0
             )
-            self.dbv.look_at(sampled_look_target)
-            self.dbv.debug_obs.append(self.dbv.get_observation())
+            self.vdb.look_at(sampled_look_target)
+            self.vdb.get_observation()
 
     def get_island_sampled_point(self, island_idx = None):
         print("---------------get island sampled point----------")
@@ -525,10 +524,10 @@ class RearrangeEpisodeGenerator:
         """
 
         # Reset the number of allowed objects per receptacle.
-        recep_tracker = ReceptacleTracker(
-            dict(self.cfg.max_objects_per_receptacle),
-            self._receptacle_sets,
-        )
+        # recep_tracker = ReceptacleTracker(
+        #     dict(self.cfg.max_objects_per_receptacle),
+        #     self._receptacle_sets,
+        # )
 
         self._reset_samplers()
         self.episode_data: Dict[str, Dict[str, Any]] = {
@@ -539,9 +538,9 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
         scene_base_dir = osp.dirname(osp.dirname(ep_scene_handle))
 
-        recep_tracker.init_scene_filters(
-            mm=self.sim.metadata_mediator, scene_handle=ep_scene_handle
-        )
+        # recep_tracker.init_scene_filters(
+        #     mm=self.sim.metadata_mediator, scene_handle=ep_scene_handle
+        # )
 
         scene_name = ep_scene_handle.split(".")[0]
         navmesh_path = osp.join(
@@ -590,94 +589,20 @@ class RearrangeEpisodeGenerator:
             self.sim.pathfinder, self.sim, allow_outdoor=False
         )
         #KL
-        # robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
-        #     largest_indoor_island_id
-        # )
-        sampled_start, sampled_goal, robot_sampled_start = door_samples(self.sim.pathfinder, self.cfg)
-        print("Get DOOR final samples: ", robot_sampled_start, sampled_start, sampled_goal)
-        
+        robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
+            largest_indoor_island_id
+        )
+        print("Get largest indoor island sample: ", robot_sampled_start, sampled_start, sampled_goal)
+
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
-        for sampler_name, num_targets in target_numbers.items():
-            new_target_receptacles: List[Receptacle] = []
-            failed_samplers: Dict[str, bool] = defaultdict(bool)
-            while len(new_target_receptacles) < num_targets:
-                assert len(failed_samplers.keys()) < len(
-                    targ_sampler_name_to_obj_sampler_names[sampler_name]
-                ), f"All target samplers failed to find a match for '{sampler_name}'."
-                obj_sampler_name = random.choice(
-                    targ_sampler_name_to_obj_sampler_names[sampler_name]
-                )
-
-                sampler = self._obj_samplers[obj_sampler_name]
-                new_receptacle = None
-                try:
-                    new_receptacle = sampler.sample_receptacle(
-                        self.sim, recep_tracker
-                    )
-                except AssertionError:
-                    # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
-                    failed_samplers[obj_sampler_name]
-                    continue
-
-                if recep_tracker.allocate_one_placement(new_receptacle):
-                    # used up new_receptacle, need to recompute the sampler's receptacle_candidates
-                    sampler.receptacle_candidates = None
-                # optionally constrain to the largest indoor island
-                nav_island = -1
-                if sampler._constrain_to_largest_nav_island:
-                    nav_island = largest_indoor_island_id
-                new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle], nav_island
-                )  # type: ignore
-                if len(new_receptacle) != 0:  # type: ignore
-                    new_target_receptacles.append(new_receptacle[0])  # type: ignore
-
-            target_receptacles[obj_sampler_name].extend(new_target_receptacles)
-            all_target_receptacles.extend(new_target_receptacles)
-
+        
         # sample and allocate receptacles to contain the goal states for target objects
         goal_receptacles = {}
         all_goal_receptacles = []
-        for sampler, (sampler_name, num_targets) in zip(
-            self._target_samplers.values(), target_numbers.items()
-        ):
-            new_goal_receptacles = []  # type: ignore
-            num_iterations = 0
-            max_iterations = num_targets * 100
-            while (
-                len(new_goal_receptacles) < num_targets
-                and num_iterations < max_iterations
-            ):
-                num_iterations += 1
-                new_receptacle = sampler.sample_receptacle(
-                    self.sim,
-                    recep_tracker,
-                )
-                if isinstance(new_receptacle, OnTopOfReceptacle):
-                    new_receptacle.set_episode_data(self.episode_data)
-                if recep_tracker.allocate_one_placement(new_receptacle):
-                    # used up new_receptacle, need to recompute the sampler's receptacle_candidates
-                    sampler.receptacle_candidates = None
-                # optionally constrain to the largest indoor island
-                nav_island = -1
-                if sampler._constrain_to_largest_nav_island:
-                    nav_island = largest_indoor_island_id
-                new_receptacle = get_navigable_receptacles(
-                    self.sim, [new_receptacle], nav_island
-                )  # type: ignore
-                if len(new_receptacle) != 0:  # type: ignore
-                    new_goal_receptacles.append(new_receptacle[0])  # type: ignore
-            assert (
-                len(new_goal_receptacles) == num_targets
-            ), "Unable to sample goal Receptacles for all requested targets."
-            goal_receptacles[sampler_name] = new_goal_receptacles
-            all_goal_receptacles.extend(new_goal_receptacles)
 
-        # Goal and target containing receptacles are allowed 1 extra maximum object for each goal/target if a limit was defined
-        for recep in [*all_goal_receptacles, *all_target_receptacles]:
-            recep_tracker.inc_count(recep.unique_name)
+        # Goal and target containing receptacles are allowed 1 extra maximum object for each goal/target if a limit was define
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
@@ -694,63 +619,17 @@ class RearrangeEpisodeGenerator:
                     ao_states[sampled_instance.handle] = {}
                 for link_ix, joint_state in link_states.items():
                     ao_states[sampled_instance.handle][link_ix] = joint_state
-
+        
         # visualize after setting AO states to correctly see scene state
         if self._render_debug_obs:
             self.visualize_scene_receptacles()
-            self.dbv.make_debug_video(prefix="receptacles_")
-
+            self.vdb.make_debug_video(prefix="receptacles_")
+        
         # track a list of target objects to be used for settle culling later
         target_object_names: List[str] = []
         # sample object placements
         self.object_to_containing_receptacle: Dict[str, Receptacle] = {}
-        for sampler_name, obj_sampler in self._obj_samplers.items():
-            object_sample_data = obj_sampler.sample(
-                self.sim,
-                recep_tracker,
-                target_receptacles[sampler_name],
-                snap_down=True,
-                dbv=(self.dbv if self._render_debug_obs else None),
-            )
-            if len(object_sample_data) == 0:
-                return None
-            new_objects, receptacles = zip(*object_sample_data)
-            # collect names of all newly placed target objects
-            target_object_names.extend(
-                [
-                    obj.handle
-                    for obj in new_objects[
-                        : len(target_receptacles[sampler_name])
-                    ]
-                ]
-            )
-            for obj, rec in zip(new_objects, receptacles):
-                self.object_to_containing_receptacle[obj.handle] = rec
-            if sampler_name not in self.episode_data["sampled_objects"]:
-                self.episode_data["sampled_objects"][
-                    sampler_name
-                ] = new_objects
-            else:
-                # handle duplicate sampler names
-                self.episode_data["sampled_objects"][
-                    sampler_name
-                ] += new_objects
-            self.ep_sampled_objects += new_objects
-            logger.info(
-                f"Sampler {sampler_name} generated {len(new_objects)} new object placements."
-            )
-            # debug visualization showing each newly added object
-            if self._render_debug_obs:
-                logger.info(
-                    f"Generating debug images for {len(new_objects)} objects..."
-                )
-                for new_object in new_objects:
-                    self.dbv.look_at(new_object.translation)
-                    self.dbv.debug_obs.append(self.dbv.get_observation())
-                logger.info(
-                    f"... done generating the debug images for {len(new_objects)} objects."
-                )
-
+        
         # simulate the world for a few seconds to validate the placements
         if self.cfg.enable_check_obj_stability and not self.settle_sim(
             target_object_names
@@ -760,109 +639,24 @@ class RearrangeEpisodeGenerator:
             )
             return None
 
-        for sampler, target_sampler_info in zip(
-            self._target_samplers.values(), self.cfg.object_target_samplers
-        ):
-            sampler.object_instance_set = [
-                x
-                for y in target_sampler_info["params"]["object_samplers"]
-                for x in self.episode_data["sampled_objects"][y]
-            ]
-            sampler.object_set = [
-                x.creation_attributes.handle
-                for x in sampler.object_instance_set
-            ]
+        # for sampler, target_sampler_info in zip(
+        #     self._target_samplers.values(), self.cfg.object_target_samplers
+        # ):
+        #     sampler.object_instance_set = [
+        #         x
+        #         for y in target_sampler_info["params"]["object_samplers"]
+        #         for x in self.episode_data["sampled_objects"][y]
+        #     ]
+        #     sampler.object_set = [
+        #         x.creation_attributes.handle
+        #         for x in sampler.object_instance_set
+        #     ]
 
         target_refs: Dict[str, str] = {}
 
         # sample goal positions for target objects after all other clutter is placed and validated
-        handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
-        for sampler_name, target_sampler in self._target_samplers.items():
-            obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
-                sampler_name
-            ][0]
-            new_target_objects = target_sampler.sample(
-                self.sim,
-                recep_tracker,
-                snap_down=True,
-                dbv=self.dbv,
-                target_receptacles=target_receptacles[obj_sampler_name],
-                goal_receptacles=goal_receptacles[sampler_name],
-                object_to_containing_receptacle=self.object_to_containing_receptacle,
-            )
-            if new_target_objects is None:
-                return None
-            for target_handle, (
-                new_target_obj,
-                _,
-            ) in new_target_objects.items():
-                match_obj = handle_to_obj[target_handle]
-
-                dist = np.linalg.norm(
-                    match_obj.translation - new_target_obj.translation
-                )
-                if dist < self.cfg.min_dist_from_start_to_goal:
-                    return None
-
-                # Add check for checking if the robot can navigate from start to goal
-                # given the navmesh of the robot
-                if self.cfg.check_navigable:
-                    is_navigable = path_is_navigable_given_robot(
-                        sim=self.sim,
-                        start_pos=match_obj.translation,
-                        goal_pos=new_target_obj.translation,
-                        robot_navmesh_offsets=self.cfg.navmesh_offset,
-                        collision_rate_threshold=self.cfg.max_collision_rate_for_navigable,
-                        selected_island=largest_indoor_island_id,
-                        angle_threshold=self.cfg.angle_threshold,
-                        angular_speed=self.cfg.angular_velocity,
-                        distance_threshold=self.cfg.distance_threshold,
-                        linear_speed=self.cfg.linear_velocity,
-                        dbv=self.dbv,
-                        render_debug_video=False,
-                    )
-                    if not is_navigable:
-                        logger.info(
-                            f"Collision rate greater than {self.cfg.max_collision_rate_for_navigable}, discarding episode."
-                        )
-                        return None
-
-            # cache transforms and add visualizations
-            for i, (instance_handle, value) in enumerate(
-                new_target_objects.items()
-            ):
-                target_object, target_receptacle = value
-                target_receptacles[obj_sampler_name][i] = target_receptacle
-                assert (
-                    instance_handle not in self.episode_data["sampled_targets"]
-                ), f"Duplicate target for instance '{instance_handle}'."
-                rom = self.sim.get_rigid_object_manager()
-                target_bb_size = (
-                    target_object.root_scene_node.cumulative_bb.size()
-                )
-                target_transform = target_object.transformation
-                self.episode_data["sampled_targets"][
-                    instance_handle
-                ] = np.array(target_transform)
-                target_refs[
-                    instance_handle
-                ] = f"{sampler_name}|{len(target_refs)}"
-                rom.remove_object_by_handle(target_object.handle)
-                if self._render_debug_obs:
-                    sutils.add_transformed_wire_box(
-                        self.sim,
-                        size=target_bb_size / 2.0,
-                        transform=target_transform,
-                    )
-                    self.dbv.look_at(target_transform.translation)
-                    self.dbv.debug_line_render.set_line_width(2.0)
-                    self.dbv.debug_line_render.draw_transformed_line(
-                        target_transform.translation,
-                        rom.get_object_by_handle(instance_handle).translation,
-                        mn.Color4(1.0, 0.0, 0.0, 1.0),
-                        mn.Color4(1.0, 0.0, 0.0, 1.0),
-                    )
-                    self.dbv.debug_obs.append(self.dbv.get_observation())
+        handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects} #empty
+        
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
@@ -900,7 +694,7 @@ class RearrangeEpisodeGenerator:
             scene_dataset_config=self.cfg.dataset_path,
             additional_obj_config_paths=self.cfg.additional_object_paths,
             episode_id=str(self.num_ep_generated - 1),
-            start_position=robot_sampled_start, #KL
+            start_position=sampled_goal, #KL
             start_rotation=[
                 0,
                 0,
@@ -929,8 +723,8 @@ class RearrangeEpisodeGenerator:
             "rgb": {
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": camera_resolution,
-                "position": [0.0, 0.0, 0.0],
-                "orientation": [0.0, 0.0, 0.0],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
             }
         }
 
@@ -992,10 +786,10 @@ class RearrangeEpisodeGenerator:
         # initialize the debug visualizer
         output_path = (
             "rearrange_ep_gen_output/"
-            if self.dbv is None
-            else self.dbv.output_path
+            if self.vdb is None
+            else self.vdb.output_path
         )
-        self.dbv = DebugVisualizer(self.sim, output_path=output_path)
+        self.vdb = DebugVisualizer(self.sim, output_path=output_path)
 
     def settle_sim(
         self,
@@ -1024,16 +818,16 @@ class RearrangeEpisodeGenerator:
         new_obj_centroid /= len(self.ep_sampled_objects)
         settle_db_obs: List[Any] = []
         if self._render_debug_obs:
-            settle_db_obs.append(
-                self.dbv.get_observation(
-                    look_at=new_obj_centroid, look_from=scene_bb.center()
-                )
+            self.vdb.get_observation(
+                look_at=new_obj_centroid,
+                look_from=scene_bb.center(),
+                obs_cache=settle_db_obs,
             )
 
         while self.sim.get_world_time() < duration:
             self.sim.step_world(1.0 / 30.0)
             if self._render_debug_obs:
-                settle_db_obs.append(self.dbv.get_observation())
+                self.vdb.get_observation(obs_cache=settle_db_obs)
 
         logger.info(
             f"   ...done with placement stability analysis in {time.time()-settle_start_time} seconds."
@@ -1056,10 +850,10 @@ class RearrangeEpisodeGenerator:
                     f"    Object '{new_object.handle}' unstable. Moved {error} units from placement."
                 )
                 if self._render_debug_obs:
-                    # NOTE: if debugging visualization is on, any unstable objects will have a peek image prefixed "unstable_" generated to aid debugging
-                    self.dbv.peek(
-                        new_object,
+                    self.vdb.peek_rigid_object(
+                        obj=new_object,
                         peek_all_axis=True,
+                        additional_savefile_prefix="unstable_",
                         debug_lines=[
                             (
                                 [
@@ -1069,7 +863,7 @@ class RearrangeEpisodeGenerator:
                                 mn.Color4.red(),
                             )
                         ],
-                    ).save(self.dbv.output_path, prefix="unstable_")
+                    )
         logger.info(
             f" : unstable={len(unstable_placements)}|{len(self.ep_sampled_objects)} ({len(unstable_placements)/len(self.ep_sampled_objects)*100}%) : {unstable_placements}."
         )
@@ -1079,7 +873,7 @@ class RearrangeEpisodeGenerator:
         # TODO: maybe draw/display trajectory tubes for the displacements?
 
         if self._render_debug_obs and make_video:
-            self.dbv.make_debug_video(
+            self.vdb.make_debug_video(
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
 
@@ -1100,8 +894,7 @@ class RearrangeEpisodeGenerator:
             if obj_name in unstable_placements:
                 rec_num_obj_vs_unstable[rec]["num_unstable_objects"] += 1
         for rec, obj_in_rec in rec_num_obj_vs_unstable.items():
-            rec_unique_name = rec.unique_name if rec is not None else "floor"
-            detailed_receptacle_stability_report += f"\n      receptacle '{rec_unique_name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
+            detailed_receptacle_stability_report += f"\n      receptacle '{rec.unique_name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
 
         success = len(unstable_placements) == 0
 
@@ -1171,9 +964,7 @@ class RearrangeEpisodeGenerator:
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
-                self.dbv.peek(obj, peek_all_axis=True).save(
-                    self.dbv.output_path
-                )
+                self.vdb.peek_rigid_object(obj, peek_all_axis=True)
 
         # return success or failure
         return success

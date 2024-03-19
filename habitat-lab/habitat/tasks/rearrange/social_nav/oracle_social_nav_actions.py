@@ -84,7 +84,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         final_nav_targ, obj_targ_pos = self._get_target_for_coord(
             nav_to_target_coord
         )
-
+        #KL: generate humanoidpath from here
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
@@ -229,7 +229,9 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
-        self.coord_nav = None
+        self.coord_nav = self._task.nav_goal_pos
+        # self.coord_nav = None
+        print("TEST COORD_NAV nav_goal_pos: ", self.coord_nav)
 
     def _find_path_given_start_end(self, start, end):
         """Helper function to find the path given starting and end locations"""
@@ -326,6 +328,13 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
     def step(self, *args, **kwargs):
         max_tries = 10
         self.skill_done = False
+        
+        #KL: test human agent pos
+        # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
+        # human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+        # print("TEST in step: ", robot_pos, human_pos)
+        # print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
+
 
         if self.coord_nav is None:
             self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
@@ -338,8 +347,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         ] = self.coord_nav
 
         ret_val = super().step(*args, **kwargs)
-        if self.skill_done:
-            self.coord_nav = None
+        # if self.skill_done:
+        #     self.coord_nav = None
 
         # If the robot is nearby, the human starts to walk, otherwise, the human
         # just stops there and waits for robot to find it

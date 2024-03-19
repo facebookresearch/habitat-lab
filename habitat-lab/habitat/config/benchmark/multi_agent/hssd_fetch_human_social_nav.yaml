@@ -4,8 +4,8 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
   # Config agent sensors
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: spot_agent
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: fetch
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
   # Config agent hssd data
@@ -15,22 +15,27 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
   # Config agent sensor
   - /habitat/task/measurements:
-    - articulated_agent_force
-    - articulated_agent_colls
     - num_steps
     - did_agents_collide
     - num_agents_collide
+    - composite_stage_goals
+    - pddl_subgoal_reward
+    - rearrange_cooperate_reward
+    - articulated_agent_force
     - force_terminate
-    - social_nav_reward
+    - social_nav_reward #KL: FIXME
     - object_to_goal_distance
+    - articulated_agent_colls
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
-    - social_nav_seek_success
+    # - social_nav_seek_success
+    - social_dist_to_goal
+    - social_nav_to_pos_succ #KL: social nav to goal
     - social_nav_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
@@ -47,16 +52,8 @@ defaults:
     - humanoid_detector_sensor
     - has_finished_oracle_nav
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_goal_to_agent_gps_compass: nav_goal_sensor
-  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_spot_head_stereo_depth_sensor: spot_head_stereo_depth_sensor
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
   - _self_
-
-# This yaml is designed specifically for learning a social nav policy for the Boston Dynamics Spot robot.
-# The major changes compared to the base yaml are the following:
-# (1) obs_keys: we ensure these observations can be obtained from the real robot (Spot)
-# (2) social_nav_reward: social nav reward considers collisions based on a kinematic simulation
-# (3) actions: Spot controls the base linear and angualr velocity
-# (4) simulator: we simulate the environment via the kinematic mode to facilitate sim2real transfer
 
 habitat:
   task:
@@ -67,41 +64,29 @@ habitat:
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
         goal_is_human: True
-      # Defien the human detector
-      humanoid_detector_sensor:
-        # If the human detector function is image or binary flag
-        return_image: False
-        is_return_image_bbox: False
     type: RearrangePddlSocialNavTask-v0
     min_start_distance: 4.0
     reward_measure: social_nav_reward
-    success_measure: nav_seek_success
+    # KL: success_measure: nav_seek_success
+    success_measure: social_nav_to_pos_success
     success_reward: 10.0
     slack_reward: -0.01
     end_on_success: False
     task_spec_base_path: benchmark/multi_agent/
-    task_spec: pddl/multi_agent_social_nav
+    task_spec: pddl/multi_agent_tidy_house
     pddl_domain_def: fp
     min_distance_start_agents: 5.0
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
 
     measurements:
-      # We do kinemantic simulation here, so no dynamic force
+      rearrange_cooperate_reward:
+        stage_sparse_reward: 5.0
+        end_on_collide: True
+        collide_penalty: 0.5
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
-      # Define the social nav reward
-      social_nav_reward:
-        facing_human_reward: 0.01
-        count_coll_pen: 0.01
-        max_count_colls: 1000
-        count_coll_end_pen: 1.0
-      # Define the social nav seek success
-      social_nav_seek_success:
-        must_look_at_targ: False
-        following_step_succ_threshold: 500
-        need_to_face_human: True
 
     actions:
       agent_0_base_velocity:
@@ -120,14 +105,13 @@ habitat:
         ang_speed: 5.0
         enable_rotation_check_for_dyn_slide: False
 
-      # Human random walking action
-      agent_1_oracle_nav_action:
-        type: OracleNavAction
-        motion_control: human_joints
-        spawn_max_dist_to_obj: -1.0
-        dist_thresh: 0.5
-        lin_speed: 10.0
-        ang_speed: 10.0
+      # agent_1_oracle_nav_action:
+      #   type: OracleNavAction
+      #   motion_control: human_joints
+      #   spawn_max_dist_to_obj: -1.0
+      #   dist_thresh: 0.5
+      #   lin_speed: 10.0
+      #   ang_speed: 10.0
 
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
@@ -139,9 +123,12 @@ habitat:
 
   gym:
     obs_keys:
-      - agent_0_articulated_agent_arm_depth
-      - agent_0_spot_head_stereo_depth_sensor
+      - agent_0_head_depth
+      - agent_0_obj_goal_sensor
       - agent_0_humanoid_detector_sensor
+      # added obs_keys
+      - agent_0_localization_sensor
+      
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -153,6 +140,8 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
+      # KL:humanoid detector sensor
+      # - agent_1_articulated_agent_arm_panoptic
 
   environment:
     max_episode_steps: 750
@@ -169,8 +158,22 @@ habitat:
     agents_order:
       - agent_0
       - agent_1
+    agents:
+      agent_0:
+        radius: 0.3
+        height: 1.5
+        articulated_agent_urdf: data/robots/hab_fetch/robots/hab_fetch.urdf
+        articulated_agent_type: "FetchRobot"
+        sim_sensors:
+          # head_rgb_sensor:
+          #   height: 128
+          #   width: 128
+          head_depth_sensor:
+            height: 128
+            width: 128
+          
+        joint_start_noise: 0.0
 
-    # We use the kinematic mode to train the real world social nav policy
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -179,5 +182,7 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
+    data_path: data/social_nav_episode_6_1.json.gz
+    # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz
