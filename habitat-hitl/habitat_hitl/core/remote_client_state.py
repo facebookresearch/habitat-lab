@@ -150,10 +150,10 @@ class RemoteClientState:
         # Or in spot-sim2real, we can import this guy
         print(f"hand {hand_idx}, {pos}")
         # Write the hand pos into the ros buffer
-        # import rospy
-        # rospy.set_param(f'hand_{hand_idx}_pos', list(pos))
-        # rospy_rot = [rot_quat.vector[0],rot_quat.vector[1],rot_quat.vector[2],rot_quat.scalar]
-        # rospy.set_param(f'hand_{hand_idx}_rot', rospy_rot)
+        import rospy
+        rospy.set_param(f'hand_{hand_idx}_pos', list(pos))
+        rospy_rot = [rot_quat.vector[0],rot_quat.vector[1],rot_quat.vector[2],rot_quat.scalar]
+        rospy.set_param(f'hand_{hand_idx}_rot', rospy_rot)
         return pos, rot_quat
 
     def _update_input_state(self, client_states):
