@@ -12,7 +12,7 @@ import pytest
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat_sim import Simulator, built_with_bullet, stage_id
 from habitat_sim.metadata import MetadataMediator
-from habitat_sim.physics import JointType, MotionType
+from habitat_sim.physics import JointType, ManagedRigidObject, MotionType
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
@@ -521,3 +521,247 @@ def test_ao_open_close_queries():
                         < 1e-5
                     )
                     sutils.close_link(obj, link_id)  # debug reset state
+
+
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Collision detection API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
+def test_ontop_util():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
+    hab_cfg = make_cfg(sim_settings)
+    with Simulator(hab_cfg) as sim:
+        # a rigid object to test
+        table_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_table_02_:0000"
+        )
+
+        # an articulated object to test
+        counter_object = sutils.get_obj_from_handle(
+            sim, "kitchen_counter_:0000"
+        )
+
+        # the link to test
+        drawer_link_id = 7
+
+        drawer_link_object_ids = [
+            obj_id
+            for obj_id in counter_object.link_object_ids.keys()
+            if counter_object.link_object_ids[obj_id] == drawer_link_id
+        ]
+        assert len(drawer_link_object_ids) == 1
+        drawer_link_object_id = drawer_link_object_ids[0]
+
+        # open the drawer
+        drawer_link_dof = counter_object.get_link_joint_pos_offset(
+            drawer_link_id
+        )
+        joint_positions = counter_object.joint_positions
+        joint_positions[drawer_link_dof] = 0.5
+        counter_object.joint_positions = joint_positions
+
+        # drop an object into the open drawer
+        container_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_kitchen_utensil_08_:0000"
+        )
+        container_object.translation = mn.Vector3(-1.7, 0.6, 0.2)
+
+        # in the initial state:
+        # objects are on the table
+        assert sutils.ontop(sim, table_object, True) == [
+            102,
+            103,
+            51,
+            52,
+            53,
+            55,
+        ]
+        assert sutils.ontop(sim, table_object, False) == sutils.ontop(
+            sim, table_object.object_id, False
+        )
+        # objects about the counter are floating slightly and don't register
+        assert len(sutils.ontop(sim, counter_object, False)) == 0
+        assert len(sutils.ontop(sim, drawer_link_object_id, False)) == 0
+
+        # after some simulation, object settle onto the counter and drawer
+        sim.step_physics(0.75)
+
+        # objects are on the table
+        # NOTE: we only do collision detection on the first query after a state change
+        assert sutils.ontop(sim, table_object, True) == [
+            102,
+            103,
+            51,
+            52,
+            53,
+            55,
+        ]
+        assert sutils.ontop(sim, table_object, False) == sutils.ontop(
+            sim, table_object.object_id, False
+        )
+        on_counter = sutils.ontop(sim, counter_object, False)
+        assert on_counter == [
+            65,
+            1,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            66,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            63,
+        ]
+        assert container_object.object_id in on_counter
+        assert sutils.ontop(sim, drawer_link_object_id, False) == [
+            container_object.object_id
+        ]
+        assert sutils.ontop(sim, counter_object.object_id, False) == on_counter
+
+
+@pytest.mark.skipif(
+    not built_with_bullet,
+    reason="Collision detection API requires Bullet physics.",
+)
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/"),
+    reason="Requires ReplicaCAD dataset.",
+)
+def test_on_floor_util():
+    sim_settings = default_sim_settings.copy()
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    sim_settings["scene"] = "apt_0"
+    hab_cfg = make_cfg(sim_settings)
+    with Simulator(hab_cfg) as sim:
+        all_objects = sutils.get_all_object_ids(sim)
+        ao_link_map = sutils.get_ao_link_id_map(sim)
+        ao_aabbs = sutils.get_ao_root_bbs(sim)
+
+        for obj_id, handle in all_objects.items():
+            obj = sutils.get_obj_from_id(sim, obj_id, ao_link_map)
+            if isinstance(obj, ManagedRigidObject):
+                obj_on_floor = sutils.on_floor(
+                    sim, obj, ao_link_map=ao_link_map, ao_aabbs=ao_aabbs
+                )
+                print(f"{handle}: {obj_on_floor}")
+                # check a known set of relationships in this scene
+                if "plant" in handle:
+                    assert obj_on_floor, "All potted plants are on the floor."
+                if "lamp" in handle:
+                    assert (
+                        not obj_on_floor
+                    ), "All lamps are on furniture off the floor."
+                if "chair" in handle:
+                    assert (
+                        obj_on_floor
+                    ), "All chairs are furniture on the floor."
+                if "rug" in handle:
+                    assert obj_on_floor, "All rugs are on the floor."
+                if "remote-control" in handle:
+                    assert (
+                        not obj_on_floor
+                    ), "All remotes are on furniture, off the floor."
+                if "picture" in handle:
+                    assert (
+                        not obj_on_floor
+                    ), "All pictures are on furniture, off the floor."
+                if "beanbag" in handle:
+                    assert (
+                        obj_on_floor
+                    ), "All beanbags are furniture on the floor."
+
+        # also test the regularized distance functions directly
+        table_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_table_02_:0000"
+        )
+        objects_in_table = [
+            "frl_apartment_choppingboard_02_:0000",
+            "frl_apartment_kitchen_utensil_01_:0000",
+            "frl_apartment_pan_01_:0000",
+            "frl_apartment_bowl_07_:0000",
+            "frl_apartment_kitchen_utensil_05_:0000",
+        ]
+        for obj_handle in objects_in_table:
+            obj = sutils.get_obj_from_handle(sim, obj_handle)
+            l2_dist = (obj.translation - table_object.translation).length()
+            reg_dist = sutils.size_regularized_distance(
+                sim,
+                table_object.object_id,
+                obj.object_id,
+                ao_link_map,
+                ao_aabbs,
+            )
+            # since the objects are in the shelves of the table, regularized distance is o
+            assert reg_dist == 0, f"{obj_handle}"
+            # L2 distance is computed from CoM or anchor point and will be non-zero
+            assert l2_dist > 0
+
+        objects_on_table = [
+            "frl_apartment_lamp_02_:0001",
+            "frl_apartment_lamp_02_:0000",
+        ]
+        for obj_handle in objects_on_table:
+            obj = sutils.get_obj_from_handle(sim, obj_handle)
+            l2_dist = (obj.translation - table_object.translation).length()
+            reg_dist = sutils.size_regularized_distance(
+                sim,
+                table_object.object_id,
+                obj.object_id,
+                ao_link_map,
+                ao_aabbs,
+            )
+            # since the objects are "on" the table surface, regularized distance is small, but non-zero
+            assert reg_dist != 0, f"{obj_handle}"
+            assert reg_dist < 0.1, f"{obj_handle}"
+            # L2 distance is computed from CoM or anchor point and will be non-zero
+            assert l2_dist > 0
+            assert l2_dist > reg_dist
+
+        # test distance between two large neighboring objects
+        sofa = sutils.get_obj_from_handle(sim, "frl_apartment_sofa_:0000")
+        shelf = sutils.get_obj_from_handle(
+            sim, "frl_apartment_wall_cabinet_01_:0000"
+        )
+        reg_dist = sutils.size_regularized_distance(
+            sim, sofa.object_id, shelf.object_id, ao_link_map, ao_aabbs
+        )
+        assert (
+            reg_dist < 0.1
+        ), "sofa and shelf should be very close heuristically"
+        l2_dist = (sofa.translation - shelf.translation).length()
+        assert l2_dist > reg_dist
+        assert (
+            l2_dist > 1.0
+        ), "sofa is more than 1 meter from center to end, so l2 distance to neighbors is typically large."
+
+        # test the bb size heuristic with known directions
+        sofa.transformation = mn.Matrix4.identity_init()
+        sofa_bb, transform = sutils.get_bb_for_object_id(
+            sim, sofa.object_id, ao_link_map, ao_aabbs
+        )
+        assert transform == mn.Matrix4.identity_init()
+        # check the obvious axis-aligned vectors
+        for axis in range(3):
+            vec = mn.Vector3()
+            vec[axis] = 1.0
+            axis_size_along, _center = sutils.get_obj_size_along(
+                sim, sofa.object_id, vec, ao_link_map, ao_aabbs
+            )
+            assert axis_size_along == sofa_bb.size()[axis] / 2.0

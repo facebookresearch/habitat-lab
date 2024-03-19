@@ -46,7 +46,7 @@ class Receptacle(ABC):
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
-        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptacles.
         :param up: The "up" direction of the receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         """
         self.name = name
@@ -195,8 +195,8 @@ class AABBReceptacle(Receptacle):
         :param bounds: The AABB of the Receptacle.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
-        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
-        :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptacles.
+        :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexibility.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self._bounds = bounds
@@ -311,7 +311,7 @@ class TriangleMeshReceptacle(Receptacle):
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
         :param mesh_data: The Receptacle's mesh data. A magnum.trade.MeshData object (indices len divisible by 3).
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
-        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptacles.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
@@ -453,7 +453,7 @@ def get_all_scenedataset_receptacles(
 
     :param sim: Simulator must be provided.
     """
-    # cache the rigid and articulated receptacles seperately
+    # cache the rigid and articulated receptacles separately
     receptacles: Dict[str, Dict[str, List[str]]] = {
         "stage": {},
         "rigid": {},
@@ -531,6 +531,7 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
+    _manager.set_preferred_plugins("StanfordImporter", ["AssimpImporter"])
     importer = _manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(mesh_file)
 
@@ -935,12 +936,12 @@ def get_navigable_receptacles(
     """
     Given a list of receptacles, return the ones that are heuristically navigable from the largest indoor navmesh island.
 
-    Navigability heuristic is that at least two Receptacle AABB corners are within 1.5m of the largest indoor navmesh island and obejct is within 0.2m of the configured agent height.
+    Navigability heuristic is that at least two Receptacle AABB corners are within 1.5m of the largest indoor navmesh island and object is within 0.2m of the configured agent height.
 
     :param sim: The Simulator instance.
     :param receptacles: The list of Receptacle instances to cull.
     :param nav_island: The NavMesh island on which to check accessibility. -1 is the full NavMesh.
-    :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minumum distance).
+    :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minimum distance).
 
     :return: The list of heuristic passing Receptacle instances.
     """

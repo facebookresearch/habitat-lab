@@ -292,7 +292,7 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
-    # If the condition of sliding includs the checking of rotation
+    # If the condition of sliding includes the checking of rotation
     enable_rotation_check_for_dyn_slide: bool = True
 
 
@@ -997,9 +997,9 @@ class SocialNavStatsMeasurementConfig(MeasurementConfig):
     total_steps: int = 1500
     # If we want to compute the shortest path to human
     enable_shortest_path_computation: bool = False
-    # The min distance for considering backup and yiled motions
+    # The min distance for considering backup and yield motions
     dis_threshold_for_backup_yield: float = 1.5
-    # The min vel for considering yiled motion
+    # The min vel for considering yield motion
     min_abs_vel_for_yield: float = 1.0
     # The dot product value for considering that the robot is facing human
     robot_face_human_threshold: float = 0.5
@@ -1304,7 +1304,7 @@ class SocialNavReward(MeasurementConfig):
     facing_human_dis: float = 3.0
     # -1 means that there is no facing_human_reward
     facing_human_reward: float = -1.0
-    # toward_human_reward defualt is 1.0
+    # toward_human_reward default is 1.0
     toward_human_reward: float = 1.0
     # -1 means that there is no near_human_bonus
     near_human_bonus: float = -1.0
@@ -1615,6 +1615,13 @@ class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
 
 
 @dataclass
+class JawPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "articulated_agent_jaw_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
@@ -1624,6 +1631,20 @@ class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
 @dataclass
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "articulated_agent_arm_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class JawRGBSensorConfig(HabitatSimRGBSensorConfig):
+    uuid: str = "articulated_agent_jaw_rgb"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class JawDepthSensorConfig(HabitatSimDepthSensorConfig):
+    uuid: str = "articulated_agent_jaw_depth"
     width: int = 256
     height: int = 256
 
@@ -2084,6 +2105,18 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="jaw_depth_sensor",
+    node=JawDepthSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_rgb_sensor",
+    node=JawRGBSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="head_depth_sensor",
     node=HeadDepthSensorConfig,
 )
@@ -2117,6 +2150,12 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="arm_panoptic_sensor",
     node=ArmPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="jaw_panoptic_sensor",
+    node=JawPanopticSensorConfig,
 )
 
 cs.store(

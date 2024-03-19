@@ -51,6 +51,7 @@ class HumanoidSeqPoseController(HumanoidBaseController):
             self.humanoid_motion.poses[0].root_transform
         )
         self.step_size = int(self.humanoid_motion.fps / self.motion_fps)
+        self.base_transform_offset = mn.Matrix4()
 
     def reset(self, base_transformation: mn.Matrix4) -> None:
         """Reset the joints on the human. (Put in rest state)"""
@@ -59,6 +60,17 @@ class HumanoidSeqPoseController(HumanoidBaseController):
 
         # The first pose of the motion file will be set at base_transformation
         self.ref_pose = base_transformation
+        self.base_transform_offset = mn.Matrix4()
+        self.calculate_pose()
+
+    def apply_base_transformation(
+        self, base_transformation: mn.Matrix4
+    ) -> None:
+        """Sets the current pose to the base transformation, making the rest of poses are relative to this one"""
+        self.base_transform_offset = mn.Matrix4()
+        self.base_transform_offset.translation = (
+            -base_transformation.translation + self.base_offset
+        )
 
         self.calculate_pose()
 
@@ -108,7 +120,7 @@ class HumanoidSeqPoseController(HumanoidBaseController):
             0, 0.9, 0
         )
         curr_poses = self.humanoid_motion.poses[self.motion_frame].joints
-        self.obj_transform_offset = curr_transform
+        self.obj_transform_offset = self.base_transform_offset @ curr_transform
         self.joint_pose = curr_poses
 
         if advance_pose:

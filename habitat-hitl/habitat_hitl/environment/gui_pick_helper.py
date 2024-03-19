@@ -21,12 +21,12 @@ RING_PULSE_SIZE: Final[float] = 0.03
 class GuiPickHelper:
     """Helper for picking up objects from the GUI."""
 
-    def __init__(self, gui_service, agent_idx):
+    def __init__(self, gui_service):
         self._app_service = gui_service
-        self._agent_idx = agent_idx
         self._rom = self._get_sim().get_rigid_object_manager()
         self._obj_ids = self._get_sim()._scene_obj_ids
         self._dist_to_highlight_obj = DIST_HIGHLIGHT
+        self._pick_candidate_indices = []
 
     def _get_sim(self):
         return self._app_service.sim
@@ -49,6 +49,7 @@ class GuiPickHelper:
         sim = self._get_sim()
         self._rom = sim.get_rigid_object_manager()
         self._obj_ids = sim._scene_obj_ids
+        self._pick_candidate_indices = []
 
     def _closest_point_and_dist_to_query_position(self, points, query_pos):
         distances = np.linalg.norm(points - query_pos, axis=1)
@@ -71,24 +72,16 @@ class GuiPickHelper:
             obj_positions, query_pos
         )
         if distance < self._app_service.hitl_config.can_grasp_place_threshold:
-            self._pick_candidate_index = obj_index
+            self._pick_candidate_indices.append(obj_index)
             return self._obj_ids[obj_index]
         else:
-            self._pick_candidate_index = None
             return None
 
     def _draw_circle(self, pos, color, radius, billboard):
         num_segments = 24
-        self._app_service.line_render.draw_circle(
-            pos,
-            radius,
-            color,
-            num_segments,
+        self._app_service.gui_drawer.draw_circle(
+            pos, radius, color, num_segments, billboard=billboard
         )
-        if self._app_service.client_message_manager:
-            self._app_service.client_message_manager.add_highlight(
-                pos, radius, billboard=billboard, color=color
-            )
 
     def _add_highlight_ring(
         self, pos, color, radius, do_pulse=False, billboard=True
@@ -100,15 +93,19 @@ class GuiPickHelper:
     def viz_objects(self):
         obj_positions = self._get_object_positions()
 
-        if self._pick_candidate_index is not None:
-            obj_id = self._obj_ids[self._pick_candidate_index]
-            pos = self._rom.get_object_by_id(obj_id).transformation.translation
-            self._add_highlight_ring(
-                pos,
-                COLOR_GRASP_PREVIEW,
-                RADIUS_GRASP_PREVIEW,
-                do_pulse=False,
-            )
+        if len(self._pick_candidate_indices) > 0:
+            for candidate_index in self._pick_candidate_indices:
+                obj_id = self._obj_ids[candidate_index]
+                pos = self._rom.get_object_by_id(
+                    obj_id
+                ).transformation.translation
+                self._add_highlight_ring(
+                    pos,
+                    COLOR_GRASP_PREVIEW,
+                    RADIUS_GRASP_PREVIEW,
+                    do_pulse=False,
+                )
+            self._pick_candidate_indices = []
         else:
             for i in range(len(obj_positions)):
                 obj_id = self._obj_ids[i]

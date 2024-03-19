@@ -12,7 +12,7 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -31,8 +31,10 @@ from habitat_hitl._internal.networking.networking_process import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.gui_drawer import GuiDrawer
+from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
-from habitat_hitl.core.remote_gui_input import RemoteGuiInput
+from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import (
     BaseRecorder,
     NullRecorder,
@@ -41,10 +43,13 @@ from habitat_hitl.core.serialize_utils import (
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
+from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
 )
 from habitat_hitl.environment.episode_helper import EpisodeHelper
+from habitat_sim.gfx import DebugLineRender
 
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
@@ -72,11 +77,12 @@ class AppDriver:
 class HitlDriver(AppDriver):
     def __init__(
         self,
+        *,
         config,
-        gui_input,
-        line_render,
-        text_drawer,
-        create_app_state_lambda,
+        gui_input: GuiInput,
+        debug_line_drawer: Optional[DebugLineRender],
+        text_drawer: AbstractTextDrawer,
+        create_app_state_lambda: Callable,
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -86,16 +92,7 @@ class HitlDriver(AppDriver):
         self._dataset_config = config.habitat.dataset
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
-        if (
-            not self._hitl_config.experimental.headless
-            and gui_input.is_stub_implementation
-        ):
-            raise RuntimeError(
-                "HitlDriver with experimental.headless=False requires a non-stub-implementation GuiInput."
-            )
         self._gui_input = gui_input
-
-        line_render.set_line_width(self._hitl_config.debug_line_width)
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -112,10 +109,18 @@ class HitlDriver(AppDriver):
             self.gym_habitat_env.unwrapped.habitat_env
         )
 
-        if self._hitl_config.gui_controlled_agent.agent_index is not None:
+        # If all agents are gui-controlled, we should have no camera sensors and thus no renderer.
+        if len(config.habitat_hitl.gui_controlled_agents) == len(
+            config.habitat.simulator.agents
+        ):
+            assert self.get_sim().renderer is None
+
+        for (
+            gui_controlled_agent_config
+        ) in self._hitl_config.gui_controlled_agents:
             sim_config = config.habitat.simulator
             gui_agent_key = sim_config.agents_order[
-                self._hitl_config.gui_controlled_agent.agent_index
+                gui_controlled_agent_config.agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if (
@@ -162,31 +167,37 @@ class HitlDriver(AppDriver):
         self._debug_images = self._hitl_config.debug_images
 
         self._viz_anim_fraction: float = 0.0
-        self._pending_cursor_style = None
+        self._pending_cursor_style: Optional[Any] = None
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        self._check_init_server(line_render)
+        self._client_message_manager = None
+        if self.network_server_enabled:
+            # TODO: Only one user is currently supported.
+            users = Users(1)
+            self._client_message_manager = ClientMessageManager(users)
+
+        gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
+        gui_drawer.set_line_width(self._hitl_config.debug_line_width)
+
+        self._check_init_server(gui_drawer, gui_input)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
 
-        self._client_message_manager = None
-        if self.network_server_enabled:
-            self._client_message_manager = ClientMessageManager()
-
-        gui_agent_controller: Any = (
-            self.ctrl_helper.get_gui_agent_controller()
-            if self.ctrl_helper
-            else None
+        gui_agent_controllers: Any = (
+            self.ctrl_helper.get_gui_agent_controllers()
         )
+
+        # TODO: Dependency injection
+        text_drawer._client_message_manager = self._client_message_manager
 
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
             gui_input=gui_input,
-            remote_gui_input=self._remote_gui_input,
-            line_render=line_render,
+            remote_client_state=self._remote_client_state,
+            gui_drawer=gui_drawer,
             text_drawer=text_drawer,
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
@@ -198,12 +209,18 @@ class HitlDriver(AppDriver):
             set_cursor_style=self._set_cursor_style,
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
-            gui_agent_controller=gui_agent_controller,
+            gui_agent_controllers=gui_agent_controllers,
         )
 
         self._app_state: AppState = None
         assert create_app_state_lambda is not None
         self._app_state = create_app_state_lambda(self._app_service)
+
+        # Limit the number of float decimals in JSON transmissions
+        if hasattr(
+            self.get_sim().gfx_replay_manager, "set_max_decimal_places"
+        ):
+            self.get_sim().gfx_replay_manager.set_max_decimal_places(4)
 
         self._reset_environment()
 
@@ -214,8 +231,8 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.networking.enable
 
-    def _check_init_server(self, line_render):
-        self._remote_gui_input = None
+    def _check_init_server(self, gui_drawer: GuiDrawer, gui_input: GuiInput):
+        self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
             # How many frames we can simulate "ahead" of what keyframes have been sent.
@@ -227,8 +244,8 @@ class HitlDriver(AppDriver):
                 self._hitl_config.networking, max_steps_ahead
             )
             launch_networking_process(self._interprocess_record)
-            self._remote_gui_input = RemoteGuiInput(
-                self._interprocess_record, line_render
+            self._remote_client_state = RemoteClientState(
+                self._interprocess_record, gui_drawer, gui_input
             )
 
     def _check_terminate_server(self):
@@ -344,7 +361,7 @@ class HitlDriver(AppDriver):
         self._obs, self._metrics = self.gym_habitat_env.reset(return_info=True)
 
         if self.network_server_enabled:
-            self._remote_gui_input.clear_history()
+            self._remote_client_state.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
         if self.ctrl_helper:
@@ -441,8 +458,8 @@ class HitlDriver(AppDriver):
     def sim_update(self, dt):
         post_sim_update_dict: Dict[str, Any] = {}
 
-        if self._remote_gui_input:
-            self._remote_gui_input.update()
+        if self._remote_client_state:
+            self._remote_client_state.update()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         self._viz_anim_fraction = (
@@ -500,12 +517,12 @@ class HitlDriver(AppDriver):
             np.flipud(image) for image in debug_images
         ]
 
-        if self._remote_gui_input:
-            self._remote_gui_input.on_frame_end()
+        if self._remote_client_state:
+            self._remote_client_state.on_frame_end()
 
         if self.network_server_enabled:
             if (
-                self._hitl_config.networking.client_sync.camera_transform
+                self._hitl_config.networking.client_sync.server_camera
                 and "cam_transform" in post_sim_update_dict
             ):
                 cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
@@ -527,10 +544,11 @@ class HitlDriver(AppDriver):
                     if "rigUpdates" in keyframe_obj:
                         del keyframe_obj["rigUpdates"]
                 # Insert server->client message into the keyframe
-                message = self._client_message_manager.get_message_dict()
+                # TODO: Only one user is currently supported.
+                message = self._client_message_manager.get_messages()[0]
                 if len(message) > 0:
                     keyframe_obj["message"] = message
-                    self._client_message_manager.clear_message_dict()
+                    self._client_message_manager.clear_messages()
                 # Send the keyframe
                 self._interprocess_record.send_keyframe_to_networking_thread(
                     keyframe_obj
