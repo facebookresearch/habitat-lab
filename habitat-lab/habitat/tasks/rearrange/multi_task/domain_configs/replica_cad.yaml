@@ -67,7 +67,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.45
       cmp: 'greater'
-      dist_thresh: 0.1
+      joint_dist_thresh: 0.1
     set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 0.45
@@ -80,7 +80,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.0
       cmp: 'close'
-      dist_thresh: 0.15
+      joint_dist_thresh: 0.15
     set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 0.0
@@ -93,7 +93,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 1.22
       cmp: 'greater'
-      dist_thresh: 0.15
+      joint_dist_thresh: 0.15
     set_state_fn:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_articulated_object_at_state
       target_val: 1.22
@@ -106,7 +106,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_articulated_object_at_state
       target_val: 0.0
       cmp: 'close'
-      dist_thresh: 0.15
+      joint_dist_thresh: 0.15
 
   - name: robot_at
     args:
@@ -121,7 +121,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_position
       dist_thresh: 2.0
 
-  - name: at
+  - name: object_at
     args:
       - name: obj
         expr_type: movable_entity_type
@@ -195,7 +195,7 @@ actions:
         - robot_at(obj, robot)
     postcondition:
       - not_holding(robot)
-      - at(place_obj, obj)
+      - object_at(place_obj, obj)
 
   - name: open_fridge
     parameters:

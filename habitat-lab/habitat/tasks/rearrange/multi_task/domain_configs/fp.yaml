@@ -63,7 +63,7 @@ predicates:
       _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_position
       dist_thresh: 2.0
 
-  - name: at
+  - name: object_at
     args:
       - name: obj
         expr_type: movable_entity_type
@@ -207,7 +207,7 @@ actions:
         - robot_at(obj, robot)
     postcondition:
       - not_holding(robot)
-      - at(place_obj, obj)
+      - object_at(place_obj, obj)
     task_info:
       task: RearrangePlaceTask-v0
       task_def: "place"

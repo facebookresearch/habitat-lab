@@ -68,6 +68,10 @@ def set_robot_holding(
     if not hold_state and agent_data.grasp_mgr.is_grasped:
         agent_data.grasp_mgr.desnap(True)
     elif hold_state:
+        if obj is None:
+            raise ValueError(
+                f"If setting hold state {hold_state=}, must set object"
+            )
         # Swap objects to the desired object.
         obj_idx = cast(int, sim_info.search_for_entity(obj))
         agent_data.grasp_mgr.desnap(True)
@@ -159,7 +163,7 @@ def set_robot_position(
     num_spawn_attempts: int = 200,
 ):
     """
-    Set the robot transformation to be within `dist_thresh` of
+    Set the robot transformation to be within `dist_thresh` of `at_entity`.
     """
 
     sim = sim_info.sim
@@ -259,7 +263,7 @@ def set_object_at(
     ):
         raise ValueError(f"Got unexpected obj {obj}")
 
-    elif sim_info.check_type_matches(
+    if sim_info.check_type_matches(
         at_entity, SimulatorObjectType.GOAL_ENTITY.value
     ):
         targ_idx = cast(
@@ -304,12 +308,12 @@ def is_articulated_object_at_state(
     sim_info: PddlSimInfo,
     target_val: float,
     cmp: str,
-    dist_thresh: float = 0.1,
+    joint_dist_thresh: float = 0.1,
 ) -> bool:
     """
     Checks if an articulated object matches a joint state condition.
 
-    :param cmp: The comparison to use. Can be "greater", "less", or "close".
+    :param cmp: The comparison to use. Can be "greater", "lesser", or "close".
     """
 
     if not sim_info.check_type_matches(
@@ -325,11 +329,11 @@ def is_articulated_object_at_state(
     )
     cur_value = marker.get_targ_js()
     if cmp == "greater":
-        return cur_value > target_val - dist_thresh
-    elif cmp == "less":
-        return cur_value < target_val + dist_thresh
+        return cur_value > target_val - joint_dist_thresh
+    elif cmp == "lesser":
+        return cur_value < target_val + joint_dist_thresh
     elif cmp == "close":
-        return abs(cur_value - target_val) < dist_thresh
+        return abs(cur_value - target_val) < joint_dist_thresh
     else:
         raise ValueError(f"Unrecognized comparison {cmp}")
 
