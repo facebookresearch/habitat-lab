@@ -259,6 +259,7 @@ class RearrangeTask(NavigationTask):
                         agent_rot = 0
                     self._set_articulated_agent_start(agent_idx, agent_pos, agent_rot)
         print("TEST articulated_agent_pos_start: ", self._articulated_agent_pos_start)
+        print("#############################################")
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

@@ -500,6 +500,7 @@ class RearrangeEpisodeGenerator:
         while len(generated_episodes) < num_episodes:
             try:
                 self._scene_sampler.set_cur_episode(len(generated_episodes))
+                print(f"---------------------Generating {len(generated_episodes)+1} episodes ---------------")
                 new_episode = self.generate_single_episode()
             except Exception:
                 new_episode = None

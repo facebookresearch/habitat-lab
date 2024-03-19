@@ -333,7 +333,9 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
         # human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
         # print("TEST in step: ", robot_pos, human_pos)
-        # print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
+        if self.coord_nav is None:
+            print("###-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
+        #DEBUG: coord_nav is aligned with human_goal, and is been called
 
 
         if self.coord_nav is None:
@@ -347,8 +349,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         ] = self.coord_nav
 
         ret_val = super().step(*args, **kwargs)
-        # if self.skill_done:
-        #     self.coord_nav = None
+        if self.skill_done:
+            self.coord_nav = None
 
         try:
             kwargs["task"].measurements.measures[

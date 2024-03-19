@@ -39,6 +39,7 @@ import cv2
 import matplotlib.pyplot as plt
 import math
 import csv
+import random
 
 
 def to_grid(pathfinder, points, grid_dimensions):
@@ -101,25 +102,13 @@ def append_to_csv(filename, x1, y1, x2, y2):
         writer = csv.writer(csvfile)
         writer.writerow([x1, y1, x2, y2])
 
-def door_samples(pathfinder, config) -> List:
-    # Get top down map
-    top_down_map = maps.get_topdown_map(
-            pathfinder, height=0.0, meters_per_pixel=0.025
-        )
-
-    recolor_map = np.array(
-        [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
-    )
-    top_down_map = recolor_map[top_down_map]
-    cv2.imwrite("top_down_map_generator.jpg", top_down_map)
-    
+def generate_door_pos() -> List:
     # Click to get the door coordinates
     image = plt.imread("top_down_map_generator.jpg")
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.imshow(image)
     plt.title('Click on the image to get coordinates')
-
     coords = []
     def onclick(event):
         ix, iy = int(event.xdata), int(event.ydata) # Convert float coordinates to integers
@@ -133,15 +122,66 @@ def door_samples(pathfinder, config) -> List:
     # Connect the onclick function to the mouse click event
     cid = fig.canvas.mpl_connect('button_press_event', onclick)
     plt.show()
+    print("TEST: coords: ", coords)
+    return coords
+
+def is_door_valid(coords, grid_dim, pathfinder) -> bool:
+    z1 = 0.0
+    door1 = from_grid(pathfinder, coords[0], grid_dim)
+    door2 = from_grid(pathfinder, coords[1], grid_dim)
+    door1_pos = np.array([door1[0], z1, door1[2]])
+    door2_pos = np.array([door2[0], z1, door2[2]])
+    mid_door_pos = (door1_pos + door2_pos) / 2.0
+    dist_to_obs = pathfinder.distance_to_closest_obstacle(
+        mid_door_pos,
+        max_search_radius=10.0
+        )
+    print("Test distance door to obstacle: ", dist_to_obs)
+    if dist_to_obs > 0.12 and dist_to_obs < 0.4:
+        return True
+    return False
+
+def door_samples(pathfinder, config) -> List:
+    # Get top down map
+    top_down_map = maps.get_topdown_map(
+            pathfinder, height=0.0, meters_per_pixel=0.025
+        )
+
+    recolor_map = np.array(
+        [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
+    )
+    top_down_map = recolor_map[top_down_map]
+    cv2.imwrite("top_down_map_generator.jpg", top_down_map)
+
+    # Check mid_door valid wrt obstacles
+    grid_dim = (top_down_map.shape[0], top_down_map.shape[1])
+
+    # Generate Valid Doors and Write into csv file
+    # coords = generate_door_pos()
+    # while (not is_door_valid(coords, grid_dim, pathfinder)):
+    #     coords = generate_door_pos()
     
-    # append to csv file
+    # # append valid door pos to csv file
+    # file_name = config.scene_sets[0].included_substrings[0] #substring
+    # file_path = f"data_{file_name}.csv"
+    # append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    
+    # Get door pos randomly from csv file
+    coords = []
     file_name = config.scene_sets[0].included_substrings[0] #substring
     file_path = f"data_{file_name}.csv"
-    append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    with open(file_path, 'r') as csvfile:
+        # Create a CSV reader object
+        csvreader = csv.reader(csvfile)
+        # Convert CSV data to a list of lists
+        data = list(csvreader)
+        total_rows = len(data)
+        random_index = random.randint(0, total_rows - 1)
+        row_list = data[random_index]
+        coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
 
     # Get the end point for door_line
-    print("-------Coords for Door position----------")
-    grid_dim = (top_down_map.shape[0], top_down_map.shape[1])
+    print("-------Coords for Valid Door position----------")
     door1 = from_grid(pathfinder, coords[0], grid_dim)
     door2 = from_grid(pathfinder, coords[1], grid_dim)
     door_end_xy = [door1[0], door1[2]]
@@ -170,13 +210,6 @@ def door_samples(pathfinder, config) -> List:
     cv2.circle(top_down_map, [int(mid_door_xy[0]), int(mid_door_xy[1])], 10, (255, 255, 0), -1)
     cv2.imwrite("top_down_map_door_generator.jpg", top_down_map)
     
-    # Check mid_door valid wrt obstacles
-    dist_to_obs = pathfinder.distance_to_closest_obstacle(
-        mid_door_pos,
-        max_search_radius=10.0
-        )
-    print("Test distance door to obstacle: ", dist_to_obs)
-
     # Generate One Valid pair of sampled points across the door
     print("----------Start Sampling points-----------")
     sampled_points_a = [] #left point
@@ -213,10 +246,10 @@ def door_samples(pathfinder, config) -> List:
             cv2.circle(top_down_map, [i, j], 5, (255, 0, 0), -1) #red points
                 
         return samples_a, samples_b
-        
+    
+    print("-------Get sampled A B group points----------") 
     while(len(sampled_points_a) < 2 or len(sampled_points_b) < 2):
         sampled_points_a, sampled_points_b = get_opposite_points()
-        print("Get sampled group points with one try ... ")
     
     cv2.imwrite("top_down_map_door_samples_generator.jpg", top_down_map)
 
@@ -239,7 +272,7 @@ def door_samples(pathfinder, config) -> List:
     sorted_points = sorted(sampled_points_b, key=lambda point: distance_to_line(point))
     
     start_sample = sampled_points_a[0]
-    goal_sample = sampled_points_b[1]
+    goal_sample = sampled_points_b[-1]
     robot_start_sample = sampled_points_b[0]
     
     return [start_sample, goal_sample, robot_start_sample]
