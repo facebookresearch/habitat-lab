@@ -1247,7 +1247,7 @@ def open_link(
     set_link_normalized_joint_position(objectA, link_ix, 1.0)
 
 
-def next_to(
+def bb_next_to(
     bb_a: mn.Range3D,
     bb_b: mn.Range3D,
     transform_a: mn.Matrix4 = None,
@@ -1292,3 +1292,53 @@ def next_to(
         return False
 
     return True
+
+
+def obj_next_to(
+    sim: habitat_sim.Simulator,
+    object_id_a: int,
+    object_id_b: int,
+    vertical_threshold=0.1,
+    l2_threshold=0.3,
+    ao_link_map: Dict[int, int] = None,
+    ao_aabbs: Dict[int, mn.Range3D] = None,
+) -> bool:
+    """
+    Check whether or not two objects should be considered "next to" one another.
+    Concretely, consists of two checks:
+     1. height difference between the lowest points on the two objects to check that they are approximately resting on the same surface.
+     2. regularized L2 distance between object centers. Regularized in this case means displacement vector is truncted by each object's heuristic size.
+
+    :param sim: The Simulator instance.
+    :param object_id_a: object_id of the first ManagedObject or link.
+    :param object_id_b: object_id of the second ManagedObject or link.
+    :param vertical_threshold: vertical distance allowed between objects' lowest points.
+    :param l2_threshold: regularized L2 distance allow between the objects' centers.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
+
+    :return: Whether or not the objects are heuristically "next to" one another.
+    """
+
+    assert object_id_a != object_id_b, "Object cannot be 'next to' itself."
+
+    assert (
+        object_id_a != habitat_sim.stage_id
+        and object_id_b != habitat_sim.stage_id
+    ), "Cannot compute distance between the stage and its contents."
+
+    obja_bb, transform_a = get_bb_for_object_id(
+        sim, object_id_a, ao_link_map, ao_aabbs
+    )
+    objb_bb, transform_b = get_bb_for_object_id(
+        sim, object_id_b, ao_link_map, ao_aabbs
+    )
+
+    return bb_next_to(
+        obja_bb,
+        objb_bb,
+        transform_a,
+        transform_b,
+        vertical_threshold,
+        l2_threshold,
+    )
