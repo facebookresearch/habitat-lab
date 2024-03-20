@@ -651,7 +651,7 @@ def get_obj_from_handle(
     Get a ManagedRigidObject or ManagedArticulatedObject from its instance handle.
 
     :param sim: The Simulator instance.
-    :param obj_handle: object istance handle for which ManagedObject is desired.
+    :param obj_handle: object instance handle for which ManagedObject is desired.
 
     :return: a ManagedObject or None
     """
@@ -898,7 +898,7 @@ def within(
     first_voting_keypoint = 0
 
     if center_ensures_containment:
-        # initialize the list from keypoint 0 (center of bounding box) which gaurantees containment
+        # initialize the list from keypoint 0 (center of bounding box) which guarantees containment
         containment_ids = list(keypoint_intersect_set[0])
         first_voting_keypoint = 1
 
@@ -1299,7 +1299,7 @@ def obj_next_to(
     object_id_a: int,
     object_id_b: int,
     vertical_threshold=0.1,
-    l2_threshold=0.3,
+    l2_threshold=0.5,
     ao_link_map: Dict[int, int] = None,
     ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
@@ -1313,7 +1313,7 @@ def obj_next_to(
     :param object_id_a: object_id of the first ManagedObject or link.
     :param object_id_b: object_id of the second ManagedObject or link.
     :param vertical_threshold: vertical distance allowed between objects' lowest points.
-    :param l2_threshold: regularized L2 distance allow between the objects' centers.
+    :param l2_threshold: regularized L2 distance allow between the objects' centers. This should be tailored to the scenario.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
 
