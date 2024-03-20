@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 # TODO, lots of typing errors in here
-
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 import attr

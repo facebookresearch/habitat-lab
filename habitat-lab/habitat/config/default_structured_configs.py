@@ -463,12 +463,18 @@ class GPSSensorConfig(LabSensorConfig):
 @dataclass
 class RobotStartCompassSensorConfig(CompassSensorConfig):
     type: str = "RobotStartCompassSensor"
-
+    
+@dataclass
+class RobotRotSensorConfig(CompassSensorConfig):
+    type: str = "RobotRotSensor"
 
 @dataclass
 class RobotStartGPSSensorConfig(GPSSensorConfig):
     type: str = "RobotStartGPSSensor"
-
+    
+@dataclass
+class RobotPositionSensorConfig(GPSSensorConfig):
+    type: str = "RobotPositionSensor"
 
 @dataclass
 class ProximitySensorConfig(LabSensorConfig):
@@ -2189,10 +2195,23 @@ cs.store(
     node=RobotStartGPSSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.robot_pos_sensor",
+    group="habitat/task/lab_sensors",
+    name="robot_pos_sensor",
+    node=RobotPositionSensorConfig,
+)
+
+cs.store(
     package="habitat.task.lab_sensors.robot_start_compass_sensor",
     group="habitat/task/lab_sensors",
     name="robot_start_compass_sensor",
     node=RobotStartCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.robot_rot_sensor",
+    group="habitat/task/lab_sensors",
+    name="robot_rot_sensor",
+    node=RobotRotSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor",

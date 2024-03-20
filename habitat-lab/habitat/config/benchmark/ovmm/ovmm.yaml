@@ -17,7 +17,9 @@ habitat:
       - start_receptacle
       - goal_receptacle
       - robot_start_gps
+      - robot_pos
       - robot_start_compass
+      - robot_rot
       - joint
       - object_segmentation
       - start_recep_segmentation

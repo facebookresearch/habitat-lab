@@ -268,10 +268,10 @@ class HabGymWrapper(gym.Wrapper):
         return self.env.current_episode(all_info)
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
-        obs, reward, done, info = self.env.step(action=action)
+        obs, reward, done, info, curr_pos, curr_rot = self.env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
-        return obs, reward, done, info
+        return obs, reward, done, info, curr_pos, curr_rot
 
     def _transform_obs(self, obs):
         if self._save_orig_obs:

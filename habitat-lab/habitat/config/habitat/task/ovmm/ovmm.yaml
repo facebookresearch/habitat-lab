@@ -48,6 +48,8 @@ defaults:
     - start_recep_segmentation_sensor
     - goal_recep_segmentation_sensor
     - robot_start_gps_sensor
+    - robot_pos_sensor
+    - robot_rot_sensor
     - robot_start_compass_sensor
     - camera_pose_sensor
     - end_effector_sensor

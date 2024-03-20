@@ -32,6 +32,8 @@ defaults:
     - object_embedding_sensor
     - robot_start_gps_sensor
     - robot_start_compass_sensor
+    - robot_pos_sensor
+    - robot_rot_sensor
   - _self_
 
 type: OVMMNavToObjTask-v0

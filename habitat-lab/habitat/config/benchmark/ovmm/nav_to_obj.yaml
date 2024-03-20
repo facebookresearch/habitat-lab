@@ -16,7 +16,9 @@ habitat:
       - receptacle_segmentation
       - start_receptacle
       - robot_start_gps
+      - robot_pos
       - robot_start_compass
+      - robot_rot
   environment:
     max_episode_steps: 400
   simulator:

@@ -6,7 +6,6 @@
 r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
-
 import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
@@ -171,6 +170,7 @@ class Measurements:
             measure.update_metric(*args, task=task, **kwargs)
             measure_name = measure._get_uuid(*args, task=task, **kwargs)
             task.add_perf_timing(f"measures.{measure_name}", t_start)
+        # pdb.set_trace()
 
     def get_metrics(self) -> Metrics:
         r"""Collects measurement from all :ref:`Measure`\ s and returns it
@@ -252,6 +252,9 @@ class EmbodiedTask:
                 register_func=registry.get_measure,
             ).values()
         )
+         
+        # pdb.set_trace()       
+        # self.robot_position = self._sim.articulated_agent.sim_obj.translation
 
         self.sensor_suite = SensorSuite(
             self._init_entities(

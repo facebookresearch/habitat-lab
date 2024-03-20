@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pdb
+
 import random
 import time
 from typing import (
@@ -316,10 +318,12 @@ class Env:
             task=self.task,
             observations=observations,
         )
-
+        
+        curr_pos = self._task.sensor_suite.current_pos(self._task._sim)
+        curr_rot = self._task.sensor_suite.current_rot(self._task._sim)
+        
         self._update_step_stats()
-
-        return observations
+        return observations, curr_pos, curr_rot
 
     @staticmethod
     @numba.njit
@@ -470,12 +474,12 @@ class RLEnv(gym.Env):
         :return: :py:`(observations, reward, done, info)`
         """
 
-        observations = self._env.step(*args, **kwargs)
+        observations, curr_pos, curr_rot = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)
 
-        return observations, reward, done, info
+        return observations, reward, done, info, curr_pos, curr_rot
 
     def seed(self, seed: Optional[int] = None) -> None:
         self._env.seed(seed)

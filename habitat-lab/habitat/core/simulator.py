@@ -3,6 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import pdb
 import abc
 import time
 from collections import OrderedDict
@@ -235,6 +236,14 @@ class SensorSuite:
         :ref:`Observations`.
         """
         return Observations(self.sensors, *args, **kwargs)
+    
+    def current_pos(self, sim):
+        sensor = self.sensors['robot_pos']
+        return sensor.get_agent_current_position(sim)
+    
+    def current_rot(self, sim):
+        sensor = self.sensors['robot_rot']
+        return sensor.get_agent_current_rotation(sim)
 
 
 @attr.s(auto_attribs=True)

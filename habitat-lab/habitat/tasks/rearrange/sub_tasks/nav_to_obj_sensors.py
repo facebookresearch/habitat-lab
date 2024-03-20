@@ -3,6 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import pdb
 
 from typing import TYPE_CHECKING
 
@@ -191,9 +192,9 @@ class NavToObjReward(RearrangeReward):
 
 @registry.register_measure
 class DistToGoal(Measure):
-    cls_uuid: str = "dist_to_goal"
-
+    cls_uuid: str = "dist_to_goal"     
     def __init__(self, *args, sim, config, task, **kwargs):
+        # pdb.set_trace()
         self._config = config
         self._sim = sim
         self._prev_dist = None
@@ -219,6 +220,7 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task, episode):
         goals = self._get_goals(task, episode)
+        # pdb.set_trace()
         distance_to_target = self._sim.geodesic_distance(
             self._sim.articulated_agent.base_pos,
             goals,
@@ -253,7 +255,32 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
 
     def get_agent_current_position(self, sim):
         return sim.articulated_agent.sim_obj.translation
+        
+@registry.register_sensor(name="RobotPositionSensor")
+class RobotPositionSensor(EpisodicGPSSensor):
+    cls_uuid: str = "robot_pos"
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+    
+    def get_agent_current_position(self, sim):
+        return sim.articulated_agent.sim_obj.translation
+    
+@registry.register_sensor(name="RobotRotSensor")
+class RobotRotSensor(EpisodicCompassSensor):
+    cls_uuid: str = "robot_rot"
 
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+
+    def get_agent_current_rotation(self, sim):
+        curr_quat = sim.articulated_agent.sim_obj.rotation
+        curr_rotation = [
+            curr_quat.vector.x,
+            curr_quat.vector.y,
+            curr_quat.vector.z,
+            curr_quat.scalar,
+        ]
+        return quaternion_from_coeff(curr_rotation)
 
 @registry.register_sensor(name="RobotStartCompassSensor")
 class RobotStartCompassSensor(EpisodicCompassSensor):
