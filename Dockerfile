@@ -26,7 +26,7 @@ RUN curl -L -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3
     chmod +x ~/miniconda.sh &&\
     ~/miniconda.sh -b -p /opt/conda &&\
     rm ~/miniconda.sh &&\
-    /opt/conda/bin/conda install numpy pyyaml scipy ipython mkl mkl-include &&\
+    /opt/conda/bin/conda install "numpy>=1.20.0,<1.24.0" pyyaml scipy ipython mkl mkl-include &&\
     /opt/conda/bin/conda clean -ya
 ENV PATH /opt/conda/bin:$PATH
 
