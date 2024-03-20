@@ -76,6 +76,8 @@ class AppStateRearrangeV2(AppState):
         self._frame_counter = 0
         self._sps_tracker = AverageRateTracker(2.0)
 
+        self._task_instruction = ""
+
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
     def get_sim_utilities() -> Any:
@@ -170,6 +172,13 @@ class AppStateRearrangeV2(AppState):
         self._pick_helper.on_environment_reset()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+
+        # Set the task instruction
+        current_episode = self._app_service.env.current_episode
+        if current_episode.info.get("extra_info") is not None:
+            self._task_instruction = current_episode.info["extra_info"][
+                "instruction"
+            ]
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
@@ -281,6 +290,7 @@ class AppStateRearrangeV2(AppState):
             controls_str += "I, K: look up, down\n"
             controls_str += "A, D: turn\n"
             controls_str += "W/F, S/V: walk\n"
+            controls_str += "N: next episode\n"
             if ENABLE_ARTICULATED_OPEN_CLOSE:
                 controls_str += "Z/X: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
@@ -292,6 +302,8 @@ class AppStateRearrangeV2(AppState):
     def _get_status_text(self):
         status_str = ""
 
+        if len(self._task_instruction) > 0:
+            status_str += "\nInstruction: " + self._task_instruction + "\n"
         if self._paused:
             status_str += "\n\npaused\n"
         if (
@@ -316,6 +328,8 @@ class AppStateRearrangeV2(AppState):
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
+                text_delta_x=-280,
+                text_delta_y=-50,
             )
 
     def _get_camera_lookat_pos(self):
@@ -331,40 +345,13 @@ class AppStateRearrangeV2(AppState):
         return not self._app_service.gui_input.get_any_key_down()
 
     def _check_change_episode(self):
-        if self._paused:
+        if self._paused or not self._app_service.gui_input.get_key_down(
+            GuiInput.KeyNS.N
+        ):
             return
 
-        # episode_id should be a string, e.g. "5"
-        episode_ids_by_dataset = {
-            "data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz": [
-                "23775",
-                "23776",
-            ]
-        }
-        fallback_episode_ids = ["0", "1"]
-        dataset_key = self._app_service.config.habitat.dataset.data_path
-        episode_ids = (
-            episode_ids_by_dataset[dataset_key]
-            if dataset_key in episode_ids_by_dataset
-            else fallback_episode_ids
-        )
-
-        # use number keys to select episode
-        episode_index_by_key = {
-            GuiInput.KeyNS.ONE: 0,
-            GuiInput.KeyNS.TWO: 1,
-        }
-        assert len(episode_index_by_key) == len(episode_ids)
-
-        for key in episode_index_by_key:
-            if self._app_service.gui_input.get_key_down(key):
-                episode_id = episode_ids[episode_index_by_key[key]]
-                # episode_id should be a string, e.g. "5"
-                assert isinstance(episode_id, str)
-                self._app_service.episode_helper.set_next_episode_by_id(
-                    episode_id
-                )
-                self._app_service.end_episode(do_reset=True)
+        if self._app_service.episode_helper.next_episode_exists():
+            self._app_service.end_episode(do_reset=True)
 
     def _update_held_object_placement(self):
         if not self._held_obj_id:

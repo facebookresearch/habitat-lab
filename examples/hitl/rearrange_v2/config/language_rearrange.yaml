@@ -1,0 +1,87 @@
+# This config is derived from habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human.yaml
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: human
+
+  - /habitat/dataset/rearrangement: hssd
+
+  - /habitat/task/actions@habitat.task.actions.base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.rearrange_stop: rearrange_stop
+
+  - /habitat/task/measurements:
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+
+  - _self_
+
+habitat:
+  task:
+    type: RearrangeEmptyTask-v0
+    reward_measure: num_steps
+    success_measure: num_steps
+    success_reward: 10.0
+    min_distance_start_agents: 5.0
+    slack_reward: -0.0005
+    end_on_success: True
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+    task_spec_base_path: benchmark/multi_agent/
+    task_spec: pddl/multi_agent_tidy_house
+    pddl_domain_def: fp
+    actions:
+      base_velocity:
+        lin_speed: 40.0
+        ang_speed: 20.0
+
+    robot_at_thresh: 3.0
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - has_finished_oracle_nav
+  environment:
+    max_episode_steps: 750
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
+      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
+      - "data/objects_ovmm/train_val/google_scanned/configs/"
+      - "data/objects_ovmm/train_val/hssd/configs/objects/"
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - main_agent
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/hssd/llm_rearrange/train/test_dataset_curated.json.gz
