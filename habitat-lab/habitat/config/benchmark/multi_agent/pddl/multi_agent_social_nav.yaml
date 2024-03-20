@@ -16,8 +16,8 @@ objects:
 goal:
   expr_type: AND
   sub_exprs:
-    - at(any_targets|0,TARGET_any_targets|0)
-    - at(any_targets|1,TARGET_any_targets|1)
+    - object_at(any_targets|0,TARGET_any_targets|0)
+    - object_at(any_targets|1,TARGET_any_targets|1)
     - not_holding(robot_0)
     - not_holding(robot_1)
 
@@ -35,7 +35,7 @@ stage_goals:
   stage_1_2:
     expr_type: AND
     sub_exprs:
-      - at(any_targets|0,TARGET_any_targets|0)
+      - object_at(any_targets|0,TARGET_any_targets|0)
   stage_2_1:
     expr_type: AND
     sub_exprs:
@@ -49,7 +49,7 @@ stage_goals:
   stage_2_2:
     expr_type: AND
     sub_exprs:
-      - at(any_targets|1,TARGET_any_targets|1)
+      - object_at(any_targets|1,TARGET_any_targets|1)
 
 solution:
   - nav_to_goal(any_targets|1, robot_1)

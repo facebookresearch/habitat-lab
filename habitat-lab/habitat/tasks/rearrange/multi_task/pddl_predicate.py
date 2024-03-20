@@ -3,11 +3,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
-from habitat.tasks.rearrange.multi_task.pddl_sim_state import PddlSimState
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    ExprType,
     PddlEntity,
     PddlSimInfo,
     do_entity_lists_match,
@@ -21,21 +19,31 @@ class Predicate:
     def __init__(
         self,
         name: str,
-        pddl_sim_state: Optional[PddlSimState],
+        is_valid_fn: Optional[Callable],
+        set_state_fn: Optional[Callable],
         args: List[PddlEntity],
     ):
         """
         :param name: Predicate identifier. Does not need to be unique because
             predicates have the same name but different arguments.
-        :param pddl_sim_state: Optionally specifies conditions that must be
-            true in the simulator for the predicate to be true. If None is
-            specified, no simulator state will force the Predicate to be true.
+        :param is_valid_fn: Function that returns if the predicate is true in
+            the current state. This function must return a bool and
+            take as input the predicate parameters specified by `args`. If
+            None, then this always returns True.
+        :param set_state_fn: Function that sets the state to satisfy the
+            predicate. This function must return nothing and take as input the
+            values set in the predicate parameters specified by `args`. If
+            None, then no simulator state is set.
+        :param args: The names of the arguments to the predicate. Note that
+            these are only placeholders. Actual entities are substituted in later
+            via `self.set_param_values`.
         """
 
         self._name = name
-        self._pddl_sim_state = pddl_sim_state
         self._args = args
         self._arg_values = None
+        self._is_valid_fn = is_valid_fn
+        self._set_state_fn = set_state_fn
 
     def are_args_compatible(self, arg_values: List[PddlEntity]):
         """
@@ -45,15 +53,6 @@ class Predicate:
 
         return do_entity_lists_match(self._args, arg_values)
 
-    def are_types_compatible(self, expr_types: Dict[str, ExprType]) -> bool:
-        """
-        Returns if the argument types match the underlying simulator state.
-        """
-        if self._pddl_sim_state is None:
-            return True
-
-        return self._pddl_sim_state.is_compatible(expr_types)
-
     def set_param_values(self, arg_values: List[PddlEntity]) -> None:
         arg_values = list(arg_values)
         if self._arg_values is not None:
@@ -62,7 +61,6 @@ class Predicate:
             )
         ensure_entity_lists_match(self._args, arg_values)
         self._arg_values = arg_values
-        self._pddl_sim_state.sub_in(dict(zip(self._args, self._arg_values)))
 
     @property
     def n_args(self):
@@ -77,13 +75,13 @@ class Predicate:
             sub_dict.get(entity, entity) for entity in self._arg_values
         ]
         ensure_entity_lists_match(self._args, self._arg_values)
-        self._pddl_sim_state.sub_in(sub_dict)
         return self
 
     def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
         p = Predicate(
             self._name,
-            self._pddl_sim_state.sub_in_clone(sub_dict),
+            self._is_valid_fn,
+            self._set_state_fn,
             self._args,
         )
         if self._arg_values is not None:
@@ -107,7 +105,12 @@ class Predicate:
             return sim_info.pred_truth_cache[self_repr]
 
         # Recompute and potentially cache the result.
-        result = self._pddl_sim_state.is_true(sim_info)
+        if self._is_valid_fn is None:
+            result = True
+        else:
+            result = self._is_valid_fn(
+                sim_info=sim_info, **self._create_kwargs()
+            )
         if sim_info.pred_truth_cache is not None:
             sim_info.pred_truth_cache[self_repr] = result
         return result
@@ -116,10 +119,18 @@ class Predicate:
         """
         Sets the simulator state to satisfy the predicate.
         """
-        return self._pddl_sim_state.set_state(sim_info)
+        if self._set_state_fn is not None:
+            self._set_state_fn(sim_info=sim_info, **self._create_kwargs())
+
+    def _create_kwargs(self):
+        return {
+            arg.name: val for arg, val in zip(self._args, self._arg_values)
+        }
 
     def clone(self):
-        p = Predicate(self._name, self._pddl_sim_state.clone(), self._args)
+        p = Predicate(
+            self._name, self._is_valid_fn, self._set_state_fn, self._args
+        )
         if self._arg_values is not None:
             p.set_param_values(self._arg_values)
         return p
