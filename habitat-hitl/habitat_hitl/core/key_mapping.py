@@ -151,7 +151,7 @@ class MagnumKeyConverter:
             return magnum_keymap[key]
         return None
 
-    def convert_mouse_key(key: Any) -> Optional[MouseButton]:
-        if magnum_enabled and key in magnum_mouse_keymap:
-            return magnum_mouse_keymap[key]
+    def convert_mouse_button(button: Any) -> Optional[MouseButton]:
+        if magnum_enabled and button in magnum_mouse_keymap:
+            return magnum_mouse_keymap[button]
         return None

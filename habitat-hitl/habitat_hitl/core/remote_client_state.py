@@ -160,7 +160,7 @@ class RemoteClientState:
                 client_state["mouse"] if "mouse" in client_state else None
             )
 
-            if input_json != None:
+            if input_json is not None:
                 for button in input_json["buttonDown"]:
                     if button not in KeyCode:
                         continue
@@ -170,7 +170,7 @@ class RemoteClientState:
                         continue
                     self._gui_input._key_up.add(KeyCode(button))
 
-            if mouse_json != None:
+            if mouse_json is not None:
                 mouse_buttons = mouse_json["buttons"]
                 for button in mouse_buttons["buttonDown"]:
                     if button not in KeyCode:
@@ -204,13 +204,13 @@ class RemoteClientState:
 
         self._gui_input._key_held.clear()
 
-        if input_json != None:
+        if input_json is not None:
             for button in input_json["buttonHeld"]:
                 if button not in KeyCode:
                     continue
                 self._gui_input._key_held.add(KeyCode(button))
 
-        if mouse_json != None:
+        if mouse_json is not None:
             mouse_buttons = mouse_json["buttons"]
             for button in mouse_buttons["buttonHeld"]:
                 if button not in KeyCode:

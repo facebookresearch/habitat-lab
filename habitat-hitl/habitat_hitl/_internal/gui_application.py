@@ -57,7 +57,7 @@ class InputHandlerApplication(Application):
                 wrapper._key_up.add(key)
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_key(event.button)
+        key = MagnumKeyConverter.convert_mouse_button(event.button)
         if key:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
@@ -67,7 +67,7 @@ class InputHandlerApplication(Application):
                     wrapper._mouse_button_down.add(key)
 
     def mouse_release_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_key(event.button)
+        key = MagnumKeyConverter.convert_mouse_button(event.button)
         if key:
             for wrapper in self._gui_inputs:
                 if key in wrapper._mouse_button_held:
