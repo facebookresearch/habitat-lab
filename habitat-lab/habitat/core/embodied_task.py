@@ -252,9 +252,6 @@ class EmbodiedTask:
                 register_func=registry.get_measure,
             ).values()
         )
-         
-        # pdb.set_trace()       
-        # self.robot_position = self._sim.articulated_agent.sim_obj.translation
 
         self.sensor_suite = SensorSuite(
             self._init_entities(
