@@ -18,6 +18,7 @@ from habitat_hitl._internal.networking.interprocess_record import (
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode
+import rospy
 
 
 class RemoteClientState:
@@ -148,11 +149,13 @@ class RemoteClientState:
         )
         # TODO: Send the location into the real spot robot using ROS
         # Or in spot-sim2real, we can import this guy
-        print(f"hand {hand_idx}, {pos}")
+        import quaternion
+        from habitat.utils.geometry_utils import quaternion_from_coeff
+        rpy = quaternion.as_euler_angles(quaternion_from_coeff([rot_json[1], rot_json[2], rot_json[3], rot_json[0]]))
+        print(f"hand {hand_idx}, {pos} {rot_quat}, {rpy}")
         # Write the hand pos into the ros buffer
-        import rospy
-        rospy.set_param(f'hand_{hand_idx}_pos', list(pos))
         rospy_rot = [rot_quat.vector[0],rot_quat.vector[1],rot_quat.vector[2],rot_quat.scalar]
+        rospy.set_param(f'hand_{hand_idx}_pos', list(pos))
         rospy.set_param(f'hand_{hand_idx}_rot', rospy_rot)
         return pos, rot_quat
 
@@ -179,6 +182,8 @@ class RemoteClientState:
                 if button not in KeyCode:
                     continue
                 self._gui_input._key_up.add(KeyCode(button))
+            # Write the button state into the buffer
+            rospy.set_param("buttonHeld", input_json["buttonHeld"])
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
