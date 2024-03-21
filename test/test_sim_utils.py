@@ -315,7 +315,7 @@ def test_keypoint_cast_prepositions():
         canister_within = sutils.within(sim, canister_object)
         assert len(canister_within) == 1
         assert basket_object.object_id in canister_within
-        # now make the check more strict, requring 6 keypoints
+        # now make the check more strict, requiring 6 keypoints
         canister_within = sutils.within(
             sim, canister_object, keypoint_vote_threshold=6
         )
@@ -323,7 +323,7 @@ def test_keypoint_cast_prepositions():
 
         # further lower the canister such that the center is contained
         canister_object.translation = mn.Vector3(-2.01639, 1.2, 0.0410867)
-        # when center ensures contaiment this state is "within"
+        # when center ensures containment this state is "within"
         canister_within = sutils.within(
             sim, canister_object, keypoint_vote_threshold=6
         )
@@ -642,7 +642,7 @@ def test_ontop_util():
     not osp.exists("data/replica_cad/"),
     reason="Requires ReplicaCAD dataset.",
 )
-def test_on_floor_util():
+def test_on_floor_and_next_to():
     sim_settings = default_sim_settings.copy()
     sim_settings[
         "scene_dataset_config_file"
@@ -701,7 +701,7 @@ def test_on_floor_util():
         for obj_handle in objects_in_table:
             obj = sutils.get_obj_from_handle(sim, obj_handle)
             l2_dist = (obj.translation - table_object.translation).length()
-            reg_dist = sutils.size_regularized_distance(
+            reg_dist = sutils.size_regularized_object_distance(
                 sim,
                 table_object.object_id,
                 obj.object_id,
@@ -720,7 +720,7 @@ def test_on_floor_util():
         for obj_handle in objects_on_table:
             obj = sutils.get_obj_from_handle(sim, obj_handle)
             l2_dist = (obj.translation - table_object.translation).length()
-            reg_dist = sutils.size_regularized_distance(
+            reg_dist = sutils.size_regularized_object_distance(
                 sim,
                 table_object.object_id,
                 obj.object_id,
@@ -739,7 +739,7 @@ def test_on_floor_util():
         shelf = sutils.get_obj_from_handle(
             sim, "frl_apartment_wall_cabinet_01_:0000"
         )
-        reg_dist = sutils.size_regularized_distance(
+        reg_dist = sutils.size_regularized_object_distance(
             sim, sofa.object_id, shelf.object_id, ao_link_map, ao_aabbs
         )
         assert (
@@ -765,3 +765,45 @@ def test_on_floor_util():
                 sim, sofa.object_id, vec, ao_link_map, ao_aabbs
             )
             assert axis_size_along == sofa_bb.size()[axis] / 2.0
+
+        # test next_to logics
+
+        # NOTE: using ids because they can represent links also, providing handles for readability
+        next_to_object_pairs = [
+            (3, 4),  # neighboring trashcans
+            (102, 103),  # lamps on the table
+            (145, 50),  # table and cabinet furniture
+            (40, 38),  # books on the same shelf
+            (22, 23),  # two neighboring lounge chairs
+            (11, 13),  # two neighboring Sofa pillows
+            (51, 52),  # two neighboring objects on the table
+            (141, 142),  # two neighboring drawers in the chest of drawers
+            (131, 132),  # two neighboring cabinet doors
+            (77, 78),  # two neighboring spice jars
+            (77, 79),  # two skip neighboring spice jars
+            (77, 80),  # two double-skip neighboring spice jars
+        ]
+        not_next_to_object_pairs = [
+            (36, 38),  # books on different shelves
+            (11, 14),  # sofa pillows on opposite sides
+            (51, 53),  # two objects on different table shelves
+            (141, 140),  # two non-neighboring drawers in the chest of drawers
+            (129, 132),  # two non-neighboring cabinet doors
+            (17, 20),  # potted plant and coffee table
+        ]
+        for ix, (obj_a_id, obj_b_id) in enumerate(next_to_object_pairs):
+            assert sutils.obj_next_to(
+                sim,
+                obj_a_id,
+                obj_b_id,
+                ao_aabbs=ao_aabbs,
+                ao_link_map=ao_link_map,
+            ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should be 'next to' one another."
+        for ix, (obj_a_id, obj_b_id) in enumerate(not_next_to_object_pairs):
+            assert not sutils.obj_next_to(
+                sim,
+                obj_a_id,
+                obj_b_id,
+                ao_aabbs=ao_aabbs,
+                ao_link_map=ao_link_map,
+            ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should not be 'next to' one another."
