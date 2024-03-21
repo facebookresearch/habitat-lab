@@ -4,17 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_hitl.core.key_mapping import KeyCode
-
-
-class StubNSMeta(type):
-    def __getattr__(cls, name):
-        return None
-
-
-# Stub version of Application.MouseEvent.Button
-class StubMouseNS(metaclass=StubNSMeta):
-    pass
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 
 
 class GuiInput:
@@ -25,7 +15,7 @@ class GuiInput:
     """
 
     KeyNS = KeyCode
-    MouseNS = StubMouseNS
+    MouseNS = MouseButton
 
     def __init__(self):
         self._key_held = set()
@@ -37,7 +27,7 @@ class GuiInput:
         self._mouse_button_down = set()
         self._mouse_button_up = set()
         self._relative_mouse_position = [0, 0]
-        self._mouse_scroll_offset = 0
+        self._mouse_scroll_offset = 0.0
         self._mouse_ray = None
 
     def validate_key(key):
@@ -59,9 +49,7 @@ class GuiInput:
         return key in self._key_up
 
     def validate_mouse_button(mouse_button):
-        # if not do_agnostic_gui_input:
-        #    assert isinstance(mouse_button, Application.MouseEvent.Button)
-        pass
+        assert isinstance(mouse_button, MouseButton)
 
     def get_mouse_button(self, mouse_button):
         GuiInput.validate_mouse_button(mouse_button)
@@ -99,4 +87,4 @@ class GuiInput:
         self._mouse_button_down.clear()
         self._mouse_button_up.clear()
         self._relative_mouse_position = [0, 0]
-        self._mouse_scroll_offset = 0
+        self._mouse_scroll_offset = 0.0

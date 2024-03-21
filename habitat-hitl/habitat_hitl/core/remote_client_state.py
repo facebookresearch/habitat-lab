@@ -228,6 +228,23 @@ class RemoteGuiInput:
                 if True:
                     self._gui_input._key_up.add(self._button_map[button])
 
+            if mouse_json is not None:
+                mouse_buttons = mouse_json["buttons"]
+                for button in mouse_buttons["buttonDown"]:
+                    if button not in KeyCode:
+                        continue
+                    self._gui_input._mouse_button_down.add(KeyCode(button))
+                for button in mouse_buttons["buttonUp"]:
+                    if button not in KeyCode:
+                        continue
+                    self._gui_input._mouse_button_up.add(KeyCode(button))
+
+                delta: List[Any] = mouse_json["scrollDelta"]
+                if len(delta) == 2:
+                    self._gui_input._mouse_scroll_offset += (
+                        delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
+                    )
+
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
         client_state = client_states[-1]
@@ -247,6 +264,13 @@ class RemoteGuiInput:
                 continue
             if True:  # input_json["buttonHeld"][button]:
                 self._gui_input._key_held.add(self._button_map[button])
+
+        if mouse_json is not None:
+            mouse_buttons = mouse_json["buttons"]
+            for button in mouse_buttons["buttonHeld"]:
+                if button not in KeyCode:
+                    continue
+                self._gui_input._mouse_button_held.add(KeyCode(button))
 
     def debug_visualize_client(self):
         """Visualize the received VR inputs (head and hands)."""
