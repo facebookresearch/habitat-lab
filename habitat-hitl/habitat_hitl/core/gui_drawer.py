@@ -9,6 +9,7 @@ from typing import Final, List, Optional
 import magnum as mn
 
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.user_mask import Mask
 from habitat_sim.gfx import DebugLineRender
 
 
@@ -43,6 +44,7 @@ class GuiDrawer:
     def set_line_width(
         self,
         line_width: float,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Set global line width for all lines rendered by GuiDrawer.
@@ -59,6 +61,7 @@ class GuiDrawer:
     def push_transform(
         self,
         transform: mn.Matrix4,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Push (multiply) a transform onto the transform stack, affecting all line-drawing until popped.
@@ -75,6 +78,7 @@ class GuiDrawer:
 
     def pop_transform(
         self,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         See push_transform.
@@ -93,6 +97,7 @@ class GuiDrawer:
         min_extent: mn.Vector3,
         max_extent: mn.Vector3,
         color: mn.Color4,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a box in world-space or local-space (see pushTransform).
@@ -114,6 +119,7 @@ class GuiDrawer:
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
         billboard: bool = False,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a circle in world-space or local-space (see pushTransform).
@@ -128,7 +134,11 @@ class GuiDrawer:
         # If remote rendering is enabled:
         if self._client_message_manager:
             self._client_message_manager.add_highlight(
-                translation, radius, billboard=billboard, color=color
+                translation,
+                radius,
+                billboard=billboard,
+                color=color,
+                destination_mask=destination_mask,
             )
 
     def draw_transformed_line(
@@ -137,6 +147,7 @@ class GuiDrawer:
         to_pos: mn.Vector3,
         from_color: mn.Color4,
         to_color: mn.Color4 = None,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a line segment in world-space or local-space (see pushTransform) with interpolated color.
@@ -165,6 +176,7 @@ class GuiDrawer:
         color: mn.Color4,
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a sequence of line segments with circles at the two endpoints.
