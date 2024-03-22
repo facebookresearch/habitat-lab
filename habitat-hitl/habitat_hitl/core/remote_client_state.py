@@ -19,6 +19,7 @@ from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.types import ClientState, ConnectionRecord
+from habitat_hitl.core.user_mask import Mask, Users
 
 
 class RemoteClientState:
@@ -31,16 +32,21 @@ class RemoteClientState:
         self,
         interprocess_record: InterprocessRecord,
         gui_drawer: GuiDrawer,
-        gui_input: GuiInput,
+        users: Users,
     ):
-        self._gui_input = gui_input
         self._interprocess_record = interprocess_record
         self._gui_drawer = gui_drawer
+        self._users = users
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
         self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
+
+        # Create one GuiInput per user to be controlled by remote clients.
+        self._gui_inputs: List[GuiInput] = []
+        for _ in users.indices(Mask.ALL):
+            self._gui_inputs.append(GuiInput())
 
         # temp map VR button to key
         self._button_map = {
@@ -50,9 +56,21 @@ class RemoteClientState:
             3: GuiInput.KeyNS.THREE,
         }
 
-    def get_gui_input(self) -> GuiInput:
-        """Internal GuiInput class."""
-        return self._gui_input
+    def get_gui_input(self, user_index: int = 0) -> GuiInput:
+        """Get the GuiInput for a specified user index."""
+        return self._gui_inputs[user_index]
+
+    def get_gui_inputs(self) -> List[GuiInput]:
+        """Get a list of all GuiInputs indexed by user index."""
+        return self._gui_inputs
+
+    def bind_gui_input(self, gui_input: GuiInput, user_index: int) -> None:
+        """
+        Bind the specified GuiInput to a specified user, allowing the associated remote client to control it.
+        Erases the previous GuiInput.
+        """
+        assert user_index < len(self._gui_inputs)
+        self._gui_inputs[user_index] = gui_input
 
     def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
@@ -158,6 +176,12 @@ class RemoteClientState:
         if not len(client_states):
             return
 
+        # TODO: Only one user supported for now.
+        #       In multiplayer, there will be client_state per user_index.
+        user_index = 0
+        assert user_index < len(self._gui_inputs)
+        gui_input = self._gui_inputs[user_index]
+
         # Gather all recent keyDown and keyUp events
         for client_state in client_states:
             input_json = (
@@ -171,26 +195,26 @@ class RemoteClientState:
                 for button in input_json["buttonDown"]:
                     if button not in KeyCode:
                         continue
-                    self._gui_input._key_down.add(KeyCode(button))
+                    gui_input._key_down.add(KeyCode(button))
                 for button in input_json["buttonUp"]:
                     if button not in KeyCode:
                         continue
-                    self._gui_input._key_up.add(KeyCode(button))
+                    gui_input._key_up.add(KeyCode(button))
 
             if mouse_json is not None:
                 mouse_buttons = mouse_json["buttons"]
                 for button in mouse_buttons["buttonDown"]:
                     if button not in KeyCode:
                         continue
-                    self._gui_input._mouse_button_down.add(KeyCode(button))
+                    gui_input._mouse_button_down.add(KeyCode(button))
                 for button in mouse_buttons["buttonUp"]:
                     if button not in KeyCode:
                         continue
-                    self._gui_input._mouse_button_up.add(KeyCode(button))
+                    gui_input._mouse_button_up.add(KeyCode(button))
 
                 delta: List[Any] = mouse_json["scrollDelta"]
                 if len(delta) == 2:
-                    self._gui_input._mouse_scroll_offset += (
+                    gui_input._mouse_scroll_offset += (
                         delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
                     )
 
@@ -209,20 +233,20 @@ class RemoteClientState:
             else None
         )
 
-        self._gui_input._key_held.clear()
+        gui_input._key_held.clear()
 
         if input_json is not None:
             for button in input_json["buttonHeld"]:
                 if button not in KeyCode:
                     continue
-                self._gui_input._key_held.add(KeyCode(button))
+                gui_input._key_held.add(KeyCode(button))
 
         if mouse_json is not None:
             mouse_buttons = mouse_json["buttons"]
             for button in mouse_buttons["buttonHeld"]:
                 if button not in KeyCode:
                     continue
-                self._gui_input._mouse_button_held.add(KeyCode(button))
+                gui_input._mouse_button_held.add(KeyCode(button))
 
     def debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
@@ -346,7 +370,8 @@ class RemoteClientState:
         return self._new_connection_records
 
     def on_frame_end(self) -> None:
-        self._gui_input.on_frame_end()
+        for user_index in self._users.indices(Mask.ALL):
+            self._gui_inputs[user_index].on_frame_end()
         self._new_connection_records = None
 
     def clear_history(self) -> None:
