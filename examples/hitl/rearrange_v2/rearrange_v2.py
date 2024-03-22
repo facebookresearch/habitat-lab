@@ -64,10 +64,10 @@ class AppStateRearrangeV2(AppState):
             self._app_service.gui_input,
         )
 
-        self._pick_helper = GuiPickHelper(
-            self._app_service,
+        self._pick_helper = GuiPickHelper(self._app_service, user_index=0)
+        self._placement_helper = GuiPlacementHelper(
+            self._app_service, user_index=0
         )
-        self._placement_helper = GuiPlacementHelper(self._app_service)
         self._client_helper = None
         if self._app_service.hitl_config.networking.enable:
             self._client_helper = ClientHelper(self._app_service)

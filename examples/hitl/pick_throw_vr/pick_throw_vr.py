@@ -79,7 +79,9 @@ class AppStatePickThrowVr(AppState):
         assert not self._app_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
-            self._app_service, self.get_gui_controlled_agent_index()
+            self._app_service,
+            self.get_gui_controlled_agent_index(),
+            user_index=0,
         )
         self._throw_helper = GuiThrowHelper(
             self._app_service, self.get_gui_controlled_agent_index()

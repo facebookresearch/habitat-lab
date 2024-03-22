@@ -84,7 +84,9 @@ class AppStateRearrange(AppState):
         )
 
         self._nav_helper = GuiNavigationHelper(
-            self._app_service, self.get_gui_controlled_agent_index()
+            self._app_service,
+            self.get_gui_controlled_agent_index(),
+            user_index=0,
         )
         self._episode_helper = self._app_service.episode_helper
 

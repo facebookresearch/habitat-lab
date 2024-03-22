@@ -12,6 +12,7 @@ import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.nav import ShortestPath
 
@@ -19,9 +20,12 @@ from habitat_sim.nav import ShortestPath
 class GuiNavigationHelper:
     """Helper for controlling an agent from the GUI."""
 
-    def __init__(self, gui_service: AppService, agent_idx: int) -> None:
+    def __init__(
+        self, gui_service: AppService, agent_idx: int, user_index: int
+    ) -> None:
         self._app_service = gui_service
         self._agent_idx = agent_idx
+        self._user_index = user_index
         self._largest_island_idx: Optional[int] = None
 
     def _get_sim(self) -> RearrangeSim:
@@ -298,6 +302,11 @@ class GuiNavigationHelper:
                 color_with_alpha = mn.Color4(color)
                 color_with_alpha[3] *= alpha
                 self._app_service.gui_drawer.draw_circle(
-                    pos, radius, color_with_alpha, num_segments, normal
+                    pos,
+                    radius,
+                    color_with_alpha,
+                    num_segments,
+                    normal,
+                    destination_mask=Mask.from_index(self._user_index),
                 )
             prev_pos = pos
