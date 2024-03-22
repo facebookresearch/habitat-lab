@@ -7,7 +7,9 @@
 from habitat_hitl.core.types import Keyframe
 
 
-def update_consolidated_keyframe(consolidated_keyframe: Keyframe, inc_keyframe: Keyframe) -> None:
+def update_consolidated_keyframe(
+    consolidated_keyframe: Keyframe, inc_keyframe: Keyframe
+) -> None:
     """
     A "consolidated" keyframe is several incremental keyframes merged together.
     See nearly duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
