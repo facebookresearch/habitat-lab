@@ -108,8 +108,8 @@ class GuiPickHelper:
                 ).transformation.translation
                 self._add_highlight_ring(
                     pos,
-                    COLOR_GRASP_PREVIEW,
                     RADIUS_GRASP_PREVIEW,
+                    COLOR_GRASP_PREVIEW,
                     do_pulse=False,
                 )
             self._pick_candidate_indices = []
@@ -120,7 +120,7 @@ class GuiPickHelper:
                     obj_id
                 ).transformation.translation
                 self._add_highlight_ring(
-                    pos, COLOR_GRASPABLE, RADIUS_GRASPABLE, do_pulse=True
+                    pos, RADIUS_GRASPABLE, COLOR_GRASPABLE, do_pulse=True
                 )
 
     # Reference code
