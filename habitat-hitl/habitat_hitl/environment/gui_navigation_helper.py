@@ -112,7 +112,10 @@ class GuiNavigationHelper:
             path_points.append(adjusted_point)
 
         self._app_service.gui_drawer.draw_path_with_endpoint_circles(
-            path_points, path_endpoint_radius, path_color
+            path_points,
+            path_endpoint_radius,
+            path_color,
+            destination_mask=Mask.from_index(self._user_index),
         )
 
     def get_humanoid_walk_hints_from_remote_client_state(
