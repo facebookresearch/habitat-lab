@@ -9,10 +9,10 @@ from typing import Any, Dict
 # Dictionary that is serialized to or from JSON.
 DataDict = Dict[str, Any]
 
-# Server -> Client data dictionary originating from habitat-sim (loads, updates, deletions, ...).
+# Server -> Client communication dictionary originating from habitat-sim (loads, updates, deletions, ...).
 Keyframe = DataDict
 
-# Client -> Server data dictionary (inputs, etc.).
+# Client -> Server communication dictionary (inputs, etc.).
 ClientState = DataDict
 
 # Dictionary that contains data about a new connection.
