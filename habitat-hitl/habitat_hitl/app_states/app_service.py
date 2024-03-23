@@ -10,6 +10,7 @@ from typing import Callable, List
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.app_states.campaign_service import CampaignService
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -42,6 +43,7 @@ class AppService:
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
         gui_agent_controllers: List[GuiController],
+        campaign_service: CampaignService,
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -60,6 +62,7 @@ class AppService:
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
         self._gui_agent_controllers = gui_agent_controllers
+        self._campaign_service = campaign_service
 
     @property
     def config(self):
@@ -128,3 +131,7 @@ class AppService:
     @property
     def gui_agent_controllers(self) -> List[GuiController]:
         return self._gui_agent_controllers
+
+    @property
+    def campaign_service(self) -> CampaignService:
+        return self._campaign_service
