@@ -7,6 +7,7 @@
 import random
 from typing import List, Tuple, Union
 
+import magnum as mn
 import numpy as np
 import quaternion
 
@@ -168,29 +169,29 @@ def is_point_in_triangle(
     return True
 
 
-def cam_pose_from_opengl_to_opencv(cam_pose: np.ndarray) -> np.ndarray:
+def pose_from_opengl_to_opencv(pose: np.ndarray) -> np.ndarray:
     """
     Convert pose matrix from OpenGL (habitat) to OpenCV convention.
     """
-    assert cam_pose.shape == (4, 4), f"Invalid pose shape {cam_pose.shape}"
+    assert pose.shape == (4, 4), f"Invalid pose shape {pose.shape}"
     transform = np.array(
         [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]]
     )
-    cam_pose = cam_pose @ transform
-    return cam_pose
+    pose = pose @ transform
+    return pose
 
 
-def cam_pose_from_xzy_to_xyz(camera_pose_xzy: np.ndarray) -> np.ndarray:
+def pose_from_xzy_to_xyz(pose_xzy: np.ndarray) -> np.ndarray:
     """
     Convert from habitat to common convention
     """
-    assert camera_pose_xzy.shape == (
+    assert pose_xzy.shape == (
         4,
         4,
-    ), f"Invalid pose shape {camera_pose_xzy.shape}"
+    ), f"Invalid pose shape {pose_xzy.shape}"
     # Extract rotation matrix and translation vector from the camera pose
-    rotation_matrix_xzy = camera_pose_xzy[:3, :3]
-    translation_vector_xzy = camera_pose_xzy[:3, 3]
+    rotation_matrix_xzy = pose_xzy[:3, :3]
+    translation_vector_xzy = pose_xzy[:3, 3]
 
     # Convert rotation matrix from XZ-Y to XYZ convention
     rotation_matrix_xyz = np.array(
@@ -223,8 +224,15 @@ def cam_pose_from_xzy_to_xyz(camera_pose_xzy: np.ndarray) -> np.ndarray:
     )
 
     # Create the new camera pose matrix in XYZ convention
-    camera_pose_xyz = np.eye(4)
-    camera_pose_xyz[:3, :3] = rotation_matrix_xyz
-    camera_pose_xyz[:3, 3] = translation_vector_xyz
+    pose_xyz = np.eye(4)
+    pose_xyz[:3, :3] = rotation_matrix_xyz
+    pose_xyz[:3, 3] = translation_vector_xyz
 
-    return camera_pose_xyz
+    return pose_xyz
+
+
+def change_coordinate_from_opengl_to_opencv(
+    point: Union[np.ndarray, mn.Vector3]
+) -> np.ndarray:
+    """Change the coordinate system from openGL to openCV"""
+    return np.array([point[0], -point[2], point[1]])
