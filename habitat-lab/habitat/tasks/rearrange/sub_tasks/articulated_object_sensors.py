@@ -5,9 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Tuple, Union
+from typing import Tuple
 
-import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -24,8 +23,9 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.utils.geometry_utils import (
-    cam_pose_from_opengl_to_opencv,
-    cam_pose_from_xzy_to_xyz,
+    change_coordinate_from_opengl_to_opencv,
+    pose_from_opengl_to_opencv,
+    pose_from_xzy_to_xyz,
 )
 
 
@@ -112,7 +112,12 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
     def _get_image_coordinate_from_world_coordinate(
         self, point: np.ndarray, target_key: str
     ) -> Tuple[int, int, bool]:
-        """Project point in the world frame to the image plane"""
+        """
+        Project point in the world frame to the image plane
+
+        :param point: The 3D xyz point in openCV coordinate
+        :param target_key: The target key (name) of the sensor. Usually it is articulated_agent_arm_rgb
+        """
         # Get the camera info
         fs_w, fs_h, cam_pose = self._get_camera_param(target_key)
 
@@ -127,21 +132,26 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         # From the camera frame into image pixel frame
         # For image width coordinate
         w = self._origin_width / 2.0 + (
-            fs_w * point_cam_coord[0] / point_cam_coord[-2]
+            fs_w * point_cam_coord[0] / point_cam_coord[2]
         )
         # For image height coordinate
         h = self._origin_height / 2.0 + (
-            fs_h * point_cam_coord[1] / point_cam_coord[-2]
+            fs_h * point_cam_coord[1] / point_cam_coord[2]
         )
 
         # check if the point is in front of the camera
-        is_in_front_of_camera = point_cam_coord[-2] > 0
+        is_in_front_of_camera = point_cam_coord[2] > 0
         return (w, h, is_in_front_of_camera)
 
     def _get_camera_param(
         self, target_key: str
     ) -> Tuple[float, float, np.ndarray]:
-        """Get the camera parameters from the agent's sensor"""
+        """
+        Get the camera parameters from the agent's sensor
+
+        :param target_key: The target key (name) of the sensor. Usually it is articulated_agent_arm_rgb
+        :return: A tuple of camera focal width, focal height, world_T_cam in real-world xyz convention
+        """
         agent_id = 0 if self.agent_id is None else self.agent_id
 
         # Get focal length
@@ -156,18 +166,25 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         # Get the camera pose
         hab_cam_T = (
             self._sim.agents[agent_id]
-            ._sensors["articulated_agent_arm_rgb"]
+            ._sensors[target_key]
             .render_camera.camera_matrix.inverted()
         )
-        world_T_cam = cam_pose_from_xzy_to_xyz(
-            cam_pose_from_opengl_to_opencv(np.array(hab_cam_T))
+        world_T_cam = pose_from_xzy_to_xyz(
+            pose_from_opengl_to_opencv(np.array(hab_cam_T))
         )
         return fs_w, fs_h, world_T_cam
 
     def _get_image_pixel_from_point(
         self, point: np.ndarray, target_key: str, img: np.ndarray
     ):
-        """Get image pixcel from point"""
+        """
+        Get image pixel from point
+
+        :param point: The 3D xyz point in openCV coordinate
+        :param target_key: The target key (name) of the sensor. Usually it is articulated_agent_arm_rgb
+
+        :return: The bounding box of the handle
+        """
         # Get the pixel coordinate in 2D
         (
             w,
@@ -184,14 +201,13 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             img[h_low:h_high, w_low:w_high, 0] = 1.0
         return img
 
-    def _change_coordinate(
-        self, point: Union[np.ndarray, mn.Vector3]
-    ) -> np.ndarray:
-        """Change the coordinate system from openGL to openCV"""
-        return np.array([point[0], -point[2], point[1]])
-
     def _get_bbox(self, img):
-        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        """
+        Simple function to get the bounding box (1 for detected object and 0 otherwise), assuming that only one object of interest in the image
+
+        :param img: The binary image with non rectangle shape of handles
+        :return: The bounding box (rectangle) of the handle in which 1 indicates the handle and 0 otherwise
+        """
         bbox = np.zeros(img.shape)
 
         # No handle
@@ -246,7 +262,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             np.linspace(-width, width, granularity),
         ):
             # Get the handle location on the left and right side
-            handle_pos = self._change_coordinate(
+            handle_pos = change_coordinate_from_opengl_to_opencv(
                 handle_T.transform_point([height_offset, 0.0, width_offset])
             )
             # Draw the handle location in the image
