@@ -47,6 +47,9 @@ class CampaignService:
         response = requests.get(url)
         return response
 
+    def is_enabled(self):
+        return len(self._hitl_config.campaign_server.url) != 0
+
     @staticmethod
     def random_id(max_len: int = 10):
         return "".join(
@@ -55,6 +58,8 @@ class CampaignService:
         )
 
     def initialize_session(self):
+        if not self.is_enabled():
+            return None
         self.session_meta["session_id"] = CampaignService.random_id()
         self.session_meta["worker_id"] = CampaignService.random_id()
         self.session_meta["mode"] = "sandbox"
@@ -69,6 +74,8 @@ class CampaignService:
             self.session_meta.update(response.json()["data"])
 
     def set_task_status(self, status: TaskStatus):
+        if not self.is_enabled():
+            return None
         endpoint = self._hitl_config.campaign_server.endpoints.update_task
         url = f"{self.server_url}/{endpoint}"
 
@@ -76,6 +83,8 @@ class CampaignService:
         return response
 
     def initialize_task(self, data: Dict[str, Any]):
+        if not self.is_enabled():
+            return None
         endpoint = self._hitl_config.campaign_server.endpoints.initialize_task
         url = f"{self.server_url}/{endpoint}"
 
@@ -83,6 +92,8 @@ class CampaignService:
         return response
 
     def end_task(self, data: Dict[str, Any]):
+        if not self.is_enabled():
+            return None
         endpoint = self._hitl_config.campaign_server.endpoints.end_task
         url = f"{self.server_url}/{endpoint}"
 

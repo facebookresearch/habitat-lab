@@ -116,8 +116,12 @@ habitat_hitl:
 
     max_episodes_per_session: 100
 
+    # Save the episode record and gfx-replay keyframes to S3. Use save_filepath_base to specify the filepath base. The files will be saved to the specified S3 bucket. Note that the S3 bucket must be configured in the `s3` section below.
+    upload_to_s3: False
+    s3_bucket: ""
+
   campaign_server:
-    url: "http://localhost:22362"
+    url: ""
     endpoints:
       initialize_task: "/initialize_task"
       update_task: "/update_task"

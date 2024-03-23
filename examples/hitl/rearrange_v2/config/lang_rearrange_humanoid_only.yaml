@@ -32,6 +32,10 @@ habitat_hitl:
       lin_speed: 10.0
       ang_speed: 300
   hide_humanoid_in_gui: True
+  data_collection:
+    save_filepath_base: "my_session"
+    save_gfx_replay_keyframes: False
+    save_episode_record: True
   camera:
     first_person_mode: True
   campaign_server:

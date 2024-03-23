@@ -137,9 +137,7 @@ class AppStateRearrangeV2(AppState):
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
         for handle, _ in self._ao_root_bbs.items():
-            ao = self.get_sim_utilities().get_obj_from_handle(
-                self._sim, handle
-            )
+            ao = self.get_sim_utilities().get_obj_from_handle(self._sim, handle)
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
             dist_xz = (ao_pos_xz - player_pos_xz).length()
@@ -287,9 +285,13 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                controls_str += (
+                    f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                )
             if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                controls_str += (
+                    f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                )
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -445,6 +447,33 @@ class AppStateRearrangeV2(AppState):
         ):
             self.end_task()
 
+    def get_num_agents(self):
+        return len(self.get_sim().agents_mgr._all_agent_data)
+
+    def record_state(self):
+        agent_states = []
+        for agent_idx in range(self.get_num_agents()):
+            agent_root = get_agent_art_obj_transform(self.get_sim(), agent_idx)
+            rotation_quat = mn.Quaternion.from_matrix(agent_root.rotation())
+            rotation_list = list(rotation_quat.vector) + [rotation_quat.scalar]
+            pos = agent_root.translation
+
+            snap_idx = (
+                self.get_sim()
+                .agents_mgr._all_agent_data[agent_idx]
+                .grasp_mgr.snap_idx
+            )
+
+            agent_states.append(
+                {
+                    "position": pos,
+                    "rotation_xyzw": rotation_list,
+                    "grasp_mgr_snap_idx": snap_idx,
+                }
+            )
+
+        self._app_service.step_recorder.record("agent_states", agent_states)
+
     def end_task(self):
         self._app_service.campaign_service.end_task(
             {
@@ -454,9 +483,7 @@ class AppStateRearrangeV2(AppState):
         )
 
 
-@hydra.main(
-    version_base=None, config_path="config", config_name="rearrange_v2"
-)
+@hydra.main(version_base=None, config_path="config", config_name="rearrange_v2")
 def main(config):
     hitl_main(
         config,
