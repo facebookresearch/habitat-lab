@@ -24,7 +24,7 @@ def get_articulated_agent_camera_transform_from_cam_info(
     cam_offset_transform = None
     if cam_info.cam_look_at_pos == None:
         # if cam_info.cam_look_at_pos is None that means the camera's pose-transform
-        # is described as a position and orientation in the world
+        # is described as a position and orientation in the local coordinate space of the parent link or object
         pos = cam_info.cam_offset_pos
         ori = cam_info.cam_orientation
         Mt = mn.Matrix4.translation(pos)
