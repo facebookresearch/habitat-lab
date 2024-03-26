@@ -171,16 +171,17 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
+        # TODO: Only one user is currently supported.
+        users = Users(1)
+
         self._client_message_manager = None
         if self.network_server_enabled:
-            # TODO: Only one user is currently supported.
-            users = Users(1)
             self._client_message_manager = ClientMessageManager(users)
 
         gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
 
-        self._check_init_server(gui_drawer, gui_input)
+        self._check_init_server(gui_drawer, gui_input, users)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -231,7 +232,9 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.networking.enable
 
-    def _check_init_server(self, gui_drawer: GuiDrawer, gui_input: GuiInput):
+    def _check_init_server(
+        self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
+    ):
         self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
@@ -245,8 +248,11 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record, gui_drawer, gui_input
+                self._interprocess_record, gui_drawer, users
             )
+            # Bind the server input to user 0
+            if self._hitl_config.networking.client_sync.server_input:
+                self._remote_client_state.bind_gui_input(server_gui_input, 0)
 
     def _check_terminate_server(self):
         if self.network_server_enabled:
