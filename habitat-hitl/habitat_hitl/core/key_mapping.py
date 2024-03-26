@@ -69,7 +69,17 @@ class KeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
     # fmt: on
 
 
-class MouseButton(IntEnum, metaclass=KeyCodeMetaEnum):
+class MouseButtonMetaEnum(EnumMeta):
+    keycode_value_cache: Set[int] = None
+
+    # Override 'in' keyword to check whether the specified integer exists in 'MouseButton'.
+    def __contains__(cls, value) -> bool:
+        if MouseButtonMetaEnum.keycode_value_cache == None:
+            MouseButtonMetaEnum.keycode_value_cache = set(MouseButton)
+        return value in MouseButtonMetaEnum.keycode_value_cache
+
+
+class MouseButton(IntEnum, metaclass=MouseButtonMetaEnum):
     """
     Mouse buttons available to control habitat-hitl.
     """

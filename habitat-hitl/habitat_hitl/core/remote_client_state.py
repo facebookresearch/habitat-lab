@@ -17,7 +17,7 @@ from habitat_hitl._internal.networking.interprocess_record import (
 )
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.key_mapping import KeyCode
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.types import ClientState, ConnectionRecord
 from habitat_hitl.core.user_mask import Mask, Users
 
@@ -173,7 +173,7 @@ class RemoteClientState:
 
     def _update_input_state(self, client_states: List[ClientState]) -> None:
         """Update mouse/keyboard input based on new client states."""
-        if not len(client_states):
+        if not len(client_states) or not len(self._gui_inputs):
             return
 
         # TODO: Only one user supported for now.
@@ -204,13 +204,13 @@ class RemoteClientState:
             if mouse_json is not None:
                 mouse_buttons = mouse_json["buttons"]
                 for button in mouse_buttons["buttonDown"]:
-                    if button not in KeyCode:
+                    if button not in MouseButton:
                         continue
-                    gui_input._mouse_button_down.add(KeyCode(button))
+                    gui_input._mouse_button_down.add(MouseButton(button))
                 for button in mouse_buttons["buttonUp"]:
-                    if button not in KeyCode:
+                    if button not in MouseButton:
                         continue
-                    gui_input._mouse_button_up.add(KeyCode(button))
+                    gui_input._mouse_button_up.add(MouseButton(button))
 
                 delta: List[Any] = mouse_json["scrollDelta"]
                 if len(delta) == 2:
@@ -244,13 +244,15 @@ class RemoteClientState:
         if mouse_json is not None:
             mouse_buttons = mouse_json["buttons"]
             for button in mouse_buttons["buttonHeld"]:
-                if button not in KeyCode:
+                if button not in MouseButton:
                     continue
-                gui_input._mouse_button_held.add(KeyCode(button))
+                gui_input._mouse_button_held.add(MouseButton(button))
 
     def debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         # Sloppy: Use internal debug_line_render to render on server only.
+        if not self._gui_drawer:
+            return
         line_renderer = self._gui_drawer.get_sim_debug_line_render()
         if not line_renderer:
             return
@@ -321,6 +323,8 @@ class RemoteClientState:
             return
 
         latest_client_state = client_states[-1]
+        if "connectionId" not in latest_client_state:
+            return
         latest_connection_id = latest_client_state["connectionId"]
 
         # discard older states that don't match the latest connection id
