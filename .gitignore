@@ -101,6 +101,8 @@ data
 /test
 navmeshes/
 *.jpg
+/tb_new_reward
+/video_dir
 
 # outputs from other libraries
 /sandbox
