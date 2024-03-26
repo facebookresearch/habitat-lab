@@ -309,6 +309,8 @@ class RearrangeTask(NavigationTask):
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
+        self._episode_over=False
+        
         action_args = action["action_args"]
         if self._enable_safe_drop and self._is_violating_safe_drop(
             action_args

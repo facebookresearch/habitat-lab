@@ -45,7 +45,7 @@ class PddlSocialNavTask(PddlTask):
         """
         Returns the starting information for a navigate to object task.
         """
-
+        print("social_nav_task is being called")
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
@@ -77,7 +77,6 @@ class PddlSocialNavTask(PddlTask):
             radius=2
             )
         
-        
         def filter_func(start_pos, _):
             return (
                 np.linalg.norm(start_pos - nav_to_pos)
@@ -90,15 +89,21 @@ class PddlSocialNavTask(PddlTask):
         # ) = self._sim.set_articulated_agent_base_to_random_point(
         #     filter_func=filter_func,
         # )
-        #set robot pose to robot start position
+        # set robot pose to robot start position
         if agent_idx == 0: #robot
             articulated_agent_pos = np.array(episode.start_position)
             articulated_agent_angle = episode.start_rotation[3]*1.0
-            nav_to_pos = np.array(episode.info["human_start"])
+            # nav_to_pos = np.array(episode.info["human_start"])
+            # change to somewhere navigable
+            nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
+            circle_center=np.array(episode.info["human_start"]),
+            radius=2
+            )
         elif agent_idx == 1: #human
             articulated_agent_pos = np.array(episode.info["human_start"])
             articulated_agent_angle = episode.start_rotation[3]*1.0
             nav_to_pos = np.array(episode.info["human_goal"])
+        print("agent_idx: ", agent_idx,"robot nav_to_pos: ", nav_to_pos)
         print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)
         
         return NavToInfo(

@@ -81,13 +81,17 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         )
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
-        final_nav_targ, obj_targ_pos = self._get_target_for_coord(
+        final_nav_targ, obj_targ_pos = self._get_target_for_coord( #debug
             nav_to_target_coord
         )
+        final_nav_targ = self._task.nav_goal_pos #kl
+        obj_targ_pos  = self._task.nav_goal_pos
         #KL: generate humanoidpath from here
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        print("oracleNavCoordAction being called")
+        print("Test final_nav_targ & curr_path_points: ", final_nav_targ, curr_path_points)
         if curr_path_points is None:
             raise Exception
         else:
@@ -150,7 +154,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             # Move towards the target
                             vel = [self._config.forward_velocity, 0]
                         else:
-                            # Look at the target waypoint.
+                            HumanoidJointAction# Look at the target waypoint.
                             vel = OracleNavAction._compute_turn(
                                 rel_targ,
                                 self._config.turn_velocity,
@@ -158,7 +162,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             )
                 else:
                     vel = [0, 0]
-                    self.skill_done = True
+                    self.skill_done = True #KL
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelAction.step(self, *args, **kwargs)
 
@@ -172,6 +176,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
                         )
                     else:
+                        print("Move towards the target being called")
                         # Move towards the target
                         if self._config["lin_speed"] == 0:
                             distance_multiplier = 0.0
@@ -190,12 +195,16 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                 kwargs[
                     f"{self._action_arg_prefix}human_joints_trans"
                 ] = base_action
-
+                #KL
+                human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+                print("TEST in coord step: ", human_pos)
+                
                 return HumanoidJointAction.step(self, *args, **kwargs)
             else:
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
+            
 
 
 @registry.register_task_action
@@ -330,17 +339,17 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         self.skill_done = False
         
         #KL: test human agent pos
-        # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
-        # human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
-        # print("TEST in step: ", robot_pos, human_pos)
-        # print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
+        robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
+        human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+        print("TEST in step: ", robot_pos, human_pos)
+        print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
 
 
-        if self.coord_nav is None:
-            self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
-                max_tries,
-                island_index=self._sim.largest_island_idx,
-            )
+        # if self.coord_nav is None:
+        #     self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
+        #         max_tries,
+        #         island_index=self._sim.largest_island_idx,
+        #     )
 
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
@@ -349,7 +358,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         ret_val = super().step(*args, **kwargs)
         # if self.skill_done:
         #     self.coord_nav = None
-
+        human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+        print("TEST in step after super: ", human_pos)
         # If the robot is nearby, the human starts to walk, otherwise, the human
         # just stops there and waits for robot to find it
         if self._config.human_stop_and_walk_to_robot_distance_threshold != -1:
@@ -385,6 +395,8 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             kwargs["task"].measurements.measures[
                 "social_nav_stats"
             ].update_human_pos = self.coord_nav
+            human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
+            print("TEST in step after update_human_pos: ", human_pos)
         except Exception:
             pass
         return ret_val

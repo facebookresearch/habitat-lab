@@ -327,6 +327,7 @@ class EmbodiedTask:
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
+        self._is_episode_active = True
         action_name = action["action"]
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
@@ -357,9 +358,9 @@ class EmbodiedTask:
                 should_time=True,
             )
         )
-        self._is_episode_active = self._check_episode_is_active(
-            observations=observations, action=action, episode=episode
-        )
+        # self._is_episode_active = self._check_episode_is_active(
+        #     observations=observations, action=action, episode=episode
+        # )
         return observations
 
     def get_action_name(self, action_index: Union[int, np.integer]):

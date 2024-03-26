@@ -24,8 +24,8 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/new_checkpoints"
-  checkpoint_folder: "data/new_checkpoints"
+  eval_ckpt_path_dir: "data/checkpoints"
+  checkpoint_folder: "data/checkpoints"
   num_environments: 1  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e7
@@ -79,9 +79,9 @@ habitat_baselines:
             allowed_actions:
               - nav_to_goal
               - nav_to_obj
-              - pick
-              - place
-              - nav_to_receptacle_by_name
+              # - pick
+              # - place
+              # - nav_to_receptacle_by_name
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_randcoord:

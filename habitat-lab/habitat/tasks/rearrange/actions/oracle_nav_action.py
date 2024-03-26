@@ -161,7 +161,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         path.requested_end = point
         found_path = self._sim.pathfinder.find_path(path)
         if not found_path:
+            print("NOT FOUND PATH")
             return [agent_pos, point]
+        print("PATH GENERATED", path.points)
         return path.points
 
     def step(self, *args, **kwargs):

@@ -63,9 +63,9 @@ habitat:
         y_len: 1.5
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
-        goal_is_human: False
+        goal_is_human: True
     type: RearrangePddlSocialNavTask-v0
-    min_start_distance: 0.0
+    min_start_distance: 0.0 #KL
     reward_measure: social_nav_reward
     # KL: success_measure: nav_seek_success
     success_measure: social_nav_to_pos_success
@@ -75,7 +75,7 @@ habitat:
     task_spec_base_path: benchmark/multi_agent/
     task_spec: pddl/multi_agent_tidy_house
     pddl_domain_def: fp
-    min_distance_start_agents: 0.0
+    min_distance_start_agents: 0.0 #KL
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
 
@@ -121,10 +121,10 @@ habitat:
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
         motion_control: human_joints
-        lin_speed: 0.05 #5.0
-        ang_speed: 0.5 #5.0
+        lin_speed: 5.0
+        ang_speed: 5.0
 
-    robot_at_thresh: 3.0
+    robot_at_thresh: 3.0 #KL:3.0
 
   gym:
     obs_keys:
@@ -176,11 +176,7 @@ habitat:
           head_depth_sensor:
             height: 128
             width: 128
-          third_rgb_sensor:
-            height: 128
-            width: 128
-            orientation: [-1.519, 0.0, 0.0]
-            position: [0, 1.39, 0]
+          
         joint_start_noise: 0.0
 
     kinematic_mode: True

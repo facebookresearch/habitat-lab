@@ -25,7 +25,7 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat_baselines.utils.info_dict import extract_scalars_from_info
-
+from IPython import embed
 
 class HabitatEvaluator(Evaluator):
     """
@@ -46,6 +46,7 @@ class HabitatEvaluator(Evaluator):
         rank0_keys,
     ):
         observations = envs.reset()
+        logger.info(f"###### RESET BEEN CALLED ######")
         observations = envs.post_step(observations)
         batch = batch_obs(observations, device=device)
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
@@ -171,7 +172,7 @@ class HabitatEvaluator(Evaluator):
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
 
             outputs = envs.step(step_data)
-
+            print("### Test human pos in habitat_evaluator2: ", outputs[0][0]["agent_1_localization_sensor"][:3])
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
