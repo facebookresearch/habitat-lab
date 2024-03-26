@@ -21,7 +21,8 @@ class RemoteGuiInput:
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
-        self._new_connection_records: List[Any] = []
+        self._recent_client_states: List[ClientState] = []
+        self._new_connection_records: List[ConnectionRecord] = []
 
         # temp map VR button to key
         self._button_map = {
@@ -39,15 +40,15 @@ class RemoteGuiInput:
         """Internal GuiInput class."""
         return self._gui_input
 
-    def get_history_length(self):
+    def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
         return 4
 
-    def get_history_timestep(self):
+    def get_history_timestep(self) -> float:
         """Frequency at which client states are read."""
         return 1 / 60
 
-    def pop_recent_server_keyframe_id(self):
+    def pop_recent_server_keyframe_id(self) -> Optional[int]:
         """
         Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
 
@@ -64,14 +65,18 @@ class RemoteGuiInput:
         del latest_client_state["recentServerKeyframeId"]
         return retval
 
-    def get_recent_client_state_by_history_index(self, history_index):
+    def get_recent_client_state_by_history_index(
+        self, history_index: int
+    ) -> Optional[ClientState]:
         assert history_index >= 0
         if history_index >= len(self._recent_client_states):
             return None
 
         return self._recent_client_states[-(1 + history_index)]
 
-    def get_head_pose(self, history_index=0):
+    def get_head_pose(
+        self, history_index: int = 0
+    ) -> Optional[Tuple[mn.Vector3, mn.Quaternion]]:
         """
         Get the latest head transform.
         Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
@@ -198,7 +203,7 @@ class RemoteGuiInput:
 
         return pos, rot_quat
 
-    def _update_input_state(self, client_states):
+    def _update_input_state(self, client_states: List[ClientState]) -> None:
         """Update mouse/keyboard input based on new client states."""
         if not len(client_states):
             return
@@ -272,7 +277,7 @@ class RemoteGuiInput:
                     continue
                 self._gui_input._mouse_button_held.add(KeyCode(button))
 
-    def debug_visualize_client(self):
+    def debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         # Sloppy: Use internal debug_line_render to render on server only.
         line_renderer = self._gui_drawer.get_sim_debug_line_render()
@@ -356,7 +361,9 @@ class RemoteGuiInput:
                     )
                     self._debug_line_render.pop_transform()
 
-    def _clean_history_by_connection_id(self, client_states):
+    def _clean_history_by_connection_id(
+        self, client_states: List[ClientState]
+    ) -> None:
         """
         Clear history by connection id.
         Typically done after a client disconnect.
@@ -385,7 +392,7 @@ class RemoteGuiInput:
         ):
             self.clear_history()
 
-    def update(self):
+    def update(self) -> None:
         """Get the latest received remote client states."""
         self._new_connection_records = (
             self._interprocess_record.get_queued_connection_records()
@@ -411,10 +418,10 @@ class RemoteGuiInput:
 
         self.debug_visualize_client()
 
-    def get_new_connection_records(self):
+    def get_new_connection_records(self) -> List[ConnectionRecord]:
         return self._new_connection_records
 
-    def on_frame_end(self):
+    def on_frame_end(self) -> None:
         self._gui_input.on_frame_end()
         self._new_connection_records = None
 

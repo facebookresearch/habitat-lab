@@ -11,7 +11,7 @@ import signal
 import ssl
 from datetime import datetime, timedelta
 from multiprocessing import Process
-from typing import Any, Dict, Optional
+from typing import Dict, List, Optional
 
 import aiohttp.web
 import websockets
@@ -28,6 +28,7 @@ from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
     update_consolidated_keyframe,
 )
+from habitat_hitl.core.types import ClientState, ConnectionRecord, Keyframe
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -107,7 +108,7 @@ class NetworkManager:
         self._waiting_for_app_ready = False
         self._recent_connection_activity_timestamp: Optional[datetime] = None
 
-    def update_consolidated_keyframes(self, keyframes) -> None:
+    def update_consolidated_keyframes(self, keyframes: List[Keyframe]) -> None:
         for inc_keyframe in keyframes:
             update_consolidated_keyframe(
                 self._consolidated_keyframe, inc_keyframe
@@ -119,7 +120,7 @@ class NetworkManager:
             self._recent_connection_activity_timestamp = datetime.now()
             try:
                 # Parse the received message as a JSON object
-                client_state = json.loads(message)
+                client_state: ClientState = json.loads(message)
 
                 client_state["connectionId"] = connection_id
 
@@ -232,8 +233,8 @@ class NetworkManager:
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
-    def parse_connection_record(self, message: str) -> Any:
-        connection_record = None
+    def parse_connection_record(self, message: str) -> ConnectionRecord:
+        connection_record: ConnectionRecord
         if message == "client ready!":
             # legacy message format for initial client message
             connection_record = {"isClientReady": True}
