@@ -111,8 +111,8 @@ class GuiPlacementHelper:
         if success:
             self._app_service.gui_drawer.draw_circle(
                 hint_pos,
-                COLOR_PLACE_PREVIEW_VALID,
                 RADIUS_PLACE_PREVIEW_VALID,
+                COLOR_PLACE_PREVIEW_VALID,
                 billboard=False,
                 destination_mask=Mask.from_index(self._user_index),
             )
@@ -120,8 +120,8 @@ class GuiPlacementHelper:
             query_obj.translation = FAR_AWAY_HIDDEN_POSITION
             self._app_service.gui_drawer.draw_circle(
                 hint_pos,
-                COLOR_PLACE_PREVIEW_INVALID,
                 RADIUS_PLACE_PREVIEW_INVALID,
+                COLOR_PLACE_PREVIEW_INVALID,
                 billboard=True,
                 destination_mask=Mask.from_index(self._user_index),
             )
