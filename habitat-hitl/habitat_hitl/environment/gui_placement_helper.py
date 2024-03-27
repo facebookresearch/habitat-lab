@@ -29,7 +29,7 @@ class GuiPlacementHelper:
         self,
         app_service: AppService,
         user_index: int,
-        gravity_dir=DEFAULT_GRAVITY,
+        gravity_dir: mn.Vector3 = DEFAULT_GRAVITY,
     ):
         self._app_service = app_service
         self._user_index = user_index

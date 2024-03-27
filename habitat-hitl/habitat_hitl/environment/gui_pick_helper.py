@@ -84,8 +84,8 @@ class GuiPickHelper:
         pos: mn.Vector3,
         radius: float,
         color: mn.Color3,
-        do_pulse=False,
-        billboard=True,
+        do_pulse: bool = False,
+        billboard: bool = True,
     ):
         if do_pulse:
             radius += self._app_service.get_anim_fraction() * RING_PULSE_SIZE
