@@ -304,6 +304,7 @@ class TriangleMeshReceptacle(Receptacle):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
+        scale: Union[float, mn.Vector3] = None,
     ) -> None:
         """
         Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
@@ -313,9 +314,19 @@ class TriangleMeshReceptacle(Receptacle):
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptacles.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :param scale: The scaling vector (or uniform scaling float) to be applied to the mesh.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self.mesh_data = mesh_data
+
+        # apply the scale
+        if scale is not None:
+            m_verts = self.mesh_data.mutable_attribute(
+                mn.trade.MeshAttribute.POSITION
+            )
+            for vix, v in enumerate(m_verts):
+                m_verts[vix] = v * scale
+
         self.area_weighted_accumulator = (
             []
         )  # normalized float weights for each triangle for sampling
@@ -695,6 +706,7 @@ def parse_receptacles_from_user_config(
                             up=up,
                             parent_object_handle=parent_object_handle,
                             parent_link=parent_link_ix,
+                            scale=ao_uniform_scaling,
                         )
                     )
             else:
