@@ -9,6 +9,8 @@ from typing import Final
 
 import magnum as mn
 
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import Mask
 from habitat_sim.physics import CollisionGroups
 
 COLOR_PLACE_PREVIEW_VALID: Final[mn.Color3] = mn.Color3(1, 1, 1)
@@ -23,8 +25,14 @@ DEFAULT_GRAVITY = mn.Vector3(0, -1, 0)
 class GuiPlacementHelper:
     """Helper for placing objects from the GUI."""
 
-    def __init__(self, app_service, gravity_dir=DEFAULT_GRAVITY):
+    def __init__(
+        self,
+        app_service: AppService,
+        user_index: int,
+        gravity_dir: mn.Vector3 = DEFAULT_GRAVITY,
+    ):
         self._app_service = app_service
+        self._user_index = user_index
         self._gravity_dir = gravity_dir
 
     def _snap_or_hide_object(self, ray, query_obj) -> tuple[bool, mn.Vector3]:
@@ -101,29 +109,21 @@ class GuiPlacementHelper:
         query_obj.collidable = cached_is_collidable
 
         if success:
-            self._draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 hint_pos,
-                COLOR_PLACE_PREVIEW_VALID,
                 RADIUS_PLACE_PREVIEW_VALID,
+                COLOR_PLACE_PREVIEW_VALID,
                 billboard=False,
+                destination_mask=Mask.from_index(self._user_index),
             )
         else:
             query_obj.translation = FAR_AWAY_HIDDEN_POSITION
-            self._draw_circle(
+            self._app_service.gui_drawer.draw_circle(
                 hint_pos,
-                COLOR_PLACE_PREVIEW_INVALID,
                 RADIUS_PLACE_PREVIEW_INVALID,
+                COLOR_PLACE_PREVIEW_INVALID,
                 billboard=True,
+                destination_mask=Mask.from_index(self._user_index),
             )
 
         return hint_pos if success else None
-
-    def _draw_circle(self, pos, color, radius, billboard):
-        num_segments = 24
-        self._app_service.gui_drawer.draw_circle(
-            pos,
-            radius,
-            color,
-            num_segments,
-            billboard=billboard,
-        )
