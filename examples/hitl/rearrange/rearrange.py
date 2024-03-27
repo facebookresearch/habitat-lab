@@ -84,7 +84,9 @@ class AppStateRearrange(AppState):
         )
 
         self._nav_helper = GuiNavigationHelper(
-            self._app_service, self.get_gui_controlled_agent_index()
+            self._app_service,
+            self.get_gui_controlled_agent_index(),
+            user_index=0,
         )
         self._episode_helper = self._app_service.episode_helper
 
@@ -121,7 +123,7 @@ class AppStateRearrange(AppState):
             color = mn.Color3(0, 255 / 255, 0)  # green
             goal_position = self._goal_positions[self._held_target_obj_idx]
             self._app_service.gui_drawer.draw_circle(
-                goal_position, end_radius, color, 24
+                goal_position, end_radius, color
             )
 
             self._nav_helper.draw_nav_hint_from_agent(
@@ -138,7 +140,6 @@ class AppStateRearrange(AppState):
                 can_place_position,
                 self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
-                24,
             )
 
             if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
@@ -272,7 +273,6 @@ class AppStateRearrange(AppState):
                     can_grasp_position,
                     self._can_grasp_place_threshold,
                     mn.Color3(255 / 255, 255 / 255, 0),
-                    24,
                 )
 
     def get_gui_controlled_agent_index(self):
