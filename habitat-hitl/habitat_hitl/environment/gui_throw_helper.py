@@ -9,11 +9,14 @@ import math
 import magnum as mn
 import numpy as np
 
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import Mask
+
 
 class GuiThrowHelper:
     """Helper for throwing objects from the GUI."""
 
-    def __init__(self, gui_service, agent_idx):
+    def __init__(self, gui_service: AppService, agent_idx: int):
         self._app_service = gui_service
         self._agent_idx = agent_idx
         self._largest_island_idx = None
@@ -66,16 +69,20 @@ class GuiThrowHelper:
         vel_vector, path_points = self.compute_velocity_throw(
             robot_root, target_on_floor
         )
-        # Sloppy: Use internal debug_line_render to render on server only.
-        line_renderer = (
-            self._app_service.gui_drawer.get_sim_debug_line_render()
-        )
-        if line_renderer is not None:
-            line_renderer.draw_path_with_endpoint_circles(
-                path_points, path_endpoint_radius, path_color
+        gui_drawer = self._app_service.gui_drawer
+        server_only = Mask.NONE  # Render on the server only.
+        if gui_drawer is not None:
+            gui_drawer.draw_path_with_endpoint_circles(
+                path_points,
+                path_endpoint_radius,
+                path_color,
+                destination_mask=server_only,
             )
-            line_renderer.draw_path_with_endpoint_circles(
-                path_points, path_endpoint_radius, path_color
+            gui_drawer.draw_path_with_endpoint_circles(
+                path_points,
+                path_endpoint_radius,
+                path_color,
+                destination_mask=server_only,
             )
 
         return vel_vector
