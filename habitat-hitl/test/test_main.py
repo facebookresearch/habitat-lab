@@ -39,7 +39,7 @@ def main(config) -> None:
 
 def test_hitl_main():
     register_hydra_plugins()
-    with initialize(version_base=None, config_path="../config/habitat_hitl"):
+    with initialize(version_base=None, config_path="config"):
         cfg = compose(
             config_name="base_test_cfg",
             overrides=[

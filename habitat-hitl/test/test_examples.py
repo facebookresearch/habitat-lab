@@ -34,7 +34,7 @@ def run_main_as_subprocess(args):
         (
             "examples/hitl/basic_viewer/basic_viewer.py",
             "--config-dir",
-            "test/config/habitat_hitl",
+            "habitat-hitl/test/config",
             "+experiment=smoke_test",
         ),
     ],
@@ -49,7 +49,7 @@ def test_hitl_example_basic_viewer(args):
         (
             "examples/hitl/minimal/minimal.py",
             "--config-dir",
-            "test/config/habitat_hitl",
+            "habitat-hitl/test/config",
             "+experiment=smoke_test",
         ),
     ],
@@ -64,7 +64,7 @@ def test_hitl_example_minimal(args):
         (
             "examples/hitl/pick_throw_vr/pick_throw_vr.py",
             "--config-dir",
-            "test/config/habitat_hitl",
+            "habitat-hitl/test/config",
             "+experiment=smoke_test",
         ),
     ],
@@ -79,7 +79,7 @@ def test_hitl_example_pick_throw_vr(args):
         (
             "examples/hitl/rearrange/rearrange.py",
             "--config-dir",
-            "test/config/habitat_hitl",
+            "habitat-hitl/test/config",
             "+experiment=smoke_test",
         ),
     ],
@@ -94,7 +94,7 @@ def test_hitl_example_rearrange(args):
         (
             "examples/hitl/rearrange_v2/rearrange_v2.py",
             "--config-dir",
-            "test/config/habitat_hitl",
+            "habitat-hitl/test/config",
             "+experiment=smoke_test",
         ),
     ],

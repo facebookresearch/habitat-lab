@@ -271,7 +271,7 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m pytest --cov-report=xml --cov-report term  --cov=./
+              pytest test/ --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
       - run:
           name: Run HITL tests
@@ -283,7 +283,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
-              pytest test/hitl/test_hitl_main.py
+              pytest habitat-hitl/test
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
@@ -292,9 +292,9 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              # This is a flag that enables test_test_baseline_training to work
+              # This is a flag that enables test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python -m pytest  test/test_baseline_training.py -s
+              pytest test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
