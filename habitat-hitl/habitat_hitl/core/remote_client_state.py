@@ -250,19 +250,18 @@ class RemoteClientState:
 
     def debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
-        # Sloppy: Use internal debug_line_render to render on server only.
         if not self._gui_drawer:
             return
-        line_renderer = self._gui_drawer.get_sim_debug_line_render()
-        if not line_renderer:
-            return
 
+        server_only = Mask.NONE  # Render on the server only.
         avatar_color = mn.Color3(0.3, 1, 0.3)
 
         pos, rot_quat = self.get_head_pose()
         if pos is not None and rot_quat is not None:
             trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            line_renderer.push_transform(trans)
+            self._gui_drawer.push_transform(
+                trans, destination_mask=server_only
+            )
             color0 = avatar_color
             color1 = mn.Color4(
                 avatar_color.r, avatar_color.g, avatar_color.b, 0
@@ -270,47 +269,53 @@ class RemoteClientState:
             size = 0.5
 
             # Draw a frustum (forward is flipped (z+))
-            line_renderer.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, size, size),
                 color0,
                 color1,
             )
-            line_renderer.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, size, size),
                 color0,
                 color1,
+                destination_mask=server_only,
             )
-            line_renderer.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(size, -size, size),
                 color0,
                 color1,
+                destination_mask=server_only,
             )
-            line_renderer.draw_transformed_line(
+            self._gui_drawer.draw_transformed_line(
                 mn.Vector3(0, 0, 0),
                 mn.Vector3(-size, -size, size),
                 color0,
                 color1,
+                destination_mask=server_only,
             )
 
-            line_renderer.pop_transform()
+            self._gui_drawer.pop_transform(destination_mask=server_only)
 
         # Draw controller rays (forward is flipped (z+))
         for hand_idx in range(2):
             hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
             if hand_pos is not None and hand_rot_quat is not None:
                 trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
-                line_renderer.push_transform(trans)
+                self._gui_drawer.push_transform(
+                    trans, destination_mask=server_only
+                )
                 pointer_len = 0.5
-                line_renderer.draw_transformed_line(
+                self._gui_drawer.draw_transformed_line(
                     mn.Vector3(0, 0, 0),
                     mn.Vector3(0, 0, pointer_len),
                     color0,
                     color1,
+                    destination_mask=server_only,
                 )
-                line_renderer.pop_transform()
+                self._gui_drawer.pop_transform(destination_mask=server_only)
 
     def _clean_history_by_connection_id(
         self, client_states: List[ClientState]
