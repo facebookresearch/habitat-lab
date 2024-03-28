@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Set
 
 import hydra
 import magnum as mn
@@ -212,8 +212,11 @@ class AppStateRearrangeV2(AppState):
         self._has_grasp_preview = False
 
         # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
-        if self._held_obj_id is not None :
-            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE) and self._can_place_object:
+        if self._held_obj_id is not None:
+            if (
+                self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE)
+                and self._can_place_object
+            ):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._get_gui_agent_translation(
