@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
 import hydra
 import magnum as mn
@@ -58,6 +58,8 @@ class AppStateRearrangeV2(AppState):
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
+        self._can_place_object = False
+        self._original_object_position: Optional[mn.Vector3] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -219,8 +221,15 @@ class AppStateRearrangeV2(AppState):
                         user_index
                     )  # self._gui_agent_controllers.get_base_translation()
                 else:
-                    # GuiPlacementHelper has already placed this object, so nothing to do here
-                    pass
+                    # GuiPlacementHelper has already placed this object.
+                    # Move object back to original position if it could not be placed.
+                    if not self._can_place_object:
+                        query_obj = (
+                            self.get_sim()
+                            .get_rigid_object_manager()
+                            .get_object_by_id(self._held_obj_id)
+                        )
+                        query_obj.translation = self._original_object_position
                 self._held_obj_id = None
         else:
             query_pos = self._get_gui_agent_translation(user_index)
@@ -232,6 +241,12 @@ class AppStateRearrangeV2(AppState):
                     if DO_HUMANOID_GRASP_OBJECTS:
                         grasp_object_id = obj_id
                     self._held_obj_id = obj_id
+                    query_obj = (
+                        self.get_sim()
+                        .get_rigid_object_manager()
+                        .get_object_by_id(self._held_obj_id)
+                    )
+                    self._original_object_position = query_obj.translation
                 else:
                     self._has_grasp_preview = True
 
@@ -367,6 +382,9 @@ class AppStateRearrangeV2(AppState):
         if self._placement_helper.update(ray, self._held_obj_id):
             # sloppy: save another keyframe here since we just moved the held object
             self.get_sim().gfx_replay_manager.save_keyframe()
+            self._can_place_object = True
+        else:
+            self._can_place_object = False
 
     def sim_update(self, dt, post_sim_update_dict):
         if (
