@@ -239,13 +239,8 @@ class HitlDriver(AppDriver):
         self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
-            # How many frames we can simulate "ahead" of what keyframes have been sent.
-            # A larger value increases lag on the client, while ensuring a more reliable
-            # simulation rate in the presence of unreliable network comms.
-            # See also server.py max_send_rate
-            max_steps_ahead = 5
             self._interprocess_record = InterprocessRecord(
-                self._hitl_config.networking, max_steps_ahead
+                self._hitl_config.networking
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
