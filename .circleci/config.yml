@@ -337,7 +337,7 @@ jobs:
               pip install habitat-baselines/
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
               pip install habitat-hitl/
-              python -c 'import habitat-hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
+              python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
       - run: &build_sdist_and_bdist
           name: Build sdist and bdist
           command: |
