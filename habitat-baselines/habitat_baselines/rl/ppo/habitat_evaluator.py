@@ -46,7 +46,6 @@ class HabitatEvaluator(Evaluator):
         rank0_keys,
     ):
         observations = envs.reset()
-        logger.info(f"###### RESET BEEN CALLED ######")
         observations = envs.post_step(observations)
         batch = batch_obs(observations, device=device)
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
@@ -127,6 +126,7 @@ class HabitatEvaluator(Evaluator):
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and envs.num_envs > 0
         ):
+            logger.info("###### episodes evaluation ###")
             current_episodes_info = envs.current_episodes()
 
             space_lengths = {}
@@ -172,7 +172,7 @@ class HabitatEvaluator(Evaluator):
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
 
             outputs = envs.step(step_data)
-            print("### Test human pos in habitat_evaluator2: ", outputs[0][0]["agent_1_localization_sensor"][:3])
+
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]

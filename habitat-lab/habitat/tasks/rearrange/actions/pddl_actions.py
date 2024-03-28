@@ -58,7 +58,6 @@ class PddlApplyAction(ArticulatedAgentAction):
         cur_i = 0
         for action in self._action_ordering:
             action_part = apply_pddl_action[cur_i : cur_i + action.n_args][:]
-            print("action_name: ", action.name)
             if sum(action_part) > 0:
                 # Take action
                 # Convert 1 indexed to 0 indexed.
@@ -77,7 +76,7 @@ class PddlApplyAction(ArticulatedAgentAction):
                 apply_action.set_param_values(param_values)
                 self._prev_action = apply_action
 
-                #debug
+                # debug
                 # if not apply_action.apply_if_true(
                 #     self._task.pddl_problem.sim_info
                 # ):
@@ -86,8 +85,6 @@ class PddlApplyAction(ArticulatedAgentAction):
             cur_i += action.n_args
 
     def step(self, *args, **kwargs):
-        print("pddl_actions.py being called")
-        print(self.cur_articulated_agent.base_pos)
         self._prev_action = None
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         self._was_prev_action_invalid = False
@@ -96,5 +93,3 @@ class PddlApplyAction(ArticulatedAgentAction):
         )
         if not inputs_outside:
             self._apply_action(apply_pddl_action)
-            print("human_pos after apply_action: ", self.cur_articulated_agent.base_pos)
-        print("test after step in pddl_action: human_pos", self.cur_articulated_agent.base_pos)

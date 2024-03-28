@@ -102,7 +102,6 @@ data
 /test
 navmeshes/
 *.jpg
-*.mp4
 
 # outputs from other libraries
 /sandbox

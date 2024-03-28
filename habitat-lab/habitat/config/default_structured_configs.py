@@ -353,7 +353,7 @@ class OracleNavActionConfig(ActionConfig):
     turn_velocity: float = 1.0
     forward_velocity: float = 1.0
     turn_thresh: float = 0.1
-    dist_thresh: float = 0.2
+    dist_thresh: float = 0.0 #0.2
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
@@ -992,7 +992,7 @@ class SocialNavToPosSuccMeasurementConfig(MeasurementConfig):
     Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position.
     """
     type: str = "SocialNavToPosSucc"
-    success_distance: float = 1.5
+    success_distance: float = 0.2 #KL
 
 @dataclass
 class SocialNavStatsMeasurementConfig(MeasurementConfig):
