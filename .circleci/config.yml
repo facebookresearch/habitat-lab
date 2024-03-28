@@ -19,7 +19,8 @@ jobs:
           name: setup
           command: |
               pip install black==23.1.0 --progress-bar off
-              pip install "isort[pyproject]" numpy --progress-bar off
+              pip install "isort[pyproject]" --progress-bar off
+              pip install "numpy>=1.20.0,<1.24.0" --progress-bar off
               pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
               pip install -r habitat-lab/requirements.txt --progress-bar off
       - run:
@@ -335,7 +336,7 @@ jobs:
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
       - run:
-          name: Ensure sdist and bdist intall work
+          name: Ensure sdist and bdist install work
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
