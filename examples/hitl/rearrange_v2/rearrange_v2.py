@@ -59,7 +59,6 @@ class AppStateRearrangeV2(AppState):
         self._paused = False
         self._hide_gui_text = False
         self._can_place_object = False
-        self._original_object_position: Optional[mn.Vector3] = None
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -213,8 +212,8 @@ class AppStateRearrangeV2(AppState):
         self._has_grasp_preview = False
 
         # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
-        if self._held_obj_id is not None:
-            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+        if self._held_obj_id is not None :
+            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE) and self._can_place_object:
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._get_gui_agent_translation(
@@ -222,14 +221,7 @@ class AppStateRearrangeV2(AppState):
                     )  # self._gui_agent_controllers.get_base_translation()
                 else:
                     # GuiPlacementHelper has already placed this object.
-                    # Move object back to original position if it could not be placed.
-                    if not self._can_place_object:
-                        query_obj = (
-                            self.get_sim()
-                            .get_rigid_object_manager()
-                            .get_object_by_id(self._held_obj_id)
-                        )
-                        query_obj.translation = self._original_object_position
+                    pass
                 self._held_obj_id = None
         else:
             query_pos = self._get_gui_agent_translation(user_index)
@@ -241,12 +233,6 @@ class AppStateRearrangeV2(AppState):
                     if DO_HUMANOID_GRASP_OBJECTS:
                         grasp_object_id = obj_id
                     self._held_obj_id = obj_id
-                    query_obj = (
-                        self.get_sim()
-                        .get_rigid_object_manager()
-                        .get_object_by_id(self._held_obj_id)
-                    )
-                    self._original_object_position = query_obj.translation
                 else:
                     self._has_grasp_preview = True
 
