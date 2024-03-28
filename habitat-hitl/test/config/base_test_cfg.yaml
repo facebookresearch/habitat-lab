@@ -1,0 +1,6 @@
+defaults:
+  # We load the `pop_play` Habitat baseline featuring a Spot robot and a humanoid in HSSD scenes. See habitat-baselines/README.md.
+  - social_rearrange: pop_play
+  # Load default parameters for the HITL framework. See habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_

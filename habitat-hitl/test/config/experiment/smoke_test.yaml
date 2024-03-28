@@ -1,0 +1,16 @@
+# @package _global_
+
+# HITL smoke test configuration.
+# Starts a headless HITL app and runs one frame.
+habitat_hitl:
+  window: ~
+  experimental:
+    headless:
+      do_headless: True
+      exit_after: 1
+  test:
+    testing: True
+
+habitat:
+  dataset:
+    data_path: data/hab3_bench_assets/episode_datasets/small_small.json.gz
