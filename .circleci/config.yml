@@ -271,7 +271,7 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              pytest test/ --cov-report=xml --cov-report term  --cov=./
+              python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
       - run:
           name: Run HITL tests
@@ -279,11 +279,10 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              ln -s ../habitat-sim/data data
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
-              pytest habitat-hitl/test
+              python -m pytest habitat-hitl/test
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
@@ -294,7 +293,7 @@ jobs:
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               # This is a flag that enables test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              pytest test/test_baseline_training.py -s
+              python -m pytest test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
