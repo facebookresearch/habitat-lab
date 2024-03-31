@@ -24,6 +24,25 @@ LOCAL_GROUP_NAME = "local"
 OUTPUT_METADATA_FILE_NAME = "metadata.json"
 
 
+def resolve_relative_path(path: str) -> str:
+    """
+    Remove './' and '../' from path.
+    """
+    components = path.split("/")
+    output_path: List[str] = []
+    for component in components:
+        if component == ".":
+            continue
+        elif component == "..":
+            assert (
+                len(output_path) > 0
+            ), "Relative path escaping out of data folder."
+            output_path.pop()
+        else:
+            output_path.append(component)
+    return os.path.join("", *output_path)
+
+
 class Job:
     def __init__(
         self,
@@ -32,8 +51,10 @@ class Job:
         groups: List[str],
         simplify: bool,
     ):
-        self.source_path = asset_path
-        self.dest_path = os.path.join(output_dir, asset_path)
+        self.source_path = resolve_relative_path(asset_path)
+        self.dest_path = resolve_relative_path(
+            os.path.join(output_dir, asset_path)
+        )
         self.groups = groups
         self.simplify = simplify
 
@@ -129,6 +150,9 @@ def verify_jobs(jobs: List[Job], output_path: str) -> None:
         ), f"Duplicate destination asset: '{job.dest_path}'."
         source_set.add(job.source_path)
         dest_set.add(job.dest_path)
+        # Check that all paths are resolved (no '.' or '..').
+        assert "./" not in job.source_path
+        assert "./" not in job.dest_path
 
 
 def find_files(
@@ -287,7 +311,9 @@ class ObjectDataset:
             object_render_asset_path = os.path.join(
                 object_render_asset_dir, object_render_asset_file_name
             )
-            self.render_assets.append(object_render_asset_path)
+            self.render_assets.append(
+                resolve_relative_path(object_render_asset_path)
+            )
 
 
 class SceneInstance:
@@ -397,7 +423,7 @@ class GroupedSceneAssets:
 
 class EpisodeSet:
     """
-    Loads and episode set and exposes its assets.
+    Loads an episode set (.json.gz) and exposes its assets.
     """
 
     grouped_scene_assets: GroupedSceneAssets
@@ -468,13 +494,16 @@ def create_metadata_file(results: List[Dict[str, Any]]):
     # Aggregate groups from processing results.
     groups: Dict[str, List[str]] = {}
     for result in results:
-        if result["status"] == "ok" and "groups" in result:
-            pkgs = result["groups"]
-            for pkg in pkgs:
+        if (
+            Path(result["dest_path"]).is_file()
+            and result["status"] != "error"
+            and "groups" in result
+        ):
+            for group in result["groups"]:
                 file_rel_path = result["dest_path"].removeprefix(OUTPUT_DIR)
-                if pkg not in groups:
-                    groups[pkg] = []
-                groups[pkg].append(file_rel_path)
+                if group not in groups:
+                    groups[group] = []
+                groups[group].append(file_rel_path)
 
     # Compose file content.
     content: Dict[str, Any] = {}
@@ -484,18 +513,26 @@ def create_metadata_file(results: List[Dict[str, Any]]):
     # Save file.
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_METADATA_FILE_NAME)
     with open(output_path, "w") as f:
-        json.dump(groups, f, ensure_ascii=False)
+        json.dump(content, f, ensure_ascii=False)
 
 
 def process_model(args):
     job, counter, lock, total_models, verbose = args
 
+    result = {
+        "source_path": job.source_path,
+        "dest_path": job.dest_path,
+        "groups": job.groups,
+    }
+
     if os.path.isfile(job.dest_path):
-        print(f"Skipping:   {job.source_path}")
-        result = {"status": "skipped"}
+        if verbose:
+            print(f"Skipping:   {job.source_path}")
+        result["status"] = "skipped"
         return result
 
-    print(f"Processing: {job.source_path}")
+    if verbose:
+        print(f"Processing: {job.source_path}.")
 
     # Create all necessary subdirectories
     os.makedirs(os.path.dirname(job.dest_path), exist_ok=True)
@@ -523,21 +560,17 @@ def process_model(args):
             )
         except Exception:
             print(f"Unable to decimate: {job.source_path}")
-            result = {"status": "error"}
+            result["status"] = "error"
             return result
 
-    print(
-        f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
-    )
+    if job.simplify and job.verbose:
+        print(
+            f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
+        )
+        result["source_tris"] = source_tris
+        result["simplified_tris"] = simplified_tris
 
-    result = {
-        "source_tris": source_tris,
-        "simplified_tris": simplified_tris,
-        "source_path": job.source_path,
-        "dest_path": job.dest_path,
-        "status": "ok",
-        "groups": job.groups,
-    }
+    result["status"] = "ok"
 
     if simplified_tris > target_tris * 2 and simplified_tris > 3000:
         result["list_type"] = "black"
@@ -553,7 +586,7 @@ def process_model(args):
     with lock:
         counter.value += 1
         print(
-            f"{counter.value} out of {total_models} models have been processed so far"
+            f"{counter.value} out of {total_models} models have been processed so far."
         )
 
     return result
@@ -613,20 +646,10 @@ def simplify_models(jobs: List[Job], config: Config):
         print(f"Skipped {total_skipped} files.")
     if total_error > 0:
         print(f"Skipped {total_error} files due to processing errors.")
-    print(
-        f"Reduced total vertex count from {total_source_tris} to {total_simplified_tris}"
-    )
-    print(f"Without black list: {total_simplified_tris - black_list_tris}")
-    print(
-        f"Without gray and black list: {total_simplified_tris - black_list_tris - gray_list_tris}"
-    )
-
-    for i, curr_list in enumerate([black_list, gray_list]):
-        print("")
-        print("black list" if i == 0 else "gray list" + " = [")
-        for item in curr_list:
-            print("    " + item + ",")
-        print("]")
+    if total_source_tris > total_simplified_tris:
+        print(
+            f"Reduced total vertex count from {total_source_tris} to {total_simplified_tris}."
+        )
 
     # Create the output metadata file.
     create_metadata_file(results)
@@ -645,7 +668,7 @@ def load_json(path: str) -> Dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Get all .glb render asset files associated with a given scene."
+        description="Get all render asset files associated with a given episode set."
     )
     parser.add_argument(
         "--verbose",
