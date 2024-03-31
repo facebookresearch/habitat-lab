@@ -691,6 +691,7 @@ class GoalSensorConfig(LabSensorConfig):
     dimensionality: int = 3
     only_one_target: bool = False
     use_base_transform: bool = False
+    use_noise_target: bool = False  # only support for a single object
 
 
 @dataclass
@@ -1618,6 +1619,7 @@ class TaskConfig(HabitatBaseConfig):
     fix_obj_rotation_change_arm_joint: bool = False
     joint_start_noise: float = 0.1
     joint_start_noise_multiplier: Optional[List[float]] = None
+    object_target_noise: float = 0.0  # target place/pick object location noise, only for the obj_goal_sensor
 
 
 @dataclass
