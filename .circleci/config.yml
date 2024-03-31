@@ -235,6 +235,7 @@ jobs:
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               pip install -e habitat-lab
               pip install -e habitat-baselines
+              pip install -e habitat-hitl
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
           background: true
@@ -270,8 +271,18 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m pytest --cov-report=xml --cov-report term  --cov=./
+              python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
+      - run:
+          name: Run HITL tests
+          no_output_timeout: 60m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat; cd habitat-lab
+              export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
+              python -m pytest habitat-hitl/test
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
@@ -280,9 +291,9 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              # This is a flag that enables test_test_baseline_training to work
+              # This is a flag that enables test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python -m pytest  test/test_baseline_training.py -s
+              python -m pytest test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
@@ -324,6 +335,8 @@ jobs:
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+              pip install habitat-hitl/
+              python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
       - run: &build_sdist_and_bdist
           name: Build sdist and bdist
           command: |
