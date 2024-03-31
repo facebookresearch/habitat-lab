@@ -5,13 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import gzip
 import json
 import os
 import time
+from dataclasses import dataclass
 from multiprocessing import Manager, Pool
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Set, Tuple
-import gzip
+from typing import Any, Callable, Dict, List, Set
 
 import decimate
 
@@ -19,14 +20,27 @@ OUTPUT_DIR = "data/_processing_output/"
 OMIT_BLACK_LIST = False
 OMIT_GRAY_LIST = False
 PROCESS_COUNT = os.cpu_count()
+LOCAL_GROUP_NAME = "local"
+OUTPUT_METADATA_FILE_NAME = "metadata.json"
 
 
 class Job:
-    def __init__(self, asset_path: str, output_dir: str, groups: List[str], simplify: bool):
+    def __init__(
+        self,
+        asset_path: str,
+        output_dir: str,
+        groups: List[str],
+        simplify: bool,
+    ):
         self.source_path = asset_path
         self.dest_path = os.path.join(output_dir, asset_path)
         self.groups = groups
         self.simplify = simplify
+
+        # If the asset doesn't belong to a group, assign the 'local' group.
+        # This group indicates that the asset should be packaged along with the client rather than at a remote location.
+        if len(self.groups) == 0:
+            groups.append(LOCAL_GROUP_NAME)
 
 
 class Config:
@@ -42,6 +56,7 @@ def file_is_object_config(filepath: str) -> bool:
     """
     return filepath.endswith(".object_config.json")
 
+
 def file_is_render_asset_config(filepath: str) -> bool:
     """
     Return if the file is either:
@@ -50,15 +65,19 @@ def file_is_render_asset_config(filepath: str) -> bool:
     * stage_config.json
     All of these files are guaranteed to have a 'render_asset' field.
     """
-    return (filepath.endswith(".object_config.json") or
-            filepath.endswith(".ao_config.json") or
-            filepath.endswith(".stage_config.json"))
+    return (
+        filepath.endswith(".object_config.json")
+        or filepath.endswith(".ao_config.json")
+        or filepath.endswith(".stage_config.json")
+    )
+
 
 def file_is_scene_dataset_config(filepath: str) -> bool:
     """
     Return whether or not the file is a scene_dataset_config.json
     """
     return filepath.endswith(".scene_dataset_config.json")
+
 
 def file_is_scene_config(filepath: str) -> bool:
     """
@@ -86,20 +105,31 @@ def verify_jobs(jobs: List[Job], output_path: str) -> None:
     dest_set: Set[str] = set()
     for job in jobs:
         # Check that all assets exist.
-        assert Path(job.source_path).is_file(), f"Source path is not a file: '{job.source_path}'."
+        assert Path(
+            job.source_path
+        ).is_file(), f"Source path is not a file: '{job.source_path}'."
         # Check that all source paths start with "data/".
         prefix = "data/"
         prefix_length = len(prefix)
-        assert str(job.source_path)[0:prefix_length] == prefix, f"Source path not in '{prefix}': '{job.source_path}'."
+        assert (
+            str(job.source_path)[0:prefix_length] == prefix
+        ), f"Source path not in '{prefix}': '{job.source_path}'."
         # Check that all dest paths start with "{output_path}/data/"
         prefix = os.path.join(output_path, "data/")
         prefix_length = len(prefix)
-        assert str(job.dest_path)[0:prefix_length] == prefix, f"Dest path not in '{prefix}': '{job.dest_path}'."
+        assert (
+            str(job.dest_path)[0:prefix_length] == prefix
+        ), f"Dest path not in '{prefix}': '{job.dest_path}'."
         # Check that all job paths are unique.
-        assert not job.source_path in source_set, f"Duplicate source asset: '{job.source_path}'."
-        assert not job.dest_path in dest_set, f"Duplicate destination asset: '{job.dest_path}'."
+        assert (
+            job.source_path not in source_set
+        ), f"Duplicate source asset: '{job.source_path}'."
+        assert (
+            job.dest_path not in dest_set
+        ), f"Duplicate destination asset: '{job.dest_path}'."
         source_set.add(job.source_path)
         dest_set.add(job.dest_path)
+
 
 def find_files(
     root_dir: str, discriminator: Callable[[str], bool]
@@ -129,8 +159,9 @@ def find_files(
     return filepaths
 
 
-
-def search_dataset_render_assets(scene_dataset_dir: str, directory_search_patterns: List[str]) -> Dict[str, str]:
+def search_dataset_render_assets(
+    scene_dataset_dir: str, directory_search_patterns: List[str]
+) -> Dict[str, str]:
     """
     scene_dataset_dir: "data/scene_datasets/hssd-hab"
     directory_search_patterns: ["objects/*", "objects/decomposed/*"]
@@ -140,14 +171,18 @@ def search_dataset_render_assets(scene_dataset_dir: str, directory_search_patter
 
     for directory_search_pattern in directory_search_patterns:
         # > "data/scene_datasets/hssd-hab/objects/*"
-        object_config_search_pattern = os.path.join(scene_dataset_dir, directory_search_pattern)
+        object_config_search_pattern = os.path.join(
+            scene_dataset_dir, directory_search_pattern
+        )
         # > "data/scene_datasets/hssd-hab/objects"
         object_config_search_dir = Path(object_config_search_pattern)
         while not Path.is_dir(object_config_search_dir):
             object_config_search_dir = object_config_search_dir.parent
         # Find all object configs in the specified path
         # > "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.object_config.json"
-        object_config_json_paths = find_files(object_config_search_dir, file_is_render_asset_config)
+        object_config_json_paths = find_files(
+            str(object_config_search_dir), file_is_render_asset_config
+        )
         for object_config_json_path in object_config_json_paths:
             # Ignore object if already found.
             if object_config_json_path in object_config_json_path_cache:
@@ -161,7 +196,9 @@ def search_dataset_render_assets(scene_dataset_dir: str, directory_search_patter
             # > "data/scene_datasets/hssd-hab/objects/2"
             object_render_asset_dir = Path(object_config_json_path).parent
             # > "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
-            object_render_asset_path = os.path.join(object_render_asset_dir, object_render_asset_file_name)
+            object_render_asset_path = os.path.join(
+                object_render_asset_dir, object_render_asset_file_name
+            )
             output[object_template_name] = object_render_asset_path
 
     return output
@@ -171,6 +208,7 @@ class SceneDataset:
     """
     Upon construction, loads a scene_dataset_config.json file and exposes its content.
     """
+
     # Location of the scene_dataset_config.json.
     # > "data/scene_datasets/hssd-hab"
     scene_dataset_dir: str
@@ -183,32 +221,38 @@ class SceneDataset:
     stages: Dict[str, str] = {}
 
     def __init__(self, scene_dataset_config_path: str):
-        self.scene_dataset_dir: str = Path(scene_dataset_config_path).parent
+        self.scene_dataset_dir = str(Path(scene_dataset_config_path).parent)
         scene_dataset_config = load_json(scene_dataset_config_path)
 
         # Find objects.
         if "objects" in scene_dataset_config:
-            self.objects = search_dataset_render_assets(self.scene_dataset_dir,
-                                                scene_dataset_config["objects"]["paths"][".json"])
+            self.objects = search_dataset_render_assets(
+                self.scene_dataset_dir,
+                scene_dataset_config["objects"]["paths"][".json"],
+            )
 
         # Find articulated objects.
         if "articulated_objects" in scene_dataset_config:
-            self.articulated_objects = search_dataset_render_assets(self.scene_dataset_dir,
-                                                            scene_dataset_config["articulated_objects"]["paths"][".json"])
+            self.articulated_objects = search_dataset_render_assets(
+                self.scene_dataset_dir,
+                scene_dataset_config["articulated_objects"]["paths"][".json"],
+            )
 
         # Find stages.
         if "stages" in scene_dataset_config:
-            self.stages = search_dataset_render_assets(self.scene_dataset_dir,
-                                            scene_dataset_config["stages"]["paths"][".json"])
-    
+            self.stages = search_dataset_render_assets(
+                self.scene_dataset_dir,
+                scene_dataset_config["stages"]["paths"][".json"],
+            )
+
     def resolve_object(self, template_name: str) -> str:
         stem = Path(template_name).stem
         return self.objects[stem]
-    
+
     def resolve_articulated_object(self, template_name: str) -> str:
         stem = Path(template_name).stem
         return self.articulated_objects[stem]
-    
+
     def resolve_stage(self, template_name: str) -> str:
         stem = Path(template_name).stem
         return self.stages[stem]
@@ -220,11 +264,14 @@ class ObjectDataset:
     Typically, this is a folder referenced from an episode's "additional_obj_config_paths" field.
     These special datasets only contain regular objects - no stage or articulated objects.
     """
+
     render_assets: List[str] = []
 
     def __init__(self, dataset_path: str):
         assert Path(dataset_path).is_dir()
-        object_config_json_paths = find_files(dataset_path, file_is_object_config)
+        object_config_json_paths = find_files(
+            dataset_path, file_is_object_config
+        )
         object_config_cache: Set[str] = set()
         for object_config_json_path in object_config_json_paths:
             # Ignore object if already found.
@@ -237,45 +284,62 @@ class ObjectDataset:
             # > "data/scene_datasets/hssd-hab/objects/2"
             object_render_asset_dir = Path(object_config_json_path).parent
             # > "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
-            object_render_asset_path = os.path.join(object_render_asset_dir, object_render_asset_file_name)
+            object_render_asset_path = os.path.join(
+                object_render_asset_dir, object_render_asset_file_name
+            )
             self.render_assets.append(object_render_asset_path)
+
 
 class SceneInstance:
     """
     Upon construction, loads a scene_instance.json file and exposes its content.
     """
+
     group_name: str
     stage_render_asset: str
     object_render_assets: List[str]
     articulated_object_render_assets: List[str]
 
-    def __init__(self, group_name: str, scene_instance_config_path: str, scene_dataset: SceneDataset) -> None:
+    def __init__(
+        self,
+        group_name: str,
+        scene_instance_config_path: str,
+        scene_dataset: SceneDataset,
+    ) -> None:
         self.group_name = group_name
         scene_instance_config = load_json(scene_instance_config_path)
 
-        template_name = scene_instance_config["stage_instance"]["template_name"]
+        template_name = scene_instance_config["stage_instance"][
+            "template_name"
+        ]
         self.stage_render_asset = scene_dataset.resolve_stage(template_name)
 
         object_render_assets = set()
         for instance in scene_instance_config["object_instances"]:
             template_name = instance["template_name"]
-            object_render_assets.add(scene_dataset.resolve_object(template_name))
+            object_render_assets.add(
+                scene_dataset.resolve_object(template_name)
+            )
         self.object_render_assets = list(object_render_assets)
 
         articulated_object_render_assets = set()
         for instance in scene_instance_config["articulated_object_instances"]:
             template_name = instance["template_name"]
-            articulated_object_render_assets.add(scene_dataset.resolve_articulated_object(template_name))
-        self.articulated_object_render_assets = list(articulated_object_render_assets)
+            articulated_object_render_assets.add(
+                scene_dataset.resolve_articulated_object(template_name)
+            )
+        self.articulated_object_render_assets = list(
+            articulated_object_render_assets
+        )
 
 
-
-
+@dataclass
 class AssetInfo:
     """
     Asset and the groups that contain it.
     Path is complete and relative to repository root (data/asset/blob.glb).
     """
+
     asset_path: str
     groups: List[str]
 
@@ -283,11 +347,13 @@ class AssetInfo:
         self.asset_path = asset_path
         self.groups = groups
 
+
 class GroupedSceneAssets:
     """
     All assets in the scenes along with their groups.
     Paths are complete and relative to repository root (data/asset/blob.glb).
     """
+
     stages: List[AssetInfo] = []
     objects: List[AssetInfo] = []
     articulated_objects: List[AssetInfo] = []
@@ -297,7 +363,9 @@ class GroupedSceneAssets:
         object_groups: Dict[str, List[str]] = {}
         articulated_object_groups: Dict[str, List[str]] = {}
 
-        def add_group_reference(asset_path: str, group_name: str, groups: Dict[str, List[str]]) -> None:
+        def add_group_reference(
+            asset_path: str, group_name: str, groups: Dict[str, List[str]]
+        ) -> None:
             if asset_path not in groups:
                 groups[asset_path] = []
             groups[asset_path].append(group_name)
@@ -306,19 +374,17 @@ class GroupedSceneAssets:
             add_group_reference(
                 scene_instance.stage_render_asset,
                 scene_instance.group_name,
-                stage_groups
+                stage_groups,
             )
             for obj in scene_instance.object_render_assets:
                 add_group_reference(
-                    obj,
-                    scene_instance.group_name,
-                    object_groups
+                    obj, scene_instance.group_name, object_groups
                 )
             for art_obj in scene_instance.articulated_object_render_assets:
                 add_group_reference(
                     art_obj,
                     scene_instance.group_name,
-                    articulated_object_groups
+                    articulated_object_groups,
                 )
 
         for asset_path, groups in stage_groups.items():
@@ -327,21 +393,26 @@ class GroupedSceneAssets:
             self.objects.append(AssetInfo(asset_path, groups))
         for asset_path, groups in articulated_object_groups.items():
             self.articulated_objects.append(AssetInfo(asset_path, groups))
-        
-        
+
+
 class EpisodeSet:
     """
     Loads and episode set and exposes its assets.
     """
+
     grouped_scene_assets: GroupedSceneAssets
     additional_datasets: Dict[str, ObjectDataset] = {}
 
     def __init__(self, episodes_path: str):
-        assert file_is_episode_set(episodes_path), "Episodes must be supplied as a '.json.gz' file."
+        assert file_is_episode_set(
+            episodes_path
+        ), "Episodes must be supplied as a '.json.gz' file."
         with gzip.open(episodes_path, "rb") as file:
             json_data = file.read().decode("utf-8")
-            loaded_data = json.loads(json_data)
-        episodes: List[Dict[Any]] = loaded_data["episodes"]
+            loaded_data: Dict[str, List[Dict[str, Any]]] = json.loads(
+                json_data
+            )
+        episodes = loaded_data["episodes"]
 
         scene_datasets: Dict[str, SceneDataset] = {}
         scene_instances: Dict[str, SceneInstance] = {}
@@ -351,7 +422,9 @@ class EpisodeSet:
             scene_dataset_config_path = episode["scene_dataset_config"]
             # Load dataset.
             if scene_dataset_config_path not in scene_datasets:
-                scene_datasets[scene_dataset_config_path] = SceneDataset(scene_dataset_config_path)
+                scene_datasets[scene_dataset_config_path] = SceneDataset(
+                    str(scene_dataset_config_path)
+                )
             scene_dataset = scene_datasets[scene_dataset_config_path]
             # > "data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json"
             scene_instance_config_path = episode["scene_id"]
@@ -359,21 +432,59 @@ class EpisodeSet:
             if scene_instance_config_path not in scene_instances:
                 scene_instances[scene_instance_config_path] = SceneInstance(
                     group_name=scene_instance_config_path,
-                    scene_instance_config_path=scene_instance_config_path,
-                    scene_dataset=scene_dataset)
+                    scene_instance_config_path=str(scene_instance_config_path),
+                    scene_dataset=scene_dataset,
+                )
             # Find additional datasets referenced by the episode.
             if "additional_obj_config_paths" in episode:
-                for additional_dataset_path in episode["additional_obj_config_paths"]:
+                for additional_dataset_path in episode[
+                    "additional_obj_config_paths"
+                ]:
                     # > "data/objects/ycb/configs/"
-                    additional_dataset_paths.add(additional_dataset_path)
+                    additional_dataset_paths.add(str(additional_dataset_path))
 
         # Load additional datasets (e.g. ycb).
         for additional_dataset_path in additional_dataset_paths:
-            self.additional_datasets[additional_dataset_path] = ObjectDataset(additional_dataset_path)
+            self.additional_datasets[additional_dataset_path] = ObjectDataset(
+                str(additional_dataset_path)
+            )
 
-        # Group assets per scene dependencies.            
-        self.grouped_scene_assets = GroupedSceneAssets(scene_instances.values())
+        # Group assets per scene dependencies.
+        self.grouped_scene_assets = GroupedSceneAssets(
+            list(scene_instances.values())
+        )
 
+
+def create_metadata_file(results: List[Dict[str, Any]]):
+    """
+    Create output metadata file.
+    This file is consumed by custom external asset pipelines (e.g. Unity) to manage assets.
+
+    Contents:
+    * local_group_name: Name of the local group. See 'LOCAL_GROUP_NAME'.
+    * groups: List of groups and their assets.
+              Groups are used to determine how to package remote assets.
+    """
+    # Aggregate groups from processing results.
+    groups: Dict[str, List[str]] = {}
+    for result in results:
+        if result["status"] == "ok" and "groups" in result:
+            pkgs = result["groups"]
+            for pkg in pkgs:
+                file_rel_path = result["dest_path"].removeprefix(OUTPUT_DIR)
+                if pkg not in groups:
+                    groups[pkg] = []
+                groups[pkg].append(file_rel_path)
+
+    # Compose file content.
+    content: Dict[str, Any] = {}
+    content["local_group_name"] = LOCAL_GROUP_NAME
+    content["groups"] = groups
+
+    # Save file.
+    output_path = os.path.join(OUTPUT_DIR, OUTPUT_METADATA_FILE_NAME)
+    with open(output_path, "w") as f:
+        json.dump(groups, f, ensure_ascii=False)
 
 
 def process_model(args):
@@ -425,7 +536,7 @@ def process_model(args):
         "source_path": job.source_path,
         "dest_path": job.dest_path,
         "status": "ok",
-        "groups": job.groups
+        "groups": job.groups,
     }
 
     if simplified_tris > target_tris * 2 and simplified_tris > 3000:
@@ -517,19 +628,8 @@ def simplify_models(jobs: List[Job], config: Config):
             print("    " + item + ",")
         print("]")
 
-    # Create the dataset.json file containing all dependencies.
-    groups: Dict[str, List[str]] = {}
-    for result in results:
-        if result["status"] == "ok" and "groups" in result:
-            pkgs = result["groups"]
-            for pkg in pkgs:
-                file_rel_path = result["dest_path"].removeprefix(OUTPUT_DIR)
-                if pkg not in groups:
-                    groups[pkg] = []
-                groups[pkg].append(file_rel_path)
-    groups_json_path = os.path.join(OUTPUT_DIR, "dataset.json")
-    with open(groups_json_path, 'w') as f:
-        json.dump(groups, f, ensure_ascii=False)
+    # Create the output metadata file.
+    create_metadata_file(results)
 
     elapsed_time = time.time() - start_time
     print(f"Elapsed time (s): {elapsed_time}")
@@ -541,6 +641,7 @@ def load_json(path: str) -> Dict[str, Any]:
     with open(path) as file:
         output = json.load(file)
         return output
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -574,57 +675,67 @@ def main():
     # Add scene stages.
     # Grouped by scenes.
     for obj in episode_set.grouped_scene_assets.stages:
-        jobs.append(Job(
-            asset_path=obj.asset_path,
-            output_dir=OUTPUT_DIR,
-            groups=obj.groups,
-            simplify=False,
-        ))
+        jobs.append(
+            Job(
+                asset_path=obj.asset_path,
+                output_dir=OUTPUT_DIR,
+                groups=obj.groups,
+                simplify=False,
+            )
+        )
 
     # Add scene objects.
     # Grouped by scenes.
     for obj in episode_set.grouped_scene_assets.objects:
-        jobs.append(Job(
-            asset_path=obj.asset_path,
-            output_dir=OUTPUT_DIR,
-            groups=obj.groups,
-            simplify=True,
-        ))
+        jobs.append(
+            Job(
+                asset_path=obj.asset_path,
+                output_dir=OUTPUT_DIR,
+                groups=obj.groups,
+                simplify=True,
+            )
+        )
 
     # Add articulated objects.
     # Grouped by scenes.
     for obj in episode_set.grouped_scene_assets.articulated_objects:
-        jobs.append(Job(
-            asset_path=obj.asset_path,
-            output_dir=OUTPUT_DIR,
-            groups=obj.groups,
-            simplify=False,
-        ))
+        jobs.append(
+            Job(
+                asset_path=obj.asset_path,
+                output_dir=OUTPUT_DIR,
+                groups=obj.groups,
+                simplify=False,
+            )
+        )
 
     # Add additional datasets.
     for dataset in episode_set.additional_datasets.values():
         for asset_path in dataset.render_assets:
-            jobs.append(Job(
-                asset_path=asset_path,
-                output_dir=OUTPUT_DIR,
-                groups=[],
-                simplify=False,
-            ))
+            jobs.append(
+                Job(
+                    asset_path=asset_path,
+                    output_dir=OUTPUT_DIR,
+                    groups=[],
+                    simplify=False,
+                )
+            )
 
     # Add spot models
     for filename in Path("data/robots/hab_spot_arm/meshesColored").rglob(
         "*.glb"
     ):
-        jobs.append(Job(
-            asset_path=filename,
-            output_dir=OUTPUT_DIR,
-            groups=[],
-            simplify=False,
-        ))
+        jobs.append(
+            Job(
+                asset_path=str(filename),
+                output_dir=OUTPUT_DIR,
+                groups=[],
+                simplify=False,
+            )
+        )
 
     # Verify jobs.
     verify_jobs(jobs, OUTPUT_DIR)
-    
+
     # Start processing.
     simplify_models(jobs, config)
 
