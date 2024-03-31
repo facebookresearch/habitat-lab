@@ -189,7 +189,7 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
     cls_uuid: str = "obj_goal_sensor"
 
     def _get_observation_space(self, *args, **kwargs):
-        if self.config.only_one_target:
+        if self.config.only_one_target or self.config.use_noise_target:
             n_targets = 1
         else:
             n_targets = self._task.get_n_targets()
@@ -223,14 +223,19 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         # x: ee as origin, front is +; back is -
         # y: ee as origin, left is +; right is -
         # z: ee as origin, up is +; down is -
-        if self.config.only_one_target:
-            pos_array = batch_transform_point(pos, T_inv, np.float32)[
-                [task.targ_idx]
-            ].reshape(-1)
+        if self.config.use_noise_target:
+            pos_array = batch_transform_point(
+                np.array([task.noise_target_location]), T_inv, np.float32
+            )[0].reshape(-1)
         else:
-            pos_array = batch_transform_point(pos, T_inv, np.float32).reshape(
-                -1
-            )
+            if self.config.only_one_target:
+                pos_array = batch_transform_point(pos, T_inv, np.float32)[
+                    [task.targ_idx]
+                ].reshape(-1)
+            else:
+                pos_array = batch_transform_point(
+                    pos, T_inv, np.float32
+                ).reshape(-1)
         return np.array(pos_array, dtype=np.float32)
 
 

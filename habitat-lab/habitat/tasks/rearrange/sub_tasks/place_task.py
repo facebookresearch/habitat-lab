@@ -184,4 +184,15 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         if self._config.fix_obj_rotation_change_arm_joint and top_down_grasp:
             self.random_arm()
 
+        # We want to add the noise to the target place location
+        target_location = self._get_targ_pos(self._sim)[self.targ_idx]
+        # Add noise to the target place location
+        noise_target_location = []
+        for i in range(len(target_location)):
+            noise_target_location.append(
+                target_location[i]
+                + np.random.uniform(-1, 1) * self._config.object_target_noise
+            )
+        self.noise_target_location = np.array(noise_target_location)
+
         return self._get_observations(episode)

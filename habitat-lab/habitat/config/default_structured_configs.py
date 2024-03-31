@@ -711,6 +711,7 @@ class GoalSensorConfig(LabSensorConfig):
     dimensionality: int = 3
     only_one_target: bool = False
     use_base_transform: bool = False
+    use_noise_target: bool = False  # only support for a single object
 
 
 @dataclass
@@ -1654,6 +1655,7 @@ class TaskConfig(HabitatBaseConfig):
     # For the open_close_drawer task
     # The format is [x_min, y_min, x_max, y_max]
     rectangle_spawn_region: Optional[List[float]] = None
+    object_target_noise: float = 0.0  # target place/pick object location noise, only for the obj_goal_sensor
 
 
 @dataclass
