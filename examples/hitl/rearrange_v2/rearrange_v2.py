@@ -58,6 +58,7 @@ class AppStateRearrangeV2(AppState):
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
+        self._can_place_object = False
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -212,14 +213,17 @@ class AppStateRearrangeV2(AppState):
 
         # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
         if self._held_obj_id is not None:
-            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+            if (
+                self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE)
+                and self._can_place_object
+            ):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._get_gui_agent_translation(
                         user_index
                     )  # self._gui_agent_controllers.get_base_translation()
                 else:
-                    # GuiPlacementHelper has already placed this object, so nothing to do here
+                    # GuiPlacementHelper has already placed this object.
                     pass
                 self._held_obj_id = None
         else:
@@ -367,6 +371,9 @@ class AppStateRearrangeV2(AppState):
         if self._placement_helper.update(ray, self._held_obj_id):
             # sloppy: save another keyframe here since we just moved the held object
             self.get_sim().gfx_replay_manager.save_keyframe()
+            self._can_place_object = True
+        else:
+            self._can_place_object = False
 
     def sim_update(self, dt, post_sim_update_dict):
         if (
