@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Set
 
 import decimate
 
+METADATA_FILE_VERSION = 1
 OUTPUT_DIR = "data/_processing_output/"
 OMIT_BLACK_LIST = False
 OMIT_GRAY_LIST = False
@@ -487,6 +488,7 @@ def create_metadata_file(results: List[Dict[str, Any]]):
     This file is consumed by custom external asset pipelines (e.g. Unity) to manage assets.
 
     Contents:
+    * version: Version of the file format. Bump when breaking backward compatibility.
     * local_group_name: Name of the local group. See 'LOCAL_GROUP_NAME'.
     * groups: List of groups and their assets.
               Groups are used to determine how to package remote assets.
@@ -507,6 +509,7 @@ def create_metadata_file(results: List[Dict[str, Any]]):
 
     # Compose file content.
     content: Dict[str, Any] = {}
+    content["version"] = METADATA_FILE_VERSION
     content["local_group_name"] = LOCAL_GROUP_NAME
     content["groups"] = groups
 
