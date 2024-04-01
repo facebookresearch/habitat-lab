@@ -560,7 +560,8 @@ class RearrangeEpisodeGenerator:
             new_target_receptacles: List[Receptacle] = []
             failed_samplers: Dict[str, bool] = defaultdict(bool)
             tries = 0
-            while len(new_target_receptacles) < num_targets and tries < 100:
+            max_tries = 100
+            while len(new_target_receptacles) < num_targets and tries < max_tries:
                 tries += 1
                 assert len(failed_samplers.keys()) < len(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
@@ -592,6 +593,10 @@ class RearrangeEpisodeGenerator:
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_target_receptacles.append(new_receptacle[0])  # type: ignore
+            
+            assert (
+                len(new_target_receptacles) >= num_targets
+            ), "Unable to sample target Receptacles for all requested targets."
 
             target_receptacles[obj_sampler_name].extend(new_target_receptacles)
             all_target_receptacles.extend(new_target_receptacles)
