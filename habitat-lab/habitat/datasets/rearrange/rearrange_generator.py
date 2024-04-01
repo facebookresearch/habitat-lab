@@ -559,7 +559,9 @@ class RearrangeEpisodeGenerator:
         for sampler_name, num_targets in target_numbers.items():
             new_target_receptacles: List[Receptacle] = []
             failed_samplers: Dict[str, bool] = defaultdict(bool)
-            while len(new_target_receptacles) < num_targets:
+            tries = 0
+            while len(new_target_receptacles) < num_targets and tries < 100:
+                tries += 1
                 assert len(failed_samplers.keys()) < len(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 ), f"All target samplers failed to find a match for '{sampler_name}'."
