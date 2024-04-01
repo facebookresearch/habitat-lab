@@ -108,13 +108,6 @@ def file_is_scene_config(filepath: str) -> bool:
     return filepath.endswith(".scene_instance.json")
 
 
-def file_is_glb(filepath: str) -> bool:
-    """
-    Return whether or not the file is a glb.
-    """
-    return filepath.endswith(".glb")
-
-
 def file_is_episode_set(filepath: str) -> bool:
     """
     Return whether or not the file is an json.gz
@@ -246,6 +239,7 @@ class SceneDataset:
     stages: Dict[str, str] = {}
 
     def __init__(self, scene_dataset_config_path: str):
+        assert file_is_scene_dataset_config(scene_dataset_config_path)
         self.scene_dataset_dir = str(Path(scene_dataset_config_path).parent)
         scene_dataset_config = load_json(scene_dataset_config_path)
 
@@ -333,6 +327,7 @@ class SceneInstance:
         scene_instance_config_path: str,
         scene_dataset: SceneDataset,
     ) -> None:
+        assert file_is_scene_config(scene_instance_config_path)
         self.group_name = group_name
         scene_instance_config = load_json(scene_instance_config_path)
 
