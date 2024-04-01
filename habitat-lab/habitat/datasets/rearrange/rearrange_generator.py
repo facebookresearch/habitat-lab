@@ -464,9 +464,10 @@ class RearrangeEpisodeGenerator:
             try:
                 self._scene_sampler.set_cur_episode(len(generated_episodes))
                 new_episode = self.generate_single_episode()
-            except Exception:
+            except Exception as e:
                 new_episode = None
                 logger.error("Generation failed with exception...")
+                logger.error(e)
             if new_episode is None:
                 failed_episodes += 1
                 continue
