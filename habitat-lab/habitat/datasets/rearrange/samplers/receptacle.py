@@ -807,6 +807,45 @@ class ReceptacleSet:
     comment: str = ""
 
 
+def get_scene_rec_filter_filepath(
+    mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
+) -> str:
+    """
+    Look in the user_defined metadata for a scene to find the configured filepath for the scene's Receptacle filter file.
+
+    :return: Filter filepath or None if not found.
+    """
+    scene_user_defined = mm.get_scene_user_defined(scene_handle)
+    if scene_user_defined is not None and scene_user_defined.has_value(
+        "scene_filter_file"
+    ):
+        scene_filter_file = scene_user_defined.get("scene_filter_file")
+        scene_filter_file = os.path.join(
+            os.path.dirname(mm.active_dataset), scene_filter_file
+        )
+        return scene_filter_file
+    return None
+
+
+def get_excluded_recs_from_filter_file(rec_filter_filepath: str) -> List[str]:
+    """
+    Load and digest a Receptacle filter file to generate a list of strings which should be excluded from the active ReceptacleSet.
+    """
+
+    filtered_unique_names = []
+    with open(rec_filter_filepath, "r") as f:
+        filter_json = json.load(f)
+        for filter_type in [
+            "manually_filtered",
+            "access_filtered",
+            "stability_filtered",
+            "height_filtered",
+        ]:
+            for filtered_unique_name in filter_json[filter_type]:
+                filtered_unique_names.append(filtered_unique_name)
+    return filtered_unique_names
+
+
 class ReceptacleTracker:
     def __init__(
         self,
@@ -837,34 +876,19 @@ class ReceptacleTracker:
         :param mm: The active MetadataMediator instance from which to load the filter data.
         :param scene_handle: The handle of the currently instantiated scene.
         """
-        scene_user_defined = mm.get_scene_user_defined(scene_handle)
-        filtered_unique_names = []
-        if scene_user_defined is not None and scene_user_defined.has_value(
-            "scene_filter_file"
-        ):
-            scene_filter_file = scene_user_defined.get("scene_filter_file")
-            # construct the dataset level path for the filter data file
-            scene_filter_file = os.path.join(
-                os.path.dirname(mm.active_dataset), scene_filter_file
+        scene_filter_filepath = get_scene_rec_filter_filepath(mm, scene_handle)
+        if scene_filter_filepath is not None:
+            filtered_unique_names = get_excluded_recs_from_filter_file(
+                scene_filter_filepath
             )
-            with open(scene_filter_file, "r") as f:
-                filter_json = json.load(f)
-                for filter_type in [
-                    "manually_filtered",
-                    "access_filtered",
-                    "stability_filtered",
-                    "height_filtered",
-                ]:
-                    for filtered_unique_name in filter_json[filter_type]:
-                        filtered_unique_names.append(filtered_unique_name)
             # add exclusion filters to all receptacles sets
             for r_set in self._receptacle_sets.values():
                 r_set.excluded_receptacle_substrings.extend(
                     filtered_unique_names
                 )
-            logger.info(
-                f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
-            )
+                logger.info(
+                    f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_filepath}'."
+                )
         else:
             logger.info(
                 f"Loaded receptacle filter data for scene '{scene_handle}' does not have configured filter file."
