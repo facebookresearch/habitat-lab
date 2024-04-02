@@ -231,7 +231,7 @@ def pose_from_xzy_to_xyz(pose_xzy: np.ndarray) -> np.ndarray:
     return pose_xyz
 
 
-def change_coordinate_from_opengl_to_opencv(
+def coordinate_from_opengl_to_opencv(
     point: Union[np.ndarray, mn.Vector3]
 ) -> np.ndarray:
     """Change the coordinate system from openGL to openCV"""

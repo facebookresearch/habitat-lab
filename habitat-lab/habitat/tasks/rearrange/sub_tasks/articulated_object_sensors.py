@@ -23,7 +23,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.utils.geometry_utils import (
-    change_coordinate_from_opengl_to_opencv,
+    coordinate_from_opengl_to_opencv,
     pose_from_opengl_to_opencv,
     pose_from_xzy_to_xyz,
 )
@@ -262,7 +262,7 @@ class HandleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
             np.linspace(-width, width, granularity),
         ):
             # Get the handle location on the left and right side
-            handle_pos = change_coordinate_from_opengl_to_opencv(
+            handle_pos = coordinate_from_opengl_to_opencv(
                 handle_T.transform_point([height_offset, 0.0, width_offset])
             )
             # Draw the handle location in the image
