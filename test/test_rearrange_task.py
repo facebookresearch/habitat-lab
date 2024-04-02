@@ -168,7 +168,8 @@ def test_pddl_action_postconds():
     # Check the object registers at the goal now.
     true_preds = pddl.get_true_predicates()
     assert any(
-        x.compact_str == "at(goal0|0,TARGET_goal0|0)" for x in true_preds
+        x.compact_str == "object_at(goal0|0,TARGET_goal0|0)"
+        for x in true_preds
     )
 
 
