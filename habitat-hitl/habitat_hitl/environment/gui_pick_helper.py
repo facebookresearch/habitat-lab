@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Final
+from typing import Final, List
 
 import magnum as mn
 import numpy as np
+
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.user_mask import Mask
 
 DIST_HIGHLIGHT: Final[float] = 0.15
 COLOR_GRASPABLE: Final[mn.Color3] = mn.Color3(1, 0.75, 0)
@@ -21,15 +24,15 @@ RING_PULSE_SIZE: Final[float] = 0.03
 class GuiPickHelper:
     """Helper for picking up objects from the GUI."""
 
-    def __init__(self, gui_service):
-        self._app_service = gui_service
-        self._rom = self._get_sim().get_rigid_object_manager()
-        self._obj_ids = self._get_sim()._scene_obj_ids
-        self._dist_to_highlight_obj = DIST_HIGHLIGHT
-        self._pick_candidate_indices = []
+    def __init__(self, app_service: AppService, user_index: int):
+        self._app_service = app_service
+        self._user_index = user_index
+        self._sim = self._app_service.sim
 
-    def _get_sim(self):
-        return self._app_service.sim
+        self._rom = self._sim.get_rigid_object_manager()
+        self._obj_ids = self._sim._scene_obj_ids
+        self._dist_to_highlight_obj = DIST_HIGHLIGHT
+        self._pick_candidate_indices: List[int] = []
 
     def _closest_point_and_dist_to_ray(
         self, ray_origin, ray_direction_vector, points
@@ -46,9 +49,8 @@ class GuiPickHelper:
         return np.argmin(distances), np.min(distances)
 
     def on_environment_reset(self):
-        sim = self._get_sim()
-        self._rom = sim.get_rigid_object_manager()
-        self._obj_ids = sim._scene_obj_ids
+        self._rom = self._sim.get_rigid_object_manager()
+        self._obj_ids = self._sim._scene_obj_ids
         self._pick_candidate_indices = []
 
     def _closest_point_and_dist_to_query_position(self, points, query_pos):
@@ -77,18 +79,23 @@ class GuiPickHelper:
         else:
             return None
 
-    def _draw_circle(self, pos, color, radius, billboard):
-        num_segments = 24
-        self._app_service.gui_drawer.draw_circle(
-            pos, radius, color, num_segments, billboard=billboard
-        )
-
     def _add_highlight_ring(
-        self, pos, color, radius, do_pulse=False, billboard=True
+        self,
+        pos: mn.Vector3,
+        radius: float,
+        color: mn.Color3,
+        do_pulse: bool = False,
+        billboard: bool = True,
     ):
         if do_pulse:
             radius += self._app_service.get_anim_fraction() * RING_PULSE_SIZE
-        self._draw_circle(pos, color, radius, billboard)
+        self._app_service.gui_drawer.draw_circle(
+            pos,
+            radius,
+            color,
+            billboard=billboard,
+            destination_mask=Mask.from_index(self._user_index),
+        )
 
     def viz_objects(self):
         obj_positions = self._get_object_positions()
@@ -101,8 +108,8 @@ class GuiPickHelper:
                 ).transformation.translation
                 self._add_highlight_ring(
                     pos,
-                    COLOR_GRASP_PREVIEW,
                     RADIUS_GRASP_PREVIEW,
+                    COLOR_GRASP_PREVIEW,
                     do_pulse=False,
                 )
             self._pick_candidate_indices = []
@@ -113,7 +120,7 @@ class GuiPickHelper:
                     obj_id
                 ).transformation.translation
                 self._add_highlight_ring(
-                    pos, COLOR_GRASPABLE, RADIUS_GRASPABLE, do_pulse=True
+                    pos, RADIUS_GRASPABLE, COLOR_GRASPABLE, do_pulse=True
                 )
 
     # Reference code

@@ -73,7 +73,6 @@ class AppStateBasicViewer(AppState):
             self._get_camera_lookat_pos(),
             radius,
             mn.Color3(255 / 255, 0 / 255, 0 / 255),
-            24,
         )
 
     @property

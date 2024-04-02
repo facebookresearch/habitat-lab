@@ -9,6 +9,9 @@
         #status {
             font-weight: bold;
         }
+        #keyframeCount {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -18,7 +21,7 @@
                 <label for="serverIp">Server IP:</label>
             </td>
             <td>
-                <input type="text" id="serverIp" placeholder="0.0.0.0" style="width: 500px">
+                <input type="text" id="serverIp" value="0.0.0.0" style="width: 500px">
             </td>
         </tr>
         <tr>
@@ -26,19 +29,44 @@
                 <label for="serverPort">Port:</label>
             </td>
             <td>
-                <input type="text" id="serverPort" placeholder="8888" style="width: 500px">
+                <input type="text" id="serverPort" value="8888" style="width: 500px">
             </td>
         </tr>
     </table>
+    <br>
     <button id="connectButton">Connect</button>
     <button id="disconnectButton" disabled>Disconnect</button>
-    <div id="serverUrl"></div>
+    <hr>
     <div id="status">Disconnected</div>
-    <div id="messageRate">Message Rate: 0</div>
+    <div id="serverUrl">Server URL:</div>
+    <div id="messageRate">Message Frequency (Hz): 0.0</div>
+    <hr>
+    <div id="keyframeCount">Keyframe Count: 0</div>
+    <div id="loadCount">Load Count: 0</div>
+    <div id="creationCount">Creation Count: 0</div>
+    <div id="stateUpdateCount">Update Count: 0</div>
+    <div id="deletionCount">Deletion Count: 0</div>
+    <div id="rigCreationCount">Rig Creation Count: 0</div>
+    <div id="rigUpdateCount">Rig Update Count: 0</div>
+    <div id="messageCount">Message Count: 0</div>
 
     <script>
+        class Stats {
+            constructor() {
+                this.keyframeCount = 0;
+                this.loadCount = 0;
+                this.creationCount = 0;
+                this.stateUpdateCount = 0;
+                this.deletionCount = 0;
+                this.rigCreationCount = 0;
+                this.rigUpdateCount = 0;
+                this.messageCount = 0;
+            }
+        }
+
         var ws = null;
         var messageCount = 0;
+        var stats = null;
         var lastUpdateTime = Date.now();
 
         function connect() {
@@ -63,17 +91,19 @@
                 var message = JSON.stringify(connectionParams);  // Convert the object to a JSON string
                 ws.send(message);  // Send the JSON string
 
+                stats = new Stats();
+
                 // Start sending messages at 10 Hz
                 sendIntervalId = setInterval(function() {
-                        var dict = {};  // Create an empty JavaScript object
+                    var dict = {};  // Create an empty JavaScript object
 
-                        // Our stub client only sends recentServerKeyframeId. It doesn't send local GUI input or other client state.
-                        if (recentServerKeyframeId != null) {
-                            dict.recentServerKeyframeId = recentServerKeyframeId;
-                        }
-                        var message = JSON.stringify(dict);  // Convert the object to a JSON string
-                        ws.send(message);  // Send the JSON string
-                    }, 100);  // Repeat every 100 milliseconds
+                    // Our stub client only sends recentServerKeyframeId. It doesn't send local GUI input or other client state.
+                    if (recentServerKeyframeId != null) {
+                        dict.recentServerKeyframeId = recentServerKeyframeId;
+                    }
+                    var message = JSON.stringify(dict);  // Convert the object to a JSON string
+                    ws.send(message);  // Send the JSON string
+                }, 100);  // Repeat every 100 milliseconds
             };
 
             ws.onclose = function() {
@@ -88,7 +118,6 @@
                     sendIntervalId = null;
                 }
                 recentServerKeyframeId = null;
-
             };
 
             ws.onmessage = function() {
@@ -97,13 +126,50 @@
                 var message = event.data;
                 var dict = JSON.parse(message);
 
-                // parse the latest serverKeyframeId from received keyframes
+                // Update stats
                 if ("keyframes" in dict) {
                     keyframes = dict["keyframes"]
                     if (keyframes.length) {
-                        keyframe = keyframes[keyframes.length - 1];
-                        if ("message" in keyframe) {
-                            message = keyframe["message"]
+                        for (i = 0; i < keyframes.length; ++i)
+                        {
+                            stats.keyframeCount++;
+                            document.getElementById('keyframeCount').textContent = 'Keyframe Count: ' + stats.keyframeCount;
+                            keyframe = keyframes[i];
+                            if ("loads" in keyframe) {
+                                stats.loadCount += keyframe["loads"].length;
+                                document.getElementById('loadCount').textContent = 'Load Count: ' + stats.loadCount;
+                            }
+                            if ("creations" in keyframe) {
+                                stats.creationCount += keyframe["creations"].length;
+                                document.getElementById('creationCount').textContent = 'Creation Count: ' + stats.creationCount;
+                            }
+                            if ("stateUpdates" in keyframe) {
+                                stats.stateUpdateCount += keyframe["stateUpdates"].length;
+                                document.getElementById('stateUpdateCount').textContent = 'Update Count: ' + stats.stateUpdateCount;
+                            }
+                            if ("deletions" in keyframe) {
+                                stats.deletionCount += keyframe["deletions"].length;
+                                document.getElementById('deletionCount').textContent = 'Deletion Count: ' + stats.deletionCount;
+                            }
+                            if ("rigCreations" in keyframe) {
+                                stats.rigCreationCount += keyframe["rigCreations"].length;
+                                document.getElementById('rigCreationCount').textContent = 'Rig Creation Count: ' + stats.rigCreationCount;
+                            }
+                            if ("rigUpdates" in keyframe) {
+                                stats.rigUpdateCount += keyframe["rigUpdates"].length;
+                                document.getElementById('rigUpdateCount').textContent = 'Rig Update Count: ' + stats.rigUpdateCount;
+                            }
+                            if ("message" in keyframe) {
+                                stats.messageCount += Object.keys(keyframe["message"]).length;
+                                document.getElementById('messageCount').textContent = 'Message Count: ' + stats.messageCount;
+                            }
+                        }
+
+                        lastKeyframe = keyframes[keyframes.length - 1];
+                        if ("message" in lastKeyframe) {
+                            stats.messageCount++;
+                            // Parse the latest serverKeyframeId from received keyframes
+                            message = lastKeyframe["message"]
                             if ("serverKeyframeId" in message) {
                                 recentServerKeyframeId = message["serverKeyframeId"];
                             }
@@ -123,7 +189,7 @@
             var now = Date.now();
             var deltaTime = (now - lastUpdateTime) / 1000;  // Convert to seconds
             var messageRate = messageCount / deltaTime;
-            document.getElementById('messageRate').textContent = 'Message Rate: ' + messageRate.toFixed(1);
+            document.getElementById('messageRate').textContent = 'Message Frequency (Hz): ' + messageRate.toFixed(1);
             messageCount = 0;
             lastUpdateTime = now;
         }

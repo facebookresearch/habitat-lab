@@ -5,6 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Optional
+
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.average_helper import AverageHelper
 
 
@@ -13,26 +16,30 @@ class ClientHelper:
     Tracks connected remote clients. Displays client latency and kicks idle clients.
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
-        self._show_idle_kick_warning = False
-        self._idle_frame_counter = None
         self._frame_counter = 0
 
         self._client_frame_latency_avg_helper = AverageHelper(
             window_size=10, output_rate=10
         )
-        self._display_latency_ms = None
+
+        self._show_idle_kick_warning: Optional[bool] = False
+        self._idle_frame_counter: Optional[int] = None
+        self._display_latency_ms: Optional[float] = None
 
     @property
-    def display_latency_ms(self):
+    def display_latency_ms(self) -> Optional[float]:
+        """Returns the display latency."""
         return self._display_latency_ms
 
     @property
-    def do_show_idle_kick_warning(self):
+    def do_show_idle_kick_warning(self) -> Optional[bool]:
+        """Indicates that the user should be warned that they will be kicked imminently."""
         return self._show_idle_kick_warning
 
-    def _update_idle_kick(self, is_user_idle_this_frame):
+    def _update_idle_kick(self, is_user_idle_this_frame: bool) -> None:
+        """Keeps tracks of whether the user is AFK. After some time, they will be kicked."""
         hitl_config = self._app_service.hitl_config
         self._show_idle_kick_warning = False
 
@@ -74,7 +81,10 @@ class ClientHelper:
                 # reset counter whenever the client isn't idle
                 self._idle_frame_counter = 0
 
-    def _update_frame_counter_and_display_latency(self, server_sps):
+    def _update_frame_counter_and_display_latency(
+        self, server_sps: float
+    ) -> None:
+        """Update the frame counter."""
         recent_server_keyframe_id = (
             self._app_service.remote_client_state.pop_recent_server_keyframe_id()
         )
@@ -92,6 +102,7 @@ class ClientHelper:
             )
         self._frame_counter += 1
 
-    def update(self, is_user_idle_this_frame, server_sps):
+    def update(self, is_user_idle_this_frame: bool, server_sps: float) -> None:
+        """Update the client helper."""
         self._update_idle_kick(is_user_idle_this_frame)
         self._update_frame_counter_and_display_latency(server_sps)

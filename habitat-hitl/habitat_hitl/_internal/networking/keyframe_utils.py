@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
+from habitat_hitl.core.types import Keyframe
 
 
-def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
+def update_consolidated_keyframe(
+    consolidated_keyframe: Keyframe, inc_keyframe: Keyframe
+) -> None:
     """
     A "consolidated" keyframe is several incremental keyframes merged together.
     See nearly duplicate logic in habitat-sim Recorder::addLoadsCreationsDeletions.
@@ -108,8 +110,8 @@ def update_consolidated_keyframe(consolidated_keyframe, inc_keyframe):
     # todo: lights, userTransforms
 
 
-def get_empty_keyframe():
-    keyframe: Any = dict()
+def get_empty_keyframe() -> Keyframe:
+    keyframe: Keyframe = dict()
     keyframe["loads"] = []
     keyframe["creations"] = []
     keyframe["rigCreations"] = []
