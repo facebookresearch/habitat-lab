@@ -717,13 +717,42 @@ def parse_receptacles_from_user_config(
     return receptacles
 
 
+def cull_filtered_receptacles(
+    receptacles: List[Receptacle], exclude_filter_strings: List[str]
+) -> List[Receptacle]:
+    """
+    Filter a list of Receptacles to exclude any which are matched to the provided exclude_filter_strings.
+    Each string in filter strings is checked against each receptacle's unique_name. If the unique_name contains any filter string as a substring, that Receptacle is filtered.
+
+    :param receptacles: The initial list of Receptacle objects.
+    :param exclude_filter_strings: The list of filter substrings defining receptacles which should not be active in the current scene.
+
+    :return: The filtered list of Receptacle objects. Those which contain none of the filter substrings in their unqiue_name.
+    """
+
+    filtered_receptacles = []
+    for receptacle in receptacles:
+        culled = False
+        for filter_substring in exclude_filter_strings:
+            if filter_substring in receptacle.unique_name:
+                culled = True
+                break
+        if not culled:
+            filtered_receptacles.append(receptacle)
+    return filtered_receptacles
+
+
 def find_receptacles(
-    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
+    sim: habitat_sim.Simulator,
+    ignore_handles: Optional[List[str]] = None,
+    exclude_filter_strings: Optional[List[str]] = None,
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
 
     :param sim: Simulator must be provided.
+    :param ignore_handles: An optional list of handles for ManagedObjects which should be skipped. No Receptacles for matching objects will be returned.
+    :param exclude_filter_strings: An optional list of excluded Receptacle substrings. Any Receptacle which contains any excluded filter substring in its unique_name will not be included in the returned set.
     """
 
     obj_mgr = sim.get_rigid_object_manager()
@@ -783,6 +812,12 @@ def find_receptacles(
                 ],
                 ao_uniform_scaling=obj.global_scale,
             )
+        )
+
+    # filter out individual Receptacles with excluded substrings
+    if exclude_filter_strings is not None:
+        receptacles = cull_filtered_receptacles(
+            receptacles, exclude_filter_strings
         )
 
     # check for non-unique naming mistakes in user dataset
