@@ -13,6 +13,18 @@ import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
+def object_shortname_from_handle(object_handle: str) -> str:
+    """
+    Splits any path directory and instance increment from the handle.
+
+    :param object_handle: The raw object template or instance handle.
+
+    :return: the shortened name string.
+    """
+
+    return object_handle.split("/")[-1].split(".")[0].split("_:")[0]
+
+
 def register_custom_wireframe_box_template(
     sim: habitat_sim.Simulator,
     size: mn.Vector3,
