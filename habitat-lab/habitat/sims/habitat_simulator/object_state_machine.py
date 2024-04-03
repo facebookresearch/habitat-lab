@@ -246,7 +246,7 @@ class ObjectIsPoweredOn(BooleanObjectState):
         return False
 
 
-class ObjectSateMachine:
+class ObjectStateMachine:
     """
     Defines the logic for managing multiple states across all objects in the scene.
     """

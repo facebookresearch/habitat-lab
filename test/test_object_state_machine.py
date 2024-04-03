@@ -10,7 +10,7 @@ import magnum as mn
 
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
-    ObjectSateMachine,
+    ObjectStateMachine,
     get_state_of_obj,
     set_state_of_obj,
 )
@@ -92,7 +92,7 @@ def test_object_state_machine():
         assert get_state_of_obj(new_obj, "semantic_class") == "test_class"
 
         # initialize the ObjectStateMachine
-        osm = ObjectSateMachine(active_states=[TestObjectState()])
+        osm = ObjectStateMachine(active_states=[TestObjectState()])
         osm.initialize_object_state_map(sim)
 
         # now the cube should be registered for TestObjectState because it has the correct semantic_class
