@@ -618,7 +618,6 @@ def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
 
 
 def get_ao_default_link(
-    sim: habitat_sim.Simulator,
     ao: habitat_sim.physics.ManagedArticulatedObject,
     compute_if_not_found: bool = False,
 ) -> Optional[int]:
