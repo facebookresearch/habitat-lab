@@ -522,6 +522,78 @@ def test_ao_open_close_queries():
                     )
                     sutils.close_link(obj, link_id)  # debug reset state
 
+        ################################
+        # test default link functionality
+
+        # test computing the default link
+        default_link = sutils.get_ao_default_link(sim, fridge)
+        assert default_link is None
+        default_link = sutils.get_ao_default_link(
+            sim, fridge, compute_if_not_found=True
+        )
+        assert default_link == 1
+        assert fridge.user_attributes.get("default_link") == 1
+        default_link = sutils.get_ao_default_link(
+            sim, kitchen_counter, compute_if_not_found=True
+        )
+        assert default_link == 6
+
+        # test setting the default link in template metadata
+        fridge_template = fridge.creation_attributes
+        assert fridge_template.get_user_config().get("default_link") is None
+        fridge_template.get_user_config().set("default_link", 0)
+        assert fridge_template.get_user_config().get("default_link") == 0
+
+        print(
+            f"orig object user info = {fridge.user_attributes.get_keys_and_types()}"
+        )
+        print(
+            f"orig object creation user info = {fridge.creation_attributes.get_user_config().get_keys_and_types()}"
+        )
+
+        print(
+            f"template user info = {fridge_template.get_user_config().get_keys_and_types()}"
+        )
+
+        new_id = sim.metadata_mediator.ao_template_manager.register_template(
+            fridge_template, "new_fridge_template"
+        )
+        print(f"new_id = {new_id}")
+        print(
+            f"template user info = {sim.metadata_mediator.ao_template_manager.get_template_by_handle('new_fridge_template').get_user_config().get_keys_and_types()}"
+        )
+        new_fridge = sim.get_articulated_object_manager().add_articulated_object_by_template_handle(
+            "new_fridge_template"
+        )
+
+        # TODO: fix the bug. "default_link" does not get copied over after instantiation.
+        print(
+            f"object user info = {new_fridge.user_attributes.get_keys_and_types()}"
+        )
+        print(
+            f"object creation user info = {new_fridge.creation_attributes.get_user_config().get_keys_and_types()}"
+        )
+
+        print(new_fridge.user_attributes.get("default_link"))
+
+        assert new_fridge is not None
+        default_link = sutils.get_ao_default_link(
+            sim, fridge, compute_if_not_found=True
+        )
+        assert default_link == 1
+        new_default_link = sutils.get_ao_default_link(
+            sim, new_fridge, compute_if_not_found=True
+        )
+        assert new_default_link == 0
+
+        # test setting the default link in instance metadata
+        fridge.user_attributes.set("default_link", 0)
+        assert fridge.user_attributes.get("default_link") == 0
+        default_link = sutils.get_ao_default_link(
+            sim, fridge, compute_if_not_found=True
+        )
+        assert fridge.user_attributes.get("default_link") == 0
+
 
 @pytest.mark.skipif(
     not built_with_bullet,
