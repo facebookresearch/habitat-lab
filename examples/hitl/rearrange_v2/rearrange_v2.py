@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Optional, Set
 
 import hydra
 import magnum as mn
@@ -16,6 +16,7 @@ from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
@@ -99,7 +100,7 @@ class AppStateRearrangeV2(AppState):
     Todo
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
         self._num_users = len(self._gui_agent_controllers)
@@ -113,11 +114,16 @@ class AppStateRearrangeV2(AppState):
 
         self._cam_transform = None
         self._camera_user_index = 0
-        self._held_obj_id = None
+        self._held_obj_id: Optional[int] = None
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
         self._can_place_object = False
+
+        # Hack: We maintain our own episode iterator.
+        self._episode_ids: List[str] = ["0"]
+        self._current_episode_index = 0
+        self._last_episodes_param_str = ""
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -414,7 +420,24 @@ class AppStateRearrangeV2(AppState):
         ):
             return
 
-        if self._app_service.episode_helper.next_episode_exists():
+        self._increment_episode()
+
+    def _increment_episode(self):
+        self._current_episode_index += 1
+
+        if self._current_episode_index < len(self._episode_ids):
+            self._set_episode(self._current_episode_index)
+        else:
+            # TODO: Terminate experiment and collect data.
+            pass
+
+    def _set_episode(self, episode_index: int):
+        # If an episode range was received...
+        if len(self._episode_ids) > 0:
+            next_episode_id = self._episode_ids[episode_index]
+            self._app_service.episode_helper.set_next_episode_by_id(
+                next_episode_id
+            )
             self._app_service.end_episode(do_reset=True)
 
     def _update_held_object_placement(self):
@@ -435,6 +458,45 @@ class AppStateRearrangeV2(AppState):
         else:
             self._can_place_object = False
 
+    def _update_episode_set(
+        self, connection_parameters: Optional[Dict[str, Any]]
+    ):
+        if (
+            connection_parameters != None
+            and "episodes" in connection_parameters
+        ):
+            episodes_param_str: str = connection_parameters["episodes"]
+            if episodes_param_str != self._last_episodes_param_str:
+                self._last_episodes_param_str = episodes_param_str
+                # Format: {lower_bound}-{upper_bound} E.g. 100-110
+                # Upper bound is exclusive.
+                episode_range_str = episodes_param_str.split("-")
+                if len(episode_range_str) == 2:
+                    start_episode_id = (
+                        int(episode_range_str[0])
+                        if episode_range_str[0].isdecimal()
+                        else None
+                    )
+                    last_episode_id = (
+                        int(episode_range_str[1])
+                        if episode_range_str[0].isdecimal()
+                        else None
+                    )
+                    if start_episode_id != None and last_episode_id != None:
+                        # If in decreasing order, swap.
+                        if start_episode_id > last_episode_id:
+                            temp = last_episode_id
+                            last_episode_id = start_episode_id
+                            start_episode_id = temp
+                        self._current_episode_index = 0
+                        self._episode_ids = []
+                        for episode_id_int in range(
+                            start_episode_id, last_episode_id
+                        ):
+                            self._episode_ids.append(str(episode_id_int))
+                        # Change episode.
+                        self._set_episode(self._current_episode_index)
+
     def sim_update(self, dt, post_sim_update_dict):
         if (
             not self._app_service.hitl_config.networking.enable
@@ -443,6 +505,12 @@ class AppStateRearrangeV2(AppState):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
             return
+
+        if self._app_service.hitl_config.networking.enable:
+            params = (
+                self._app_service.remote_client_state.get_connection_parameters()
+            )
+            self._update_episode_set(params)
 
         self._sps_tracker.increment()
 
