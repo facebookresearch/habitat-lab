@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 
@@ -42,6 +42,8 @@ class RemoteClientState:
 
         self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
+
+        self._connection_params_dict: Optional[Dict[str, Any]] = None
 
         # Create one GuiInput per user to be controlled by remote clients.
         self._gui_inputs: List[GuiInput] = []
@@ -105,6 +107,13 @@ class RemoteClientState:
             return None
 
         return self._recent_client_states[-(1 + history_index)]
+
+    def get_connection_parameters(self) -> Optional[Dict[str, Any]]:
+        """
+        Get the connection parameters (data from URL query string).
+        Returns null if this information is unavailable.
+        """
+        return self._connection_params_dict
 
     def get_head_pose(
         self, history_index: int = 0
@@ -248,7 +257,7 @@ class RemoteClientState:
                     continue
                 gui_input._mouse_button_held.add(MouseButton(button))
 
-    def debug_visualize_client(self) -> None:
+    def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         if not self._gui_drawer:
             return
@@ -359,6 +368,14 @@ class RemoteClientState:
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
 
+        # Get the connection parameters if they are provided (URL query string).
+        # TODO: Make this data structured.
+        for client_state in client_states:
+            if "connectionParamsDict" in client_state:
+                self._connection_params_dict = client_state[
+                    "connectionParamsDict"
+                ]
+
         # We expect to only process ~1 new client state at a time. If this assert fails, something is going awry with networking.
         # disabling because this happens all the time when debugging the main process
         # assert len(client_states) < 100
@@ -373,7 +390,7 @@ class RemoteClientState:
             if len(self._recent_client_states) > self.get_history_length():
                 self._recent_client_states.pop(0)
 
-        self.debug_visualize_client()
+        self._debug_visualize_client()
 
     def get_new_connection_records(self) -> List[ConnectionRecord]:
         return self._new_connection_records
