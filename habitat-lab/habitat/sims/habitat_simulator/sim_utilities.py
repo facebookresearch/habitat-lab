@@ -419,6 +419,7 @@ def snap_down(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     dbv: Optional[DebugVisualizer] = None,
+    max_collision_depth: float = 0.01,
 ) -> bool:
     """
     Attempt to project an object in the gravity direction onto the surface below it.
@@ -427,6 +428,7 @@ def snap_down(
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (0).
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
+    :param max_collision_depth: The maximum contact penetration depth between the object and the support surface. Higher values are easier to sample, but result in less dynamically stabile states.
 
     :return: boolean placement success.
 
@@ -464,7 +466,9 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.05)
+                (
+                    cp.contact_distance < (-1 * max_collision_depth)
+                )  # contact depth is negative distance
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
