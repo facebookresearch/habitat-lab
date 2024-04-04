@@ -8,6 +8,8 @@ import argparse
 import gzip
 import json
 import os
+import re
+import shutil
 import time
 from dataclasses import dataclass
 from multiprocessing import Manager, Pool
@@ -136,12 +138,15 @@ def verify_jobs(jobs: List[Job], output_path: str) -> None:
             str(job.dest_path)[0:prefix_length] == prefix
         ), f"Dest path not in '{prefix}': '{job.dest_path}'."
         # Check that all job paths are unique.
+        # TODO: De-duplicate items from mixed sources.
+        """
         assert (
             job.source_path not in source_set
         ), f"Duplicate source asset: '{job.source_path}'."
         assert (
             job.dest_path not in dest_set
         ), f"Duplicate destination asset: '{job.dest_path}'."
+        """
         source_set.add(job.source_path)
         dest_set.add(job.dest_path)
         # Check that all paths are resolved (no '.' or '..').
@@ -179,12 +184,12 @@ def find_files(
 
 def search_dataset_render_assets(
     scene_dataset_dir: str, directory_search_patterns: List[str]
-) -> Dict[str, str]:
+) -> Dict[str, List[str]]:
     """
     scene_dataset_dir: "data/scene_datasets/hssd-hab"
     directory_search_patterns: ["objects/*", "objects/decomposed/*"]
     """
-    output: Dict[str, str] = {}
+    output: Dict[str, List[str]] = {}
     object_config_json_path_cache: set[str] = set()
 
     for directory_search_pattern in directory_search_patterns:
@@ -207,17 +212,43 @@ def search_dataset_render_assets(
                 continue
             object_config_json_path_cache.add(object_config_json_path)
             object_config = load_json(object_config_json_path)
-            # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
-            object_render_asset_file_name = object_config["render_asset"]
-            # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3
-            object_template_name = Path(object_render_asset_file_name).stem
             # > "data/scene_datasets/hssd-hab/objects/2"
             object_render_asset_dir = Path(object_config_json_path).parent
-            # > "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
-            object_render_asset_path = os.path.join(
-                object_render_asset_dir, object_render_asset_file_name
-            )
-            output[object_template_name] = object_render_asset_path
+            # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3
+            object_template_name = Path(object_config_json_path).stem.split(
+                "."
+            )[0]
+            # Canonical case - the object has a render_asset field.
+            if "render_asset" in object_config:
+                # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
+                object_render_asset_file_name = object_config["render_asset"]
+                # > "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
+                object_render_asset_path = os.path.join(
+                    object_render_asset_dir, object_render_asset_file_name
+                )
+                if object_template_name not in output:
+                    output[object_template_name] = []
+                output[object_template_name].append(object_render_asset_path)
+            # Articulated objects may have extra render assets defined in the URDF.
+            if "urdf_filepath" in object_config:
+                urdf_file_path = os.path.join(
+                    object_render_asset_dir, object_config["urdf_filepath"]
+                )
+                # Hack: Search URDF text directly.
+                with open(urdf_file_path, "r") as urdf_file:
+                    urdf_text = urdf_file.read()
+                    regex = re.compile('filename="(.*?)"')
+                    matches = re.findall(regex, urdf_text)
+                    for match in matches:
+                        render_asset_path = os.path.join(
+                            object_render_asset_dir, match
+                        )
+                        render_asset_path = resolve_relative_path(
+                            render_asset_path
+                        )
+                        if object_template_name not in output:
+                            output[object_template_name] = []
+                        output[object_template_name].append(render_asset_path)
 
     return output
 
@@ -231,12 +262,17 @@ class SceneDataset:
     # > "data/scene_datasets/hssd-hab"
     scene_dataset_dir: str
 
+    # List of locations where scenes can be referenced by this config.
+    # Used to resolve incomplete scene paths.
+    # > "data/scene_datasets/hssd-hab/scenes"
+    scene_directories: List[str] = []
+
     # Maps of template_name to render_asset path.
     # > Key: "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3"
     # > Value: "data/scene_datasets/hssd-hab/objects/2/2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3.glb"
-    objects: Dict[str, str] = {}
-    articulated_objects: Dict[str, str] = {}
-    stages: Dict[str, str] = {}
+    objects: Dict[str, List[str]] = {}
+    articulated_objects: Dict[str, List[str]] = {}
+    stages: Dict[str, List[str]] = {}
 
     def __init__(self, scene_dataset_config_path: str):
         assert file_is_scene_dataset_config(scene_dataset_config_path)
@@ -264,16 +300,31 @@ class SceneDataset:
                 scene_dataset_config["stages"]["paths"][".json"],
             )
 
-    def resolve_object(self, template_name: str) -> str:
-        stem = Path(template_name).stem
+        # Find scene path.
+        if "scene_instances" in scene_dataset_config:
+            scene_path_search_patterns = scene_dataset_config[
+                "scene_instances"
+            ]["paths"][".json"]
+            for scene_path_search_pattern in scene_path_search_patterns:
+                scene_path = Path.joinpath(
+                    Path(self.scene_dataset_dir),
+                    Path(scene_path_search_pattern),
+                )
+                # Remove search patterns (e.g. /*)
+                while not scene_path.is_dir():
+                    scene_path = scene_path.parent
+                self.scene_directories.append(str(scene_path))
+
+    def resolve_object(self, template_name: str) -> List[str]:
+        stem = Path(template_name).stem.split(".")[0]
         return self.objects[stem]
 
-    def resolve_articulated_object(self, template_name: str) -> str:
-        stem = Path(template_name).stem
+    def resolve_articulated_object(self, template_name: str) -> List[str]:
+        stem = Path(template_name).stem.split(".")[0]
         return self.articulated_objects[stem]
 
-    def resolve_stage(self, template_name: str) -> str:
-        stem = Path(template_name).stem
+    def resolve_stage(self, template_name: str) -> List[str]:
+        stem = Path(template_name).stem.split(".")[0]
         return self.stages[stem]
 
 
@@ -334,22 +385,22 @@ class SceneInstance:
         template_name = scene_instance_config["stage_instance"][
             "template_name"
         ]
-        self.stage_render_asset = scene_dataset.resolve_stage(template_name)
+        self.stage_render_asset = scene_dataset.resolve_stage(template_name)[0]
 
         object_render_assets = set()
         for instance in scene_instance_config["object_instances"]:
             template_name = instance["template_name"]
-            object_render_assets.add(
-                scene_dataset.resolve_object(template_name)
-            )
+            assets = scene_dataset.resolve_object(template_name)
+            for asset in assets:
+                object_render_assets.add(asset)
         self.object_render_assets = list(object_render_assets)
 
         articulated_object_render_assets = set()
         for instance in scene_instance_config["articulated_object_instances"]:
             template_name = instance["template_name"]
-            articulated_object_render_assets.add(
-                scene_dataset.resolve_articulated_object(template_name)
-            )
+            assets = scene_dataset.resolve_articulated_object(template_name)
+            for asset in assets:
+                articulated_object_render_assets.add(asset)
         self.articulated_object_render_assets = list(
             articulated_object_render_assets
         )
@@ -449,8 +500,30 @@ class EpisodeSet:
                 )
             scene_dataset = scene_datasets[scene_dataset_config_path]
             # > "data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json"
+            # BEWARE: "scene_id" can either be a path or a file stem (without extension).
             scene_instance_config_path = episode["scene_id"]
+            if not file_is_scene_config(scene_instance_config_path):
+                for (
+                    dataset_scene_search_path
+                ) in scene_dataset.scene_directories:
+                    # Try to resolve the incomplete scene file name.
+                    scene_file_candidate = Path(
+                        os.path.join(
+                            dataset_scene_search_path,
+                            scene_instance_config_path
+                            + ".scene_instance.json",
+                        )
+                    )
+                    if scene_file_candidate.is_file():
+                        scene_instance_config_path = str(scene_file_candidate)
+                        break
+            assert file_is_scene_config(
+                scene_instance_config_path
+            ), "Unsupported dataset definition."
             # Load scene instance.
+            scene_instance_config_path = resolve_relative_path(
+                scene_instance_config_path
+            )
             if scene_instance_config_path not in scene_instances:
                 scene_instances[scene_instance_config_path] = SceneInstance(
                     group_name=scene_instance_config_path,
@@ -463,6 +536,9 @@ class EpisodeSet:
                     "additional_obj_config_paths"
                 ]:
                     # > "data/objects/ycb/configs/"
+                    additional_dataset_path = resolve_relative_path(
+                        additional_dataset_path
+                    )
                     additional_dataset_paths.add(str(additional_dataset_path))
 
         # Load additional datasets (e.g. ycb).
@@ -535,6 +611,11 @@ def process_model(args):
     # Create all necessary subdirectories
     os.makedirs(os.path.dirname(job.dest_path), exist_ok=True)
 
+    if Path(job.dest_path).suffix == ".obj":
+        shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
+        result["status"] = "copied"
+        return result
+
     try:
         source_tris, target_tris, simplified_tris = decimate.decimate(
             inputFile=job.source_path,
@@ -546,6 +627,7 @@ def process_model(args):
         )
     except Exception:
         try:
+            decimate.close()
             print(
                 f"Unable to decimate: {job.source_path}. Trying without decimation."
             )
@@ -557,11 +639,17 @@ def process_model(args):
                 simplify=False,
             )
         except Exception:
-            print(f"Unable to decimate: {job.source_path}")
+            decimate.close()
+            print(
+                f"Unable to decimate: {job.source_path}. Copying as-is to output."
+            )
+            shutil.copyfile(
+                job.source_path, job.dest_path, follow_symlinks=True
+            )
             result["status"] = "error"
             return result
 
-    if job.simplify and job.verbose:
+    if job.simplify and verbose:
         print(
             f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
         )
@@ -583,9 +671,10 @@ def process_model(args):
 
     with lock:
         counter.value += 1
-        print(
-            f"{counter.value} out of {total_models} models have been processed so far."
-        )
+        if verbose:
+            print(
+                f"{counter.value} out of {total_models} models have been processed so far."
+            )
 
     return result
 
@@ -600,6 +689,7 @@ def simplify_models(jobs: List[Job], config: Config):
     gray_list_tris = 0
     total_skipped = 0
     total_error = 0
+    total_copied = 0
 
     total_models = len(jobs)
 
@@ -627,23 +717,28 @@ def simplify_models(jobs: List[Job], config: Config):
 
     for result in results:
         if result["status"] == "ok":
-            total_source_tris += result["source_tris"]
-            total_simplified_tris += result["simplified_tris"]
-            if result["list_type"] == "black":
-                black_list.append(result["source_path"])
-                black_list_tris += result["simplified_tris"]
-            elif result["list_type"] == "gray":
-                gray_list.append(result["source_path"])
-                gray_list_tris += result["simplified_tris"]
+            if "source_tris" in result:
+                total_source_tris += result["source_tris"]
+                total_simplified_tris += result["simplified_tris"]
+                if result["list_type"] == "black":
+                    black_list.append(result["source_path"])
+                    black_list_tris += result["simplified_tris"]
+                elif result["list_type"] == "gray":
+                    gray_list.append(result["source_path"])
+                    gray_list_tris += result["simplified_tris"]
         elif result["status"] == "error":
             total_error += 1
         elif result["status"] == "skipped":
             total_skipped += 1
+        elif result["status"] == "copied":
+            total_copied += 1
 
     if total_skipped > 0:
         print(f"Skipped {total_skipped} files.")
     if total_error > 0:
         print(f"Skipped {total_error} files due to processing errors.")
+    if total_copied > 0:
+        print(f"Copied {total_copied} files due to unsupported format.")
     if total_source_tris > total_simplified_tris:
         print(
             f"Reduced total vertex count from {total_source_tris} to {total_simplified_tris}."
@@ -669,6 +764,11 @@ def main():
         description="Get all render asset files associated with a given episode set."
     )
     parser.add_argument(
+        "--episodes",
+        type=str,
+        help="Episodes (.json.gz).",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         default=False,
@@ -685,11 +785,9 @@ def main():
     config.verbose = args.verbose
     config.use_multiprocessing = args.use_multiprocessing
 
-    # TODO: Parameterize
-    episodes_raw = "data/episodes/rearrange_ep_dataset.json.gz"
-
     # Load episodes.
-    episode_set = EpisodeSet(episodes_raw)
+    assert Path(args.episodes).is_file()
+    episode_set = EpisodeSet(args.episodes)
 
     jobs: List[Job] = []
 
