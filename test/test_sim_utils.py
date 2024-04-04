@@ -526,15 +526,15 @@ def test_ao_open_close_queries():
         # test default link functionality
 
         # test computing the default link
-        default_link = sutils.get_ao_default_link(sim, fridge)
+        default_link = sutils.get_ao_default_link(fridge)
         assert default_link is None
         default_link = sutils.get_ao_default_link(
-            sim, fridge, compute_if_not_found=True
+            fridge, compute_if_not_found=True
         )
         assert default_link == 1
         assert fridge.user_attributes.get("default_link") == 1
         default_link = sutils.get_ao_default_link(
-            sim, kitchen_counter, compute_if_not_found=True
+            kitchen_counter, compute_if_not_found=True
         )
         assert default_link == 6
 
@@ -578,11 +578,11 @@ def test_ao_open_close_queries():
 
         assert new_fridge is not None
         default_link = sutils.get_ao_default_link(
-            sim, fridge, compute_if_not_found=True
+            fridge, compute_if_not_found=True
         )
         assert default_link == 1
         new_default_link = sutils.get_ao_default_link(
-            sim, new_fridge, compute_if_not_found=True
+            new_fridge, compute_if_not_found=True
         )
         assert new_default_link == 0
 
@@ -590,7 +590,7 @@ def test_ao_open_close_queries():
         fridge.user_attributes.set("default_link", 0)
         assert fridge.user_attributes.get("default_link") == 0
         default_link = sutils.get_ao_default_link(
-            sim, fridge, compute_if_not_found=True
+            fridge, compute_if_not_found=True
         )
         assert fridge.user_attributes.get("default_link") == 0
 
