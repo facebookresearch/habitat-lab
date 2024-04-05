@@ -3,7 +3,7 @@ Taxonomy of "user_defined" configurations in habitat-lab
 
 This resource page outlines the expected taxonomy of expected metadata fields and systems in habitat-lab leveraging the non-official "user_defined" Configuration fields for objects, stages, and scenes.
 
-As outlined on the `"Using JSON Files to configure Attributes" <https://aihabitat.org/docs/habitat-sim/attributesJSON.html#user-defined-attributes>` doc page, "user_defined" attributes provide a generic, reserved JSON configuration node which can be filled with user data. The intent was that no "officially supported" metadata would use this field, leaving it open for arbitrary user metadata. However, several prototype and bleeding-edge features are actively leveraging this system. The purpose of this doc page is to enumerate those known uses and their taxonomy to guide further development and avoid potential conflict with ongoing/future development.
+As outlined on the `Using JSON Files to configure Attributes <https://aihabitat.org/docs/habitat-sim/attributesJSON.html#user-defined-attributes>`_ doc page, "user_defined" attributes provide a generic, reserved JSON configuration node which can be filled with user data. The intent was that no "officially supported" metadata would use this field, leaving it open for arbitrary user metadata. However, several prototype and bleeding-edge features are actively leveraging this system. The purpose of this doc page is to enumerate those known uses and their taxonomy to guide further development and avoid potential conflict with ongoing/future development.
 
 
 `Receptacles`_
@@ -12,11 +12,11 @@ As outlined on the `"Using JSON Files to configure Attributes" <https://aihabita
 Who: Stages, RigidObjects, and ArticulatedObjects.
 Where: stage_config.json, object_config.json, ao_config.json, scene_instance.json (overrides)
 
-What: sub_config with key string containing "receptacle\_". "receptacle_mesh\_" defines a TriangleMeshReceptacle while "receptacle_aabb\_" defines a bounding box (AABB) Receptacle. See the `parse_receptacles_from_user_config <https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/datasets/rearrange/samplers/receptacle.py>` function.
+What: sub_config with key string containing "receptacle\_". "receptacle_mesh\_" defines a TriangleMeshReceptacle while "receptacle_aabb\_" defines a bounding box (AABB) Receptacle. See the `parse_receptacles_from_user_config <https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/datasets/rearrange/samplers/receptacle.py>`_ function.
 
 Example:
 
-.. code:: json
+.. code:: python
 
     "user_defined": {
         "receptacle_mesh_table0001_receptacle_mesh": {
@@ -36,11 +36,11 @@ Example:
 
 Who: Scene Instances
 Where: scene_instance.json
-What: relative filepath to the file containing Receptacle filter strings for the scene.
+What: filepath (relative to dataset root directory) to the file containing Receptacle filter strings for the scene.
 
 Example:
 
-.. code:: json
+.. code:: python
 
     "user_defined": {
         "scene_filter_file": "scene_filter_files/102344022.rec_filter.json"
@@ -55,7 +55,7 @@ Where: object_config.json, ao_config.json, scene_instance.json (overrides)
 
 What: sub_config containing any fields which pertain to the ObjectStateMachine and ObjectStateSpec logic. Exact taxonomy in flux. Consider this key reserved.
 
-.. code:: json
+.. code:: python
 
     "user_defined": {
         "object_states": {
@@ -71,7 +71,7 @@ Where: object_config.json, ao_config.json, scene_instance.json (overrides)
 
 What: sub_config containing any 3D point sets which must be defined for various purposes.
 
-.. code:: json
+.. code:: python
 
     "user_defined": {
         "marker_sets": {
@@ -106,7 +106,7 @@ Where: ao_config.json
 
 What: The "default" link (integer index) is the one link which should be used if only one joint can be actuated. For example, the largest or most accessible drawer or door. Cannot be base link (-1).
 
-.. code:: json
+.. code:: python
 
     "user_defined": {
         "default_link": 5 #the link id which is "default"
