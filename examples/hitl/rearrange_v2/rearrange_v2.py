@@ -84,21 +84,6 @@ class AppStateRearrangeV2(AppState):
     def get_sim_utilities() -> Any:
         return sim_utilities
 
-    def _remap_key(self, user_index, key):
-        key_remap = {
-            GuiInput.KeyNS.SPACE: GuiInput.KeyNS.N,
-            GuiInput.KeyNS.Z: GuiInput.KeyNS.X,
-        }
-        if user_index == 1:
-            assert key in key_remap
-            key = key_remap[key]
-        return key
-
-    def _get_user_key_down(self, user_index, key):
-        return self._app_service.gui_input.get_key_down(
-            self._remap_key(user_index, key)
-        )
-
     def _open_close_ao(self, ao_handle: str):
         if not ENABLE_ARTICULATED_OPEN_CLOSE:
             return
@@ -214,7 +199,7 @@ class AppStateRearrangeV2(AppState):
         # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
         if self._held_obj_id is not None:
             if (
-                self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE)
+                self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE)
                 and self._can_place_object
             ):
                 if DO_HUMANOID_GRASP_OBJECTS:
@@ -232,7 +217,9 @@ class AppStateRearrangeV2(AppState):
                 query_pos
             )
             if obj_id:
-                if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+                if self._app_service.gui_input.get_key_down(
+                    GuiInput.KeyNS.SPACE
+                ):
                     if DO_HUMANOID_GRASP_OBJECTS:
                         grasp_object_id = obj_id
                     self._held_obj_id = obj_id
@@ -406,7 +393,7 @@ class AppStateRearrangeV2(AppState):
             )
             if reachable_ao_handle is not None:
                 self._highlight_ao(reachable_ao_handle)
-                if self._get_user_key_down(user_index, GuiInput.KeyNS.Z):
+                if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Z):
                     self._open_close_ao(reachable_ao_handle)
 
         if not self._paused:
