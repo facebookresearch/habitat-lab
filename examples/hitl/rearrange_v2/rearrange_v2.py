@@ -169,16 +169,6 @@ class AppStateRearrangeV2(AppState):
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
             client_message_manager.signal_scene_change()
-            # Not currently needed since the browser client doesn't have a notion of a humanoid. Here for reference.
-            # human_pos = (
-            #     self.get_sim()
-            #     .get_agent_data(self.get_gui_controlled_agent_index())
-            #     .articulated_agent.base_pos
-            # )
-            # client_message_manager.change_humanoid_position(human_pos)
-            # client_message_manager.update_navmesh_triangles(
-            #     self._get_navmesh_triangle_vertices()
-            # )
 
     def get_sim(self):
         return self._app_service.sim
@@ -404,7 +394,6 @@ class AppStateRearrangeV2(AppState):
             # temp hack: manually add a keyframe while paused
             self.get_sim().gfx_replay_manager.save_keyframe()
 
-        # todo: visualize objects properly for each user (this requires a separate debug_line_render per user!), or find a reasonable debug line visualization that can be shared between both users every frame.
         if self._held_obj_id is None:
             self._pick_helper.viz_objects()
 
