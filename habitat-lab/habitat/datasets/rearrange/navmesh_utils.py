@@ -72,7 +72,7 @@ def unoccluded_navmesh_snap(
     min_sample_dist: float = 0.5,
 ) -> Optional[mn.Vector3]:
     """
-    Snap a point to the navmesh considering point visibilty via raycasting.
+    Snap a point to the navmesh considering point visibility via raycasting.
 
     :property pos: The 3D position to snap.
     :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
@@ -85,14 +85,15 @@ def unoccluded_navmesh_snap(
     :property max_samples: The maximum number of attempts to sample navmesh points for the test batch.
     :property min_sample_dist: The minimum allowed L2 distance between samples in the test batch.
 
-    NOTE: this function is based on smapling and does not guarantee the closest point.
+    NOTE: this function is based on sampling and does not guarantee the closest point.
 
     :return: An approximation of the closest unoccluded snap point to pos or None if an unoccluded point could not be found.
     """
 
     # first try the closest snap point
     snap_point = pathfinder.snap_point(pos, island_id)
-    is_occluded = snap_point_is_occluded(
+
+    is_occluded = np.isnan(snap_point[0]) or snap_point_is_occluded(
         target=pos,
         snap_point=snap_point,
         height=height,
@@ -114,15 +115,19 @@ def unoccluded_navmesh_snap(
             sample = pathfinder.get_random_navigable_point_near(
                 circle_center=pos, radius=search_radius, island_index=island_id
             )
-            reject = False
-            for batch_sample in test_batch:
-                if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
-                    reject = True
-                    break
-            if not reject:
-                test_batch.append(
-                    (sample, float(np.linalg.norm(sample - pos)))
-                )
+            if not np.isnan(sample[0]):
+                reject = False
+                for batch_sample in test_batch:
+                    if (
+                        np.linalg.norm(sample - batch_sample[0])
+                        < min_sample_dist
+                    ):
+                        reject = True
+                        break
+                if not reject:
+                    test_batch.append(
+                        (sample, float(np.linalg.norm(sample - pos)))
+                    )
             sample_count += 1
 
         # sort the test batch points by distance to the target

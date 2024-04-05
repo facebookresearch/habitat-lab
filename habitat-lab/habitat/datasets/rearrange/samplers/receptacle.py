@@ -862,20 +862,34 @@ def get_scene_rec_filter_filepath(
     return None
 
 
-def get_excluded_recs_from_filter_file(rec_filter_filepath: str) -> List[str]:
+def get_excluded_recs_from_filter_file(
+    rec_filter_filepath: str, filter_types: Optional[List[str]] = None
+) -> List[str]:
     """
     Load and digest a Receptacle filter file to generate a list of strings which should be excluded from the active ReceptacleSet.
+
+    :param filter_types: Optionally specify a particular set of filter types to scrape. Default is all filters.
     """
+
+    possible_filter_types = [
+        "manually_filtered",
+        "access_filtered",
+        "stability_filtered",
+        "height_filtered",
+    ]
+
+    if filter_types is None:
+        filter_types = possible_filter_types
+    else:
+        for filter_type in filter_types:
+            assert (
+                filter_type in possible_filter_types
+            ), f"Specified filter type '{filter_type}' is not in supported set: {possible_filter_types}"
 
     filtered_unique_names = []
     with open(rec_filter_filepath, "r") as f:
         filter_json = json.load(f)
-        for filter_type in [
-            "manually_filtered",
-            "access_filtered",
-            "stability_filtered",
-            "height_filtered",
-        ]:
+        for filter_type in filter_types:
             for filtered_unique_name in filter_json[filter_type]:
                 filtered_unique_names.append(filtered_unique_name)
     return filtered_unique_names
