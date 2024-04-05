@@ -20,6 +20,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.types import ClientState, ConnectionRecord
 from habitat_hitl.core.user_mask import Mask, Users
+from habitat_sim.geo import Ray
 
 
 class RemoteClientState:
@@ -212,11 +213,29 @@ class RemoteClientState:
                         continue
                     gui_input._mouse_button_up.add(MouseButton(button))
 
-                delta: List[Any] = mouse_json["scrollDelta"]
-                if len(delta) == 2:
-                    gui_input._mouse_scroll_offset += (
-                        delta[0] if abs(delta[0]) > abs(delta[1]) else delta[1]
-                    )
+                if "scrollDelta" in mouse_json:
+                    delta: List[Any] = mouse_json["scrollDelta"]
+                    if len(delta) == 2:
+                        gui_input._mouse_scroll_offset += (
+                            delta[0]
+                            if abs(delta[0]) > abs(delta[1])
+                            else delta[1]
+                        )
+
+                if "rayOrigin" in mouse_json:
+                    ray_origin: List[float] = mouse_json["rayOrigin"]
+                    ray_direction: List[float] = mouse_json["rayDirection"]
+                    if len(ray_origin) == 3 and len(ray_direction) == 3:
+                        ray = Ray()
+                        ray.origin = mn.Vector3(
+                            ray_origin[0], ray_origin[1], ray_origin[2]
+                        )
+                        ray.direction = mn.Vector3(
+                            ray_direction[0],
+                            ray_direction[1],
+                            ray_direction[2],
+                        ).normalized()
+                        gui_input._mouse_ray = ray
 
         # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
         # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
