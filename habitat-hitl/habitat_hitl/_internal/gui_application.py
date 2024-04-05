@@ -41,7 +41,7 @@ class InputHandlerApplication(Application):
 
     def key_press_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
-        if key != None:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
                 # ignore it.
@@ -51,7 +51,7 @@ class InputHandlerApplication(Application):
 
     def key_release_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
-        if key != None:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 if key in wrapper._key_held:
                     wrapper._key_held.remove(key)
@@ -59,7 +59,7 @@ class InputHandlerApplication(Application):
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
         key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key != None:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
                 # ignore it.
@@ -69,7 +69,7 @@ class InputHandlerApplication(Application):
 
     def mouse_release_event(self, event: Application.MouseEvent) -> None:
         key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key != None:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 if key in wrapper._mouse_button_held:
                     wrapper._mouse_button_held.remove(key)
