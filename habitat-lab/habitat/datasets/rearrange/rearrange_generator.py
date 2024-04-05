@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import random
 import time
@@ -44,6 +45,7 @@ from habitat_sim.nav import NavMeshSettings
 
 from IPython import embed
 from habitat.datasets.rearrange.door_sampler import door_samples
+import csv
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
@@ -486,6 +488,26 @@ class RearrangeEpisodeGenerator:
         print("----FOUND start_navigable: ", start_navigable, " goal_navigable: ", goal_navigable, "robot_start: ", robot_start, "----------")
         return robot_start, start_navigable, goal_navigable
 
+    def remove_last_line_if_nonempty(self, csv_file):
+        """
+        Read a CSV file and remove the last line if the file has length > 0.
+        """
+        if osp.exists(csv_file):
+            with open(csv_file, 'r') as file:
+                lines = list(csv.reader(file))
+                if len(lines) > 0:
+                    with open(csv_file, 'w', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerows(lines[:-1])
+                    print(f"Last line removed from {csv_file}")
+                else:
+                    print(f"{csv_file} is empty, no changes made.")
+                if len(lines) == 1:
+                    os.remove(csv_file)
+                    print(f"{csv_file} removed because no data")
+        else:
+            print(f"{csv_file} does not exist.")
+
     def generate_episodes(
         self, num_episodes: int = 1, verbose: bool = False
     ) -> List[RearrangeEpisode]:
@@ -497,6 +519,12 @@ class RearrangeEpisodeGenerator:
         
         if verbose:
             pbar = tqdm(total=num_episodes)
+        
+        #KL: stop sign
+        # count_generation = 0
+        # last_generated_episodes = len(generated_episodes)
+        cur_file_name = self.cfg.scene_sets[0].included_substrings[0]
+        cur_file_path = f"test_door_dataset/data_{cur_file_name}.csv"
         while len(generated_episodes) < num_episodes:
             try:
                 self._scene_sampler.set_cur_episode(len(generated_episodes))
@@ -506,11 +534,13 @@ class RearrangeEpisodeGenerator:
                 new_episode = None
                 logger.error("Generation failed with exception...")
             if new_episode is None:
+                #KL
+                # self.remove_last_line_if_nonempty(cur_file_path)
                 failed_episodes += 1
                 continue
             generated_episodes.append(new_episode)
             if verbose:
-                pbar.update(1)
+                pbar.update(1)            
         if verbose:
             pbar.close()
 
@@ -594,8 +624,8 @@ class RearrangeEpisodeGenerator:
         # robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
         #     largest_indoor_island_id
         # )
-        sampled_start, sampled_goal, robot_sampled_start = door_samples(self.sim.pathfinder, self.cfg)
-        print("Get DOOR final samples: ", robot_sampled_start, sampled_start, sampled_goal)
+        sampled_start, sampled_goal, robot_sampled_start, robot_sampled_goal = door_samples(self.sim.pathfinder, self.cfg, ep_scene_handle)
+        print("Get DOOR final samples: ", robot_sampled_start, robot_sampled_goal, sampled_start, sampled_goal)
         
         # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
@@ -603,7 +633,11 @@ class RearrangeEpisodeGenerator:
         for sampler_name, num_targets in target_numbers.items():
             new_target_receptacles: List[Receptacle] = []
             failed_samplers: Dict[str, bool] = defaultdict(bool)
-            while len(new_target_receptacles) < num_targets:
+            #KL
+            maxiter = 3
+            iter_count = 0
+            while len(new_target_receptacles) < num_targets and iter_count < maxiter:
+                iter_count += 1
                 assert len(failed_samplers.keys()) < len(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 ), f"All target samplers failed to find a match for '{sampler_name}'."
@@ -646,7 +680,8 @@ class RearrangeEpisodeGenerator:
         ):
             new_goal_receptacles = []  # type: ignore
             num_iterations = 0
-            max_iterations = num_targets * 100
+            #KL
+            max_iterations = num_targets * 10 #100
             while (
                 len(new_goal_receptacles) < num_targets
                 and num_iterations < max_iterations

@@ -141,7 +141,7 @@ def is_door_valid(coords, grid_dim, pathfinder) -> bool:
         return True
     return False
 
-def door_samples(pathfinder, config, scene_handle) -> List:
+def door_samples(pathfinder, config) -> List:
     # Get top down map
     top_down_map = maps.get_topdown_map(
             pathfinder, height=0.0, meters_per_pixel=0.025
@@ -158,24 +158,49 @@ def door_samples(pathfinder, config, scene_handle) -> List:
 
     # Generate Valid Doors and Write into csv file
     #KL: modifying
-    # file_name = config.scene_sets[0].included_substrings[0] #false
-    file_name = scene_handle.replace("/habitat-lab/data/scene_datasets/hssd-hab/scenes-uncluttered/", "")
-    file_name = file_name.replace(".scene_instance.json", "")
+    file_name = config.scene_sets[0].included_substrings[0] #substring
     file_path = f"test_door_dataset/data_{file_name}.csv"
-    print("Current file_path: ", file_path)
-    assert os.path.exists(file_path), f"File path does not exist: {file_path}"
+    coords = []
+    # if os.path.exists(file_path):
+    #     # os.remove(file_path)
+    #     with open(file_path, 'r') as csvfile:
+    #         # Create a CSV reader object
+    #         csvreader = csv.reader(csvfile)
+    #         # Convert CSV data to a list of lists
+    #         data = list(csvreader)
+    #         total_rows = len(data)
+    #         row_list = data[0]
+    #         coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
+    # else:
+    #     coords = generate_door_pos()
+    #     while (not is_door_valid(coords, grid_dim, pathfinder)):
+    #         coords = generate_door_pos()
+    #     append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    
+    # append valid door pos to csv file
+    # if os.path.exists(file_path):
+    #     os.remove(file_path)
+    #make sure only 1 door in each dataset
+    coords = generate_door_pos()
+    while (not is_door_valid(coords, grid_dim, pathfinder)):
+        coords = generate_door_pos()
+    append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
 
     # Get door pos randomly from csv file
-    coords = []
-    with open(file_path, 'r') as csvfile:
-        # Create a CSV reader object
-        csvreader = csv.reader(csvfile)
-        # Convert CSV data to a list of lists
-        data = list(csvreader)
-        total_rows = len(data)
-        random_index = random.randint(0, total_rows - 1)
-        row_list = data[random_index]
-        coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
+    # coords = []
+    # file_name = config.scene_sets[0].included_substrings[0] #substring
+    # file_path = f"data_{file_name}.csv"
+    # with open(file_path, 'r') as csvfile:
+    #     # Create a CSV reader object
+    #     csvreader = csv.reader(csvfile)
+    #     # Convert CSV data to a list of lists
+    #     data = list(csvreader)
+    #     total_rows = len(data)
+    #     random_index = random.randint(0, total_rows - 1)
+    #     row_list = data[random_index]
+    #     coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
+
+
 
     # Get the end point for door_line
     print("-------Coords for Valid Door position----------")

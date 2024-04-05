@@ -199,6 +199,9 @@ def generate_fn():
             else:
                 # filename
                 if not output_path.endswith(".json.gz"):
+                    #KL
+                    # cur_file_name = cfg.scene_sets[0].included_substrings[0]
+                    # output_path += f"_{cur_file_name}"
                     output_path += ".json.gz"
 
             if (
