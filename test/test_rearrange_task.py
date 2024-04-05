@@ -6,6 +6,7 @@
 
 import json
 import os.path as osp
+import random
 import time
 from glob import glob
 
@@ -311,6 +312,24 @@ def test_receptacle_parsing():
 
         # parse the metadata into Receptacle objects
         test_receptacles = hab_receptacle.find_receptacles(sim)
+
+        # test receptacle filtering in find
+        random_receptacle = random.choice(test_receptacles)
+        exclude_unique_name = random_receptacle.unique_name
+        test_filtered_receptacles = hab_receptacle.find_receptacles(
+            sim, exclude_filter_strings=[exclude_unique_name]
+        )
+        assert len(test_filtered_receptacles) == len(test_receptacles) - 1
+        assert (
+            len(
+                [
+                    rec
+                    for rec in test_filtered_receptacles
+                    if rec.unique_name == random_receptacle.unique_name
+                ]
+            )
+            == 0
+        )
 
         # test the Receptacle instances
         num_test_samples = 10
