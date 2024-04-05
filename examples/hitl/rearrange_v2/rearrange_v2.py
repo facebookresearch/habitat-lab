@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
 import hydra
 import magnum as mn
@@ -15,6 +15,7 @@ from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
@@ -40,7 +41,7 @@ class AppStateRearrangeV2(AppState):
     Todo
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
         self._num_users = len(self._gui_agent_controllers)
@@ -54,7 +55,7 @@ class AppStateRearrangeV2(AppState):
 
         self._cam_transform = None
         self._camera_user_index = 0
-        self._held_obj_id = None
+        self._held_obj_id: Optional[int] = None
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
