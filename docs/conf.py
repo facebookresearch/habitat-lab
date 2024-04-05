@@ -103,6 +103,7 @@ INPUT_PAGES = [
     "pages/habitat-lab-tdmap-viz.rst",
     "pages/habitat2.rst",
     "pages/view-transform-warp.rst",
+    "pages/metadata-taxonomy.rst",
 ]
 
 PLUGINS = [
