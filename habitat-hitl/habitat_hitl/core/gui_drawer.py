@@ -104,7 +104,7 @@ class GuiDrawer:
         """
         # If server rendering is enabled:
         if self._sim_debug_line_render:
-            self._sim_debug_line_render.draw_box(min, max, color)
+            self._sim_debug_line_render.draw_box(min_extent, max_extent, color)
 
         # If remote rendering is enabled:
         if self._client_message_manager:
