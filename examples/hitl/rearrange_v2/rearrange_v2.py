@@ -9,6 +9,7 @@ from typing import Any, Dict, Set
 
 import hydra
 import magnum as mn
+from habitat_llm.agent.env import dataset
 
 import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
@@ -133,9 +134,7 @@ class AppStateRearrangeV2(AppState):
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
         for handle, _ in self._ao_root_bbs.items():
-            ao = self.get_sim_utilities().get_obj_from_handle(
-                self._sim, handle
-            )
+            ao = self.get_sim_utilities().get_obj_from_handle(self._sim, handle)
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
             dist_xz = (ao_pos_xz - player_pos_xz).length()
@@ -176,10 +175,8 @@ class AppStateRearrangeV2(AppState):
 
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("extra_info") is not None:
-            self._task_instruction = current_episode.info["extra_info"][
-                "instruction"
-            ]
+        if hasattr(current_episode, "instruction") is not None:
+            self._task_instruction = current_episode.instruction
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
@@ -286,9 +283,13 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                controls_str += (
+                    f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                )
             if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                controls_str += (
+                    f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                )
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -441,9 +442,7 @@ class AppStateRearrangeV2(AppState):
         self._update_help_text()
 
 
-@hydra.main(
-    version_base=None, config_path="config", config_name="rearrange_v2"
-)
+@hydra.main(version_base=None, config_path="config", config_name="rearrange_v2")
 def main(config):
     hitl_main(
         config,
