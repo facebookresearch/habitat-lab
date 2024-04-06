@@ -9,6 +9,7 @@ from typing import Any, Dict, Set
 
 import hydra
 import magnum as mn
+import numpy as np
 from habitat_llm.agent.env import dataset  # noqa: F401
 
 import habitat_sim
@@ -30,10 +31,68 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.gui_placement_helper import GuiPlacementHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 ENABLE_ARTICULATED_OPEN_CLOSE = False
 # Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
 DO_HUMANOID_GRASP_OBJECTS = False
+
+
+class DataLogger:
+    def __init__(self, app_service):
+        self._app_service = app_service
+        self._sim = app_service.sim
+
+    def get_num_agents(self):
+        return len(self._sim.agents_mgr._all_agent_data)
+
+    def get_agents_state(self):
+        agent_states = []
+        for agent_idx in range(self.get_num_agents()):
+            agent_root = get_agent_art_obj_transform(self._sim, agent_idx)
+            position = np.array(agent_root.translation).tolist()
+            rotation = mn.Quaternion.from_matrix(agent_root.rotation())
+            rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
+
+            snap_idx = self._sim.agents_mgr._all_agent_data[
+                agent_idx
+            ].grasp_mgr.snap_idx
+            agent_states.append(
+                {
+                    "position": position,
+                    "rotation": rotation,
+                    "grasp_mgr_snap_idx": snap_idx,
+                }
+            )
+        return agent_states
+
+    def get_objects_state(self):
+        object_states = []
+        rom = self._sim.get_rigid_object_manager()
+        for object_handle, rel_idx in self._sim._handle_to_object_id.items():
+            obj_id = self._sim._scene_obj_ids[rel_idx]
+            ro = rom.get_object_by_id(obj_id)
+            position = np.array(ro.translation).tolist()
+            rotation = quat_to_coeffs(quat_from_magnum(ro.rotation)).tolist()
+            object_states.append(
+                {
+                    "position": position,
+                    "rotation": rotation,
+                    "object_handle": object_handle,
+                    "object_id": obj_id,
+                }
+            )
+        return object_states
+
+    def record_state(self, task_completed: bool = False):
+        agent_states = self.get_agents_state()
+        object_states = self.get_objects_state()
+
+        self._app_service.step_recorder.record("agent_states", agent_states)
+        self._app_service.step_recorder.record("object_states", object_states)
+        self._app_service.step_recorder.record(
+            "task_completed", task_completed
+        )
 
 
 class AppStateRearrangeV2(AppState):
@@ -79,6 +138,7 @@ class AppStateRearrangeV2(AppState):
         self._sps_tracker = AverageRateTracker(2.0)
 
         self._task_instruction = ""
+        self._data_logger = DataLogger(app_service=self._app_service)
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -438,6 +498,12 @@ class AppStateRearrangeV2(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+    def record_state(self):
+        task_completed = self._app_service.gui_input.get_key_down(
+            GuiInput.KeyNS.N
+        )
+        self._data_logger.record_state(task_completed=task_completed)
 
 
 @hydra.main(
