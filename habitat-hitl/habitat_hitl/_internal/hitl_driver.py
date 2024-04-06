@@ -30,6 +30,8 @@ from habitat_hitl._internal.networking.networking_process import (
 )
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.campaign_service import CampaignService
+from habitat_hitl.app_states.data_service import DataService
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -193,6 +195,16 @@ class HitlDriver(AppDriver):
         # TODO: Dependency injection
         text_drawer._client_message_manager = self._client_message_manager
 
+        campaign_service = CampaignService(
+            hitl_config=self._hitl_config,
+            get_metrics=lambda: self._get_recent_metrics(),
+            episode_helper=self._episode_helper,
+        )
+
+        self.data_service: DataService = DataService(
+            hitl_config=self._hitl_config
+        )
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
@@ -211,6 +223,7 @@ class HitlDriver(AppDriver):
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=gui_agent_controllers,
+            campaign_service=campaign_service,
         )
 
         self._app_state: AppState = None
@@ -218,9 +231,7 @@ class HitlDriver(AppDriver):
         self._app_state = create_app_state_lambda(self._app_service)
 
         # Limit the number of float decimals in JSON transmissions
-        if hasattr(
-            self.get_sim().gfx_replay_manager, "set_max_decimal_places"
-        ):
+        if hasattr(self.get_sim().gfx_replay_manager, "set_max_decimal_places"):
             self.get_sim().gfx_replay_manager.set_max_decimal_places(4)
 
         self._reset_environment()
@@ -261,9 +272,7 @@ class HitlDriver(AppDriver):
             id_dataset=dataset_config.type, config=dataset_config
         )
         if self._play_episodes_filter_str is not None:
-            self._play_episodes_filter_str = str(
-                self._play_episodes_filter_str
-            )
+            self._play_episodes_filter_str = str(self._play_episodes_filter_str)
             max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):
@@ -290,8 +299,7 @@ class HitlDriver(AppDriver):
             dataset.episodes = [
                 ep
                 for ep in dataset.episodes
-                if ep.episode_id.zfill(max_num_digits)
-                in play_episodes_ids_list
+                if ep.episode_id.zfill(max_num_digits) in play_episodes_ids_list
             ]
 
             dataset.episodes.sort(
@@ -344,6 +352,7 @@ class HitlDriver(AppDriver):
 
         pkl_filepath = filepath_base + ".pkl.gz"
         save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
+        self.data_service.upload(json_filepath, json_filepath.split("/")[-1])
 
     def _reset_episode_recorder(self):
         assert self._step_recorder
@@ -464,16 +473,15 @@ class HitlDriver(AppDriver):
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         self._viz_anim_fraction = (
-            self._viz_anim_fraction
-            + dt * self._hitl_config.viz_animation_speed
+            self._viz_anim_fraction + dt * self._hitl_config.viz_animation_speed
         ) % 1.0
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
         if self._pending_cursor_style:
-            post_sim_update_dict[
-                "application_cursor"
-            ] = self._pending_cursor_style
+            post_sim_update_dict["application_cursor"] = (
+                self._pending_cursor_style
+            )
             self._pending_cursor_style = None
 
         keyframes = (

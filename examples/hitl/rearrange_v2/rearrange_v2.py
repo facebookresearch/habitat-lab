@@ -15,7 +15,9 @@ from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
+from habitat_hitl.app_states.campaign_service import TaskStatus
 from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
@@ -40,7 +42,7 @@ class AppStateRearrangeV2(AppState):
     Todo
     """
 
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
         self._num_users = len(self._gui_agent_controllers)
@@ -78,6 +80,9 @@ class AppStateRearrangeV2(AppState):
         self._sps_tracker = AverageRateTracker(2.0)
 
         self._task_instruction = ""
+        self._num_episodes_completed = 0
+
+        self._app_service.campaign_service.initialize_session()
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -133,9 +138,7 @@ class AppStateRearrangeV2(AppState):
         # TODO: Caching
         # TODO: Improve heuristic using bounding box sizes and view angle
         for handle, _ in self._ao_root_bbs.items():
-            ao = self.get_sim_utilities().get_obj_from_handle(
-                self._sim, handle
-            )
+            ao = self.get_sim_utilities().get_obj_from_handle(self._sim, handle)
             ao_pos = ao.translation
             ao_pos_xz = mn.Vector3(ao_pos.x, 0.0, ao_pos.z)
             dist_xz = (ao_pos_xz - player_pos_xz).length()
@@ -286,9 +289,13 @@ class AppStateRearrangeV2(AppState):
         controls_str: str = ""
         if not self._hide_gui_text:
             if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                controls_str += (
+                    f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+                )
             if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                controls_str += (
+                    f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+                )
             controls_str += "H: show/hide help text\n"
             controls_str += "P: pause\n"
             controls_str += "I, K: look up, down\n"
@@ -354,6 +361,7 @@ class AppStateRearrangeV2(AppState):
         ):
             return
 
+        self._num_episodes_completed += 1
         if self._app_service.episode_helper.next_episode_exists():
             self._app_service.end_episode(do_reset=True)
 
@@ -440,10 +448,49 @@ class AppStateRearrangeV2(AppState):
 
         self._update_help_text()
 
+        if (
+            self._num_episodes_completed
+            > self._app_service.campaign_service.max_episodes_per_session
+        ):
+            self.end_task()
 
-@hydra.main(
-    version_base=None, config_path="config", config_name="rearrange_v2"
-)
+    def get_num_agents(self):
+        return len(self.get_sim().agents_mgr._all_agent_data)
+
+    def record_state(self):
+        agent_states = []
+        for agent_idx in range(self.get_num_agents()):
+            agent_root = get_agent_art_obj_transform(self.get_sim(), agent_idx)
+            rotation_quat = mn.Quaternion.from_matrix(agent_root.rotation())
+            rotation_list = list(rotation_quat.vector) + [rotation_quat.scalar]
+            pos = agent_root.translation
+
+            snap_idx = (
+                self.get_sim()
+                .agents_mgr._all_agent_data[agent_idx]
+                .grasp_mgr.snap_idx
+            )
+
+            agent_states.append(
+                {
+                    "position": pos,
+                    "rotation_xyzw": rotation_list,
+                    "grasp_mgr_snap_idx": snap_idx,
+                }
+            )
+
+        self._app_service.step_recorder.record("agent_states", agent_states)
+
+    def end_task(self):
+        self._app_service.campaign_service.end_task(
+            {
+                "task_status": TaskStatus.COMPLETED.value,
+                **self._app_service.campaign_service.session_meta,
+            }
+        )
+
+
+@hydra.main(version_base=None, config_path="config", config_name="rearrange_v2")
 def main(config):
     hitl_main(
         config,
