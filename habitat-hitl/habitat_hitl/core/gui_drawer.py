@@ -239,6 +239,10 @@ class GuiDrawer:
             pass
 
     def _compute_parent_transform(self) -> mn.Matrix4:
+        """
+        Resolve the transform resulting from the push/pop_transform calls.
+        To apply to a point, use {ret_val}.transform_point(from_pos).
+        """
         parent_transform = mn.Matrix4.identity_init()
         for local_transform in self._local_transforms:
             parent_transform = parent_transform @ local_transform
