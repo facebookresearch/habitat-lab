@@ -253,6 +253,7 @@ class RemoteClientState:
         )
 
         gui_input._key_held.clear()
+        gui_input._mouse_button_held.clear()
 
         if input_json is not None:
             for button in input_json["buttonHeld"]:
