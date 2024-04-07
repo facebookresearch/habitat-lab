@@ -222,6 +222,14 @@ class RemoteClientState:
                             else delta[1]
                         )
 
+                if "mousePositionDelta" in mouse_json:
+                    pos_delta: List[Any] = mouse_json["mousePositionDelta"]
+                    if len(pos_delta) == 2:
+                        gui_input._relative_mouse_position = [
+                            pos_delta[0],
+                            pos_delta[1],
+                        ]
+
                 if "rayOrigin" in mouse_json:
                     ray_origin: List[float] = mouse_json["rayOrigin"]
                     ray_direction: List[float] = mouse_json["rayDirection"]
