@@ -21,14 +21,6 @@ cd objects
 git checkout 3893a735352b92d46505f35d759553f5fc82a39b
 ```
 
-To test the latest version of Habitat-LLM episodes install habitat-llm using:
-
-```
-git clone git@github.com:facebookresearch/habitat-llm.git
-cd habitat-llm
-pip install -e .
-```
-
 ## Data directory
 
 Run `rearrange_v2` from the Habitat-lab root directory. It will expect `data/` for Habitat-lab data, and it will also look for `examples/hitl/rearrange_v2/app_data/demo.json.gz` (included alongside source files in our git repo).

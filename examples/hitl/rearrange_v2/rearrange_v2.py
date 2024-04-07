@@ -10,7 +10,6 @@ from typing import Any, Dict, Set
 import hydra
 import magnum as mn
 import numpy as np
-from habitat_llm.agent.env import dataset  # noqa: F401
 
 import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
@@ -237,8 +236,10 @@ class AppStateRearrangeV2(AppState):
 
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
-        if hasattr(current_episode, "instruction") is not None:
-            self._task_instruction = current_episode.instruction
+        if current_episode.info.get("extra_info") is not None:
+            self._task_instruction = current_episode.info["extra_info"][
+                "instruction"
+            ]
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
