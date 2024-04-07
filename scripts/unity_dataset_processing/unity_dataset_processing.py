@@ -335,7 +335,8 @@ class ObjectDataset:
     These special datasets only contain regular objects - no stage or articulated objects.
     """
 
-    render_assets: List[str] = []
+    render_assets: Set[str] = set()
+    stem_to_resolved_path: Dict[str, str] = {}
 
     def __init__(self, dataset_path: str):
         assert Path(dataset_path).is_dir()
@@ -357,9 +358,13 @@ class ObjectDataset:
             object_render_asset_path = os.path.join(
                 object_render_asset_dir, object_render_asset_file_name
             )
-            self.render_assets.append(
-                resolve_relative_path(object_render_asset_path)
+            resolved_path = resolve_relative_path(object_render_asset_path)
+            self.render_assets.add(
+                resolve_relative_path(resolved_path)
             )
+            # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3"
+            stem = Path(object_config_json_path).stem.split(".")[0]
+            self.stem_to_resolved_path[stem] = resolved_path
 
 
 class SceneInstance:
@@ -468,6 +473,16 @@ class GroupedSceneAssets:
             self.articulated_objects.append(AssetInfo(asset_path, groups))
 
 
+#class EpisodeObjectAssets:
+#    """
+#    All objects used in a episode.
+#    """
+#    def __init__(self, assets: List[str], package_number: int, scene_dataset: SceneDataset):
+#        for asset in assets:
+#            scene_objects = scene_dataset.resolve_object(asset)
+#            for scene_object in scene_objects:
+                
+
 class EpisodeSet:
     """
     Loads an episode set (.json.gz) and exposes its assets.
@@ -475,6 +490,8 @@ class EpisodeSet:
 
     grouped_scene_assets: GroupedSceneAssets
     additional_datasets: Dict[str, ObjectDataset] = {}
+    episodes: List[Dict[str, Any]] = []
+    scene_datasets: Dict[str, SceneDataset] = {}
 
     def __init__(self, episodes_path: str):
         assert file_is_episode_set(
@@ -486,6 +503,7 @@ class EpisodeSet:
                 json_data
             )
         episodes = loaded_data["episodes"]
+        self.episodes = episodes
 
         scene_datasets: Dict[str, SceneDataset] = {}
         scene_instances: Dict[str, SceneInstance] = {}
@@ -551,6 +569,8 @@ class EpisodeSet:
         self.grouped_scene_assets = GroupedSceneAssets(
             list(scene_instances.values())
         )
+
+        self.scene_datasets = scene_datasets
 
 
 def create_metadata_file(results: List[Dict[str, Any]]):
@@ -791,6 +811,61 @@ def main():
 
     jobs: List[Job] = []
 
+    # Add additional datasets.
+    additional_asset_group_size = 50
+    objects_in_current_group = 0
+    current_group_index = 0
+    shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
+    processed_objects: Set[str] = set()
+    for episode in episode_set.episodes:
+        rigid_objs = episode["rigid_objs"]
+        for rigid_obj in rigid_objs:
+            resolved_rigid_objs: List[str] = []
+            rigid_obj_stem = Path(rigid_obj[0]).stem.split(".")[0]
+            for object_dataset in episode_set.additional_datasets.values():
+                if rigid_obj_stem in object_dataset.stem_to_resolved_path:
+                    resolved_rigid_objs = [object_dataset.stem_to_resolved_path[rigid_obj_stem]]
+                    continue
+            # Look for the object in the scene dataset.
+            # HACK: We create duplicates for these objects.
+            for scene_dataset in episode_set.scene_datasets.values():
+                if rigid_obj_stem in scene_dataset.objects:
+                    resolved_rigid_objs = scene_dataset.objects[rigid_obj_stem]
+                    for resolved in resolved_rigid_objs:
+                        shared_scene_objects.add(resolved)
+                    continue
+            assert len(resolved_rigid_objs) > 0
+            for resolved_rigid_obj in resolved_rigid_objs:
+                jobs.append(
+                    Job(
+                        asset_path=resolved_rigid_obj,
+                        output_dir=OUTPUT_DIR,
+                        groups=[str(current_group_index)],
+                        simplify=False,
+                    )
+                )
+                processed_objects.add(resolved_rigid_obj)
+            objects_in_current_group += 1
+        # Note: additional_asset_group_size can be exceeded to allow packaging episode assets together
+        if objects_in_current_group >= additional_asset_group_size:
+            objects_in_current_group -= additional_asset_group_size
+            current_group_index += 1
+    ## Sloppy: Add missing assets.
+    #for dataset in episode_set.additional_datasets.values():
+    #    for asset_path in dataset.render_assets:
+    #        jobs.append(
+    #            Job(
+    #                asset_path=asset_path,
+    #                output_dir=OUTPUT_DIR,
+    #                groups=[str(current_group_index)],
+    #                simplify=False,
+    #            )
+    #        )
+    #        objects_in_current_group += 1
+    #        if objects_in_current_group >= additional_asset_group_size:
+    #            objects_in_current_group -= additional_asset_group_size
+    #            current_group_index += 1
+
     # Add scene stages.
     # Grouped by scenes.
     for obj in episode_set.grouped_scene_assets.stages:
@@ -804,8 +879,10 @@ def main():
         )
 
     # Add scene objects.
-    # Grouped by scenes.
+    # Grouped by scenes, excluding objects also in episodes.
     for obj in episode_set.grouped_scene_assets.objects:
+        if obj.asset_path in shared_scene_objects:
+            continue
         jobs.append(
             Job(
                 asset_path=obj.asset_path,
@@ -827,18 +904,6 @@ def main():
             )
         )
 
-    # Add additional datasets.
-    for dataset in episode_set.additional_datasets.values():
-        for asset_path in dataset.render_assets:
-            jobs.append(
-                Job(
-                    asset_path=asset_path,
-                    output_dir=OUTPUT_DIR,
-                    groups=[],
-                    simplify=False,
-                )
-            )
-
     # Add spot models
     for filename in Path("data/robots/hab_spot_arm/meshesColored").rglob(
         "*.glb"
@@ -854,6 +919,15 @@ def main():
 
     # Verify jobs.
     verify_jobs(jobs, OUTPUT_DIR)
+
+    #groups = {}
+    #for job in jobs:
+    #    for group in job.groups:
+    #        if group not in groups:
+    #            groups[group] = 0
+    #        groups[group] += 1
+    #for group, count in groups.items():
+    #    print(f"{group}: {str(count)}")
 
     # Start processing.
     simplify_models(jobs, config)
