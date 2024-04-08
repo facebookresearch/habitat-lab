@@ -218,7 +218,10 @@ def is_object_at(
         return is_inside(obj, at_entity, sim_info)
     elif sim_info.check_type_matches(
         at_entity, SimulatorObjectType.GOAL_ENTITY.value
+    ) or sim_info.check_type_matches(
+        at_entity, SimulatorObjectType.MOVABLE_ENTITY.value
     ):
+        # Is the target `at_entity` a movable or goal entity?
         targ_idx = cast(
             int,
             sim_info.search_for_entity(at_entity),
