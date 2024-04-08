@@ -5,11 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
-from typing import cast
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
@@ -36,8 +34,6 @@ class PddlTask(RearrangeTask):
 
     def reset(self, episode: Episode):
         super().reset(episode, fetch_observations=False)
-        self.pddl_problem.bind_to_instance(
-            self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
-        )
+        self.pddl_problem.bind_to_instance(self._sim, self)
         self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

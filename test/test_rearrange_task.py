@@ -98,7 +98,11 @@ def test_rearrange_dataset():
     check_binary_serialization(dataset)
 
 
-def test_pddl():
+def _get_test_pddl():
+    """
+    Helper to get a test PDDL instance.
+    """
+
     config = get_config(
         "habitat-lab/habitat/config/benchmark/rearrange/multi_task/rearrange_easy.yaml",
         [
@@ -112,7 +116,29 @@ def test_pddl():
         env_class=env_class, config=config
     )
     env.reset()
-    pddl = env.env.env._env.task.pddl_problem  # type: ignore
+    return env.env.env._env.task.pddl_problem  # type: ignore
+
+
+def test_pddl_actions():
+    """
+    Checks we can execute all PDDL actions.
+    """
+
+    pddl = _get_test_pddl()
+    sim_info = pddl.sim_info
+
+    poss_actions = pddl.get_possible_actions()
+    for action in poss_actions:
+        action.apply_if_true(sim_info)
+
+
+def test_pddl_action_postconds():
+    """
+    Tests the PDDL system action post conditions have the expected outcome in
+    the simulator.
+    """
+
+    pddl = _get_test_pddl()
     sim_info = pddl.sim_info
 
     # Check that the predicates are registering that the robot is not holding
@@ -143,7 +169,8 @@ def test_pddl():
     # Check the object registers at the goal now.
     true_preds = pddl.get_true_predicates()
     assert any(
-        x.compact_str == "at(goal0|0,TARGET_goal0|0)" for x in true_preds
+        x.compact_str == "object_at(goal0|0,TARGET_goal0|0)"
+        for x in true_preds
     )
 
 

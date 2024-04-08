@@ -9,7 +9,7 @@ objects:
 goal:
   expr_type: AND
   sub_exprs:
-    - at(goal0|0,TARGET_goal0|0)
+    - object_at(goal0|0,TARGET_goal0|0)
     - not_holding(robot_0)
 
 stage_goals:
@@ -20,7 +20,7 @@ stage_goals:
   stage_1:
     expr_type: AND
     sub_exprs:
-      - at(goal0|0,TARGET_goal0|0)
+      - object_at(goal0|0,TARGET_goal0|0)
 
 solution:
   - nav(goal0|0, robot_0)
