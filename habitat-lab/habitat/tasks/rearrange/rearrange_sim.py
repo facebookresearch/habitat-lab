@@ -630,7 +630,6 @@ class RearrangeSim(HabitatSim):
             )
             if self._kinematic_mode:
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                ro.collidable = False
 
             if should_add_objects:
                 self._scene_obj_ids.append(ro.object_id)
