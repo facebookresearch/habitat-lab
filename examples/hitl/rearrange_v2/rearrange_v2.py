@@ -5,18 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import hydra
 import magnum as mn
 import numpy as np
 
-import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentManager,
 )
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
@@ -34,17 +33,9 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
 )
-from habitat_hitl.environment.hablab_utils import (
-    get_agent_art_obj,
-    get_agent_art_obj_transform,
-)
+from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.geo import Ray
-from habitat_sim.physics import (
-    ManagedArticulatedObject,
-    ManagedRigidObject,
-    RayHitInfo,
-)
-from datetime import datetime, timedelta
+from habitat_sim.physics import ManagedArticulatedObject, RayHitInfo
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 # Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
@@ -142,7 +133,7 @@ class AppStateRearrangeV2(AppState):
 
         self._cam_transform = None
         self._camera_user_index = 0
-        self._held_obj_id: Optional[int] = None #remove
+        self._held_obj_id: Optional[int] = None  # remove
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
@@ -160,7 +151,7 @@ class AppStateRearrangeV2(AppState):
         self._hovered_point: Optional[mn.Vector3] = None
         self._selected_normal: Optional[mn.Vector3] = None
         self._hovered_normal: Optional[mn.Vector3] = None
-        
+
         self._held_object_id: Optional[int] = None
         self._link_id_to_ao_map: Dict[int, int] = {}
         self._opened_link_set: Set = set()
@@ -168,7 +159,7 @@ class AppStateRearrangeV2(AppState):
         self._interactable_object_ids: Set[int] = set()
 
         self._paired_goal_ids: List[Tuple[List[int], List[int]]] = []
-        
+
         # Object that is being double-clicked
         self._interacting_object_id: Optional[int] = None
         self._interacting_timestamp: Optional[datetime] = None
@@ -193,7 +184,7 @@ class AppStateRearrangeV2(AppState):
     @staticmethod
     def get_sim_utilities() -> Any:
         return sim_utilities
-    
+
     def _reset_state(self):
         self._held_object_id = None
         sim = self.get_sim()
@@ -214,11 +205,13 @@ class AppStateRearrangeV2(AppState):
             agent = agent_manager[agent_index]
             agent_ao = agent.articulated_agent.sim_obj
             agent_ao_object_ids.add(agent_ao.object_id)
-            #for link_object_id in agent_ao.link_object_ids:
+            # for link_object_id in agent_ao.link_object_ids:
             #    agent_ao_object_ids.add(link_object_id)
         self._interactable_object_ids = set()
         aom = sim.get_articulated_object_manager()
-        all_ao: List[ManagedArticulatedObject] = aom.get_objects_by_handle_substring().values()
+        all_ao: List[
+            ManagedArticulatedObject
+        ] = aom.get_objects_by_handle_substring().values()
         # All add non-root links that are not agents.
         for ao in all_ao:
             if ao.object_id not in agent_ao_object_ids:
@@ -226,7 +219,7 @@ class AppStateRearrangeV2(AppState):
                     if link_object_id != ao.object_id:
                         self._interactable_object_ids.add(link_object_id)
 
-    def on_environment_reset(self, episode_recorder_dict):# Reset state.
+    def on_environment_reset(self, episode_recorder_dict):  # Reset state.
         self._reset_state()
 
         self._held_obj_id = None
@@ -243,24 +236,20 @@ class AppStateRearrangeV2(AppState):
                 object_ids: List[int] = []
                 object_handles = proposition["args"]["object_handles"]
                 for object_handle in object_handles:
-                    obj = sim_utilities.get_obj_from_handle(self.get_sim(), object_handle)
-                    id = obj.object_id
-                    object_ids.append(id)
+                    obj = sim_utilities.get_obj_from_handle(
+                        self.get_sim(), object_handle
+                    )
+                    object_id = obj.object_id
+                    object_ids.append(object_id)
                 receptacle_ids: List[int] = []
                 receptacle_handles = proposition["args"]["receptacle_handles"]
                 for receptacle_handle in receptacle_handles:
-                    obj = sim_utilities.get_obj_from_handle(self.get_sim(), receptacle_handle)
-                    id = obj.object_id
+                    obj = sim_utilities.get_obj_from_handle(
+                        self.get_sim(), receptacle_handle
+                    )
+                    object_id = obj.object_id
                     # TODO: Support for finding links by handle.
-                    #if hasattr(obj, "num_links"):
-                    #    ao = obj
-                    #    num_links = ao.num_links
-                    #    for i in range(num_links):
-                    #        link = ao.get_link_scene_node(i)
-                    #        if link.handle == receptacle_handle:
-                    #            id = link.object_id
-                    #            continue
-                    receptacle_ids.append(id)
+                    receptacle_ids.append(object_id)
                 self._paired_goal_ids.append((object_ids, receptacle_ids))
 
         client_message_manager = self._app_service.client_message_manager
@@ -329,7 +318,7 @@ class AppStateRearrangeV2(AppState):
             controls_str += "N: next episode\n"
             controls_str += "Double-click: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
-            #if self._num_users > 1 and self._held_obj_id is None:
+            # if self._num_users > 1 and self._held_obj_id is None:
             #    controls_str += "T: toggle camera user\n"
 
         return controls_str
@@ -350,14 +339,18 @@ class AppStateRearrangeV2(AppState):
             )
 
         return status_str
-    
+
     def _get_contextual_info_text(self):
         info_txt = ""
         episode_index = 0  # TODO
         info_txt += f"Episode index: {episode_index}"
         obj_handle = "None"
         if self._hovered_object_id:
-            obj = sim_utilities.get_obj_from_id(self.get_sim(), self._hovered_object_id, self._link_id_to_ao_map)
+            obj = sim_utilities.get_obj_from_id(
+                self.get_sim(),
+                self._hovered_object_id,
+                self._link_id_to_ao_map,
+            )
             if hasattr(obj, "handle"):
                 obj_handle = obj.handle
         info_txt += f"\nPointing object: {obj_handle}"
@@ -475,19 +468,21 @@ class AppStateRearrangeV2(AppState):
             - self._camera_helper.get_eye_pos()
         ).normalized()
 
-        rigid_object = self.get_sim().get_rigid_object_manager().get_object_by_id(
-            object_id
+        rigid_object = (
+            self.get_sim()
+            .get_rigid_object_manager()
+            .get_object_by_id(object_id)
         )
         rigid_object.translation = eye_position + forward_vector
 
         # sloppy: save another keyframe here since we just moved the held object
-        #self.get_sim().gfx_replay_manager.save_keyframe()
+        # self.get_sim().gfx_replay_manager.save_keyframe()
 
     def _is_object_id_selectable(self, object_id: Optional[int]):
         return object_id and (
-                self._is_object_pickable(object_id) or
-                self._is_object_interactable(object_id)
-                )
+            self._is_object_pickable(object_id)
+            or self._is_object_interactable(object_id)
+        )
 
     def _user_pos(self) -> mn.Vector3:
         return self._get_gui_agent_translation(user_index=0)
@@ -496,7 +491,7 @@ class AppStateRearrangeV2(AppState):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
         return rom.get_object_by_id(object_id)
-    
+
     def _get_articulated_object(self, object_id) -> Any:
         sim = self.get_sim()
         aom = sim.get_articulated_object_manager()
@@ -514,12 +509,15 @@ class AppStateRearrangeV2(AppState):
         displacement = a - b
         displacement.y = 0.0  # Horizontal plane.
         return displacement.length()
-    
+
     def _is_object_pickable(self, object_id: int) -> bool:
-        return object_id and object_id in self._pickable_object_ids
-    
+        return object_id is not None and object_id in self._pickable_object_ids
+
     def _is_object_interactable(self, object_id: int) -> bool:
-        return object_id and object_id in self._interactable_object_ids
+        return (
+            object_id is not None
+            and object_id in self._interactable_object_ids
+        )
 
     def _mouse_controls(self) -> None:
         ray = self._app_service.gui_input.mouse_ray
@@ -535,7 +533,9 @@ class AppStateRearrangeV2(AppState):
             self._hovered_normal = hit_info.normal
 
             # Left click.
-            if self._app_service.gui_input.get_mouse_button_down(MouseButton.LEFT):
+            if self._app_service.gui_input.get_mouse_button_down(
+                MouseButton.LEFT
+            ):
                 # Click to select pickable.
                 if self._is_object_pickable(object_id):
                     self._selected_object_id = object_id
@@ -543,8 +543,12 @@ class AppStateRearrangeV2(AppState):
                     if self._held_object_id is None:
                         # TODO: Simplify double-click (handle by client).
                         if self._interacting_object_id == object_id:
-                            time_since_last_click = datetime.now() - self._interacting_timestamp
-                            if time_since_last_click < timedelta(seconds=DOUBLE_CLICK_DELAY):
+                            time_since_last_click = (
+                                datetime.now() - self._interacting_timestamp
+                            )
+                            if time_since_last_click < timedelta(
+                                seconds=DOUBLE_CLICK_DELAY
+                            ):
                                 self._pick_object(object_id)
                         self._interacting_object_id = object_id
                         self._interacting_timestamp = datetime.now()
@@ -552,26 +556,40 @@ class AppStateRearrangeV2(AppState):
                 elif self._is_object_interactable(object_id):
                     # TODO: Simplify double-click (handle by client).
                     if self._interacting_object_id == object_id:
-                        time_since_last_click = datetime.now() - self._interacting_timestamp
-                        if time_since_last_click < timedelta(seconds=DOUBLE_CLICK_DELAY):
+                        time_since_last_click = (
+                            datetime.now() - self._interacting_timestamp
+                        )
+                        if time_since_last_click < timedelta(
+                            seconds=DOUBLE_CLICK_DELAY
+                        ):
                             self._interact_with_object(object_id)
                     self._interacting_object_id = object_id
                     self._interacting_timestamp = datetime.now()
 
             # Select drop location point.
-            if self._app_service.gui_input.get_mouse_button(MouseButton.RIGHT) and self._held_object_id and not self._is_object_pickable(self._hovered_object_id):
+            if (
+                self._app_service.gui_input.get_mouse_button(MouseButton.RIGHT)
+                and self._held_object_id
+                and not self._is_object_pickable(self._hovered_object_id)
+            ):
                 self._selected_point = hit_info.point
                 self._selected_normal = hit_info.normal
                 # If the point is on a link, record it so that the object can be parented.
                 # TODO: rigid_object does not expose its node.
-                #if self._is_object_interactable(self._hovered_object_id):
+                # if self._is_object_interactable(self._hovered_object_id):
                 #    link_index = self._get_link_index(self._hovered_object_id)
                 #    ao = sim_utilities.get_obj_from_id(self.get_sim(), self._hovered_object_id, self._link_id_to_ao_map)
                 #    link_node = ao.get_link_scene_node(link_index)
                 #    self._drop_ao_link_node = link_node
 
             # Drop when releasing right click.
-            if self._app_service.gui_input.get_mouse_button_up(MouseButton.RIGHT) and self._held_object_id and self._selected_point:
+            if (
+                self._app_service.gui_input.get_mouse_button_up(
+                    MouseButton.RIGHT
+                )
+                and self._held_object_id
+                and self._selected_point
+            ):
                 self._place_object()
 
     def _interact_with_object(self, object_id: int):
@@ -592,7 +610,7 @@ class AppStateRearrangeV2(AppState):
                     else:
                         sim_utilities.open_link(ao, link_index)
                         self._opened_link_set.add(link_id)
-    
+
     def _pick_object(self, object_id: int):
         # Grab an object.
         assert self._held_object_id is None
@@ -607,11 +625,16 @@ class AppStateRearrangeV2(AppState):
                     self._selected_object_id = None
                     # Unparent
                     # TODO: rigid_object does not expose its node.
-                    #rigid_object.node.set_parent(None)
+                    # rigid_object.node.set_parent(None)
 
-    def _is_within_reach(self, user_pos: mn.Vector3, target_pos: mn.Vector3) -> bool:
-        return self._horizontal_distance(user_pos, target_pos) < self._can_grasp_place_threshold
-    
+    def _is_within_reach(
+        self, user_pos: mn.Vector3, target_pos: mn.Vector3
+    ) -> bool:
+        return (
+            self._horizontal_distance(user_pos, target_pos)
+            < self._can_grasp_place_threshold
+        )
+
     def _is_location_suitable_for_placement(self, normal: mn.Vector3) -> bool:
         placement_verticality = mn.math.dot(normal, mn.Vector3(0, 1, 0))
         placement_valid = placement_verticality > MINIMUM_DROP_VERTICALITY
@@ -621,7 +644,10 @@ class AppStateRearrangeV2(AppState):
         # Place an object
         object_id = self._held_object_id
         assert object_id is not None
-        if self._selected_point is not None and self._is_location_suitable_for_placement(self._selected_normal):
+        if (
+            self._selected_point is not None
+            and self._is_location_suitable_for_placement(self._selected_normal)
+        ):
             # Get the distance to the candidate drop point on the XZ plane.
             user_pos = self._user_pos()
             if self._is_within_reach(user_pos, self._selected_point):
@@ -632,7 +658,7 @@ class AppStateRearrangeV2(AppState):
                 self._reset_selection()
                 # Set parent. This allows the object to follow, for example, a closing drawer.
                 # TODO: rigid_object does not expose its node.
-                #if self._drop_ao_link_node:
+                # if self._drop_ao_link_node:
                 #    rigid_object.node.set_parent(self._drop_ao_link_node)
 
     def _pick_place(self):
@@ -642,10 +668,11 @@ class AppStateRearrangeV2(AppState):
             if self._held_object_id is not None:
                 self._place_object()
             # If selection is an object:
-            elif self._selected_object_id is not None:
-                if self._is_object_pickable(self._selected_object_id):
-                    self._pick_object(self._selected_object_id)
-
+            elif (
+                self._selected_object_id is not None
+                and self._is_object_pickable(self._selected_object_id)
+            ):
+                self._pick_object(self._selected_object_id)
 
     def _draw_ui(self):
         user_index = 0
@@ -670,13 +697,17 @@ class AppStateRearrangeV2(AppState):
 
         # Highlight selected object.
         if self._selected_object_id:
-            managed_object = sim_utilities.get_obj_from_id(self.get_sim(), self._selected_object_id, self._link_id_to_ao_map)
-            translation: Optional[mn.Vector3] = managed_object.translation
+            managed_object = sim_utilities.get_obj_from_id(
+                self.get_sim(),
+                self._selected_object_id,
+                self._link_id_to_ao_map,
+            )
+            translation = managed_object.translation
             reachable = self._is_within_reach(user_pos, translation)
             color = COLOR_VALID if reachable else COLOR_INVALID
             self._app_service.gui_drawer.draw_circle(
                 translation=translation,
-                radius=0.25, 
+                radius=0.25,
                 color=color,
                 billboard=True,
                 destination_mask=Mask.ALL,
@@ -687,36 +718,54 @@ class AppStateRearrangeV2(AppState):
         if hovered_id and self._is_object_interactable(hovered_id):
             link_index = self._get_link_index(hovered_id)
             if link_index:
-                ao = sim_utilities.get_obj_from_id(self.get_sim(), hovered_id, self._link_id_to_ao_map)
+                ao = sim_utilities.get_obj_from_id(
+                    self.get_sim(), hovered_id, self._link_id_to_ao_map
+                )
                 link_node = ao.get_link_scene_node(link_index)
                 aabb = link_node.cumulative_bb
-                reachable = self._is_within_reach(user_pos, link_node.translation)
+                reachable = self._is_within_reach(
+                    user_pos, link_node.translation
+                )
                 color = COLOR_VALID if reachable else COLOR_INVALID
-                self._app_service.gui_drawer.push_transform(link_node.transformation, destination_mask=Mask.ALL)
+                self._app_service.gui_drawer.push_transform(
+                    link_node.transformation, destination_mask=Mask.ALL
+                )
                 self._app_service.gui_drawer.draw_box(
                     min_extent=aabb.back_bottom_left,
                     max_extent=aabb.front_top_right,
                     color=color,
                     destination_mask=Mask.ALL,
                 )
-                self._app_service.gui_drawer.pop_transform(destination_mask=Mask.ALL)
+                self._app_service.gui_drawer.pop_transform(
+                    destination_mask=Mask.ALL
+                )
 
         # Highlight hovered pickable object.
         hovered_id = self._hovered_object_id
-        if hovered_id and self._is_object_pickable(hovered_id) and self._held_object_id is None:
-            managed_object = sim_utilities.get_obj_from_id(self.get_sim(), hovered_id, self._link_id_to_ao_map)
-            translation: Optional[mn.Vector3] = managed_object.translation
+        if (
+            hovered_id
+            and self._is_object_pickable(hovered_id)
+            and self._held_object_id is None
+        ):
+            managed_object = sim_utilities.get_obj_from_id(
+                self.get_sim(), hovered_id, self._link_id_to_ao_map
+            )
+            translation = managed_object.translation
             reachable = self._is_within_reach(user_pos, translation)
             color = COLOR_VALID if reachable else COLOR_INVALID
             aabb = managed_object.collision_shape_aabb
-            self._app_service.gui_drawer.push_transform(managed_object.transformation, destination_mask=Mask.ALL)
+            self._app_service.gui_drawer.push_transform(
+                managed_object.transformation, destination_mask=Mask.ALL
+            )
             self._app_service.gui_drawer.draw_box(
                 min_extent=aabb.back_bottom_left,
                 max_extent=aabb.front_top_right,
                 color=color,
                 destination_mask=Mask.ALL,
             )
-            self._app_service.gui_drawer.pop_transform(destination_mask=Mask.ALL)
+            self._app_service.gui_drawer.pop_transform(
+                destination_mask=Mask.ALL
+            )
 
         # Highlight goals.
         # TODO: Simplify and cache.
@@ -728,37 +777,45 @@ class AppStateRearrangeV2(AppState):
                 for rigid_id in rigid_ids:
                     if self._hovered_object_id == rigid_id:
                         continue
-                    managed_object = sim_utilities.get_obj_from_id(self.get_sim(), rigid_id, self._link_id_to_ao_map)
-                    translation: Optional[mn.Vector3] = managed_object.translation
+                    managed_object = sim_utilities.get_obj_from_id(
+                        self.get_sim(), rigid_id, self._link_id_to_ao_map
+                    )
+                    translation = managed_object.translation
                     self._app_service.gui_drawer.draw_circle(
                         translation=translation,
-                        radius=0.25, 
+                        radius=0.25,
                         color=goal_pair_color,
                         billboard=True,
                         destination_mask=Mask.ALL,
                     )
             for receptacle_id in receptacle_ids:
-                managed_object = sim_utilities.get_obj_from_id(self.get_sim(), receptacle_id, self._link_id_to_ao_map)
+                managed_object = sim_utilities.get_obj_from_id(
+                    self.get_sim(), receptacle_id, self._link_id_to_ao_map
+                )
                 aabb = None
                 if hasattr(managed_object, "collision_shape_aabb"):
                     aabb = managed_object.collision_shape_aabb
                 else:
                     link_index = self._get_link_index(receptacle_id)
                     if link_index is not None:
-                        link_node = managed_object.get_link_scene_node(link_index)
+                        link_node = managed_object.get_link_scene_node(
+                            link_index
+                        )
                         aabb = link_node.cumulative_bb
                 if aabb is not None:
-                    self._app_service.gui_drawer.push_transform(managed_object.transformation, destination_mask=Mask.ALL)
+                    self._app_service.gui_drawer.push_transform(
+                        managed_object.transformation,
+                        destination_mask=Mask.ALL,
+                    )
                     self._app_service.gui_drawer.draw_box(
                         min_extent=aabb.back_bottom_left,
                         max_extent=aabb.front_top_right,
                         color=goal_pair_color,
                         destination_mask=Mask.ALL,
                     )
-                    self._app_service.gui_drawer.pop_transform(destination_mask=Mask.ALL)
-
-
-
+                    self._app_service.gui_drawer.pop_transform(
+                        destination_mask=Mask.ALL
+                    )
 
     def _reset_selection(self):
         self._selected_object_id = None
@@ -788,12 +845,6 @@ class AppStateRearrangeV2(AppState):
             post_sim_update_dict["application_exit"] = True
             return
 
-        if self._app_service.hitl_config.networking.enable:
-            params = (
-                self._app_service.remote_client_state.get_connection_parameters()
-            )
-            self._update_episode_set(params)
-
         self._sps_tracker.increment()
 
         if self._client_helper:
@@ -802,44 +853,27 @@ class AppStateRearrangeV2(AppState):
                 self._sps_tracker.get_smoothed_rate(),
             )
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
-            self._paused = not self._paused
+        # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        #    self._paused = not self._paused
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
         self._check_change_episode()
 
-        for user_index in range(self._num_users):
-            reachable_ao_handle = self._find_reachable_ao(
-                self._get_gui_agent_translation(user_index)
-            )
-            if reachable_ao_handle is not None:
-                self._highlight_ao(reachable_ao_handle)
-                if self._get_user_key_down(user_index, GuiInput.KeyNS.Z):
-                    self._open_close_ao(reachable_ao_handle)
-
         if not self._paused:
             for user_index in range(self._num_users):
-                self._update_grasping_and_set_act_hints(user_index)
+                self._mouse_controls()
+                self._pick_place()
+                self._draw_ui()
+                self._set_agent_act_hints(user_index)
+                self._update_held_object_placement()
             self._app_service.compute_action_and_step_env()
         else:
             # temp hack: manually add a keyframe while paused
             self.get_sim().gfx_replay_manager.save_keyframe()
 
-        if (
-            self._num_users > 1
-            and self._held_obj_id is None
-            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
-        ):
-            self._camera_user_index = (
-                self._camera_user_index + 1
-            ) % self._num_users
-
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
-
-        # after camera update
-        self._update_held_object_placement()
 
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
