@@ -838,6 +838,12 @@ class AppStateRearrangeV2(AppState):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
             return
+        
+        if self._app_service.hitl_config.networking.enable:
+            params = (
+                self._app_service.remote_client_state.get_connection_parameters()
+            )
+            self._update_episode_set(params)
 
         self._sps_tracker.increment()
 
