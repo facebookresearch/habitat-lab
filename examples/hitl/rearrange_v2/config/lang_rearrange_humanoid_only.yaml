@@ -35,3 +35,6 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+  data_collection:
+    save_filepath_base: my_session
+    save_episode_record: True
