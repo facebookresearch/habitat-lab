@@ -342,8 +342,8 @@ class HitlDriver(AppDriver):
         json_filepath = filepath_base + ".json.gz"
         save_as_json_gzip(self._episode_recorder_dict, json_filepath)
 
-        pkl_filepath = filepath_base + ".pkl.gz"
-        save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
+        #pkl_filepath = filepath_base + ".pkl.gz"
+        #save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
 
     def _reset_episode_recorder(self):
         assert self._step_recorder

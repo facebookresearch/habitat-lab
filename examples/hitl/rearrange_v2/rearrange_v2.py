@@ -6,6 +6,10 @@
 
 
 from datetime import datetime, timedelta
+import os
+from pathlib import Path
+import shutil
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import hydra
@@ -37,6 +41,29 @@ from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.geo import Ray
 from habitat_sim.physics import ManagedArticulatedObject, RayHitInfo
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
+
+def upload_file_to_s3(local_file: str, file_name:str , s3_folder:str):
+    try:
+        import boto3
+        # Check if local file exists
+        if not os.path.isfile(local_file):
+            raise ValueError(f"Local file {local_file} does not exist")
+
+        s3_client = boto3.client('s3')
+        if not s3_folder.endswith('/'):
+            s3_folder += '/'
+
+        s3_path = os.path.join(s3_folder, file_name)
+        s3_path = s3_path.replace(os.path.sep, '/')
+
+        if "S3_BUCKET" in os.environ:
+            bucket_name = os.environ["S3_BUCKET"]
+            print(f"Uploading {local_file} to {bucket_name}/{s3_path}")
+            s3_client.upload_file(local_file, bucket_name, s3_path)
+        else:
+            print("'S3_BUCKET' environment variable is not set. Cannot upload.")
+    except Exception as e:
+        print(e)
 
 # Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
 DO_HUMANOID_GRASP_OBJECTS = False
@@ -113,6 +140,10 @@ class DataLogger:
             "task_completed", task_completed
         )
 
+    def record_session_metadata(self, connection_params: Dict[str, Any], session_metadata: Dict[str, Any]):
+        self._app_service.step_recorder.record("connection", connection_params)
+        self._app_service.step_recorder.record("session", session_metadata)
+
 
 class AppStateRearrangeV2(AppState):
     """
@@ -135,7 +166,7 @@ class AppStateRearrangeV2(AppState):
         self._camera_user_index = 0
         self._held_obj_id: Optional[int] = None  # remove
         self._recent_reach_pos = None
-        self._paused = False
+        self._paused = True
         self._hide_gui_text = False
 
         # Hack: We maintain our own episode iterator.
@@ -157,6 +188,12 @@ class AppStateRearrangeV2(AppState):
         self._opened_link_set: Set = set()
         self._pickable_object_ids: Set[int] = set()
         self._interactable_object_ids: Set[int] = set()
+
+        self._episode_start_time = datetime.now()
+
+        self._connection_parameters: Dict[str, Any] = {}
+
+        self._recording = False
 
         self._paired_goal_ids: List[Tuple[List[int], List[int]]] = []
 
@@ -343,6 +380,7 @@ class AppStateRearrangeV2(AppState):
         return status_str
 
     def _get_contextual_info_text(self):
+        # TODO: Currently unused. Keeping for reference.
         info_txt = ""
         episode_index = 0  # TODO
         info_txt += f"Episode index: {episode_index}"
@@ -395,16 +433,20 @@ class AppStateRearrangeV2(AppState):
         self._increment_episode()
 
     def _increment_episode(self):
-        self._current_episode_index += 1
-
-        if self._current_episode_index < len(self._episode_ids):
-            self._set_episode(self._current_episode_index)
-        else:
-            # TODO: Terminate experiment and collect data.
-            pass
+        if not self._paused:
+            self._current_episode_index += 1
+            delta_time = datetime.now() - self._episode_start_time
+            session_metadata: Dict[str, Any] = {}
+            session_metadata["elapsed_time"] = delta_time.total_seconds()
+            if self._current_episode_index < len(self._episode_ids):
+                self._set_episode(self._current_episode_index)
+            else:
+                self._end_session()
+            self._data_logger.record_session_metadata(self._connection_parameters, session_metadata)
 
     def _set_episode(self, episode_index: int):
         # If an episode range was received...
+        self._episode_start_time = datetime.now()
         if len(self._episode_ids) > 0:
             next_episode_id = self._episode_ids[episode_index]
             self._app_service.episode_helper.set_next_episode_by_id(
@@ -421,6 +463,7 @@ class AppStateRearrangeV2(AppState):
         ):
             episodes_param_str: str = connection_parameters["episodes"]
             if episodes_param_str != self._last_episodes_param_str:
+                self._connection_parameters = connection_parameters
                 self._last_episodes_param_str = episodes_param_str
                 # Format: {lower_bound}-{upper_bound} E.g. 100-110
                 # Upper bound is exclusive.
@@ -442,14 +485,51 @@ class AppStateRearrangeV2(AppState):
                             temp = last_episode_id
                             last_episode_id = start_episode_id
                             start_episode_id = temp
-                        self._current_episode_index = 0
-                        self._episode_ids = []
+                        episode_ids = []
                         for episode_id_int in range(
                             start_episode_id, last_episode_id
                         ):
-                            self._episode_ids.append(str(episode_id_int))
+                            episode_ids.append(str(episode_id_int))
                         # Change episode.
-                        self._set_episode(self._current_episode_index)
+                        self._start_session(episode_ids)
+    
+    def _start_session(self, episode_ids: List[str]):
+        assert len(episode_ids) > 0
+        # Delete previous output directory
+        # TODO: Get the directory from the config value.
+        if os.path.exists("output"):
+            shutil.rmtree("output")
+        self._episode_ids = episode_ids
+        self._current_episode_index = 0
+        self._recording = True
+        self._paused = False
+        self._set_episode(self._current_episode_index)
+
+    def _end_session(self):        
+        # Save keyframe for kick signal to reach backend.
+        # TODO: Upload is blocking and slow. Client hangs for a while.
+        self._client_helper.kick()
+        self.get_sim().gfx_replay_manager.save_keyframe()
+
+        self._app_service.end_episode()
+        self._recording = False
+        self._paused = True
+        # TODO: Clean up any remaining memory.
+        self._connection_parameters = {}
+        self._app_service.gui_input.on_frame_end()
+        self._app_service.remote_client_state.clear_history()
+
+        # TODO: Move out this block.
+        from os import listdir
+        from os.path import isfile, join
+        output_path = "output"
+        output_files = [f for f in listdir(output_path) if isfile(join(output_path, f))]
+        for output_file in output_files:
+            timestamp = str(int(time.time()))
+            output_file_path = os.path.join(output_path, output_file)
+            upload_file_to_s3(output_file_path, output_file, f"Phase_0/{timestamp}")
+        # Ready for the next user.
+
 
     def _update_held_object_placement(self):
         object_id = self._held_object_id
@@ -853,9 +933,6 @@ class AppStateRearrangeV2(AppState):
                 self._sps_tracker.get_smoothed_rate(),
             )
 
-        # if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
-        #    self._paused = not self._paused
-
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui_text = not self._hide_gui_text
 
@@ -869,11 +946,7 @@ class AppStateRearrangeV2(AppState):
                 self._set_agent_act_hints(user_index)
                 self._update_held_object_placement()
             self._app_service.compute_action_and_step_env()
-        else:
-            # temp hack: manually add a keyframe while paused
-            self.get_sim().gfx_replay_manager.save_keyframe()
-
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt)
+            self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform

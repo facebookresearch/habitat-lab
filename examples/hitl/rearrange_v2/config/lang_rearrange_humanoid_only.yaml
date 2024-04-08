@@ -36,5 +36,5 @@ habitat_hitl:
   camera:
     first_person_mode: True
   data_collection:
-    save_filepath_base: single_user
+    save_filepath_base: output/single_user
     save_episode_record: True

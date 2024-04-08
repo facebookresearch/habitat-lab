@@ -12,6 +12,7 @@ import pickle
 from abc import abstractmethod
 from datetime import datetime
 from typing import Any, List
+from pathlib import Path
 
 import magnum as mn
 import numpy as np
@@ -26,7 +27,7 @@ def pickle_vector3(obj):
     return unpickle_vector3, (pickled_data,)
 
 
-# fix for unpickable type; run once at startup
+# fix for unpicklable type; run once at startup
 copyreg.pickle(mn.Vector3, pickle_vector3)
 
 
@@ -79,6 +80,8 @@ def save_as_json_gzip(obj, filepath):
 def save_as_gzip(data, filepath, mode="wb"):
     if os.path.exists(filepath):
         raise FileExistsError(filepath)
+    if len(Path(filepath).parents) > 0:
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(filepath, mode) as file:
         file.write(data)
     print("wrote " + filepath)

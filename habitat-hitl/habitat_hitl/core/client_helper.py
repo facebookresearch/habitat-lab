@@ -9,6 +9,7 @@ from typing import Optional
 
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.average_helper import AverageHelper
+from habitat_hitl.core.user_mask import Mask, Users
 
 
 class ClientHelper:
@@ -38,6 +39,12 @@ class ClientHelper:
         """Indicates that the user should be warned that they will be kicked imminently."""
         return self._show_idle_kick_warning
 
+    def kick(self) -> None:
+        "Kick the user."
+        self._app_service.client_message_manager.signal_kick_client(
+            self._client_connection_id, Mask.ALL
+        )
+    
     def _update_idle_kick(self, is_user_idle_this_frame: bool) -> None:
         """Keeps tracks of whether the user is AFK. After some time, they will be kicked."""
         hitl_config = self._app_service.hitl_config
@@ -74,7 +81,7 @@ class ClientHelper:
 
                 if self._idle_frame_counter > max_idle_frames:
                     self._app_service.client_message_manager.signal_kick_client(
-                        self._client_connection_id
+                        self._client_connection_id, Mask.ALL
                     )
                     self._idle_frame_counter = None
             else:
