@@ -12,8 +12,6 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
-  dataset:
-    data_path: "60scenes_777eps_old_format_targets.json.gz"
 
 habitat_baselines:
   # todo: document these choices
@@ -38,5 +36,5 @@ habitat_hitl:
   camera:
     first_person_mode: True
   data_collection:
-    save_filepath_base: my_session
+    save_filepath_base: single_user
     save_episode_record: True
