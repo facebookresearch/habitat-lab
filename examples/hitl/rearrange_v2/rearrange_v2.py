@@ -307,16 +307,18 @@ class AppStateRearrangeV2(AppState):
 
         controls_str: str = ""
         if not self._hide_gui_text:
-            if self._sps_tracker.get_smoothed_rate() is not None:
-                controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
-            if self._client_helper and self._client_helper.display_latency_ms:
-                controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
-            controls_str += "H: show/hide help text\n"
-            controls_str += "I, K: look up, down\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += "N: next episode\n"
-            controls_str += "Double-click: open/close receptacle\n"
+            # if self._sps_tracker.get_smoothed_rate() is not None:
+            #    controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+            # if self._client_helper and self._client_helper.display_latency_ms:
+            #    controls_str += f"latency: {self._client_helper.display_latency_ms:.0f}ms\n"
+            controls_str += f"Episode: {str(self._current_episode_index)}\n"
+            controls_str += "H: Show/hide help\n"
+            controls_str += "Middle-click, I, K: Look\n"
+            controls_str += "A, D: Turn\n"
+            controls_str += "W, S: Walk\n"
+            controls_str += "N: Next episode\n"
+            controls_str += "Double-click: Open/close or pick\n"
+            controls_str += "Right-click: Place\n"
             controls_str += get_grasp_release_controls_text()
             # if self._num_users > 1 and self._held_obj_id is None:
             #    controls_str += "T: toggle camera user\n"
@@ -357,12 +359,6 @@ class AppStateRearrangeV2(AppState):
         return info_txt
 
     def _update_help_text(self):
-        controls_str = self._get_controls_text()
-        if len(controls_str) > 0:
-            self._app_service.text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
-            )
-
         status_str = self._get_status_text()
         if len(status_str) > 0:
             self._app_service.text_drawer.add_text(
@@ -372,12 +368,10 @@ class AppStateRearrangeV2(AppState):
                 text_delta_y=-50,
             )
 
-        info_str = self._get_contextual_info_text()
-        if len(info_str) > 0:
+        controls_str = self._get_controls_text()
+        if len(controls_str) > 0:
             self._app_service.text_drawer.add_text(
-                info_str,
-                TextOnScreenAlignment.BOTTOM_LEFT,
-                text_delta_y=50,
+                controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
     def _get_camera_lookat_pos(self):
