@@ -34,13 +34,14 @@ class InputHandlerApplication(Application):
     def __init__(self, config):
         super().__init__(config)
         self._gui_inputs: List[GuiInput] = []
+        self._mouse_ray = None
 
     def add_gui_input(self, gui_input: GuiInput) -> None:
         self._gui_inputs.append(gui_input)
 
     def key_press_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
-        if key:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
                 # ignore it.
@@ -50,7 +51,7 @@ class InputHandlerApplication(Application):
 
     def key_release_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
-        if key:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 if key in wrapper._key_held:
                     wrapper._key_held.remove(key)
@@ -58,7 +59,7 @@ class InputHandlerApplication(Application):
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
         key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
                 # ignore it.
@@ -68,7 +69,7 @@ class InputHandlerApplication(Application):
 
     def mouse_release_event(self, event: Application.MouseEvent) -> None:
         key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key:
+        if key is not None:
             for wrapper in self._gui_inputs:
                 if key in wrapper._mouse_button_held:
                     wrapper._mouse_button_held.remove(key)
@@ -110,10 +111,13 @@ class InputHandlerApplication(Application):
             wrapper._mouse_position = mouse_pos
             wrapper._relative_mouse_position[0] += relative_mouse_position[0]
             wrapper._relative_mouse_position[1] += relative_mouse_position[1]
+            if self._mouse_ray:
+                wrapper._mouse_ray = self._mouse_ray
 
     def update_mouse_ray(self, unproject_fn):
-        for wrapper in self._gui_inputs:
-            wrapper._mouse_ray = unproject_fn(wrapper._mouse_position)
+        if len(self._gui_inputs) > 0:
+            gui_input = self._gui_inputs[0]
+            self._mouse_ray = unproject_fn(gui_input._mouse_position)
 
 
 class GuiApplication(InputHandlerApplication):

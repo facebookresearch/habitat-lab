@@ -522,6 +522,56 @@ def test_ao_open_close_queries():
                     )
                     sutils.close_link(obj, link_id)  # debug reset state
 
+        ################################
+        # test default link functionality
+
+        # test computing the default link
+        default_link = sutils.get_ao_default_link(fridge)
+        assert default_link is None
+        default_link = sutils.get_ao_default_link(
+            fridge, compute_if_not_found=True
+        )
+        assert default_link == 1
+        assert fridge.user_attributes.get("default_link") == 1
+        default_link = sutils.get_ao_default_link(
+            kitchen_counter, compute_if_not_found=True
+        )
+        assert default_link == 6
+
+        # NOTE: sim bug here doesn't break the feature
+        # test setting the default link in template metadata
+        fridge_template = fridge.creation_attributes
+        assert fridge_template.get_user_config().get("default_link") is None
+        fridge_template.get_user_config().set("default_link", 0)
+        assert fridge_template.get_user_config().get("default_link") == 0
+        sim.metadata_mediator.ao_template_manager.register_template(
+            fridge_template, "new_fridge_template"
+        )
+        new_fridge = sim.get_articulated_object_manager().add_articulated_object_by_template_handle(
+            "new_fridge_template"
+        )
+        assert new_fridge is not None
+        default_link = sutils.get_ao_default_link(
+            fridge, compute_if_not_found=True
+        )
+        assert default_link == 1
+        new_default_link = sutils.get_ao_default_link(
+            new_fridge, compute_if_not_found=True
+        )
+        print(
+            f" new_default_link (== {new_default_link}) should be 0, waiting on sim bug fix."
+        )
+        # TODO: habitat-sim bug. "default_link" does not get copied over after instantiation if set in the template programmatically.
+        # assert new_default_link == 0
+
+        # test setting the default link in instance metadata
+        fridge.user_attributes.set("default_link", 0)
+        assert fridge.user_attributes.get("default_link") == 0
+        default_link = sutils.get_ao_default_link(
+            fridge, compute_if_not_found=True
+        )
+        assert fridge.user_attributes.get("default_link") == 0
+
 
 @pytest.mark.skipif(
     not built_with_bullet,
