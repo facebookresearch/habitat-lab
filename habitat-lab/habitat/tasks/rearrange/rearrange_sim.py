@@ -419,6 +419,7 @@ class RearrangeSim(HabitatSim):
                 island_index=self._largest_indoor_island_idx
             )
 
+            # TODO: is this correct behavior?
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
 
@@ -548,10 +549,11 @@ class RearrangeSim(HabitatSim):
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
         Returns the 3D coordinates corresponding to a point belonging
-        to the biggest navmesh island in the scenee and closest to pos.
+        to the biggest navmesh island in the scene and closest to pos.
         When that point returns NaN, computes a navigable point at increasing
         distances to it.
         """
+        # TODO: is this correct behavior?
         new_pos = self.pathfinder.snap_point(
             pos, self._largest_indoor_island_idx
         )

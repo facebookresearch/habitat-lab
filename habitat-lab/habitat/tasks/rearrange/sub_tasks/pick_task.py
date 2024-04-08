@@ -12,7 +12,7 @@ from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import (
-    place_agent_at_dist_from_pos,
+    embodied_unoccluded_navmesh_snap,
     rearrange_logger,
     set_agent_base_via_obj_trans,
 )
@@ -69,18 +69,29 @@ class RearrangePickTaskV1(RearrangeTask):
         spawn_attempt_count = 0
 
         while was_fail and spawn_attempt_count < self._num_spawn_attempts:
-            start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
-                targ_pos,
-                self._base_angle_noise,
-                self._spawn_max_dist_to_obj
+            (
+                start_pos,
+                angle_to_obj,
+                success,
+            ) = embodied_unoccluded_navmesh_snap(
+                target_position=targ_pos,
+                height=1.5,  # NOTE: this is default agent max height. This parameter is used to determine whether or not a point is occluded.
+                sim=sim,
+                island_id=sim._largest_indoor_island_idx,
+                search_offset=self._spawn_max_dist_to_obj
                 + spawn_attempt_count * self._spawn_max_dist_to_obj_delta,
-                sim,
-                self._num_spawn_attempts,
-                self._filter_colliding_states,
+                orientation_noise=self._base_angle_noise,
+                max_samples=self._num_spawn_attempts,
+                target_object_id=None,  # TODO: this must be the integer id of the target object or no unoccluded state will be found because this object will be considered occluding
+                agent_embodiement=(
+                    sim.articulated_agent
+                    if self._filter_colliding_states
+                    else None
+                ),
             )
             spawn_attempt_count += 1
 
-        if was_fail:
+        if not success:
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
