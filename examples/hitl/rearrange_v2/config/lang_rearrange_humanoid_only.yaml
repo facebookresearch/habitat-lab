@@ -12,6 +12,8 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
+  dataset:
+    data_path: "60scenes_777eps_old_format_targets.json.gz"
 
 habitat_baselines:
   # todo: document these choices
