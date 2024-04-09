@@ -12,6 +12,7 @@ import abc
 import json
 from datetime import datetime
 from functools import wraps
+import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import magnum as mn
@@ -349,6 +350,7 @@ class HitlDriver(AppDriver):
         assert self._step_recorder
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
+        ep_dict["start_timestamp"] = int(time.time())
         ep_dict["dataset"] = self._dataset_config
         ep_dict["scene_id"] = self._episode_helper.current_episode.scene_id
         ep_dict["episode_id"] = self._episode_helper.current_episode.episode_id
