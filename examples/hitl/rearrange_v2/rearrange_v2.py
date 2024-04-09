@@ -648,13 +648,6 @@ class AppStateRearrangeV2(AppState):
             ):
                 self._selected_point = hit_info.point
                 self._selected_normal = hit_info.normal
-                # If the point is on a link, record it so that the object can be parented.
-                # TODO: rigid_object does not expose its node.
-                # if self._is_object_interactable(self._hovered_object_id):
-                #    link_index = self._get_link_index(self._hovered_object_id)
-                #    ao = sim_utilities.get_obj_from_id(self.get_sim(), self._hovered_object_id, self._link_id_to_ao_map)
-                #    link_node = ao.get_link_scene_node(link_index)
-                #    self._drop_ao_link_node = link_node
 
             # Drop when releasing right click.
             if (
@@ -697,9 +690,6 @@ class AppStateRearrangeV2(AppState):
                     # Pick the object.
                     self._held_object_id = object_id
                     self._selected_object_id = None
-                    # Unparent
-                    # TODO: rigid_object does not expose its node.
-                    # rigid_object.node.set_parent(None)
 
     def _is_within_reach(
         self, user_pos: mn.Vector3, target_pos: mn.Vector3
@@ -730,10 +720,6 @@ class AppStateRearrangeV2(AppState):
                 rigid_object.translation = self._selected_point
                 self._held_object_id = None
                 self._reset_selection()
-                # Set parent. This allows the object to follow, for example, a closing drawer.
-                # TODO: rigid_object does not expose its node.
-                # if self._drop_ao_link_node:
-                #    rigid_object.node.set_parent(self._drop_ao_link_node)
 
     def _pick_place(self):
         # Pick, place.
