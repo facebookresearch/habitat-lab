@@ -34,6 +34,9 @@ class GuiDrawer:
         self._sim_debug_line_render = sim_debug_line_render
         self._client_message_manager = client_message_manager
 
+        # TODO: Implement per-user.
+        self._local_transforms: List[mn.Matrix4] = []
+
     def get_sim_debug_line_render(self) -> Optional[DebugLineRender]:
         """
         Set the internal 'sim_debug_line_render' object, used for rendering lines onto the server.
@@ -73,8 +76,8 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            # TODO: Implement per-user.
+            self._local_transforms.append(transform)
 
     def pop_transform(
         self,
@@ -89,8 +92,8 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            # TODO: Implement per-user.
+            self._local_transforms.pop()
 
     def draw_box(
         self,
@@ -108,8 +111,35 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+
+            def vec(x, y, z) -> mn.Vector3:
+                return mn.Vector3(x, y, z)
+
+            def draw_line(a: mn.Vector3, b: mn.Vector3) -> None:
+                self.draw_transformed_line(
+                    a, b, from_color=color, destination_mask=destination_mask
+                )
+
+            e0 = min_extent
+            e1 = max_extent
+
+            # 4 lines along x axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e1.x, e0.y, e0.z))
+            draw_line(vec(e0.x, e0.y, e1.z), vec(e1.x, e0.y, e1.z))
+            draw_line(vec(e0.x, e1.y, e0.z), vec(e1.x, e1.y, e0.z))
+            draw_line(vec(e0.x, e1.y, e1.z), vec(e1.x, e1.y, e1.z))
+
+            # 4 lines along y axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e0.x, e1.y, e0.z))
+            draw_line(vec(e1.x, e0.y, e0.z), vec(e1.x, e1.y, e0.z))
+            draw_line(vec(e0.x, e0.y, e1.z), vec(e0.x, e1.y, e1.z))
+            draw_line(vec(e1.x, e0.y, e1.z), vec(e1.x, e1.y, e1.z))
+
+            # 4 lines along z axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e0.x, e0.y, e1.z))
+            draw_line(vec(e1.x, e0.y, e0.z), vec(e1.x, e0.y, e1.z))
+            draw_line(vec(e0.x, e1.y, e0.z), vec(e0.x, e1.y, e1.z))
+            draw_line(vec(e1.x, e1.y, e0.z), vec(e1.x, e1.y, e1.z))
 
     def draw_circle(
         self,
@@ -124,6 +154,8 @@ class GuiDrawer:
         """
         Draw a circle in world-space or local-space (see pushTransform).
         The circle is an approximation; see numSegments.
+
+        The normal is always in world-space.
         """
         # If server rendering is enabled:
         if self._sim_debug_line_render:
@@ -133,9 +165,13 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
+            parent_transform = self._compute_parent_transform()
+            global_translation = parent_transform.transform_point(translation)
+
             self._client_message_manager.add_highlight(
-                translation,
-                radius,
+                pos=_vec_to_list(global_translation),
+                radius=radius,
+                normal=_vec_to_list(normal),
                 billboard=billboard,
                 color=color,
                 destination_mask=destination_mask,
@@ -166,8 +202,17 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            parent_transform = self._compute_parent_transform()
+            global_from_pos = parent_transform.transform_point(from_pos)
+            global_to_pos = parent_transform.transform_point(to_pos)
+
+            self._client_message_manager.add_line(
+                _vec_to_list(global_from_pos),
+                _vec_to_list(global_to_pos),
+                from_color=from_color,
+                to_color=to_color,
+                destination_mask=destination_mask,
+            )
 
     def draw_path_with_endpoint_circles(
         self,
@@ -192,3 +237,17 @@ class GuiDrawer:
         if self._client_message_manager:
             # Networking not implemented
             pass
+
+    def _compute_parent_transform(self) -> mn.Matrix4:
+        """
+        Resolve the transform resulting from the push/pop_transform calls.
+        To apply to a point, use {ret_val}.transform_point(from_pos).
+        """
+        parent_transform = mn.Matrix4.identity_init()
+        for local_transform in self._local_transforms:
+            parent_transform = parent_transform @ local_transform
+        return parent_transform
+
+
+def _vec_to_list(vec: mn.Vector3) -> List[float]:
+    return [vec.x, vec.y, vec.z]

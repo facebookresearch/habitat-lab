@@ -4,11 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
 
 from habitat_hitl.core.user_mask import Mask, Users
+
+DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 
 
 class ClientMessageManager:
@@ -41,6 +43,7 @@ class ClientMessageManager:
         self,
         pos: List[float],
         radius: float,
+        normal: List[float] = DEFAULT_NORMAL,
         billboard: bool = True,
         color: Optional[Union[mn.Color4, mn.Color3]] = None,
         destination_mask: Mask = Mask.ALL,
@@ -53,9 +56,13 @@ class ClientMessageManager:
 
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            if "highlights" not in message:
-                message["highlights"] = []
-            highlight_dict = {"t": [pos[0], pos[1], pos[2]], "r": radius}
+            if "circles" not in message:
+                message["circles"] = []
+            highlight_dict = {
+                "t": [pos[0], pos[1], pos[2]],
+                "r": radius,
+                "n": normal,
+            }
             if billboard:
                 highlight_dict["b"] = 1
             if color is not None:
@@ -71,7 +78,48 @@ class ClientMessageManager:
                     conv(color.b),
                     conv(alpha),
                 ]
-            message["highlights"].append(highlight_dict)
+            message["circles"].append(highlight_dict)
+
+    def add_line(
+        self,
+        a: List[float],
+        b: List[float],
+        from_color: Optional[Union[mn.Color4, mn.Color3]] = None,
+        to_color: Optional[Union[mn.Color4, mn.Color3]] = None,
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Draw a line from the two specified world positions.
+        """
+        assert len(a) == 3
+        assert len(b) == 3
+
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+
+            if "lines" not in message:
+                message["lines"] = []
+            lines_dict = {"a": [a[0], a[1], a[2]], "b": [b[0], b[1], b[2]]}
+
+            if from_color is not None:
+
+                def conv(channel):
+                    # sloppy: using int 0-255 to reduce serialized data size
+                    return int(channel * 255.0)
+
+                alpha = (
+                    1.0 if isinstance(from_color, mn.Color3) else from_color.a
+                )
+                lines_dict["c"] = [
+                    conv(from_color.r),
+                    conv(from_color.g),
+                    conv(from_color.b),
+                    conv(alpha),
+                ]
+
+            # TODO: Implement "to_color".
+
+            message["lines"].append(lines_dict)
 
     def add_text(
         self, text: str, pos: list[float], destination_mask: Mask = Mask.ALL
