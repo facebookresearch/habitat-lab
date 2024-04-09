@@ -665,8 +665,7 @@ class AppStateRearrangeV2(AppState):
             if self._is_within_reach(user_pos, place_point):
                 # Drop the object.
                 rigid_object = self._get_rigid_object(object_id)
-                rigid_object.translation = place_point
-                rigid_object.translation.y += rigid_object.collision_shape_aabb.size_y() / 2
+                rigid_object.translation = place_point + mn.Vector3(0.0, rigid_object.collision_shape_aabb.size_y() / 2, 0.0)
                 self._held_object_id = None
                 self._place_selection.deselect()
 
