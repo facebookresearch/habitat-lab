@@ -435,7 +435,9 @@ async def networking_main_async(
 
 def networking_main(interprocess_record: InterprocessRecord) -> None:
     # Set up the event loop and run the main coroutine
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(networking_main_async(interprocess_record))
-    loop.close()
-    print("Networking process terminated.")
+    while True:
+        print("Starting networking process.")
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(networking_main_async(interprocess_record))
+        loop.close()
+        print("Networking process terminated.")
