@@ -366,7 +366,7 @@ class AppStateRearrangeV2(AppState):
         
         status_str = ""
         if len(self._task_instruction) > 0:
-            status_str += "\nInstruction: " + self._task_instruction + "\n"
+            status_str += "Instruction: " + self._task_instruction + "\n"
         if (
             self._client_helper
             and self._client_helper.do_show_idle_kick_warning
@@ -506,8 +506,8 @@ class AppStateRearrangeV2(AppState):
         from os.path import isfile, join
         output_path = "output"
         output_files = [f for f in listdir(output_path) if isfile(join(output_path, f))]
+        timestamp = str(int(time.time()))
         for output_file in output_files:
-            timestamp = str(int(time.time()))
             output_file_path = os.path.join(output_path, output_file)
             upload_file_to_s3(output_file_path, output_file, f"Phase_0/{timestamp}")
         # Ready for the next user.
