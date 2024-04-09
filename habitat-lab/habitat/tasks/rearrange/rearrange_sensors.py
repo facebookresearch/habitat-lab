@@ -852,6 +852,12 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
             )
             distances += obj_angle
 
+        if self._config.if_consider_detected_portion:
+            bbox = kwargs["observations"]["arm_depth_bbox_sensor"]
+            # Compute the detected portion in the bounding box sensor
+            # Since this is the distance, the smaller the value is, the better
+            distances += 1.0 - np.mean(bbox)
+
         self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 

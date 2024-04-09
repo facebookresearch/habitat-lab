@@ -265,6 +265,7 @@ class ArmActionConfig(ActionConfig):
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
     auto_grasp: bool = False
+    consider_detected_portion_threshold: float = -1.0
 
 
 @dataclass
@@ -967,6 +968,8 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     # Normally, you want the L2 distance between the gripper and the object as small as possible.
     # However, there are cases where you want to constrain the distance to be close to a specific value.
     desire_distance_between_gripper_object: float = 0.0
+    # We want to make sure the robot can detect large area:
+    if_consider_detected_portion: bool = False
 
 
 @dataclass

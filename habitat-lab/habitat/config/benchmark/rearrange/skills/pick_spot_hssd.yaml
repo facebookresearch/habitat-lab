@@ -1,0 +1,75 @@
+# @package _global_
+defaults:
+  - pick
+  - /habitat/task/measurements:
+    - base_to_object_distance
+  - /habitat/task/lab_sensors:
+    - arm_depth_bbox_sensor
+    - end_effector_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - arm_depth_bbox_sensor
+      - articulated_agent_arm_depth
+      - joint
+  task:
+    measurements:
+      end_effector_to_object_distance:
+        if_consider_gaze_angle: False # We do not consider gaze anymore
+        center_cone_vector: [0.0, 1.0, 0.0]
+        desire_distance_between_gripper_object: 0.2 # We make the value smaller from 0.4 to 0.2 for better grasping
+        if_consider_detected_portion: True
+      pick_reward:
+        force_pen: 0.0001
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+        use_diff: True
+        drop_obj_should_end: True
+        wrong_pick_should_end: True
+        count_coll_pen: 0.01
+        max_count_colls: 1000
+        count_coll_end_pen: 1.0
+        wrong_pick_pen: 5.0
+        dist_reward: 20.0
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+      pick_success:
+        ee_resting_success_threshold: -1.0
+    lab_sensors:
+      arm_depth_bbox_sensor:
+        height: 240
+        width: 228
+      joint_sensor:
+        dimensionality: 4
+        arm_joint_mask: [1,1,0,1,0,1,0]
+    actions:
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        center_cone_vector: [0.0, 1.0, 0.0]
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        auto_grasp: True
+        should_clip: True
+        consider_detected_portion_threshold: 0.5 # 0.5 or 0.3 should be good
+        gaze_distance_range: [0.0, 0.5] # gaze distance
+    success_reward: 10.0
+    slack_reward: -0.01
+    spawn_max_dist_to_obj: 2.0
+    base_angle_noise: 0.523599
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    agents:
+      main_agent:
+        joint_start_noise: 0.1
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real-world gaze ready location
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
+  dataset:
+    data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

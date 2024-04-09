@@ -196,6 +196,9 @@ class GazeGraspAction(MagicGraspAction):
             config.center_cone_vector
         ).normalized()
         self.auto_grasp = config.auto_grasp
+        self.consider_detected_portion_threshold = (
+            config.consider_detected_portion_threshold
+        )
 
     @property
     def action_space(self):
@@ -216,6 +219,14 @@ class GazeGraspAction(MagicGraspAction):
         )
 
         return obj_angle
+
+    def _get_bbox(self, img):
+        """Simple function to get the bounding box, assuming that only one object of interest in the image"""
+        rows = np.any(img, axis=1)
+        cols = np.any(img, axis=0)
+        rmin, rmax = np.where(rows)[0][[0, -1]]
+        cmin, cmax = np.where(cols)[0][[0, -1]]
+        return rmin, rmax, cmin, cmax
 
     def _determine_center_object(self):
         """Determine if an object is at the center of the frame and in range"""
@@ -267,10 +278,30 @@ class GazeGraspAction(MagicGraspAction):
             if dist < self.min_dist or dist > self.max_dist:
                 return None, None
 
-            # Skip if not in the central cone
-            obj_angle = self._get_camera_object_angle(obj_pos)
-            if abs(obj_angle) > self.center_cone_angle_threshold:
-                return None, None
+            if self.consider_detected_portion_threshold != -1.0:
+                # Skip if an object is not being detected in the bounding box
+                # Check the portion
+                tgt_mask = (
+                    center_obj_id + self._sim.habitat_config.object_ids_start
+                    == panoptic_img
+                ).astype(int)
+                tgt_mask = tgt_mask[:, :, 0]
+                # Get the bounding box
+                bbox = np.zeros(tgt_mask.shape)
+                rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
+                bbox[rmin:rmax, cmin:cmax] = 1.0
+                # Compute the mean of the bounding box
+                detected_portion = np.mean(bbox)
+                if (
+                    detected_portion
+                    <= self.consider_detected_portion_threshold
+                ):
+                    return None, None
+            else:
+                # Skip if not in the central cone
+                obj_angle = self._get_camera_object_angle(obj_pos)
+                if abs(obj_angle) > self.center_cone_angle_threshold:
+                    return None, None
 
             return center_obj_id, obj_pos
 
