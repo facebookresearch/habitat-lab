@@ -571,6 +571,30 @@ class AppStateRearrangeV2(AppState):
     def _is_holding_object(self) -> bool:
         return self._held_object_id is not None
 
+    def _send_error_report(self, user_index: int, clicked_object_id: int) -> None:
+        if self._app_service.client_message_manager is None:
+            return
+        
+        sim = self.get_sim()
+        clicked_object = sim_utilities.get_obj_from_id(sim, clicked_object_id, self._link_id_to_ao_map)
+        handle = clicked_object.handle if clicked_object is not None else ""
+
+        scene_id = sim.curr_scene_name
+        episode_id = self._episode_ids[self._current_episode_index]
+        task_instruction=self._task_instruction
+        sps=self._sps_tracker.get_smoothed_rate()
+
+        msg_mgr = self._app_service.client_message_manager
+        msg_mgr.error_report(
+            connection_params=self._connection_parameters,
+            clicked_object_handle=handle,
+            scene_id=scene_id,
+            episode_id=episode_id,
+            task_instruction=task_instruction,
+            sps=sps,
+            destination_mask=Mask.from_index(user_index),
+        )
+
     def _update_user_actions(self, user_index: int) -> None:
         def _handle_double_click() -> bool:
             time_since_last_click = datetime.now() - self._last_click_time
@@ -591,6 +615,10 @@ class AppStateRearrangeV2(AppState):
                 # Double-click to interact.
                 elif self._is_object_interactable(clicked_object_id):
                     self._interact_with_object(clicked_object_id)
+            else:
+                # Click to send error report.
+                self._send_error_report(user_index, clicked_object_id)
+
 
         # Drop when releasing right click.
         if self._gui_input.get_mouse_button_up(MouseButton.RIGHT):
@@ -846,7 +874,6 @@ def main(config):
         config,
         lambda app_service: AppStateRearrangeV2(app_service),
     )
-
 
 if __name__ == "__main__":
     register_hydra_plugins()

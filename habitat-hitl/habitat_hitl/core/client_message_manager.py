@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
@@ -174,6 +175,45 @@ class ClientMessageManager:
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
             message["kickClient"] = connection_id
+
+    def error_report(
+        self,
+        connection_params: Dict[str, Any],
+        clicked_object_handle: str,
+        scene_id: str,
+        episode_id: str,
+        task_instruction: str,
+        sps: float,
+        destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        TODO
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            report = {}
+            report["connection_params"] = {}
+            if connection_params is not None:
+                for key, pair in connection_params.items():
+                    report["connection_params"][key] = pair
+            
+            if clicked_object_handle is not None:
+                report["clicked_object_handle"] = clicked_object_handle
+
+            if scene_id is not None:
+                report["scene_id"] = scene_id
+
+            if episode_id is not None:
+                report["episode_id"] = episode_id
+
+            if task_instruction is not None:
+                report["task_instruction"] = task_instruction
+
+            if sps is not None:
+                report["sps"] = sps
+            
+            message["report"] = json.dumps(report)
+
 
     def set_server_keyframe_id(
         self, keyframe_id: int, destination_mask: Mask = Mask.ALL
