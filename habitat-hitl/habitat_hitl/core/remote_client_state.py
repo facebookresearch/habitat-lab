@@ -286,6 +286,7 @@ class RemoteGuiInput:
             return
 
         gui_input._key_held.clear()
+        gui_input._mouse_button_held.clear()
 
         for button in input_json["buttonHeld"]:
             if button not in self._button_map:
