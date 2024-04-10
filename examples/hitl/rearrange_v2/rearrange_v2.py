@@ -159,6 +159,7 @@ class AppStateRearrangeV2(AppState):
             self._app_service.hitl_config.can_grasp_place_threshold
         )
         self._gui_input = self._app_service.gui_input
+        self._last_connection_id = ""
 
         self._sim = app_service.sim
         self._ao_root_bbs: Dict = None
@@ -436,14 +437,17 @@ class AppStateRearrangeV2(AppState):
             self._app_service.end_episode(do_reset=True)
 
     def _update_episode_set(
-        self, connection_parameters: Optional[Dict[str, Any]]
+        self, connection_parameters: Optional[Dict[str, Any]], connection_id:str
     ):
         if (
             connection_parameters != None
             and "episodes" in connection_parameters
+            and connection_id is not None
+            and self._last_connection_id != connection_id
         ):
+            self._last_connection_id = connection_id
             episodes_param_str: str = connection_parameters["episodes"]
-            if episodes_param_str != self._last_episodes_param_str:
+            if episodes_param_str != None:
                 self._connection_parameters = connection_parameters
                 self._last_episodes_param_str = episodes_param_str
                 # Format: {lower_bound}-{upper_bound} E.g. 100-110
@@ -829,7 +833,7 @@ class AppStateRearrangeV2(AppState):
             params = (
                 self._app_service.remote_client_state.get_connection_parameters()
             )
-            self._update_episode_set(params)
+            self._update_episode_set(params, self._app_service.remote_client_state._last_connection_id)
 
         self._sps_tracker.increment()
 
@@ -859,10 +863,11 @@ class AppStateRearrangeV2(AppState):
         self._update_help_text()
 
     def record_state(self):
-        task_completed = self._gui_input.get_key_down(
-            GuiInput.KeyNS.ZERO
-        )
-        self._data_logger.record_state(task_completed=task_completed)
+        if self._gui_input.get_any_input():
+            task_completed = self._gui_input.get_key_down(
+                GuiInput.KeyNS.ZERO
+            )
+            self._data_logger.record_state(task_completed=task_completed)
 
 
 @hydra.main(
