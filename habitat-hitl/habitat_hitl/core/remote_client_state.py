@@ -6,8 +6,9 @@
 
 from datetime import datetime, timedelta
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from habitat_hitl.core.event import Event
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -45,9 +46,13 @@ class RemoteClientState:
 
         self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
+        self._new_disconnection_records: List[ConnectionRecord] = []
 
         self._connection_params_dict: Optional[Dict[str, Any]] = None
         self._last_connection_id: str = ""
+
+        self._on_client_connected = Event()
+        self._on_client_disconnected = Event()
 
         # Create one GuiInput per user to be controlled by remote clients.
         self._gui_inputs: List[GuiInput] = []
@@ -61,6 +66,14 @@ class RemoteClientState:
             2: GuiInput.KeyNS.TWO,
             3: GuiInput.KeyNS.THREE,
         }
+
+    @property
+    def on_client_connected(self) -> Event:
+        return self._on_client_connected
+    
+    @property
+    def on_client_disconnected(self) -> Event:
+        return self._on_client_disconnected
 
     def get_gui_input(self, user_index: int = 0) -> GuiInput:
         """Get the GuiInput for a specified user index."""
@@ -395,9 +408,17 @@ class RemoteClientState:
         self._new_connection_records = (
             self._interprocess_record.get_queued_connection_records()
         )
+        self._new_disconnection_records = (
+            self._interprocess_record.get_queued_disconnection_records()
+        )
 
         if len(self._new_connection_records) > 0:
             self._last_connection_id = str(self._new_connection_records[-1]["connectionId"])
+
+        for record in self._new_connection_records:
+            self._on_client_connected.invoke(record)
+        for record in self._new_disconnection_records:
+            self._on_client_disconnected.invoke(record)
 
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))

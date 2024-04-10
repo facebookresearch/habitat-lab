@@ -29,7 +29,7 @@ from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
     update_consolidated_keyframe,
 )
-from habitat_hitl.core.types import ClientState, ConnectionRecord, Keyframe
+from habitat_hitl.core.types import ClientState, ConnectionRecord, DisconnectionRecord, Keyframe
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -233,18 +233,16 @@ class NetworkManager:
         # todo: assert that websocket is actually already closed
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
+        disconnection_record: DisconnectionRecord = {}
+        disconnection_record["connectionId"] = websocket_id
+        self._interprocess_record.send_disconnection_record_to_main_thread(disconnection_record)
 
     def parse_connection_record(self, message: str) -> ConnectionRecord:
-        connection_record: ConnectionRecord
-        if message == "client ready!":
-            # legacy message format for initial client message
-            connection_record = {"isClientReady": True}
-        else:
-            connection_record = json.loads(message)
-            if "isClientReady" not in connection_record:
-                raise ValueError(
-                    "isClientReady key not found in initial client message."
-                )
+        connection_record: ConnectionRecord = json.loads(message)
+        if "isClientReady" not in connection_record:
+            raise ValueError(
+                "isClientReady key not found in initial client message."
+            )
         return connection_record
 
     async def handle_connection(self, websocket: ClientConnection) -> None:

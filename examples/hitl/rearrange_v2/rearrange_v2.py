@@ -12,6 +12,7 @@ import shutil
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
 import hydra
 import magnum as mn
 import numpy as np
@@ -185,10 +186,14 @@ class AppStateRearrangeV2(AppState):
         self._paired_goal_ids: List[Tuple[List[int], List[int]]] = []
 
         self._episode_start_time = datetime.now()
+        self._last_episode_change_time: datetime = datetime.now()
 
         self._connection_parameters: Dict[str, Any] = {}
 
         self._recording = False
+        self._app_service.step_recorder._recording = False
+
+        self._task_completed = False
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -228,6 +233,10 @@ class AppStateRearrangeV2(AppState):
         )
         self._selections.append(self._place_selection)
 
+        if self._app_service.hitl_config.networking.enable:
+            self._app_service.remote_client_state.on_client_connected.registerCallback(self._on_client_connected)
+            self._app_service.remote_client_state.on_client_disconnected.registerCallback(self._on_client_disconnected)
+
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
     def get_sim_utilities() -> Any:
@@ -238,6 +247,7 @@ class AppStateRearrangeV2(AppState):
         sim = self.get_sim()
         self._link_id_to_ao_map = sim_utilities.get_ao_link_id_map(sim)
         self._opened_link_set = set()
+        self._last_episode_change_time: datetime = datetime.now()
         for selection in self._selections:
             selection.deselect()
         
@@ -406,13 +416,17 @@ class AppStateRearrangeV2(AppState):
     def is_user_idle_this_frame(self):
         return not self._gui_input.get_any_key_down()
 
-    def _check_change_episode(self):
+    def _can_change_episode(self) -> bool:
         if self._paused or not self._gui_input.get_key_down(
             GuiInput.KeyNS.ZERO
         ):
-            return
-
-        self._increment_episode()
+            return False
+        
+        # Prevent changing episode too fast.
+        time_since_last_episode_change = datetime.now() - self._last_episode_change_time
+        if time_since_last_episode_change > timedelta(seconds=2.5):
+            return True
+        return False
 
     def _increment_episode(self):
         if not self._paused:
@@ -423,12 +437,13 @@ class AppStateRearrangeV2(AppState):
             if self._current_episode_index < len(self._episode_ids):
                 self._set_episode(self._current_episode_index)
             else:
-                self._end_session()
+                self._end_session(record=True)
             self._data_logger.record_session_metadata(self._connection_parameters, session_metadata)
 
     def _set_episode(self, episode_index: int):
         # If an episode range was received...
         self._episode_start_time = datetime.now()
+        self._last_episode_change_time = datetime.now()
         if len(self._episode_ids) > 0:
             next_episode_id = self._episode_ids[episode_index]
             self._app_service.episode_helper.set_next_episode_by_id(
@@ -436,59 +451,70 @@ class AppStateRearrangeV2(AppState):
             )
             self._app_service.end_episode(do_reset=True)
 
-    def _update_episode_set(
-        self, connection_parameters: Optional[Dict[str, Any]], connection_id:str
-    ):
-        if (
-            connection_parameters != None
-            and "episodes" in connection_parameters
-            and connection_id is not None
-            and self._last_connection_id != connection_id
+    def _kick(self):
+        self._client_helper.kick()
+
+    def _on_client_connected(self, connection_record: ConnectionRecord):
+        if "episodes" not in connection_record:
+            self._kick()
+            return
+        
+        self._last_connection_id = connection_record["connectionId"]
+        episodes_str: str = connection_record["episodes"]
+        if episodes_str is None:
+            self._kick()
+            return
+        
+        # Format: {lower_bound}-{upper_bound} E.g. 100-110
+        # Upper bound is exclusive.
+        episode_range_str = episodes_str.split("-")
+        if len(episode_range_str) != 2:
+            self._kick()
+            return
+        
+        start_episode_id = (
+            int(episode_range_str[0])
+            if episode_range_str[0].isdecimal()
+            else None
+        )
+        last_episode_id = (
+            int(episode_range_str[1])
+            if episode_range_str[0].isdecimal()
+            else None
+        )
+        if start_episode_id is None or last_episode_id is None or start_episode_id < 0:
+            self._kick()
+            return
+        
+        total_episode_count = len(self._app_service.episode_helper._episode_iterator.episodes)
+
+        # If outside of range, kick.
+        if start_episode_id >= total_episode_count:
+            self._kick()
+            return
+        
+        last_episode_id += 1 # Hack: Links are inclusive.
+        if last_episode_id >= total_episode_count:
+            last_episode_id = total_episode_count
+
+        # If in decreasing order, swap.
+        if start_episode_id > last_episode_id:
+            temp = last_episode_id
+            last_episode_id = start_episode_id
+            start_episode_id = temp
+        episode_ids = []
+        for episode_id_int in range(
+            start_episode_id, last_episode_id
         ):
-            self._last_connection_id = connection_id
-            episodes_param_str: str = connection_parameters["episodes"]
-            if episodes_param_str != None:
-                # Format: {lower_bound}-{upper_bound} E.g. 100-110
-                # Upper bound is exclusive.
-                episode_range_str = episodes_param_str.split("-")
-                if len(episode_range_str) == 2:
-                    start_episode_id = (
-                        int(episode_range_str[0])
-                        if episode_range_str[0].isdecimal()
-                        else None
-                    )
-                    last_episode_id = (
-                        int(episode_range_str[1])
-                        if episode_range_str[0].isdecimal()
-                        else None
-                    )
-                    if start_episode_id != None and last_episode_id != None and start_episode_id >= 0:
-                        total_episode_count = len(self._app_service.episode_helper._episode_iterator.episodes)
-                        # If outside of range, kick.
-                        if start_episode_id >= total_episode_count:
-                            self._client_helper.kick()
-                            return
-                        last_episode_id += 1 # Hack: Links are inclusive.
-                        if last_episode_id >= total_episode_count:
-                            last_episode_id = total_episode_count
-                        # If in decreasing order, swap.
-                        if start_episode_id > last_episode_id:
-                            temp = last_episode_id
-                            last_episode_id = start_episode_id
-                            start_episode_id = temp
-                        episode_ids = []
-                        for episode_id_int in range(
-                            start_episode_id, last_episode_id
-                        ):
-                            episode_ids.append(str(episode_id_int))
-                        # Change episode.
-                        self._connection_parameters = connection_parameters
-                        self._last_episodes_param_str = episodes_param_str
-                        self._start_session(episode_ids)
-                    else:
-                        # If outside of range, kick.
-                        self._client_helper.kick()
-                        return
+            episode_ids.append(str(episode_id_int))
+
+        # Change episode.
+        self._connection_parameters = connection_record
+        self._last_episodes_param_str = episode_range_str
+        self._start_session(episode_ids)
+
+    def _on_client_disconnected(self, disconnection_record: DisconnectionRecord):
+        self._end_session(record=False)
     
     def _start_session(self, episode_ids: List[str]):
         assert len(episode_ids) > 0
@@ -500,22 +526,25 @@ class AppStateRearrangeV2(AppState):
         self._current_episode_index = 0
         self._recording = True
         self._paused = False
+        self._app_service.step_recorder._recording = True
         self._set_episode(self._current_episode_index)
 
-    def _end_session(self):        
+    def _end_session(self, record: bool = True):        
         # Save keyframe for kick signal to reach backend.
         # TODO: Upload is blocking and slow. Client hangs for a while.
-        if self._client_helper:
-            self._client_helper.kick()
-        self.get_sim().gfx_replay_manager.save_keyframe()
+        self._kick()
 
         self._app_service.end_episode()
         self._recording = False
         self._paused = True
+        self._app_service.step_recorder._recording = False
         # TODO: Clean up any remaining memory.
         self._connection_parameters = {}
         self._gui_input.on_frame_end()
         self._app_service.remote_client_state.clear_history()
+
+        if not record:
+            return
 
         # TODO: Move out this block.
         from os import listdir
@@ -843,12 +872,6 @@ class AppStateRearrangeV2(AppState):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
             return
-        
-        if self._app_service.hitl_config.networking.enable:
-            params = (
-                self._app_service.remote_client_state.get_connection_parameters()
-            )
-            self._update_episode_set(params, self._app_service.remote_client_state._last_connection_id)
 
         self._sps_tracker.increment()
 
@@ -861,7 +884,7 @@ class AppStateRearrangeV2(AppState):
         if self._gui_input.get_key_down(GuiInput.KeyNS.H):
             self._show_gui_text = not self._show_gui_text
 
-        self._check_change_episode()
+        can_change_episode = self._can_change_episode()
 
         if not self._paused:
             for user_index in range(self._num_users):
@@ -869,7 +892,12 @@ class AppStateRearrangeV2(AppState):
                 self._draw_ui(user_index)
                 self._set_agent_act_hints(user_index)
                 self._update_held_object_placement(user_index)
-            self._app_service.compute_action_and_step_env()
+
+            # HACK: Communicate to the data logger that the task was completed.
+            self._task_completed = can_change_episode
+            self._app_service.compute_action_and_step_env()  # This record.
+            self._task_completed = False
+
             self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 
         self._cam_transform = self._camera_helper.get_cam_transform()
@@ -877,11 +905,18 @@ class AppStateRearrangeV2(AppState):
 
         self._update_help_text()
 
+        if can_change_episode:
+            self._increment_episode()
+
+
     def record_state(self):
-        if self._gui_input.get_any_input():
-            task_completed = self._gui_input.get_key_down(
-                GuiInput.KeyNS.ZERO
-            )
+        # Hack: This state cannot be communicated easily.
+        task_completed = self._task_completed
+        # Only record if the user does something, or if the task was completed.
+        # TODO: The parent step_recorder class still records on empty frames.
+        #       Write a custom recorder.
+        if self._gui_input.get_any_input() or task_completed:
+            task_completed = self._task_completed
             self._data_logger.record_state(task_completed=task_completed)
 
 

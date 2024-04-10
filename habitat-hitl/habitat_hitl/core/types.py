@@ -17,3 +17,6 @@ ClientState = DataDict
 
 # Dictionary that contains data about a new connection.
 ConnectionRecord = DataDict
+
+# Dictionary that contains data about a closing connection.
+DisconnectionRecord = DataDict
