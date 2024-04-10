@@ -7,7 +7,6 @@
 import abc
 import math
 import time
-from typing import List
 
 import magnum as mn
 from magnum.platform.glfw import Application
@@ -33,15 +32,14 @@ class GuiAppRenderer:
 class InputHandlerApplication(Application):
     def __init__(self, config):
         super().__init__(config)
-        self._gui_inputs: List[GuiInput] = []
-        self._mouse_ray = None
+        self._gui_inputs = []
 
-    def add_gui_input(self, gui_input: GuiInput) -> None:
+    def add_gui_input(self, gui_input):
         self._gui_inputs.append(gui_input)
 
     def key_press_event(self, event: Application.KeyEvent) -> None:
-        key = MagnumKeyConverter.convert_key(event.key)
-        if key is not None:
+        key = MagnumKeyConverter.convert(event.key)
+        if key:
             for wrapper in self._gui_inputs:
                 # If the key is already held, this is a repeat press event and we should
                 # ignore it.
@@ -50,30 +48,30 @@ class InputHandlerApplication(Application):
                     wrapper._key_down.add(key)
 
     def key_release_event(self, event: Application.KeyEvent) -> None:
-        key = MagnumKeyConverter.convert_key(event.key)
-        if key is not None:
+        key = MagnumKeyConverter.convert(event.key)
+        if key:
             for wrapper in self._gui_inputs:
                 if key in wrapper._key_held:
                     wrapper._key_held.remove(key)
                 wrapper._key_up.add(key)
 
     def mouse_press_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key is not None:
-            for wrapper in self._gui_inputs:
-                # If the key is already held, this is a repeat press event and we should
-                # ignore it.
-                if key not in wrapper._mouse_button_held:
-                    wrapper._mouse_button_held.add(key)
-                    wrapper._mouse_button_down.add(key)
+        mouse_button = event.button
+        GuiInput.validate_mouse_button(mouse_button)
+        for wrapper in self._gui_inputs:
+            wrapper._mouse_button_held.add(mouse_button)
+            wrapper._mouse_button_down.add(mouse_button)
 
     def mouse_release_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_button(event.button)
-        if key is not None:
-            for wrapper in self._gui_inputs:
-                if key in wrapper._mouse_button_held:
-                    wrapper._mouse_button_held.remove(key)
-                wrapper._mouse_button_up.add(key)
+        mouse_button = event.button
+        GuiInput.validate_mouse_button(mouse_button)
+        for wrapper in self._gui_inputs:
+            # In theory, mouse_button should always be present in _mouse_button_held.
+            # In practice, we seem to get spurious release events due to the app
+            # losing focus (e.g. switching to VS code debugger while mouse-clicking)
+            if mouse_button in wrapper._mouse_button_held:
+                wrapper._mouse_button_held.remove(mouse_button)
+                wrapper._mouse_button_up.add(mouse_button)
 
     def mouse_scroll_event(self, event: Application.MouseEvent) -> None:
         # shift+scroll is forced into x direction on mac, seemingly at OS level,
@@ -111,13 +109,10 @@ class InputHandlerApplication(Application):
             wrapper._mouse_position = mouse_pos
             wrapper._relative_mouse_position[0] += relative_mouse_position[0]
             wrapper._relative_mouse_position[1] += relative_mouse_position[1]
-            if self._mouse_ray:
-                wrapper._mouse_ray = self._mouse_ray
 
     def update_mouse_ray(self, unproject_fn):
-        if len(self._gui_inputs) > 0:
-            gui_input = self._gui_inputs[0]
-            self._mouse_ray = unproject_fn(gui_input._mouse_position)
+        for wrapper in self._gui_inputs:
+            wrapper._mouse_ray = unproject_fn(wrapper._mouse_position)
 
 
 class GuiApplication(InputHandlerApplication):

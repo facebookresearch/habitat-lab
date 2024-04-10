@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import random
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 
@@ -14,6 +14,7 @@ from habitat.articulated_agents.humanoids.kinematic_humanoid import (
 )
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_task import PddlTask
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import NavToInfo
 
@@ -120,7 +121,9 @@ class PddlSocialNavTask(PddlTask):
 
         super().reset(episode)
 
-        self.pddl_problem.bind_to_instance(self._sim, self)
+        self.pddl_problem.bind_to_instance(
+            self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
+        )
 
         if self._sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.

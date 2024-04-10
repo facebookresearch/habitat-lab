@@ -23,6 +23,7 @@ habitat:
     data_path: examples/hitl/rearrange_v2/app_data/demo.json.gz
 
 
+
 habitat_baselines:
   # todo: document these choices
   eval:

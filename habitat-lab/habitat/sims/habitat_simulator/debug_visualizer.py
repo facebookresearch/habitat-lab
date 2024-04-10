@@ -14,7 +14,6 @@ from PIL import Image
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.utils.common import check_make_dir
-from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 
 class DebugObservation:
@@ -76,43 +75,6 @@ class DebugObservation:
         file_path = os.path.join(output_path, prefix + date_time + ".png")
         self.image.save(file_path)
         return file_path
-
-
-def draw_object_highlight(
-    obj: Union[ManagedRigidObject, ManagedArticulatedObject],
-    debug_line_render: habitat_sim.gfx.DebugLineRender,
-    camera_transform: mn.Matrix4,
-    color: mn.Color4 = None,
-) -> None:
-    """
-    Draw a circle around the object to highlight it. The circle normal is oriented toward the camera_transform.
-
-    :param obj: The ManagedObject
-    :param debug_line_render: The DebugLineRender instance for the Simulator.
-    :param camera_transform: The Matrix4 transform of the camera. Used to orient the circle normal.
-    :param color: The color of the circle. Default magenta.
-    """
-
-    if color is None:
-        color = mn.Color4.magenta()
-
-    obj_bb = None
-    if isinstance(obj, ManagedArticulatedObject):
-        from habitat.sims.habitat_simulator.sim_utilities import get_ao_root_bb
-
-        obj_bb = get_ao_root_bb(obj)
-    else:
-        obj_bb = obj.root_scene_node.cumulative_bb
-
-    obj_center = obj.transformation.transform_point(obj_bb.center())
-    obj_size = obj_bb.size().max() / 2
-
-    debug_line_render.draw_circle(
-        translation=obj_center,
-        radius=obj_size,
-        color=color,
-        normal=camera_transform.translation - obj_center,
-    )
 
 
 class DebugVisualizer:

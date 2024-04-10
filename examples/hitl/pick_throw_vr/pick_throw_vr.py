@@ -79,9 +79,7 @@ class AppStatePickThrowVr(AppState):
         assert not self._app_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
-            self._app_service,
-            self.get_gui_controlled_agent_index(),
-            user_index=0,
+            self._app_service, self.get_gui_controlled_agent_index()
         )
         self._throw_helper = GuiThrowHelper(
             self._app_service, self.get_gui_controlled_agent_index()
@@ -485,10 +483,12 @@ class AppStatePickThrowVr(AppState):
         )
 
     def _draw_circle(self, pos, color, radius):
+        num_segments = 24
         self._app_service.gui_drawer.draw_circle(
             pos,
             radius,
             color,
+            num_segments,
         )
 
     def _add_target_object_highlight_ring(

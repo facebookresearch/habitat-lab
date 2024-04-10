@@ -40,8 +40,6 @@ habitat_hitl:
     client_sync:
       # If enabled, the server main camera transform will be sent to the client. Disable if the client should control its own camera (e.g. VR), or if clients must use different camera transforms (e.g. multiplayer).
       server_camera: True
-      # If enabled, the first client input is relayed to the server's GuiInput. Disable if clients have independent controls from the server.
-      server_input: True
       # Enable transmission of skinned mesh poses. If 'camera.first_person_mode' is enabled, you should generally disable this as well as enable `hide_humanoid_in_gui` because the humanoid will occlude the camera.
       skinning: True
 

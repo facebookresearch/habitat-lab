@@ -171,17 +171,16 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        # TODO: Only one user is currently supported.
-        users = Users(1)
-
         self._client_message_manager = None
         if self.network_server_enabled:
+            # TODO: Only one user is currently supported.
+            users = Users(1)
             self._client_message_manager = ClientMessageManager(users)
 
         gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
 
-        self._check_init_server(gui_drawer, gui_input, users)
+        self._check_init_server(gui_drawer, gui_input)
 
         def local_end_episode(do_reset=False):
             self._end_episode(do_reset)
@@ -232,22 +231,22 @@ class HitlDriver(AppDriver):
     def network_server_enabled(self) -> bool:
         return self._hitl_config.networking.enable
 
-    def _check_init_server(
-        self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
-    ):
+    def _check_init_server(self, gui_drawer: GuiDrawer, gui_input: GuiInput):
         self._remote_client_state = None
         self._interprocess_record = None
         if self.network_server_enabled:
+            # How many frames we can simulate "ahead" of what keyframes have been sent.
+            # A larger value increases lag on the client, while ensuring a more reliable
+            # simulation rate in the presence of unreliable network comms.
+            # See also server.py max_send_rate
+            max_steps_ahead = 5
             self._interprocess_record = InterprocessRecord(
-                self._hitl_config.networking
+                self._hitl_config.networking, max_steps_ahead
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record, gui_drawer, users
+                self._interprocess_record, gui_drawer, gui_input
             )
-            # Bind the server input to user 0
-            if self._hitl_config.networking.client_sync.server_input:
-                self._remote_client_state.bind_gui_input(server_gui_input, 0)
 
     def _check_terminate_server(self):
         if self.network_server_enabled:
