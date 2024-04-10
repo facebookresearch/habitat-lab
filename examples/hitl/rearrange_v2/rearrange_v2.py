@@ -448,8 +448,6 @@ class AppStateRearrangeV2(AppState):
             self._last_connection_id = connection_id
             episodes_param_str: str = connection_parameters["episodes"]
             if episodes_param_str != None:
-                self._connection_parameters = connection_parameters
-                self._last_episodes_param_str = episodes_param_str
                 # Format: {lower_bound}-{upper_bound} E.g. 100-110
                 # Upper bound is exclusive.
                 episode_range_str = episodes_param_str.split("-")
@@ -464,7 +462,15 @@ class AppStateRearrangeV2(AppState):
                         if episode_range_str[0].isdecimal()
                         else None
                     )
-                    if start_episode_id != None and last_episode_id != None:
+                    if start_episode_id != None and last_episode_id != None and start_episode_id >= 0:
+                        total_episode_count = len(self._app_service.episode_helper._episode_iterator.episodes)
+                        # If outside of range, kick.
+                        if start_episode_id >= total_episode_count:
+                            self._client_helper.kick()
+                            return
+                        last_episode_id += 1 # Hack: Links are inclusive.
+                        if last_episode_id >= total_episode_count:
+                            last_episode_id = total_episode_count
                         # If in decreasing order, swap.
                         if start_episode_id > last_episode_id:
                             temp = last_episode_id
@@ -476,7 +482,13 @@ class AppStateRearrangeV2(AppState):
                         ):
                             episode_ids.append(str(episode_id_int))
                         # Change episode.
+                        self._connection_parameters = connection_parameters
+                        self._last_episodes_param_str = episodes_param_str
                         self._start_session(episode_ids)
+                    else:
+                        # If outside of range, kick.
+                        self._client_helper.kick()
+                        return
     
     def _start_session(self, episode_ids: List[str]):
         assert len(episode_ids) > 0
