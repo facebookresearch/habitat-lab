@@ -511,9 +511,12 @@ class AppStateRearrangeV2(AppState):
         output_path = "output"
         output_files = [f for f in listdir(output_path) if isfile(join(output_path, f))]
         timestamp = str(int(time.time()))
+        task_id = self._connection_parameters["task_id"] if "task_id" in self._connection_parameters else ""
+        task_id = task_id if task_id.isalnum() else ""
+        s3_dir_name = task_id + "_" + timestamp
         for output_file in output_files:
             output_file_path = os.path.join(output_path, output_file)
-            upload_file_to_s3(output_file_path, output_file, f"Phase_0/{timestamp}")
+            upload_file_to_s3(output_file_path, output_file, f"Phase_1/{s3_dir_name}")
         # Ready for the next user.
 
 
