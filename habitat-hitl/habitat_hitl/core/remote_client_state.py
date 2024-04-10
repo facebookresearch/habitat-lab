@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from datetime import datetime, timedelta
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -38,6 +39,7 @@ class RemoteClientState:
         self._interprocess_record = interprocess_record
         self._gui_drawer = gui_drawer
         self._users = users
+        self._last_input_timestamp = datetime.now()
 
         self._receive_rate_tracker = AverageRateTracker(2.0)
 
@@ -45,6 +47,7 @@ class RemoteClientState:
         self._new_connection_records: List[ConnectionRecord] = []
 
         self._connection_params_dict: Optional[Dict[str, Any]] = None
+        self._last_connection_id: str = ""
 
         # Create one GuiInput per user to be controlled by remote clients.
         self._gui_inputs: List[GuiInput] = []
@@ -393,8 +396,14 @@ class RemoteClientState:
             self._interprocess_record.get_queued_connection_records()
         )
 
+        if len(self._new_connection_records) > 0:
+            self._last_connection_id = str(self._new_connection_records[-1]["connectionId"])
+
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
+
+        if len(client_states) > 0:
+            self._last_input_timestamp = datetime.now()
 
         # Get the connection parameters if they are provided (URL query string).
         # TODO: Make this data structured.
