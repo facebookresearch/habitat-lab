@@ -93,7 +93,10 @@ class LogicalExpr:
             result = True
             for i, sub_expr in enumerate(self._sub_exprs):
                 truth_val = is_true_fn(sub_expr)
-                assert isinstance(truth_val, bool)
+                if not isinstance(truth_val, bool):
+                    raise ValueError(
+                        f"Predicate returned non truth value: {sub_expr=}, {truth_val=}"
+                    )
                 self._truth_vals[i] = truth_val
                 result = result and truth_val
                 if not result:

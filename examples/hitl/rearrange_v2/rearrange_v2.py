@@ -9,6 +9,7 @@ from typing import Any, Dict, Set
 
 import hydra
 import magnum as mn
+import numpy as np
 
 import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
@@ -29,10 +30,68 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.gui_pick_helper import GuiPickHelper
 from habitat_hitl.environment.gui_placement_helper import GuiPlacementHelper
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 ENABLE_ARTICULATED_OPEN_CLOSE = False
 # Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
 DO_HUMANOID_GRASP_OBJECTS = False
+
+
+class DataLogger:
+    def __init__(self, app_service):
+        self._app_service = app_service
+        self._sim = app_service.sim
+
+    def get_num_agents(self):
+        return len(self._sim.agents_mgr._all_agent_data)
+
+    def get_agents_state(self):
+        agent_states = []
+        for agent_idx in range(self.get_num_agents()):
+            agent_root = get_agent_art_obj_transform(self._sim, agent_idx)
+            position = np.array(agent_root.translation).tolist()
+            rotation = mn.Quaternion.from_matrix(agent_root.rotation())
+            rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
+
+            snap_idx = self._sim.agents_mgr._all_agent_data[
+                agent_idx
+            ].grasp_mgr.snap_idx
+            agent_states.append(
+                {
+                    "position": position,
+                    "rotation": rotation,
+                    "grasp_mgr_snap_idx": snap_idx,
+                }
+            )
+        return agent_states
+
+    def get_objects_state(self):
+        object_states = []
+        rom = self._sim.get_rigid_object_manager()
+        for object_handle, rel_idx in self._sim._handle_to_object_id.items():
+            obj_id = self._sim._scene_obj_ids[rel_idx]
+            ro = rom.get_object_by_id(obj_id)
+            position = np.array(ro.translation).tolist()
+            rotation = quat_to_coeffs(quat_from_magnum(ro.rotation)).tolist()
+            object_states.append(
+                {
+                    "position": position,
+                    "rotation": rotation,
+                    "object_handle": object_handle,
+                    "object_id": obj_id,
+                }
+            )
+        return object_states
+
+    def record_state(self, task_completed: bool = False):
+        agent_states = self.get_agents_state()
+        object_states = self.get_objects_state()
+
+        self._app_service.step_recorder.record("agent_states", agent_states)
+        self._app_service.step_recorder.record("object_states", object_states)
+        self._app_service.step_recorder.record(
+            "task_completed", task_completed
+        )
 
 
 class AppStateRearrangeV2(AppState):
@@ -58,16 +117,17 @@ class AppStateRearrangeV2(AppState):
         self._recent_reach_pos = None
         self._paused = False
         self._hide_gui_text = False
+        self._can_place_object = False
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
             self._app_service.gui_input,
         )
 
-        self._pick_helper = GuiPickHelper(
-            self._app_service,
+        self._pick_helper = GuiPickHelper(self._app_service, user_index=0)
+        self._placement_helper = GuiPlacementHelper(
+            self._app_service, user_index=0
         )
-        self._placement_helper = GuiPlacementHelper(self._app_service)
         self._client_helper = None
         if self._app_service.hitl_config.networking.enable:
             self._client_helper = ClientHelper(self._app_service)
@@ -75,6 +135,9 @@ class AppStateRearrangeV2(AppState):
         self._has_grasp_preview = False
         self._frame_counter = 0
         self._sps_tracker = AverageRateTracker(2.0)
+
+        self._task_instruction = ""
+        self._data_logger = DataLogger(app_service=self._app_service)
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -171,6 +234,13 @@ class AppStateRearrangeV2(AppState):
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
+        # Set the task instruction
+        current_episode = self._app_service.env.current_episode
+        if current_episode.info.get("extra_info") is not None:
+            self._task_instruction = current_episode.info["extra_info"][
+                "instruction"
+            ]
+
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
             client_message_manager.signal_scene_change()
@@ -203,14 +273,17 @@ class AppStateRearrangeV2(AppState):
 
         # todo: implement grasping properly for each user. _held_obj_id, _has_grasp_preview, etc. must be tracked per user.
         if self._held_obj_id is not None:
-            if self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE):
+            if (
+                self._get_user_key_down(user_index, GuiInput.KeyNS.SPACE)
+                and self._can_place_object
+            ):
                 if DO_HUMANOID_GRASP_OBJECTS:
                     # todo: better drop pos
                     drop_pos = self._get_gui_agent_translation(
                         user_index
                     )  # self._gui_agent_controllers.get_base_translation()
                 else:
-                    # GuiPlacementHelper has already placed this object, so nothing to do here
+                    # GuiPlacementHelper has already placed this object.
                     pass
                 self._held_obj_id = None
         else:
@@ -281,6 +354,7 @@ class AppStateRearrangeV2(AppState):
             controls_str += "I, K: look up, down\n"
             controls_str += "A, D: turn\n"
             controls_str += "W/F, S/V: walk\n"
+            controls_str += "N: next episode\n"
             if ENABLE_ARTICULATED_OPEN_CLOSE:
                 controls_str += "Z/X: open/close receptacle\n"
             controls_str += get_grasp_release_controls_text()
@@ -292,6 +366,8 @@ class AppStateRearrangeV2(AppState):
     def _get_status_text(self):
         status_str = ""
 
+        if len(self._task_instruction) > 0:
+            status_str += "\nInstruction: " + self._task_instruction + "\n"
         if self._paused:
             status_str += "\n\npaused\n"
         if (
@@ -316,6 +392,8 @@ class AppStateRearrangeV2(AppState):
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
+                text_delta_x=-280,
+                text_delta_y=-50,
             )
 
     def _get_camera_lookat_pos(self):
@@ -331,40 +409,13 @@ class AppStateRearrangeV2(AppState):
         return not self._app_service.gui_input.get_any_key_down()
 
     def _check_change_episode(self):
-        if self._paused:
+        if self._paused or not self._app_service.gui_input.get_key_down(
+            GuiInput.KeyNS.N
+        ):
             return
 
-        # episode_id should be a string, e.g. "5"
-        episode_ids_by_dataset = {
-            "data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz": [
-                "23775",
-                "23776",
-            ]
-        }
-        fallback_episode_ids = ["0", "1"]
-        dataset_key = self._app_service.config.habitat.dataset.data_path
-        episode_ids = (
-            episode_ids_by_dataset[dataset_key]
-            if dataset_key in episode_ids_by_dataset
-            else fallback_episode_ids
-        )
-
-        # use number keys to select episode
-        episode_index_by_key = {
-            GuiInput.KeyNS.ONE: 0,
-            GuiInput.KeyNS.TWO: 1,
-        }
-        assert len(episode_index_by_key) == len(episode_ids)
-
-        for key in episode_index_by_key:
-            if self._app_service.gui_input.get_key_down(key):
-                episode_id = episode_ids[episode_index_by_key[key]]
-                # episode_id should be a string, e.g. "5"
-                assert isinstance(episode_id, str)
-                self._app_service.episode_helper.set_next_episode_by_id(
-                    episode_id
-                )
-                self._app_service.end_episode(do_reset=True)
+        if self._app_service.episode_helper.next_episode_exists():
+            self._app_service.end_episode(do_reset=True)
 
     def _update_held_object_placement(self):
         if not self._held_obj_id:
@@ -380,6 +431,9 @@ class AppStateRearrangeV2(AppState):
         if self._placement_helper.update(ray, self._held_obj_id):
             # sloppy: save another keyframe here since we just moved the held object
             self.get_sim().gfx_replay_manager.save_keyframe()
+            self._can_place_object = True
+        else:
+            self._can_place_object = False
 
     def sim_update(self, dt, post_sim_update_dict):
         if (
@@ -445,6 +499,12 @@ class AppStateRearrangeV2(AppState):
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         self._update_help_text()
+
+    def record_state(self):
+        task_completed = self._app_service.gui_input.get_key_down(
+            GuiInput.KeyNS.N
+        )
+        self._data_logger.record_state(task_completed=task_completed)
 
 
 @hydra.main(

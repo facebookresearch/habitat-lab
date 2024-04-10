@@ -9,6 +9,7 @@ from typing import Final, List, Optional
 import magnum as mn
 
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.user_mask import Mask
 from habitat_sim.gfx import DebugLineRender
 
 
@@ -33,6 +34,9 @@ class GuiDrawer:
         self._sim_debug_line_render = sim_debug_line_render
         self._client_message_manager = client_message_manager
 
+        # TODO: Implement per-user.
+        self._local_transforms: List[mn.Matrix4] = []
+
     def get_sim_debug_line_render(self) -> Optional[DebugLineRender]:
         """
         Set the internal 'sim_debug_line_render' object, used for rendering lines onto the server.
@@ -43,6 +47,7 @@ class GuiDrawer:
     def set_line_width(
         self,
         line_width: float,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Set global line width for all lines rendered by GuiDrawer.
@@ -59,6 +64,7 @@ class GuiDrawer:
     def push_transform(
         self,
         transform: mn.Matrix4,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Push (multiply) a transform onto the transform stack, affecting all line-drawing until popped.
@@ -70,11 +76,12 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            # TODO: Implement per-user.
+            self._local_transforms.append(transform)
 
     def pop_transform(
         self,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         See push_transform.
@@ -85,26 +92,54 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            # TODO: Implement per-user.
+            self._local_transforms.pop()
 
     def draw_box(
         self,
         min_extent: mn.Vector3,
         max_extent: mn.Vector3,
         color: mn.Color4,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a box in world-space or local-space (see pushTransform).
         """
         # If server rendering is enabled:
         if self._sim_debug_line_render:
-            self._sim_debug_line_render.draw_box(min, max, color)
+            self._sim_debug_line_render.draw_box(min_extent, max_extent, color)
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+
+            def vec(x, y, z) -> mn.Vector3:
+                return mn.Vector3(x, y, z)
+
+            def draw_line(a: mn.Vector3, b: mn.Vector3) -> None:
+                self.draw_transformed_line(
+                    a, b, from_color=color, destination_mask=destination_mask
+                )
+
+            e0 = min_extent
+            e1 = max_extent
+
+            # 4 lines along x axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e1.x, e0.y, e0.z))
+            draw_line(vec(e0.x, e0.y, e1.z), vec(e1.x, e0.y, e1.z))
+            draw_line(vec(e0.x, e1.y, e0.z), vec(e1.x, e1.y, e0.z))
+            draw_line(vec(e0.x, e1.y, e1.z), vec(e1.x, e1.y, e1.z))
+
+            # 4 lines along y axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e0.x, e1.y, e0.z))
+            draw_line(vec(e1.x, e0.y, e0.z), vec(e1.x, e1.y, e0.z))
+            draw_line(vec(e0.x, e0.y, e1.z), vec(e0.x, e1.y, e1.z))
+            draw_line(vec(e1.x, e0.y, e1.z), vec(e1.x, e1.y, e1.z))
+
+            # 4 lines along z axis
+            draw_line(vec(e0.x, e0.y, e0.z), vec(e0.x, e0.y, e1.z))
+            draw_line(vec(e1.x, e0.y, e0.z), vec(e1.x, e0.y, e1.z))
+            draw_line(vec(e0.x, e1.y, e0.z), vec(e0.x, e1.y, e1.z))
+            draw_line(vec(e1.x, e1.y, e0.z), vec(e1.x, e1.y, e1.z))
 
     def draw_circle(
         self,
@@ -114,10 +149,13 @@ class GuiDrawer:
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
         billboard: bool = False,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a circle in world-space or local-space (see pushTransform).
         The circle is an approximation; see numSegments.
+
+        The normal is always in world-space.
         """
         # If server rendering is enabled:
         if self._sim_debug_line_render:
@@ -127,8 +165,16 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
+            parent_transform = self._compute_parent_transform()
+            global_translation = parent_transform.transform_point(translation)
+
             self._client_message_manager.add_highlight(
-                translation, radius, billboard=billboard, color=color
+                pos=_vec_to_list(global_translation),
+                radius=radius,
+                normal=_vec_to_list(normal),
+                billboard=billboard,
+                color=color,
+                destination_mask=destination_mask,
             )
 
     def draw_transformed_line(
@@ -137,6 +183,7 @@ class GuiDrawer:
         to_pos: mn.Vector3,
         from_color: mn.Color4,
         to_color: mn.Color4 = None,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a line segment in world-space or local-space (see pushTransform) with interpolated color.
@@ -155,8 +202,17 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # Networking not implemented
-            pass
+            parent_transform = self._compute_parent_transform()
+            global_from_pos = parent_transform.transform_point(from_pos)
+            global_to_pos = parent_transform.transform_point(to_pos)
+
+            self._client_message_manager.add_line(
+                _vec_to_list(global_from_pos),
+                _vec_to_list(global_to_pos),
+                from_color=from_color,
+                to_color=to_color,
+                destination_mask=destination_mask,
+            )
 
     def draw_path_with_endpoint_circles(
         self,
@@ -165,6 +221,7 @@ class GuiDrawer:
         color: mn.Color4,
         num_segments: int = DEFAULT_SEGMENT_COUNT,
         normal: mn.Vector3 = DEFAULT_NORMAL,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         """
         Draw a sequence of line segments with circles at the two endpoints.
@@ -180,3 +237,17 @@ class GuiDrawer:
         if self._client_message_manager:
             # Networking not implemented
             pass
+
+    def _compute_parent_transform(self) -> mn.Matrix4:
+        """
+        Resolve the transform resulting from the push/pop_transform calls.
+        To apply to a point, use {ret_val}.transform_point(from_pos).
+        """
+        parent_transform = mn.Matrix4.identity_init()
+        for local_transform in self._local_transforms:
+            parent_transform = parent_transform @ local_transform
+        return parent_transform
+
+
+def _vec_to_list(vec: mn.Vector3) -> List[float]:
+    return [vec.x, vec.y, vec.z]
