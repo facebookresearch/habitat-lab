@@ -9,6 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
+import warnings
 from functools import wraps
 from typing import List, Optional, Tuple
 
@@ -21,6 +22,9 @@ import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
+from habitat.articulated_agents.utils import (
+    get_articulated_agent_camera_transform_from_cam_info,
+)
 from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
@@ -725,9 +729,20 @@ def add_perf_timing_func(name: Optional[str] = None):
     return perf_time
 
 
-def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
+def get_camera_transform(
+    cur_articulated_agent,
+    camera_name: str = None,
+    deprecated_logic: bool = False,
+) -> mn.Matrix4:
     """Get the camera transformation"""
-    if isinstance(cur_articulated_agent, SpotRobot):
+    if camera_name is not None:
+        try:
+            cam_info = cur_articulated_agent.params.cameras[camera_name]
+        except KeyError:
+            raise Exception(
+                f"Camera name {camera_name} not found in the agent's camera list."
+            )
+    elif isinstance(cur_articulated_agent, SpotRobot):
         cam_info = cur_articulated_agent.params.cameras[
             "articulated_agent_arm_depth"
         ]
@@ -736,13 +751,21 @@ def get_camera_transform(cur_articulated_agent) -> mn.Matrix4:
     else:
         raise NotImplementedError("This robot does not have GazeGraspAction.")
 
-    # Get the camera's attached link
-    link_trans = cur_articulated_agent.sim_obj.get_link_scene_node(
-        cam_info.attached_link_id
-    ).transformation
-    # Get the camera offset transformation
-    offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-    cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+    cam_trans = None
+
+    if deprecated_logic:
+        warnings.warn(
+            "[habitat.tasks.rearrange.utils.get_camera_transform] Using deprecated logic to get-camera-transform. Only for legacy reasons, planned to phase out in next version."
+        )
+        link_trans = cur_articulated_agent.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+    else:
+        cam_trans = get_articulated_agent_camera_transform_from_cam_info(
+            cur_articulated_agent, cam_info
+        )
     return cam_trans
 
 

@@ -14,66 +14,56 @@ constants: {}
 
 
 predicates:
-  - name: holding
-    args:
-      - name: obj
-        expr_type: movable_entity_type
-      - name: robot
-        expr_type: robot_entity_type
-    is_valid_fn:
-      # Function that checks if the predicate is satisfied. See
-      # `pddl_defined_predicates.py` for the pre-defined instances of these
-      # functions.
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
-      hold_state: True
-    set_state_fn:
-      # Funtion that sets simulator state based on predicate arguments.
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
-      hold_state: True
-
   - name: in
     args:
       - name: obj
         expr_type: obj_type
-      - name: recep
+      - name: receptacle
         expr_type: art_receptacle_entity_type
-    is_valid_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_inside
+    set_state:
+      obj_states:
+        obj: receptacle
 
-  - name: not_holding
-    args:
-      - name: robot
-        expr_type: robot_entity_type
-    is_valid_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_hold_match
-      hold_state: False
-    set_state_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_holding
-      hold_state: False
-  - name: robot_at
-    args:
-      - name: at_entity
-        expr_type: static_obj_type
-      - name: robot
-        expr_type: robot_entity_type
-    is_valid_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_robot_at_position
-      dist_thresh: 2.0
-    set_state_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_robot_position
-      dist_thresh: 2.0
-
-  - name: object_at
+  - name: holding
     args:
       - name: obj
         expr_type: movable_entity_type
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          holding: obj
+
+  - name: not_holding
+    args:
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          should_drop: True
+
+  - name: robot_at
+    args:
+      - name: Y
+        expr_type: static_obj_type
+      - name: robot_id
+        expr_type: robot_entity_type
+    set_state:
+      robot_states:
+        robot_id:
+          pos: Y
+
+  - name: at
+    args:
+      - name: obj
+        expr_type: obj_type
       - name: at_entity
         expr_type: static_obj_type
-    is_valid_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.is_object_at
-      dist_thresh: 0.3
-    set_state_fn:
-      _target_: habitat.tasks.rearrange.multi_task.pddl_defined_predicates.set_object_at
+    set_state:
+        obj_states:
+            obj: at_entity
 
 actions:
   - name: nav_to_goal
@@ -207,7 +197,7 @@ actions:
         - robot_at(obj, robot)
     postcondition:
       - not_holding(robot)
-      - object_at(place_obj, obj)
+      - at(place_obj, obj)
     task_info:
       task: RearrangePlaceTask-v0
       task_def: "place"

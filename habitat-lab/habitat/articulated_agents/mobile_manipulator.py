@@ -27,7 +27,7 @@ class ArticulatedAgentCameraParams:
 
     attached_link_id: int
     cam_offset_pos: mn.Vector3 = mn.Vector3.zero_init()
-    cam_look_at_pos: mn.Vector3 = mn.Vector3.zero_init()
+    cam_look_at_pos: mn.Vector3 = None
     cam_orientation: mn.Vector3 = mn.Vector3.zero_init()
     relative_transform: mn.Matrix4 = mn.Matrix4.identity_init()
 

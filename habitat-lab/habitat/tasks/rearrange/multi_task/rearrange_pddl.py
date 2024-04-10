@@ -8,9 +8,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+import magnum as mn
 import numpy as np
 
-from habitat.datasets.rearrange.samplers.receptacle import Receptacle
+from habitat.core.dataset import Episode
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
@@ -25,7 +27,6 @@ class SimulatorObjectType(Enum):
     Predefined entity types for which default predicate behavior is defined.
     """
 
-    BASE_ENTITY = "entity_type"
     MOVABLE_ENTITY = "movable_entity_type"
     STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
     ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
@@ -168,11 +169,20 @@ class PddlSimInfo:
     robot_ids: Dict[str, int]
 
     sim: RearrangeSim
+    dataset: RearrangeDatasetV0
     env: RearrangeTask
+    episode: Episode
+    obj_thresh: float
+    art_thresh: float
+    robot_at_thresh: float
     expr_types: Dict[str, ExprType]
     predicates: Dict[str, Any]
     all_entities: Dict[str, PddlEntity]
-    receptacles: Dict[str, Receptacle]
+    receptacles: Dict[str, mn.Range3D]
+
+    num_spawn_attempts: int
+    filter_colliding_states: bool
+    recep_place_shrink_factor: float
 
     pred_truth_cache: Optional[Dict[str, bool]] = None
 
@@ -221,7 +231,7 @@ class PddlSimInfo:
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             recep = self.receptacles[ename]
-            return np.array(recep.get_global_transform(self.sim).translation)
+            return np.array(recep.center())
         if self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
@@ -236,7 +246,7 @@ class PddlSimInfo:
 
     def search_for_entity(
         self, entity: PddlEntity
-    ) -> Union[int, str, MarkerInfo, Receptacle]:
+    ) -> Union[int, str, MarkerInfo, mn.Range3D]:
         """
         Returns underlying simulator information associated with a PDDL entity.
         Helper to match the PDDL entity to something from the simulator.
@@ -263,6 +273,7 @@ class PddlSimInfo:
         elif self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
-            return self.receptacles[ename]
+            asset_name = ename.split("_:")[0]
+            return self.receptacles[asset_name]
         else:
             raise ValueError(f"No type match for {entity}")

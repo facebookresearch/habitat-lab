@@ -304,7 +304,6 @@ class TriangleMeshReceptacle(Receptacle):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
-        scale: Union[float, mn.Vector3] = None,
     ) -> None:
         """
         Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
@@ -314,19 +313,9 @@ class TriangleMeshReceptacle(Receptacle):
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptacles.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
-        :param scale: The scaling vector (or uniform scaling float) to be applied to the mesh.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self.mesh_data = mesh_data
-
-        # apply the scale
-        if scale is not None:
-            m_verts = self.mesh_data.mutable_attribute(
-                mn.trade.MeshAttribute.POSITION
-            )
-            for vix, v in enumerate(m_verts):
-                m_verts[vix] = v * scale
-
         self.area_weighted_accumulator = (
             []
         )  # normalized float weights for each triangle for sampling
@@ -706,7 +695,6 @@ def parse_receptacles_from_user_config(
                             up=up,
                             parent_object_handle=parent_object_handle,
                             parent_link=parent_link_ix,
-                            scale=ao_uniform_scaling,
                         )
                     )
             else:
@@ -717,42 +705,13 @@ def parse_receptacles_from_user_config(
     return receptacles
 
 
-def cull_filtered_receptacles(
-    receptacles: List[Receptacle], exclude_filter_strings: List[str]
-) -> List[Receptacle]:
-    """
-    Filter a list of Receptacles to exclude any which are matched to the provided exclude_filter_strings.
-    Each string in filter strings is checked against each receptacle's unique_name. If the unique_name contains any filter string as a substring, that Receptacle is filtered.
-
-    :param receptacles: The initial list of Receptacle objects.
-    :param exclude_filter_strings: The list of filter substrings defining receptacles which should not be active in the current scene.
-
-    :return: The filtered list of Receptacle objects. Those which contain none of the filter substrings in their unqiue_name.
-    """
-
-    filtered_receptacles = []
-    for receptacle in receptacles:
-        culled = False
-        for filter_substring in exclude_filter_strings:
-            if filter_substring in receptacle.unique_name:
-                culled = True
-                break
-        if not culled:
-            filtered_receptacles.append(receptacle)
-    return filtered_receptacles
-
-
 def find_receptacles(
-    sim: habitat_sim.Simulator,
-    ignore_handles: Optional[List[str]] = None,
-    exclude_filter_strings: Optional[List[str]] = None,
+    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
 
     :param sim: Simulator must be provided.
-    :param ignore_handles: An optional list of handles for ManagedObjects which should be skipped. No Receptacles for matching objects will be returned.
-    :param exclude_filter_strings: An optional list of excluded Receptacle substrings. Any Receptacle which contains any excluded filter substring in its unique_name will not be included in the returned set.
     """
 
     obj_mgr = sim.get_rigid_object_manager()
@@ -814,12 +773,6 @@ def find_receptacles(
             )
         )
 
-    # filter out individual Receptacles with excluded substrings
-    if exclude_filter_strings is not None:
-        receptacles = cull_filtered_receptacles(
-            receptacles, exclude_filter_strings
-        )
-
     # check for non-unique naming mistakes in user dataset
     for rec_ix in range(len(receptacles)):
         rec1_unique_name = receptacles[rec_ix].unique_name
@@ -840,59 +793,6 @@ class ReceptacleSet:
     excluded_receptacle_substrings: List[str]
     is_on_top_of_sampler: bool = False
     comment: str = ""
-
-
-def get_scene_rec_filter_filepath(
-    mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
-) -> str:
-    """
-    Look in the user_defined metadata for a scene to find the configured filepath for the scene's Receptacle filter file.
-
-    :return: Filter filepath or None if not found.
-    """
-    scene_user_defined = mm.get_scene_user_defined(scene_handle)
-    if scene_user_defined is not None and scene_user_defined.has_value(
-        "scene_filter_file"
-    ):
-        scene_filter_file = scene_user_defined.get("scene_filter_file")
-        scene_filter_file = os.path.join(
-            os.path.dirname(mm.active_dataset), scene_filter_file
-        )
-        return scene_filter_file
-    return None
-
-
-def get_excluded_recs_from_filter_file(
-    rec_filter_filepath: str, filter_types: Optional[List[str]] = None
-) -> List[str]:
-    """
-    Load and digest a Receptacle filter file to generate a list of strings which should be excluded from the active ReceptacleSet.
-
-    :param filter_types: Optionally specify a particular set of filter types to scrape. Default is all filters.
-    """
-
-    possible_filter_types = [
-        "manually_filtered",
-        "access_filtered",
-        "stability_filtered",
-        "height_filtered",
-    ]
-
-    if filter_types is None:
-        filter_types = possible_filter_types
-    else:
-        for filter_type in filter_types:
-            assert (
-                filter_type in possible_filter_types
-            ), f"Specified filter type '{filter_type}' is not in supported set: {possible_filter_types}"
-
-    filtered_unique_names = []
-    with open(rec_filter_filepath, "r") as f:
-        filter_json = json.load(f)
-        for filter_type in filter_types:
-            for filtered_unique_name in filter_json[filter_type]:
-                filtered_unique_names.append(filtered_unique_name)
-    return filtered_unique_names
 
 
 class ReceptacleTracker:
@@ -925,19 +825,34 @@ class ReceptacleTracker:
         :param mm: The active MetadataMediator instance from which to load the filter data.
         :param scene_handle: The handle of the currently instantiated scene.
         """
-        scene_filter_filepath = get_scene_rec_filter_filepath(mm, scene_handle)
-        if scene_filter_filepath is not None:
-            filtered_unique_names = get_excluded_recs_from_filter_file(
-                scene_filter_filepath
+        scene_user_defined = mm.get_scene_user_defined(scene_handle)
+        filtered_unique_names = []
+        if scene_user_defined is not None and scene_user_defined.has_value(
+            "scene_filter_file"
+        ):
+            scene_filter_file = scene_user_defined.get("scene_filter_file")
+            # construct the dataset level path for the filter data file
+            scene_filter_file = os.path.join(
+                os.path.dirname(mm.active_dataset), scene_filter_file
             )
+            with open(scene_filter_file, "r") as f:
+                filter_json = json.load(f)
+                for filter_type in [
+                    "manually_filtered",
+                    "access_filtered",
+                    "stability_filtered",
+                    "height_filtered",
+                ]:
+                    for filtered_unique_name in filter_json[filter_type]:
+                        filtered_unique_names.append(filtered_unique_name)
             # add exclusion filters to all receptacles sets
             for r_set in self._receptacle_sets.values():
                 r_set.excluded_receptacle_substrings.extend(
                     filtered_unique_names
                 )
-                logger.info(
-                    f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_filepath}'."
-                )
+            logger.info(
+                f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
+            )
         else:
             logger.info(
                 f"Loaded receptacle filter data for scene '{scene_handle}' does not have configured filter file."
