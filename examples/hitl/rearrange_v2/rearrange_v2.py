@@ -160,6 +160,7 @@ class AppStateRearrangeV2(AppState):
         self,
     ) -> List[Tuple[List[int], List[int]]]:
         """Parse the current episode and returns the goal object-receptacle pairs."""
+        sim = self.get_sim()
         paired_goal_ids: List[Tuple[List[int], List[int]]] = []
         current_episode = self._app_service.env.current_episode
         if current_episode.info.get("extra_info") is not None:
@@ -169,16 +170,14 @@ class AppStateRearrangeV2(AppState):
                 object_ids: List[int] = []
                 object_handles = proposition["args"]["object_handles"]
                 for object_handle in object_handles:
-                    obj = sim_utilities.get_obj_from_handle(
-                        self.get_sim(), object_handle
-                    )
+                    obj = sim_utilities.get_obj_from_handle(sim, object_handle)
                     object_id = obj.object_id
                     object_ids.append(object_id)
                 receptacle_ids: List[int] = []
                 receptacle_handles = proposition["args"]["receptacle_handles"]
                 for receptacle_handle in receptacle_handles:
                     obj = sim_utilities.get_obj_from_handle(
-                        self.get_sim(), receptacle_handle
+                        sim, receptacle_handle
                     )
                     object_id = obj.object_id
                     # TODO: Support for finding links by handle.
@@ -270,7 +269,7 @@ class AppStateRearrangeV2(AppState):
 
     def _check_change_episode(self):
         if self._paused or not self._app_service.gui_input.get_key_down(
-            GuiInput.KeyNS.N
+            GuiInput.KeyNS.ZERO
         ):
             return
 
@@ -318,7 +317,7 @@ class AppStateRearrangeV2(AppState):
 
     def record_state(self):
         task_completed = self._app_service.gui_input.get_key_down(
-            GuiInput.KeyNS.N
+            GuiInput.KeyNS.ZERO
         )
         self._data_logger.record_state(task_completed=task_completed)
 

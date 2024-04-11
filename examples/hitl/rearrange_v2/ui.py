@@ -410,37 +410,36 @@ class UI:
     def _draw_goals(self) -> None:
         """Draw goal object-receptacle pairs."""
         # TODO: Cache
-        for i in range(len(self._object_receptacle_pairs)):
-            rigid_ids = self._object_receptacle_pairs[i][0]
-            receptacle_ids = self._object_receptacle_pairs[i][1]
+        sim = self._sim
+        obj_receptacle_pairs = self._object_receptacle_pairs
+        link_id_to_ao_map = self._link_id_to_ao_map
+        dest_mask = self._dest_mask
+        get_obj_from_id = sim_utilities.get_obj_from_id
+        draw_gui_circle = self._gui_drawer.draw_circle
+        draw_gui_aabb = self._draw_aabb
+
+        for i in range(len(obj_receptacle_pairs)):
+            rigid_ids = obj_receptacle_pairs[i][0]
+            receptacle_ids = obj_receptacle_pairs[i][1]
             goal_pair_color = COLOR_GOALS[i % len(COLOR_GOALS)]
             for rigid_id in rigid_ids:
-                managed_object = sim_utilities.get_obj_from_id(
-                    self._sim, rigid_id, self._link_id_to_ao_map
+                managed_object = get_obj_from_id(
+                    sim, rigid_id, link_id_to_ao_map
                 )
                 translation = managed_object.translation
-                self._gui_drawer.draw_circle(
+                draw_gui_circle(
                     translation=translation,
                     radius=0.25,
                     color=goal_pair_color,
                     billboard=True,
-                    destination_mask=self._dest_mask,
+                    destination_mask=dest_mask,
                 )
             for receptacle_id in receptacle_ids:
-                managed_object = sim_utilities.get_obj_from_id(
-                    self._sim, receptacle_id, self._link_id_to_ao_map
+                managed_object = get_obj_from_id(
+                    sim, receptacle_id, link_id_to_ao_map
                 )
-                aabb = None
-                if hasattr(managed_object, "collision_shape_aabb"):
-                    aabb = managed_object.collision_shape_aabb
-                else:
-                    link_index = self._get_link_index(receptacle_id)
-                    if link_index is not None:
-                        link_node = managed_object.get_link_scene_node(
-                            link_index
-                        )
-                        aabb = link_node.cumulative_bb
+                aabb, matrix = sim_utilities.get_bb_for_object_id(
+                    sim, receptacle_id, link_id_to_ao_map
+                )
                 if aabb is not None:
-                    self._draw_aabb(
-                        aabb, managed_object.transformation, goal_pair_color
-                    )
+                    draw_gui_aabb(aabb, matrix, goal_pair_color)
