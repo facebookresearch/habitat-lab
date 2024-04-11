@@ -6,40 +6,47 @@
 
 from typing import Callable, Optional
 
+import magnum as mn
+
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import MouseButton
-import magnum as mn
-
 from habitat_sim.geo import Ray
 from habitat_sim.physics import RayHitInfo
+
 
 class Selection:
     """
     Class that handles selection by tracking a given GuiInput.
     """
+
+    @staticmethod
     def hover_fn(_gui_input: GuiInput) -> bool:
         """Select the object under the cursor every frame."""
         return True
 
+    @staticmethod
     def left_click_fn(_gui_input: GuiInput) -> bool:
         """Select the object under the cursor when left clicking."""
         return _gui_input.get_mouse_button_down(MouseButton.LEFT)
-    
+
+    @staticmethod
     def right_click_fn(_gui_input: GuiInput) -> bool:
         """Select the object under the cursor when right clicking."""
         return _gui_input.get_mouse_button_down(MouseButton.RIGHT)
 
+    @staticmethod
     def default_discriminator(_object_id: int) -> bool:
         """Pick any object ID."""
         return True
 
-    def __init__(self,
-                 simulator: HabitatSim,
-                 gui_input: GuiInput,
-                 selection_fn: Callable[[GuiInput], bool],
-                 object_id_discriminator: Callable[[int], bool] = default_discriminator,
-                 ):
+    def __init__(
+        self,
+        simulator: HabitatSim,
+        gui_input: GuiInput,
+        selection_fn: Callable[[GuiInput], bool],
+        object_id_discriminator: Callable[[int], bool] = default_discriminator,
+    ):
         """
         :param simulator: Simulator that is raycast upon.
         :param gui_input: GuiInput to track.
@@ -61,7 +68,7 @@ class Selection:
     def selected(self) -> bool:
         """Returns true if something is selected."""
         return self._selected
-    
+
     @property
     def object_id(self) -> Optional[int]:
         """Currently selected object ID."""
@@ -70,12 +77,12 @@ class Selection:
     @property
     def point(self) -> Optional[mn.Vector3]:
         """Point of the currently selected location."""
-        return self._point 
+        return self._point
 
     @property
     def normal(self) -> Optional[mn.Vector3]:
         """Normal at the currently selected location."""
-        return self._normal 
+        return self._normal
 
     def deselect(self) -> None:
         """Clear selection."""
@@ -93,7 +100,7 @@ class Selection:
                 if hit_info is None:
                     self.deselect()
                     return
-                
+
                 object_id: int = hit_info.object_id
 
                 if self._discriminator(object_id):
