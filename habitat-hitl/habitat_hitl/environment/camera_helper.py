@@ -10,10 +10,11 @@ import magnum as mn
 import numpy as np
 
 from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import MouseButton
 
 
 class CameraHelper:
-    def __init__(self, hitl_config, gui_input):
+    def __init__(self, hitl_config, gui_input: GuiInput):
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
         self._first_person_mode = hitl_config.camera.first_person_mode
@@ -76,11 +77,13 @@ class CameraHelper:
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        enable_mouse_control = self._gui_input.get_key(GuiInput.KeyNS.R)
+        enable_mouse_control = self._gui_input.get_key(
+            GuiInput.KeyNS.R
+        ) or self._gui_input.get_mouse_button(MouseButton.MIDDLE)
 
         if enable_mouse_control:
             # update yaw and pitch by scale * mouse relative position delta
-            scale = 1 / 50
+            scale = 0.003
             self._lookat_offset_yaw += (
                 scale * self._gui_input.relative_mouse_position[0]
             )
