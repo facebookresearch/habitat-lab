@@ -415,8 +415,6 @@ class UI:
             receptacle_ids = self._object_receptacle_pairs[i][1]
             goal_pair_color = COLOR_GOALS[i % len(COLOR_GOALS)]
             for rigid_id in rigid_ids:
-                if self._hover_selection.object_id == rigid_id:
-                    continue
                 managed_object = sim_utilities.get_obj_from_id(
                     self._sim, rigid_id, self._link_id_to_ao_map
                 )
