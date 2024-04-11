@@ -730,6 +730,36 @@ def get_obj_from_handle(
     return None
 
 
+def get_obj_transform_from_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> mn.Matrix4:
+    """
+    Retrieve the local to global transform of the object or link identified by the object_id.
+
+    :param sim: The Simulator instance.
+    :param obj_id: object id for which ManagedObject is desired.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+
+    :return: a Matrix4 local to global transform or None
+    """
+
+    parent_obj = get_obj_from_id(sim, obj_id, ao_link_map)
+    if parent_obj is None:
+        # invalid object id
+        return None
+
+    if parent_obj.object_id == obj_id:
+        # this is a rigid or articulated object
+        return parent_obj.transformation
+    else:
+        # this is a link
+        return parent_obj.get_link_scene_node(
+            parent_obj.link_object_ids[obj_id]
+        ).transformation
+
+
 def get_global_keypoints_from_bb(
     aabb: mn.Range3D, local_to_global: mn.Matrix4
 ) -> List[mn.Vector3]:
