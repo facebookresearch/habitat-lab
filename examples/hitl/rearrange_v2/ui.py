@@ -5,47 +5,24 @@
 # LICENSE file in the root directory of this source tree.
 
 from datetime import datetime, timedelta
-import os
-from pathlib import Path
-import shutil
-import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat_hitl.core.gui_drawer import GuiDrawer
-from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
-from habitat_hitl.environment.controllers.controller_abc import GuiController
-import hydra
 import magnum as mn
-import numpy as np
 
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentManager,
 )
-from habitat_hitl._internal.networking.average_rate_tracker import (
-    AverageRateTracker,
-)
-from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.client_helper import ClientHelper
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.hitl_main import hitl_main
-from habitat_hitl.core.hydra_utils import register_hydra_plugins
-from habitat_hitl.core.key_mapping import KeyCode, MouseButton
-from habitat_hitl.core.text_drawer import TextOnScreenAlignment
-from habitat_hitl.core.user_mask import Mask, Users
-from habitat_hitl.environment.camera_helper import CameraHelper
-from habitat_hitl.environment.controllers.gui_controller import (
-    GuiHumanoidController,
-    GuiRobotController,
-)
-from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
-from habitat_sim.geo import Ray
-from habitat_sim.physics import ManagedArticulatedObject, RayHitInfo
-from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
-
+from habitat_hitl.core.key_mapping import MouseButton
 from habitat_hitl.core.selection import Selection
+from habitat_hitl.core.user_mask import Mask
+from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.controller_abc import GuiController
+from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim.physics import ManagedArticulatedObject
 
 # Verticality threshold for successful placement.
 MINIMUM_DROP_VERTICALITY: float = 0.9
@@ -68,12 +45,23 @@ COLOR_GOALS: List[mn.Color4] = [
     mn.Color4(_LO, _HI, 0.0, 1.0),  # Orange
 ]
 
+
 class UI:
     """
     User interface for the rearrange_v2 app.
     Each user has their own UI class.
     """
-    def __init__(self, hitl_config, user_index: int, gui_controller: GuiController, sim: RearrangeSim, gui_input: GuiInput, gui_drawer: GuiDrawer, camera_helper: CameraHelper):
+
+    def __init__(
+        self,
+        hitl_config,
+        user_index: int,
+        gui_controller: GuiController,
+        sim: RearrangeSim,
+        gui_input: GuiInput,
+        gui_drawer: GuiDrawer,
+        camera_helper: CameraHelper,
+    ):
         self._user_index = user_index
         self._dest_mask = Mask.from_index(self._user_index)
         self._gui_controller = gui_controller
@@ -97,15 +85,13 @@ class UI:
         # Last time a click was done. Used to track double-clicking.
         self._last_click_time: datetime = datetime.now()
         # Cache of goal object-receptacle pairs.
-        self._paired_goal_ids: List[Tuple[List[int], List[int]]] = []
+        self._object_receptacle_pairs: List[Tuple[List[int], List[int]]] = []
 
         # Selection trackers.
         self._selections: List[Selection] = []
         # Track hovered object.
         self._hover_selection = Selection(
-            self._sim,
-            self._gui_input,
-            Selection.hover_fn
+            self._sim, self._gui_input, Selection.hover_fn
         )
         self._selections.append(self._hover_selection)
         # Track left-clicked object.
@@ -115,30 +101,36 @@ class UI:
             Selection.left_click_fn,
         )
         self._selections.append(self._click_selection)
+
         # Track drop placement.
         def place_selection_fn(gui_input: GuiInput) -> bool:
-            return gui_input.get_mouse_button(MouseButton.RIGHT) or gui_input.get_mouse_button_up(MouseButton.RIGHT)
+            return gui_input.get_mouse_button(
+                MouseButton.RIGHT
+            ) or gui_input.get_mouse_button_up(MouseButton.RIGHT)
+
         self._place_selection = Selection(
             self._sim,
             self._gui_input,
             place_selection_fn,
         )
         self._selections.append(self._place_selection)
-    
-    def reset(self, paired_goal_ids: List[Tuple[List[int], List[int]]]) -> None:
+
+    def reset(
+        self, object_receptacle_pairs: List[Tuple[List[int], List[int]]]
+    ) -> None:
         """
         Reset the UI. Call on simulator reset.
         """
         sim = self._sim
-        
+
         self._held_object_id = None
         self._link_id_to_ao_map = sim_utilities.get_ao_link_id_map(sim)
         self._opened_link_set = set()
-        self._paired_goal_ids = paired_goal_ids
+        self._object_receptacle_pairs = object_receptacle_pairs
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
-                
+
         self._pickable_object_ids = set(sim._scene_obj_ids)
         for pickable_obj_id in self._pickable_object_ids:
             rigid_obj = self._get_rigid_object(pickable_obj_id)
@@ -169,13 +161,16 @@ class UI:
         """
         Handle user actions and update the UI.
         """
+
         def _handle_double_click() -> bool:
             time_since_last_click = datetime.now() - self._last_click_time
-            double_clicking = time_since_last_click < timedelta(seconds=DOUBLE_CLICK_DELAY)
+            double_clicking = time_since_last_click < timedelta(
+                seconds=DOUBLE_CLICK_DELAY
+            )
             if not double_clicking:
                 self._last_click_time = datetime.now()
             return double_clicking
-        
+
         for selection in self._selections:
             selection.update()
 
@@ -193,11 +188,12 @@ class UI:
         if self._gui_input.get_mouse_button_up(MouseButton.RIGHT):
             self._place_object()
             self._place_selection.deselect()
-    
+
     def draw_ui(self) -> None:
         """
         Draw the UI.
         """
+        self._update_held_object_placement()
         self._draw_place_selection()
         self._draw_hovered_interactable()
         self._draw_hovered_pickable()
@@ -205,7 +201,9 @@ class UI:
 
     def _pick_object(self, object_id: int) -> None:
         """Pick the specified object_id. The object must be pickable."""
-        if not self._is_holding_object() and self._is_object_pickable(object_id):
+        if not self._is_holding_object() and self._is_object_pickable(
+            object_id
+        ):
             rigid_object = self._get_rigid_object(object_id)
             if rigid_object is not None:
                 rigid_pos = rigid_object.translation
@@ -214,22 +212,41 @@ class UI:
                     self._held_object_id = object_id
                     self._place_selection.deselect()
 
+    def _update_held_object_placement(self) -> None:
+        """Update the location of the held object."""
+        object_id = self._held_object_id
+        if not object_id:
+            return
+
+        eye_position = self._camera_helper.get_eye_pos()
+        forward_vector = (
+            self._camera_helper.get_lookat_pos()
+            - self._camera_helper.get_eye_pos()
+        ).normalized()
+
+        rigid_object = self._sim.get_rigid_object_manager().get_object_by_id(
+            object_id
+        )
+        rigid_object.translation = eye_position + forward_vector
+
     def _place_object(self) -> None:
         """Place the currently held object."""
         if not self._place_selection.selected:
             return
-        
+
         object_id = self._held_object_id
-        place_point = self._place_selection.point
-        place_normal = self._place_selection.normal
+        point = self._place_selection.point
+        normal = self._place_selection.normal
         if (
-            object_id is not None and
-            object_id != self._place_selection.object_id and
-            self._is_location_suitable_for_placement(place_normal)
+            object_id is not None
+            and object_id != self._place_selection.object_id
+            and self._is_location_suitable_for_placement(point, normal)
         ):
             # Drop the object.
             rigid_object = self._get_rigid_object(object_id)
-            rigid_object.translation = place_point + mn.Vector3(0.0, rigid_object.collision_shape_aabb.size_y() / 2, 0.0)
+            rigid_object.translation = point + mn.Vector3(
+                0.0, rigid_object.collision_shape_aabb.size_y() / 2, 0.0
+            )
             self._held_object_id = None
             self._place_selection.deselect()
 
@@ -251,25 +268,6 @@ class UI:
                     else:
                         sim_utilities.open_link(ao, link_index)
                         self._opened_link_set.add(link_id)
-
-    def _update_held_object_placement(self) -> None:
-        """Update the location of the held object."""
-        object_id = self._held_object_id
-        if not object_id:
-            return
-
-        eye_position = self._camera_helper.get_eye_pos()
-        forward_vector = (
-            self._camera_helper.get_lookat_pos()
-            - self._camera_helper.get_eye_pos()
-        ).normalized()
-
-        rigid_object = (
-            self._sim
-            .get_rigid_object_manager()
-            .get_object_by_id(object_id)
-        )
-        rigid_object.translation = eye_position + forward_vector
 
     def _user_pos(self) -> mn.Vector3:
         """Get the translation of the agent controlled by the user."""
@@ -311,31 +309,33 @@ class UI:
     def _is_object_interactable(self, object_id: int) -> bool:
         """Returns true if the object can be opened or closed."""
         return (
-            object_id is not None and
-            object_id in self._interactable_object_ids and
-            object_id in self._link_id_to_ao_map
+            object_id is not None
+            and object_id in self._interactable_object_ids
+            and object_id in self._link_id_to_ao_map
         )
 
     def _is_holding_object(self) -> bool:
         """Returns true if the user is holding an object."""
         return self._held_object_id is not None
 
-    def _is_within_reach(
-        self, target_pos: mn.Vector3
-    ) -> bool:
+    def _is_within_reach(self, target_pos: mn.Vector3) -> bool:
         """Returns true if the target can be reached by the user."""
         return (
             self._horizontal_distance(self._user_pos(), target_pos)
             < self._can_grasp_place_threshold
         )
 
-    def _is_location_suitable_for_placement(self, point: mn.Vector3, normal: mn.Vector3) -> bool:
+    def _is_location_suitable_for_placement(
+        self, point: mn.Vector3, normal: mn.Vector3
+    ) -> bool:
         """Returns true if the target location is suitable for placement."""
         placement_verticality = mn.math.dot(normal, mn.Vector3(0, 1, 0))
         placement_valid = placement_verticality > MINIMUM_DROP_VERTICALITY
         return placement_valid and self._is_within_reach(point)
-    
-    def _draw_aabb(self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3) -> None:
+
+    def _draw_aabb(
+        self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3
+    ) -> None:
         """Draw an AABB."""
         self._gui_drawer.push_transform(
             transform, destination_mask=self._dest_mask
@@ -346,18 +346,18 @@ class UI:
             color=color,
             destination_mask=self._dest_mask,
         )
-        self._gui_drawer.pop_transform(
-            destination_mask=self._dest_mask
-        )
-    
+        self._gui_drawer.pop_transform(destination_mask=self._dest_mask)
+
     def _draw_place_selection(self) -> None:
         """Draw the object placement selection."""
         if not self._place_selection.selected or self._held_object_id is None:
             return
-        
+
         point = self._place_selection.point
         normal = self._place_selection.normal
-        placement_valid = self._is_location_suitable_for_placement(normal)
+        placement_valid = self._is_location_suitable_for_placement(
+            point, normal
+        )
         color = COLOR_VALID if placement_valid else COLOR_INVALID
         radius = 0.15 if placement_valid else 0.05
         self._gui_drawer.draw_circle(
@@ -373,11 +373,11 @@ class UI:
         """Highlight the hovered interactable object."""
         if not self._hover_selection.selected:
             return
-        
+
         object_id = self._hover_selection.object_id
         if not self._is_object_interactable(object_id):
             return
-        
+
         link_index = self._get_link_index(object_id)
         if link_index:
             ao = sim_utilities.get_obj_from_id(
@@ -385,8 +385,7 @@ class UI:
             )
             link_node = ao.get_link_scene_node(link_index)
             aabb = link_node.cumulative_bb
-            reachable = self._is_within_reach(link_node.translation
-            )
+            reachable = self._is_within_reach(link_node.translation)
             color = COLOR_VALID if reachable else COLOR_INVALID
             self._draw_aabb(aabb, link_node.transformation, color)
 
@@ -394,11 +393,11 @@ class UI:
         """Highlight the hovered pickable object."""
         if not self._hover_selection.selected or self._is_holding_object():
             return
-        
+
         object_id = self._hover_selection.object_id
         if not self._is_object_pickable(object_id):
             return
-        
+
         managed_object = sim_utilities.get_obj_from_id(
             self._sim, object_id, self._link_id_to_ao_map
         )
@@ -411,9 +410,9 @@ class UI:
     def _draw_goals(self) -> None:
         """Draw goal object-receptacle pairs."""
         # TODO: Cache
-        for i in range(len(self._paired_goal_ids)):
-            rigid_ids = self._paired_goal_ids[i][0]
-            receptacle_ids = self._paired_goal_ids[i][1]
+        for i in range(len(self._object_receptacle_pairs)):
+            rigid_ids = self._object_receptacle_pairs[i][0]
+            receptacle_ids = self._object_receptacle_pairs[i][1]
             goal_pair_color = COLOR_GOALS[i % len(COLOR_GOALS)]
             for rigid_id in rigid_ids:
                 if self._hover_selection.object_id == rigid_id:
@@ -444,4 +443,6 @@ class UI:
                         )
                         aabb = link_node.cumulative_bb
                 if aabb is not None:
-                    self._draw_aabb(aabb, managed_object.transformation, goal_pair_color)
+                    self._draw_aabb(
+                        aabb, managed_object.transformation, goal_pair_color
+                    )

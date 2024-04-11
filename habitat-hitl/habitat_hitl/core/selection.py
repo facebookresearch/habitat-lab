@@ -20,23 +20,19 @@ class Selection:
     Class that handles selection by tracking a given GuiInput.
     """
 
-    @staticmethod
-    def hover_fn(_gui_input: GuiInput) -> bool:
+    def hover_fn(_gui_input: GuiInput) -> bool:  # type: ignore
         """Select the object under the cursor every frame."""
         return True
 
-    @staticmethod
-    def left_click_fn(_gui_input: GuiInput) -> bool:
+    def left_click_fn(_gui_input: GuiInput) -> bool:  # type: ignore
         """Select the object under the cursor when left clicking."""
         return _gui_input.get_mouse_button_down(MouseButton.LEFT)
 
-    @staticmethod
-    def right_click_fn(_gui_input: GuiInput) -> bool:
+    def right_click_fn(_gui_input: GuiInput) -> bool:  # type: ignore
         """Select the object under the cursor when right clicking."""
         return _gui_input.get_mouse_button_down(MouseButton.RIGHT)
 
-    @staticmethod
-    def default_discriminator(_object_id: int) -> bool:
+    def default_discriminator(_object_id: int) -> bool:  # type: ignore
         """Pick any object ID."""
         return True
 
