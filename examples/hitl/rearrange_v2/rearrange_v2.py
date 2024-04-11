@@ -405,8 +405,8 @@ class AppStateRearrangeV2(AppState):
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
-    def is_user_idle_this_frame(self):
-        return not self._app_service.gui_input.get_any_key_down()
+    def is_user_idle_this_frame(self) -> bool:
+        return not self._app_service.gui_input.get_any_input()
 
     def _check_change_episode(self):
         if self._paused or not self._app_service.gui_input.get_key_down(

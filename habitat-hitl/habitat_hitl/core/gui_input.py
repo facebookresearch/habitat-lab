@@ -40,6 +40,15 @@ class GuiInput:
     def get_any_key_down(self):
         return len(self._key_down) > 0
 
+    def get_any_input(self) -> bool:
+        """Returns true if any input is active."""
+        return (
+            len(self._key_down) > 0
+            or len(self._key_up) > 0
+            or len(self._mouse_button_down) > 0
+            or len(self._mouse_button_up) > 0
+        )
+
     def get_key_down(self, key):
         GuiInput.validate_key(key)
         return key in self._key_down
