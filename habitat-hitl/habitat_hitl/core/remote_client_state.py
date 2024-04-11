@@ -15,6 +15,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
+from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
@@ -44,6 +45,9 @@ class RemoteClientState:
         self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
 
+        self._on_client_connected = Event()
+        self._on_client_disconnected = Event()
+
         # Create one GuiInput per user to be controlled by remote clients.
         self._gui_inputs: List[GuiInput] = []
         for _ in users.indices(Mask.ALL):
@@ -56,6 +60,14 @@ class RemoteClientState:
             2: GuiInput.KeyNS.TWO,
             3: GuiInput.KeyNS.THREE,
         }
+
+    @property
+    def on_client_connected(self) -> Event:
+        return self._on_client_connected
+
+    @property
+    def on_client_disconnected(self) -> Event:
+        return self._on_client_disconnected
 
     def get_gui_input(self, user_index: int = 0) -> GuiInput:
         """Get the GuiInput for a specified user index."""
@@ -276,7 +288,7 @@ class RemoteClientState:
                     continue
                 gui_input._mouse_button_held.add(MouseButton(button))
 
-    def debug_visualize_client(self) -> None:
+    def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         if not self._gui_drawer:
             return
@@ -383,6 +395,14 @@ class RemoteClientState:
         self._new_connection_records = (
             self._interprocess_record.get_queued_connection_records()
         )
+        new_disconnection_records = (
+            self._interprocess_record.get_queued_disconnection_records()
+        )
+
+        for record in self._new_connection_records:
+            self._on_client_connected.invoke(record)
+        for record in new_disconnection_records:
+            self._on_client_disconnected.invoke(record)
 
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
@@ -401,7 +421,7 @@ class RemoteClientState:
             if len(self._recent_client_states) > self.get_history_length():
                 self._recent_client_states.pop(0)
 
-        self.debug_visualize_client()
+        self._debug_visualize_client()
 
     def get_new_connection_records(self) -> List[ConnectionRecord]:
         return self._new_connection_records

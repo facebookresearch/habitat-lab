@@ -22,6 +22,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
@@ -138,6 +139,21 @@ class AppStateRearrangeV2(AppState):
 
         self._task_instruction = ""
         self._data_logger = DataLogger(app_service=self._app_service)
+
+        if self._app_service.hitl_config.networking.enable:
+            self._app_service.remote_client_state.on_client_connected.registerCallback(
+                self._on_client_connected
+            )
+            self._app_service.remote_client_state.on_client_disconnected.registerCallback(
+                self._on_client_disconnected
+            )
+            self._paused = True
+
+    def _on_client_connected(self, connection: ConnectionRecord):
+        self._paused = False
+
+    def _on_client_disconnected(self, disconnection: DisconnectionRecord):
+        self._paused = True
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
