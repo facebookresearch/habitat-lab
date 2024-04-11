@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, List, Tuple
 
 import hydra
 import magnum as mn
@@ -30,10 +30,6 @@ from habitat_hitl.environment.controllers.gui_controller import (
 )
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
-
-ENABLE_ARTICULATED_OPEN_CLOSE = False
-# Visually snap picked objects into the humanoid's hand. May be useful in third-person mode. Beware that this conflicts with GuiPlacementHelper.
-DO_HUMANOID_GRASP_OBJECTS = False
 
 
 class DataLogger:
@@ -107,15 +103,10 @@ class AppStateRearrangeV2(AppState):
         )
 
         self._sim = app_service.sim
-        self._ao_root_bbs: Dict = None
-        self._opened_ao_set: Set = set()
-
         self._cam_transform = None
         self._camera_user_index = 0
-        self._recent_reach_pos = None
         self._paused = False
         self._show_gui_text = True
-        self._can_place_object = False
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config,
@@ -125,7 +116,6 @@ class AppStateRearrangeV2(AppState):
         if self._app_service.hitl_config.networking.enable:
             self._client_helper = ClientHelper(self._app_service)
 
-        self._frame_counter = 0
         self._sps_tracker = AverageRateTracker(2.0)
 
         self._task_instruction = ""
@@ -146,21 +136,6 @@ class AppStateRearrangeV2(AppState):
     def get_sim_utilities() -> Any:
         return sim_utilities
 
-    def _remap_key(self, user_index, key):
-        key_remap = {
-            GuiInput.KeyNS.SPACE: GuiInput.KeyNS.N,
-            GuiInput.KeyNS.Z: GuiInput.KeyNS.X,
-        }
-        if user_index == 1:
-            assert key in key_remap
-            key = key_remap[key]
-        return key
-
-    def _get_user_key_down(self, user_index, key):
-        return self._app_service.gui_input.get_key_down(
-            self._remap_key(user_index, key)
-        )
-
     def on_environment_reset(self, episode_recorder_dict):
         object_receptacle_pairs = self._create_goal_object_receptacle_pairs()
         self._ui.reset(object_receptacle_pairs)
@@ -180,11 +155,6 @@ class AppStateRearrangeV2(AppState):
 
     def get_sim(self):
         return self._app_service.sim
-
-    def _get_gui_agent_translation(self, user_index):
-        return get_agent_art_obj_transform(
-            self.get_sim(), self.get_gui_controlled_agent_index(user_index)
-        ).translation
 
     def _create_goal_object_receptacle_pairs(
         self,
