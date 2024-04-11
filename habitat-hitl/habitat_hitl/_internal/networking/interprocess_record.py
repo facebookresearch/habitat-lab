@@ -11,6 +11,7 @@ from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
     DataDict,
+    DisconnectionRecord,
     Keyframe,
 )
 
@@ -25,6 +26,7 @@ class InterprocessRecord:
         self._keyframe_queue: Queue[Keyframe] = Queue()
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
+        self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
 
     def send_keyframe_to_networking_thread(self, keyframe: Keyframe) -> None:
         """Send a keyframe (outgoing data) to the networking thread."""
@@ -44,6 +46,13 @@ class InterprocessRecord:
         assert "connectionId" in connection_record
         assert "isClientReady" in connection_record
         self._connection_record_queue.put(connection_record)
+
+    def send_disconnection_record_to_main_thread(
+        self, disconnection_record: DisconnectionRecord
+    ) -> None:
+        """Send a disconnection record to the main thread."""
+        assert "connectionId" in disconnection_record
+        self._disconnection_record_queue.put(disconnection_record)
 
     def get_single_queued_keyframe(self) -> Optional[Keyframe]:
         """Dequeue one keyframe."""
@@ -75,3 +84,7 @@ class InterprocessRecord:
     def get_queued_connection_records(self) -> List[ConnectionRecord]:
         """Dequeue all connection records."""
         return self._dequeue_all(self._connection_record_queue)
+
+    def get_queued_disconnection_records(self) -> List[DisconnectionRecord]:
+        """Dequeue all disconnection records."""
+        return self._dequeue_all(self._disconnection_record_queue)
