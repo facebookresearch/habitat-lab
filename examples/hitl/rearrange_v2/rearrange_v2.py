@@ -114,7 +114,7 @@ class AppStateRearrangeV2(AppState):
         self._camera_user_index = 0
         self._recent_reach_pos = None
         self._paused = False
-        self._hide_gui_text = False
+        self._show_gui_text = True
         self._can_place_object = False
 
         self._camera_helper = CameraHelper(
@@ -235,18 +235,21 @@ class AppStateRearrangeV2(AppState):
         return self._gui_agent_controllers[user_index]._agent_idx
 
     def _get_controls_text(self):
-        # TODO: Get controls from UI.
-        controls_str: str = ""
-        if not self._hide_gui_text:
-            controls_str += "H: show/hide help text\n"
-            controls_str += "P: pause\n"
-            controls_str += "I, K: look up, down\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W/F, S/V: walk\n"
-            controls_str += "N: next episode\n"
-            if ENABLE_ARTICULATED_OPEN_CLOSE:
-                controls_str += "Z/X: open/close receptacle\n"
+        if self._paused:
+            return "Session ended."
 
+        if not self._show_gui_text:
+            return ""
+
+        controls_str: str = ""
+        controls_str += "H: Toggle help\n"
+        controls_str += "Look: Middle click (drag), I, K\n"
+        controls_str += "Walk: W, S\n"
+        controls_str += "Turn: A, D\n"
+        controls_str += "Finish episode: Zero (0)\n"
+        controls_str += "Open/close: Double-click\n"
+        controls_str += "Pick object: Double-click\n"
+        controls_str += "Place object: Right click (hold)\n"
         return controls_str
 
     def _get_status_text(self):
@@ -254,8 +257,6 @@ class AppStateRearrangeV2(AppState):
 
         if len(self._task_instruction) > 0:
             status_str += "\nInstruction: " + self._task_instruction + "\n"
-        if self._paused:
-            status_str += "\n\npaused\n"
         if (
             self._client_helper
             and self._client_helper.do_show_idle_kick_warning
@@ -320,17 +321,14 @@ class AppStateRearrangeV2(AppState):
                 self._sps_tracker.get_smoothed_rate(),
             )
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
-            self._paused = not self._paused
-
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
-            self._hide_gui_text = not self._hide_gui_text
+            self._show_gui_text = not self._show_gui_text
 
         self._check_change_episode()
 
         if not self._paused:
-            self._ui.update()
             for user_index in range(self._num_users):
+                self._ui.update()  # TODO: One UI per user.
                 self._update_grasping_and_set_act_hints(user_index)
             self._app_service.compute_action_and_step_env()
         else:
@@ -342,7 +340,7 @@ class AppStateRearrangeV2(AppState):
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
-        self._ui.draw_ui()
+        self._ui.draw_ui()  # TODO: One UI per user.
         self._update_help_text()
 
     def record_state(self):
