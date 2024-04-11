@@ -223,10 +223,13 @@ class AppStateRearrangeV2(AppState):
         return controls_str
 
     def _get_status_text(self):
+        if self._paused:
+            return ""
+
         status_str = ""
 
         if len(self._task_instruction) > 0:
-            status_str += "\nInstruction: " + self._task_instruction + "\n"
+            status_str += "Instruction: " + self._task_instruction + "\n"
         if (
             self._client_helper
             and self._client_helper.do_show_idle_kick_warning
@@ -238,12 +241,6 @@ class AppStateRearrangeV2(AppState):
         return status_str
 
     def _update_help_text(self):
-        controls_str = self._get_controls_text()
-        if len(controls_str) > 0:
-            self._app_service.text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
-            )
-
         status_str = self._get_status_text()
         if len(status_str) > 0:
             self._app_service.text_drawer.add_text(
@@ -251,6 +248,12 @@ class AppStateRearrangeV2(AppState):
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,
                 text_delta_y=-50,
+            )
+
+        controls_str = self._get_controls_text()
+        if len(controls_str) > 0:
+            self._app_service.text_drawer.add_text(
+                controls_str, TextOnScreenAlignment.TOP_LEFT
             )
 
     def _get_camera_lookat_pos(self):
