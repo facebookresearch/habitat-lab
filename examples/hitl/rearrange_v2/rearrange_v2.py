@@ -23,6 +23,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
@@ -130,6 +131,21 @@ class AppStateRearrangeV2(AppState):
             gui_drawer=app_service.gui_drawer,
             camera_helper=self._camera_helper,
         )
+
+        if self._app_service.hitl_config.networking.enable:
+            self._app_service.remote_client_state.on_client_connected.registerCallback(
+                self._on_client_connected
+            )
+            self._app_service.remote_client_state.on_client_disconnected.registerCallback(
+                self._on_client_disconnected
+            )
+            self._paused = True
+
+    def _on_client_connected(self, connection: ConnectionRecord):
+        self._paused = False
+
+    def _on_client_disconnected(self, disconnection: DisconnectionRecord):
+        self._paused = True
 
     # needed to avoid spurious mypy attr-defined errors
     @staticmethod
@@ -264,8 +280,8 @@ class AppStateRearrangeV2(AppState):
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
-    def is_user_idle_this_frame(self):
-        return not self._app_service.gui_input.get_any_key_down()
+    def is_user_idle_this_frame(self) -> bool:
+        return not self._app_service.gui_input.get_any_input()
 
     def _check_change_episode(self):
         if self._paused or not self._app_service.gui_input.get_key_down(
