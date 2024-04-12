@@ -9,6 +9,20 @@ from habitat_hitl.core.user_mask import Mask, Users
 
 
 def test_hitl_user_mask():
+    zero_users = Users(0)
+    assert zero_users.max_user_count == 0
+    assert len(zero_users.to_index_list(Mask.ALL)) == 0
+    assert len(zero_users.to_index_list(Mask.NONE)) == 0
+    user_indices = zero_users.to_index_list(
+        Mask.from_index(0) | Mask.from_index(1)
+    )
+    assert 0 not in user_indices
+    assert 1 not in user_indices
+    user_indices = zero_users.to_index_list(
+        Mask.all_except_index(0)
+    )
+    assert 0 not in user_indices
+
     four_users = Users(4)
     assert four_users.max_user_count == 4
     assert len(four_users.to_index_list(Mask.ALL)) == 4

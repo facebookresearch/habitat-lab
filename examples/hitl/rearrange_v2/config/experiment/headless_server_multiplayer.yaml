@@ -1,0 +1,13 @@
+# @package _global_
+
+habitat_hitl:
+  window: ~
+  networking:
+    enable: True
+    max_client_count: 2
+    http_availability_server:
+      enable: True
+    client_max_idle_duration: 30.0
+  experimental:
+    headless:
+      do_headless: True

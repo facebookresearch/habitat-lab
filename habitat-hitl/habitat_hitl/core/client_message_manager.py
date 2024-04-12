@@ -6,6 +6,7 @@
 
 from typing import Any, Dict, Final, List, Optional, Union
 
+from habitat_hitl.core.types import Message
 import magnum as mn
 
 from habitat_hitl.core.user_mask import Mask, Users
@@ -18,7 +19,6 @@ class ClientMessageManager:
     Extends gfx-replay keyframes to include server messages to be interpreted by the clients.
     Unlike keyframes, messages are client-specific.
     """
-    Message = Dict[str, Any]
     _messages: List[Message]
     _users: Users
 

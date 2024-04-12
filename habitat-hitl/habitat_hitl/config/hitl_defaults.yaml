@@ -20,6 +20,9 @@ habitat_hitl:
     # When enabled, we run a websocket server that connects to remote clients. A HITL app with networking enabled is an "HITL server". See pick_throw_vr example app.
     enable: False
 
+    # Number of accepted concurrent clients (multiplayer if higher than one). All connections beyond this count will be rejected. Beware that this can be greater than the agent count.
+    max_client_count: 1
+
     # We'll listen for incoming client connections at this port.
     port: 8888
 

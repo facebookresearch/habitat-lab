@@ -14,6 +14,7 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
+from habitat_hitl.core.types import KeyframeAndMessages
 import magnum as mn
 import numpy as np
 
@@ -171,8 +172,7 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        # TODO: Only one user is currently supported.
-        users = Users(1)
+        users = Users(self._hitl_config.networking.max_client_count)
 
         self._client_message_manager = None
         if self.network_server_enabled:
@@ -230,7 +230,10 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.networking.enable
+        return (
+            self._hitl_config.networking.enable
+            and self._hitl_config.networking.max_client_count > 0
+        )
 
     def _check_init_server(
         self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
@@ -476,7 +479,7 @@ class HitlDriver(AppDriver):
             ] = self._pending_cursor_style
             self._pending_cursor_style = None
 
-        keyframes = (
+        keyframes: List[str] = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
@@ -534,25 +537,27 @@ class HitlDriver(AppDriver):
                         cam_transform
                     )
 
-            for keyframe_json in keyframes:
-                obj = json.loads(keyframe_json)
-                assert "keyframe" in obj
-                keyframe_obj = obj["keyframe"]
-                # Remove rigs from keyframe if skinning is disabled
-                if not self._hitl_config.networking.client_sync.skinning:
-                    if "rigCreations" in keyframe_obj:
-                        del keyframe_obj["rigCreations"]
-                    if "rigUpdates" in keyframe_obj:
-                        del keyframe_obj["rigUpdates"]
-                # Insert server->client message into the keyframe
-                # TODO: Only one user is currently supported.
-                message = self._client_message_manager.get_messages()[0]
-                if len(message) > 0:
-                    keyframe_obj["message"] = message
-                    self._client_message_manager.clear_messages()
-                # Send the keyframe
-                self._interprocess_record.send_keyframe_to_networking_thread(
-                    keyframe_obj
-                )
+                self._send_keyframes(keyframes)
 
         return post_sim_update_dict
+
+    def _send_keyframes(self, keyframes_json: List[str]):
+        assert(self.network_server_enabled)
+        for keyframe_json in keyframes_json:
+            obj = json.loads(keyframe_json)
+            assert "keyframe" in obj
+            keyframe_obj = obj["keyframe"]
+            # Remove rigs from keyframe if skinning is disabled
+            # TODO: Per-user.
+            if not self._hitl_config.networking.client_sync.skinning:
+                if "rigCreations" in keyframe_obj:
+                    del keyframe_obj["rigCreations"]
+                if "rigUpdates" in keyframe_obj:
+                    del keyframe_obj["rigUpdates"]
+            # Insert server->client message into the keyframe
+            messages = self._client_message_manager.get_messages()
+            self._client_message_manager.clear_messages()
+            # Send the keyframe
+            self._interprocess_record.send_keyframe_to_networking_thread(
+                KeyframeAndMessages(keyframe_obj, messages)
+            )
