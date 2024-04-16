@@ -18,6 +18,9 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
+from habitat.tasks.rearrange.sub_tasks.place_sensors import (
+    ObjectToTargetOrientationDistance,
+)
 from habitat.tasks.rearrange.utils import (
     get_camera_lookat_relative_to_vertial_line,
     rearrange_logger,
@@ -94,6 +97,14 @@ class RearrangePickReward(RearrangeReward):
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
+
+        # Consider ee pose
+        if self._config.consider_ee_pose:
+            target_orientation_distance = task.measurements.measures[
+                ObjectToTargetOrientationDistance.cls_uuid
+            ].get_metric()
+            for keys in ee_to_object_distance:
+                ee_to_object_distance[keys] += target_orientation_distance
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
@@ -233,6 +244,13 @@ class RearrangePickSuccess(Measure):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
+        # if we consider ee pose
+        target_orientation_distance = -float("inf")
+        if self._config.ee_pose_threshold != -1.0:
+            target_orientation_distance = task.measurements.measures[
+                ObjectToTargetOrientationDistance.cls_uuid
+            ].get_metric()
+
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
@@ -241,6 +259,7 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
+            and target_orientation_distance < self._config.ee_pose_threshold
             and (
                 ee_to_rest_distance < self._config.ee_resting_success_threshold
                 or self._config.ee_resting_success_threshold == -1.0

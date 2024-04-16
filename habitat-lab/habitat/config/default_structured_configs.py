@@ -1322,6 +1322,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     non_desire_ee_local_pos: Optional[List[float]] = None
     camera_looking_down_angle: float = -1.0
     camera_looking_down_pen: float = 1.0
+    # For semantic pick skill
+    consider_ee_pose: bool = False
 
 
 @dataclass
@@ -1333,6 +1335,7 @@ class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
+    ee_pose_threshold: float = -1.0
 
 
 @dataclass
@@ -1659,6 +1662,10 @@ class TaskConfig(HabitatBaseConfig):
     # The format is [x_min, y_min, x_max, y_max]
     rectangle_spawn_region: Optional[List[float]] = None
     object_target_noise: float = 0.0  # target place/pick object location noise, only for the obj_goal_sensor
+    # For semantic pick skills
+    semantic_pick_training: bool = False
+    # For semantic pick skills's arm pose
+    semantic_pick_target_arm_pose: Optional[List[float]] = None
 
 
 @dataclass
