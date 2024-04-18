@@ -11,6 +11,7 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 
 
 class RelationshipGraph:
@@ -152,6 +153,45 @@ class KinematicRelationshipManager:
         self.prev_root_obj_state: Dict[int, mn.Matrix4] = None
         # note: this must be updated when new AOs are added or objects are removed and object ids could be recycled.
         self.ao_link_map = sutils.get_ao_link_id_map(self.sim)
+
+    def initialize_from_obj_to_rec_pairs(
+        self, obj_to_rec: Dict[str, str], receptacles: List[Receptacle]
+    ) -> None:
+        """
+        Initialize the RelationshipGraph from object to receptacle mappings as found in a RearrangeEpisode.
+
+        :param obj_to_rec: Map from object instance names to Receptacle unique names.
+        :param receptacles: A list of active Receptacle objects.
+        """
+
+        self.relationship_graph = RelationshipGraph()
+
+        # construct a Dict of Receptacle unique_name to Receptacle object
+        unique_name_to_rec = {rec.unique_name: rec for rec in receptacles}
+
+        # construct the parent relations
+        for obj_handle, rec_unique_name in obj_to_rec.items():
+            obj = sutils.get_obj_from_handle(self.sim, obj_handle)
+            assert (
+                obj is not None
+            ), f"Object with handle '{obj_handle}' could not be found in the scene. Has the Episode been initialized?"
+            rec = unique_name_to_rec[rec_unique_name]
+            parent_obj = sutils.get_obj_from_handle(
+                self.sim, rec.parent_object_handle
+            )
+            parent_id = parent_obj.object_id
+            if rec.parent_link >= 0:
+                # this is a link, get the object id
+                link_ids_to_object_ids = dict(
+                    (v, k) for k, v in parent_obj.link_object_ids.items()
+                )
+                parent_id = link_ids_to_object_ids[rec.parent_link]
+            self.relationship_graph.add_relation(
+                parent_id, obj.object_id, "ontop"
+            )
+
+        self.prev_snapshot = self.get_relations_snapshot()
+        self.prev_root_obj_state = self.get_root_parents_snapshot()
 
     def initialize_relationship_graph(self) -> None:
         """
