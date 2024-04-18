@@ -567,9 +567,7 @@ def test_ao_open_close_queries():
         new_default_link = sutils.get_ao_default_link(
             new_fridge, compute_if_not_found=True
         )
-        print(
-            f" new_default_link (== {new_default_link}) should be 0, waiting on sim bug fix."
-        )
+
         # "default_link" should get copied over after instantiation if set in the template programmatically.
         assert new_default_link == 0
 
