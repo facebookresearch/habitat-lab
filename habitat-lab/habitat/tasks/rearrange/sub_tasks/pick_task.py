@@ -152,6 +152,8 @@ class RearrangePickTaskV1(RearrangeTask):
         # Set the arm to the target pose, and the revert it
         if self._config.semantic_pick_training:
             self._set_arm_to_target_pose()
+        if self._config.topdown_side_training:
+            self.grasping_type = np.random.choice(["topdown", "side"])
 
         if fetch_observations:
             self._sim.maybe_update_articulated_agent()

@@ -63,6 +63,7 @@ __all__ = [
     "RelativeRestingPositionSensorConfig",
     "RelativeInitialEEOrientationSensorConfig",
     "RelativeTargetObjectOrientationSensorConfig",
+    "TopDownOrSideGraspingSensorConfig",
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
@@ -626,6 +627,14 @@ class RelativeTargetObjectOrientationSensorConfig(LabSensorConfig):
 
     type: str = "RelativeTargetObjectOrientationSensor"
     offset_yaw: bool = False
+
+
+@dataclass
+class TopDownOrSideGraspingSensorConfig(LabSensorConfig):
+    r"""
+    Sensor for computing the top down or side grasping action.
+    """
+    type: str = "TopDownOrSideGraspingSensor"
 
 
 @dataclass
@@ -1324,6 +1333,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     camera_looking_down_pen: float = 1.0
     # For semantic pick skill
     consider_ee_pose: bool = False
+    ee_pose_threshold: float = -1.0
 
 
 @dataclass
@@ -1664,6 +1674,7 @@ class TaskConfig(HabitatBaseConfig):
     object_target_noise: float = 0.0  # target place/pick object location noise, only for the obj_goal_sensor
     # For semantic pick skills
     semantic_pick_training: bool = False
+    topdown_side_training: bool = False
     # For semantic pick skills's arm pose
     semantic_pick_target_arm_pose: Optional[List[float]] = None
 
@@ -2533,6 +2544,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="relative_target_object_orientation_sensor",
     node=RelativeTargetObjectOrientationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.topdown_or_side_grasping_sensor",
+    group="habitat/task/lab_sensors",
+    name="topdown_or_side_grasping_sensor",
+    node=TopDownOrSideGraspingSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.instruction_sensor",

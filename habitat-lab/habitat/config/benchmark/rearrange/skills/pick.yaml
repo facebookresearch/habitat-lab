@@ -15,7 +15,6 @@ defaults:
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
-    - object_to_target_orientation_distance
     - did_pick_object
     - pick_success
     - pick_reward

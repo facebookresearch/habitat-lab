@@ -566,6 +566,51 @@ class RelativeTargetObjectOrientationSensor(
 
 
 @registry.register_sensor
+class TopDownOrSideGraspingSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "topdown_or_side_grasping"
+
+    def _get_uuid(self, *args, **kwargs):
+        return TopDownOrSideGraspingSensor.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        # Get the current agent
+        agent = self._sim.get_agent_data(self.agent_id).articulated_agent
+        ee_T = agent.ee_transform()
+        base_T = agent.base_transformation
+        base_to_ee_T = base_T.inverted() @ ee_T
+        # Get the target vector
+        if task.grasping_type == "topdown":
+            target_vector = np.array([1.0, 0, 0])
+        elif task.grasping_type == "side":
+            target_vector = np.array([0, 0, 1.0])
+        else:
+            raise ValueError(f"Unknown grasping type {task.grasping_type}")
+        # Compute the delta
+        dir_vector = np.array(base_to_ee_T.transform_vector(target_vector))
+        # Get the abs value of delta
+        delta = abs(dir_vector[2])
+        return np.array(
+            [delta],
+            dtype=np.float32,
+        )
+
+
+@registry.register_sensor
 class RestingPositionSensor(Sensor):
     """
     Desired resting position in the articulated_agent coordinate frame.

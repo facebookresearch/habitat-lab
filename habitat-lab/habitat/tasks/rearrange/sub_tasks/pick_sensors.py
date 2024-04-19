@@ -18,9 +18,6 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.sub_tasks.place_sensors import (
-    ObjectToTargetOrientationDistance,
-)
 from habitat.tasks.rearrange.utils import (
     get_camera_lookat_relative_to_vertial_line,
     rearrange_logger,
@@ -100,9 +97,9 @@ class RearrangePickReward(RearrangeReward):
 
         # Consider ee pose
         if self._config.consider_ee_pose:
-            target_orientation_distance = task.measurements.measures[
-                ObjectToTargetOrientationDistance.cls_uuid
-            ].get_metric()
+            target_orientation_distance = float(
+                observations["topdown_or_side_grasping"]
+            )
             for keys in ee_to_object_distance:
                 ee_to_object_distance[keys] += target_orientation_distance
 
@@ -119,10 +116,27 @@ class RearrangePickReward(RearrangeReward):
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
-                self._metric += self._config.pick_reward
-                # If we just transitioned to the next stage our current
-                # distance is stale.
-                self.cur_dist = -1
+                # Did pick the correct object and the pose is correct
+                if self._config.consider_ee_pose:
+                    # The pick success
+                    if (
+                        target_orientation_distance
+                        < self._config.ee_pose_threshold
+                    ):
+                        self._metric += self._config.pick_reward
+                        self.cur_dist = -1
+                    else:
+                        # No a correct pose when pick
+                        self._metric -= self._config.wrong_pick_pen
+                        self._task.should_end = True
+                        self._prev_picked = cur_picked
+                        self.cur_dist = -1
+                        return
+                else:
+                    self._metric += self._config.pick_reward
+                    # If we just transitioned to the next stage our current
+                    # distance is stale.
+                    self.cur_dist = -1
             else:
                 # picked the wrong object
                 self._metric -= self._config.wrong_pick_pen
@@ -247,9 +261,9 @@ class RearrangePickSuccess(Measure):
         # if we consider ee pose
         target_orientation_distance = -float("inf")
         if self._config.ee_pose_threshold != -1.0:
-            target_orientation_distance = task.measurements.measures[
-                ObjectToTargetOrientationDistance.cls_uuid
-            ].get_metric()
+            target_orientation_distance = observations[
+                "topdown_or_side_grasping"
+            ]
 
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
