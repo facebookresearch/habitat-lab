@@ -279,4 +279,4 @@ def door_samples(pathfinder, config, scene_handle) -> List:
         cv2.circle(top_down_map, [i, j], 4, (0, 255, 0), -1)  #green points
     cv2.imwrite(f"test_door_images/top_down_map_{file_name}_generator.jpg", top_down_map)
     
-    return [start_sample, goal_sample, robot_start_sample, robot_goal_sample]
+    return [start_sample, goal_sample, robot_start_sample, robot_goal_sample, door1_pos, door2_pos]
