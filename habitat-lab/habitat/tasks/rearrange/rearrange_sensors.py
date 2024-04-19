@@ -593,15 +593,15 @@ class TopDownOrSideGraspingSensor(UsesArticulatedAgentInterface, Sensor):
         ee_T = agent.ee_transform()
         base_T = agent.base_transformation
         base_to_ee_T = base_T.inverted() @ ee_T
+        target_vector = np.array([0, 0, 1.0])
+        dir_vector = np.array(base_to_ee_T.transform_vector(target_vector))
         # Get the target vector
         if task.grasping_type == "topdown":
-            target_vector = np.array([1.0, 0, 0])
+            delta = 1.0 - abs(dir_vector[2])
         elif task.grasping_type == "side":
-            target_vector = np.array([0, 0, 1.0])
+            delta = abs(dir_vector[2])
         else:
             raise ValueError(f"Unknown grasping type {task.grasping_type}")
-        # Compute the delta
-        dir_vector = np.array(base_to_ee_T.transform_vector(target_vector))
         # Get the abs value of delta
         delta = abs(dir_vector[2])
         return np.array(
