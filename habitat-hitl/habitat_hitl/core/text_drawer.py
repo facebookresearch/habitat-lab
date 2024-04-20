@@ -13,6 +13,7 @@ from typing import List, Tuple
 import magnum as mn
 
 from habitat_hitl.core.client_message_manager import ClientMessageManager
+from habitat_hitl.core.user_mask import Mask
 
 use_headless_text_drawer = False
 try:
@@ -61,6 +62,7 @@ class AbstractTextDrawer(ABC):
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
+        destination_mask: Mask = Mask.ALL,
     ):
         """
         Draw text on-screen.
@@ -80,11 +82,12 @@ class HeadlessTextDrawer(AbstractTextDrawer):
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
+        destination_mask: Mask = Mask.ALL,
     ):
         if self._client_message_manager:
             align_y, align_x = alignment.value
             self._client_message_manager.add_text(
-                text_to_add, [align_x, align_y]
+                text_to_add, [align_x, align_y], destination_mask
             )
 
 
@@ -144,6 +147,7 @@ if not use_headless_text_drawer:
             alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
             text_delta_x: int = 0,
             text_delta_y: int = 0,
+            destination_mask: Mask = Mask.ALL,
         ):
             """
             Adds `text_to_add` and corresponding window text transform to `self._text_transform_pairs`.
@@ -169,7 +173,7 @@ if not use_headless_text_drawer:
 
             if self._client_message_manager:
                 self._client_message_manager.add_text(
-                    text_to_add, [align_x, align_y]
+                    text_to_add, [align_x, align_y], destination_mask
                 )
 
         def draw_text(self):

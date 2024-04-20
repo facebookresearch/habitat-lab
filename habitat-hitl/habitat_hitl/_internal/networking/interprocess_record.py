@@ -5,14 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 from multiprocessing import Queue
-from typing import List, Optional
+from typing import Any, List
 
 from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
-    DataDict,
     DisconnectionRecord,
-    Keyframe,
+    KeyframeAndMessages,
 )
 
 
@@ -23,12 +22,14 @@ class InterprocessRecord:
 
     def __init__(self, networking_config) -> None:
         self._networking_config = networking_config
-        self._keyframe_queue: Queue[Keyframe] = Queue()
+        self._keyframe_queue: Queue[KeyframeAndMessages] = Queue()
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
 
-    def send_keyframe_to_networking_thread(self, keyframe: Keyframe) -> None:
+    def send_keyframe_to_networking_thread(
+        self, keyframe: KeyframeAndMessages
+    ) -> None:
         """Send a keyframe (outgoing data) to the networking thread."""
         # Acquire the semaphore to ensure the simulation doesn't advance too far ahead
         self._keyframe_queue.put(keyframe)
@@ -54,16 +55,8 @@ class InterprocessRecord:
         assert "connectionId" in disconnection_record
         self._disconnection_record_queue.put(disconnection_record)
 
-    def get_single_queued_keyframe(self) -> Optional[Keyframe]:
-        """Dequeue one keyframe."""
-        if self._keyframe_queue.empty():
-            return None
-
-        keyframe = self._keyframe_queue.get(block=False)
-        return keyframe
-
     @staticmethod
-    def _dequeue_all(queue: Queue) -> List[DataDict]:
+    def _dequeue_all(queue: Queue) -> List[Any]:
         """Dequeue all items from a queue."""
         items = []
 
@@ -73,7 +66,7 @@ class InterprocessRecord:
 
         return items
 
-    def get_queued_keyframes(self) -> List[Keyframe]:
+    def get_queued_keyframes(self) -> List[KeyframeAndMessages]:
         """Dequeue all keyframes."""
         return self._dequeue_all(self._keyframe_queue)
 

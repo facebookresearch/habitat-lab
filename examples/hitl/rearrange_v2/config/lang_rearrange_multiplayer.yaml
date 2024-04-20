@@ -1,9 +1,8 @@
 # @package _global_
 
 defaults:
-  - social_rearrange: pop_play
+  - language_rearrange
   - hitl_defaults
-  - disable_spot_pick_and_move_backward
   - _self_
 
 habitat:
@@ -13,19 +12,6 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
-  task:
-    measurements:
-      rearrange_cooperate_reward:
-        end_on_collide: False
-      pddl_success:
-        must_call_stop: False
-    actions:
-      # HACK: Robot velocities are defined here.
-      agent_0_base_velocity:
-        lin_speed: 4.0
-        ang_speed: 250
-  dataset:
-    data_path: "60scenes_777eps_old_format_targets.json.gz"
 
 habitat_baselines:
   # todo: document these choices
@@ -33,7 +19,9 @@ habitat_baselines:
     should_load_ckpt: False
   rl:
     agent:
-      num_pool_agents_per_type: [1,1]
+      num_pool_agents_per_type: [1, 1]
+    policy:
+
 
 habitat_hitl:
   window:
@@ -41,16 +29,15 @@ habitat_hitl:
     width: 1300
     height: 1000
   gui_controlled_agents:
-    - agent_index: 1
-      lin_speed: 4.0
-      ang_speed: 250
     - agent_index: 0
-      lin_speed: 4.0  # No effect
-      ang_speed: 250  # No effect
-  hide_humanoid_in_gui: False
+      lin_speed: 10.0
+      ang_speed: 300
+  hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+
   networking:
+    client_max_idle_duration: 30.0
     client_sync:
       server_camera: False
       server_input: False

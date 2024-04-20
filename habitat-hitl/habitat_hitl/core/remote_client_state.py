@@ -19,7 +19,11 @@ from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
-from habitat_hitl.core.types import ClientState, ConnectionRecord
+from habitat_hitl.core.types import (
+    ClientState,
+    ConnectionRecord,
+    DisconnectionRecord,
+)
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_sim.geo import Ray
 
@@ -40,18 +44,18 @@ class RemoteClientState:
         self._gui_drawer = gui_drawer
         self._users = users
 
-        self._receive_rate_tracker = AverageRateTracker(2.0)
-
-        self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
 
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
 
-        # Create one GuiInput per user to be controlled by remote clients.
         self._gui_inputs: List[GuiInput] = []
+        self._client_state_history: List[List[ClientState]] = []
+        self._receive_rate_trackers: List[AverageRateTracker] = []
         for _ in users.indices(Mask.ALL):
             self._gui_inputs.append(GuiInput())
+            self._client_state_history.append([])
+            self._receive_rate_trackers.append(AverageRateTracker(2.0))
 
         # temp map VR button to key
         self._button_map = {
@@ -93,16 +97,16 @@ class RemoteClientState:
         """Frequency at which client states are read."""
         return 1 / 60
 
-    def pop_recent_server_keyframe_id(self) -> Optional[int]:
+    def pop_recent_server_keyframe_id(self, user_index: int) -> Optional[int]:
         """
         Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
 
         The removal behavior here is to help user code by only returning a keyframe ID when a new (unseen) one is available.
         """
-        if len(self._recent_client_states) == 0:
+        if len(self._client_state_history[user_index]) == 0:
             return None
 
-        latest_client_state = self._recent_client_states[-1]
+        latest_client_state = self._client_state_history[user_index][-1]
         if "recentServerKeyframeId" not in latest_client_state:
             return None
 
@@ -111,23 +115,23 @@ class RemoteClientState:
         return retval
 
     def get_recent_client_state_by_history_index(
-        self, history_index: int
+        self, user_index: int, history_index: int
     ) -> Optional[ClientState]:
         assert history_index >= 0
-        if history_index >= len(self._recent_client_states):
+        if history_index >= len(self._client_state_history[user_index]):
             return None
 
-        return self._recent_client_states[-(1 + history_index)]
+        return self._client_state_history[user_index][-(1 + history_index)]
 
     def get_head_pose(
-        self, history_index: int = 0
+        self, user_index: int, history_index: int = 0
     ) -> Optional[Tuple[mn.Vector3, mn.Quaternion]]:
         """
         Get the latest head transform.
         Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
         """
         client_state = self.get_recent_client_state_by_history_index(
-            history_index
+            user_index, history_index
         )
         if not client_state:
             return None, None
@@ -151,14 +155,14 @@ class RemoteClientState:
         return pos, rot_quat
 
     def get_hand_pose(
-        self, hand_idx: int, history_index: int = 0
+        self, user_index: int, hand_idx: int, history_index: int = 0
     ) -> Optional[Tuple[mn.Vector3, mn.Quaternion]]:
         """
         Get the latest hand transforms.
         Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
         """
         client_state = self.get_recent_client_state_by_history_index(
-            history_index
+            user_index, history_index
         )
         if not client_state:
             return None, None
@@ -184,109 +188,126 @@ class RemoteClientState:
         )
         return pos, rot_quat
 
-    def _update_input_state(self, client_states: List[ClientState]) -> None:
+    def _group_client_states_by_user_index(
+        self, client_states: List[ClientState]
+    ) -> List[List[ClientState]]:
+        """
+        Group a list of client states by user index.
+        """
+        output: List[List[ClientState]] = []
+        for _ in self._users.indices(Mask.ALL):
+            output.append([])
+
+        for client_state in client_states:
+            user_index = client_state["userIndex"]
+            assert user_index < self._users.max_user_count
+            output[user_index].append(client_state)
+        return output
+
+    def _update_input_state(
+        self, all_client_states: List[List[ClientState]]
+    ) -> None:
         """Update mouse/keyboard input based on new client states."""
-        if not len(client_states) or not len(self._gui_inputs):
+        if len(all_client_states) == 0 or len(self._gui_inputs) == 0:
             return
 
-        # TODO: Only one user supported for now.
-        #       In multiplayer, there will be client_state per user_index.
-        user_index = 0
-        assert user_index < len(self._gui_inputs)
-        gui_input = self._gui_inputs[user_index]
-
         # Gather all recent keyDown and keyUp events
-        for client_state in client_states:
+        for user_index in range(len(all_client_states)):
+            client_states = all_client_states[user_index]
+            if len(client_states) == 0:
+                continue
+            gui_input = self._gui_inputs[user_index]
+            for client_state in client_states:
+                input_json = (
+                    client_state["input"] if "input" in client_state else None
+                )
+                mouse_json = (
+                    client_state["mouse"] if "mouse" in client_state else None
+                )
+
+                if input_json is not None:
+                    for button in input_json["buttonDown"]:
+                        if button not in KeyCode:
+                            continue
+                        gui_input._key_down.add(KeyCode(button))
+                    for button in input_json["buttonUp"]:
+                        if button not in KeyCode:
+                            continue
+                        gui_input._key_up.add(KeyCode(button))
+
+                if mouse_json is not None:
+                    mouse_buttons = mouse_json["buttons"]
+                    for button in mouse_buttons["buttonDown"]:
+                        if button not in MouseButton:
+                            continue
+                        gui_input._mouse_button_down.add(MouseButton(button))
+                    for button in mouse_buttons["buttonUp"]:
+                        if button not in MouseButton:
+                            continue
+                        gui_input._mouse_button_up.add(MouseButton(button))
+
+                    if "scrollDelta" in mouse_json:
+                        delta: List[Any] = mouse_json["scrollDelta"]
+                        if len(delta) == 2:
+                            gui_input._mouse_scroll_offset += (
+                                delta[0]
+                                if abs(delta[0]) > abs(delta[1])
+                                else delta[1]
+                            )
+
+                    if "mousePositionDelta" in mouse_json:
+                        pos_delta: List[Any] = mouse_json["mousePositionDelta"]
+                        if len(pos_delta) == 2:
+                            gui_input._relative_mouse_position = [
+                                pos_delta[0],
+                                pos_delta[1],
+                            ]
+
+                    if "rayOrigin" in mouse_json:
+                        ray_origin: List[float] = mouse_json["rayOrigin"]
+                        ray_direction: List[float] = mouse_json["rayDirection"]
+                        if len(ray_origin) == 3 and len(ray_direction) == 3:
+                            ray = Ray()
+                            ray.origin = mn.Vector3(
+                                ray_origin[0], ray_origin[1], ray_origin[2]
+                            )
+                            ray.direction = mn.Vector3(
+                                ray_direction[0],
+                                ray_direction[1],
+                                ray_direction[2],
+                            ).normalized()
+                            gui_input._mouse_ray = ray
+
+            # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
+            # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
+            last_client_state = client_states[-1]
+
             input_json = (
-                client_state["input"] if "input" in client_state else None
+                last_client_state["input"]
+                if "input" in last_client_state
+                else None
             )
             mouse_json = (
-                client_state["mouse"] if "mouse" in client_state else None
+                last_client_state["mouse"]
+                if "mouse" in last_client_state
+                else None
             )
 
+            gui_input._key_held.clear()
+            gui_input._mouse_button_held.clear()
+
             if input_json is not None:
-                for button in input_json["buttonDown"]:
+                for button in input_json["buttonHeld"]:
                     if button not in KeyCode:
                         continue
-                    gui_input._key_down.add(KeyCode(button))
-                for button in input_json["buttonUp"]:
-                    if button not in KeyCode:
-                        continue
-                    gui_input._key_up.add(KeyCode(button))
+                    gui_input._key_held.add(KeyCode(button))
 
             if mouse_json is not None:
                 mouse_buttons = mouse_json["buttons"]
-                for button in mouse_buttons["buttonDown"]:
+                for button in mouse_buttons["buttonHeld"]:
                     if button not in MouseButton:
                         continue
-                    gui_input._mouse_button_down.add(MouseButton(button))
-                for button in mouse_buttons["buttonUp"]:
-                    if button not in MouseButton:
-                        continue
-                    gui_input._mouse_button_up.add(MouseButton(button))
-
-                if "scrollDelta" in mouse_json:
-                    delta: List[Any] = mouse_json["scrollDelta"]
-                    if len(delta) == 2:
-                        gui_input._mouse_scroll_offset += (
-                            delta[0]
-                            if abs(delta[0]) > abs(delta[1])
-                            else delta[1]
-                        )
-
-                if "mousePositionDelta" in mouse_json:
-                    pos_delta: List[Any] = mouse_json["mousePositionDelta"]
-                    if len(pos_delta) == 2:
-                        gui_input._relative_mouse_position = [
-                            pos_delta[0],
-                            pos_delta[1],
-                        ]
-
-                if "rayOrigin" in mouse_json:
-                    ray_origin: List[float] = mouse_json["rayOrigin"]
-                    ray_direction: List[float] = mouse_json["rayDirection"]
-                    if len(ray_origin) == 3 and len(ray_direction) == 3:
-                        ray = Ray()
-                        ray.origin = mn.Vector3(
-                            ray_origin[0], ray_origin[1], ray_origin[2]
-                        )
-                        ray.direction = mn.Vector3(
-                            ray_direction[0],
-                            ray_direction[1],
-                            ray_direction[2],
-                        ).normalized()
-                        gui_input._mouse_ray = ray
-
-        # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
-        # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
-        last_client_state = client_states[-1]
-
-        input_json = (
-            last_client_state["input"]
-            if "input" in last_client_state
-            else None
-        )
-        mouse_json = (
-            last_client_state["mouse"]
-            if "mouse" in last_client_state
-            else None
-        )
-
-        gui_input._key_held.clear()
-        gui_input._mouse_button_held.clear()
-
-        if input_json is not None:
-            for button in input_json["buttonHeld"]:
-                if button not in KeyCode:
-                    continue
-                gui_input._key_held.add(KeyCode(button))
-
-        if mouse_json is not None:
-            mouse_buttons = mouse_json["buttons"]
-            for button in mouse_buttons["buttonHeld"]:
-                if button not in MouseButton:
-                    continue
-                gui_input._mouse_button_held.add(MouseButton(button))
+                    gui_input._mouse_button_held.add(MouseButton(button))
 
     def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
@@ -296,99 +317,84 @@ class RemoteClientState:
         server_only = Mask.NONE  # Render on the server only.
         avatar_color = mn.Color3(0.3, 1, 0.3)
 
-        pos, rot_quat = self.get_head_pose()
-        if pos is not None and rot_quat is not None:
-            trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
-            self._gui_drawer.push_transform(
-                trans, destination_mask=server_only
-            )
-            color0 = avatar_color
-            color1 = mn.Color4(
-                avatar_color.r, avatar_color.g, avatar_color.b, 0
-            )
-            size = 0.5
-
-            # Draw a frustum (forward is flipped (z+))
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(size, size, size),
-                color0,
-                color1,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(-size, size, size),
-                color0,
-                color1,
-                destination_mask=server_only,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(size, -size, size),
-                color0,
-                color1,
-                destination_mask=server_only,
-            )
-            self._gui_drawer.draw_transformed_line(
-                mn.Vector3(0, 0, 0),
-                mn.Vector3(-size, -size, size),
-                color0,
-                color1,
-                destination_mask=server_only,
-            )
-
-            self._gui_drawer.pop_transform(destination_mask=server_only)
-
-        # Draw controller rays (forward is flipped (z+))
-        for hand_idx in range(2):
-            hand_pos, hand_rot_quat = self.get_hand_pose(hand_idx)
-            if hand_pos is not None and hand_rot_quat is not None:
-                trans = mn.Matrix4.from_(hand_rot_quat.to_matrix(), hand_pos)
+        for user_index in self._users.indices(Mask.ALL):
+            pos, rot_quat = self.get_head_pose(user_index)
+            if pos is not None and rot_quat is not None:
+                trans = mn.Matrix4.from_(rot_quat.to_matrix(), pos)
                 self._gui_drawer.push_transform(
                     trans, destination_mask=server_only
                 )
-                pointer_len = 0.5
+                color0 = avatar_color
+                color1 = mn.Color4(
+                    avatar_color.r, avatar_color.g, avatar_color.b, 0
+                )
+                size = 0.5
+
+                # Draw a frustum (forward is flipped (z+))
                 self._gui_drawer.draw_transformed_line(
                     mn.Vector3(0, 0, 0),
-                    mn.Vector3(0, 0, pointer_len),
+                    mn.Vector3(size, size, size),
+                    color0,
+                    color1,
+                )
+                self._gui_drawer.draw_transformed_line(
+                    mn.Vector3(0, 0, 0),
+                    mn.Vector3(-size, size, size),
                     color0,
                     color1,
                     destination_mask=server_only,
                 )
+                self._gui_drawer.draw_transformed_line(
+                    mn.Vector3(0, 0, 0),
+                    mn.Vector3(size, -size, size),
+                    color0,
+                    color1,
+                    destination_mask=server_only,
+                )
+                self._gui_drawer.draw_transformed_line(
+                    mn.Vector3(0, 0, 0),
+                    mn.Vector3(-size, -size, size),
+                    color0,
+                    color1,
+                    destination_mask=server_only,
+                )
+
                 self._gui_drawer.pop_transform(destination_mask=server_only)
 
-    def _clean_history_by_connection_id(
-        self, client_states: List[ClientState]
+            # Draw controller rays (forward is flipped (z+))
+            for hand_idx in range(2):
+                hand_pos, hand_rot_quat = self.get_hand_pose(
+                    user_index, hand_idx
+                )
+                if hand_pos is not None and hand_rot_quat is not None:
+                    trans = mn.Matrix4.from_(
+                        hand_rot_quat.to_matrix(), hand_pos
+                    )
+                    self._gui_drawer.push_transform(
+                        trans, destination_mask=server_only
+                    )
+                    pointer_len = 0.5
+                    self._gui_drawer.draw_transformed_line(
+                        mn.Vector3(0, 0, 0),
+                        mn.Vector3(0, 0, pointer_len),
+                        color0,
+                        color1,
+                        destination_mask=server_only,
+                    )
+                    self._gui_drawer.pop_transform(
+                        destination_mask=server_only
+                    )
+
+    def _clean_disconnected_user_history(
+        self,
+        disconnection_record: DisconnectionRecord,
+        all_client_states: List[List[ClientState]],
     ) -> None:
         """
-        Clear history by connection id.
-        Typically done after a client disconnect.
+        Clear history by connection id. Done after a client disconnect.
         """
-        if not len(client_states):
-            return
-
-        latest_client_state = client_states[-1]
-        if "connectionId" not in latest_client_state:
-            return
-        latest_connection_id = latest_client_state["connectionId"]
-
-        # discard older states that don't match the latest connection id
-        # iterate over items in reverse, starting with second-most recent client state
-        for i in range(len(client_states) - 2, -1, -1):
-            if client_states[i]["connectionId"] != latest_connection_id:
-                client_states = client_states[i + 1 :]
-                break
-
-        # discard recent client states if they don't match the latest connection id
-        latest_recent_client_state = (
-            self.get_recent_client_state_by_history_index(0)
-        )
-        if (
-            latest_recent_client_state
-            and latest_recent_client_state["connectionId"]
-            != latest_connection_id
-        ):
-            self.clear_history()
+        user_index: int = disconnection_record["userIndex"]
+        all_client_states[user_index].clear()
 
     def update(self) -> None:
         """Get the latest received remote client states."""
@@ -399,27 +405,39 @@ class RemoteClientState:
             self._interprocess_record.get_queued_disconnection_records()
         )
 
+        assorted_client_states = (
+            self._interprocess_record.get_queued_client_states()
+        )
+        client_states = self._group_client_states_by_user_index(
+            assorted_client_states
+        )
+        for user_index in range(len(client_states)):
+            user_client_states = client_states[user_index]
+            self._receive_rate_trackers[user_index].increment(
+                len(user_client_states)
+            )
+
         for record in self._new_connection_records:
             self._on_client_connected.invoke(record)
         for record in new_disconnection_records:
             self._on_client_disconnected.invoke(record)
-
-        client_states = self._interprocess_record.get_queued_client_states()
-        self._receive_rate_tracker.increment(len(client_states))
+            self._clean_disconnected_user_history(record, client_states)
 
         # We expect to only process ~1 new client state at a time. If this assert fails, something is going awry with networking.
         # disabling because this happens all the time when debugging the main process
         # assert len(client_states) < 100
 
-        self._clean_history_by_connection_id(client_states)
-
         self._update_input_state(client_states)
 
         # append to _recent_client_states, discarding old states to limit length to get_history_length()
-        for client_state in client_states:
-            self._recent_client_states.append(client_state)
-            if len(self._recent_client_states) > self.get_history_length():
-                self._recent_client_states.pop(0)
+        for user_index in range(len(client_states)):
+            for client_state in client_states[user_index]:
+                self._client_state_history[user_index].append(client_state)
+                if (
+                    len(self._client_state_history[user_index])
+                    > self.get_history_length()
+                ):
+                    self._client_state_history[user_index].pop(0)
 
         self._debug_visualize_client()
 
@@ -431,5 +449,6 @@ class RemoteClientState:
             self._gui_inputs[user_index].on_frame_end()
         self._new_connection_records = None
 
-    def clear_history(self) -> None:
-        self._recent_client_states.clear()
+    def clear_history(self, user_mask=Mask.ALL) -> None:
+        for user_index in self._users.indices(user_mask):
+            self._client_state_history[user_index].clear()

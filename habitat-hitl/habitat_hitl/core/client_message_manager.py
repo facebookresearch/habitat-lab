@@ -4,10 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, Final, List, Optional, Union
+from typing import Final, List, Optional, Union
 
 import magnum as mn
 
+from habitat_hitl.core.types import Message
 from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
@@ -18,7 +19,6 @@ class ClientMessageManager:
     Extends gfx-replay keyframes to include server messages to be interpreted by the clients.
     Unlike keyframes, messages are client-specific.
     """
-    Message = Dict[str, Any]
     _messages: List[Message]
     _users: Users
 
