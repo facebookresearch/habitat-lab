@@ -547,6 +547,15 @@ def test_ao_open_close_queries():
         sim.metadata_mediator.ao_template_manager.register_template(
             fridge_template, "new_fridge_template"
         )
+        new_fridge_template_check = (
+            sim.metadata_mediator.ao_template_manager.get_template_by_handle(
+                "new_fridge_template"
+            )
+        )
+        assert (
+            new_fridge_template_check.get_user_config().get("default_link")
+            == 0
+        )
         new_fridge = sim.get_articulated_object_manager().add_articulated_object_by_template_handle(
             "new_fridge_template"
         )
@@ -558,11 +567,9 @@ def test_ao_open_close_queries():
         new_default_link = sutils.get_ao_default_link(
             new_fridge, compute_if_not_found=True
         )
-        print(
-            f" new_default_link (== {new_default_link}) should be 0, waiting on sim bug fix."
-        )
-        # TODO: habitat-sim bug. "default_link" does not get copied over after instantiation if set in the template programmatically.
-        # assert new_default_link == 0
+
+        # "default_link" should get copied over after instantiation if set in the template programmatically.
+        assert new_default_link == 0
 
         # test setting the default link in instance metadata
         fridge.user_attributes.set("default_link", 0)
