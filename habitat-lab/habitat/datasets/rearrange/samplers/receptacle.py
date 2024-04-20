@@ -866,12 +866,12 @@ def get_excluded_recs_from_filter_file(
     rec_filter_filepath: str, filter_types: Optional[List[str]] = None
 ) -> List[str]:
     """
-    Load and digest a Receptacle filter file to generate a list of strings which should be excluded from the active ReceptacleSet.
+    Load and digest a Receptacle filter file to generate a list of Receptacle.unique_names strings which should be excluded from the active ReceptacleSet.
 
-    :param filter_types: Optionally specify a particular set of filter types to scrape. Default is all filters.
+    :param filter_types: Optionally specify a particular set of filter types to scrape. Default is all exclusion filters.
     """
 
-    possible_filter_types = [
+    possible_exclude_filter_types = [
         "manually_filtered",
         "access_filtered",
         "stability_filtered",
@@ -879,12 +879,40 @@ def get_excluded_recs_from_filter_file(
     ]
 
     if filter_types is None:
-        filter_types = possible_filter_types
+        filter_types = possible_exclude_filter_types
     else:
         for filter_type in filter_types:
             assert (
-                filter_type in possible_filter_types
-            ), f"Specified filter type '{filter_type}' is not in supported set: {possible_filter_types}"
+                filter_type in possible_exclude_filter_types
+            ), f"Specified filter type '{filter_type}' is not in supported set: {possible_exclude_filter_types}"
+
+    return get_recs_from_filter_file(rec_filter_filepath, filter_types)
+
+
+def get_recs_from_filter_file(
+    rec_filter_filepath: str, filter_types: List[str]
+) -> List[str]:
+    """
+    Load and digest a Receptacle filter file to generate a list of Receptacle.unique_names which belong to a particular filter subset.
+
+    :param filter_types: Specify a particular subset of filter types to include.
+    """
+
+    # all allowed filter set types include:
+    all_possible_filter_types = [
+        "active",
+        "manually_filtered",
+        "access_filtered",
+        "stability_filtered",
+        "height_filtered",
+        "within_set",
+    ]
+
+    # check that specified query filter types are valid
+    for filter_type in filter_types:
+        assert (
+            filter_type in all_possible_filter_types
+        ), f"Specified filter type '{filter_type}' is not in supported set: {all_possible_filter_types}"
 
     filtered_unique_names = []
     with open(rec_filter_filepath, "r") as f:
@@ -892,7 +920,7 @@ def get_excluded_recs_from_filter_file(
         for filter_type in filter_types:
             for filtered_unique_name in filter_json[filter_type]:
                 filtered_unique_names.append(filtered_unique_name)
-    return filtered_unique_names
+    return list(set(filtered_unique_names))
 
 
 class ReceptacleTracker:
