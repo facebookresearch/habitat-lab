@@ -261,10 +261,9 @@ class RearrangePickSuccess(Measure):
         # if we consider ee pose
         target_orientation_distance = -float("inf")
         if self._config.ee_pose_threshold != -1.0:
-            target_orientation_distance = observations[
-                "topdown_or_side_grasping"
-            ]
-
+            target_orientation_distance = float(
+                observations["topdown_or_side_grasping"]
+            )
         # Is the agent holding the object and it's at the start?
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
