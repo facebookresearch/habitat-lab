@@ -602,8 +602,6 @@ class TopDownOrSideGraspingSensor(UsesArticulatedAgentInterface, Sensor):
             delta = abs(dir_vector[2])
         else:
             raise ValueError(f"Unknown grasping type {task.grasping_type}")
-        # Get the abs value of delta
-        delta = abs(dir_vector[2])
         return np.array(
             [delta],
             dtype=np.float32,
