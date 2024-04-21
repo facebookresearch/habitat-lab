@@ -46,6 +46,15 @@ try:
 except ImportError:
     clip = None
 
+try:
+    from transformers import (
+        AutoModel,
+        AutoProcessor,
+        SiglipVisionConfig,
+    )
+except:
+    AutoModel = None
+
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(NetPolicy):
@@ -68,7 +77,7 @@ class PointNavResNetPolicy(NetPolicy):
         """
         Keyword arguments:
         rnn_type: RNN layer type; one of ["GRU", "LSTM"]
-        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool"]
+        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool", "siglip_base_patch16_224"]
         """
 
         assert backbone in [
@@ -80,6 +89,7 @@ class PointNavResNetPolicy(NetPolicy):
             "se_resneXt101",
             "resnet50_clip_avgpool",
             "resnet50_clip_attnpool",
+            "siglip_base_patch16_224",
         ], f"{backbone} backbone is not recognized."
 
         if policy_config is not None:
@@ -147,6 +157,11 @@ class PointNavResNetPolicy(NetPolicy):
             else:
                 agent_name = config.habitat.simulator.agents_order[0]
 
+        has_rgb = False
+        for keys in observation_space.spaces:
+            if "rgb" in keys and "bbox" not in keys:
+                has_rgb = True
+
         return cls(
             observation_space=filtered_obs,
             action_space=action_space,
@@ -154,7 +169,7 @@ class PointNavResNetPolicy(NetPolicy):
             rnn_type=config.habitat_baselines.rl.ddppo.rnn_type,
             num_recurrent_layers=config.habitat_baselines.rl.ddppo.num_recurrent_layers,
             backbone=config.habitat_baselines.rl.ddppo.backbone,
-            normalize_visual_inputs="rgb" in observation_space.spaces,
+            normalize_visual_inputs=has_rgb,
             force_blind_policy=config.habitat_baselines.force_blind_policy,
             policy_config=config.habitat_baselines.rl.policy[agent_name],
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
@@ -284,8 +299,18 @@ class ResNetCLIPEncoder(nn.Module):
     ):
         super().__init__()
 
-        self.rgb = "rgb" in observation_space.spaces
-        self.depth = "depth" in observation_space.spaces
+        # Ensure that we make self.rgb and self.depth correct
+        self.rgb = False
+        self.rgb_obs_space_name = []
+        self.depth = False
+        self.depth_obs_space_name = []
+        for keys in observation_space.spaces:
+            if "rgb" in keys and "bbox" not in keys:
+                self.rgb = True
+                self.rgb_obs_space_name.append(keys)
+            if "depth" in keys and "bbox" not in keys:
+                self.depth = True
+                self.depth_obs_space_name.append(keys)
 
         # Determine which visual observations are present
         self.visual_keys = [
@@ -354,7 +379,9 @@ class ResNetCLIPEncoder(nn.Module):
 
         cnn_input = []
         if self.rgb:
-            rgb_observations = observations["rgb"]
+            # We only select the first one
+            name = self.rgb_obs_space_name[0]
+            rgb_observations = observations[name]
             rgb_observations = rgb_observations.permute(
                 0, 3, 1, 2
             )  # BATCH x CHANNEL x HEIGHT X WIDTH
@@ -365,7 +392,9 @@ class ResNetCLIPEncoder(nn.Module):
             cnn_input.append(rgb_x)
 
         if self.depth:
-            depth_observations = observations["depth"][
+            # We only select the first one
+            name = self.depth_obs_space_name[0]
+            depth_observations = observations[name][
                 ..., 0
             ]  # [BATCH x HEIGHT X WIDTH]
             ddd = torch.stack(
@@ -385,6 +414,130 @@ class ResNetCLIPEncoder(nn.Module):
         if self.rgb and self.depth:
             x = F.adaptive_avg_pool2d(cnn_input[0] + cnn_input[1], 1)
             x = x.flatten(1)
+        else:
+            x = torch.cat(cnn_input, dim=1)
+
+        return x
+
+
+class ResNetSIGLIPEncoder(nn.Module):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+    ):
+        super().__init__()
+
+        # Ensure that we make self.rgb and self.depth correct
+        self.rgb = False
+        self.rgb_obs_space_name = []
+        self.depth = False
+        self.depth_obs_space_name = []
+        for keys in observation_space.spaces:
+            if "rgb" in keys and "bbox" not in keys:
+                self.rgb = True
+                self.rgb_obs_space_name.append(keys)
+            if "depth" in keys and "bbox" not in keys:
+                self.depth = True
+                self.depth_obs_space_name.append(keys)
+
+        # Determine which visual observations are present
+        self.visual_keys = [
+            k
+            for k, v in observation_space.spaces.items()
+            if len(v.shape) > 1 and k != ImageGoalSensor.cls_uuid
+        ]
+
+        # Count total # of channels
+        self._n_input_channels = sum(
+            observation_space.spaces[k].shape[2] for k in self.visual_keys
+        )
+
+        if not self.is_blind:
+            if AutoModel is None:
+                raise ImportError(
+                    "Need to install transformers (run `pip install transformers`)"
+                )
+
+            self._model_name = "google/siglip-base-patch16-224"
+            self._device = (
+                torch.device("cuda")
+                if torch.cuda.is_available()
+                else torch.device("cpu")
+            )
+
+            # Load the model based on HuggingFace's transformers
+            configuration = SiglipVisionConfig()
+            if self.rgb and self.depth:
+                self.output_shape = (int(configuration.hidden_size*2),)  # 768 * 2
+            else:
+                self.output_shape = (int(configuration.hidden_size),)  # 768
+
+            # Use bfloat16 to speed up inference
+            self.backbone = AutoModel.from_pretrained(
+                self._model_name, torch_dtype=torch.bfloat16
+            ).to(self._device)
+            self.preprocess = AutoProcessor.from_pretrained(self._model_name)  
+
+            # Disable grad
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+            for module in self.backbone.modules():
+                if "BatchNorm" in type(module).__name__:
+                    module.momentum = 0.0
+
+            # Eval mode
+            self.backbone.eval()
+
+    @property
+    def is_blind(self):
+        return self._n_input_channels == 0
+
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
+        if self.is_blind:
+            return None
+
+        cnn_input = []
+        if self.rgb:
+            # We only select the first one
+            name = self.rgb_obs_space_name[0]
+            rgb_observations = observations[name]
+            rgb_observations = rgb_observations.permute(
+                0, 3, 1, 2
+            )  # BATCH x CHANNEL x HEIGHT X WIDTH
+            rgb_observations = torch.stack(
+                [self.preprocess(images=rgb_image, return_tensors="pt")["pixel_values"][0].bfloat16() for rgb_image in rgb_observations]
+            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
+            rgb_observations = rgb_observations.to(self._device)
+            rgb_observations_input = {}
+            rgb_observations_input["pixel_values"] = rgb_observations
+            rgb_x = self.backbone.get_image_features(**rgb_observations_input)
+            rgb_x = rgb_x.float() # Make it back to torch.float32
+            cnn_input.append(rgb_x)
+
+        if self.depth:
+            # We only select the first one
+            name = self.depth_obs_space_name[0]
+            depth_observations = observations[name][
+                ..., 0
+            ]  # [BATCH x HEIGHT X WIDTH]
+            ddd = torch.stack(
+                [depth_observations] * 3, dim=1
+            )  # [BATCH x 3 x HEIGHT X WIDTH]
+            ddd = torch.stack(
+                [
+                    self.preprocess(images=depth_map, return_tensors="pt")["pixel_values"][0].bfloat16()
+                    for depth_map in ddd
+                ]
+            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
+            ddd = ddd.to(self._device)
+            ddd_input = {}
+            ddd_input["pixel_values"] = ddd
+            depth_x = self.backbone.get_image_features(**ddd_input)
+            depth_x = depth_x.float() # Make it back to torch.float32
+            cnn_input.append(depth_x)
+
+        if self.rgb and self.depth:
+            x = torch.cat((cnn_input[0],  cnn_input[1]), dim=1)
         else:
             x = torch.cat(cnn_input, dim=1)
 
@@ -567,6 +720,19 @@ class PointNavResNetNet(Net):
                 if not force_blind_policy
                 else spaces.Dict({}),
                 pooling="avgpool" if "avgpool" in backbone else "attnpool",
+            )
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
+                    nn.Linear(
+                        self.visual_encoder.output_shape[0], hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+        elif backbone.startswith("siglip"):
+            self.visual_encoder = ResNetSIGLIPEncoder(
+                observation_space
+                if not force_blind_policy
+                else spaces.Dict({}),
             )
             if not self.visual_encoder.is_blind:
                 self.visual_fc = nn.Sequential(
