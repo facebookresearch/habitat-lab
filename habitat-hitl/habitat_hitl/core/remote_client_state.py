@@ -7,6 +7,8 @@
 import math
 from typing import Any, List, Optional, Tuple
 
+from habitat_hitl.core.client_helper import ClientHelper
+from habitat_hitl.core.client_message_manager import ClientMessageManager
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -36,6 +38,8 @@ class RemoteClientState:
 
     def __init__(
         self,
+        hitl_config,  # TODO: Coupling with ClientHelper
+        client_message_manager: ClientMessageManager,  # TODO: Coupling with ClientHelper
         interprocess_record: InterprocessRecord,
         gui_drawer: GuiDrawer,
         users: Users,
@@ -48,6 +52,10 @@ class RemoteClientState:
 
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
+        
+        # TODO: Coupling.
+        #       ClientHelper lifetime is directly coupled with RemoteClientState.
+        self._client_helper = ClientHelper(hitl_config, self, client_message_manager, users)
 
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
@@ -452,3 +460,7 @@ class RemoteClientState:
     def clear_history(self, user_mask=Mask.ALL) -> None:
         for user_index in self._users.indices(user_mask):
             self._client_state_history[user_index].clear()
+
+    def kick(self, user_mask: Mask) -> None:
+        for user_index in self._users.indices(user_mask):
+            self._interprocess_record.send_kick_signal_to_networking_thread(user_index)

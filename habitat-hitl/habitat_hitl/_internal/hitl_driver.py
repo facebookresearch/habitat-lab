@@ -14,6 +14,7 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
+from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe, update_consolidated_keyframe
 import magnum as mn
 import numpy as np
 
@@ -44,7 +45,7 @@ from habitat_hitl.core.serialize_utils import (
     save_as_pickle_gzip,
 )
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
-from habitat_hitl.core.types import KeyframeAndMessages
+from habitat_hitl.core.types import Keyframe, KeyframeAndMessages
 from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
@@ -246,6 +247,7 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
+                self._hitl_config, self._client_message_manager,
                 self._interprocess_record, gui_drawer, users
             )
             # Bind the server input to user 0
@@ -543,21 +545,44 @@ class HitlDriver(AppDriver):
 
     def _send_keyframes(self, keyframes_json: List[str]):
         assert self.network_server_enabled
+
+        cmm = self._client_message_manager
+        any_message = cmm.any_message()
+
+        # Convert keyframe JSON strings to Python dicts.
+        # TODO: Inefficient.
+        keyframes: List[Keyframe] = []
         for keyframe_json in keyframes_json:
             obj = json.loads(keyframe_json)
             assert "keyframe" in obj
-            keyframe_obj = obj["keyframe"]
-            # Remove rigs from keyframe if skinning is disabled
+            keyframes.append(obj["keyframe"])
+
+        cons_keyframe: Optional[Keyframe] = None
+        if len(keyframes) > 0:
+            cons_keyframe = keyframes[0]
+        # If there's no keyframe, but messages need to be sent, create an empty keyframe.
+        elif any_message and len(keyframes) == 0:
+            cons_keyframe = get_empty_keyframe()
+
+        # There there's multiple keyframes, consolidate them.
+        if len(keyframes) > 1:
+            for inc_keyframe in keyframes[1:]:
+                update_consolidated_keyframe(cons_keyframe, inc_keyframe)
+        
+
+        # If there's a keyframe available, send it.
+        if cons_keyframe is not None:
+            # Remove rigs from keyframe if skinning is disabled.
             # TODO: Per-user.
             if not self._hitl_config.networking.client_sync.skinning:
-                if "rigCreations" in keyframe_obj:
-                    del keyframe_obj["rigCreations"]
-                if "rigUpdates" in keyframe_obj:
-                    del keyframe_obj["rigUpdates"]
-            # Insert server->client message into the keyframe
-            messages = self._client_message_manager.get_messages()
-            self._client_message_manager.clear_messages()
-            # Send the keyframe
+                if "rigCreations" in cons_keyframe:
+                    del cons_keyframe["rigCreations"]
+                if "rigUpdates" in cons_keyframe:
+                    del cons_keyframe["rigUpdates"]
+
+            # Send the keyframe.
+            messages = cmm.get_messages()
+            cmm.clear_messages()
             self._interprocess_record.send_keyframe_to_networking_thread(
-                KeyframeAndMessages(keyframe_obj, messages)
+                KeyframeAndMessages(cons_keyframe, messages)
             )

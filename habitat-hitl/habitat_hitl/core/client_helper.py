@@ -8,8 +8,8 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.average_helper import AverageHelper
+from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
 from habitat_hitl.core.user_mask import Mask, Users
 
@@ -19,17 +19,18 @@ class ClientHelper:
     Tracks connected remote clients. Displays client latency and kicks idle clients.
     """
 
-    def __init__(self, app_service: AppService, users: Users):
-        assert app_service.hitl_config.networking.enable
-        self._app_service = app_service
+    def __init__(self, hitl_config, remote_client_state, client_message_manager: ClientMessageManager, users: Users):
+        assert hitl_config.networking.enable
+        self._remote_client_state = remote_client_state
+        self._client_message_manager = client_message_manager
         self._users = users
         self._connected_users = Mask.NONE
 
         self._kick_active = (
-            app_service.hitl_config.networking.client_max_idle_duration != None
+            hitl_config.networking.client_max_idle_duration != None
         )
         self._max_idle_duration = (
-            app_service.hitl_config.networking.client_max_idle_duration
+            hitl_config.networking.client_max_idle_duration
         )
 
         user_count = users.max_user_count
@@ -42,10 +43,10 @@ class ClientHelper:
         ] = [None] * user_count
         self._frame_counter: List[int] = [0] * user_count
 
-        self._app_service.remote_client_state.on_client_connected.registerCallback(
+        remote_client_state.on_client_connected.registerCallback(
             self._on_client_connected
         )
-        self._app_service.remote_client_state.on_client_disconnected.registerCallback(
+        remote_client_state.on_client_disconnected.registerCallback(
             self._on_client_disconnected
         )
 
@@ -106,15 +107,13 @@ class ClientHelper:
             seconds=self._max_idle_duration
         ):
             print(f"User {user_index} is idle. Kicking.")
-            self._app_service.client_message_manager.signal_kick_client(
-                self._connection_ids[user_index]
-            )
+            self._remote_client_state.kick(Mask.from_index(user_index))
 
     def _update_frame_counter_and_display_latency(
         self, user_index: int, server_sps: float
     ) -> None:
         """Update the frame counter."""
-        recent_server_keyframe_id = self._app_service.remote_client_state.pop_recent_server_keyframe_id(
+        recent_server_keyframe_id = self._remote_client_state.pop_recent_server_keyframe_id(
             user_index
         )
         if recent_server_keyframe_id is not None:
@@ -124,7 +123,7 @@ class ClientHelper:
             if new_avg and server_sps is not None:
                 latency_ms = new_avg / server_sps * 1000
                 self._display_latency_ms[user_index] = latency_ms
-        self._app_service.client_message_manager.set_server_keyframe_id(
+        self._client_message_manager.set_server_keyframe_id(
             self._frame_counter[user_index], Mask.from_index(user_index)
         )
         self._frame_counter[user_index] += 1

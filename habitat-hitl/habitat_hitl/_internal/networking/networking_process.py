@@ -16,6 +16,7 @@ from multiprocessing import Process
 from typing import Any, Dict, List, Optional
 
 import aiohttp.web
+from habitat_hitl.core.hydra_utils import ConfigObject
 import websockets
 from websockets.client import ClientConnection
 from websockets.server import WebSocketServer
@@ -221,19 +222,21 @@ class NetworkManager:
             and not self._waiting_for_app_ready
         )
 
-    def _check_kick_client(self, message: Message):
-        if "kickClient" in message:
-            connection_id = message["kickClient"]
-            if connection_id in self._connected_clients:
-                print(f"Kicking client {connection_id}.")
-                websocket = self._connected_clients[connection_id]
+    def _check_kick_client(self):
+        kicked_user_indices = self._interprocess_record.get_queued_kick_signals()
+        for user_index in kicked_user_indices:
+            if user_index in self._user_slots:
+                print(f"Kicking client {user_index}.")
+                user_slot = self._user_slots[user_index]
                 # Don't await this; we want to keep checking keyframes.
                 # Beware that the connection will remain alive for some time after this.
-                asyncio.create_task(websocket.close())
+                asyncio.create_task(user_slot.socket.close())
 
     async def send_keyframes(self) -> None:
         # this runs continuously even when there is no client connection
         while True:
+            self._check_kick_client()
+
             time_start_ns = time.time_ns()
             inc_keyframes_and_messages = (
                 self._interprocess_record.get_queued_keyframes()
@@ -256,7 +259,6 @@ class NetworkManager:
                     message = inc_keyframes_and_messages[0].messages[
                         user_index
                     ]
-                    self._check_kick_client(message)
 
                     # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
                     if (
@@ -383,6 +385,8 @@ class NetworkManager:
         return connection_record
 
     async def handle_connection(self, websocket: ClientConnection) -> None:
+        # TODO: Kick clients before accepting connection.
+
         # Kick clients after limit is reached.
         if not self.can_accept_connection():
             await websocket.close()
@@ -418,6 +422,13 @@ class NetworkManager:
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
             connection_record["userIndex"] = user_index
+
+            # Insert mock connection parameters
+            mock_connection_params_dict = self._networking_config.mock_connection_params_dict
+            if mock_connection_params_dict is not None and isinstance(mock_connection_params_dict, ConfigObject):
+                for key, value in mock_connection_params_dict.__dict__.items():
+                    connection_record[key] = value
+
             self._interprocess_record.send_connection_record_to_main_thread(
                 connection_record
             )

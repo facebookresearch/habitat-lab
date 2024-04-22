@@ -25,7 +25,12 @@ habitat:
         lin_speed: 4.0
         ang_speed: 250
   dataset:
-    data_path: "60scenes_777eps_old_format_targets.json.gz"
+    #type: "CollaborationDataset-v0"
+    #BROKEN
+    #data_path: "2024_03_27_eps300_filtered.json.gz"
+    #BROKEN
+    #data_path: "60scenes_777eps_old_format_targets.json.gz"
+    data_path: "/home/mdcote/Documents/git/lab-6/examples/hitl/rearrange_v2/app_data/demo.json.gz"
 
 habitat_baselines:
   # todo: document these choices

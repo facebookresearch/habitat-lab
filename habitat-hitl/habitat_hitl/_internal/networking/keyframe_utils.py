@@ -111,9 +111,6 @@ def update_consolidated_message(
 ) -> None:
     """Consolidate single user message."""
     for message_item_key in inc_message:
-        # Don't consolidate kick signals.
-        if message_item_key == "kickClient":
-            continue
         consolidated_message[message_item_key] = inc_message[message_item_key]
 
 
