@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 import hydra
 import magnum as mn
 import numpy as np
-from ui import UI
+from ui import UI, World
 
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -447,6 +447,7 @@ class UserData:
         self,
         app_service: AppService,
         user_index: int,
+        world: World,
         gui_agent_controller: GuiController,
         server_sps_tracker: AverageRateTracker,
     ):
@@ -469,7 +470,8 @@ class UserData:
 
         self.ui = UI(
             hitl_config=app_service.hitl_config,
-            user_index=0,
+            user_index=user_index,
+            world=world,
             gui_controller=gui_agent_controller,
             sim=app_service.sim,
             gui_input=self.gui_input,
@@ -553,17 +555,20 @@ class AppStateRearrangeV2(BaseRearrangeState):
 
         self._user_data: List[UserData] = []
 
+        self._world = World(app_service.sim)
+
         for user_index in self._users.indices(Mask.ALL):
             self._user_data.append(
                 UserData(
                     app_service=app_service,
                     user_index=user_index,
+                    world=self._world,
                     gui_agent_controller=self._gui_agent_controllers[user_index],
                     server_sps_tracker=self._sps_tracker,
                 )
             )
 
-        # Reset the environment.
+        # Reset the environment immediately.
         self.on_environment_reset(None)
 
     def get_next_state(self) -> Optional[BaseRearrangeState]:
@@ -584,6 +589,8 @@ class AppStateRearrangeV2(BaseRearrangeState):
             return None
 
     def on_environment_reset(self, episode_recorder_dict):
+        self._world.reset()
+
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
         if current_episode.info.get("extra_info") is not None:
@@ -700,53 +707,37 @@ class AppStateRearrangeV2(BaseRearrangeState):
                 destination_mask=Mask.from_index(user_index),
             )
 
-    def _check_change_episode(self):
-        # If all users signaled to change episode:
-        change_episode = True
-        for user_index in self._users.indices(Mask.ALL):
-            change_episode &= self._user_data[user_index].signal_change_episode
-
-        if (
-            change_episode
-            and self._app_service.episode_helper.next_episode_exists()
-        ):
-            #for user_index in self._users.indices(Mask.ALL):
-            #    self._user_data[user_index].signal_change_episode = False
-            self._app_service.end_episode(do_reset=True)
-
-    def sim_update(self, dt: float, post_sim_update_dict):
-        if (
-            not self._app_service.hitl_config.networking.enable
-            and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
-        ):
-            self._app_service.end_episode()
-            post_sim_update_dict["application_exit"] = True
-            return
-        
-        # Switch the server-controlled user.
-        if self._num_agents > 0 and self._server_gui_input.get_key_down(GuiInput.KeyNS.TAB):
-            self._server_user_index = (self._server_user_index + 1) % self._num_agents
-        
-        # Copy server input to user input.
-        server_user_input = self._user_data[self._server_user_index].gui_input
-        if server_user_input.get_any_input():
-            self._server_input_enabled = False
-        elif self._server_gui_input.get_any_input():
-            self._server_input_enabled = True
-        if self._server_input_enabled:
-            server_user_input.copy_from(self._server_gui_input)
+    def sim_update(self, dt: float, post_sim_update_dict):        
+        if not self._app_service.hitl_config.experimental.headless.do_headless:
+            # Server GUI exit.
+            if (
+                not self._app_service.hitl_config.networking.enable
+                and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
+            ):
+                self._app_service.end_episode()
+                post_sim_update_dict["application_exit"] = True
+                return
+            
+            # Switch the server-controlled user.
+            if self._num_agents > 0 and self._server_gui_input.get_key_down(GuiInput.KeyNS.TAB):
+                self._server_user_index = (self._server_user_index + 1) % self._num_agents
+            
+            # Copy server input to user input when server input is active.
+            server_user_input = self._user_data[self._server_user_index].gui_input
+            if server_user_input.get_any_input():
+                self._server_input_enabled = False
+            elif self._server_gui_input.get_any_input():
+                self._server_input_enabled = True
+            if self._server_input_enabled:
+                server_user_input.copy_from(self._server_gui_input)
 
         self._sps_tracker.increment()
-
-        self._check_change_episode()
 
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].update(dt)
             self._update_grasping_and_set_act_hints(user_index)
-        self._app_service.compute_action_and_step_env()
-
-        for user_index in self._users.indices(Mask.ALL):
             self._update_help_text(user_index)
+        self._app_service.compute_action_and_step_env()
 
         # Set the server camera.
         server_cam_transform = self._user_data[

@@ -17,9 +17,9 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp.web
 from habitat_hitl.core.hydra_utils import ConfigObject
-import websockets
-from websockets.client import ClientConnection
 from websockets.server import WebSocketServer
+from websockets.server import serve
+from websockets.server import WebSocketServerProtocol
 
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
@@ -89,20 +89,13 @@ def create_ssl_context() -> ssl.SSLContext:
 
 
 class Client:
-    def __init__(self, socket: ClientConnection):
+    def __init__(self, socket: WebSocketServerProtocol):
         self.socket = socket
         self.connection_id = id(socket)
         self.connection_timestamp = datetime.now()
         self.recent_connection_activity_timestamp = self.connection_timestamp
         self.waiting_for_client_ready = True
         self.needs_consolidated_keyframe = True
-
-
-class UserSlots:
-    def __init__(self, max_user_count: int):
-        self._max_user_count = max_user_count
-        self._connected_users = Users(0)
-        self._clients: Dict[int, Client] = {}
 
 
 class NetworkManager:
@@ -118,14 +111,13 @@ class NetworkManager:
 
     def __init__(self, interprocess_record: InterprocessRecord):
         self._connected_clients: Dict[
-            int, ClientConnection
+            int, WebSocketServerProtocol
         ] = {}  # Dictionary to store connected clients
 
         self._interprocess_record = interprocess_record
         self._networking_config = interprocess_record._networking_config
         self._max_client_count = self._networking_config.max_client_count
         self._user_slots: Dict[int, Client] = {}
-        self._connected_users = Users(0)
 
         # Limit how many messages/sec we send. Note the current server implementation sends
         # messages "one at a time" (waiting for confirmation of receipt from the
@@ -145,7 +137,7 @@ class NetworkManager:
             get_empty_keyframe(), consolidated_messages
         )
 
-    def _occupy_user_slot(self, websocket: ClientConnection) -> int:
+    def _occupy_user_slot(self, websocket: WebSocketServerProtocol) -> int:
         """
         Find the lowest available user_index and assigns the specified client to it.
         Returns the user index.
@@ -187,7 +179,7 @@ class NetworkManager:
                 inc_keyframe_and_messages.messages,
             )
 
-    async def receive_client_states(self, websocket: ClientConnection) -> None:
+    async def receive_client_states(self, websocket: WebSocketServerProtocol) -> None:
         connection_id = id(websocket)
         async for message in websocket:
             self._recent_connection_activity_timestamp = datetime.now()
@@ -353,9 +345,8 @@ class NetworkManager:
             return
         assert connection_id in self._connected_clients
         websocket = self._connected_clients[connection_id]
-        assert (
-            websocket.close_reason != None
-        )  # Assert that the socket is closed.
+        # Ensure that the connection is closed.
+        asyncio.create_task(websocket.close())
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[connection_id]
         # Sloppy: Search for slot by connection ID
@@ -384,7 +375,7 @@ class NetworkManager:
             )
         return connection_record
 
-    async def handle_connection(self, websocket: ClientConnection) -> None:
+    async def handle_connection(self, websocket: WebSocketServerProtocol) -> None:
         # TODO: Kick clients before accepting connection.
 
         # Kick clients after limit is reached.
@@ -446,6 +437,7 @@ class NetworkManager:
 
     # Sloppy: Connection sends/receives seem to sometimes hang for several minutes, making the server unresponsive to new connections. Let's try to detect when this happens and close the connection. Unclear if this is actually helping. I believe the underlying cause was improper configuration of the AWS load balancer and this has probably since been fixed.
     async def check_close_broken_connection(self) -> None:
+        # TODO: Probably not needed anymore. Disabled for now.
         while True:
             try:
                 await asyncio.sleep(5)
@@ -475,7 +467,7 @@ async def start_websocket_server(
     global use_ssl
     network_mgr_lambda = lambda ws, path: network_mgr.handle_connection(ws)
     ssl_context = create_ssl_context() if use_ssl else None
-    websocket_server = await websockets.serve(
+    websocket_server = await serve(
         network_mgr_lambda, "0.0.0.0", networking_config.port, ssl=ssl_context
     )
     print(

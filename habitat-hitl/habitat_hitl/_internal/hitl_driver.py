@@ -530,7 +530,6 @@ class HitlDriver(AppDriver):
                 self._hitl_config.networking.client_sync.server_camera
                 and "cam_transform" in post_sim_update_dict
             ):
-                self._remote_client_state.on_frame_end()
                 cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
                     "cam_transform"
                 ]
@@ -539,6 +538,7 @@ class HitlDriver(AppDriver):
                         cam_transform
                     )
 
+            self._remote_client_state.on_frame_end()
             self._send_keyframes(keyframes)
 
         return post_sim_update_dict

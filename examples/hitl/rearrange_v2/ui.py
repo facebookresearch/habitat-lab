@@ -45,17 +45,98 @@ COLOR_GOALS: List[mn.Color4] = [
     mn.Color4(_LO, _HI, 0.0, 1.0),  # Orange
 ]
 
+class World:
+    """
+    Global world state shared by each user.
+    """
+    def __init__(
+        self,
+        sim: RearrangeSim,
+    ):
+        self._sim = sim
+
+        # Cache of all held objects.
+        # Prevents users from picking objects held by others.
+        self._all_held_object_ids: Set[int] = set()
+        # Cache of all opened articulated object links.
+        self._opened_link_set: Set = set()
+        # Cache of all link IDs and their parent articulated objects.
+        # Used to speed-up sim queries.
+        self._link_id_to_ao_map: Dict[int, int] = {}
+        # Cache of pickable objects IDs.
+        self._pickable_object_ids: Set[int] = set()
+        # Cache of interactable objects IDs.
+        self._interactable_object_ids: Set[int] = set()
+
+    def reset(self) -> None:
+        """
+        Reset the world state. Call every time the scene changes.
+        """
+        sim = self._sim
+        self._all_held_object_ids = set()
+        self._opened_link_set = set()
+        self._link_id_to_ao_map = sim_utilities.get_ao_link_id_map(sim)
+
+        # Find pickable objects.
+        self._pickable_object_ids = set(sim._scene_obj_ids)
+        for pickable_obj_id in self._pickable_object_ids:
+            rigid_obj = self.get_rigid_object(pickable_obj_id)
+            # Ensure that rigid objects are collidable.
+            rigid_obj.collidable = True
+
+        # Get set of interactable articulated object links.
+        # Exclude all agents.
+        agent_ao_object_ids: Set[int] = set()
+        agent_manager: ArticulatedAgentManager = sim.agents_mgr
+        for agent_index in range(len(agent_manager)):
+            agent = agent_manager[agent_index]
+            agent_ao = agent.articulated_agent.sim_obj
+            agent_ao_object_ids.add(agent_ao.object_id)
+        self._interactable_object_ids = set()
+        aom = sim.get_articulated_object_manager()
+        all_ao: List[
+            ManagedArticulatedObject
+        ] = aom.get_objects_by_handle_substring().values()
+        # All add non-root links that are not agents.
+        for ao in all_ao:
+            if ao.object_id not in agent_ao_object_ids:
+                for link_object_id in ao.link_object_ids:
+                    if link_object_id != ao.object_id:
+                        self._interactable_object_ids.add(link_object_id)
+
+    def get_rigid_object(self, object_id: int) -> Optional[Any]:
+        """Get the rigid object with the specified ID. Returns None if unsuccessful."""
+        rom = self._sim.get_rigid_object_manager()
+        return rom.get_object_by_id(object_id)
+
+    def get_articulated_object(self, object_id: int) -> Optional[Any]:
+        """Get the articulated object with the specified ID. Returns None if unsuccessful."""
+        aom = self._sim.get_articulated_object_manager()
+        return aom.get_object_by_id(object_id)
+
+    def get_link_index(self, object_id: int) -> int:
+        """Get the index of a link. Returns None if unsuccessful."""
+        link_id = object_id
+        if link_id in self._link_id_to_ao_map:
+            ao_id = self._link_id_to_ao_map[link_id]
+            ao = self.get_articulated_object(ao_id)
+            link_id_to_index: Dict[int, int] = ao.link_object_ids
+            if link_id in link_id_to_index:
+                return link_id_to_index[link_id]
+        return None
+
+
 
 class UI:
     """
     User interface for the rearrange_v2 app.
     Each user has their own UI class.
     """
-
     def __init__(
         self,
         hitl_config,
         user_index: int,
+        world: World,
         gui_controller: GuiController,
         sim: RearrangeSim,
         gui_input: GuiInput,
@@ -64,6 +145,7 @@ class UI:
     ):
         self._user_index = user_index
         self._dest_mask = Mask.from_index(self._user_index)
+        self._world = world
         self._gui_controller = gui_controller
         self._sim = sim
         self._gui_input = gui_input
@@ -74,14 +156,6 @@ class UI:
 
         # ID of the object being held. None if no object is held.
         self._held_object_id: Optional[int] = None
-        # Cache of all link IDs and their parent articulated objects.
-        self._link_id_to_ao_map: Dict[int, int] = {}
-        # Cache of all opened articulated object links.
-        self._opened_link_set: Set = set()
-        # Cache of pickable objects IDs.
-        self._pickable_object_ids: Set[int] = set()
-        # Cache of interactable objects IDs.
-        self._interactable_object_ids: Set[int] = set()
         # Last time a click was done. Used to track double-clicking.
         self._last_click_time: datetime = datetime.now()
         # Cache of goal object-receptacle pairs.
@@ -121,41 +195,11 @@ class UI:
         """
         Reset the UI. Call on simulator reset.
         """
-        sim = self._sim
-
         self._held_object_id = None
-        self._link_id_to_ao_map = sim_utilities.get_ao_link_id_map(sim)
-        self._opened_link_set = set()
         self._object_receptacle_pairs = object_receptacle_pairs
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
-
-        self._pickable_object_ids = set(sim._scene_obj_ids)
-        for pickable_obj_id in self._pickable_object_ids:
-            rigid_obj = self._get_rigid_object(pickable_obj_id)
-            # Ensure that rigid objects are collidable.
-            rigid_obj.collidable = True
-
-        # Get set of interactable articulated object links.
-        # Exclude all agents.
-        agent_ao_object_ids: Set[int] = set()
-        agent_manager: ArticulatedAgentManager = sim.agents_mgr
-        for agent_index in range(len(agent_manager)):
-            agent = agent_manager[agent_index]
-            agent_ao = agent.articulated_agent.sim_obj
-            agent_ao_object_ids.add(agent_ao.object_id)
-        self._interactable_object_ids = set()
-        aom = sim.get_articulated_object_manager()
-        all_ao: List[
-            ManagedArticulatedObject
-        ] = aom.get_objects_by_handle_substring().values()
-        # All add non-root links that are not agents.
-        for ao in all_ao:
-            if ao.object_id not in agent_ao_object_ids:
-                for link_object_id in ao.link_object_ids:
-                    if link_object_id != ao.object_id:
-                        self._interactable_object_ids.add(link_object_id)
 
     def update(self) -> None:
         """
@@ -200,17 +244,16 @@ class UI:
         self._draw_goals()
 
     def _pick_object(self, object_id: int) -> None:
-        """Pick the specified object_id. The object must be pickable."""
-        if not self._is_holding_object() and self._is_object_pickable(
-            object_id
-        ):
-            rigid_object = self._get_rigid_object(object_id)
+        """Pick the specified object_id. The object must be pickable and held by nobody else."""
+        if not self._is_holding_object() and self._is_object_pickable(object_id) and not self._is_someone_holding_object(object_id):
+            rigid_object = self._world.get_rigid_object(object_id)
             if rigid_object is not None:
                 rigid_pos = rigid_object.translation
                 if self._is_within_reach(rigid_pos):
                     # Pick the object.
                     self._held_object_id = object_id
                     self._place_selection.deselect()
+                    self._world._all_held_object_ids.add(object_id)
 
     def _update_held_object_placement(self) -> None:
         """Update the location of the held object."""
@@ -243,31 +286,32 @@ class UI:
             and self._is_location_suitable_for_placement(point, normal)
         ):
             # Drop the object.
-            rigid_object = self._get_rigid_object(object_id)
+            rigid_object = self._world.get_rigid_object(object_id)
             rigid_object.translation = point + mn.Vector3(
                 0.0, rigid_object.collision_shape_aabb.size_y() / 2, 0.0
             )
             self._held_object_id = None
             self._place_selection.deselect()
+            self._world._all_held_object_ids.remove(object_id)
 
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""
         if self._is_object_interactable(object_id):
             link_id = object_id
-            link_index = self._get_link_index(link_id)
+            link_index = self._world.get_link_index(link_id)
             if link_index:
-                ao_id = self._link_id_to_ao_map[link_id]
-                ao = self._get_articulated_object(ao_id)
+                ao_id = self._world._link_id_to_ao_map[link_id]
+                ao = self._world.get_articulated_object(ao_id)
                 link_node = ao.get_link_scene_node(link_index)
                 link_pos = link_node.translation
                 if self._is_within_reach(link_pos):
                     # Open/close object.
-                    if link_id in self._opened_link_set:
+                    if link_id in self._world._opened_link_set:
                         sim_utilities.close_link(ao, link_index)
-                        self._opened_link_set.remove(link_id)
+                        self._world._opened_link_set.remove(link_id)
                     else:
                         sim_utilities.open_link(ao, link_index)
-                        self._opened_link_set.add(link_id)
+                        self._world._opened_link_set.add(link_id)
 
     def _user_pos(self) -> mn.Vector3:
         """Get the translation of the agent controlled by the user."""
@@ -275,26 +319,7 @@ class UI:
             self._sim, self._gui_controller._agent_idx
         ).translation
 
-    def _get_rigid_object(self, object_id: int) -> Optional[Any]:
-        """Get the rigid object with the specified ID. Returns None if unsuccessful."""
-        rom = self._sim.get_rigid_object_manager()
-        return rom.get_object_by_id(object_id)
-
-    def _get_articulated_object(self, object_id: int) -> Optional[Any]:
-        """Get the articulated object with the specified ID. Returns None if unsuccessful."""
-        aom = self._sim.get_articulated_object_manager()
-        return aom.get_object_by_id(object_id)
-
-    def _get_link_index(self, object_id: int) -> int:
-        """Get the index of a link. Returns None if unsuccessful."""
-        link_id = object_id
-        if link_id in self._link_id_to_ao_map:
-            ao_id = self._link_id_to_ao_map[link_id]
-            ao = self._get_articulated_object(ao_id)
-            link_id_to_index: Dict[int, int] = ao.link_object_ids
-            if link_id in link_id_to_index:
-                return link_id_to_index[link_id]
-        return None
+    
 
     def _horizontal_distance(self, a: mn.Vector3, b: mn.Vector3) -> float:
         """Compute the distance between two points on the horizontal plane."""
@@ -304,19 +329,24 @@ class UI:
 
     def _is_object_pickable(self, object_id: int) -> bool:
         """Returns true if the object can be picked."""
-        return object_id is not None and object_id in self._pickable_object_ids
+        return object_id is not None and object_id in self._world._pickable_object_ids
 
     def _is_object_interactable(self, object_id: int) -> bool:
         """Returns true if the object can be opened or closed."""
+        world = self._world
         return (
             object_id is not None
-            and object_id in self._interactable_object_ids
-            and object_id in self._link_id_to_ao_map
+            and object_id in world._interactable_object_ids
+            and object_id in world._link_id_to_ao_map
         )
 
     def _is_holding_object(self) -> bool:
         """Returns true if the user is holding an object."""
         return self._held_object_id is not None
+    
+    def _is_someone_holding_object(self, object_id: int) -> bool:
+        """Returns true if any user is holding the specified object."""
+        return object_id in self._world._all_held_object_ids
 
     def _is_within_reach(self, target_pos: mn.Vector3) -> bool:
         """Returns true if the target can be reached by the user."""
@@ -378,10 +408,10 @@ class UI:
         if not self._is_object_interactable(object_id):
             return
 
-        link_index = self._get_link_index(object_id)
+        link_index = self._world.get_link_index(object_id)
         if link_index:
             ao = sim_utilities.get_obj_from_id(
-                self._sim, object_id, self._link_id_to_ao_map
+                self._sim, object_id, self._world._link_id_to_ao_map
             )
             link_node = ao.get_link_scene_node(link_index)
             aabb = link_node.cumulative_bb
@@ -395,11 +425,11 @@ class UI:
             return
 
         object_id = self._hover_selection.object_id
-        if not self._is_object_pickable(object_id):
+        if not self._is_object_pickable(object_id) or self._is_someone_holding_object(object_id):
             return
 
         managed_object = sim_utilities.get_obj_from_id(
-            self._sim, object_id, self._link_id_to_ao_map
+            self._sim, object_id, self._world._link_id_to_ao_map
         )
         translation = managed_object.translation
         reachable = self._is_within_reach(translation)
@@ -412,7 +442,7 @@ class UI:
         # TODO: Cache
         sim = self._sim
         obj_receptacle_pairs = self._object_receptacle_pairs
-        link_id_to_ao_map = self._link_id_to_ao_map
+        link_id_to_ao_map = self._world._link_id_to_ao_map
         dest_mask = self._dest_mask
         get_obj_from_id = sim_utilities.get_obj_from_id
         draw_gui_circle = self._gui_drawer.draw_circle

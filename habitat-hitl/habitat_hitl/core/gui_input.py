@@ -93,23 +93,19 @@ class GuiInput:
     def on_frame_end(self):
         self._key_down.clear()
         self._key_up.clear()
-        #self._key_held.clear()
         self._mouse_button_down.clear()
         self._mouse_button_up.clear()
-        #self._mouse_button_held.clear()
-        #self._mouse_position = [0, 0]
-        self._relative_mouse_position = [0, 0]
-        self._mouse_scroll_offset = 0.0
-        #self._mouse_ray = None
+        #self._relative_mouse_position = [0, 0]
+        #self._mouse_scroll_offset = 0.0
 
     def copy_from(self, other: GuiInput):
-        self._key_down = other._key_down
-        self._key_up = other._key_up
-        self._key_held = other._key_held
-        self._mouse_button_down = other._mouse_button_down
-        self._mouse_button_up = other._mouse_button_up
-        self._mouse_button_held = other._mouse_button_held
-        self._mouse_position = other._mouse_position
-        self._relative_mouse_position = other._relative_mouse_position
+        self._key_down = set(other._key_down)
+        self._key_up = set(other._key_up)
+        self._key_held = set(other._key_held)
+        self._mouse_button_down = set(other._mouse_button_down)
+        self._mouse_button_up = set(other._mouse_button_up)
+        self._mouse_button_held = set(other._mouse_button_held)
+        self._mouse_position = list(other._mouse_position)
+        self._relative_mouse_position = list(other._relative_mouse_position)
         self._mouse_scroll_offset = other._mouse_scroll_offset
         self._mouse_ray = other._mouse_ray
