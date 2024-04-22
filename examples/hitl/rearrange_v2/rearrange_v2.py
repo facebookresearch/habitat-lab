@@ -7,6 +7,8 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
+from habitat_hitl.core.client_message_manager import UIButton
+from habitat_hitl.core.key_mapping import KeyCode
 import hydra
 import magnum as mn
 import numpy as np
@@ -364,6 +366,9 @@ class AppStateLoadEpisode(BaseRearrangeState):
         self._session_ended = True
 
 
+START_BUTTON_ID = "start"
+START_SCREEN_TIMEOUT = 120.0
+SKIP_START_SCREEN = False
 class AppStateStartScreen(BaseRearrangeState):
     """
     Start screen with a "Start" button that all users must press before starting the session.
@@ -371,16 +376,62 @@ class AppStateStartScreen(BaseRearrangeState):
     """
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
+        self._ready_to_start: List[bool] = [False] * self._app_data.max_user_count
+        self._elapsed_time: float = 0.0
+
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if self._cancel:
             return AppStateCleanup(self._app_service, self._app_data)
-        # TODO: If modal dialogue is acknowledged...
-        return AppStateRearrangeV2(self._app_service, self._app_data)
+        
+        # If all users pressed the "Start" button, begin the session.
+        ready_to_start = True
+        for user_ready in self._ready_to_start:
+            ready_to_start &= user_ready
+        if ready_to_start or SKIP_START_SCREEN:
+            return AppStateRearrangeV2(self._app_service, self._app_data)
+        
         return None
 
     def sim_update(self, dt: float, post_sim_update_dict):
         # TODO: Top-down view.
-        pass # TODO: Modal dialogue.
+        # Draw modal dialogue
+
+        # Time limit to start the experiment.
+        self._elapsed_time += dt
+        remaining_time = START_SCREEN_TIMEOUT - self._elapsed_time
+        if remaining_time <= 0:
+            self._cancel = True
+            return
+        remaining_time_int = int(remaining_time)
+        title = f"New Session (Expires in: {remaining_time_int}s)"
+
+        # Show dialogue box with "Start" button.
+        for user_index in range(self._app_data.max_user_count):
+            button_pressed = self._app_service.remote_client_state.ui_button_clicked(user_index, START_BUTTON_ID)
+            self._ready_to_start[user_index] |= button_pressed
+
+            if not self._ready_to_start[user_index]:
+                self._app_service.client_message_manager.show_modal_dialogue_box(
+                    title,
+                    "Press 'Start' to begin the experiment.",
+                    [UIButton(START_BUTTON_ID, "Start", True)],
+                    Mask.from_index(user_index),
+                )
+            else:
+                self._app_service.client_message_manager.show_modal_dialogue_box(
+                    title,
+                    "Waiting for other participants...",
+                    [UIButton(START_BUTTON_ID, "Start", False)],
+                    Mask.from_index(user_index),
+                )
+
+        # Server-only: Press numeric keys to press button on behalf of users.
+        if not self._app_service.hitl_config.experimental.headless.do_headless:
+            first_key = int(KeyCode.ONE)
+            for user_index in range(len(self._ready_to_start)):
+                if self._app_service.gui_input.get_key_down(KeyCode(first_key + user_index)):
+                    self._ready_to_start[user_index] = True
+
 
 class AppStateEndSession(BaseRearrangeState):
     """
@@ -689,6 +740,20 @@ class AppStateRearrangeV2(BaseRearrangeState):
         return status_str
 
     def _update_help_text(self, user_index: int):
+        # If the user has signaled to change episode, show dialogue.
+        if self._user_data[user_index].signal_change_episode:
+            ui_button_id = "undo_change_episode"
+            self._app_service.client_message_manager.show_modal_dialogue_box(
+                "Task Finished",
+                "Waiting for the other participant to finish...",
+                [UIButton(ui_button_id, "Cancel", True)],
+                Mask.from_index(user_index),
+            )
+            cancel = self._app_service.remote_client_state.ui_button_clicked(user_index, ui_button_id)
+            if cancel:
+                self._user_data[user_index].signal_change_episode = False
+            return
+
         status_str = self._get_status_text(user_index)
         if len(status_str) > 0:
             self._app_service.text_drawer.add_text(

@@ -343,6 +343,7 @@ class NetworkManager:
         """
         if len(self._connected_clients) == 0:
             return
+        # TODO: THIS CAN FAIL
         assert connection_id in self._connected_clients
         websocket = self._connected_clients[connection_id]
         # Ensure that the connection is closed.

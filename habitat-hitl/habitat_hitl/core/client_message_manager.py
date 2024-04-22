@@ -14,6 +14,13 @@ from habitat_hitl.core.user_mask import Mask, Users
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 
 
+class UIButton:
+    def __init__(self, button_id: str, text: str, enabled: bool):
+        self.button_id = button_id
+        self.text = text
+        self.enabled = enabled
+
+
 class ClientMessageManager:
     r"""
     Extends gfx-replay keyframes to include server messages to be interpreted by the clients.
@@ -146,6 +153,30 @@ class ClientMessageManager:
             message["texts"].append(
                 {"text": text, "position": [pos[0], pos[1]]}
             )
+
+    def show_modal_dialogue_box(
+        self, title: str, text: str, buttons: List[UIButton], destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        Show a modal dialogue box with buttons.
+        There can only be one modal dialog box at a time.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            
+            if "dialog" not in message:
+                message["dialog"] = {}
+            message["dialog"] = {
+                "title": title,
+                "text": text,
+                "buttons": [],
+            }
+            for button in buttons:
+                message["dialog"]["buttons"].append({
+                    "id": button.button_id,
+                    "text": button.text,
+                    "enabled": button.enabled,
+                })
 
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
