@@ -931,10 +931,16 @@ class RearrangeEpisodeGenerator:
             k: v.unique_name
             for k, v in self.object_to_containing_receptacle.items()
         }
+        
+        #modify for great lakes file path
+        gl_path = "/gpfs/accounts/maanigj_root/maanigj0/kliubiyk"
+        new_cfg_dataset_path = self.cfg.dataset_path.replace("/habitat-lab/", "")
 
+        new_additional_obj_config_paths = [path.replace("/habitat-lab/", "") for path in self.cfg.additional_object_paths]
+        new_ep_scene_handle = ep_scene_handle.replace("/habitat-lab/", "")
         return RearrangeEpisode(
-            scene_dataset_config=self.cfg.dataset_path,
-            additional_obj_config_paths=self.cfg.additional_object_paths,
+            scene_dataset_config=new_cfg_dataset_path, #KL
+            additional_obj_config_paths=new_additional_obj_config_paths, #KL
             episode_id=str(self.num_ep_generated - 1),
             start_position=robot_sampled_start, #KL
             start_rotation=[
@@ -943,7 +949,7 @@ class RearrangeEpisodeGenerator:
                 0,
                 1,
             ],
-            scene_id=ep_scene_handle,
+            scene_id=new_ep_scene_handle, #KL
             ao_states=ao_states,
             rigid_objs=sampled_rigid_object_states,
             targets=self.episode_data["sampled_targets"],
