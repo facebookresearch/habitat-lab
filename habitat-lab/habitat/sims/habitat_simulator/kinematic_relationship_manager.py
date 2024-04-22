@@ -193,10 +193,9 @@ class KinematicRelationshipManager:
         self.prev_snapshot = self.get_relations_snapshot()
         self.prev_root_obj_state = self.get_root_parents_snapshot()
 
-    def initialize_relationship_graph(self) -> None:
+    def initialize_from_dynamic_ontop(self) -> None:
         """
-        Scrape current scene contents to initialize the relationship graph.
-        #TODO: add configurable relationship sources (e.g. ontop vs. within vs. both)
+        Scrape current scene contents to initialize the relationship graph via the "ontop" util, requiring that objects are dynamically simulated such that contact can be used as a heuristic for support relationships.
         """
 
         self.relationship_graph = RelationshipGraph()
