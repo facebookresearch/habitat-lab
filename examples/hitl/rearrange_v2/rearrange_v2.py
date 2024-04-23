@@ -693,9 +693,9 @@ class AppStateEndSession(BaseRearrangeState):
             else:
                 episodes_str = "unknown_episodes"
             
+            if user_id_str != "":
+                user_id_str += "_"
             if "user_id" in connection_record:
-                if user_id_str != "":
-                    user_id_str += "_"
                 user_id_str += connection_record["user_id"]
             else:
                 user_id_str += "unknown_user"
@@ -911,8 +911,8 @@ class AppStateRearrangeV2(BaseRearrangeState):
 
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("instruction") is not None:
-            task_instruction = current_episode.info["instruction"]
+        if hasattr(current_episode, "instruction"):
+            task_instruction = current_episode.instruction
             # TODO: Users will have different instructions.
             for user_index in self._users.indices(Mask.ALL):
                 self._user_data[user_index].task_instruction = task_instruction
@@ -935,17 +935,18 @@ class AppStateRearrangeV2(BaseRearrangeState):
         sim = self._app_service.sim
         paired_goal_ids: List[Tuple[List[int], List[int]]] = []
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("evaluation_propositions") is not None:
-            evaluation_propositions = current_episode.info["evaluation_propositions"]
+        # Typing unavailable for this episode type.
+        if hasattr(current_episode, "evaluation_propositions"):
+            evaluation_propositions = current_episode.evaluation_propositions
             for proposition in evaluation_propositions:
                 object_ids: List[int] = []
-                object_handles = proposition["args"]["object_handles"]
+                object_handles = proposition.args["object_handles"]
                 for object_handle in object_handles:
                     obj = sim_utilities.get_obj_from_handle(sim, object_handle)
                     object_id = obj.object_id
                     object_ids.append(object_id)
                 receptacle_ids: List[int] = []
-                receptacle_handles = proposition["args"]["receptacle_handles"]
+                receptacle_handles = proposition.args["receptacle_handles"]
                 for receptacle_handle in receptacle_handles:
                     obj = sim_utilities.get_obj_from_handle(
                         sim, receptacle_handle
