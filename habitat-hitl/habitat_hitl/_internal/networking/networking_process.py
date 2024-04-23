@@ -333,8 +333,7 @@ class NetworkManager:
 
     def can_accept_connection(self) -> bool:
         return (
-            len(self._connected_clients)
-            < self._networking_config.max_client_count
+            len(self._connected_clients) < self._networking_config.max_client_count and self._interprocess_record.new_connections_allowed()
         )
 
     def handle_disconnect(self, connection_id: int) -> None:
@@ -364,6 +363,7 @@ class NetworkManager:
         disconnection_record: DisconnectionRecord = {}
         disconnection_record["connectionId"] = connection_id
         disconnection_record["userIndex"] = user_index
+        disconnection_record["timestamp"] = str(int(time.time()))
         self._interprocess_record.send_disconnection_record_to_main_thread(
             disconnection_record
         )
@@ -414,6 +414,7 @@ class NetworkManager:
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
             connection_record["userIndex"] = user_index
+            connection_record["timestamp"] = str(int(time.time()))
 
             # Insert mock connection parameters
             mock_connection_params_dict = self._networking_config.mock_connection_params_dict
