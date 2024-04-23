@@ -49,6 +49,7 @@ class RemoteClientState:
         self._users = users
 
         self._new_connection_records: List[ConnectionRecord] = []
+        self._client_loading: List[bool] = [False] * users.max_user_count
 
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
@@ -304,6 +305,11 @@ class RemoteClientState:
             # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
             # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
             last_client_state = client_states[-1]
+
+            # Loading states.
+            self._client_loading[user_index] = False
+            if "isLoading" in last_client_state:
+                self._client_loading[user_index] = last_client_state["isLoading"]
 
             input_json = (
                 last_client_state["input"]

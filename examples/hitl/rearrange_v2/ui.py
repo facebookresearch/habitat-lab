@@ -31,19 +31,13 @@ MINIMUM_DROP_VERTICALITY: float = 0.9
 DOUBLE_CLICK_DELAY: float = 0.33
 
 _HI = 0.8
-_LO = 0.4
+_LO = 0.1
 # Color for a valid action.
-COLOR_VALID = mn.Color4(0.0, _HI, 0.0, 1.0)  # Green
+COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 # Color for an invalid action.
-COLOR_INVALID = mn.Color4(_HI, 0.0, 0.0, 1.0)  # Red
+COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
-COLOR_GOALS: List[mn.Color4] = [
-    mn.Color4(0.0, _HI, _HI, 1.0),  # Cyan
-    mn.Color4(_HI, 0.0, _HI, 1.0),  # Magenta
-    mn.Color4(_HI, _HI, 0.0, 1.0),  # Yellow
-    mn.Color4(_HI, 0.0, _LO, 1.0),  # Purple
-    mn.Color4(_LO, _HI, 0.0, 1.0),  # Orange
-]
+COLOR_GOALS = mn.Color4(_HI, _HI, _LO, 1.0) # Yellow
 
 class World:
     """
@@ -496,7 +490,6 @@ class UI:
         for i in range(len(obj_receptacle_pairs)):
             rigid_ids = obj_receptacle_pairs[i][0]
             receptacle_ids = obj_receptacle_pairs[i][1]
-            goal_pair_color = COLOR_GOALS[i % len(COLOR_GOALS)]
             for rigid_id in rigid_ids:
                 managed_object = get_obj_from_id(
                     sim, rigid_id, link_id_to_ao_map
@@ -505,7 +498,7 @@ class UI:
                 draw_gui_circle(
                     translation=translation,
                     radius=0.25,
-                    color=goal_pair_color,
+                    color=COLOR_GOALS,
                     billboard=True,
                     destination_mask=dest_mask,
                 )
@@ -517,4 +510,4 @@ class UI:
                     sim, receptacle_id, link_id_to_ao_map
                 )
                 if aabb is not None:
-                    draw_gui_aabb(aabb, matrix, goal_pair_color)
+                    draw_gui_aabb(aabb, matrix, COLOR_GOALS)

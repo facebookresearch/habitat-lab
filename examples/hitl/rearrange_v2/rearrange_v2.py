@@ -57,7 +57,7 @@ def get_top_down_view(sim) -> mn.Matrix4:
     scene_root_node = sim.get_active_scene_graph().get_root_node()
     scene_target_bb: mn.Range3D = scene_root_node.cumulative_bb
     look_at = _lookat_bounding_box_top_down(
-        100, scene_target_bb, FWD
+        200, scene_target_bb, FWD
     )
     return mn.Matrix4.look_at(look_at[0], look_at[1], UP)
 
@@ -214,16 +214,6 @@ class FrameRecorder:
                 }
             )
         return object_states
-    
-    def get_users_state(self) -> List[Dict[str, Any]]:
-        output = []
-        for user_index in range(self._app_data.max_user_count):
-            #output.append({
-            #    self._app_service.
-            #})
-            # Get camera transforms
-            pass
-        return output
 
     def record_state(self, elapsed_time:float, user_data: List[UserData]) -> Dict[str, Any]:
         data: Dict[str, Any] = {
@@ -239,7 +229,6 @@ class FrameRecorder:
                 "task_completed": u.task_completed,
                 "camera_transform": u.cam_transform,
                 "held_object": u.ui._held_object_id,
-                #"agent_state: ...
                 "events": list(u.ui._events)
             }
             data["users"].append(user_data_dict)
@@ -493,6 +482,7 @@ class AppStateLoadEpisode(BaseRearrangeState):
             return AppStateEndSession(self._app_service, self._app_data, "User disconnected")
         if self._session_ended:
             return AppStateEndSession(self._app_service, self._app_data)
+        # When all clients finish loading, show the start screen.
         if not self._loading:
             return AppStateStartScreen(self._app_service, self._app_data)
         return None
@@ -504,7 +494,24 @@ class AppStateLoadEpisode(BaseRearrangeState):
         # TODO: Clean this up.
         if self._frame_number == 1:
             self._increment_episode()
-            self._loading = False
+        elif self._frame_number > 1:
+            # Top-down view.
+            cam_matrix = get_top_down_view(self._app_service.sim)
+            post_sim_update_dict["cam_transform"] = cam_matrix
+            self._app_service._client_message_manager.update_camera_transform(
+                cam_matrix, destination_mask=Mask.ALL
+            )
+        
+        # HACK: Sample periodically. Find a way to synchronize states properly.
+        # Periodically check if clients are loading.
+        if self._frame_number > 0 and self._frame_number % 20 == 0:
+            any_client_loading = False
+            for user_index in range(self._app_data.max_user_count):
+                if self._app_service.remote_client_state._client_loading[user_index]:
+                    any_client_loading = True
+                    break
+            if not any_client_loading:
+                self._loading = False
 
         self._frame_number += 1
 
@@ -529,10 +536,14 @@ class AppStateLoadEpisode(BaseRearrangeState):
         # Once an episode ID has been set, lab needs to be reset to load the episode.
         self._app_service.end_episode(do_reset=True)
 
+        # Signal the clients that the scene has changed.
+        client_message_manager = self._app_service.client_message_manager
+        if client_message_manager:
+            client_message_manager.signal_scene_change(Mask.ALL)
+            
         # Insert a keyframe to force clients to load immediately.
         self._app_service.sim.gfx_replay_manager.save_keyframe()
 
-        # TODO: Wait for clients to finish loading before starting rearrange.
         # TODO: Timeout
 
 START_BUTTON_ID = "start"
@@ -696,7 +707,11 @@ class AppStateEndSession(BaseRearrangeState):
             if user_id_str != "":
                 user_id_str += "_"
             if "user_id" in connection_record:
-                user_id_str += connection_record["user_id"]
+                uid = str(connection_record["user_id"])
+                if uid.isalnum():
+                    user_id_str += uid
+                else:
+                    user_id_str += "unknown_user"
             else:
                 user_id_str += "unknown_user"
         session_id = f"{episodes_str}_{user_id_str}_{timestamp()}"
@@ -917,16 +932,9 @@ class AppStateRearrangeV2(BaseRearrangeState):
             for user_index in self._users.indices(Mask.ALL):
                 self._user_data[user_index].task_instruction = task_instruction
 
-        client_message_manager = self._app_service.client_message_manager
-        if client_message_manager:
-            client_message_manager.signal_scene_change(Mask.ALL)
-
         object_receptacle_pairs = self._create_goal_object_receptacle_pairs()
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].reset(object_receptacle_pairs)
-
-        # Insert a keyframe to force clients to load immediately.
-        self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def _create_goal_object_receptacle_pairs(
         self,
@@ -940,21 +948,24 @@ class AppStateRearrangeV2(BaseRearrangeState):
             evaluation_propositions = current_episode.evaluation_propositions
             for proposition in evaluation_propositions:
                 object_ids: List[int] = []
-                object_handles = proposition.args["object_handles"]
-                for object_handle in object_handles:
-                    obj = sim_utilities.get_obj_from_handle(sim, object_handle)
-                    object_id = obj.object_id
-                    object_ids.append(object_id)
-                receptacle_ids: List[int] = []
-                receptacle_handles = proposition.args["receptacle_handles"]
-                for receptacle_handle in receptacle_handles:
-                    obj = sim_utilities.get_obj_from_handle(
-                        sim, receptacle_handle
-                    )
-                    object_id = obj.object_id
-                    # TODO: Support for finding links by handle.
-                    receptacle_ids.append(object_id)
-                paired_goal_ids.append((object_ids, receptacle_ids))
+                if hasattr(proposition, "args"):
+                    if "object_handles" in proposition.args:
+                        object_handles = proposition.args["object_handles"]
+                        for object_handle in object_handles:
+                            obj = sim_utilities.get_obj_from_handle(sim, object_handle)
+                            object_id = obj.object_id
+                            object_ids.append(object_id)
+                        receptacle_ids: List[int] = []
+                    if "receptacle_handles" in proposition.args:
+                        receptacle_handles = proposition.args["receptacle_handles"]
+                        for receptacle_handle in receptacle_handles:
+                            obj = sim_utilities.get_obj_from_handle(
+                                sim, receptacle_handle
+                            )
+                            object_id = obj.object_id
+                            # TODO: Support for finding links by handle.
+                            receptacle_ids.append(object_id)
+                        paired_goal_ids.append((object_ids, receptacle_ids))
         return paired_goal_ids
 
     def _update_grasping_and_set_act_hints(self, user_index: int):
