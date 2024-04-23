@@ -408,7 +408,10 @@ class HitlDriver(AppDriver):
 
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
-        if do_reset and self._episode_helper.next_episode_exists():
+        # TODO: Conflict with set_next_episode_by_id
+        #if do_reset and self._episode_helper.next_episode_exists():
+        #    self._reset_environment()
+        if do_reset:
             self._reset_environment()
 
         self._episode_helper.increment_done_episode_counter()

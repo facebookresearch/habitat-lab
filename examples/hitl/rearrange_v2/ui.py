@@ -258,9 +258,13 @@ class UI:
                     self._place_selection.deselect()
                     self._world._all_held_object_ids.add(object_id)
 
+                    # Force graphics update.
+                    self._sim.gfx_replay_manager.save_keyframe()
+
                     self._events.append({
                         "type": "pick",
                         "obj_handle": rigid_object.handle,
+                        "obj_id": object_id,
                     })
 
     def _update_held_object_placement(self) -> None:
@@ -279,6 +283,9 @@ class UI:
             object_id
         )
         rigid_object.translation = eye_position + forward_vector
+
+        # Force graphics update.
+        self._sim.gfx_replay_manager.save_keyframe()
 
     def _place_object(self) -> None:
         """Place the currently held object."""
@@ -302,9 +309,14 @@ class UI:
             self._place_selection.deselect()
             self._world._all_held_object_ids.remove(object_id)
 
+            # Force graphics update.
+            self._sim.gfx_replay_manager.save_keyframe()
+
             self._events.append({
                 "type": "place",
                 "obj_handle": rigid_object.handle,
+                "obj_id": object_id,
+                "receptacle_id": self._place_selection.object_id,
                 #"receptacle_handle": TODO
                 # receptacle = get_any_object(self._place_selection.object_id)
                 # if hasattr(receptacle, "handle")
@@ -321,6 +333,10 @@ class UI:
                 ao = self._world.get_articulated_object(ao_id)
                 link_node = ao.get_link_scene_node(link_index)
                 link_pos = link_node.translation
+
+                # Force graphics update.
+                self._sim.gfx_replay_manager.save_keyframe()
+
                 if self._is_within_reach(link_pos):
                     # Open/close object.
                     if link_id in self._world._opened_link_set:
@@ -330,6 +346,7 @@ class UI:
                         self._events.append({
                             "type": "open",
                             "obj_handle": ao.handle,
+                            "obj_id": object_id,
                         })
                     else:
                         sim_utilities.open_link(ao, link_index)
@@ -338,6 +355,7 @@ class UI:
                         self._events.append({
                             "type": "close",
                             "obj_handle": ao.handle,
+                            "obj_id": object_id,
                         })
 
     def _user_pos(self) -> mn.Vector3:

@@ -11,6 +11,7 @@ from time import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from habitat_hitl.core.serialize_utils import save_as_json_gzip
+from habitat_hitl.environment.hitl_tutorial import _lookat_bounding_box_top_down
 
 # Importing this file enables the collaboration dataset episode type to be loaded.
 from collaboration_episode_loader import load_collaboration_episode_data
@@ -46,10 +47,19 @@ from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 UP = mn.Vector3(0, 1, 0)
+FWD = mn.Vector3(0, 0, 1)
 
 def timestamp() -> str:
     "Generate a Unix timestamp at the current time."
     return str(int(time()))
+
+def get_top_down_view(sim) -> mn.Matrix4:
+    scene_root_node = sim.get_active_scene_graph().get_root_node()
+    scene_target_bb: mn.Range3D = scene_root_node.cumulative_bb
+    look_at = _lookat_bounding_box_top_down(
+        100, scene_target_bb, FWD
+    )
+    return mn.Matrix4.look_at(look_at[0], look_at[1], UP)
 
 class Session():
     """
@@ -216,10 +226,6 @@ class FrameRecorder:
         return output
 
     def record_state(self, elapsed_time:float, user_data: List[UserData]) -> Dict[str, Any]:
-        agent_states = self.get_agents_state()
-        object_states = self.get_objects_state()
-
-        # TODO
         data: Dict[str, Any] = {
             "t": elapsed_time,
             "users": [],
@@ -231,13 +237,15 @@ class FrameRecorder:
             u = user_data[user_index]
             user_data_dict = {
                 "task_completed": u.task_completed,
-                #"camera_transform": u.cam_transform,
-                #"held_object: handle
+                "camera_transform": u.cam_transform,
+                "held_object": u.ui._held_object_id,
                 #"agent_state: ...
-                "events": u.ui._events
+                "events": list(u.ui._events)
             }
             data["users"].append(user_data_dict)
             u.ui._events.clear() # Sloppy
+
+        return data
 
 class BaseRearrangeState(AppState):
     
@@ -439,7 +447,6 @@ class AppStateStartSession(BaseRearrangeState):
             print("Invalid episode names. Cancelling session.")
             return False
         
-        last_episode_id += 1 # Hack: Links are inclusive.
         if last_episode_id >= total_episode_count:
             last_episode_id = total_episode_count
 
@@ -506,13 +513,15 @@ class AppStateLoadEpisode(BaseRearrangeState):
 
     def _set_episode(self, episode_index: int):
         data = self._app_data
-        
+
+        # Set the ID of the next episode to play in lab.
         next_episode_id = data.episode_ids[episode_index]
         self._app_service.episode_helper.set_next_episode_by_id(
             next_episode_id
         )
-        # TODO: What does this _actually_ do?
-        #self._app_service.end_episode(do_reset=True)
+        
+        # Once an episode ID has been set, lab needs to be reset to load the episode.
+        self._app_service.end_episode(do_reset=True)
 
         # Insert a keyframe to force clients to load immediately.
         self._app_service.sim.gfx_replay_manager.save_keyframe()
@@ -548,7 +557,12 @@ class AppStateStartScreen(BaseRearrangeState):
         return None
 
     def sim_update(self, dt: float, post_sim_update_dict):
-        # TODO: Top-down view.
+        # Top-down view.
+        cam_matrix = get_top_down_view(self._app_service.sim)
+        post_sim_update_dict["cam_transform"] = cam_matrix
+        self._app_service._client_message_manager.update_camera_transform(
+            cam_matrix, destination_mask=Mask.ALL
+        )
 
         # Time limit to start the experiment.
         self._elapsed_time += dt
@@ -619,6 +633,13 @@ class AppStateEndSession(BaseRearrangeState):
         return self._next_state
     
     def sim_update(self, dt: float, post_sim_update_dict):
+        # Top-down view.
+        cam_matrix = get_top_down_view(self._app_service.sim)
+        post_sim_update_dict["cam_transform"] = cam_matrix
+        self._app_service._client_message_manager.update_camera_transform(
+            cam_matrix, destination_mask=Mask.ALL
+        )
+
         self._status_message(self._status)
         self._elapsed_time += dt
         if self._elapsed_time > SESSION_END_DELAY:
@@ -673,13 +694,13 @@ class AppStateReset(BaseRearrangeState):
 
         # Kick all users.
         self._kick_all_users()
-
-        # Clean-up AppData before opening the lobby.
-        self._app_data.reset()
     
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         # Wait for users to be kicked.
         if (len(self._app_data.connected_users) == 0):
+            # Clean-up AppData before opening the lobby.
+            self._app_data.reset()
+
             return AppStateLobby(self._app_service, self._app_data)
         else: return None
 
@@ -696,7 +717,7 @@ class UserData:
         self.user_index = user_index
         self.gui_agent_controller = gui_agent_controller
         self.server_sps_tracker = server_sps_tracker
-        self.gui_input = app_service.remote_client_state.get_gui_input(
+        self.gui_input: GuiInput = app_service.remote_client_state.get_gui_input(
             user_index
         )
         self.cam_transform = mn.Matrix4.identity_init()
@@ -874,6 +895,9 @@ class AppStateRearrangeV2(BaseRearrangeState):
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].reset(object_receptacle_pairs)
 
+        # Insert a keyframe to force clients to load immediately.
+        self._app_service.sim.gfx_replay_manager.save_keyframe()
+
     def _create_goal_object_receptacle_pairs(
         self,
     ) -> List[Tuple[List[int], List[int]]]:
@@ -1026,8 +1050,16 @@ class AppStateRearrangeV2(BaseRearrangeState):
 
         #  Collect data.
         self._elapsed_time += dt
-        frame_data = self._frame_recorder.record_state(self._elapsed_time, self._user_data)
-        self._app_data.session.session_recorder.record_frame(frame_data)
+        if self._is_any_user_active():
+            frame_data = self._frame_recorder.record_state(self._elapsed_time, self._user_data)
+            self._app_data.session.session_recorder.record_frame(frame_data)
+
+    def _is_any_user_active(self) -> bool:
+        for user_index in range(self._app_data.max_user_count):
+            if self._user_data[user_index].gui_input.get_any_input() or len(self._user_data[user_index].ui._events) > 0:
+                return True
+        else:
+            return False
 
 
 @hydra.main(

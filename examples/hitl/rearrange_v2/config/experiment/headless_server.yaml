@@ -4,9 +4,14 @@ habitat_hitl:
   window: ~
   networking:
     enable: True
+    max_client_count: 1
     http_availability_server:
       enable: True
     client_max_idle_duration: 30.0
   experimental:
     headless:
       do_headless: True
+
+rearrange_v2:
+  data_collection:
+    s3_path: "Phase_2/pilot/single/"

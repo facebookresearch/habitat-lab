@@ -29,7 +29,10 @@ class InterprocessRecord:
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
         self._kick_signal_queue: Queue[int] = Queue()
 
-        self._allow_new_connections = Value("b", True)
+        # TODO: Add config for this.
+        #       This fixes an issue that occurs when Unity connects when HITL launches.
+        #       When that happens, nobody listens to connection events which causes hanging.
+        self._allow_new_connections = Value("b", False)
 
     def enable_new_connections(self, enabled: bool):
         self._allow_new_connections.value = enabled
