@@ -413,7 +413,8 @@ class NetworkManager:
                     if time_out <= 0:
                         raise(Exception(f"Timeout."))
                     try:
-                        connection_record = self.parse_connection_record(message)                        
+                        connection_record = self.parse_connection_record(message)
+                        break
                     except Exception:
                         print(f"Unable to get connection record from client message: {message}.")
             except Exception:
