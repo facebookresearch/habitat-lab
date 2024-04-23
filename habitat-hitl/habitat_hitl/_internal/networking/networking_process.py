@@ -401,11 +401,19 @@ class NetworkManager:
 
         try:
             print("Waiting for connection record from client...")
-            message = await websocket.recv()
+
+            connection_record = None
             try:
-                connection_record = self.parse_connection_record(message)
+                async for message in websocket:
+                    try:
+                        connection_record = self.parse_connection_record(message)
+                    except Exception:
+                        print(f"Unexpected message from client: {message}.")
             except Exception:
-                raise(f"Unexpected message from client: {message}.")
+                raise(f"Client disconnected while sending connection record.")
+            
+            if connection_record is None:
+                raise(f"Client did not send connection record.")
 
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
