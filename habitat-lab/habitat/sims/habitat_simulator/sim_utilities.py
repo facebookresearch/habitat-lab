@@ -236,6 +236,7 @@ def size_regularized_bb_distance(
     bb_b: mn.Range3D,
     transform_a: mn.Matrix4 = None,
     transform_b: mn.Matrix4 = None,
+    flatten_axis: int = None,
 ) -> float:
     """
     Get the heuristic surface-to-surface distance between two bounding boxes (regularized by their individual heuristic sizes).
@@ -245,9 +246,13 @@ def size_regularized_bb_distance(
     :param bb_b: local bounding box of another object
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
+    :param flatten_axis: Optionally flatten one axis of the displacement vector. This effectively projects the displacement. For example, index "1" would result in horizontal (xz) distance.
 
     :return: heuristic surface-to-surface distance.
     """
+
+    # check for a valid value
+    assert flatten_axis in [None, 0, 1, 2]
 
     if transform_a is None:
         transform_a = mn.Matrix4.identity_init()
@@ -258,6 +263,9 @@ def size_regularized_bb_distance(
     b_center = transform_b.transform_point(bb_b.center())
 
     disp = a_center - b_center
+    # optionally project the displacement vector by flattening it
+    if flatten_axis is not None:
+        disp[flatten_axis] = 0
     dist = disp.length()
     disp_dir = disp / dist
 
@@ -1316,21 +1324,19 @@ def bb_next_to(
     bb_b: mn.Range3D,
     transform_a: mn.Matrix4 = None,
     transform_b: mn.Matrix4 = None,
-    vertical_threshold=0.1,
-    l2_threshold=0.3,
+    hor_l2_threshold=0.3,
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
     Concretely, consists of two checks:
-     1. height difference between the lowest points on the two objects to check that they are approximately resting on the same surface.
-     2. regularized L2 distance between object centers. Regularized in this case means displacement vector is truncted by each object's heuristic size.
+     1. assert overlap between the vertical range of the two bounding boxes.
+     2. regularized horizontal L2 distance between object centers. Regularized in this case means projected displacement vector is truncated by each object's heuristic size.
 
     :param bb_a: local bounding box of one object
     :param bb_b: local bounding box of another object
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
-    :param vertical_threshold: vertical distance allowed between objects' lowest points.
-    :param l2_threshold: regularized L2 distance allow between the objects' centers.
+    :param hor_l2_threshold: regularized horizontal L2 distance allowed between the objects' centers.
 
     :return: Whether or not the objects are heuristically "next to" one another.
     """
@@ -1345,13 +1351,21 @@ def bb_next_to(
 
     lowest_height_a = min([p[1] for p in keypoints_a])
     lowest_height_b = min([p[1] for p in keypoints_b])
+    highest_height_a = max([p[1] for p in keypoints_a])
+    highest_height_b = max([p[1] for p in keypoints_b])
 
-    if abs(lowest_height_a - lowest_height_b) > vertical_threshold:
+    # check for non-overlapping bounding boxes
+    if (
+        highest_height_a < lowest_height_b
+        or highest_height_b < lowest_height_a
+    ):
         return False
 
     if (
-        size_regularized_bb_distance(bb_a, bb_b, transform_a, transform_b)
-        > l2_threshold
+        size_regularized_bb_distance(
+            bb_a, bb_b, transform_a, transform_b, flatten_axis=1
+        )
+        > hor_l2_threshold
     ):
         return False
 
@@ -1362,22 +1376,20 @@ def obj_next_to(
     sim: habitat_sim.Simulator,
     object_id_a: int,
     object_id_b: int,
-    vertical_threshold=0.1,
-    l2_threshold=0.5,
+    hor_l2_threshold=0.5,
     ao_link_map: Dict[int, int] = None,
     ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
     """
     Check whether or not two objects should be considered "next to" one another.
     Concretely, consists of two checks:
-     1. height difference between the lowest points on the two objects to check that they are approximately resting on the same surface.
-     2. regularized L2 distance between object centers. Regularized in this case means displacement vector is truncted by each object's heuristic size.
+     1. bounding boxes must overlap vertically.
+     2. regularized horizontal L2 distance between object centers must be less than a threshold. Regularized in this case means displacement vector is truncated by each object's heuristic size.
 
     :param sim: The Simulator instance.
     :param object_id_a: object_id of the first ManagedObject or link.
     :param object_id_b: object_id of the second ManagedObject or link.
-    :param vertical_threshold: vertical distance allowed between objects' lowest points.
-    :param l2_threshold: regularized L2 distance allow between the objects' centers. This should be tailored to the scenario.
+    :param hor_l2_threshold: regularized horizontal L2 distance allow between the objects' centers. This should be tailored to the scenario.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
 
@@ -1403,6 +1415,5 @@ def obj_next_to(
         objb_bb,
         transform_a,
         transform_b,
-        vertical_threshold,
-        l2_threshold,
+        hor_l2_threshold,
     )
