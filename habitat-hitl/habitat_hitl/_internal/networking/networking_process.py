@@ -403,12 +403,20 @@ class NetworkManager:
             print("Waiting for connection record from client...")
 
             connection_record = None
+            time_out = 10
             try:
                 async for message in websocket:
+                    if time_out <= 0:
+                        raise(f"Timeout.")
                     try:
-                        connection_record = self.parse_connection_record(message)
+                        connection_record = self.parse_connection_record(message)                        
                     except Exception:
-                        print(f"Unexpected message from client: {message}.")
+                        print(f"Unable to get connection record from client. Trying to read from client state.")
+                        try:
+                            connection_record = self.parse_connection_record(message["connectionParamsDict"])
+                        except Exception:
+                            print(f"Unexpected message from client: {message}.")
+                            time_out -= 1
             except Exception:
                 raise(f"Client disconnected while sending connection record.")
             
