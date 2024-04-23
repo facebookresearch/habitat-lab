@@ -257,6 +257,7 @@ class BaseRearrangeState(AppState):
             self._app_service = app_service
             self._app_data = app_data
             self._cancel = False
+            self._time_since_last_connection = 0
 
     def on_enter(self):
         print(f"Entering state: {type(self)}")
@@ -309,11 +310,14 @@ class AppStateMain(AppState):
         if user_index in self._app_data.connected_users:
             raise RuntimeError(f"User index {user_index} already connected! Aborting.")
         self._app_data.connected_users[connection["userIndex"]] = connection
+        self._app_state._time_since_last_connection = 0.0
 
     def _on_client_disconnected(self, disconnection: DisconnectionRecord):
         user_index = disconnection["userIndex"]
         if user_index not in self._app_data.connected_users:
-            raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
+            # TODO: Investigate why clients keep connecting/disconnecting.
+            print(f"User index {user_index} already disconnected!")
+            #raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
         del self._app_data.connected_users[disconnection["userIndex"]]
 
         # If a user has disconnected, send a cancellation signal to the current state.
@@ -323,6 +327,7 @@ class AppStateMain(AppState):
         self._app_state.on_environment_reset(episode_recorder_dict)
 
     def sim_update(self, dt: float, post_sim_update_dict):
+        self._app_state._time_since_last_connection += dt
         post_sim_update_dict["cam_transform"] = mn.Matrix4.identity_init()
         self._app_state.sim_update(dt, post_sim_update_dict)
 
@@ -357,7 +362,7 @@ class AppStateLobby(BaseRearrangeState):
 
 
     def get_next_state(self) -> Optional[BaseRearrangeState]:
-        if len(self._app_data.connected_users) == self._app_data.max_user_count:
+        if len(self._app_data.connected_users) == self._app_data.max_user_count and self._time_since_last_connection > 0.5:
             return AppStateStartSession(self._app_service, self._app_data)
         return None
 
