@@ -342,7 +342,6 @@ class NetworkManager:
         """
         if len(self._connected_clients) == 0:
             return
-        # TODO: THIS CAN FAIL
         assert connection_id in self._connected_clients
         websocket = self._connected_clients[connection_id]
         # Ensure that the connection is closed.
@@ -403,13 +402,10 @@ class NetworkManager:
         try:
             print("Waiting for connection record from client...")
             message = await websocket.recv()
-
             try:
                 connection_record = self.parse_connection_record(message)
             except Exception:
-                raise RuntimeError(
-                    f"Unexpected message from client: {message}."
-                )
+                raise(f"Unexpected message from client: {message}.")
 
             print("Client is ready!")
             connection_record["connectionId"] = connection_id

@@ -318,7 +318,8 @@ class AppStateMain(AppState):
             # TODO: Investigate why clients keep connecting/disconnecting.
             print(f"User index {user_index} already disconnected!")
             #raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
-        del self._app_data.connected_users[disconnection["userIndex"]]
+        else:
+            del self._app_data.connected_users[user_index]
 
         # If a user has disconnected, send a cancellation signal to the current state.
         self._app_state.try_cancel()
