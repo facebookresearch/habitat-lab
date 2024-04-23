@@ -5,13 +5,22 @@
 # LICENSE file in the root directory of this source tree.
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple
+import os
+import shutil
+from time import time
+from typing import Any, Dict, List, Optional, Tuple
+
+from habitat_hitl.core.serialize_utils import save_as_json_gzip
+
+# Importing this file enables the collaboration dataset episode type to be loaded.
+from collaboration_episode_loader import load_collaboration_episode_data
 
 from habitat_hitl.core.client_message_manager import UIButton
 from habitat_hitl.core.key_mapping import KeyCode
 import hydra
 import magnum as mn
 import numpy as np
+from s3_upload import upload_file_to_s3
 from ui import UI, World
 
 from habitat.sims.habitat_simulator import sim_utilities
@@ -38,11 +47,105 @@ from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 UP = mn.Vector3(0, 1, 0)
 
+def timestamp() -> str:
+    "Generate a Unix timestamp at the current time."
+    return str(int(time()))
+
+class Session():
+    """
+    RearrangeV2 session.
+    """
+    def __init__(
+            self,
+            config: Dict[str, Any],
+            episode_ids: List[str],
+            connection_records: Dict[int, ConnectionRecord],
+        ):
+        self.success = False
+        self.episode_ids = episode_ids
+        self.current_episode_index = 0
+        self.connection_records = connection_records
+        self.session_recorder = SessionRecorder(config, connection_records, episode_ids)
+        self.status = ""  # Use this to display error status
+
+        # Use the port as a discriminator for when there are multiple concurrent servers.
+        output_folder_suffix = str(config.habitat_hitl.networking.port)
+        self.output_folder = f"output_{output_folder_suffix}"
+
+class SessionRecorder():
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        connection_records: Dict[int, ConnectionRecord],
+        episode_ids: List[str],
+    ):
+        self.data = {
+            "episode_ids": episode_ids,
+            "completed": False,
+            "error": "",
+            "start_timestamp": timestamp(),
+            "end_timestamp": timestamp(),
+            "config": config,
+            "frame_count": 0,
+            "users": [],
+            "episodes": [],
+        }
+        
+        for user_index in range(len(connection_records)):
+            self.data["users"].append({
+                "user_index": user_index,
+                #"agent_index": TODO: Only available during rearrange.
+                "connection_record": connection_records[user_index],
+            })
+
+    def end_session(self, error: str):
+        self.data["end_timestamp"] = timestamp()
+        self.data["completed"] = True
+        self.data["error"] = error
+
+    def start_episode(
+        self,
+        episode_id: str,
+        scene_id: str,
+        dataset: str,
+    ):
+        self.data["episodes"].append({
+            "episode_id": episode_id,
+            "scene_id": scene_id,
+            "start_timestamp": timestamp(),
+            "end_timestamp": timestamp(),
+            "completed": False,
+            "success": False,
+            "frame_count": 0,
+            "dataset": dataset,
+            "frames": [],
+        })
+
+    def end_episode(
+        self,
+        success: bool,
+    ):
+        self.data["episodes"][-1]["end_timestamp"] = timestamp()
+        self.data["episodes"][-1]["success"] = success
+        self.data["episodes"][-1]["completed"] = True
+
+    def record_frame(
+        self,
+        frame_data: Dict[str, Any],
+    ):
+        self.data["end_timestamp"] = timestamp()
+        self.data["frame_count"] += 1
+
+        self.data["episodes"][-1]["end_timestamp"] = timestamp()
+        self.data["episodes"][-1]["frame_count"] += 1
+        self.data["episodes"][-1]["frames"].append(frame_data)
+        
 class AppData():
     """RearrangeV2 data."""
     def __init__(self, max_user_count: int):
         self.max_user_count = max_user_count
         self.connected_users: Dict[int, ConnectionRecord] = {}
+        self.session: Optional[Session] = None
 
         self.episode_ids: Optional[List[str]] = None
         self.current_episode_index = 0
@@ -51,11 +154,15 @@ class AppData():
         assert len(self.connected_users) == 0, "Cannot reset RearrangeV2 state if users are still connected!"
         self.episode_ids = None
         self.current_episode_index = 0
+        self.session = None
+        # Note: Clearing connected users is done by kicking.
 
-class DataLogger:
-    def __init__(self, app_service):
+class FrameRecorder:
+    def __init__(self, app_service: AppService, app_data: AppData, world: World):
         self._app_service = app_service
+        self._app_data = app_data
         self._sim = app_service.sim
+        self._world = world
 
     def get_num_agents(self):
         return len(self._sim.agents_mgr._all_agent_data)
@@ -97,18 +204,43 @@ class DataLogger:
                 }
             )
         return object_states
+    
+    def get_users_state(self) -> List[Dict[str, Any]]:
+        output = []
+        for user_index in range(self._app_data.max_user_count):
+            #output.append({
+            #    self._app_service.
+            #})
+            # Get camera transforms
+            pass
+        return output
 
-    def record_state(self, task_completed: bool = False):
+    def record_state(self, elapsed_time:float, user_data: List[UserData]) -> Dict[str, Any]:
         agent_states = self.get_agents_state()
         object_states = self.get_objects_state()
 
-        self._app_service.step_recorder.record("agent_states", agent_states)
-        self._app_service.step_recorder.record("object_states", object_states)
-        self._app_service.step_recorder.record(
-            "task_completed", task_completed
-        )
+        # TODO
+        data: Dict[str, Any] = {
+            "t": elapsed_time,
+            "users": [],
+            "object_states": self.get_objects_state(),
+            "agent_states": self.get_agents_state(),
+        }
+
+        for user_index in range(len(user_data)):
+            u = user_data[user_index]
+            user_data_dict = {
+                "task_completed": u.task_completed,
+                #"camera_transform": u.cam_transform,
+                #"held_object: handle
+                #"agent_state: ...
+                "events": u.ui._events
+            }
+            data["users"].append(user_data_dict)
+            u.ui._events.clear() # Sloppy
 
 class BaseRearrangeState(AppState):
+    
     def __init__(
             self,
             app_service: AppService,
@@ -147,19 +279,6 @@ class BaseRearrangeState(AppState):
 class AppStateMain(AppState):
     """
     Main RearrangeV2 application state.
-    It is itself a state machine.
-
-    Flow:
-    * 'Clean-up' -> 'Lobby'
-    * 'Lobby' -> 'Loading'
-    * 'Loading' ->
-        * 'Start Screen' if an episode is available.
-        * 'End Session' if all episodes are done.
-        * 'Clean-up' if a user disconnected or an error occurred.
-    * 'Start Screen' -> 'RearrangeV2' or 'Clean-up' (cancel)
-    * 'RearrangeV2' -> 'Loading' or 'Clean-up' (cancel)
-    * 'End Session' -> 'Upload'
-    * 'Upload' -> 'Clean-up'
     """
     def __init__(
             self,
@@ -167,7 +286,7 @@ class AppStateMain(AppState):
         ):
             self._app_service = app_service
             self._app_data = AppData(app_service.hitl_config.networking.max_client_count)
-            self._app_state: BaseRearrangeState = AppStateCleanup(app_service, self._app_data)
+            self._app_state: BaseRearrangeState = AppStateReset(app_service, self._app_data)
 
             if app_service.hitl_config.networking.enable:
                 app_service.remote_client_state.on_client_connected.registerCallback(
@@ -215,9 +334,23 @@ class AppStateLobby(BaseRearrangeState):
     """
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
+
+    def on_enter(self):
+        super().on_enter()
+        # Enable new connections
+        # Sloppy: Create API
+        self._app_service._remote_client_state._interprocess_record.enable_new_connections(True)
+    
+    def on_exit(self):
+        super().on_exit()
+        # Disable new connections
+        # Sloppy: Create API
+        self._app_service._remote_client_state._interprocess_record.enable_new_connections(False)
+
+
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if len(self._app_data.connected_users) == self._app_data.max_user_count:
-            return AppStateLoadEpisode(self._app_service, self._app_data)
+            return AppStateStartSession(self._app_service, self._app_data)
         return None
 
     def sim_update(self, dt: float, post_sim_update_dict):
@@ -226,44 +359,36 @@ class AppStateLobby(BaseRearrangeState):
         message = f"Waiting for {missing_users} participant{s} to join."
         self._status_message(message)
 
-class AppStateLoadEpisode(BaseRearrangeState):
-    """
-    Load an episode.
-    A loading screen is displaying while the content loads.
-    * If no episode set is selected, create a new episode set from connection record.
-    * If a next episode exists, fires up RearrangeV2.
-    * If all episodes are done, end session.
-    Cancellable.
-    """
+
+class AppStateStartSession(BaseRearrangeState):
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
-        self._loading = True
-        self._session_ended = False
-        self._frame_number = 0
+
+    def on_enter(self):
+        super().on_enter()
+
+        if self._try_get_episodes():
+            # Start the session.
+            self._app_data.session = Session(
+                self._app_service.config,
+                self._app_data.episode_ids,
+                self._app_data.connected_users,
+            )
+        else:
+            # Create partial session record.
+            self._app_data.session = Session(
+                self._app_service.config,
+                [],
+                self._app_data.connected_users,
+            )
+            self._cancel = True
+
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if self._cancel:
-            return AppStateCleanup(self._app_service, self._app_data)
-        if self._session_ended:
-            return AppStateEndSession(self._app_service, self._app_data)
-        if not self._loading:
-            return AppStateStartScreen(self._app_service, self._app_data)
-        return None
+            return AppStateEndSession(self._app_service, self._app_data, "Invalid session")
+        return AppStateLoadEpisode(self._app_service, self._app_data)
 
-    def sim_update(self, dt: float, post_sim_update_dict):
-        self._status_message("Loading...")
-
-        # HACK: Skip a frame so that the status message reaches the client before the server blocks.
-        # TODO: Clean this up.
-        if self._frame_number == 1:
-            if self._app_data.episode_ids is None:
-                self._load_episode()
-            else:
-                self._increment_episode()
-            self._loading = False
-
-        self._frame_number += 1
-
-    def _load_episode(self):
+    def _try_get_episodes(self):
         data = self._app_data
 
         # Validate that episodes are selected.
@@ -271,30 +396,26 @@ class AppStateLoadEpisode(BaseRearrangeState):
         connection_record = episodes_str = list(data.connected_users.values())[0]
         if "episodes" not in connection_record:
             print("Users did not request episodes. Cancelling session.")
-            self._cancel = True
-            return
+            return False
         episodes_str = connection_record["episodes"]
 
         # Validate that all users are requesting the same episodes.
         for connection_record in data.connected_users.values():
             if connection_record["episodes"] != episodes_str:
                 print("Users are requesting different episodes! Cancelling session.")
-                self._cancel = True
-                return
+                return False
             
         # Validate that the episode set is not empty.
         if episodes_str is None or len(episodes_str) == 0:
             print("Users did not request episodes. Cancelling session.")
-            self._cancel = True
-            return
+            return False
         
         # Format: {lower_bound}-{upper_bound} E.g. 100-110
         # Upper bound is exclusive.
         episode_range_str = episodes_str.split("-")
         if len(episode_range_str) != 2:
             print("Invalid episode range. Cancelling session.")
-            self._cancel = True
-            return
+            return False
         
         # Validate that episodes are numeric.
         start_episode_id = (
@@ -309,16 +430,14 @@ class AppStateLoadEpisode(BaseRearrangeState):
         )
         if start_episode_id is None or last_episode_id is None or start_episode_id < 0:
             print("Invalid episode names. Cancelling session.")
-            self._cancel = True
-            return
+            return False
         
         total_episode_count = len(self._app_service.episode_helper._episode_iterator.episodes)
 
         # Validate episode range.
         if start_episode_id >= total_episode_count:
             print("Invalid episode names. Cancelling session.")
-            self._cancel = True
-            return
+            return False
         
         last_episode_id += 1 # Hack: Links are inclusive.
         if last_episode_id >= total_episode_count:
@@ -338,33 +457,68 @@ class AppStateLoadEpisode(BaseRearrangeState):
         # Change episode.
         data.episode_ids = episode_ids
         data.current_episode_index = 0
-        self._set_episode(data.current_episode_index)
+        return True
+
+class AppStateLoadEpisode(BaseRearrangeState):
+    """
+    Load an episode.
+    A loading screen is displaying while the content loads.
+    * If no episode set is selected, create a new episode set from connection record.
+    * If a next episode exists, fires up RearrangeV2.
+    * If all episodes are done, end session.
+    Cancellable.
+    """
+    def __init__(self, app_service: AppService, app_data: AppData):
+        super().__init__(app_service, app_data)
+        self._loading = True
+        self._session_ended = False
+        self._frame_number = 0
+
+    def get_next_state(self) -> Optional[BaseRearrangeState]:
+        if self._cancel:
+            # TODO: Error management
+            return AppStateEndSession(self._app_service, self._app_data, "User disconnected")
+        if self._session_ended:
+            return AppStateEndSession(self._app_service, self._app_data)
+        if not self._loading:
+            return AppStateStartScreen(self._app_service, self._app_data)
+        return None
+
+    def sim_update(self, dt: float, post_sim_update_dict):
+        self._status_message("Loading...")
+
+        # HACK: Skip a frame so that the status message reaches the client before the server blocks.
+        # TODO: Clean this up.
+        if self._frame_number == 1:
+            self._increment_episode()
+            self._loading = False
+
+        self._frame_number += 1
 
     def _increment_episode(self):
         data = self._app_data
         assert data.episode_ids is not None
-        data.current_episode_index += 1
         if data.current_episode_index < len(data.episode_ids):
             self._set_episode(data.current_episode_index)
+            data.current_episode_index += 1
         else:
-            self._end_session()
+            self._session_ended = True
 
     def _set_episode(self, episode_index: int):
         data = self._app_data
-        assert data.episode_ids is not None
-        if episode_index >= len(data.episode_ids):
-            self._end_session()
-            return
         
         next_episode_id = data.episode_ids[episode_index]
         self._app_service.episode_helper.set_next_episode_by_id(
             next_episode_id
         )
-        self._app_service.end_episode(do_reset=True)
+        # TODO: What does this _actually_ do?
+        #self._app_service.end_episode(do_reset=True)
 
-    def _end_session(self):
-        self._session_ended = True
+        # Insert a keyframe to force clients to load immediately.
+        self._app_service.sim.gfx_replay_manager.save_keyframe()
 
+        # TODO: Wait for clients to finish loading before starting rearrange.
+        # TODO: Timeout
 
 START_BUTTON_ID = "start"
 START_SCREEN_TIMEOUT = 120.0
@@ -378,10 +532,11 @@ class AppStateStartScreen(BaseRearrangeState):
         super().__init__(app_service, app_data)
         self._ready_to_start: List[bool] = [False] * self._app_data.max_user_count
         self._elapsed_time: float = 0.0
+        self._timeout = False  # TODO: Error management
 
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if self._cancel:
-            return AppStateCleanup(self._app_service, self._app_data)
+            return AppStateEndSession(self._app_service, self._app_data, "Timeout" if self._timeout else "User disconnected")
         
         # If all users pressed the "Start" button, begin the session.
         ready_to_start = True
@@ -394,13 +549,13 @@ class AppStateStartScreen(BaseRearrangeState):
 
     def sim_update(self, dt: float, post_sim_update_dict):
         # TODO: Top-down view.
-        # Draw modal dialogue
 
         # Time limit to start the experiment.
         self._elapsed_time += dt
         remaining_time = START_SCREEN_TIMEOUT - self._elapsed_time
         if remaining_time <= 0:
             self._cancel = True
+            self._timeout = True
             return
         remaining_time_int = int(remaining_time)
         title = f"New Session (Expires in: {remaining_time_int}s)"
@@ -427,71 +582,106 @@ class AppStateStartScreen(BaseRearrangeState):
 
         # Server-only: Press numeric keys to press button on behalf of users.
         if not self._app_service.hitl_config.experimental.headless.do_headless:
+            server_message = "Press numeric keys to start on behalf of users."
             first_key = int(KeyCode.ONE)
             for user_index in range(len(self._ready_to_start)):
                 if self._app_service.gui_input.get_key_down(KeyCode(first_key + user_index)):
                     self._ready_to_start[user_index] = True
+                user_ready = self._ready_to_start[user_index]
+                server_message += f"\nUser {user_index}: {'Ready' if user_ready else 'Not ready'}."
+
+            self._app_service.text_drawer.add_text(
+                server_message,
+                TextOnScreenAlignment.TOP_LEFT,
+                text_delta_x=0,
+                text_delta_y=-50,
+                destination_mask=Mask.NONE,
+            )
 
 
+SESSION_END_DELAY = 5.0
 class AppStateEndSession(BaseRearrangeState):
     """
     Indicate users that the session is terminated.
     """
-    def __init__(self, app_service: AppService, app_data: AppData,):
+    def __init__(self, app_service: AppService, app_data: AppData, error_message: str = ""):
         super().__init__(app_service, app_data)
         self._elapsed_time = 0.0
-        self._done = False
+        self._next_state: Optional[BaseRearrangeState] = None
+
+        # TODO: Gather from session.
+        self._error = error_message
+        self._status = "Session ended."
+        if len(error_message) > 0:
+            self._status += f"Error: {error_message}"
+
     def get_next_state(self) -> Optional[BaseRearrangeState]:
-        if self._done:
-            return AppStateUpload(self._app_service, self._app_data)
-        return None
+        return self._next_state
+    
     def sim_update(self, dt: float, post_sim_update_dict):
+        self._status_message(self._status)
         self._elapsed_time += dt
-        if self._elapsed_time > 3.0:
-            self._kick_all_users()
-            self._done = True
-            
-        # TODO: Top-down view.
-        self._status_message("Session ended successfully.")
+        if self._elapsed_time > SESSION_END_DELAY:
+            self._end_session()
+            self._next_state = AppStateReset(self._app_service, self._app_data)
 
-class AppStateUpload(BaseRearrangeState):
-    """
-    Upload collected data.
-    """
-    def __init__(self, app_service: AppService, app_data: AppData,):
-        super().__init__(app_service, app_data)
-        # This blocks until the upload is finished.
-        # TODO: Retry if failed?
+    def _end_session(self):
+        session = self._app_data.session
+        if session is None:
+            print("Null session. Skipping S3 upload.")
+            return
 
-        # TODO: Query a source of truth for paths and data (call it SessionRecorder)
-        #upload_file_to_s3(...)
+        # Finalize session.
+        session.session_recorder.end_session(self._error)
 
-    def get_next_state(self) -> Optional[BaseRearrangeState]:
-        return AppStateCleanup(self._app_service, self._app_data)
+        # Find S3 params.
+        data_collection_config = self._app_service.config.rearrange_v2.data_collection
+        s3_path = data_collection_config.s3_path
+        if s3_path[-1] != "/":
+            s3_path += "/"
+        s3_subdir = "complete" if session.success else "incomplete"
+        s3_path += s3_subdir
 
-class AppStateCleanup(BaseRearrangeState):
+        # Delete previous output directory
+        output_folder = session.output_folder
+        if os.path.exists(output_folder):
+            shutil.rmtree(output_folder)
+        
+        # Create new output directory
+        os.makedirs(output_folder)
+        json_path = os.path.join(output_folder, "session.json.gz")
+        save_as_json_gzip(session.session_recorder, json_path)
+
+        # Upload output directory
+        output_files = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
+        for output_file in output_files:
+            output_file_path = os.path.join(output_folder, output_file)
+            upload_file_to_s3(output_file_path, output_file, s3_path)
+
+class AppStateReset(BaseRearrangeState):
     """
     Kick all users and restore state for a new session.
     Actions:
     * Kick all users.
-    * Clear data collection output.
     * Clean-up AppData.
     """
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
-    def get_next_state(self) -> Optional[BaseRearrangeState]:
-        # TODO: Wait for output folder to be cleaned.
 
+    def on_enter(self):
+        super().on_enter()
+
+        # Kick all users.
+        self._kick_all_users()
+
+        # Clean-up AppData before opening the lobby.
+        self._app_data.reset()
+    
+    def get_next_state(self) -> Optional[BaseRearrangeState]:
         # Wait for users to be kicked.
-        if len(self._app_data.connected_users) == 0:
-            # Clean-up AppData
-            self._app_data.reset()
+        if (len(self._app_data.connected_users) == 0):
             return AppStateLobby(self._app_service, self._app_data)
         else: return None
-    def sim_update(self, dt: float, post_sim_update_dict):
-        # TODO: Get error message from app_data, and wait a frame until kicking
-
-        self._kick_all_users()
 
 class UserData:
     def __init__(
@@ -512,7 +702,7 @@ class UserData:
         self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
         self.task_instruction = ""
-        self.signal_change_episode = False
+        self.task_completed = False
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -537,7 +727,7 @@ class UserData:
     def reset(
         self, object_receptacle_pairs: List[Tuple[List[int], List[int]]]
     ):
-        self.signal_change_episode = False
+        self.task_completed = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset(object_receptacle_pairs)
 
@@ -546,7 +736,7 @@ class UserData:
             self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self.signal_change_episode = True
+            self.task_completed = True
 
         self.app_service.remote_client_state._client_helper.update(
             self.user_index,
@@ -603,10 +793,13 @@ class AppStateRearrangeV2(BaseRearrangeState):
         self._server_user_index = 0
         self._server_gui_input = self._app_service.gui_input
         self._server_input_enabled = False
+        self._elapsed_time = 0.0
 
         self._user_data: List[UserData] = []
 
         self._world = World(app_service.sim)
+
+        self._frame_recorder =  FrameRecorder(app_service, app_data, self._world)
 
         for user_index in self._users.indices(Mask.ALL):
             self._user_data.append(
@@ -625,12 +818,10 @@ class AppStateRearrangeV2(BaseRearrangeState):
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         # If cancelled, skip upload and clean-up.
         if self._cancel:
-            return AppStateCleanup(self._app_service, self._app_data)
+            return AppStateEndSession(self._app_service, self._app_data)
 
         # Check if all users signaled to terminate episode.
-        change_episode = True
-        for user_index in self._users.indices(Mask.ALL):
-            change_episode &= self._user_data[user_index].signal_change_episode
+        change_episode = self._is_episode_finished()
 
         # If changing episode, go back to the loading screen.
         # This state takes care of selecting the next episode.
@@ -639,16 +830,39 @@ class AppStateRearrangeV2(BaseRearrangeState):
         else:
             return None
 
+    def on_enter(self):
+        super().on_enter()
+        episode = self._app_service.episode_helper.current_episode
+        self._app_data.session.session_recorder.start_episode(
+            episode.episode_id,
+            episode.scene_id,
+            episode.scene_dataset_config,
+        )
+
+    def on_exit(self):
+        super().on_exit()
+
+        self._app_data.session.session_recorder.end_episode(
+            success=self._is_episode_finished()
+        )
+
+    def _is_episode_finished(self) -> bool:
+        """
+        Determines whether all users have finished their tasks.
+        """
+        for user_index in self._users.indices(Mask.ALL):
+            if not self._user_data[user_index].task_completed:
+                return False
+        return True
+
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
 
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("extra_info") is not None:
-            task_instruction = current_episode.info["extra_info"][
-                "instruction"
-            ]
-            # TODO: Users have different instructions.
+        if current_episode.info.get("instruction") is not None:
+            task_instruction = current_episode.info["instruction"]
+            # TODO: Users will have different instructions.
             for user_index in self._users.indices(Mask.ALL):
                 self._user_data[user_index].task_instruction = task_instruction
 
@@ -667,9 +881,9 @@ class AppStateRearrangeV2(BaseRearrangeState):
         sim = self._app_service.sim
         paired_goal_ids: List[Tuple[List[int], List[int]]] = []
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("extra_info") is not None:
-            extra_info = current_episode.info["extra_info"]
-            for proposition in extra_info["evaluation_propositions"]:
+        if current_episode.info.get("evaluation_propositions") is not None:
+            evaluation_propositions = current_episode.info["evaluation_propositions"]
+            for proposition in evaluation_propositions:
                 object_ids: List[int] = []
                 object_handles = proposition["args"]["object_handles"]
                 for object_handle in object_handles:
@@ -741,7 +955,7 @@ class AppStateRearrangeV2(BaseRearrangeState):
 
     def _update_help_text(self, user_index: int):
         # If the user has signaled to change episode, show dialogue.
-        if self._user_data[user_index].signal_change_episode:
+        if self._user_data[user_index].task_completed:
             ui_button_id = "undo_change_episode"
             self._app_service.client_message_manager.show_modal_dialogue_box(
                 "Task Finished",
@@ -751,7 +965,7 @@ class AppStateRearrangeV2(BaseRearrangeState):
             )
             cancel = self._app_service.remote_client_state.ui_button_clicked(user_index, ui_button_id)
             if cancel:
-                self._user_data[user_index].signal_change_episode = False
+                self._user_data[user_index].task_completed = False
             return
 
         status_str = self._get_status_text(user_index)
@@ -809,6 +1023,11 @@ class AppStateRearrangeV2(BaseRearrangeState):
             self._server_user_index
         ].cam_transform
         post_sim_update_dict["cam_transform"] = server_cam_transform
+
+        #  Collect data.
+        self._elapsed_time += dt
+        frame_data = self._frame_recorder.record_state(self._elapsed_time, self._user_data)
+        self._app_data.session.session_recorder.record_frame(frame_data)
 
 
 @hydra.main(
