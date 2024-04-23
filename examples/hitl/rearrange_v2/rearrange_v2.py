@@ -659,6 +659,8 @@ class AppStateEndSession(BaseRearrangeState):
             return
 
         # Finalize session.
+        if self._error == "":
+            session.success = True
         session.session_recorder.end_session(self._error)
 
         # Find S3 params.
@@ -679,11 +681,33 @@ class AppStateEndSession(BaseRearrangeState):
         json_path = os.path.join(output_folder, "session.json.gz")
         save_as_json_gzip(session.session_recorder, json_path)
 
+        # Generate unique session ID
+        if len(self._app_data.session.connection_records) == 0:
+            print("No connection record. Aborting upload.")
+            return        
+        episodes_str = ""
+        user_id_str = ""
+        for _, connection_record in self._app_data.session.connection_records.items():
+            if "episodes" in connection_record:
+                episodes_str = connection_record["episodes"]
+            else:
+                episodes_str = "unknown_episodes"
+            
+            if "user_id" in connection_record:
+                if user_id_str != "":
+                    user_id_str += "_"
+                user_id_str += connection_record["user_id"]
+            else:
+                user_id_str += "unknown_user"
+        session_id = f"{episodes_str}_{user_id_str}_{timestamp()}"
+        # TODO Filter str
+
         # Upload output directory
         output_files = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
         for output_file in output_files:
-            output_file_path = os.path.join(output_folder, output_file)
-            upload_file_to_s3(output_file_path, output_file, s3_path)
+            local_file_path = os.path.join(output_folder, output_file)
+            s3_file_name = f"{session_id}_{output_file}"
+            upload_file_to_s3(local_file_path, s3_file_name, s3_path)
 
 class AppStateReset(BaseRearrangeState):
     """
