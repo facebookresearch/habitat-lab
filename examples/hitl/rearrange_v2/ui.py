@@ -152,6 +152,9 @@ class UI:
         self._gui_drawer = gui_drawer
         self._camera_helper = camera_helper
 
+        # Sloppy
+        self._events = []
+
         self._can_grasp_place_threshold = hitl_config.can_grasp_place_threshold
 
         # ID of the object being held. None if no object is held.
@@ -255,6 +258,11 @@ class UI:
                     self._place_selection.deselect()
                     self._world._all_held_object_ids.add(object_id)
 
+                    self._events.append({
+                        "type": "pick",
+                        "obj_handle": rigid_object.handle,
+                    })
+
     def _update_held_object_placement(self) -> None:
         """Update the location of the held object."""
         object_id = self._held_object_id
@@ -294,6 +302,15 @@ class UI:
             self._place_selection.deselect()
             self._world._all_held_object_ids.remove(object_id)
 
+            self._events.append({
+                "type": "place",
+                "obj_handle": rigid_object.handle,
+                #"receptacle_handle": TODO
+                # receptacle = get_any_object(self._place_selection.object_id)
+                # if hasattr(receptacle, "handle")
+                #   "obj_handle" = receptacle.handle
+            })
+
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""
         if self._is_object_interactable(object_id):
@@ -309,9 +326,19 @@ class UI:
                     if link_id in self._world._opened_link_set:
                         sim_utilities.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
+
+                        self._events.append({
+                            "type": "open",
+                            "obj_handle": ao.handle,
+                        })
                     else:
                         sim_utilities.open_link(ao, link_index)
                         self._world._opened_link_set.add(link_id)
+
+                        self._events.append({
+                            "type": "close",
+                            "obj_handle": ao.handle,
+                        })
 
     def _user_pos(self) -> mn.Vector3:
         """Get the translation of the agent controlled by the user."""
