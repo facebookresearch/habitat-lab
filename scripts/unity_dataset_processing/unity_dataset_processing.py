@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+from enum import Enum
 import gzip
 import json
 import os
@@ -45,6 +46,13 @@ def resolve_relative_path(path: str) -> str:
             output_path.append(component)
     return os.path.join("", *output_path)
 
+class JobType(Enum):
+    # Copy the asset as-is, skipping all processing.
+    COPY = 1
+    # Process the asset to make it compatible with Unity.
+    # Enable 'job.decimate' to simplify the model.
+    PROCESS = 2
+
 
 class Job:
     def __init__(
@@ -53,6 +61,7 @@ class Job:
         output_dir: str,
         groups: List[str],
         simplify: bool,
+        job_type: JobType = JobType.PROCESS,
     ):
         self.source_path = resolve_relative_path(asset_path)
         self.dest_path = resolve_relative_path(
@@ -60,6 +69,7 @@ class Job:
         )
         self.groups = groups
         self.simplify = simplify
+        self.job_type = job_type
 
         # If the asset doesn't belong to a group, assign the 'local' group.
         # This group indicates that the asset should be packaged along with the client rather than at a remote location.
@@ -635,41 +645,46 @@ def process_model(args):
         shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
         result["status"] = "copied"
         return result
-
-    try:
-        source_tris, target_tris, simplified_tris = decimate.decimate(
-            inputFile=job.source_path,
-            outputFile=job.dest_path,
-            quiet=not verbose,
-            verbose=verbose,
-            sloppy=False,
-            simplify=job.simplify,
-        )
-    except Exception:
+    job_type: JobType = job.job_type    
+    if job_type == JobType.COPY:
+        shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
+        result["status"] = "copied"
+        return result
+    else:
         try:
-            decimate.close()
-            print(
-                f"Unable to decimate: {job.source_path}. Trying without decimation."
-            )
             source_tris, target_tris, simplified_tris = decimate.decimate(
                 inputFile=job.source_path,
                 outputFile=job.dest_path,
                 quiet=not verbose,
                 verbose=verbose,
-                simplify=False,
+                sloppy=False,
+                simplify=job.simplify,
             )
         except Exception:
-            decimate.close()
-            print(
-                f"Unable to decimate: {job.source_path}. Copying as-is to output."
-            )
-            shutil.copyfile(
-                job.source_path, job.dest_path, follow_symlinks=True
-            )
-            result["status"] = "error"
-            return result
+            try:
+                decimate.close()
+                print(
+                    f"Unable to decimate: {job.source_path}. Trying without decimation."
+                )
+                source_tris, target_tris, simplified_tris = decimate.decimate(
+                    inputFile=job.source_path,
+                    outputFile=job.dest_path,
+                    quiet=not verbose,
+                    verbose=verbose,
+                    simplify=False,
+                )
+            except Exception:
+                decimate.close()
+                print(
+                    f"Unable to decimate: {job.source_path}. Copying as-is to output."
+                )
+                shutil.copyfile(
+                    job.source_path, job.dest_path, follow_symlinks=True
+                )
+                result["status"] = "error"
+                return result
 
-    if job.simplify and verbose:
+    if job_type == JobType.PROCESS and job.simplify and verbose:
         print(
             f"source_tris: {source_tris}, target_tris: {target_tris}, simplified_tris: {simplified_tris}"
         )
@@ -815,7 +830,7 @@ def main():
     additional_asset_group_size = 50
     objects_in_current_group = 0
     current_group_index = 0
-    shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
+    #shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
     processed_objects: Set[str] = set()
     for episode in episode_set.episodes:
         rigid_objs = episode["rigid_objs"]
@@ -828,12 +843,12 @@ def main():
                     continue
             # Look for the object in the scene dataset.
             # HACK: We create duplicates for these objects.
-            for scene_dataset in episode_set.scene_datasets.values():
-                if rigid_obj_stem in scene_dataset.objects:
-                    resolved_rigid_objs = scene_dataset.objects[rigid_obj_stem]
-                    for resolved in resolved_rigid_objs:
-                        shared_scene_objects.add(resolved)
-                    continue
+            #for scene_dataset in episode_set.scene_datasets.values():
+            #    if rigid_obj_stem in scene_dataset.objects:
+            #        resolved_rigid_objs = scene_dataset.objects[rigid_obj_stem]
+            #        for resolved in resolved_rigid_objs:
+            #            shared_scene_objects.add(resolved)
+            #        continue
             assert len(resolved_rigid_objs) > 0
             for resolved_rigid_obj in resolved_rigid_objs:
                 jobs.append(
@@ -881,8 +896,8 @@ def main():
     # Add scene objects.
     # Grouped by scenes, excluding objects also in episodes.
     for obj in episode_set.grouped_scene_assets.objects:
-        if obj.asset_path in shared_scene_objects:
-            continue
+        #if obj.asset_path in shared_scene_objects:
+        #    continue
         jobs.append(
             Job(
                 asset_path=obj.asset_path,
@@ -914,6 +929,20 @@ def main():
                 output_dir=OUTPUT_DIR,
                 groups=[],
                 simplify=False,
+            )
+        )
+
+    # Add humanoid models
+    for filename in Path("data/humanoids/humanoid_data").rglob(
+        "*.glb"
+    ):
+        jobs.append(
+            Job(
+                asset_path=str(filename),
+                output_dir=OUTPUT_DIR,
+                groups=[],
+                simplify=False,
+                job_type=JobType.COPY,
             )
         )
 
