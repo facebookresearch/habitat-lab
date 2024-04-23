@@ -370,9 +370,13 @@ class NetworkManager:
     def parse_connection_record(self, message: str) -> ConnectionRecord:
         connection_record: ConnectionRecord = json.loads(message)
         if "isClientReady" not in connection_record:
-            raise ValueError(
-                "isClientReady key not found in initial client message."
-            )
+            # Hack: connection record may be missing. Try to get it from client state.
+            if "connectionParamsDict" in connection_record:
+                connection_record = connection_record["connectionParamsDict"]
+                if "isClientReady" not in connection_record:
+                    raise ValueError(
+                        "isClientReady key not found in initial client message."
+                    )
         return connection_record
 
     async def handle_connection(self, websocket: WebSocketServerProtocol) -> None:
@@ -407,21 +411,16 @@ class NetworkManager:
             try:
                 async for message in websocket:
                     if time_out <= 0:
-                        raise(f"Timeout.")
+                        raise(Exception(f"Timeout."))
                     try:
                         connection_record = self.parse_connection_record(message)                        
                     except Exception:
-                        print(f"Unable to get connection record from client. Trying to read from client state.")
-                        try:
-                            connection_record = self.parse_connection_record(message["connectionParamsDict"])
-                        except Exception:
-                            print(f"Unexpected message from client: {message}.")
-                            time_out -= 1
+                        print(f"Unable to get connection record from client message: {message}.")
             except Exception:
-                raise(f"Client disconnected while sending connection record.")
+                raise(Exception(f"Client disconnected while sending connection record."))
             
             if connection_record is None:
-                raise(f"Client did not send connection record.")
+                raise(Exception(f"Client did not send connection record."))
 
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
