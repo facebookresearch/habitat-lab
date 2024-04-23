@@ -24,13 +24,20 @@ habitat:
       agent_0_base_velocity:
         lin_speed: 4.0
         ang_speed: 250
+  simulator:
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
+      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
+      - "data/objects_ovmm/train_val/google_scanned/configs/"
+      - "data/objects_ovmm/train_val/hssd/configs/objects/"
   dataset:
-    #type: "CollaborationDataset-v0"
     #BROKEN
-    #data_path: "2024_03_27_eps300_filtered.json.gz"
+    type: "CollaborationDataset-v0"
+    data_path: "2024_04_22_vendor_133_eps_3.json.gz"
     #BROKEN
     #data_path: "60scenes_777eps_old_format_targets.json.gz"
-    data_path: "/home/mdcote/Documents/git/lab-6/examples/hitl/rearrange_v2/app_data/demo.json.gz"
+    #data_path: "/home/mdcote/Documents/git/lab-6/examples/hitl/rearrange_v2/app_data/demo.json.gz"
 
 habitat_baselines:
   # todo: document these choices

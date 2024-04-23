@@ -22,7 +22,6 @@ habitat_baselines:
       num_pool_agents_per_type: [1, 1]
     policy:
 
-
 habitat_hitl:
   window:
     title: "Rearrange"
@@ -35,6 +34,7 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
-  data_collection:
-    save_filepath_base: my_session
-    save_episode_record: True
+  networking:
+    client_sync:
+      server_camera: False
+      server_input: False
