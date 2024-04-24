@@ -191,7 +191,7 @@ class KinematicRelationshipManager:
                 self.sim, rec.parent_object_handle
             )
             parent_id = parent_obj.object_id
-            if rec.parent_link >= 0:
+            if rec.parent_link is not None and rec.parent_link >= 0:
                 # this is a link, get the object id
                 link_ids_to_object_ids = dict(
                     (v, k) for k, v in parent_obj.link_object_ids.items()
