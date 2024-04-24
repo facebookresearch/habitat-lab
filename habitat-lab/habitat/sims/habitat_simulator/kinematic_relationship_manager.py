@@ -32,7 +32,12 @@ class RelationshipGraph:
     def add_relation(self, parent: int, child: int, rel_type: str) -> None:
         """
         Add a relationship connection between two objects.
+
+        :param parent: The parent object_id.
+        :param child: The child object_id.
+        :param rel_type: The type string for the relationship.
         """
+
         assert parent != child
         if (parent, child) in self.relation_types:
             print(
@@ -50,7 +55,11 @@ class RelationshipGraph:
     def remove_relation(self, parent: int, child: int) -> None:
         """
         Remove any relationship between the pair of objects.
+
+        :param parent: The parent object_id.
+        :param child: The child object_id.
         """
+
         assert parent != child
         del self.relation_types[(parent, child)]
 
@@ -87,6 +96,8 @@ class RelationshipGraph:
     def get_root_parents(self) -> List[int]:
         """
         Get a list of root objects: those which are parents but have no parents.
+
+        :return: A list of object_ids.
         """
 
         return [
@@ -202,20 +213,12 @@ class KinematicRelationshipManager:
         # do this once now instead of repeating for each ontop
         self.sim.perform_discrete_collision_detection()
 
-        # NOTE: initialize implementation - use within set
-        # TODO: ontop would be good, but requires settling the sim, need a kinematic alternative
         for obj_id in sutils.get_all_object_ids(self.sim).keys():
             parent_obj = sutils.get_obj_from_id(
                 self.sim, obj_id, self.ao_link_map
             )
             assert parent_obj is not None, f"Object id {obj_id} is invalid."
-            # NOTE: because links are parented explicitly to their parent AO, we don't allow them to be children in the relationship manager.
-            # if parent_obj.object_id == obj_id:
-            #    #this is a ManagedObject, not a link
-            #    obj_within = sutils.within(self.sim, parent_obj)
-            #    for parent_id in obj_within:
-            #        self.relationship_graph.add_relation(parent_id, obj_id, "within")
-            # TODO: Using ontop here because it was easier to demo, this should change. Using more than one preposition makes cycles more common. Better to control this from the episode and task logic.
+
             obj_ontop = sutils.ontop(
                 self.sim, obj_id, do_collision_detection=False
             )
@@ -309,6 +312,8 @@ class KinematicRelationshipManager:
         Get the global transformations for all root parents: those without any parent.
 
         :param root_parent_subset: Optionally, only compute the snapshot for a subset of root parents. Default is all root parents.
+
+        :return: dictionary mapping root parent object_ids to their global transformation matrices.
         """
 
         cur_root_parents = self.relationship_graph.get_root_parents()
@@ -424,6 +429,8 @@ class KinematicRelationshipManager:
         """
         Apply the previous relationship snapshot.
         Call this in the kinematic sim loop when objects are updated.
+
+        :return: The list of root parents for which the subtree transforms were updated.
         """
 
         return self.apply_relationships_snapshot(
