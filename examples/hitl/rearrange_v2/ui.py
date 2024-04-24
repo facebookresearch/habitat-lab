@@ -36,6 +36,10 @@ COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
 COLOR_GOALS = mn.Color4(_HI, _HI, _LO, 1.0)  # Yellow
 
+SHOW_GOAL_OBJECTS_HINTS = False
+SHOW_GOAL_RECEPTACLE_HINTS = False
+SHOW_GOALS = SHOW_GOAL_OBJECTS_HINTS and SHOW_GOAL_RECEPTACLE_HINTS
+
 
 class UI:
     """
@@ -413,6 +417,9 @@ class UI:
 
     def _draw_goals(self) -> None:
         """Draw goal object-receptacle pairs."""
+        if not SHOW_GOALS:
+            return
+
         # TODO: Cache
         sim = self._sim
         obj_receptacle_pairs = self._object_receptacle_pairs
@@ -425,24 +432,26 @@ class UI:
         for i in range(len(obj_receptacle_pairs)):
             rigid_ids = obj_receptacle_pairs[i][0]
             receptacle_ids = obj_receptacle_pairs[i][1]
-            for rigid_id in rigid_ids:
-                managed_object = get_obj_from_id(
-                    sim, rigid_id, link_id_to_ao_map
-                )
-                translation = managed_object.translation
-                draw_gui_circle(
-                    translation=translation,
-                    radius=0.25,
-                    color=COLOR_GOALS,
-                    billboard=True,
-                    destination_mask=dest_mask,
-                )
-            for receptacle_id in receptacle_ids:
-                managed_object = get_obj_from_id(
-                    sim, receptacle_id, link_id_to_ao_map
-                )
-                aabb, matrix = sim_utilities.get_bb_for_object_id(
-                    sim, receptacle_id, link_id_to_ao_map
-                )
-                if aabb is not None:
-                    draw_gui_aabb(aabb, matrix, COLOR_GOALS)
+            if SHOW_GOAL_OBJECTS_HINTS:
+                for rigid_id in rigid_ids:
+                    managed_object = get_obj_from_id(
+                        sim, rigid_id, link_id_to_ao_map
+                    )
+                    translation = managed_object.translation
+                    draw_gui_circle(
+                        translation=translation,
+                        radius=0.25,
+                        color=COLOR_GOALS,
+                        billboard=True,
+                        destination_mask=dest_mask,
+                    )
+            if SHOW_GOAL_RECEPTACLE_HINTS:
+                for receptacle_id in receptacle_ids:
+                    managed_object = get_obj_from_id(
+                        sim, receptacle_id, link_id_to_ao_map
+                    )
+                    aabb, matrix = sim_utilities.get_bb_for_object_id(
+                        sim, receptacle_id, link_id_to_ao_map
+                    )
+                    if aabb is not None:
+                        draw_gui_aabb(aabb, matrix, COLOR_GOALS)
