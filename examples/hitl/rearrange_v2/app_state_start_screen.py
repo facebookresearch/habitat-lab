@@ -113,7 +113,7 @@ class AppStateStartScreen(AppStateBase):
                 ):
                     self._ready_to_start[user_index] = True
                 user_ready = self._ready_to_start[user_index]
-                server_message += f"\n[{user_index}]: User {user_index}: {'Ready' if user_ready else 'Not ready'}."
+                server_message += f"\n[{user_index + 1}]: User {user_index}: {'Ready' if user_ready else 'Not ready'}."
 
             self._app_service.text_drawer.add_text(
                 server_message,
