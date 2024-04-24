@@ -54,12 +54,24 @@ def timestamp() -> str:
     return str(int(time()))
 
 def get_top_down_view(sim) -> mn.Matrix4:
+    """
+    Get a top-down view of the current scene.
+    """
     scene_root_node = sim.get_active_scene_graph().get_root_node()
     scene_target_bb: mn.Range3D = scene_root_node.cumulative_bb
     look_at = _lookat_bounding_box_top_down(
         200, scene_target_bb, FWD
     )
     return mn.Matrix4.look_at(look_at[0], look_at[1], UP)
+
+def get_empty_view(sim) -> mn.Matrix4:
+    """
+    Get a view looking into the void.
+    Used to avoid displaying previously-loaded content in intermediate stages.
+    """
+    # TODO: Improve how we show/hide the scene.
+    return mn.Matrix4.look_at(1000 * FWD, FWD, UP)
+
 
 class Session():
     """
@@ -236,8 +248,68 @@ class FrameRecorder:
 
         return data
 
+class AppStateMain(AppState):
+    """
+    Main RearrangeV2 application state.
+    """
+    def __init__(
+            self,
+            app_service: AppService,
+        ):
+            self._app_service = app_service
+            self._app_data = AppData(app_service.hitl_config.networking.max_client_count)
+            self._app_state: BaseRearrangeState = AppStateReset(app_service, self._app_data)
+            self._empty_view_matrix = get_empty_view(self._app_service.sim)
+
+            if app_service.hitl_config.networking.enable:
+                app_service.remote_client_state.on_client_connected.registerCallback(
+                    self._on_client_connected
+                )
+                app_service.remote_client_state.on_client_disconnected.registerCallback(
+                    self._on_client_disconnected
+                )
+
+    def _on_client_connected(self, connection: ConnectionRecord):
+        user_index = connection["userIndex"]
+        if user_index in self._app_data.connected_users:
+            raise RuntimeError(f"User index {user_index} already connected! Aborting.")
+        self._app_data.connected_users[connection["userIndex"]] = connection
+        self._app_state._time_since_last_connection = 0.0
+
+    def _on_client_disconnected(self, disconnection: DisconnectionRecord):
+        user_index = disconnection["userIndex"]
+        if user_index not in self._app_data.connected_users:
+            # TODO: Investigate why clients sometimes keep connecting/disconnecting.
+            print(f"User index {user_index} already disconnected!")
+            #raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
+        else:
+            del self._app_data.connected_users[user_index]
+
+        # If a user has disconnected, send a cancellation signal to the current state.
+        self._app_state.try_cancel()
+
+    def on_environment_reset(self, episode_recorder_dict):
+        self._app_state.on_environment_reset(episode_recorder_dict)
+
+    def sim_update(self, dt: float, post_sim_update_dict):
+        self._app_state._time_since_last_connection += dt
+        post_sim_update_dict["cam_transform"] = self._empty_view_matrix
+        self._app_state.sim_update(dt, post_sim_update_dict)
+
+        next_state = self._app_state.get_next_state()
+        if next_state is not None:
+             self._app_state.on_exit()
+             self._app_state = next_state
+             self._app_state.on_enter()
+
+        # Insert a keyframe to force clients to load immediately.
+        if self._app_state._auto_save_keyframes == True:
+            self._app_service.sim.gfx_replay_manager.save_keyframe()
+
+    def record_state(self): pass  # Unused.
+
+
 class BaseRearrangeState(AppState):
-    
     def __init__(
             self,
             app_service: AppService,
@@ -247,6 +319,7 @@ class BaseRearrangeState(AppState):
             self._app_data = app_data
             self._cancel = False
             self._time_since_last_connection = 0
+            self._auto_save_keyframes = True
 
     def on_enter(self):
         print(f"Entering state: {type(self)}")
@@ -274,61 +347,6 @@ class BaseRearrangeState(AppState):
         "Kick all users."
         self._app_service.remote_client_state.kick(Mask.ALL)
 
-class AppStateMain(AppState):
-    """
-    Main RearrangeV2 application state.
-    """
-    def __init__(
-            self,
-            app_service: AppService,
-        ):
-            self._app_service = app_service
-            self._app_data = AppData(app_service.hitl_config.networking.max_client_count)
-            self._app_state: BaseRearrangeState = AppStateReset(app_service, self._app_data)
-
-            if app_service.hitl_config.networking.enable:
-                app_service.remote_client_state.on_client_connected.registerCallback(
-                    self._on_client_connected
-                )
-                app_service.remote_client_state.on_client_disconnected.registerCallback(
-                    self._on_client_disconnected
-                )
-
-    def _on_client_connected(self, connection: ConnectionRecord):
-        user_index = connection["userIndex"]
-        if user_index in self._app_data.connected_users:
-            raise RuntimeError(f"User index {user_index} already connected! Aborting.")
-        self._app_data.connected_users[connection["userIndex"]] = connection
-        self._app_state._time_since_last_connection = 0.0
-
-    def _on_client_disconnected(self, disconnection: DisconnectionRecord):
-        user_index = disconnection["userIndex"]
-        if user_index not in self._app_data.connected_users:
-            # TODO: Investigate why clients keep connecting/disconnecting.
-            print(f"User index {user_index} already disconnected!")
-            #raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
-        else:
-            del self._app_data.connected_users[user_index]
-
-        # If a user has disconnected, send a cancellation signal to the current state.
-        self._app_state.try_cancel()
-
-    def on_environment_reset(self, episode_recorder_dict):
-        self._app_state.on_environment_reset(episode_recorder_dict)
-
-    def sim_update(self, dt: float, post_sim_update_dict):
-        self._app_state._time_since_last_connection += dt
-        post_sim_update_dict["cam_transform"] = mn.Matrix4.identity_init()
-        self._app_state.sim_update(dt, post_sim_update_dict)
-
-        next_state = self._app_state.get_next_state()
-        if next_state is not None:
-             self._app_state.on_exit()
-             self._app_state = next_state
-             self._app_state.on_enter()
-
-    def record_state(self): pass  # Unused.
-
 
 class AppStateLobby(BaseRearrangeState):
     """
@@ -337,6 +355,7 @@ class AppStateLobby(BaseRearrangeState):
     """
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
+        self._auto_save_keyframes = False
 
     def on_enter(self):
         super().on_enter()
@@ -366,6 +385,7 @@ class AppStateLobby(BaseRearrangeState):
 class AppStateStartSession(BaseRearrangeState):
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
+        self._auto_save_keyframes = True
 
     def on_enter(self):
         super().on_enter()
@@ -475,6 +495,7 @@ class AppStateLoadEpisode(BaseRearrangeState):
         self._loading = True
         self._session_ended = False
         self._frame_number = 0
+        self._auto_save_keyframes = True
 
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if self._cancel:
@@ -559,6 +580,7 @@ class AppStateStartScreen(BaseRearrangeState):
         self._ready_to_start: List[bool] = [False] * self._app_data.max_user_count
         self._elapsed_time: float = 0.0
         self._timeout = False  # TODO: Error management
+        self._auto_save_keyframes = True
 
     def get_next_state(self) -> Optional[BaseRearrangeState]:
         if self._cancel:
@@ -619,7 +641,7 @@ class AppStateStartScreen(BaseRearrangeState):
                 if self._app_service.gui_input.get_key_down(KeyCode(first_key + user_index)):
                     self._ready_to_start[user_index] = True
                 user_ready = self._ready_to_start[user_index]
-                server_message += f"\nUser {user_index}: {'Ready' if user_ready else 'Not ready'}."
+                server_message += f"\n[{user_index}]: User {user_index}: {'Ready' if user_ready else 'Not ready'}."
 
             self._app_service.text_drawer.add_text(
                 server_message,
@@ -639,6 +661,7 @@ class AppStateEndSession(BaseRearrangeState):
         super().__init__(app_service, app_data)
         self._elapsed_time = 0.0
         self._next_state: Optional[BaseRearrangeState] = None
+        self._auto_save_keyframes = False
 
         # TODO: Gather from session.
         self._error = error_message
@@ -733,6 +756,7 @@ class AppStateReset(BaseRearrangeState):
     """
     def __init__(self, app_service: AppService, app_data: AppData,):
         super().__init__(app_service, app_data)
+        self._auto_save_keyframes = False
 
     def on_enter(self):
         super().on_enter()
@@ -860,6 +884,7 @@ class AppStateRearrangeV2(BaseRearrangeState):
         self._server_gui_input = self._app_service.gui_input
         self._server_input_enabled = False
         self._elapsed_time = 0.0
+        self._auto_save_keyframes = False # Done in env step
 
         self._user_data: List[UserData] = []
 
@@ -935,6 +960,9 @@ class AppStateRearrangeV2(BaseRearrangeState):
         object_receptacle_pairs = self._create_goal_object_receptacle_pairs()
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].reset(object_receptacle_pairs)
+
+        # Insert a keyframe immediately.
+        self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def _create_goal_object_receptacle_pairs(
         self,

@@ -8,7 +8,6 @@ from typing import List
 
 from habitat_hitl.core.types import Keyframe, KeyframeAndMessages, Message
 
-
 def update_consolidated_keyframe(
     consolidated_keyframe: Keyframe, inc_keyframe: Keyframe
 ) -> None:
@@ -82,6 +81,7 @@ def update_consolidated_keyframe(
             # the creation and otherwise skip this deletion. This logic ensures
             # consolidated keyframes don't get bloated as many items are added
             # and removed over time.
+            # Beware that loads are never cleared.
             if "creations" in consolidated_keyframe:
                 con_creations = consolidated_keyframe["creations"]
                 found = False

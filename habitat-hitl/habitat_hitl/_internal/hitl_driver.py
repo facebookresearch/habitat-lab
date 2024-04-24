@@ -560,9 +560,11 @@ class HitlDriver(AppDriver):
             assert "keyframe" in obj
             keyframes.append(obj["keyframe"])
 
+        # Consolidate keyframes into the first one.
         cons_keyframe: Optional[Keyframe] = None
         if len(keyframes) > 0:
             cons_keyframe = keyframes[0]
+        
         # If there's no keyframe, but messages need to be sent, create an empty keyframe.
         elif any_message and len(keyframes) == 0:
             cons_keyframe = get_empty_keyframe()

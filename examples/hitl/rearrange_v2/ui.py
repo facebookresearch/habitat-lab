@@ -61,6 +61,8 @@ class World:
         self._pickable_object_ids: Set[int] = set()
         # Cache of interactable objects IDs.
         self._interactable_object_ids: Set[int] = set()
+        # Cache of agent articulated object IDs.
+        self._agent_object_ids: Set[int] = set()
 
     def reset(self) -> None:
         """
@@ -80,22 +82,27 @@ class World:
 
         # Get set of interactable articulated object links.
         # Exclude all agents.
-        agent_ao_object_ids: Set[int] = set()
+        agent_articulated_objects = set()
         agent_manager: ArticulatedAgentManager = sim.agents_mgr
         for agent_index in range(len(agent_manager)):
             agent = agent_manager[agent_index]
             agent_ao = agent.articulated_agent.sim_obj
-            agent_ao_object_ids.add(agent_ao.object_id)
+            agent_articulated_objects.add(agent_ao.object_id)
+            self._agent_object_ids.add(agent_ao.object_id)
         self._interactable_object_ids = set()
         aom = sim.get_articulated_object_manager()
         all_ao: List[
             ManagedArticulatedObject
         ] = aom.get_objects_by_handle_substring().values()
-        # All add non-root links that are not agents.
+        # Classify all non-root links.
         for ao in all_ao:
-            if ao.object_id not in agent_ao_object_ids:
-                for link_object_id in ao.link_object_ids:
-                    if link_object_id != ao.object_id:
+            for link_object_id in ao.link_object_ids:
+                if link_object_id != ao.object_id:
+                    # Link is part of an agent.
+                    if ao.object_id in agent_articulated_objects:
+                        self._agent_object_ids.add(link_object_id)
+                    # Link is not part of an agent.
+                    else:
                         self._interactable_object_ids.add(link_object_id)
 
     def get_rigid_object(self, object_id: int) -> Optional[Any]:
@@ -252,9 +259,6 @@ class UI:
                     self._place_selection.deselect()
                     self._world._all_held_object_ids.add(object_id)
 
-                    # Force graphics update.
-                    self._sim.gfx_replay_manager.save_keyframe()
-
                     self._events.append({
                         "type": "pick",
                         "obj_handle": rigid_object.handle,
@@ -278,9 +282,6 @@ class UI:
         )
         rigid_object.translation = eye_position + forward_vector
 
-        # Force graphics update.
-        self._sim.gfx_replay_manager.save_keyframe()
-
     def _place_object(self) -> None:
         """Place the currently held object."""
         if not self._place_selection.selected:
@@ -289,10 +290,11 @@ class UI:
         object_id = self._held_object_id
         point = self._place_selection.point
         normal = self._place_selection.normal
+        receptacle_object_id = self._place_selection.object_id
         if (
             object_id is not None
             and object_id != self._place_selection.object_id
-            and self._is_location_suitable_for_placement(point, normal)
+            and self._is_location_suitable_for_placement(point, normal, receptacle_object_id)
         ):
             # Drop the object.
             rigid_object = self._world.get_rigid_object(object_id)
@@ -302,9 +304,6 @@ class UI:
             self._held_object_id = None
             self._place_selection.deselect()
             self._world._all_held_object_ids.remove(object_id)
-
-            # Force graphics update.
-            self._sim.gfx_replay_manager.save_keyframe()
 
             self._events.append({
                 "type": "place",
@@ -327,9 +326,6 @@ class UI:
                 ao = self._world.get_articulated_object(ao_id)
                 link_node = ao.get_link_scene_node(link_index)
                 link_pos = link_node.translation
-
-                # Force graphics update.
-                self._sim.gfx_replay_manager.save_keyframe()
 
                 if self._is_within_reach(link_pos):
                     # Open/close object.
@@ -395,12 +391,20 @@ class UI:
         )
 
     def _is_location_suitable_for_placement(
-        self, point: mn.Vector3, normal: mn.Vector3
+        self, point: mn.Vector3, normal: mn.Vector3, receptacle_object_id: int,
     ) -> bool:
         """Returns true if the target location is suitable for placement."""
+        # Cannot place on agents.
+        if receptacle_object_id in self._world._agent_object_ids:
+            return False
+        # Cannot place on non-horizontal surfaces.
         placement_verticality = mn.math.dot(normal, mn.Vector3(0, 1, 0))
-        placement_valid = placement_verticality > MINIMUM_DROP_VERTICALITY
-        return placement_valid and self._is_within_reach(point)
+        if placement_verticality < MINIMUM_DROP_VERTICALITY:
+            return False
+        # Cannot place further than reach.
+        if not self._is_within_reach(point):
+            return False
+        return True
 
     def _draw_aabb(
         self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3
@@ -424,8 +428,9 @@ class UI:
 
         point = self._place_selection.point
         normal = self._place_selection.normal
+        receptacle_object_id = self._place_selection.object_id
         placement_valid = self._is_location_suitable_for_placement(
-            point, normal
+            point, normal, receptacle_object_id
         )
         color = COLOR_VALID if placement_valid else COLOR_INVALID
         radius = 0.15 if placement_valid else 0.05
