@@ -19,7 +19,13 @@ class ClientHelper:
     Tracks connected remote clients. Displays client latency and kicks idle clients.
     """
 
-    def __init__(self, hitl_config, remote_client_state, client_message_manager: ClientMessageManager, users: Users):
+    def __init__(
+        self,
+        hitl_config,
+        remote_client_state,
+        client_message_manager: ClientMessageManager,
+        users: Users,
+    ):
         assert hitl_config.networking.enable
         self._remote_client_state = remote_client_state
         self._client_message_manager = client_message_manager
@@ -113,8 +119,8 @@ class ClientHelper:
         self, user_index: int, server_sps: float
     ) -> None:
         """Update the frame counter."""
-        recent_server_keyframe_id = self._remote_client_state.pop_recent_server_keyframe_id(
-            user_index
+        recent_server_keyframe_id = (
+            self._remote_client_state.pop_recent_server_keyframe_id(user_index)
         )
         if recent_server_keyframe_id is not None:
             new_avg = self._client_frame_latency_avg_helper[user_index].add(

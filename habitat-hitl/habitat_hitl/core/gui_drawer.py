@@ -78,7 +78,9 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            for user_index in self._client_message_manager._users.indices(destination_mask):
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
                 self._local_transforms[user_index].append(transform)
 
     def pop_transform(
@@ -94,7 +96,9 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            for user_index in self._client_message_manager._users.indices(destination_mask):
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
                 self._local_transforms[user_index].pop()
 
     def draw_box(
@@ -113,6 +117,7 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
+
             def vec(x, y, z) -> mn.Vector3:
                 return mn.Vector3(x, y, z)
 
@@ -167,9 +172,13 @@ class GuiDrawer:
         # If remote rendering is enabled:
         if self._client_message_manager:
             # TODO: Move to client message manager.
-            for user_index in self._client_message_manager._users.indices(destination_mask):
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
                 parent_transform = self._compute_parent_transform(user_index)
-                global_translation = parent_transform.transform_point(translation)
+                global_translation = parent_transform.transform_point(
+                    translation
+                )
 
                 self._client_message_manager.add_highlight(
                     pos=_vec_to_list(global_translation),
@@ -206,7 +215,9 @@ class GuiDrawer:
         # If remote rendering is enabled:
         if self._client_message_manager:
             # TODO: Move to client message manager.
-            for user_index in self._client_message_manager._users.indices(destination_mask):
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
                 parent_transform = self._compute_parent_transform(user_index)
                 global_from_pos = parent_transform.transform_point(from_pos)
                 global_to_pos = parent_transform.transform_point(to_pos)

@@ -8,6 +8,7 @@ from typing import List
 
 from habitat_hitl.core.types import Keyframe, KeyframeAndMessages, Message
 
+
 def update_consolidated_keyframe(
     consolidated_keyframe: Keyframe, inc_keyframe: Keyframe
 ) -> None:

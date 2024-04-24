@@ -14,7 +14,6 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe, update_consolidated_keyframe
 import magnum as mn
 import numpy as np
 
@@ -24,6 +23,10 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
+)
+from habitat_hitl._internal.networking.keyframe_utils import (
+    get_empty_keyframe,
+    update_consolidated_keyframe,
 )
 from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
@@ -247,8 +250,11 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._hitl_config, self._client_message_manager,
-                self._interprocess_record, gui_drawer, users
+                self._hitl_config,
+                self._client_message_manager,
+                self._interprocess_record,
+                gui_drawer,
+                users,
             )
             # Bind the server input to user 0
             if self._hitl_config.networking.client_sync.server_input:
@@ -409,7 +415,7 @@ class HitlDriver(AppDriver):
     def _end_episode(self, do_reset=False):
         self._check_save_episode_data(session_ended=do_reset == False)
         # TODO: Conflict with set_next_episode_by_id
-        #if do_reset and self._episode_helper.next_episode_exists():
+        # if do_reset and self._episode_helper.next_episode_exists():
         #    self._reset_environment()
         if do_reset:
             self._reset_environment()
@@ -564,7 +570,7 @@ class HitlDriver(AppDriver):
         cons_keyframe: Optional[Keyframe] = None
         if len(keyframes) > 0:
             cons_keyframe = keyframes[0]
-        
+
         # If there's no keyframe, but messages need to be sent, create an empty keyframe.
         elif any_message and len(keyframes) == 0:
             cons_keyframe = get_empty_keyframe()
@@ -573,7 +579,6 @@ class HitlDriver(AppDriver):
         if len(keyframes) > 1:
             for inc_keyframe in keyframes[1:]:
                 update_consolidated_keyframe(cons_keyframe, inc_keyframe)
-        
 
         # If there's a keyframe available, send it.
         if cons_keyframe is not None:

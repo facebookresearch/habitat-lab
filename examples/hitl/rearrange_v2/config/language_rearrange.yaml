@@ -88,4 +88,3 @@ rearrange_v2:
     output_folder: "session"
     output_file: "session"
     s3_path: "Phase_2/test/"
-

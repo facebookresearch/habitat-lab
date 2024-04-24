@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from dataclasses import dataclass
 from typing import Final, List, Optional, Union
 
 import magnum as mn
@@ -14,6 +15,7 @@ from habitat_hitl.core.user_mask import Mask, Users
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 
 
+@dataclass
 class UIButton:
     def __init__(self, button_id: str, text: str, enabled: bool):
         self.button_id = button_id
@@ -35,12 +37,9 @@ class ClientMessageManager:
 
     def any_message(self) -> bool:
         """
-        Returns true if a message is ready to be sent.
+        Returns true if a message is ready to be sent for any user.
         """
-        for message in self._messages:
-            if len(message) > 0:
-                return True
-        return False
+        return any(len(message) > 0 for message in self._messages)
 
     def get_messages(self) -> List[Message]:
         r"""
@@ -155,7 +154,11 @@ class ClientMessageManager:
             )
 
     def show_modal_dialogue_box(
-        self, title: str, text: str, buttons: List[UIButton], destination_mask: Mask = Mask.ALL
+        self,
+        title: str,
+        text: str,
+        buttons: List[UIButton],
+        destination_mask: Mask = Mask.ALL,
     ):
         r"""
         Show a modal dialogue box with buttons.
@@ -163,7 +166,7 @@ class ClientMessageManager:
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            
+
             if "dialog" not in message:
                 message["dialog"] = {}
             message["dialog"] = {
@@ -172,11 +175,13 @@ class ClientMessageManager:
                 "buttons": [],
             }
             for button in buttons:
-                message["dialog"]["buttons"].append({
-                    "id": button.button_id,
-                    "text": button.text,
-                    "enabled": button.enabled,
-                })
+                message["dialog"]["buttons"].append(
+                    {
+                        "id": button.button_id,
+                        "text": button.text,
+                        "enabled": button.enabled,
+                    }
+                )
 
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL

@@ -13,7 +13,6 @@ from habitat_hitl.core.types import (
     DisconnectionRecord,
     KeyframeAndMessages,
 )
-from habitat_hitl.core.user_mask import Mask
 
 
 class InterprocessRecord:
@@ -35,10 +34,10 @@ class InterprocessRecord:
         self._allow_new_connections = Value("b", False)
 
     def enable_new_connections(self, enabled: bool):
-        self._allow_new_connections.value = enabled
+        self._allow_new_connections.value = enabled  # type: ignore
 
     def new_connections_allowed(self) -> bool:
-        return self._allow_new_connections.value
+        return self._allow_new_connections.value  # type: ignore
 
     def send_keyframe_to_networking_thread(
         self, keyframe: KeyframeAndMessages
@@ -97,8 +96,7 @@ class InterprocessRecord:
     def get_queued_disconnection_records(self) -> List[DisconnectionRecord]:
         """Dequeue all disconnection records."""
         return self._dequeue_all(self._disconnection_record_queue)
-    
+
     def get_queued_kick_signals(self) -> List[int]:
         """Dequeue all kick signals."""
         return self._dequeue_all(self._kick_signal_queue)
-    

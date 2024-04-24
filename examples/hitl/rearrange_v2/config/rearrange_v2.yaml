@@ -22,8 +22,8 @@ habitat:
     actions:
       # HACK: Robot velocities are defined here.
       agent_0_base_velocity:
-        lin_speed: 4.0
-        ang_speed: 250
+        lin_speed: 10.0
+        ang_speed: 20.0
   simulator:
     additional_object_paths:
       - "data/objects/ycb/configs/"

@@ -16,10 +16,7 @@ from multiprocessing import Process
 from typing import Any, Dict, List, Optional
 
 import aiohttp.web
-from habitat_hitl.core.hydra_utils import ConfigObject
-from websockets.server import WebSocketServer
-from websockets.server import serve
-from websockets.server import WebSocketServerProtocol
+from websockets.server import WebSocketServer, WebSocketServerProtocol, serve
 
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
@@ -33,6 +30,7 @@ from habitat_hitl._internal.networking.keyframe_utils import (
     update_consolidated_keyframe,
     update_consolidated_messages,
 )
+from habitat_hitl.core.hydra_utils import ConfigObject
 from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
@@ -40,7 +38,6 @@ from habitat_hitl.core.types import (
     KeyframeAndMessages,
     Message,
 )
-from habitat_hitl.core.user_mask import Users
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -179,7 +176,9 @@ class NetworkManager:
                 inc_keyframe_and_messages.messages,
             )
 
-    async def receive_client_states(self, websocket: WebSocketServerProtocol) -> None:
+    async def receive_client_states(
+        self, websocket: WebSocketServerProtocol
+    ) -> None:
         connection_id = id(websocket)
         async for message in websocket:
             self._recent_connection_activity_timestamp = datetime.now()
@@ -215,7 +214,9 @@ class NetworkManager:
         )
 
     def _check_kick_client(self):
-        kicked_user_indices = self._interprocess_record.get_queued_kick_signals()
+        kicked_user_indices = (
+            self._interprocess_record.get_queued_kick_signals()
+        )
         for user_index in kicked_user_indices:
             if user_index in self._user_slots:
                 print(f"Kicking client {user_index}.")
@@ -309,7 +310,7 @@ class NetworkManager:
                         slot.recent_connection_activity_timestamp = (
                             datetime.now()
                         )
-                
+
                 for user_index in range(self._max_client_count):
                     if self.is_okay_to_send_keyframes(user_index):
                         try:
@@ -333,7 +334,9 @@ class NetworkManager:
 
     def can_accept_connection(self) -> bool:
         return (
-            len(self._connected_clients) < self._networking_config.max_client_count and self._interprocess_record.new_connections_allowed()
+            len(self._connected_clients)
+            < self._networking_config.max_client_count
+            and self._interprocess_record.new_connections_allowed()
         )
 
     def handle_disconnect(self, connection_id: int) -> None:
@@ -369,17 +372,21 @@ class NetworkManager:
 
     def parse_connection_record(self, message: str) -> ConnectionRecord:
         connection_record: ConnectionRecord = json.loads(message)
-        if "isClientReady" not in connection_record:
-            # Hack: connection record may be missing. Try to get it from client state.
-            if "connectionParamsDict" in connection_record:
-                connection_record = connection_record["connectionParamsDict"]
-                if "isClientReady" not in connection_record:
-                    raise ValueError(
-                        "isClientReady key not found in initial client message."
-                    )
+        # Hack: connection record may be missing. Try to get it from client state.
+        if (
+            "isClientReady" not in connection_record
+            and "connectionParamsDict" in connection_record
+        ):
+            connection_record = connection_record["connectionParamsDict"]
+            if "isClientReady" not in connection_record:
+                raise ValueError(
+                    "isClientReady key not found in initial client message."
+                )
         return connection_record
 
-    async def handle_connection(self, websocket: WebSocketServerProtocol) -> None:
+    async def handle_connection(
+        self, websocket: WebSocketServerProtocol
+    ) -> None:
         # TODO: Kick clients before accepting connection.
 
         # Kick clients after limit is reached.
@@ -411,17 +418,25 @@ class NetworkManager:
             try:
                 async for message in websocket:
                     if time_out <= 0:
-                        raise(Exception(f"Timeout."))
+                        raise (Exception("Timeout."))
                     try:
-                        connection_record = self.parse_connection_record(message)
+                        connection_record = self.parse_connection_record(
+                            message
+                        )
                         break
                     except Exception:
-                        print(f"Unable to get connection record from client message: {message}.")
+                        print(
+                            f"Unable to get connection record from client message: {message}."
+                        )
             except Exception:
-                raise(Exception(f"Client disconnected while sending connection record."))
-            
+                raise (
+                    Exception(
+                        "Client disconnected while sending connection record."
+                    )
+                )
+
             if connection_record is None:
-                raise(Exception(f"Client did not send connection record."))
+                raise (Exception("Client did not send connection record."))
 
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
@@ -429,8 +444,12 @@ class NetworkManager:
             connection_record["timestamp"] = str(int(time.time()))
 
             # Insert mock connection parameters
-            mock_connection_params_dict = self._networking_config.mock_connection_params_dict
-            if mock_connection_params_dict is not None and isinstance(mock_connection_params_dict, ConfigObject):
+            mock_connection_params_dict = (
+                self._networking_config.mock_connection_params_dict
+            )
+            if mock_connection_params_dict is not None and isinstance(
+                mock_connection_params_dict, ConfigObject
+            ):
                 for key, value in mock_connection_params_dict.__dict__.items():
                     connection_record[key] = value
 

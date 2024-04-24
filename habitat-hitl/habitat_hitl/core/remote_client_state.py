@@ -7,8 +7,6 @@
 import math
 from typing import Any, List, Optional, Set, Tuple
 
-from habitat_hitl.core.client_helper import ClientHelper
-from habitat_hitl.core.client_message_manager import ClientMessageManager
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -17,6 +15,8 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
+from habitat_hitl.core.client_helper import ClientHelper
+from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -53,10 +53,12 @@ class RemoteClientState:
 
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
-        
+
         # TODO: Coupling.
         #       ClientHelper lifetime is directly coupled with RemoteClientState.
-        self._client_helper = ClientHelper(hitl_config, self, client_message_manager, users)
+        self._client_helper = ClientHelper(
+            hitl_config, self, client_message_manager, users
+        )
 
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
@@ -234,9 +236,7 @@ class RemoteClientState:
             gui_input = self._gui_inputs[user_index]
             for client_state in client_states:
                 # UI element events.
-                ui = (
-                    client_state["ui"] if "ui" in client_state else None
-                )
+                ui = client_state["ui"] if "ui" in client_state else None
                 if ui is not None:
                     for button in ui["buttonsPressed"]:
                         self._clicked_ui_buttons[user_index].add(button)
@@ -309,7 +309,9 @@ class RemoteClientState:
             # Loading states.
             self._client_loading[user_index] = False
             if "isLoading" in last_client_state:
-                self._client_loading[user_index] = last_client_state["isLoading"]
+                self._client_loading[user_index] = last_client_state[
+                    "isLoading"
+                ]
 
             input_json = (
                 last_client_state["input"]
@@ -486,4 +488,6 @@ class RemoteClientState:
 
     def kick(self, user_mask: Mask) -> None:
         for user_index in self._users.indices(user_mask):
-            self._interprocess_record.send_kick_signal_to_networking_thread(user_index)
+            self._interprocess_record.send_kick_signal_to_networking_thread(
+                user_index
+            )
