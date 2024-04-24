@@ -16,6 +16,7 @@ class AppData:
         self.max_user_count = max_user_count
         self.connected_users: Dict[int, ConnectionRecord] = {}
 
+        # TODO: Move this to session.
         self.episode_ids: Optional[List[str]] = None
         self.current_episode_index = 0
 

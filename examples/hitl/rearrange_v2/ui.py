@@ -233,10 +233,6 @@ class UI:
                     "obj_handle": rigid_object.handle,
                     "obj_id": object_id,
                     "receptacle_id": self._place_selection.object_id,
-                    # "receptacle_handle": TODO
-                    # receptacle = get_any_object(self._place_selection.object_id)
-                    # if hasattr(receptacle, "handle")
-                    #   "obj_handle" = receptacle.handle
                 }
             )
 
