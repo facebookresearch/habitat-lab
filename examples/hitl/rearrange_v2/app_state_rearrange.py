@@ -215,7 +215,7 @@ class AppStateRearrangeV2(AppStateBase):
     ):
         super().__init__(app_service, app_data)
         self._session = session
-        self._save_keyframes = True
+        self._save_keyframes = False  # Done on env step (rearrange_sim).
 
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers

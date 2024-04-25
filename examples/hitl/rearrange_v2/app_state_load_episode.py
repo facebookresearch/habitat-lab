@@ -37,7 +37,9 @@ class AppStateLoadEpisode(AppStateBase):
         self._loading = True
         self._session_ended = False
         self._frame_number = 0
-        self._save_keyframes = False # Enabled after new scene is loaded to prevent client from loading previous scene.
+
+        # Enabled after new scene is loaded to prevent client from loading previous scene.
+        self._save_keyframes = False
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
@@ -63,7 +65,6 @@ class AppStateLoadEpisode(AppStateBase):
         # TODO: Clean this up.
         if self._frame_number == 1:
             self._increment_episode()
-            self._save_keyframes = True
         elif self._frame_number > 1:
             # Top-down view.
             cam_matrix = get_top_down_view(self._app_service.sim)
@@ -113,7 +114,7 @@ class AppStateLoadEpisode(AppStateBase):
         if client_message_manager:
             client_message_manager.signal_scene_change(Mask.ALL)
 
-        # Insert a keyframe to force clients to load immediately.
-        self._app_service.sim.gfx_replay_manager.save_keyframe()
+        # Enable keyframes after loading episode prevent client from loading previous scene.
+        self._save_keyframes = True
 
         # TODO: Timeout
