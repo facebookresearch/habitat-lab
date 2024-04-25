@@ -555,6 +555,37 @@ class HitlDriver(AppDriver):
     def _send_keyframes(self, keyframes_json: List[str]):
         assert self.network_server_enabled
 
+        keyframes = []
+
+        for keyframe_json in keyframes_json:
+            obj = json.loads(keyframe_json)
+            assert "keyframe" in obj
+            keyframe_obj = obj["keyframe"]
+            keyframes.append(keyframe_obj)
+
+        if self._client_message_manager.any_message() and len(keyframes) == 0:
+            keyframes.append(get_empty_keyframe())
+
+        for keyframe in keyframes:
+            # Remove rigs from keyframe if skinning is disabled
+            # TODO: Per-user.
+            if not self._hitl_config.networking.client_sync.skinning:
+                if "rigCreations" in keyframe:
+                    del keyframe["rigCreations"]
+                if "rigUpdates" in keyframe:
+                    del keyframe["rigUpdates"]
+            # Insert server->client message into the keyframe
+            messages = self._client_message_manager.get_messages()
+            self._client_message_manager.clear_messages()
+            # Send the keyframe
+            self._interprocess_record.send_keyframe_to_networking_thread(
+                KeyframeAndMessages(keyframe, messages)
+            )
+
+    """
+    def _send_keyframes(self, keyframes_json: List[str]):
+        assert self.network_server_enabled
+
         cmm = self._client_message_manager
         any_message = cmm.any_message()
 
@@ -596,3 +627,4 @@ class HitlDriver(AppDriver):
             self._interprocess_record.send_keyframe_to_networking_thread(
                 KeyframeAndMessages(cons_keyframe, messages)
             )
+    """

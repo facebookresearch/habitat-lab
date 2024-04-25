@@ -23,7 +23,7 @@ class AppStateReset(AppStateBase):
 
     def __init__(self, app_service: AppService, app_data: AppData):
         super().__init__(app_service, app_data)
-        self._auto_save_keyframes = True
+        self._auto_save_keyframes = False
 
     def on_enter(self):
         super().on_enter()

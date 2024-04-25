@@ -37,7 +37,7 @@ class AppStateLoadEpisode(AppStateBase):
         self._loading = True
         self._session_ended = False
         self._frame_number = 0
-        self._auto_save_keyframes = True
+        self._auto_save_keyframes = False
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:

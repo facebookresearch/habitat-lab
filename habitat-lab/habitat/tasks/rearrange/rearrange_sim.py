@@ -901,8 +901,8 @@ class RearrangeSim(HabitatSim):
             self.add_perf_timing("get_sensor_observations", t_start)
 
         # TODO: Support recording while batch rendering
-        if self._enable_gfx_replay_save and not self._batch_render:
-            self.gfx_replay_manager.save_keyframe()
+        #if self._enable_gfx_replay_save and not self._batch_render:
+        #    self.gfx_replay_manager.save_keyframe()
 
         if self._needs_markers:
             self._update_markers()
