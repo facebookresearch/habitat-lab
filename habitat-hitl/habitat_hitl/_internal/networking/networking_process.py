@@ -115,6 +115,7 @@ class NetworkManager:
         self._networking_config = interprocess_record._networking_config
         self._max_client_count = self._networking_config.max_client_count
         self._user_slots: Dict[int, Client] = {}
+        self._handling_incoming_connection = False
 
         # Limit how many messages/sec we send. Note the current server implementation sends
         # messages "one at a time" (waiting for confirmation of receipt from the
@@ -390,9 +391,11 @@ class NetworkManager:
         # TODO: Kick clients before accepting connection.
 
         # Kick clients after limit is reached.
-        if not self.can_accept_connection():
+        if not self.can_accept_connection() and not self._handling_incoming_connection:
             await websocket.close()
             return
+        
+        self._handling_incoming_connection = True
 
         # Store the client connection object in the dictionary
         user_index = self._occupy_user_slot(websocket)
@@ -467,6 +470,7 @@ class NetworkManager:
         finally:
             await websocket.close()
             self.handle_disconnect(connection_id)
+            self._handling_incoming_connection = False
 
     # Sloppy: Connection sends/receives seem to sometimes hang for several minutes, making the server unresponsive to new connections. Let's try to detect when this happens and close the connection. Unclear if this is actually helping. I believe the underlying cause was improper configuration of the AWS load balancer and this has probably since been fixed.
     async def check_close_broken_connection(self) -> None:
@@ -516,7 +520,7 @@ async def start_http_availability_server(
         # return an HTTP code to indicate available or not
         code = (
             networking_config.http_availability_server.code_available
-            if network_mgr.can_accept_connection()
+            if not network_mgr.has_connection()
             else networking_config.http_availability_server.code_unavailable
         )
         # print(f"Returned availability HTTP code {code}")
