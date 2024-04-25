@@ -115,6 +115,24 @@ def draw_object_highlight(
     )
 
 
+def dblr_draw_bb(
+    debug_line_render: habitat_sim.gfx.DebugLineRender,
+    bb: mn.Range3D,
+    transform: mn.Matrix4 = None,
+    color: mn.Color4 = None,
+) -> None:
+    """
+    Draw an optionally transformed bounding box with the DebugLineRender interface.
+    """
+    if color is None:
+        color = mn.Color4.magenta()
+    if transform is not None:
+        debug_line_render.push_transform(transform)
+    debug_line_render.draw_box(bb.min, bb.max, color)
+    if transform is not None:
+        debug_line_render.pop_transform()
+
+
 class DebugVisualizer:
     """
     Support class for simple visual debugging of a Simulator instance.
