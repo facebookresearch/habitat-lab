@@ -165,17 +165,16 @@ class NetworkManager:
     def _update_consolidated_keyframes_and_messages(
         self,
         consolidated_keyframes_and_messages: KeyframeAndMessages,
-        keyframes_and_messages: List[KeyframeAndMessages],
+        inc_keyframe_and_messages: KeyframeAndMessages,
     ) -> None:
-        for inc_keyframe_and_messages in keyframes_and_messages:
-            update_consolidated_keyframe(
-                consolidated_keyframes_and_messages.keyframe,
-                inc_keyframe_and_messages.keyframe,
-            )
-            update_consolidated_messages(
-                consolidated_keyframes_and_messages.messages,
-                inc_keyframe_and_messages.messages,
-            )
+        update_consolidated_keyframe(
+            consolidated_keyframes_and_messages.keyframe,
+            inc_keyframe_and_messages.keyframe,
+        )
+        update_consolidated_messages(
+            consolidated_keyframes_and_messages.messages,
+            inc_keyframe_and_messages.messages,
+        )
 
     async def receive_client_states(
         self, websocket: WebSocketServerProtocol
@@ -228,7 +227,9 @@ class NetworkManager:
 
     async def send_keyframes(self) -> None:
         # this runs continuously even when there is no client connection
+        user_json_strings: Dict[int, str] = {}
         while True:
+            user_json_strings.clear()
             self._check_kick_client()
 
             time_start_ns = time.time_ns()
@@ -241,15 +242,15 @@ class NetworkManager:
                 # consolidate all inc keyframes into one inc_keyframe
                 tmp_con_keyframe = inc_keyframes_and_messages[0]
                 if len(inc_keyframes_and_messages) > 1:
-                    for _ in range(1, len(inc_keyframes)):
+                    for i in range(1, len(inc_keyframes)):
                         self._update_consolidated_keyframes_and_messages(
-                            tmp_con_keyframe, inc_keyframes_and_messages[1:]
+                            tmp_con_keyframe, inc_keyframes_and_messages[i]
                         )
                         inc_keyframes_and_messages = [tmp_con_keyframe]
                     inc_keyframes = [tmp_con_keyframe]
 
                 for user_index in self._user_slots.keys():
-                    # client = self._user_slots[i]
+                    slot = self._user_slots[user_index]
                     message = inc_keyframes_and_messages[0].messages[
                         user_index
                     ]
@@ -263,32 +264,29 @@ class NetworkManager:
                     ):
                         self._waiting_for_app_ready = False
 
-                # TODO: Combine with loop above. Make kick-safe.
-                user_json_strings: Dict[int, Any] = {}  # TODO Type
-                for user_index in self._user_slots.keys():
                     if self.is_okay_to_send_keyframes(user_index):
-                        for (
-                            keyframe_and_messages_to_send
-                        ) in inc_keyframes_and_messages:
-                            user_keyframes_to_send = [
+                        # This client may be joining "late", after we've already simulated
+                        # some frames. To handle this case, we send a consolidated keyframe as
+                        # the very first keyframe for the new client. It captures all the
+                        # previous incremental keyframes since the server started.
+                        user_keyframes_to_send = []
+                        if slot.needs_consolidated_keyframe:
+                            user_keyframes_to_send.insert(
+                                0,
+                                get_user_keyframe(
+                                    self._consolidated_keyframe_and_messages,
+                                    user_index,
+                                ),
+                            )
+                            slot.needs_consolidated_keyframe = False
+                        
+                        # Create final user keyframes by combining keyframes and user messages.
+                        for keyframe_and_messages_to_send in inc_keyframes_and_messages:
+                            user_keyframes_to_send.append(
                                 get_user_keyframe(
                                     keyframe_and_messages_to_send, user_index
                                 )
-                            ]
-                            # This client may be joining "late", after we've already simulated
-                            # some frames. To handle this case, we send a consolidated keyframe as
-                            # the very first keyframe for the new client. It captures all the
-                            # previous incremental keyframes since the server started.
-                            slot = self._user_slots[user_index]
-                            if slot.needs_consolidated_keyframe:
-                                user_keyframes_to_send.insert(
-                                    0,
-                                    get_user_keyframe(
-                                        self._consolidated_keyframe_and_messages,
-                                        user_index,
-                                    ),
-                                )
-                                slot.needs_consolidated_keyframe = False
+                            )
 
                         # Convert keyframes to JSON string
                         wrapper_obj = {"keyframes": user_keyframes_to_send}
@@ -296,16 +294,17 @@ class NetworkManager:
 
                 # after we've converted our keyframes to send to json, update
                 # our consolidated keyframe
-                self._update_consolidated_keyframes_and_messages(
-                    self._consolidated_keyframe_and_messages,
-                    inc_keyframes_and_messages,
-                )
+                for inc_keyframe_and_messages in inc_keyframes_and_messages:
+                    self._update_consolidated_keyframes_and_messages(
+                        self._consolidated_keyframe_and_messages,
+                        inc_keyframe_and_messages,
+                    )
 
                 tasks = {}
                 for user_index in self._user_slots.keys():
                     if self.is_okay_to_send_keyframes(user_index):
-                        client = self._user_slots[user_index]
-                        tasks[user_index] = client.socket.send(
+                        slot = self._user_slots[user_index]
+                        tasks[user_index] = slot.socket.send(
                             user_json_strings[user_index]
                         )
                         slot.recent_connection_activity_timestamp = (
@@ -314,6 +313,7 @@ class NetworkManager:
 
                 for user_index in range(self._max_client_count):
                     if self.is_okay_to_send_keyframes(user_index):
+                        slot = self._user_slots[user_index]
                         try:
                             # This will raise an exception if the connection is broken,
                             # e.g. if the server lost its network connection.

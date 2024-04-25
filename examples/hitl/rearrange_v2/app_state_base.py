@@ -26,7 +26,7 @@ class AppStateBase(AppState):
         self._app_data = app_data
         self._cancel = False
         self._time_since_last_connection = 0
-        self._auto_save_keyframes = True
+        self._save_keyframes = True
 
     def on_enter(self):
         print(f"Entering state: {type(self)}")

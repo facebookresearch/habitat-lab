@@ -34,7 +34,7 @@ class AppStateEndSession(AppStateBase):
         self._session = session
         self._elapsed_time = 0.0
         self._next_state: Optional[AppStateBase] = None
-        self._auto_save_keyframes = False
+        self._save_keyframes = False
 
         self._status = "Session ended."
         if len(session.status) > 0:

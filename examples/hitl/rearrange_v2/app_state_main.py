@@ -64,6 +64,7 @@ class AppStateMain(AppState):
 
     def on_environment_reset(self, episode_recorder_dict):
         self._app_state.on_environment_reset(episode_recorder_dict)
+        self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def sim_update(self, dt: float, post_sim_update_dict):
         self._app_state._time_since_last_connection += dt
@@ -77,9 +78,9 @@ class AppStateMain(AppState):
             self._app_state.on_enter()
 
         # Insert a keyframe to force clients to load immediately.
-        #if self._app_state._auto_save_keyframes == True:
-        #    self._app_service.sim.gfx_replay_manager.save_keyframe()
-        self._app_service.sim.gfx_replay_manager.save_keyframe()
+        if self._app_state._save_keyframes == True:
+            self._app_service.sim.gfx_replay_manager.save_keyframe()
+        #self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def record_state(self):
         pass  # Unused.

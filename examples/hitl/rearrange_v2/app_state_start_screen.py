@@ -39,7 +39,7 @@ class AppStateStartScreen(AppStateBase):
         ] * self._app_data.max_user_count
         self._elapsed_time: float = 0.0
         self._timeout = False  # TODO: Error management
-        self._auto_save_keyframes = True
+        self._save_keyframes = True
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
