@@ -17,7 +17,7 @@ habitat:
         grip_controller: MagicGraspAction
       agent_1_base_velocity:
         lin_speed: 10.0
-        ang_speed: 20.0
+        ang_speed: 300
   gym:
     obs_keys:
       - agent_0_head_depth
