@@ -41,7 +41,7 @@ class AppStateLoadEpisode(AppStateBase):
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
-            self._session.status = "User disconnected."
+            self._session.error = "User disconnected."
             return create_app_state_end_session(
                 self._app_service, self._app_data, self._session
             )

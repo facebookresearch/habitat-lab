@@ -199,7 +199,10 @@ class UserData:
         return lookat
 
     def _is_user_idle_this_frame(self) -> bool:
-        return not self.gui_input.get_any_input()
+        active = self.gui_input.get_any_input()
+        task_completed = self.task_completed
+        loading = self.app_service.remote_client_state._client_loading[self.user_index]
+        return not active and not task_completed and not loading
 
 
 class AppStateRearrangeV2(AppStateBase):
@@ -255,6 +258,7 @@ class AppStateRearrangeV2(AppStateBase):
     def get_next_state(self) -> Optional[AppStateBase]:
         # If cancelled, skip upload and clean-up.
         if self._cancel:
+            self._session.error = "User disconnected"
             return create_app_state_end_session(
                 self._app_service, self._app_data, self._session
             )
@@ -298,6 +302,10 @@ class AppStateRearrangeV2(AppStateBase):
 
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
+
+        # Reset AFK timers.
+        # TODO: Move to idle_kick_timer class. Make it per-user. Couple it with "user_data" class
+        self._app_service.remote_client_state._client_helper.activate_users()
 
         # Set the task instruction
         current_episode = self._app_service.env.current_episode

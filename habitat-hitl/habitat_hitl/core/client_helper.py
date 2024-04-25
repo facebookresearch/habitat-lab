@@ -42,7 +42,6 @@ class ClientHelper:
         user_count = users.max_user_count
         self._show_idle_kick_warning: List[bool] = [False] * user_count
         self._last_activity: List[datetime] = [datetime.now()] * user_count
-        self._connection_ids: List[Optional[int]] = [None] * user_count
         self._display_latency_ms: List[Optional[float]] = [None] * user_count
         self._client_frame_latency_avg_helper: List[
             Optional[AverageHelper]
@@ -56,10 +55,14 @@ class ClientHelper:
             self._on_client_disconnected
         )
 
-    def _reset_user(self, user_index: int, connection_id: int):
+    def activate_users(self):
+        for user_index in range(self._users.max_user_count):
+            self._show_idle_kick_warning[user_index] = False
+            self._last_activity[user_index] = datetime.now()
+
+    def _reset_user(self, user_index: int):
         self._show_idle_kick_warning[user_index] = False
         self._last_activity[user_index] = datetime.now()
-        self._connection_ids[user_index] = connection_id
         self._display_latency_ms[user_index] = None
         self._client_frame_latency_avg_helper[user_index] = AverageHelper(
             window_size=10, output_rate=10
@@ -69,12 +72,12 @@ class ClientHelper:
     def _on_client_connected(self, connection: ConnectionRecord):
         user_index = connection["userIndex"]
         self._connected_users |= Mask.from_index(user_index)
-        self._reset_user(user_index, connection["connectionId"])
+        self._reset_user(user_index)
 
     def _on_client_disconnected(self, disconnection: DisconnectionRecord):
         user_index = disconnection["userIndex"]
         self._connected_users &= ~Mask.from_index(user_index)
-        self._reset_user(user_index, connection_id=None)
+        self._reset_user(user_index)
 
     def display_latency_ms(self, user_index: int) -> Optional[float]:
         """Returns the display latency."""
@@ -97,7 +100,7 @@ class ClientHelper:
         self._show_idle_kick_warning[user_index] = False
 
         now = datetime.now()
-        if is_user_idle_this_frame:
+        if not is_user_idle_this_frame:
             self._last_activity[user_index] = now
 
         time_since_last_activity = now - self._last_activity[user_index]

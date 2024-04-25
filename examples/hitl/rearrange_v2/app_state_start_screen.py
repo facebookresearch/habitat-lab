@@ -43,7 +43,7 @@ class AppStateStartScreen(AppStateBase):
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
-            self._session.status = (
+            self._session.error = (
                 "Timeout" if self._timeout else "User disconnected"
             )
             return create_app_state_end_session(

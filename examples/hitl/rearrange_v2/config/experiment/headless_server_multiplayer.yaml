@@ -7,7 +7,7 @@ habitat_hitl:
     max_client_count: 2
     http_availability_server:
       enable: True
-    client_max_idle_duration: 30.0
+    client_max_idle_duration: 60.0
   experimental:
     headless:
       do_headless: True

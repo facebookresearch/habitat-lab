@@ -33,7 +33,7 @@ class AppStateStartSession(AppStateBase):
             )
 
             if self._cancel:
-                self._new_session.status = "User disconnected"
+                self._new_session.error = "User disconnected"
                 return create_app_state_end_session(
                     self._app_service, self._app_data, self._new_session
                 )
@@ -48,7 +48,7 @@ class AppStateStartSession(AppStateBase):
                 [],
                 dict(self._app_data.connected_users),
             )
-            self._new_session.status = "Invalid session"
+            self._new_session.error = "Invalid session"
             return create_app_state_end_session(
                 self._app_service, self._app_data, self._new_session
             )

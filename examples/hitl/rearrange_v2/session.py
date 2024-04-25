@@ -29,7 +29,7 @@ class Session:
         self.session_recorder = SessionRecorder(
             config, connection_records, episode_ids
         )
-        self.status = ""  # Use this to display error status
+        self.error = ""  # Use this to display error that causes termination
 
         # Use the port as a discriminator for when there are multiple concurrent servers.
         output_folder_suffix = str(config.habitat_hitl.networking.port)

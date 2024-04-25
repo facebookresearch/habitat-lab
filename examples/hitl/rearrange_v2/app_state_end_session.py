@@ -37,8 +37,8 @@ class AppStateEndSession(AppStateBase):
         self._save_keyframes = False
 
         self._status = "Session ended."
-        if len(session.status) > 0:
-            self._status += f"\nError: {session.status}"
+        if len(session.error) > 0:
+            self._status += f"\nError: {session.error}"
 
     def get_next_state(self) -> Optional[AppStateBase]:
         return self._next_state
@@ -66,9 +66,9 @@ class AppStateEndSession(AppStateBase):
             return
 
         # Finalize session.
-        if self._session.status == "":
+        if self._session.error == "":
             session.success = True
-        session.session_recorder.end_session(self._session.status)
+        session.session_recorder.end_session(self._session.error)
 
         # Find S3 params.
         data_collection_config = (
