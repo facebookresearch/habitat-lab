@@ -391,10 +391,13 @@ class NetworkManager:
         # TODO: Kick clients before accepting connection.
 
         # Kick clients after limit is reached.
-        if not self.can_accept_connection() and not self._handling_incoming_connection:
+        if (
+            not self.can_accept_connection()
+            and not self._handling_incoming_connection
+        ):
             await websocket.close()
             return
-        
+
         self._handling_incoming_connection = True
 
         # Store the client connection object in the dictionary

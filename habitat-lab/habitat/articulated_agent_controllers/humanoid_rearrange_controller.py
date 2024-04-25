@@ -253,7 +253,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        #forward_V_dist = forward_V * dist_diff * distance_multiplier
+        # forward_V_dist = forward_V * dist_diff * distance_multiplier
         # HACK: Force humanoid speed to use config value.
         forward_V_dist = forward_V * self.meters_per_step * distance_multiplier
         obj_transform_base.translation += forward_V_dist
@@ -430,7 +430,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        #forward_V_dist = forward_V * dist_diff * distance_multiplier
+        # forward_V_dist = forward_V * dist_diff * distance_multiplier
         # HACK: Force humanoid speed to use config value.
         forward_V_dist = forward_V * self.meters_per_step * distance_multiplier
         obj_transform_base.translation += forward_V_dist
