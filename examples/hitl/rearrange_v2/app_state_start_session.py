@@ -21,7 +21,7 @@ class AppStateStartSession(AppStateBase):
     def __init__(self, app_service: AppService, app_data: AppData):
         super().__init__(app_service, app_data)
         self._new_session: Optional[Session] = None
-        self._auto_save_keyframes = False
+        self._auto_save_keyframes = True
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._try_get_episodes():

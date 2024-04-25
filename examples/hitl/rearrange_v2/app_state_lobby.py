@@ -21,7 +21,7 @@ class AppStateLobby(AppStateBase):
 
     def __init__(self, app_service: AppService, app_data: AppData):
         super().__init__(app_service, app_data)
-        self._auto_save_keyframes = False
+        self._auto_save_keyframes = True
 
     def on_enter(self):
         super().on_enter()
