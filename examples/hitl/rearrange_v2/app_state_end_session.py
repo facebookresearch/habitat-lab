@@ -11,7 +11,7 @@ from typing import Optional
 from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import create_app_state_reset
-from s3_upload import upload_file_to_s3
+from s3_upload import generate_unique_session_id, make_s3_filename, upload_file_to_s3
 from session import Session
 from util import get_top_down_view, timestamp
 
@@ -91,36 +91,15 @@ class AppStateEndSession(AppStateBase):
         save_as_json_gzip(session.session_recorder, json_path)
 
         # Generate unique session ID
-        if len(self._session.connection_records) == 0:
-            print("No connection record. Aborting upload.")
-            return
-        episodes_str = ""
-        user_id_str = ""
-        for _, connection_record in self._session.connection_records.items():
-            episodes_str = connection_record.get(
-                "episodes", "unknown_episodes"
-            )
-
-            if user_id_str != "":
-                user_id_str += "_"
-            if "user_id" in connection_record:
-                uid = str(connection_record["user_id"])
-                if uid.isalnum():
-                    user_id_str += uid
-                else:
-                    user_id_str += "unknown_user"
-            else:
-                user_id_str += "unknown_user"
-        session_id = f"{episodes_str}_{user_id_str}_{timestamp()}"
-        # TODO Filter str
+        session_id = generate_unique_session_id(session.episode_ids, session.connection_records)
 
         # Upload output directory
-        output_files = [
+        orig_file_names = [
             f
             for f in os.listdir(output_folder)
             if os.path.isfile(os.path.join(output_folder, f))
         ]
-        for output_file in output_files:
-            local_file_path = os.path.join(output_folder, output_file)
-            s3_file_name = f"{session_id}_{output_file}"
+        for orig_file_name in orig_file_names:
+            local_file_path = os.path.join(output_folder, orig_file_name)
+            s3_file_name = make_s3_filename(session_id, orig_file_name)
             upload_file_to_s3(local_file_path, s3_file_name, s3_path)
