@@ -376,6 +376,7 @@ class AppStateRearrangeV2(AppStateBase):
 
         controls_str: str = ""
         controls_str += "H: Toggle help\n"
+        controls_str += f"Episode: {self._app_data.current_episode_index}\n"
         controls_str += "Look: Middle click (drag), I, K\n"
         controls_str += "Walk: W, S\n"
         controls_str += "Turn: A, D\n"
