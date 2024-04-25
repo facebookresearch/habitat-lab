@@ -14,7 +14,7 @@ from habitat.sims.habitat_simulator import sim_utilities
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.key_mapping import MouseButton
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.selection import Selection
 from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -96,9 +96,8 @@ class UI:
 
         # Track drop placement.
         def place_selection_fn(gui_input: GuiInput) -> bool:
-            return gui_input.get_mouse_button(
-                MouseButton.RIGHT
-            ) or gui_input.get_mouse_button_up(MouseButton.RIGHT)
+            # TODO: Temp keyboard equivalent
+            return gui_input.get_mouse_button(MouseButton.RIGHT) or gui_input.get_mouse_button_up(MouseButton.RIGHT) or gui_input.get_key(KeyCode.SPACE) or gui_input.get_key_up(KeyCode.SPACE)
 
         self._place_selection = Selection(
             self._sim,
@@ -147,7 +146,8 @@ class UI:
                     self._interact_with_object(clicked_object_id)
 
         # Drop when releasing right click.
-        if self._gui_input.get_mouse_button_up(MouseButton.RIGHT):
+        # TODO: Temp keyboard equivalent
+        if self._gui_input.get_mouse_button_up(MouseButton.RIGHT) or self._gui_input.get_key_up(KeyCode.SPACE):
             self._place_object()
             self._place_selection.deselect()
 
