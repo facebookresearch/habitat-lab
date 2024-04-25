@@ -28,8 +28,8 @@ class AppStateStartSession(AppStateBase):
             # Start the session.
             self._new_session = Session(
                 self._app_service.config,
-                self._app_data.episode_ids,
-                self._app_data.connected_users,
+                list(self._app_data.episode_ids),
+                dict(self._app_data.connected_users),
             )
 
             if self._cancel:
@@ -46,7 +46,7 @@ class AppStateStartSession(AppStateBase):
             self._new_session = Session(
                 self._app_service.config,
                 [],
-                self._app_data.connected_users,
+                dict(self._app_data.connected_users),
             )
             self._new_session.status = "Invalid session"
             return create_app_state_end_session(
