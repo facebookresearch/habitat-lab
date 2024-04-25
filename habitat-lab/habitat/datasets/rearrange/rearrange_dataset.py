@@ -32,7 +32,9 @@ class RearrangeEpisode(Episode):
     :property markers: Indicate points of interest in the scene such as grasp points like handles. {marker name -> (type, (params))}
     :property target_receptacles: The names and link indices of the receptacles containing the target objects.
     :property goal_receptacles: The names and link indices of the receptacles containing the goals.
+    :property name_to_receptacle: Map ManagedObject instance handles to containing Receptacle unique_names.
     """
+
     ao_states: Dict[str, Dict[int, float]]
     rigid_objs: List[Tuple[str, np.ndarray]]
     targets: Dict[str, np.ndarray]
