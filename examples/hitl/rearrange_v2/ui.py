@@ -255,7 +255,7 @@ class UI:
 
                         self._events.append(
                             {
-                                "type": "open",
+                                "type": "close",
                                 "obj_handle": ao.handle,
                                 "obj_id": object_id,
                             }
@@ -266,7 +266,7 @@ class UI:
 
                         self._events.append(
                             {
-                                "type": "close",
+                                "type": "open",
                                 "obj_handle": ao.handle,
                                 "obj_id": object_id,
                             }
