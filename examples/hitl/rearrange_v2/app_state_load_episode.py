@@ -100,6 +100,7 @@ class AppStateLoadEpisode(AppStateBase):
         data = self._app_data
 
         # Set the ID of the next episode to play in lab.
+        self._app_service.sim.gfx_replay_manager.save_keyframe()  # AWS Test
         next_episode_id = data.episode_ids[episode_index]
         self._app_service.episode_helper.set_next_episode_by_id(
             next_episode_id
