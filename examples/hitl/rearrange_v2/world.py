@@ -80,6 +80,10 @@ class World:
                     # Link is not part of an agent.
                     else:
                         self._interactable_object_ids.add(link_object_id)
+                        # Make sure that link is in "closed" state.
+                        link_index = self.get_link_index(link_object_id)
+                        if link_index:
+                            sim_utilities.close_link(ao, link_index)
 
     def get_rigid_object(self, object_id: int) -> Optional[Any]:
         """Get the rigid object with the specified ID. Returns None if unsuccessful."""
