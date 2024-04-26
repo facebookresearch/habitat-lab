@@ -530,11 +530,20 @@ class AnyObjectReceptacle(Receptacle):
     ) -> mn.Vector3:
         """
         Sample a uniform random point on the top surface of the global bounding box of the object.
-        If a pre-computed candidate point set was cached, simply sample from those points instead.
+        TODO: If a pre-computed candidate point set was cached, simply sample from those points instead.
 
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. No-op for cached points.
         """
         aabb = self._get_global_bb(sim)
+        if sample_region_scale != 1.0:
+            aabb = mn.Range3D.from_center(
+                aabb.center(),
+                aabb.scaled(
+                    mn.Vector3d(sample_region_scale, 1, sample_region_scale)
+                ).size()
+                / 2.0,
+            )
+
         sample = np.random.uniform(aabb.back_top_left, aabb.front_top_right)
         return sample
 
