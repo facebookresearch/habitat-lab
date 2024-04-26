@@ -458,7 +458,7 @@ class AnyObjectReceptacle(Receptacle):
     """
     The AnyObjectReceptacle enables any rigid or articulated object or link to be used as a Receptacle without metadata annotation.
     It uses the top surface of an object's global space bounding box as a heuristic for the sampling area.
-    The sample efficiency is likely to be poor (especially for concave objects like L-shaped sofas), this is mitigated by the option to pre-compute a discrete set of candidate points via raycast upon initialization.
+    The sample efficiency is likely to be poor (especially for concave objects like L-shaped sofas), TODO: this could be mitigated by the option to pre-compute a discrete set of candidate points via raycast upon initialization.
     Also, this heuristic will not support use of interior surfaces such as cubby and cabinet shelves since volumetric occupancy is not considered.
 
     Note the caveats above and consider that the ideal application of the AnyObjectReceptacle is to support placement of objects onto other simple objects such as open face crates, bins, baskets, trays, plates, bowls, etc... for which receptacle annotation would be overkill.
@@ -469,7 +469,6 @@ class AnyObjectReceptacle(Receptacle):
         name: str,
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
-        precompute_candidate_pointset: bool = False,
     ):
         """
         Initialize the object as a Receptacle.
@@ -477,18 +476,6 @@ class AnyObjectReceptacle(Receptacle):
         :param precompute_candidate_pointset: Whether or not to pre-compute and cache a discrete point set for sampling instead of using the global bounding box. Uses raycasting with rejection sampling.
         """
         super().__init__(name, parent_object_handle, parent_link)
-        self.precomputed_candidate_pointset = None
-        self.max_precomputed_candidate_point_samples: int = (
-            100  # modify this for fidelity vs. speed tradeoff
-        )
-
-    def candidate_pointset_precomputation(self) -> None:
-        """
-        Use vertical raycasting in the object's current state to collect a set of points which are candidates for object placement with snap.
-        Acceptable candidate points are those for which a downward vertical raycast hits the object surface. Other hits in the scene are ignored.
-        """
-        # TODO: sampling logic
-        # TODO: compute the bounds
 
     def _get_global_bb(self, sim: habitat_sim.Simulator) -> mn.Range3D:
         """
@@ -520,13 +507,12 @@ class AnyObjectReceptacle(Receptacle):
     def bounds(self) -> mn.Range3D:
         """
         AABB of the Receptacle in local space.
-        NOTE: unless cached points are used, this is an effortful query, not a getter.
+        NOTE: this is an effortful query, not a getter.
+        TODO: This needs a sim instance to compute the global bounding box
         """
-        # TODO: grab the bounds from the global AABB at this state
-        if self.precomputed_candidate_pointset is not None:
-            # TODO: return the cached bounds
-            pass
-        return mn.Range3D()
+        # TODO: grab the bounds from the global AABB at this state?
+        # return mn.Range3D()
+        raise NotImplementedError
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
