@@ -56,6 +56,12 @@ habitat:
       - localization_sensor
   environment:
     max_episode_steps: 0
+    # Ensure that the episode iterator behaves as expected.
+    iterator_options:
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      shuffle: False
+      group_by_scene: False
   simulator:
     type: RearrangeSim-v0
     seed: 100
