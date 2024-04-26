@@ -475,12 +475,14 @@ class AnyObjectReceptacle(Receptacle):
 
         :param precompute_candidate_pointset: Whether or not to pre-compute and cache a discrete point set for sampling instead of using the global bounding box. Uses raycasting with rejection sampling.
         """
+
         super().__init__(name, parent_object_handle, parent_link)
 
     def _get_global_bb(self, sim: habitat_sim.Simulator) -> mn.Range3D:
         """
         Get the global AABB of the Receptacle parent object.
         """
+
         obj = sutils.get_obj_from_handle(sim, self.parent_object_handle)
         global_keypoints = None
         if isinstance(obj, habitat_sim.physics.ManagedRigidObject):
@@ -510,6 +512,7 @@ class AnyObjectReceptacle(Receptacle):
         NOTE: this is an effortful query, not a getter.
         TODO: This needs a sim instance to compute the global bounding box
         """
+
         # TODO: grab the bounds from the global AABB at this state?
         # return mn.Range3D()
         raise NotImplementedError
@@ -523,6 +526,7 @@ class AnyObjectReceptacle(Receptacle):
 
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
+
         raise NotImplementedError
 
     def sample_uniform_global(
@@ -534,6 +538,7 @@ class AnyObjectReceptacle(Receptacle):
 
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. No-op for cached points.
         """
+
         aabb = self._get_global_bb(sim)
         if sample_region_scale != 1.0:
             aabb = mn.Range3D.from_center(
@@ -557,6 +562,7 @@ class AnyObjectReceptacle(Receptacle):
         :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
+
         aabb = self._get_global_bb(sim)
         top_min = aabb.min
         top_min[1] = aabb.top

@@ -123,7 +123,13 @@ def dblr_draw_bb(
 ) -> None:
     """
     Draw an optionally transformed bounding box with the DebugLineRender interface.
+
+    :param debug_line_render: The DebugLineRender instance.
+    :param bb: The local bounding box to draw.
+    :param transform: The local to global transformation to apply to the local bb.
+    :param color: Optional color for the lines. Default is magenta.
     """
+
     if color is None:
         color = mn.Color4.magenta()
     if transform is not None:
