@@ -341,8 +341,9 @@ class AppStateRearrangeV2(AppStateBase):
                             obj = sim_utilities.get_obj_from_handle(
                                 sim, object_handle
                             )
-                            object_id = obj.object_id
-                            object_ids.append(object_id)
+                            if obj is not None:
+                                object_id = obj.object_id
+                                object_ids.append(object_id)
                         receptacle_ids: List[int] = []
                     if "receptacle_handles" in proposition.args:
                         receptacle_handles = proposition.args[
@@ -352,9 +353,10 @@ class AppStateRearrangeV2(AppStateBase):
                             obj = sim_utilities.get_obj_from_handle(
                                 sim, receptacle_handle
                             )
-                            object_id = obj.object_id
-                            # TODO: Support for finding links by handle.
-                            receptacle_ids.append(object_id)
+                            if obj is not None:
+                                object_id = obj.object_id
+                                # TODO: Support for finding links by handle.
+                                receptacle_ids.append(object_id)
                         paired_goal_ids.append((object_ids, receptacle_ids))
         return paired_goal_ids
 
