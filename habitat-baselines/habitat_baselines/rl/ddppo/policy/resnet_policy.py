@@ -159,7 +159,7 @@ class PointNavResNetPolicy(NetPolicy):
 
         has_rgb = False
         for keys in observation_space.spaces:
-            if "rgb" in keys and "bbox" not in keys:
+            if "rgb" in keys and keys != "third_rgb" and "bbox" not in keys:
                 has_rgb = True
 
         return cls(
