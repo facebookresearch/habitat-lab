@@ -346,10 +346,16 @@ class NetworkManager:
         """
         if len(self._connected_clients) == 0:
             return
-        assert connection_id in self._connected_clients
-        websocket = self._connected_clients[connection_id]
+
+        # TODO: Investigate.
+        if connection_id not in self._connected_clients:
+            print("Already disconnected.")
+            return
+        
         # Ensure that the connection is closed.
+        websocket = self._connected_clients[connection_id]
         asyncio.create_task(websocket.close())
+        
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[connection_id]
         # Sloppy: Search for slot by connection ID

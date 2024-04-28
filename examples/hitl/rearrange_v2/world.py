@@ -105,3 +105,19 @@ class World:
             if link_id in link_id_to_index:
                 return link_id_to_index[link_id]
         return None
+
+    def get_agent_object_ids(self, agent_index: int) -> Set[int]:
+        """Get the IDs of objects composing an agent (including links)."""
+        # TODO: Cache
+        sim = self._sim
+        agent_manager: ArticulatedAgentManager = sim.agents_mgr
+        agent_object_ids: Set[int] = set()
+        agent = agent_manager[agent_index]
+        agent_ao = agent.articulated_agent.sim_obj
+        agent_object_ids.add(agent_ao.object_id)
+        
+        for link_object_id in agent_ao.link_object_ids:
+            agent_object_ids.add(link_object_id)
+
+        return agent_object_ids
+    

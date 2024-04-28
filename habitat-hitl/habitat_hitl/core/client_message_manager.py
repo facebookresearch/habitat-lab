@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Final, List, Optional, Union
+from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
 
@@ -182,6 +182,7 @@ class ClientMessageManager:
                         "enabled": button.enabled,
                     }
                 )
+        
 
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
@@ -220,6 +221,87 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["serverKeyframeId"] = keyframe_id
 
+    def set_object_global_visibility(
+        self, object_id: int, visible: bool, destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        Show-hide the object with the specified habitat-sim objectId.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            object_properties = _obtain_object_properties(message, object_id)
+            object_properties["visible"] = visible
+
+    def set_object_visibility_layer(
+        self, object_id: int, layer_id: int = -1, destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        Set the visibility layer of the object with the specified habitat-sim objectId.
+        The layer_id '-1' is the default layer and is visible to all viewports.
+        There are 8 additional layers for controlling visibility (0 to 7).
+        """
+        assert layer_id >= -1
+        assert layer_id < 8
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            object_properties = _obtain_object_properties(message, object_id)
+            object_properties["layer"] = layer_id
+
+    def set_viewport_visibility_layers(
+        self, viewport_id: int, layer_ids: List[int], destination_mask: Mask = Mask.ALL
+    ):
+        r"""
+        Set the visibility layer of the object with the specified habitat-sim objectId.
+        By default, all layers are visible.
+        The viewport_id '-1' is reserved for the main viewport.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            viewport_properties["layers"] = layer_ids
+
+    def set_viewport_properties(
+        self,
+        viewport_id: int,
+        viewport_rect_xywh: List[float] = [0.0, 0.0, 1.0, 1.0],
+        visible_layer_ids: Mask = Mask.ALL,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Set the visibility layer of the object with the specified habitat-sim objectId.
+        The viewport_id '-1' is reserved for the main viewport.
+        """
+        layers = Users(8)  # Maximum of 8 layers.
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            # TODO: Use mask int directly instead of array
+            viewport_properties["layers"] = []
+            for layer in layers.indices(visible_layer_ids):
+                viewport_properties["layers"].append(layer)
+            viewport_properties["rect"] = viewport_rect_xywh
+
+    def show_viewport(
+        self,
+        viewport_id: int,
+        cam_transform: mn.Matrix4,
+        text: str = "",
+        destination_mask: Mask = Mask.ALL,
+    ):
+        """
+        Show a viewport rendering the specified camera matrix.
+        This must be repeatedly called for the viewport to stay visible.
+        The viewport_id '-1' is reserved for the main viewport. It is always visible.
+        User set_viewport_properties() to configure the viewport.
+        """
+        assert viewport_id != -1
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            viewport_properties["enabled"] = True
+            viewport_properties["camera"] = _create_camera_transform_dict(cam_transform)
+            viewport_properties["text"] = text
+
     def update_navmesh_triangles(
         self,
         triangle_vertices: List[List[float]],
@@ -250,21 +332,32 @@ class ClientMessageManager:
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            pos = cam_transform.translation
-            cam_rotation = mn.Quaternion.from_matrix(cam_transform.rotation())
-            rot_vec = cam_rotation.vector
-            rot = [
-                cam_rotation.scalar,
-                rot_vec[0],
-                rot_vec[1],
-                rot_vec[2],
-            ]
+            message["camera"] = _create_camera_transform_dict(cam_transform)
 
-            message["camera"] = {}
-            message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
-            message["camera"]["rotation"] = [
-                rot[0],
-                rot[1],
-                rot[2],
-                rot[3],
-            ]
+
+# TODO: Rename to generic form.
+def _create_camera_transform_dict(cam_transform: mn.Matrix4) -> Dict[str, List[float]]:
+    p = cam_transform.translation
+    r = mn.Quaternion.from_matrix(cam_transform.rotation())
+    rv = r.vector
+    return {
+        "translation": [p[0], p[1], p[2]],
+        "rotation": [r.scalar, rv[0], rv[1], rv[2]]
+    }
+
+
+def _obtain_object_properties(message: Message, object_id: int) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "objects" not in message:
+        message["objects"] = {}
+    if object_id not in message["objects"]:
+        message["objects"][object_id] = {}
+    return message["objects"][object_id]
+
+def _obtain_viewport_properties(message: Message, viewport_id: int) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "viewports" not in message:
+        message["viewports"] = {}
+    if viewport_id not in message["viewports"]:
+        message["viewports"][viewport_id] = {}
+    return message["viewports"][viewport_id]

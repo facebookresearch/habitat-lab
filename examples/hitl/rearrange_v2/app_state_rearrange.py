@@ -116,6 +116,8 @@ class FrameRecorder:
 from session import Session
 
 
+PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
+
 class UserData:
     def __init__(
         self,
@@ -127,8 +129,10 @@ class UserData:
     ):
         self.app_service = app_service
         self.user_index = user_index
+        self.world = world
         self.gui_agent_controller = gui_agent_controller
         self.server_sps_tracker = server_sps_tracker
+
         self.gui_input: GuiInput = (
             app_service.remote_client_state.get_gui_input(user_index)
         )
@@ -136,6 +140,7 @@ class UserData:
         self.show_gui_text = True
         self.task_instruction = ""
         self.task_completed = False
+        self.pip_initialized = False
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -158,11 +163,30 @@ class UserData:
         gui_agent_controller._gui_input = self.gui_input
 
     def reset(
-        self, object_receptacle_pairs: List[Tuple[List[int], List[int]]]
+        self,
+        object_receptacle_pairs: List[Tuple[List[int], List[int]]],
     ):
         self.task_completed = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-        self.ui.reset(object_receptacle_pairs)
+        self.ui.reset(object_receptacle_pairs)        
+
+        # Assign user agent objects to their own layer.
+        agent_index = self.gui_agent_controller._agent_idx
+        agent_object_ids = self.world.get_agent_object_ids(agent_index)
+        for agent_object_id in agent_object_ids:
+            self.app_service.client_message_manager.set_object_visibility_layer(
+                object_id=agent_object_id,
+                layer_id=agent_index,
+                destination_mask=Mask.from_index(self.user_index),
+            )
+        
+        # Show all layers except "user_index" in the default viewport.
+        # This hides the user's own agent in the first person view.
+        self.app_service.client_message_manager.set_viewport_properties(
+            viewport_id=-1,
+            visible_layer_ids=Mask.all_except_index(agent_index),
+            destination_mask=Mask.from_index(self.user_index),
+        )
 
     def update(self, dt: float):
         if self.gui_input.get_key_down(GuiInput.KeyNS.H):
@@ -180,14 +204,49 @@ class UserData:
         self.camera_helper.update(self._get_camera_lookat_pos(), dt)
         self.cam_transform = self.camera_helper.get_cam_transform()
 
-        if self.app_service.hitl_config.networking.enable:
-            self.app_service._client_message_manager.update_camera_transform(
-                self.cam_transform,
+        self.ui.update()
+        self.ui.draw_ui()
+
+        self.app_service._client_message_manager.update_camera_transform(
+            self.cam_transform,
+            destination_mask=Mask.from_index(self.user_index),
+        )
+
+    def draw_pip_viewport(self, pip_user_data: UserData, text: str = ""):
+        """
+        Draw a picture-in-picture viewport showing another agent's perspective.
+        """
+        # Lazy init:
+        if not self.pip_initialized:
+            self.pip_initialized = True
+
+            # Assign pip agent objects to their own layer.
+            pip_agent_index = pip_user_data.gui_agent_controller._agent_idx
+            agent_object_ids = self.world.get_agent_object_ids(pip_agent_index)
+            for agent_object_id in agent_object_ids:
+                self.app_service.client_message_manager.set_object_visibility_layer(
+                    object_id=agent_object_id,
+                    layer_id=pip_agent_index,
+                    destination_mask=Mask.from_index(self.user_index),
+                )
+
+            # Define picture-in-picture (PIP) viewport.
+            # Show all layers except "pip_user_index".
+            # This hides the other agent in the picture-in-picture viewport.
+            self.app_service.client_message_manager.set_viewport_properties(
+                viewport_id=PIP_VIEWPORT_ID,
+                viewport_rect_xywh=[0.8, 0.02, 0.18, 0.18],
+                visible_layer_ids=Mask.all_except_index(pip_agent_index),
                 destination_mask=Mask.from_index(self.user_index),
             )
 
-        self.ui.update()
-        self.ui.draw_ui()
+        # Show picture-in-picture (PIP) viewport.
+        self.app_service.client_message_manager.show_viewport(
+            viewport_id=PIP_VIEWPORT_ID,
+            cam_transform=pip_user_data.cam_transform,
+            text=text,
+            destination_mask=Mask.from_index(self.user_index),
+        )
 
     def _get_camera_lookat_pos(self) -> mn.Vector3:
         agent_root = get_agent_art_obj_transform(
@@ -422,7 +481,7 @@ class AppStateRearrangeV2(AppStateBase):
                 "Task Finished",
                 "Waiting for the other participant to finish...",
                 [UIButton(ui_button_id, "Cancel", True)],
-                Mask.from_index(user_index),
+                destination_mask=Mask.from_index(user_index),
             )
             cancel = self._app_service.remote_client_state.ui_button_clicked(
                 user_index, ui_button_id
@@ -485,6 +544,12 @@ class AppStateRearrangeV2(AppStateBase):
             self._user_data[user_index].update(dt)
             self._update_grasping_and_set_act_hints(user_index)
             self._update_help_text(user_index)
+
+        # Draw the picture-in-picture showing other agent's perspective.
+        if self._users.max_user_count == 2:
+            self._user_data[0].draw_pip_viewport(self._user_data[1])
+            self._user_data[1].draw_pip_viewport(self._user_data[0])
+        
         self._app_service.compute_action_and_step_env()
 
         # Set the server camera.
