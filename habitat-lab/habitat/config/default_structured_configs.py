@@ -1334,6 +1334,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     # For semantic pick skill
     consider_ee_pose: bool = False
     ee_pose_threshold: float = -1.0
+    arm_smooth_reward: float = 0.0
 
 
 @dataclass

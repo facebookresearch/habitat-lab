@@ -51,6 +51,7 @@ class RearrangePickReward(RearrangeReward):
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self.cur_dist = -1.0
+        self.cur_arm_joint_angle = None
         self._prev_picked = False
         self._metric = None
 
@@ -70,6 +71,7 @@ class RearrangePickReward(RearrangeReward):
             ],
         )
         self.cur_dist = -1.0
+        self.cur_arm_joint_angle = None
         self._prev_picked = self._sim.grasp_mgr.snap_idx is not None
 
         super().reset_metric(
@@ -125,18 +127,21 @@ class RearrangePickReward(RearrangeReward):
                     ):
                         self._metric += self._config.pick_reward
                         self.cur_dist = -1
+                        self.cur_arm_joint_angle = None
                     else:
                         # No a correct pose when pick
                         self._metric -= self._config.wrong_pick_pen
                         self._task.should_end = True
                         self._prev_picked = cur_picked
                         self.cur_dist = -1
+                        self.cur_arm_joint_angle = None
                         return
                 else:
                     self._metric += self._config.pick_reward
                     # If we just transitioned to the next stage our current
                     # distance is stale.
                     self.cur_dist = -1
+                    self.cur_arm_joint_angle = None
             else:
                 # picked the wrong object
                 self._metric -= self._config.wrong_pick_pen
@@ -147,6 +152,7 @@ class RearrangePickReward(RearrangeReward):
                     self._task.should_end = True
                 self._prev_picked = cur_picked
                 self.cur_dist = -1
+                self.cur_arm_joint_angle = None
                 return
 
         if self._config.use_diff:
@@ -169,6 +175,7 @@ class RearrangePickReward(RearrangeReward):
                 self._task.should_end = True
             self._prev_picked = cur_picked
             self.cur_dist = -1
+            self.cur_arm_joint_angle = None
             return
 
         if self._config.max_target_distance != -1:
@@ -224,6 +231,19 @@ class RearrangePickReward(RearrangeReward):
                 return
 
         self._prev_picked = cur_picked
+
+        # Smooth reward to make the arm movement smoother
+        smooth_reward = 0
+        if self.cur_arm_joint_angle is not None:
+            smooth_reward = self._config.arm_smooth_reward * np.linalg.norm(
+                self.cur_arm_joint_angle
+                - self._sim.articulated_agent.arm_joint_pos
+            )
+            self._metric -= smooth_reward
+        # Udpate
+        self.cur_arm_joint_angle = np.copy(
+            self._sim.articulated_agent.arm_joint_pos
+        )
 
 
 @registry.register_measure
