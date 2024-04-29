@@ -6,6 +6,13 @@
 
 from __future__ import annotations
 
+# Must call this before importing Habitat or Magnum.
+# fmt: off
+import ctypes
+import sys
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
+# fmt: on
+
 # This registers collaboration episodes into this application.
 import collaboration_episode_loader  # noqa: 401
 import hydra
@@ -13,6 +20,7 @@ from app_state_main import AppStateMain
 
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
+
 
 
 @hydra.main(
