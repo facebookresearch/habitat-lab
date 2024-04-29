@@ -22,6 +22,9 @@ from habitat_sim.physics import (
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+    from habitat.articulated_agents.manipulator import Manipulator
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
 
 class RearrangeGraspManager:
     """
@@ -29,14 +32,20 @@ class RearrangeGraspManager:
     """
 
     def __init__(
-        self, sim, config: "DictConfig", articulated_agent, ee_index=0
+        self,
+        sim: "RearrangeSim",
+        config: "DictConfig",
+        articulated_agent: "Manipulator",
+        ee_index=0,
     ) -> None:
         """Initialize a grasp manager for the simulator instance provided.
+
         :param sim: Pointer to the simulator where the agent is instantiated
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.
         :param articulated_agent: The agent for which we want to manage grasping
         :param ee_index: The index of the end effector of the articulated_agent belonging to this grasp_manager
         """
+
         self._sim = sim
         self._snapped_obj_id: Optional[int] = None
         self._snapped_marker_id: Optional[str] = None
@@ -51,10 +60,12 @@ class RearrangeGraspManager:
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure."""
+
         self._snap_constraints.clear()
 
     def reset(self) -> None:
         """Reset the grasp manager by re-defining the collision group and dropping any grasped object."""
+
         # Setup the collision groups. UserGroup7 is the held object group, it
         # can interact with anything except for the robot.
         CollisionGroupHelper.set_mask_for_group(
@@ -70,6 +81,7 @@ class RearrangeGraspManager:
         Returns true if the object is too far away from the gripper, meaning
         the agent violated the hold constraint.
         """
+
         ee_pos = self._managed_articulated_agent.ee_transform(
             self.ee_index
         ).translation
@@ -91,6 +103,7 @@ class RearrangeGraspManager:
     @property
     def is_grasped(self) -> bool:
         """Returns whether or not an object or marker is currently grasped."""
+
         return (
             self._snapped_obj_id is not None
             or self._snapped_marker_id is not None
@@ -101,6 +114,7 @@ class RearrangeGraspManager:
 
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
+
         if self._leave_info is not None:
             ee_pos = self._managed_articulated_agent.ee_transform(
                 self.ee_index
@@ -118,6 +132,7 @@ class RearrangeGraspManager:
 
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """
+
         self._vis_info = []
         if len(self._snap_constraints) == 0:
             # No constraints to unsnap
@@ -151,6 +166,7 @@ class RearrangeGraspManager:
         """
         The index of the grasped RigidObject. None if nothing is being grasped.
         """
+
         return self._snapped_obj_id
 
     @property
@@ -158,11 +174,13 @@ class RearrangeGraspManager:
         """
         The name of the marker for the grasp. None if nothing is being grasped.
         """
+
         return self._snapped_marker_id
 
     @property
     def snap_rigid_obj(self) -> ManagedRigidObject:
         """The grasped object instance."""
+
         ret_obj = self._sim.get_rigid_object_manager().get_object_by_id(
             self._snapped_obj_id
         )
@@ -223,6 +241,7 @@ class RearrangeGraspManager:
 
         :return: The id of the newly created constraint or -1 if failed.
         """
+
         c = RigidConstraintSettings()
         c.object_id_a = self._managed_articulated_agent.get_robot_sim_id()
         c.link_id_a = self._managed_articulated_agent.ee_link_id(self.ee_index)
@@ -263,6 +282,7 @@ class RearrangeGraspManager:
         """
         Creates visualizations for grasp points.
         """
+
         for i, (local_pivot, obj_id) in enumerate(self._vis_info):
             rom = self._sim.get_rigid_object_manager()
             obj = rom.get_object_by_id(obj_id)
@@ -278,6 +298,7 @@ class RearrangeGraspManager:
         Kinematically update held object to be within robot's grasp. If nothing
         is grasped then nothing will happen.
         """
+
         if self._snapped_obj_id is None:
             # Not grasping anything, so do nothing.
             return
@@ -305,6 +326,7 @@ class RearrangeGraspManager:
         :param force: Will kinematically snap the object to the robot's end-effector, even if
             the object is already in the grasped state.
         """
+
         if snap_obj_id == self._snapped_obj_id:
             # Already grasping this object.
             return
@@ -323,6 +345,10 @@ class RearrangeGraspManager:
         self._managed_articulated_agent.open_gripper()
 
         if self._kinematic_mode:
+            # update the KRM to sever any existing parent relationships for the newly grasped object
+            self._sim.krm.relationship_graph.remove_obj_relations(
+                snap_obj_id, parents_only=True
+            )
             return
 
         # Set collision group to GraspedObject so that it doesn't collide
