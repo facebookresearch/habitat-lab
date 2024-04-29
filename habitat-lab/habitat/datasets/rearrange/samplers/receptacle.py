@@ -16,9 +16,11 @@ import corrade as cr
 import magnum as mn
 import numpy as np
 
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
+from habitat.sims.habitat_simulator.debug_visualizer import dblr_draw_bb
 from habitat.tasks.rearrange.utils import get_ao_link_aabb, get_rigid_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 from habitat_sim.utils.common import quat_from_two_vectors as qf2v
@@ -273,13 +275,12 @@ class AABBReceptacle(Receptacle):
         :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
-        # draw the box
-        if color is None:
-            color = mn.Color4.magenta()
-        dblr = sim.get_debug_line_render()
-        dblr.push_transform(self.get_global_transform(sim))
-        dblr.draw_box(self.bounds.min, self.bounds.max, color)
-        dblr.pop_transform()
+        dblr_draw_bb(
+            sim.get_debug_line_render(),
+            self.bounds,
+            self.get_global_transform(sim),
+            color,
+        )
 
 
 def assert_triangles(indices: List[int]) -> None:
@@ -451,6 +452,124 @@ class TriangleMeshReceptacle(Receptacle):
                     verts[edge], verts[(edge + 1) % 3], color
                 )
         dblr.pop_transform()
+
+
+class AnyObjectReceptacle(Receptacle):
+    """
+    The AnyObjectReceptacle enables any rigid or articulated object or link to be used as a Receptacle without metadata annotation.
+    It uses the top surface of an object's global space bounding box as a heuristic for the sampling area.
+    The sample efficiency is likely to be poor (especially for concave objects like L-shaped sofas), TODO: this could be mitigated by the option to pre-compute a discrete set of candidate points via raycast upon initialization.
+    Also, this heuristic will not support use of interior surfaces such as cubby and cabinet shelves since volumetric occupancy is not considered.
+
+    Note the caveats above and consider that the ideal application of the AnyObjectReceptacle is to support placement of objects onto other simple objects such as open face crates, bins, baskets, trays, plates, bowls, etc... for which receptacle annotation would be overkill.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        parent_object_handle: str = None,
+        parent_link: Optional[int] = None,
+    ):
+        """
+        Initialize the object as a Receptacle.
+
+        :param precompute_candidate_pointset: Whether or not to pre-compute and cache a discrete point set for sampling instead of using the global bounding box. Uses raycasting with rejection sampling.
+        """
+
+        super().__init__(name, parent_object_handle, parent_link)
+
+    def _get_global_bb(self, sim: habitat_sim.Simulator) -> mn.Range3D:
+        """
+        Get the global AABB of the Receptacle parent object.
+        """
+
+        obj = sutils.get_obj_from_handle(sim, self.parent_object_handle)
+        global_keypoints = None
+        if isinstance(obj, habitat_sim.physics.ManagedRigidObject):
+            global_keypoints = sutils.get_rigid_object_global_keypoints(obj)
+        elif self.parent_link is not None and self.parent_link >= 0:
+            # link
+            global_keypoints = sutils.get_articulated_link_global_keypoints(
+                obj, self.parent_link
+            )
+        else:
+            # AO
+            global_keypoints = sutils.get_articulated_object_global_keypoints(
+                obj
+            )
+
+        # find min and max
+        global_bb = mn.Range3D(
+            np.min(global_keypoints, axis=0), np.max(global_keypoints, axis=0)
+        )
+
+        return global_bb
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        NOTE: this is an effortful query, not a getter.
+        TODO: This needs a sim instance to compute the global bounding box
+        """
+
+        # TODO: grab the bounds from the global AABB at this state?
+        # return mn.Range3D()
+        raise NotImplementedError
+
+    def sample_uniform_local(
+        self, sample_region_scale: float = 1.0
+    ) -> mn.Vector3:
+        """
+        Sample a uniform random point within Receptacle in local space.
+        NOTE: This only works if a pointset cache was pre-computed. Otherwise raises an exception.
+
+        :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
+        """
+
+        raise NotImplementedError
+
+    def sample_uniform_global(
+        self, sim: habitat_sim.Simulator, sample_region_scale: float
+    ) -> mn.Vector3:
+        """
+        Sample a uniform random point on the top surface of the global bounding box of the object.
+        TODO: If a pre-computed candidate point set was cached, simply sample from those points instead.
+
+        :param sample_region_scale: defines a XZ scaling of the sample region around its center. No-op for cached points.
+        """
+
+        aabb = self._get_global_bb(sim)
+        if sample_region_scale != 1.0:
+            aabb = mn.Range3D.from_center(
+                aabb.center(),
+                aabb.scaled(
+                    mn.Vector3d(sample_region_scale, 1, sample_region_scale)
+                ).size()
+                / 2.0,
+            )
+
+        sample = np.random.uniform(aabb.back_top_left, aabb.front_top_right)
+        return sample
+
+    def debug_draw(
+        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
+    ) -> None:
+        """
+        Render the Receptacle with DebugLineRender utility at the current frame.
+        Must be called after each frame is rendered, before querying the image data.
+
+        :param sim: Simulator must be provided.
+        :param color: Optionally provide wireframe color, otherwise magenta.
+        """
+
+        aabb = self._get_global_bb(sim)
+        top_min = aabb.min
+        top_min[1] = aabb.top
+        top_max = aabb.max
+        top_max[1] = aabb.top
+        top_range = mn.Range3D(top_min, top_max)
+        dblr_draw_bb(sim.get_debug_line_render(), top_range, color=color)
 
 
 def get_all_scenedataset_receptacles(
