@@ -675,7 +675,7 @@ class RearrangeSim(HabitatSim):
             if self._kinematic_mode:
                 # initialize KRM with parent->child relationships from the RearrangeEpisode
                 self.kinematic_relationship_manager = (
-                    KinematicRelationshipManager(self.sim)
+                    KinematicRelationshipManager(self)
                 )
                 self.kinematic_relationship_manager.initialize_from_obj_to_rec_pairs(
                     ep_info.name_to_receptacle,
