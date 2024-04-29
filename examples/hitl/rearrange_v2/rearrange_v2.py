@@ -32,6 +32,11 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
+try:
+    from habitat_llm.agent.env import dataset  # noqa: F401
+except ImportError:
+    print("Habitat-LLM not installed. Skipping import.")
+
 
 class DataLogger:
     def __init__(self, app_service):
