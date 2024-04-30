@@ -5,12 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 from multiprocessing import Queue
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
-    DataDict,
     DisconnectionRecord,
     Keyframe,
 )
@@ -27,11 +26,15 @@ class InterprocessRecord:
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
+        self._kick_signal_queue: Queue[int] = Queue()
 
     def send_keyframe_to_networking_thread(self, keyframe: Keyframe) -> None:
         """Send a keyframe (outgoing data) to the networking thread."""
         # Acquire the semaphore to ensure the simulation doesn't advance too far ahead
         self._keyframe_queue.put(keyframe)
+
+    def send_kick_signal_to_networking_thread(self, user_index: int) -> None:
+        self._kick_signal_queue.put(user_index)
 
     def send_client_state_to_main_thread(
         self, client_state: ClientState
@@ -63,7 +66,7 @@ class InterprocessRecord:
         return keyframe
 
     @staticmethod
-    def _dequeue_all(queue: Queue) -> List[DataDict]:
+    def _dequeue_all(queue: Queue) -> List[Any]:
         """Dequeue all items from a queue."""
         items = []
 
@@ -88,3 +91,7 @@ class InterprocessRecord:
     def get_queued_disconnection_records(self) -> List[DisconnectionRecord]:
         """Dequeue all disconnection records."""
         return self._dequeue_all(self._disconnection_record_queue)
+
+    def get_queued_kick_signals(self) -> List[int]:
+        """Dequeue all kick signals."""
+        return self._dequeue_all(self._kick_signal_queue)

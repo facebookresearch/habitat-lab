@@ -165,16 +165,6 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["isAppReady"] = True
 
-    def signal_kick_client(
-        self, connection_id: int, destination_mask: Mask = Mask.ALL
-    ):
-        r"""
-        Signal NetworkManager to kick a client identified by connection_id. See also RemoteClientState.get_new_connection_records()[i]["connectionId"]. Sloppy: this is a message to NetworkManager, not the client.
-        """
-        for user_index in self._users.indices(destination_mask):
-            message = self._messages[user_index]
-            message["kickClient"] = connection_id
-
     def set_server_keyframe_id(
         self, keyframe_id: int, destination_mask: Mask = Mask.ALL
     ):

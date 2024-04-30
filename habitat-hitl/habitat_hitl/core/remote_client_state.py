@@ -433,3 +433,12 @@ class RemoteClientState:
 
     def clear_history(self) -> None:
         self._recent_client_states.clear()
+
+    def kick(self, user_mask: Mask) -> None:
+        """
+        Immediately kick the users matching the specified user mask.
+        """
+        for user_index in self._users.indices(user_mask):
+            self._interprocess_record.send_kick_signal_to_networking_thread(
+                user_index
+            )

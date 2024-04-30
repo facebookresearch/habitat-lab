@@ -146,9 +146,21 @@ class NetworkManager:
             and not self._waiting_for_app_ready
         )
 
+    def _check_kick_client(self):
+        kicked_user_indices = (
+            self._interprocess_record.get_queued_kick_signals()
+        )
+        # TODO: We only support 1 user at the moment.
+        if 0 in kicked_user_indices:
+            for socket in self._connected_clients.values():
+                # Don't await this; we want to keep checking keyframes.
+                # Beware that the connection will remain alive for some time after this.
+                asyncio.create_task(socket.close())
+
     async def check_keyframe_queue(self) -> None:
         # this runs continuously even when there is no client connection
         while True:
+            self._check_kick_client()
             inc_keyframes = self._interprocess_record.get_queued_keyframes()
 
             if len(inc_keyframes):
@@ -163,15 +175,6 @@ class NetworkManager:
 
                 if "message" in inc_keyframes[0]:
                     message_dict = inc_keyframes[0]["message"]
-
-                    # for kickClient, we require the requester to include the connection_id. This ensures we don't kick the wrong client. E.g. the requester recently requested to kick an idle client, but NetworkManager already dropped that client and received a new client connection.
-                    if "kickClient" in message_dict:
-                        connection_id = message_dict["kickClient"]
-                        if connection_id in self._connected_clients:
-                            print(f"kicking client {connection_id}")
-                            websocket = self._connected_clients[connection_id]
-                            # Don't await this; we want to keep checking keyframes. Beware this means the connection will remain alive for some time after this.
-                            asyncio.create_task(websocket.close())
 
                     # See hitl_defaults.yaml wait_for_app_ready_signal and ClientMessageManager.signal_app_ready
                     if (
