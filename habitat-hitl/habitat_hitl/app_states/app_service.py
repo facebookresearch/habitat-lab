@@ -16,6 +16,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.episode_helper import EpisodeHelper
 
@@ -27,6 +28,7 @@ class AppService:
         *,
         config,
         hitl_config,
+        users: Users,
         gui_input: GuiInput,
         remote_client_state: RemoteClientState,
         gui_drawer: GuiDrawer,
@@ -45,6 +47,7 @@ class AppService:
     ):
         self._config = config
         self._hitl_config = hitl_config
+        self._users = users
         self._gui_input = gui_input
         self._remote_client_state = remote_client_state
         self._gui_drawer = gui_drawer
@@ -68,6 +71,10 @@ class AppService:
     @property
     def hitl_config(self):
         return self._hitl_config
+    
+    @property
+    def users(self) -> Users:
+        return self._users
 
     @property
     def gui_input(self) -> GuiInput:
