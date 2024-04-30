@@ -479,7 +479,7 @@ habitat:
     type: RearrangeDataset-v0
     split: train
     # The dataset to use. Later we will generate our own dataset.
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v2/{split}/all_receptacles_10k_1k.json.gz
     scenes_dir: "data/replica_cad/"
 """
 nav_pick_cfg_path = os.path.join(data_path, "nav_pick_demo.yaml")
