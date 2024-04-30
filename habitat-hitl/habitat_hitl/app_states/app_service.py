@@ -71,7 +71,7 @@ class AppService:
     @property
     def hitl_config(self):
         return self._hitl_config
-    
+
     @property
     def users(self) -> Users:
         return self._users
