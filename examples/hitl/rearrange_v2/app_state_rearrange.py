@@ -29,6 +29,8 @@ from habitat_hitl.core.client_message_manager import UIButton
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask, Users
+from habitat_hitl.core.client_helper import ClientHelper
+from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.controllers.gui_controller import (
@@ -117,6 +119,18 @@ from session import Session
 
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
+
+class EndEpisodeForm:
+    def __init__(
+        self,
+        user_index: int,
+    ):
+        self._user_index = user_index
+        pass
+
+    def show(self):
+        pass
+
 
 class UserData:
     def __init__(
@@ -440,19 +454,23 @@ class AppStateRearrangeV2(AppStateBase):
         return self._gui_agent_controllers[user_index]._agent_idx
 
     def _get_controls_text(self, user_index: int):
-        if not self._user_data[user_index].show_gui_text:
-            return ""
-
         controls_str: str = ""
-        controls_str += "H: Toggle help\n"
-        controls_str += f"Episode: {self._app_data.current_episode_index}\n"
-        controls_str += "Look: Middle click (drag), I, K\n"
-        controls_str += "Walk: W, S\n"
-        controls_str += "Turn: A, D\n"
-        controls_str += "Finish episode: Zero (0)\n"
-        controls_str += "Open/close: Double-click\n"
-        controls_str += "Pick object: Double-click\n"
-        controls_str += "Place object: Right click (hold)\n"
+        if self._user_data[user_index].show_gui_text:
+            controls_str += "H: Toggle help\n"
+            controls_str += f"Episode: {self._app_data.current_episode_index}\n"
+            controls_str += "Look: Middle click (drag), I, K\n"
+            controls_str += "Walk: W, S\n"
+            controls_str += "Turn: A, D\n"
+            controls_str += "Finish episode: Zero (0)\n"
+            controls_str += "Open/close: Double-click\n"
+            controls_str += "Pick object: Double-click\n"
+            controls_str += "Place object: Right click (hold)\n"
+
+        client_helper = self._app_service.remote_client_state._client_helper
+        idle_time = client_helper.get_idle_time(user_index)
+        if idle_time > 10:
+            controls_str += f"Idle time {idle_time}/{int(client_helper._max_idle_duration)}s\n"
+
         return controls_str
 
     def _get_status_text(self, user_index: int):
@@ -464,11 +482,15 @@ class AppStateRearrangeV2(AppStateBase):
                 + self._user_data[user_index].task_instruction
                 + "\n"
             )
-        if self._app_service.remote_client_state._client_helper.do_show_idle_kick_warning(
-            user_index
-        ):
+
+        if self._users.max_user_count > 1 and self._has_any_user_finished() and not self._user_data[user_index].task_completed:
+            status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
+
+        client_helper = self._app_service.remote_client_state._client_helper
+        if client_helper.do_show_idle_kick_warning(user_index):
+            remaining_time = str(client_helper.get_remaining_idle_time(user_index))
             status_str += (
-                "\n\nAre you still there?\nPress any key to keep playing!\n"
+                f"\n\nAre you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
             )
 
         return status_str
@@ -571,5 +593,11 @@ class AppStateRearrangeV2(AppStateBase):
         return any(
             self._user_data[user_index].gui_input.get_any_input()
             or len(self._user_data[user_index].ui._events) > 0
+            for user_index in range(self._app_data.max_user_count)
+        )
+
+    def _has_any_user_finished(self) -> bool:
+        return any(
+            self._user_data[user_index].task_completed
             for user_index in range(self._app_data.max_user_count)
         )
