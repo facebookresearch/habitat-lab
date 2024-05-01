@@ -20,6 +20,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
 )
+from habitat_hitl.environment.controllers.llm_controller import LLMController
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -84,6 +85,9 @@ class ControllerHelper:
             ):
                 gui_controlled_agent_config = (
                     self._find_gui_controlled_agent_config(agent_index)
+                )
+                llm_controlled_agent_config = (
+                    self._find_llm_controlled_agent_config(agent_index)
                 )
                 if gui_controlled_agent_config:
                     agent_name: str = (
@@ -157,6 +161,15 @@ class ControllerHelper:
 
                     self.controllers.append(gui_agent_controller)
 
+                elif llm_controlled_agent_config:
+                    self.controller.append(
+                        LLMController(
+                            agent_index,
+                            is_multi_agent,
+                            config,
+                            self._gym_habitat_env,
+                        )
+                    )
                 else:
                     self.controllers.append(
                         SingleAgentBaselinesController(
@@ -173,6 +186,14 @@ class ControllerHelper:
         ) in self._hitl_config.gui_controlled_agents:
             if gui_controlled_agent_config.agent_index == agent_index:
                 return gui_controlled_agent_config
+        return None
+
+    def _llm_controlled_agent_config(self, agent_index):
+        for (
+            llm_controlled_agent_config
+        ) in self._hitl_config.llm_controlled_agents:
+            if llm_controlled_agent_config.agent_index == agent_index:
+                return llm_controlled_agent_config
         return None
 
     def get_gui_agent_controllers(self) -> List[Controller]:
