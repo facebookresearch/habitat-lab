@@ -346,7 +346,7 @@ class RearrangeGraspManager:
 
         if self._kinematic_mode:
             # update the KRM to sever any existing parent relationships for the newly grasped object
-            self._sim.krm.relationship_graph.remove_obj_relations(
+            self._sim.kinematic_relationship_manager.relationship_graph.remove_obj_relations(
                 snap_obj_id, parents_only=True
             )
             # update root parent transforms so new parent state is registered

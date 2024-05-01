@@ -130,7 +130,7 @@ def test_pddl_actions():
     poss_actions = pddl.get_possible_actions()
     for action in poss_actions:
         action.apply_if_true(sim_info)
-
+    pddl._sim_info.sim.close()
 
 def test_pddl_action_postconds():
     """
@@ -172,7 +172,7 @@ def test_pddl_action_postconds():
         x.compact_str == "object_at(goal0|0,TARGET_goal0|0)"
         for x in true_preds
     )
-
+    sim_info.sim.close()
 
 TEST_CFG_PATHS = list(
     glob(
