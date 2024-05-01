@@ -11,6 +11,7 @@ import hydra
 import magnum as mn
 import numpy as np
 from ui import UI
+from world import World
 
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -122,9 +123,12 @@ class AppStateRearrangeV2(AppState):
         self._task_instruction = ""
         self._data_logger = DataLogger(app_service=self._app_service)
 
+        self._world = World(self._sim)
+
         self._ui = UI(
             hitl_config=app_service.hitl_config,
             user_index=0,
+            world=self._world,
             gui_controller=self._gui_agent_controllers[0],
             sim=self._sim,
             gui_input=app_service.gui_input,
@@ -153,6 +157,8 @@ class AppStateRearrangeV2(AppState):
         return sim_utilities
 
     def on_environment_reset(self, episode_recorder_dict):
+        self._world.reset()
+
         object_receptacle_pairs = self._create_goal_object_receptacle_pairs()
         self._ui.reset(object_receptacle_pairs)
 
