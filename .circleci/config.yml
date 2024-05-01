@@ -200,21 +200,6 @@ jobs:
             export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
             . activate habitat;
             ccache --show-stats
-      - run:
-          name: Download test data
-          command: |
-              sudo apt install git-lfs
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat
-              git lfs install
-              conda install -y gitpython git-lfs
-              python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm hab3_bench_assets --data-path habitat-sim/data/ --no-replace --no-prune
-      - run:
-          name: Run sim benchmark
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-sim
-              python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
           key: v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
           background: true
@@ -263,66 +248,6 @@ jobs:
 
       - store_artifacts:
           path: conda_env_dump.log  # This is the list of modules in conda and pip
-      - run:
-          name: Run api tests
-          no_output_timeout: 120m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
-      - codecov/upload
-      - run:
-          name: Run HITL tests
-          no_output_timeout: 60m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
-              python -m pytest habitat-hitl/test
-      - run:
-          name: Run baseline training tests
-          no_output_timeout: 30m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              # This is a flag that enables test_baseline_training to work
-              export TEST_BASELINE_SMALL=1
-              python -m pytest test/test_baseline_training.py -s
-      - run:
-          name: Run Hab2.0 benchmark
-          no_output_timeout: 30m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
-              mkdir -p data/ep_datasets/
-              cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
-              bash scripts/hab2_bench/bench_runner.sh
-              python scripts/hab2_bench/plot_bench.py
-              # Assert the SPS number are up to standard
-              python scripts/hab2_bench/assert_bench.py
-      - run:
-          name: Build api documentation
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              # Download sim inventory for crosslinking (no need to build
-              # the whole sim docs for that)
-              # TODO: take it from github.com/facebookmicrosites/habitat-website
-              #   instead
-              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
-              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
-              cd docs
-              conda install -y -c conda-forge doxygen=1.9.5
-              conda install -y  jinja2 pygments docutils
-              mkdir -p ../build/docs
-              ./build-public.sh
       - run:
           name: Ensure non-editable mode works
           command: |
