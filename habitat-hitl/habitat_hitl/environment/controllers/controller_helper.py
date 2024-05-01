@@ -162,7 +162,7 @@ class ControllerHelper:
                     self.controllers.append(gui_agent_controller)
 
                 elif llm_controlled_agent_config:
-                    self.controller.append(
+                    self.controllers.append(
                         LLMController(
                             agent_index,
                             is_multi_agent,
@@ -188,7 +188,7 @@ class ControllerHelper:
                 return gui_controlled_agent_config
         return None
 
-    def _llm_controlled_agent_config(self, agent_index):
+    def _find_llm_controlled_agent_config(self, agent_index):
         for (
             llm_controlled_agent_config
         ) in self._hitl_config.llm_controlled_agents:

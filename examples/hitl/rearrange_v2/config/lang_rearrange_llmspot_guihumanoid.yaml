@@ -46,4 +46,3 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
-

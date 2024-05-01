@@ -1,12 +1,16 @@
+from typing import Any, Dict
+
+from habitat_llm.agent import Agent
+from habitat_llm.agent.env import EnvironmentInterface
+from habitat_llm.planner.llm_planner import LLMPlanner
+from habitat_llm.utils import fix_config, setup_config
+from hydra.utils import instantiate
+from omegaconf import DictConfig
+
 from habitat.core.environments import GymHabitatEnv
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
 )
-from omegaconf import DictConfig
-from habitat_llm.utils import setup_config, fix_config
-from hydra.utils import instantiate
-from habitat_llm.agent.env import EnvironmentInterface
-from habitat_llm.agent import Agent
 
 
 class LLMController(SingleAgentBaselinesController):
@@ -23,8 +27,8 @@ class LLMController(SingleAgentBaselinesController):
         fix_config(config)
         seed = 47668090
         self.config = setup_config(config, seed)
-        self.planner = None
-        self.environment_interface = None
+        self.planner: LLMPlanner = None
+        self.environment_interface: EnvironmentInterface = None
 
         # NOTE: this is creating just one agent. Habitat-LLM has code for creating
         # multiple processes/agents in one go. I am only prototyping single process, as
@@ -32,7 +36,7 @@ class LLMController(SingleAgentBaselinesController):
         # and this code will be called once per Sim instantiation
         self.initialize_environment_interface()
         self.initialize_planner()
-        self.info = {}
+        self.info: Dict[str, Any] = {}
 
     def initialize_planner(self):
         # NOTE: using instantiate here, but given this is planning for a single agent
@@ -61,12 +65,14 @@ class LLMController(SingleAgentBaselinesController):
 
         # NOTE: this is to replicate initial call of  get_next_action, in
         # run_instruction() method. I am not sure why we do this initially?
-        _low_level_actions, _planner_info, _task_done = (
-            self.planner.get_next_action(
-                self.current_instruction,
-                {},
-                self.env_interface.world_graph,
-            )
+        (
+            _low_level_actions,
+            _planner_info,
+            _task_done,
+        ) = self.planner.get_next_action(
+            self.current_instruction,
+            {},
+            self.environment_interface.world_graph,
         )
 
     def on_environment_reset(self):
@@ -86,11 +92,13 @@ class LLMController(SingleAgentBaselinesController):
 
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
-        low_level_actions, planner_info, task_done = (
-            self.planner.get_next_action(
-                self.current_instruction,
-                observations,
-                self.envirnment_interface.world_graph,
-            )
+        (
+            low_level_actions,
+            planner_info,
+            task_done,
+        ) = self.planner.get_next_action(
+            self.current_instruction,
+            observations,
+            self.environment_interface.world_graph,
         )
         return low_level_actions
