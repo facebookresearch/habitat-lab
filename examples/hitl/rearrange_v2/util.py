@@ -6,6 +6,7 @@
 
 from time import time
 
+
 def timestamp() -> str:
     "Generate a Unix timestamp at the current time."
     return str(int(time()))
