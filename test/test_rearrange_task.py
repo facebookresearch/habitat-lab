@@ -132,6 +132,7 @@ def test_pddl_actions():
         action.apply_if_true(sim_info)
     pddl._sim_info.sim.close()
 
+
 def test_pddl_action_postconds():
     """
     Tests the PDDL system action post conditions have the expected outcome in
@@ -173,6 +174,7 @@ def test_pddl_action_postconds():
         for x in true_preds
     )
     sim_info.sim.close()
+
 
 TEST_CFG_PATHS = list(
     glob(
