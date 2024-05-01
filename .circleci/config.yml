@@ -347,6 +347,8 @@ jobs:
               pip install --upgrade build
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
+              ls habitat-lab/dist/
+              ls habitat-baselines/dist/
       - run:
           name: Ensure sdist and bdist intall work
           command: |
@@ -364,6 +366,8 @@ jobs:
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
               # install from source distribution:
               . activate sdist-install
+              ls habitat-lab/dist/
+              ls habitat-baselines/dist/
               pip install habitat-lab/dist/habitat-lab*.tar.gz
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/dist/habitat-baselines*.tar.gz
