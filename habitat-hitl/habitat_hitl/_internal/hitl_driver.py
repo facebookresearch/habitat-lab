@@ -196,6 +196,7 @@ class HitlDriver(AppDriver):
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
+            users=users,
             gui_input=gui_input,
             remote_client_state=self._remote_client_state,
             gui_drawer=gui_drawer,
