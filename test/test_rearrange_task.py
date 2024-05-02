@@ -18,6 +18,7 @@ from omegaconf import DictConfig, OmegaConf
 import habitat
 import habitat.datasets.rearrange.run_episode_generator as rr_gen
 import habitat.datasets.rearrange.samplers.receptacle as hab_receptacle
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
@@ -465,3 +466,83 @@ def test_receptacle_parsing():
                         assert (
                             in_mesh
                         ), "The point must belong to a triangle of the local mesh to be valid."
+
+
+@pytest.mark.skipif(
+    not osp.exists("data/replica_cad/replicaCAD.scene_dataset_config.json"),
+    reason="This test requires replica cad SceneDataset.",
+)
+@pytest.mark.skipif(
+    not habitat_sim.bindings.built_with_bullet,
+    reason="Bullet physics used for validation.",
+)
+def test_any_object_receptacle():
+    sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
+    sim_settings["scene"] = "apt_0"
+    sim_settings[
+        "scene_dataset_config_file"
+    ] = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
+    with habitat_sim.Simulator(cfg) as sim:
+        # get an object which does not have a Receptacle defined
+        stool_object = sutils.get_obj_from_handle(
+            sim, "frl_apartment_stool_02_:0000"
+        )
+        # get an ArticulatedObject and an ArticulatedLink to try
+        counter_ao = sutils.get_obj_from_handle(sim, "kitchen_counter_:0000")
+        drawer_link_id = 6
+        drawer_obj_id = 125
+
+        stool_receptacle = hab_receptacle.AnyObjectReceptacle(
+            "stool_rec", stool_object.handle
+        )
+        counter_receptacle = hab_receptacle.AnyObjectReceptacle(
+            "counter_rec", counter_ao.handle
+        )
+        drawer_receptacle = hab_receptacle.AnyObjectReceptacle(
+            "drawer_rec", counter_ao.handle, parent_link=drawer_link_id
+        )
+
+        down = mn.Vector3(0, -1, 0)
+
+        def validate_rec_with_raycast_samples(rec, parent_obj_id):
+            samples = [rec.sample_uniform_global(sim, 1.0) for _ in range(100)]
+            # NOTE: we bump the ray origin up to account for collision object inflation around the bounding volume.
+            sample_raycast_results = [
+                sim.cast_ray(
+                    habitat_sim.geo.Ray(sample + mn.Vector3(0, 0.2, 0), down)
+                )
+                for sample in samples
+            ]
+            samples_over_obj = len(
+                [
+                    True
+                    for raycast_result in sample_raycast_results
+                    if (
+                        raycast_result.has_hits()
+                        and parent_obj_id
+                        in [hit.object_id for hit in raycast_result.hits]
+                    )
+                ]
+            )
+            assert (
+                samples_over_obj > 75
+            ), "75 percent of samples should be above the object in question for this scene with high statistical likelihood."
+
+        for rec, parent_obj_id in [
+            (stool_receptacle, stool_object.object_id),
+            (counter_receptacle, counter_ao.object_id),
+            (drawer_receptacle, drawer_obj_id),
+        ]:
+            validate_rec_with_raycast_samples(rec, parent_obj_id)
+            # test that samples in a scaled Receptacle region align with the global bounding box center
+            center_sample = rec.sample_uniform_global(sim, 0.01)
+            global_keypoints = sutils.get_global_keypoints_from_object_id(
+                sim, parent_obj_id
+            )
+            sample_to_center = mn.Vector3(global_keypoints[0] - center_sample)
+            assert mn.math.dot(sample_to_center.normalized(), down) >= 0.99
+            # check that the global keypoints all fit inside the rec computed bounding box
+            rec_global_bb = rec._get_global_bb(sim).padded(mn.Vector3(0.001))
+            for keypoint in global_keypoints:
+                assert rec_global_bb.contains(keypoint)
