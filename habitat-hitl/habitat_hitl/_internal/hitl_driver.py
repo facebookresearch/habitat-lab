@@ -24,10 +24,7 @@ import habitat_sim
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
-from habitat_hitl._internal.networking.keyframe_utils import (
-    get_empty_keyframe,
-    update_consolidated_keyframe,
-)
+from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe
 from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
     terminate_networking_process,
@@ -48,7 +45,7 @@ from habitat_hitl.core.serialize_utils import (
     save_as_pickle_gzip,
 )
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
-from habitat_hitl.core.types import Keyframe, KeyframeAndMessages
+from habitat_hitl.core.types import KeyframeAndMessages
 from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,

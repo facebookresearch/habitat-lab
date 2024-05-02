@@ -115,9 +115,8 @@ class World:
         agent = agent_manager[agent_index]
         agent_ao = agent.articulated_agent.sim_obj
         agent_object_ids.add(agent_ao.object_id)
-        
+
         for link_object_id in agent_ao.link_object_ids:
             agent_object_ids.add(link_object_id)
 
         return agent_object_ids
-    

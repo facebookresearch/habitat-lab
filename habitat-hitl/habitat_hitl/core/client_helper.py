@@ -35,9 +35,9 @@ class ClientHelper:
         self._kick_active: bool = (
             hitl_config.networking.client_max_idle_duration != None
         )
-        self._max_idle_duration: Optional[int] = (
-            hitl_config.networking.client_max_idle_duration
-        )
+        self._max_idle_duration: Optional[
+            int
+        ] = hitl_config.networking.client_max_idle_duration
 
         user_count = users.max_user_count
         self._show_idle_kick_warning: List[bool] = [False] * user_count
@@ -86,7 +86,7 @@ class ClientHelper:
     def do_show_idle_kick_warning(self, user_index: int) -> Optional[bool]:
         """Indicates that the user should be warned that they will be kicked imminently."""
         return self._show_idle_kick_warning[user_index]
-    
+
     def get_idle_time(self, user_index: int) -> int:
         """Returns the current idle time."""
         if not self._kick_active:

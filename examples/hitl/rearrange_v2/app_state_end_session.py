@@ -11,9 +11,13 @@ from typing import Optional
 from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import create_app_state_reset
-from s3_upload import generate_unique_session_id, make_s3_filename, upload_file_to_s3
+from s3_upload import (
+    generate_unique_session_id,
+    make_s3_filename,
+    upload_file_to_s3,
+)
 from session import Session
-from util import get_top_down_view, timestamp
+from util import get_top_down_view
 
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.serialize_utils import save_as_json_gzip
@@ -91,7 +95,9 @@ class AppStateEndSession(AppStateBase):
         save_as_json_gzip(session.session_recorder, json_path)
 
         # Generate unique session ID
-        session_id = generate_unique_session_id(session.episode_ids, session.connection_records)
+        session_id = generate_unique_session_id(
+            session.episode_ids, session.connection_records
+        )
 
         # Upload output directory
         orig_file_names = [

@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -27,12 +26,9 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.client_message_manager import UIButton, UITextbox
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask, Users
-from habitat_hitl.core.client_helper import ClientHelper
-from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.controllers.gui_controller import (
@@ -122,10 +118,7 @@ class FrameRecorder:
 
 from session import Session
 
-
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
-
-
 
 
 class UserData:
@@ -183,7 +176,7 @@ class UserData:
     ):
         self.end_episode_dialogue_shown = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-        self.ui.reset(object_receptacle_pairs)        
+        self.ui.reset(object_receptacle_pairs)
 
         # Assign user agent objects to their own layer.
         agent_index = self.gui_agent_controller._agent_idx
@@ -194,7 +187,7 @@ class UserData:
                 layer_id=agent_index,
                 destination_mask=Mask.from_index(self.user_index),
             )
-        
+
         # Show all layers except "user_index" in the default viewport.
         # This hides the user's own agent in the first person view.
         self.app_service.client_message_manager.set_viewport_properties(
@@ -275,7 +268,9 @@ class UserData:
     def _is_user_idle_this_frame(self) -> bool:
         active = self.gui_input.get_any_input()
         end_episode_dialogue_chown = self.end_episode_dialogue_shown
-        loading = self.app_service.remote_client_state._client_loading[self.user_index]
+        loading = self.app_service.remote_client_state._client_loading[
+            self.user_index
+        ]
         return not active and not end_episode_dialogue_chown and not loading
 
 
@@ -354,7 +349,9 @@ class AppStateRearrangeV2(AppStateBase):
 
         user_index_to_agent_index_map: Dict[int, int] = {}
         for user_index in range(len(self._user_data)):
-            user_index_to_agent_index_map[user_index] = self._user_data[user_index].gui_agent_controller._agent_idx
+            user_index_to_agent_index_map[user_index] = self._user_data[
+                user_index
+            ].gui_agent_controller._agent_idx
 
         episode = self._app_service.episode_helper.current_episode
         self._session.session_recorder.start_episode(
@@ -372,9 +369,7 @@ class AppStateRearrangeV2(AppStateBase):
             for user_index in range(self._app_data.max_user_count)
         )
 
-        self._session.session_recorder.end_episode(
-            episode_success
-        )
+        self._session.session_recorder.end_episode(episode_success)
 
     def _is_episode_finished(self) -> bool:
         """
@@ -469,7 +464,9 @@ class AppStateRearrangeV2(AppStateBase):
         controls_str: str = ""
         if self._user_data[user_index].show_gui_text:
             controls_str += "H: Toggle help\n"
-            controls_str += f"Episode: {self._app_data.current_episode_index}\n"
+            controls_str += (
+                f"Episode: {self._app_data.current_episode_index}\n"
+            )
             controls_str += "Look: Middle click (drag), I, K\n"
             controls_str += "Walk: W, S\n"
             controls_str += "Turn: A, D\n"
@@ -495,18 +492,21 @@ class AppStateRearrangeV2(AppStateBase):
                 + "\n"
             )
 
-        if self._users.max_user_count > 1 and not self._user_data[user_index].episode_finished:
+        if (
+            self._users.max_user_count > 1
+            and not self._user_data[user_index].episode_finished
+        ):
             if self._has_any_user_finished_success():
                 status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
             elif self._has_any_user_finished_failure():
-                status_str += f"\n\nThe other participant has signaled a problem with the task.\nPress '0' to continue."
+                status_str += "\n\nThe other participant has signaled a problem with the task.\nPress '0' to continue."
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
-            remaining_time = str(client_helper.get_remaining_idle_time(user_index))
-            status_str += (
-                f"\n\nAre you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
+            remaining_time = str(
+                client_helper.get_remaining_idle_time(user_index)
             )
+            status_str += f"\n\nAre you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
 
         return status_str
 
@@ -517,25 +517,33 @@ class AppStateRearrangeV2(AppStateBase):
             result = self._user_data[user_index].end_episode_form.show()
             if result == EndEpisodeForm.Result.CANCEL:
                 if self._user_data[user_index].episode_finished:
-                    self._user_data[user_index].ui._events.append({
-                        "type": "end_episode_form_cancelled",
-                    })
+                    self._user_data[user_index].ui._events.append(
+                        {
+                            "type": "end_episode_form_cancelled",
+                        }
+                    )
                 self._user_data[user_index].end_episode_dialogue_shown = False
                 self._user_data[user_index].episode_finished = False
                 self._user_data[user_index].episode_success = False
             elif result == EndEpisodeForm.Result.SUCCESS:
                 if not self._user_data[user_index].episode_finished:
-                    self._user_data[user_index].ui._events.append({
-                        "type": "episode_success",
-                    })
+                    self._user_data[user_index].ui._events.append(
+                        {
+                            "type": "episode_success",
+                        }
+                    )
                 self._user_data[user_index].episode_finished = True
                 self._user_data[user_index].episode_success = True
             elif result == EndEpisodeForm.Result.FAILURE:
                 if not self._user_data[user_index].episode_finished:
-                    self._user_data[user_index].ui._events.append({
-                        "type": "episode_failure",
-                        "error_report": self._user_data[user_index].end_episode_form._error_report_text,
-                    })
+                    self._user_data[user_index].ui._events.append(
+                        {
+                            "type": "episode_failure",
+                            "error_report": self._user_data[
+                                user_index
+                            ].end_episode_form._error_report_text,
+                        }
+                    )
                 self._user_data[user_index].episode_finished = True
                 self._user_data[user_index].episode_success = False
 
@@ -567,7 +575,7 @@ class AppStateRearrangeV2(AppStateBase):
                 self._app_service.end_episode()
                 post_sim_update_dict["application_exit"] = True
                 return
-            
+
             # Skip the form when changing the episode from the server.
             if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
                 server_user = self._user_data[self._server_user_index]
@@ -604,7 +612,7 @@ class AppStateRearrangeV2(AppStateBase):
         if self._users.max_user_count == 2:
             self._user_data[0].draw_pip_viewport(self._user_data[1])
             self._user_data[1].draw_pip_viewport(self._user_data[0])
-        
+
         self._app_service.compute_action_and_step_env()
 
         # Set the server camera.
@@ -631,14 +639,14 @@ class AppStateRearrangeV2(AppStateBase):
 
     def _has_any_user_finished_success(self) -> bool:
         return any(
-            self._user_data[user_index].episode_finished and
-            self._user_data[user_index].episode_success
+            self._user_data[user_index].episode_finished
+            and self._user_data[user_index].episode_success
             for user_index in range(self._app_data.max_user_count)
         )
-    
+
     def _has_any_user_finished_failure(self) -> bool:
         return any(
-            self._user_data[user_index].episode_finished and
-            not self._user_data[user_index].episode_success
+            self._user_data[user_index].episode_finished
+            and not self._user_data[user_index].episode_success
             for user_index in range(self._app_data.max_user_count)
         )

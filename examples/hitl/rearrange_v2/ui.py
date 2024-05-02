@@ -97,7 +97,12 @@ class UI:
         # Track drop placement.
         def place_selection_fn(gui_input: GuiInput) -> bool:
             # TODO: Temp keyboard equivalent
-            return gui_input.get_mouse_button(MouseButton.RIGHT) or gui_input.get_mouse_button_up(MouseButton.RIGHT) or gui_input.get_key(KeyCode.SPACE) or gui_input.get_key_up(KeyCode.SPACE)
+            return (
+                gui_input.get_mouse_button(MouseButton.RIGHT)
+                or gui_input.get_mouse_button_up(MouseButton.RIGHT)
+                or gui_input.get_key(KeyCode.SPACE)
+                or gui_input.get_key_up(KeyCode.SPACE)
+            )
 
         self._place_selection = Selection(
             self._sim,
@@ -147,7 +152,9 @@ class UI:
 
         # Drop when releasing right click.
         # TODO: Temp keyboard equivalent
-        if self._gui_input.get_mouse_button_up(MouseButton.RIGHT) or self._gui_input.get_key_up(KeyCode.SPACE):
+        if self._gui_input.get_mouse_button_up(
+            MouseButton.RIGHT
+        ) or self._gui_input.get_key_up(KeyCode.SPACE):
             self._place_object()
             self._place_selection.deselect()
 

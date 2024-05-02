@@ -22,6 +22,7 @@ class UIButton:
         self.text = text
         self.enabled = enabled
 
+
 @dataclass
 class UITextbox:
     def __init__(self, textbox_id: str, text: str, enabled: bool):
@@ -196,7 +197,6 @@ class ClientMessageManager:
                         "enabled": button.enabled,
                     }
                 )
-        
 
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
@@ -247,7 +247,10 @@ class ClientMessageManager:
             object_properties["visible"] = visible
 
     def set_object_visibility_layer(
-        self, object_id: int, layer_id: int = -1, destination_mask: Mask = Mask.ALL
+        self,
+        object_id: int,
+        layer_id: int = -1,
+        destination_mask: Mask = Mask.ALL,
     ):
         r"""
         Set the visibility layer of the object with the specified habitat-sim objectId.
@@ -262,7 +265,10 @@ class ClientMessageManager:
             object_properties["layer"] = layer_id
 
     def set_viewport_visibility_layers(
-        self, viewport_id: int, layer_ids: List[int], destination_mask: Mask = Mask.ALL
+        self,
+        viewport_id: int,
+        layer_ids: List[int],
+        destination_mask: Mask = Mask.ALL,
     ):
         r"""
         Set the visibility layer of the object with the specified habitat-sim objectId.
@@ -271,7 +277,9 @@ class ClientMessageManager:
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
             viewport_properties["layers"] = layer_ids
 
     def set_viewport_properties(
@@ -288,7 +296,9 @@ class ClientMessageManager:
         layers = Users(8)  # Maximum of 8 layers.
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
             # TODO: Use mask int directly instead of array
             viewport_properties["layers"] = []
             for layer in layers.indices(visible_layer_ids):
@@ -311,9 +321,13 @@ class ClientMessageManager:
         assert viewport_id != -1
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            viewport_properties = _obtain_viewport_properties(message, viewport_id)
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
             viewport_properties["enabled"] = True
-            viewport_properties["camera"] = _create_camera_transform_dict(cam_transform)
+            viewport_properties["camera"] = _create_camera_transform_dict(
+                cam_transform
+            )
             viewport_properties["text"] = text
 
     def update_navmesh_triangles(
@@ -350,17 +364,21 @@ class ClientMessageManager:
 
 
 # TODO: Rename to generic form.
-def _create_camera_transform_dict(cam_transform: mn.Matrix4) -> Dict[str, List[float]]:
+def _create_camera_transform_dict(
+    cam_transform: mn.Matrix4,
+) -> Dict[str, List[float]]:
     p = cam_transform.translation
     r = mn.Quaternion.from_matrix(cam_transform.rotation())
     rv = r.vector
     return {
         "translation": [p[0], p[1], p[2]],
-        "rotation": [r.scalar, rv[0], rv[1], rv[2]]
+        "rotation": [r.scalar, rv[0], rv[1], rv[2]],
     }
 
 
-def _obtain_object_properties(message: Message, object_id: int) -> Dict[str, Any]:
+def _obtain_object_properties(
+    message: Message, object_id: int
+) -> Dict[str, Any]:
     """Get or create the properties dict of an object_id."""
     if "objects" not in message:
         message["objects"] = {}
@@ -368,7 +386,10 @@ def _obtain_object_properties(message: Message, object_id: int) -> Dict[str, Any
         message["objects"][object_id] = {}
     return message["objects"][object_id]
 
-def _obtain_viewport_properties(message: Message, viewport_id: int) -> Dict[str, Any]:
+
+def _obtain_viewport_properties(
+    message: Message, viewport_id: int
+) -> Dict[str, Any]:
     """Get or create the properties dict of an object_id."""
     if "viewports" not in message:
         message["viewports"] = {}

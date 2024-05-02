@@ -106,7 +106,7 @@ class RemoteClientState:
 
     def ui_button_clicked(self, user_index: int, button_id: str) -> bool:
         return button_id in self._clicked_ui_buttons[user_index]
-    
+
     def get_textbox_content(self, user_index: int, textbox_id: str) -> str:
         user_textboxes = self._textboxes[user_index]
         if textbox_id in user_textboxes:

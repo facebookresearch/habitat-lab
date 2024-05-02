@@ -13,7 +13,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import aiohttp.web
 from websockets.server import WebSocketServer, WebSocketServerProtocol, serve
@@ -279,9 +279,11 @@ class NetworkManager:
                                 ),
                             )
                             slot.needs_consolidated_keyframe = False
-                        
+
                         # Create final user keyframes by combining keyframes and user messages.
-                        for keyframe_and_messages_to_send in inc_keyframes_and_messages:
+                        for (
+                            keyframe_and_messages_to_send
+                        ) in inc_keyframes_and_messages:
                             user_keyframes_to_send.append(
                                 get_user_keyframe(
                                     keyframe_and_messages_to_send, user_index
@@ -351,11 +353,11 @@ class NetworkManager:
         if connection_id not in self._connected_clients:
             print("Already disconnected.")
             return
-        
+
         # Ensure that the connection is closed.
         websocket = self._connected_clients[connection_id]
         asyncio.create_task(websocket.close())
-        
+
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[connection_id]
         # Sloppy: Search for slot by connection ID

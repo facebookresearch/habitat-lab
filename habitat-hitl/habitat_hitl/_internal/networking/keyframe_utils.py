@@ -63,7 +63,9 @@ def update_consolidated_keyframe(
                         con_metadata_update["metadata"] = metadata
                         found = True
                 if not found:
-                    consolidated_keyframe["metadata"].append(metadata_container)
+                    consolidated_keyframe["metadata"].append(
+                        metadata_container
+                    )
 
     # add or update rigUpdates
     if "rigUpdates" in inc_keyframe:

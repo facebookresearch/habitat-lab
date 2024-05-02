@@ -6,10 +6,11 @@
 
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
+
+from util import timestamp
 
 from habitat_hitl.core.types import ConnectionRecord
-from util import timestamp
 
 try:
     import boto3
@@ -52,9 +53,8 @@ else:
 
 
 def generate_unique_session_id(
-        episode_ids: List[str],
-        connection_records: Dict[int, ConnectionRecord]
-    ) -> str:
+    episode_ids: List[str], connection_records: Dict[int, ConnectionRecord]
+) -> str:
     """Generate a unique session name."""
     # Generate episodes string
     episodes_str = "no-episode"
@@ -77,6 +77,7 @@ def generate_unique_session_id(
 
     return f"{episodes_str}_{users_str}_{timestamp()}"
 
+
 def make_s3_filename(session_id: str, orig_file_name: str) -> str:
     """Transformation of a path for S3. Removes invalid characters and checks length."""
     filename = f"{session_id}_{orig_file_name}"
@@ -96,6 +97,7 @@ def make_s3_filename(session_id: str, orig_file_name: str) -> str:
 
     return s3_filename
 
+
 if __name__ == "__main__":
     # TODO: Temp test.
     episode_ids = []
@@ -111,11 +113,11 @@ if __name__ == "__main__":
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"2-5_no-user_{timestamp()}"
     episode_ids = []
-    connection_records = { 0: {"user_id": "test"} }
+    connection_records = {0: {"user_id": "test"}}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_test_{timestamp()}"
     episode_ids = []
-    connection_records = { 2: {"user_id": "test"} }
+    connection_records = {2: {"user_id": "test"}}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_test_{timestamp()}"
     episode_ids = []
@@ -135,7 +137,6 @@ if __name__ == "__main__":
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_invalid-user-invalid-user_{timestamp()}"
 
-
     s3_filename = make_s3_filename("id", "te-st.txt")
     assert s3_filename == "id_te-st.txt"
     s3_filename = make_s3_filename("id", "te???st.txt")
@@ -150,4 +151,3 @@ if __name__ == "__main__":
     s3_filename = make_s3_filename("ab", long_name)
     assert len(s3_filename) == 128
     assert s3_filename[-4:] == ".txt"
-
