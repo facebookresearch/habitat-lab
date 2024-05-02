@@ -93,14 +93,14 @@ class AppStateStartScreen(AppStateBase):
                     title,
                     "Press 'Start' to begin the experiment.",
                     [UIButton(START_BUTTON_ID, "Start", True)],
-                    Mask.from_index(user_index),
+                    destination_mask=Mask.from_index(user_index),
                 )
             else:
                 self._app_service.client_message_manager.show_modal_dialogue_box(
                     title,
                     "Waiting for other participants...",
                     [UIButton(START_BUTTON_ID, "Start", False)],
-                    Mask.from_index(user_index),
+                    destination_mask=Mask.from_index(user_index),
                 )
 
         # Server-only: Press numeric keys to press button on behalf of users.

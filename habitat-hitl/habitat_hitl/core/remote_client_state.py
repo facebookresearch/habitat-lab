@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import magnum as mn
 
@@ -64,11 +64,13 @@ class RemoteClientState:
         self._client_state_history: List[List[ClientState]] = []
         self._receive_rate_trackers: List[AverageRateTracker] = []
         self._clicked_ui_buttons: List[Set[str]] = []
+        self._textboxes: List[Dict[str, str]] = []
         for _ in users.indices(Mask.ALL):
             self._gui_inputs.append(GuiInput())
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
             self._clicked_ui_buttons.append(set())
+            self._textboxes.append({})
 
         # temp map VR button to key
         self._button_map = {
@@ -104,6 +106,12 @@ class RemoteClientState:
 
     def ui_button_clicked(self, user_index: int, button_id: str) -> bool:
         return button_id in self._clicked_ui_buttons[user_index]
+    
+    def get_textbox_content(self, user_index: int, textbox_id: str) -> str:
+        user_textboxes = self._textboxes[user_index]
+        if textbox_id in user_textboxes:
+            return user_textboxes[textbox_id]
+        return ""
 
     def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
@@ -238,8 +246,12 @@ class RemoteClientState:
                 # UI element events.
                 ui = client_state["ui"] if "ui" in client_state else None
                 if ui is not None:
-                    for button in ui["buttonsPressed"]:
-                        self._clicked_ui_buttons[user_index].add(button)
+                    if "buttonsPressed" in ui:
+                        for button in ui["buttonsPressed"]:
+                            self._clicked_ui_buttons[user_index].add(button)
+                    if "textboxes" in ui:
+                        for textbox_id, text in ui["textboxes"].items():
+                            self._textboxes[user_index][textbox_id] = text
 
                 # Input events.
                 input_json = (
@@ -479,12 +491,14 @@ class RemoteClientState:
         for user_index in self._users.indices(Mask.ALL):
             self._gui_inputs[user_index].on_frame_end()
             self._clicked_ui_buttons[user_index].clear()
+            self._textboxes[user_index].clear()
         self._new_connection_records = None
 
     def clear_history(self, user_mask=Mask.ALL) -> None:
         for user_index in self._users.indices(user_mask):
             self._client_state_history[user_index].clear()
             self._clicked_ui_buttons[user_index].clear()
+            self._textboxes[user_index].clear()
 
     def kick(self, user_mask: Mask) -> None:
         for user_index in self._users.indices(user_mask):

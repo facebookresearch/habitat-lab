@@ -49,6 +49,7 @@ class SessionRecorder:
         episode_id: str,
         scene_id: str,
         dataset: str,
+        user_index_to_agent_index_map: Dict[int, int],
     ):
         self.data["episodes"].append(
             {
@@ -60,6 +61,7 @@ class SessionRecorder:
                 "success": False,
                 "frame_count": 0,
                 "dataset": dataset,
+                "user_index_to_agent_index_map": user_index_to_agent_index_map,
                 "frames": [],
             }
         )

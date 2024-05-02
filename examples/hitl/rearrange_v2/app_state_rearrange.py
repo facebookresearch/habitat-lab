@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
@@ -16,6 +17,7 @@ from app_states import (
     create_app_state_end_session,
     create_app_state_load_episode,
 )
+from end_episode_form import EndEpisodeForm
 from ui import UI
 from util import UP
 from world import World
@@ -25,7 +27,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.client_message_manager import UIButton
+from habitat_hitl.core.client_message_manager import UIButton, UITextbox
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask, Users
@@ -104,9 +106,12 @@ class FrameRecorder:
         for user_index in range(len(user_data)):
             u = user_data[user_index]
             user_data_dict = {
-                "task_completed": u.task_completed,
+                "task_completed": u.episode_finished,
+                "task_succeeded": u.episode_success,
+                "end_episode_form_opened": u.end_episode_dialogue_shown,
                 "camera_transform": u.cam_transform,
                 "held_object": u.ui._held_object_id,
+                "hovered_object": u.ui._hover_selection.object_id,
                 "events": list(u.ui._events),
             }
             data["users"].append(user_data_dict)
@@ -120,16 +125,7 @@ from session import Session
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
-class EndEpisodeForm:
-    def __init__(
-        self,
-        user_index: int,
-    ):
-        self._user_index = user_index
-        pass
 
-    def show(self):
-        pass
 
 
 class UserData:
@@ -153,8 +149,13 @@ class UserData:
         self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
         self.task_instruction = ""
-        self.task_completed = False
         self.pip_initialized = False
+
+        self.end_episode_form = EndEpisodeForm(user_index, app_service)
+        self.end_episode_dialogue_shown = False
+        self.episode_finished = False
+        self.episode_success = False
+        self.episode_error_report = ""
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -180,7 +181,7 @@ class UserData:
         self,
         object_receptacle_pairs: List[Tuple[List[int], List[int]]],
     ):
-        self.task_completed = False
+        self.end_episode_dialogue_shown = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset(object_receptacle_pairs)        
 
@@ -207,7 +208,7 @@ class UserData:
             self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self.task_completed = True
+            self.end_episode_dialogue_shown = True
 
         self.app_service.remote_client_state._client_helper.update(
             self.user_index,
@@ -273,9 +274,9 @@ class UserData:
 
     def _is_user_idle_this_frame(self) -> bool:
         active = self.gui_input.get_any_input()
-        task_completed = self.task_completed
+        end_episode_dialogue_chown = self.end_episode_dialogue_shown
         loading = self.app_service.remote_client_state._client_loading[self.user_index]
-        return not active and not task_completed and not loading
+        return not active and not end_episode_dialogue_chown and not loading
 
 
 class AppStateRearrangeV2(AppStateBase):
@@ -350,18 +351,29 @@ class AppStateRearrangeV2(AppStateBase):
 
     def on_enter(self):
         super().on_enter()
+
+        user_index_to_agent_index_map: Dict[int, int] = {}
+        for user_index in range(len(self._user_data)):
+            user_index_to_agent_index_map[user_index] = self._user_data[user_index].gui_agent_controller._agent_idx
+
         episode = self._app_service.episode_helper.current_episode
         self._session.session_recorder.start_episode(
             episode.episode_id,
             episode.scene_id,
             episode.scene_dataset_config,
+            user_index_to_agent_index_map,
         )
 
     def on_exit(self):
         super().on_exit()
 
+        episode_success = all(
+            self._user_data[user_index].episode_success
+            for user_index in range(self._app_data.max_user_count)
+        )
+
         self._session.session_recorder.end_episode(
-            success=self._is_episode_finished()
+            episode_success
         )
 
     def _is_episode_finished(self) -> bool:
@@ -369,7 +381,7 @@ class AppStateRearrangeV2(AppStateBase):
         Determines whether all users have finished their tasks.
         """
         return all(
-            self._user_data[user_index].task_completed
+            self._user_data[user_index].episode_finished
             for user_index in self._users.indices(Mask.ALL)
         )
 
@@ -469,7 +481,7 @@ class AppStateRearrangeV2(AppStateBase):
         client_helper = self._app_service.remote_client_state._client_helper
         idle_time = client_helper.get_idle_time(user_index)
         if idle_time > 10:
-            controls_str += f"Idle time {idle_time}/{int(client_helper._max_idle_duration)}s\n"
+            controls_str += f"Idle time {idle_time}s\n"
 
         return controls_str
 
@@ -483,8 +495,11 @@ class AppStateRearrangeV2(AppStateBase):
                 + "\n"
             )
 
-        if self._users.max_user_count > 1 and self._has_any_user_finished() and not self._user_data[user_index].task_completed:
-            status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
+        if self._users.max_user_count > 1 and not self._user_data[user_index].episode_finished:
+            if self._has_any_user_finished_success():
+                status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
+            elif self._has_any_user_finished_failure():
+                status_str += f"\n\nThe other participant has signaled a problem with the task.\nPress '0' to continue."
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
@@ -497,20 +512,32 @@ class AppStateRearrangeV2(AppStateBase):
 
     def _update_help_text(self, user_index: int):
         # If the user has signaled to change episode, show dialogue.
-        if self._user_data[user_index].task_completed:
-            ui_button_id = "undo_change_episode"
-            self._app_service.client_message_manager.show_modal_dialogue_box(
-                "Task Finished",
-                "Waiting for the other participant to finish...",
-                [UIButton(ui_button_id, "Cancel", True)],
-                destination_mask=Mask.from_index(user_index),
-            )
-            cancel = self._app_service.remote_client_state.ui_button_clicked(
-                user_index, ui_button_id
-            )
-            if cancel:
-                self._user_data[user_index].task_completed = False
-            return
+        # TODO: Clean-up
+        if self._user_data[user_index].end_episode_dialogue_shown:
+            result = self._user_data[user_index].end_episode_form.show()
+            if result == EndEpisodeForm.Result.CANCEL:
+                if self._user_data[user_index].episode_finished:
+                    self._user_data[user_index].ui._events.append({
+                        "type": "end_episode_form_cancelled",
+                    })
+                self._user_data[user_index].end_episode_dialogue_shown = False
+                self._user_data[user_index].episode_finished = False
+                self._user_data[user_index].episode_success = False
+            elif result == EndEpisodeForm.Result.SUCCESS:
+                if not self._user_data[user_index].episode_finished:
+                    self._user_data[user_index].ui._events.append({
+                        "type": "episode_success",
+                    })
+                self._user_data[user_index].episode_finished = True
+                self._user_data[user_index].episode_success = True
+            elif result == EndEpisodeForm.Result.FAILURE:
+                if not self._user_data[user_index].episode_finished:
+                    self._user_data[user_index].ui._events.append({
+                        "type": "episode_failure",
+                        "error_report": self._user_data[user_index].end_episode_form._error_report_text,
+                    })
+                self._user_data[user_index].episode_finished = True
+                self._user_data[user_index].episode_success = False
 
         status_str = self._get_status_text(user_index)
         if len(status_str) > 0:
@@ -540,6 +567,12 @@ class AppStateRearrangeV2(AppStateBase):
                 self._app_service.end_episode()
                 post_sim_update_dict["application_exit"] = True
                 return
+            
+            # Skip the form when changing the episode from the server.
+            if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+                server_user = self._user_data[self._server_user_index]
+                server_user.episode_finished = True
+                server_user.episode_success = True
 
             # Switch the server-controlled user.
             if self._num_agents > 0 and self._server_gui_input.get_key_down(
@@ -596,8 +629,16 @@ class AppStateRearrangeV2(AppStateBase):
             for user_index in range(self._app_data.max_user_count)
         )
 
-    def _has_any_user_finished(self) -> bool:
+    def _has_any_user_finished_success(self) -> bool:
         return any(
-            self._user_data[user_index].task_completed
+            self._user_data[user_index].episode_finished and
+            self._user_data[user_index].episode_success
+            for user_index in range(self._app_data.max_user_count)
+        )
+    
+    def _has_any_user_finished_failure(self) -> bool:
+        return any(
+            self._user_data[user_index].episode_finished and
+            not self._user_data[user_index].episode_success
             for user_index in range(self._app_data.max_user_count)
         )
