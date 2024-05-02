@@ -29,6 +29,7 @@ from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
     update_consolidated_keyframe,
 )
+from habitat_hitl.core.hydra_utils import ConfigObject
 from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
@@ -282,6 +283,21 @@ class NetworkManager:
                 )
             print("Client is ready!")
             connection_record["connectionId"] = connection_id
+
+            # Copy test connection parameters from "mock_connection_params_dict".
+            if "mock_connection_params_dict" in self._networking_config:
+                mock_connection_params_dict = (
+                    self._networking_config.mock_connection_params_dict
+                )
+                if mock_connection_params_dict is not None and isinstance(
+                    mock_connection_params_dict, ConfigObject
+                ):
+                    for (
+                        key,
+                        value,
+                    ) in mock_connection_params_dict.__dict__.items():
+                        connection_record[key] = value
+
             self._interprocess_record.send_connection_record_to_main_thread(
                 connection_record
             )
