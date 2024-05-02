@@ -232,16 +232,17 @@ def test_rearrange_tasks(test_cfg_path):
         env_class=env_class, config=config
     )
 
-    with env:
-        for _ in range(2):
-            env.reset()
-            for _ in range(MAX_PER_TASK_TEST_STEPS):
-                action = env.action_space.sample()
-                _, _, done, _ = env.step(  # type:ignore[assignment]
-                    action=action
-                )
-                if done:
-                    break
+    for _ in range(2):
+        env.reset()
+        for _ in range(MAX_PER_TASK_TEST_STEPS):
+            action = env.action_space.sample()
+            _, _, done, _ = env.step(  # type:ignore[assignment]
+                action=action
+            )
+            if done:
+                break
+
+    env.close()
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
