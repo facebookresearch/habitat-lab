@@ -1,7 +1,16 @@
 # @package _global_
 
 defaults:
-  - language_rearrange_multi_agent
+  - /training@ : base_train
+  - habitat_conf/task : rearrange_easy_multi_agent
+  - world_model@world_model: gt_graph
+  - /trajectory@trajectory : trajectory_logger
+  # single agent planner setup
+  - /planner : llm_centralized_planner
+  - ../../../../../habitat-llm/habitat_llm/conf/agent/@oracle_rearrange_agent: oracle_rearrange_agent
+  - ../../../../../habitat-llm/habitat_llm/conf/agent/@planner.agents.agent_0.config: oracle_rearrange_agent
+  - /wandb_conf@                : own
+  - language_rearrange_multi_agent_llm_gui
   - hitl_defaults
   - _self_
 
@@ -15,20 +24,48 @@ habitat:
   dataset:
     data_path: "data/prerelease_1k_v2.json.gz"
     scenes_dir: "data/fpss"
+    # metadata:
+    #   metadata_folder: "data/fpss/metadata"
+    #   obj_metadata: object_categories_filtered.csv
+      # staticobj_metadata: fpmodels-with-decomposed.csv
+  task:
+    pddl_domain_def: fp
+  simulator:
+    agents:
+      agent_1:
+        radius: 0.3
+        articulated_agent_type: 'KinematicHumanoid'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
+        motion_data_path: "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
 
-habitat_baselines:
-  # todo: document these choices
-  eval:
-    should_load_ckpt: False
-  rl:
-    agent:
-      type: "SingleAgentAccessMgr"
-      num_agent_types: 1
-      num_pool_agents_per_type: [1]
-      num_active_agents_per_type: [1]
-      agent_sample_interval: 20
-      force_partner_sample_idx: -1
-    policy:
+planner:
+  agents:
+    agent_0:
+      uid: 0
+# habitat_baselines:
+#   # todo: document these choices
+#   eval:
+#     should_load_ckpt: False
+
+device      : cuda
+instruction : ''
+mode: "dataset" # cli / dataset
+env: habitat
+num_runs_per_episode: 1
+num_proc: 1
+dry_run: False
+paths:
+  results_dir: ${hydra:runtime.output_dir}/results
+  epi_result_file_path: "${paths.results_dir}/episode_result_log.csv"
+  run_result_file_path: "${paths.results_dir}/run_result_log.csv"
+  end_result_file_path: "${paths.results_dir}/end_result_log.csv"
+
+hydra:
+  job:
+    name: 'habitat_llm'
+    chdir: False
+  run:
+    dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}-${file_stem:${habitat.dataset.data_path}}
 
 habitat_hitl:
   window:
@@ -39,10 +76,11 @@ habitat_hitl:
     - agent_index: 1
       lin_speed: 10.0
       ang_speed: 300
-  llm_controller_agents:
+  llm_controlled_agents:
     - agent_index: 0
       lin_speed: 10.0
       ang_speed: 300
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+  remove_visual_sensors: False
