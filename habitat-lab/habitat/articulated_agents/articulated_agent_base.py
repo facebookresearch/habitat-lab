@@ -16,7 +16,7 @@ from habitat_sim.simulator import Simulator
 
 
 class ArticulatedAgentBase(ArticulatedAgentInterface):
-    """Generic manupulator interface defines standard API functions. Robot with a controllable base."""
+    """Generic interface defining standard API functions for a robot with a controllable base."""
 
     def __init__(
         self,
@@ -43,6 +43,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
             compatibility with PyBullet.
         :param sim_obj: Pointer to the simulated object
         """
+
         assert base_type in [
             "mobile",
             "leg",
@@ -82,6 +83,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
 
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
+
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
@@ -128,6 +130,10 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         pass
 
     def reset(self) -> None:
+        """
+        Set joint positions and motors back to the initial configuration.
+        """
+
         if (
             hasattr(self.params, "leg_joints")
             and self.params.leg_init_params is not None
@@ -139,6 +145,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
     @property
     def base_pos(self):
         """Get the robot base ground position"""
+
         # via configured local offset from origin
         if self._base_type in ["mobile", "leg"]:
             return (
@@ -153,6 +160,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
+
         # via configured local offset from origin.
         if self._base_type in ["mobile", "leg"]:
             if len(position) != 3:

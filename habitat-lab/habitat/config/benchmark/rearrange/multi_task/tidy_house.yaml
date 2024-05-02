@@ -8,4 +8,4 @@ habitat:
   task:
     task_spec: tidy_house
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v2/{split}/tidy_house_10k_1k.json.gz

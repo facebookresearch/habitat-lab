@@ -58,4 +58,4 @@ habitat:
   environment:
     max_episode_steps: 200
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/in_fridge_1k_100.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v2/{split}/in_fridge_1k_100.json.gz

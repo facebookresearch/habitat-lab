@@ -37,6 +37,9 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     find_receptacles,
 )
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+from habitat.sims.habitat_simulator.kinematic_relationship_manager import (
+    KinematicRelationshipManager,
+)
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentData,
     ArticulatedAgentManager,
@@ -109,6 +112,7 @@ class RearrangeSim(HabitatSim):
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self._handle_to_object_id: Dict[str, int] = {}
         self._markers: Dict[str, MarkerInfo] = {}
+        self._targets: Dict[str, mn.Matrix4] = {}
 
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
@@ -139,6 +143,10 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+        # KRM manages child/parent relationships in kinematic mode. Initialized in reconfigure if applicable.
+        self.kinematic_relationship_manager: KinematicRelationshipManager = (
+            None
+        )
 
         self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
         self._perf_logging_enabled = False
@@ -189,7 +197,7 @@ class RearrangeSim(HabitatSim):
         return self.agents_mgr[0].articulated_agent
 
     @property
-    def grasp_mgr(self):
+    def grasp_mgr(self) -> RearrangeGraspManager:
         if len(self.agents_mgr) > 1:
             raise ValueError(
                 f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
@@ -197,14 +205,14 @@ class RearrangeSim(HabitatSim):
         return self.agents_mgr[0].grasp_mgr
 
     @property
-    def grasp_mgrs(self):
+    def grasp_mgrs(self) -> List[RearrangeGraspManager]:
         if len(self.agents_mgr) > 1:
             raise ValueError(
                 f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
             )
         return self.agents_mgr[0].grasp_mgrs
 
-    def _get_target_trans(self):
+    def _get_target_trans(self) -> List[Tuple[int, mn.Matrix4]]:
         """
         This is how the target transforms should be accessed since
         multiprocessing does not allow pickling.
@@ -297,6 +305,8 @@ class RearrangeSim(HabitatSim):
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
+            # delete old KRM when scene is hard reset
+            self.kinematic_relationship_manager = None
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()
@@ -304,6 +314,11 @@ class RearrangeSim(HabitatSim):
             self.add_perf_timing("super_reconfigure", t_start)
             # The articulated object handles have changed.
             self._start_art_states = {}
+            if self._kinematic_mode:
+                # NOTE: scene must be loaded so articulated objects are available before KRM initialization
+                self.kinematic_relationship_manager = (
+                    KinematicRelationshipManager(self)
+                )
 
         if new_scene:
             self.agents_mgr.on_new_scene()
@@ -440,7 +455,7 @@ class RearrangeSim(HabitatSim):
             )
         return start_pos, start_rot
 
-    def _setup_targets(self, ep_info):
+    def _setup_targets(self, ep_info: RearrangeEpisode):
         self._targets = {}
         for target_handle, transform in ep_info.targets.items():
             self._targets[target_handle] = mn.Matrix4(
@@ -448,7 +463,7 @@ class RearrangeSim(HabitatSim):
             )
 
     @add_perf_timing_func()
-    def _load_navmesh(self, ep_info):
+    def _load_navmesh(self, ep_info: RearrangeEpisode):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
@@ -657,6 +672,15 @@ class RearrangeSim(HabitatSim):
                     for motor_id in ao.existing_joint_motor_ids:
                         ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
+            if self._kinematic_mode:
+                # initialize KRM with parent->child relationships from the RearrangeEpisode
+                self.kinematic_relationship_manager = (
+                    KinematicRelationshipManager(self)
+                )
+                self.kinematic_relationship_manager.initialize_from_obj_to_rec_pairs(
+                    ep_info.name_to_receptacle,
+                    list(self._receptacles.values()),
+                )
 
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
@@ -771,7 +795,7 @@ class RearrangeSim(HabitatSim):
             ret["articulated_agent_js"] = articulated_agent_js
         return ret
 
-    def set_state(self, state: Dict[str, Any], set_hold=False) -> None:
+    def set_state(self, state: Dict[str, Any], set_hold: bool = False) -> None:
         """
         Sets the simulation state from a cached state info dict. See capture_state().
 
@@ -872,6 +896,10 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_articulated_agent()
+
+        if self.kinematic_relationship_manager is not None:
+            # update children if the parents were moved
+            self.kinematic_relationship_manager.apply_relations()
 
         if self._batch_render:
             for _ in range(self.ac_freq_ratio):
