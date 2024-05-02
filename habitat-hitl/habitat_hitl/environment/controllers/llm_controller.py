@@ -7,6 +7,8 @@ from habitat_llm.utils import fix_config, setup_config
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
+import habitat
+import habitat.config
 from habitat.core.environments import GymHabitatEnv
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
@@ -23,10 +25,17 @@ class LLMController(SingleAgentBaselinesController):
         config: DictConfig,
         gym_habitat_env: GymHabitatEnv,
     ):
-        super().__init__(agent_idx, is_multi_agent, config, gym_habitat_env)
-        fix_config(config)
+        self._config = config
+        self._is_multi_agent = is_multi_agent
+        self._gym_habitat_env = gym_habitat_env
+        self._habitat_env = gym_habitat_env.unwrapped.habitat_env
+        self._agent_idx = agent_idx
+
+        with habitat.config.read_write(self._config):
+            fix_config(self._config)
         seed = 47668090
-        self.config = setup_config(config, seed)
+        with habitat.config.read_write(self._config):
+            self._config = setup_config(self._config, seed)
         self.planner: LLMPlanner = None
         self.environment_interface: EnvironmentInterface = None
 
@@ -40,10 +49,11 @@ class LLMController(SingleAgentBaselinesController):
 
     def initialize_planner(self):
         # NOTE: using instantiate here, but given this is planning for a single agent
-        # always will this ever be an option of Centralized vs Decentralized? Maybe DAG...?
-        self.planner = instantiate(self.config.evaluation.planner)
+        # always will this ever be an option of Centralized vs Decentralized? Maybe
+        # DAG...?
+        self.planner = instantiate(self._config.planner)
         self.planner.agents = self.initialize_agents(
-            self.config.evaluation.agents
+            self._config.planner.agents
         )
 
     def initialize_agents(self, agent_configs):
@@ -60,19 +70,7 @@ class LLMController(SingleAgentBaselinesController):
 
     def initialize_environment_interface(self):
         self.environment_interface = EnvironmentInterface(
-            self.config, gym_habitat_env=self._gym_habitat_env
-        )
-
-        # NOTE: this is to replicate initial call of  get_next_action, in
-        # run_instruction() method. I am not sure why we do this initially?
-        (
-            _low_level_actions,
-            _planner_info,
-            _task_done,
-        ) = self.planner.get_next_action(
-            self.current_instruction,
-            {},
-            self.environment_interface.world_graph,
+            self._config, gym_habitat_env=self._gym_habitat_env
         )
 
     def on_environment_reset(self):

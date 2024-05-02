@@ -189,6 +189,8 @@ class ControllerHelper:
         return None
 
     def _find_llm_controlled_agent_config(self, agent_index):
+        if not hasattr(self._hitl_config, "llm_controlled_agents"):
+            return None
         for (
             llm_controlled_agent_config
         ) in self._hitl_config.llm_controlled_agents:
