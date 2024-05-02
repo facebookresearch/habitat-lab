@@ -20,10 +20,12 @@ habitat:
         ang_speed: 20.0
   gym:
     obs_keys:
-      - agent_0_head_depth
+      - agent_0_head_rgb
+      - agent_1_head_rgb
       - agent_0_is_holding
+      - agent_1_is_holding
       - agent_0_ee_pos
-      - agent_1_head_depth
+      - agent_1_ee_pos
   simulator:
     agents_order:
       - agent_0
