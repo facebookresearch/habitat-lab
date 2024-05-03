@@ -128,7 +128,9 @@ class GuiNavigationHelper:
         (
             target_pos,
             target_rot_quat,
-        ) = self._app_service.remote_client_state.get_head_pose()
+        ) = self._app_service.remote_client_state.get_head_pose(
+            self._user_index
+        )
 
         forward_dir = None
         if target_pos and target_rot_quat:
