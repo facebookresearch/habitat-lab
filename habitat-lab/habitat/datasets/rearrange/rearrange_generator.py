@@ -535,7 +535,7 @@ class RearrangeEpisodeGenerator:
                 logger.error("Generation failed with exception...")
             if new_episode is None:
                 #KL
-                # self.remove_last_line_if_nonempty(cur_file_path)
+                self.remove_last_line_if_nonempty(cur_file_path) #KL: comment out if producing dataset
                 failed_episodes += 1
                 continue
             generated_episodes.append(new_episode)
