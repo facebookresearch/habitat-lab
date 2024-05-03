@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import typing
-from typing import Dict
 
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
@@ -21,7 +20,6 @@ except ImportError:
 
 class CollaborationEpisodeData:
     instruction: str = ""
-    object_goal_pairs: Dict[str, str] = {}
 
 
 if collaboration_episode_enabled:
@@ -36,9 +34,6 @@ if collaboration_episode_enabled:
 
         episode = typing.cast(CollaborationEpisode, episode)
         episode_data.instruction = episode.instruction
-        name_to_receptacle: Dict[str, str] = episode.name_to_receptacle
-        for key, value in name_to_receptacle.items():
-            episode_data.object_goal_pairs[key] = value.split("|")[0]
 
         return episode_data
 
