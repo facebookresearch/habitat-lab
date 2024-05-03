@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, List, Optional, Tuple
 
 import magnum as mn
 

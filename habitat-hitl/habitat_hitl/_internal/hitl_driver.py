@@ -14,7 +14,6 @@ from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
-from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe
 import magnum as mn
 import numpy as np
 
@@ -25,6 +24,7 @@ import habitat_sim
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
+from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe
 from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
     terminate_networking_process,
@@ -248,7 +248,6 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._hitl_config,
                 self._interprocess_record,
                 gui_drawer,
                 users,

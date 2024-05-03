@@ -16,11 +16,13 @@ Keyframe = DataDict
 # Server -> Client communication dictionary that is user specific and added to keyframes before sending the payload to the user (keyframe["message"]).
 Message = DataDict
 
+
 # Keyframe and all user messages for a specific frame.
 @dataclass
 class KeyframeAndMessages:
     keyframe: Keyframe
     messages: List[Message]
+
 
 # Client -> Server communication dictionary (inputs, etc.).
 ClientState = DataDict

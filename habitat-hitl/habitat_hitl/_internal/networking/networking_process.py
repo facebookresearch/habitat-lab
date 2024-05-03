@@ -11,9 +11,9 @@ import signal
 import ssl
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from multiprocessing import Process
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import aiohttp.web
 from websockets.server import WebSocketServer, WebSocketServerProtocol, serve
@@ -263,7 +263,7 @@ class NetworkManager:
                         # some frames. To handle this case, we send a consolidated keyframe as
                         # the very first keyframe for the new client. It captures all the
                         # previous incremental keyframes since the server started.
-                        user_keyframes_to_send = []
+                        user_keyframes_to_send: List[Keyframe] = []
                         if slot.needs_consolidated_keyframe:
                             user_keyframes_to_send.insert(
                                 0,
@@ -390,9 +390,7 @@ class NetworkManager:
         self, websocket: WebSocketServerProtocol
     ) -> None:
         # Kick clients after limit is reached.
-        if (
-            not self.can_accept_connection()
-        ):
+        if not self.can_accept_connection():
             await websocket.close()
             return
 

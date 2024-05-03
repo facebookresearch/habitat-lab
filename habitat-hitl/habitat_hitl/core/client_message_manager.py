@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, Final, List, Optional, Union
+from typing import Final, List, Optional, Union
 
-from habitat_hitl.core.types import Message
 import magnum as mn
 
+from habitat_hitl.core.types import Message
 from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
@@ -25,6 +25,12 @@ class ClientMessageManager:
     def __init__(self, users: Users):
         self._users = users
         self.clear_messages()
+
+    def any_message(self) -> bool:
+        """
+        Returns true if a message is ready to be sent for any user.
+        """
+        return any(len(message) > 0 for message in self._messages)
 
     def get_messages(self) -> List[Message]:
         r"""

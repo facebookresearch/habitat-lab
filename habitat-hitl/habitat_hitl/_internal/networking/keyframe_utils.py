@@ -130,6 +130,7 @@ def update_consolidated_keyframe(
 
     # todo: lights, userTransforms
 
+
 def update_consolidated_message(
     consolidated_message: Message, inc_message: Message
 ) -> None:
