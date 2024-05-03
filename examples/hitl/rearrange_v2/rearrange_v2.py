@@ -119,13 +119,17 @@ class UserData:
         self.gui_agent_controller = gui_agent_controller
         self.server_sps_tracker = server_sps_tracker
         self.client_helper = client_helper
-        self.gui_input = app_service.remote_client_state.get_gui_input(
-            user_index
-        )
         self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
         self.task_instruction = ""
         self.signal_change_episode = False
+
+        # If in remote mode, get the remote input. Else get the server (local) input.
+        self.gui_input = (
+            app_service.remote_client_state.get_gui_input(user_index)
+            if app_service.remote_client_state is not None
+            else self.app_service.gui_input
+        )
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -159,11 +163,12 @@ class UserData:
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
             self.signal_change_episode = True
 
-        self.client_helper.update(
-            self.user_index,
-            self._is_user_idle_this_frame(),
-            self.server_sps_tracker.get_smoothed_rate(),
-        )
+        if self.client_helper:
+            self.client_helper.update(
+                self.user_index,
+                self._is_user_idle_this_frame(),
+                self.server_sps_tracker.get_smoothed_rate(),
+            )
 
         self.camera_helper.update(self._get_camera_lookat_pos(), dt)
         self.cam_transform = self.camera_helper.get_cam_transform()
@@ -277,7 +282,7 @@ class AppStateRearrangeV2(AppState):
             reach_pos=None,
         )
 
-    def _get_gui_controlled_agent_index(self, user_index):
+    def _get_gui_controlled_agent_index(self, user_index) -> int:
         return self._gui_agent_controllers[user_index]._agent_idx
 
     def _get_controls_text(self, user_index: int):
@@ -374,13 +379,16 @@ class AppStateRearrangeV2(AppState):
             ) % self._users.max_user_count
 
         # Copy server input to user input.
-        server_user_input = self._user_data[self._server_user_index].gui_input
-        if server_user_input.get_any_input():
-            self._server_input_enabled = False
-        elif self._server_gui_input.get_any_input():
-            self._server_input_enabled = True
-        if self._server_input_enabled:
-            server_user_input.copy_from(self._server_gui_input)
+        if self._app_service.hitl_config.networking.enable:
+            server_user_input = self._user_data[
+                self._server_user_index
+            ].gui_input
+            if server_user_input.get_any_input():
+                self._server_input_enabled = False
+            elif self._server_gui_input.get_any_input():
+                self._server_input_enabled = True
+            if self._server_input_enabled:
+                server_user_input.copy_from(self._server_gui_input)
 
         self._sps_tracker.increment()
 

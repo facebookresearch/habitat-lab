@@ -173,7 +173,7 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        users = Users(self._hitl_config.networking.max_client_count)
+        users = Users(max(self._hitl_config.networking.max_client_count, 1))
 
         self._client_message_manager = None
         if self.network_server_enabled:
