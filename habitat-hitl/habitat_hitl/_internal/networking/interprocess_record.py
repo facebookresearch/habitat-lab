@@ -22,7 +22,7 @@ class InterprocessRecord:
 
     def __init__(self, networking_config) -> None:
         self._networking_config = networking_config
-        self._keyframe_queue: Queue[Keyframe] = Queue()
+        self._keyframe_queue: Queue[KeyframeAndMessages] = Queue()
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()

@@ -34,8 +34,10 @@ class GuiDrawer:
         self._sim_debug_line_render = sim_debug_line_render
         self._client_message_manager = client_message_manager
 
-        # TODO: Implement per-user.
-        self._local_transforms: List[mn.Matrix4] = []
+        # One local transform stack per user.
+        self._local_transforms: List[List[mn.Matrix4]] = []
+        for _ in client_message_manager._users.indices(Mask.ALL):
+            self._local_transforms.append([])
 
     def get_sim_debug_line_render(self) -> Optional[DebugLineRender]:
         """
@@ -76,8 +78,10 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # TODO: Implement per-user.
-            self._local_transforms.append(transform)
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
+                self._local_transforms[user_index].append(transform)
 
     def pop_transform(
         self,
@@ -92,8 +96,10 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            # TODO: Implement per-user.
-            self._local_transforms.pop()
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
+                self._local_transforms[user_index].pop()
 
     def draw_box(
         self,
@@ -165,17 +171,23 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            parent_transform = self._compute_parent_transform()
-            global_translation = parent_transform.transform_point(translation)
+            # TODO: Move to client message manager.
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
+                parent_transform = self._compute_parent_transform(user_index)
+                global_translation = parent_transform.transform_point(
+                    translation
+                )
 
-            self._client_message_manager.add_highlight(
-                pos=_vec_to_list(global_translation),
-                radius=radius,
-                normal=_vec_to_list(normal),
-                billboard=billboard,
-                color=color,
-                destination_mask=destination_mask,
-            )
+                self._client_message_manager.add_highlight(
+                    pos=_vec_to_list(global_translation),
+                    radius=radius,
+                    normal=_vec_to_list(normal),
+                    billboard=billboard,
+                    color=color,
+                    destination_mask=Mask.from_index(user_index),
+                )
 
     def draw_transformed_line(
         self,
@@ -202,17 +214,21 @@ class GuiDrawer:
 
         # If remote rendering is enabled:
         if self._client_message_manager:
-            parent_transform = self._compute_parent_transform()
-            global_from_pos = parent_transform.transform_point(from_pos)
-            global_to_pos = parent_transform.transform_point(to_pos)
+            # TODO: Move to client message manager.
+            for user_index in self._client_message_manager._users.indices(
+                destination_mask
+            ):
+                parent_transform = self._compute_parent_transform(user_index)
+                global_from_pos = parent_transform.transform_point(from_pos)
+                global_to_pos = parent_transform.transform_point(to_pos)
 
-            self._client_message_manager.add_line(
-                _vec_to_list(global_from_pos),
-                _vec_to_list(global_to_pos),
-                from_color=from_color,
-                to_color=to_color,
-                destination_mask=destination_mask,
-            )
+                self._client_message_manager.add_line(
+                    _vec_to_list(global_from_pos),
+                    _vec_to_list(global_to_pos),
+                    from_color=from_color,
+                    to_color=to_color,
+                    destination_mask=Mask.from_index(user_index),
+                )
 
     def draw_path_with_endpoint_circles(
         self,
@@ -238,13 +254,14 @@ class GuiDrawer:
             # Networking not implemented
             pass
 
-    def _compute_parent_transform(self) -> mn.Matrix4:
+    def _compute_parent_transform(self, user_index: int) -> mn.Matrix4:
         """
         Resolve the transform resulting from the push/pop_transform calls.
         To apply to a point, use {ret_val}.transform_point(from_pos).
         """
+        assert user_index < len(self._local_transforms)
         parent_transform = mn.Matrix4.identity_init()
-        for local_transform in self._local_transforms:
+        for local_transform in self._local_transforms[user_index]:
             parent_transform = parent_transform @ local_transform
         return parent_transform
 

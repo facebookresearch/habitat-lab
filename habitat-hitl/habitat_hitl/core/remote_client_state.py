@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import magnum as mn
 
@@ -44,9 +44,6 @@ class RemoteClientState:
         self._gui_drawer = gui_drawer
         self._users = users
 
-        self._receive_rate_tracker = AverageRateTracker(2.0)
-
-        self._recent_client_states: List[ClientState] = []
         self._new_connection_records: List[ConnectionRecord] = []
 
         self._on_client_connected = Event()
