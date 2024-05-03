@@ -97,13 +97,15 @@ class World:
 
     def get_link_index(self, object_id: int) -> int:
         """Get the index of a link. Returns None if unsuccessful."""
-        link_id = object_id
-        if link_id in self._link_id_to_ao_map:
-            ao_id = self._link_id_to_ao_map[link_id]
-            ao = self.get_articulated_object(ao_id)
-            link_id_to_index: Dict[int, int] = ao.link_object_ids
-            if link_id in link_id_to_index:
-                return link_id_to_index[link_id]
+        obj = sim_utilities.get_obj_from_id(
+            self._sim, object_id, self._link_id_to_ao_map
+        )
+        if (
+            obj is not None
+            and isinstance(obj, ManagedArticulatedObject)
+            and object_id in obj.link_object_ids
+        ):
+            return obj.link_object_ids[object_id]
         return None
 
     def get_agent_object_ids(self, agent_index: int) -> Set[int]:
