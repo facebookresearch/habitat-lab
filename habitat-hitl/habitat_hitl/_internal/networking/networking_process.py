@@ -35,6 +35,7 @@ from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
     DisconnectionRecord,
+    Keyframe,
     KeyframeAndMessages,
     Message,
 )
