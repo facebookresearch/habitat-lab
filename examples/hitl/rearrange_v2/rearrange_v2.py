@@ -5,15 +5,25 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, List, Tuple
+# Must call this before importing Habitat or Magnum.
+# fmt: off
+import ctypes
+import sys
 
+sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
+# fmt: on
+
+
+from typing import List, Optional
+
+# This registers collaboration episodes into this application.
+import collaboration_episode_loader  # noqa: 401
 import hydra
 import magnum as mn
 import numpy as np
 from ui import UI
 from world import World
 
-from habitat.sims.habitat_simulator import sim_utilities
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
@@ -24,8 +34,9 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
-from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
+from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
@@ -33,9 +44,11 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
+UP = mn.Vector3(0, 1, 0)
+
 
 class DataLogger:
-    def __init__(self, app_service):
+    def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._sim = app_service.sim
 
@@ -91,9 +104,95 @@ class DataLogger:
         )
 
 
+class UserData:
+    def __init__(
+        self,
+        app_service: AppService,
+        user_index: int,
+        world: World,
+        gui_agent_controller: GuiController,
+        server_sps_tracker: AverageRateTracker,
+        client_helper: ClientHelper,
+    ):
+        self.app_service = app_service
+        self.user_index = user_index
+        self.gui_agent_controller = gui_agent_controller
+        self.server_sps_tracker = server_sps_tracker
+        self.client_helper = client_helper
+        self.gui_input = app_service.remote_client_state.get_gui_input(
+            user_index
+        )
+        self.cam_transform = mn.Matrix4.identity_init()
+        self.show_gui_text = True
+        self.task_instruction = ""
+        self.signal_change_episode = False
+
+        self.camera_helper = CameraHelper(
+            app_service.hitl_config,
+            self.gui_input,
+        )
+
+        self.ui = UI(
+            hitl_config=app_service.hitl_config,
+            user_index=user_index,
+            world=world,
+            gui_controller=gui_agent_controller,
+            sim=app_service.sim,
+            gui_input=self.gui_input,
+            gui_drawer=app_service.gui_drawer,
+            camera_helper=self.camera_helper,
+        )
+
+        # HACK: Work around GuiController input.
+        # TODO: Communicate to the controller via action hints.
+        gui_agent_controller._gui_input = self.gui_input
+
+    def reset(self):
+        self.signal_change_episode = False
+        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self.ui.reset()
+
+    def update(self, dt: float):
+        if self.gui_input.get_key_down(GuiInput.KeyNS.H):
+            self.show_gui_text = not self.show_gui_text
+
+        if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+            self.signal_change_episode = True
+
+        self.client_helper.update(
+            self.user_index,
+            self._is_user_idle_this_frame(),
+            self.server_sps_tracker.get_smoothed_rate(),
+        )
+
+        self.camera_helper.update(self._get_camera_lookat_pos(), dt)
+        self.cam_transform = self.camera_helper.get_cam_transform()
+
+        if self.app_service.hitl_config.networking.enable:
+            self.app_service._client_message_manager.update_camera_transform(
+                self.cam_transform,
+                destination_mask=Mask.from_index(self.user_index),
+            )
+
+        self.ui.update()
+        self.ui.draw_ui()
+
+    def _get_camera_lookat_pos(self) -> mn.Vector3:
+        agent_root = get_agent_art_obj_transform(
+            self.app_service.sim,
+            self.gui_agent_controller._agent_idx,
+        )
+        lookat_y_offset = UP
+        lookat = agent_root.translation + lookat_y_offset
+        return lookat
+
+    def _is_user_idle_this_frame(self) -> bool:
+        return not self.gui_input.get_any_input()
+
+
 class AppStateRearrangeV2(AppState):
     """
-    Todo
+    Multiplayer rearrangement HITL application.
     """
 
     def __init__(self, app_service: AppService):
@@ -103,112 +202,66 @@ class AppStateRearrangeV2(AppState):
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
-
-        self._sim = app_service.sim
-        self._cam_transform = None
-        self._camera_user_index = 0
+        self._num_agents = len(self._gui_agent_controllers)
+        self._users = self._app_service.users
         self._paused = False
-        self._show_gui_text = True
+        self._client_helper: Optional[ClientHelper] = None
 
-        self._camera_helper = CameraHelper(
-            self._app_service.hitl_config,
-            self._app_service.gui_input,
-        )
-        self._client_helper = None
         if self._app_service.hitl_config.networking.enable:
-            self._client_helper = ClientHelper(self._app_service)
+            self._client_helper = ClientHelper(
+                self._app_service.hitl_config,
+                self._app_service.remote_client_state,
+                self._app_service.client_message_manager,
+                self._users,
+            )
+
+        self._server_user_index = 0
+        self._server_gui_input = self._app_service.gui_input
+        self._server_input_enabled = False
 
         self._sps_tracker = AverageRateTracker(2.0)
 
-        self._task_instruction = ""
-        self._data_logger = DataLogger(app_service=self._app_service)
+        self._user_data: List[UserData] = []
 
-        self._world = World(self._sim)
+        self._world = World(self._app_service.sim)
 
-        self._ui = UI(
-            hitl_config=app_service.hitl_config,
-            user_index=0,
-            world=self._world,
-            gui_controller=self._gui_agent_controllers[0],
-            sim=self._sim,
-            gui_input=app_service.gui_input,
-            gui_drawer=app_service.gui_drawer,
-            camera_helper=self._camera_helper,
-        )
-
-        if self._app_service.hitl_config.networking.enable:
-            self._app_service.remote_client_state.on_client_connected.registerCallback(
-                self._on_client_connected
+        for user_index in self._users.indices(Mask.ALL):
+            self._user_data.append(
+                UserData(
+                    app_service=app_service,
+                    user_index=user_index,
+                    world=self._world,
+                    gui_agent_controller=self._gui_agent_controllers[
+                        user_index
+                    ],
+                    client_helper=self._client_helper,
+                    server_sps_tracker=self._sps_tracker,
+                )
             )
-            self._app_service.remote_client_state.on_client_disconnected.registerCallback(
-                self._on_client_disconnected
-            )
-            self._paused = True
-
-    def _on_client_connected(self, connection: ConnectionRecord):
-        self._paused = False
-
-    def _on_client_disconnected(self, disconnection: DisconnectionRecord):
-        self._paused = True
-
-    # needed to avoid spurious mypy attr-defined errors
-    @staticmethod
-    def get_sim_utilities() -> Any:
-        return sim_utilities
 
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
 
-        object_receptacle_pairs = self._create_goal_object_receptacle_pairs()
-        self._ui.reset(object_receptacle_pairs)
-
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("extra_info") is not None:
-            self._task_instruction = current_episode.info["extra_info"][
-                "instruction"
-            ]
+
+        episode_data = (
+            collaboration_episode_loader.load_collaboration_episode_data(
+                current_episode
+            )
+        )
+        for user_index in self._users.indices(Mask.ALL):
+            self._user_data[
+                user_index
+            ].task_instruction = episode_data.instruction
+            self._user_data[user_index].reset()
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
-            client_message_manager.signal_scene_change()
+            client_message_manager.signal_scene_change(Mask.ALL)
 
-    def get_sim(self):
-        return self._app_service.sim
-
-    def _create_goal_object_receptacle_pairs(
-        self,
-    ) -> List[Tuple[List[int], List[int]]]:
-        """Parse the current episode and returns the goal object-receptacle pairs."""
-        sim = self.get_sim()
-        paired_goal_ids: List[Tuple[List[int], List[int]]] = []
-        current_episode = self._app_service.env.current_episode
-        if current_episode.info.get("extra_info") is not None:
-            extra_info = current_episode.info["extra_info"]
-            self._task_instruction = extra_info["instruction"]
-            for proposition in extra_info["evaluation_propositions"]:
-                object_ids: List[int] = []
-                object_handles = proposition["args"]["object_handles"]
-                for object_handle in object_handles:
-                    obj = sim_utilities.get_obj_from_handle(sim, object_handle)
-                    object_id = obj.object_id
-                    object_ids.append(object_id)
-                receptacle_ids: List[int] = []
-                receptacle_handles = proposition["args"]["receptacle_handles"]
-                for receptacle_handle in receptacle_handles:
-                    obj = sim_utilities.get_obj_from_handle(
-                        sim, receptacle_handle
-                    )
-                    object_id = obj.object_id
-                    # TODO: Support for finding links by handle.
-                    receptacle_ids.append(object_id)
-                paired_goal_ids.append((object_ids, receptacle_ids))
-        return paired_goal_ids
-
-    def _update_grasping_and_set_act_hints(self, user_index):
-        gui_agent_controller = self._gui_agent_controllers[user_index]
+    def _update_grasping_and_set_act_hints(self, user_index: int):
+        gui_agent_controller = self._user_data[user_index].gui_agent_controller
         assert isinstance(
             gui_agent_controller, (GuiHumanoidController, GuiRobotController)
         )
@@ -217,19 +270,21 @@ class AppStateRearrangeV2(AppState):
             distance_multiplier=1.0,
             grasp_obj_idx=None,
             do_drop=None,
-            cam_yaw=self._camera_helper.lookat_offset_yaw,
+            cam_yaw=self._user_data[
+                user_index
+            ].camera_helper.lookat_offset_yaw,
             throw_vel=None,
             reach_pos=None,
         )
 
-    def get_gui_controlled_agent_index(self, user_index):
+    def _get_gui_controlled_agent_index(self, user_index):
         return self._gui_agent_controllers[user_index]._agent_idx
 
-    def _get_controls_text(self):
+    def _get_controls_text(self, user_index: int):
         if self._paused:
             return "Session ended."
 
-        if not self._show_gui_text:
+        if not self._user_data[user_index].show_gui_text:
             return ""
 
         controls_str: str = ""
@@ -243,105 +298,106 @@ class AppStateRearrangeV2(AppState):
         controls_str += "Place object: Right click (hold)\n"
         return controls_str
 
-    def _get_status_text(self):
+    def _get_status_text(self, user_index: int):
         if self._paused:
             return ""
 
         status_str = ""
 
-        if len(self._task_instruction) > 0:
-            status_str += "Instruction: " + self._task_instruction + "\n"
-        if (
-            self._client_helper
-            and self._client_helper.do_show_idle_kick_warning
-        ):
+        if len(self._user_data[user_index].task_instruction) > 0:
+            status_str += (
+                "Instruction: "
+                + self._user_data[user_index].task_instruction
+                + "\n"
+            )
+        if self._user_data[user_index].client_helper and self._user_data[
+            user_index
+        ].client_helper.do_show_idle_kick_warning(user_index):
             status_str += (
                 "\n\nAre you still there?\nPress any key to keep playing!\n"
             )
 
         return status_str
 
-    def _update_help_text(self):
-        status_str = self._get_status_text()
+    def _update_help_text(self, user_index: int):
+        status_str = self._get_status_text(user_index)
         if len(status_str) > 0:
             self._app_service.text_drawer.add_text(
                 status_str,
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,
                 text_delta_y=-50,
+                destination_mask=Mask.from_index(user_index),
             )
 
-        controls_str = self._get_controls_text()
+        controls_str = self._get_controls_text(user_index)
         if len(controls_str) > 0:
             self._app_service.text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
+                controls_str,
+                TextOnScreenAlignment.TOP_LEFT,
+                destination_mask=Mask.from_index(user_index),
             )
-
-    def _get_camera_lookat_pos(self):
-        agent_root = get_agent_art_obj_transform(
-            self.get_sim(),
-            self.get_gui_controlled_agent_index(self._camera_user_index),
-        )
-        lookat_y_offset = mn.Vector3(0, 1, 0)
-        lookat = agent_root.translation + lookat_y_offset
-        return lookat
 
     def is_user_idle_this_frame(self) -> bool:
         return not self._app_service.gui_input.get_any_input()
 
     def _check_change_episode(self):
-        if self._paused or not self._app_service.gui_input.get_key_down(
-            GuiInput.KeyNS.ZERO
-        ):
-            return
+        # If all users signaled to change episode:
+        change_episode = True
+        for user_index in self._users.indices(Mask.ALL):
+            change_episode &= self._user_data[user_index].signal_change_episode
 
-        if self._app_service.episode_helper.next_episode_exists():
+        if (
+            change_episode
+            and self._app_service.episode_helper.next_episode_exists()
+        ):
+            # for user_index in self._users.indices(Mask.ALL):
+            #    self._user_data[user_index].signal_change_episode = False
             self._app_service.end_episode(do_reset=True)
 
-    def sim_update(self, dt, post_sim_update_dict):
+    def sim_update(self, dt: float, post_sim_update_dict):
         if (
             not self._app_service.hitl_config.networking.enable
-            and self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC)
+            and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
         ):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
             return
 
+        # Switch the server-controlled user.
+        if (
+            self._users.max_user_count > 0
+            and self._server_gui_input.get_key_down(GuiInput.KeyNS.TAB)
+        ):
+            self._server_user_index = (
+                self._server_user_index + 1
+            ) % self._users.max_user_count
+
+        # Copy server input to user input.
+        server_user_input = self._user_data[self._server_user_index].gui_input
+        if server_user_input.get_any_input():
+            self._server_input_enabled = False
+        elif self._server_gui_input.get_any_input():
+            self._server_input_enabled = True
+        if self._server_input_enabled:
+            server_user_input.copy_from(self._server_gui_input)
+
         self._sps_tracker.increment()
 
-        if self._client_helper:
-            self._client_helper.update(
-                self.is_user_idle_this_frame(),
-                self._sps_tracker.get_smoothed_rate(),
-            )
-
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
-            self._show_gui_text = not self._show_gui_text
-
-        self._check_change_episode()
-
         if not self._paused:
-            for user_index in range(self._num_users):
-                self._ui.update()  # TODO: One UI per user.
+            for user_index in self._users.indices(Mask.ALL):
+                self._user_data[user_index].update(dt)
                 self._update_grasping_and_set_act_hints(user_index)
             self._app_service.compute_action_and_step_env()
-        else:
-            # temp hack: manually add a keyframe while paused
-            self.get_sim().gfx_replay_manager.save_keyframe()
 
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt)
+        for user_index in self._users.indices(Mask.ALL):
+            self._update_help_text(user_index)
 
-        self._cam_transform = self._camera_helper.get_cam_transform()
-        post_sim_update_dict["cam_transform"] = self._cam_transform
-
-        self._ui.draw_ui()  # TODO: One UI per user.
-        self._update_help_text()
-
-    def record_state(self):
-        task_completed = self._app_service.gui_input.get_key_down(
-            GuiInput.KeyNS.ZERO
-        )
-        self._data_logger.record_state(task_completed=task_completed)
+        # Set the server camera.
+        server_cam_transform = self._user_data[
+            self._server_user_index
+        ].cam_transform
+        post_sim_update_dict["cam_transform"] = server_cam_transform
 
 
 @hydra.main(

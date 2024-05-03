@@ -309,37 +309,6 @@ class RemoteClientState:
                         continue
                     gui_input._mouse_button_held.add(MouseButton(button))
 
-        # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
-        # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
-        last_client_state = client_states[-1]
-
-        input_json = (
-            last_client_state["input"]
-            if "input" in last_client_state
-            else None
-        )
-        mouse_json = (
-            last_client_state["mouse"]
-            if "mouse" in last_client_state
-            else None
-        )
-
-        gui_input._key_held.clear()
-        gui_input._mouse_button_held.clear()
-
-        if input_json is not None:
-            for button in input_json["buttonHeld"]:
-                if button not in KeyCode:
-                    continue
-                gui_input._key_held.add(KeyCode(button))
-
-        if mouse_json is not None:
-            mouse_buttons = mouse_json["buttons"]
-            for button in mouse_buttons["buttonHeld"]:
-                if button not in MouseButton:
-                    continue
-                gui_input._mouse_button_held.add(MouseButton(button))
-
     def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         if not self._gui_drawer:

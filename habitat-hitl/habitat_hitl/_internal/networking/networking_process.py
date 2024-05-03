@@ -445,7 +445,7 @@ class NetworkManager:
             connection_record["timestamp"] = str(int(time.time()))
 
             # Copy test connection parameters from "mock_connection_params_dict".
-            if "mock_connection_params_dict" in self._networking_config:
+            if hasattr(self._networking_config, "mock_connection_params_dict"):
                 mock_connection_params_dict = (
                     self._networking_config.mock_connection_params_dict
                 )

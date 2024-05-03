@@ -8,7 +8,6 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.average_helper import AverageHelper
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
