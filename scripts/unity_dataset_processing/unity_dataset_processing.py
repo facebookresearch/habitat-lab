@@ -602,11 +602,16 @@ def create_metadata_file(results: List[Dict[str, Any]]):
             and result["status"] != "error"
             and "groups" in result
         ):
+            # Hack: Package obj mtl and png.
+            paths: List[str] = list(result["additional_dest_paths"])
+            paths.append(result["dest_path"])
+                        
             for group in result["groups"]:
-                file_rel_path = result["dest_path"].removeprefix(OUTPUT_DIR)
-                if group not in groups:
-                    groups[group] = []
-                groups[group].append(file_rel_path)
+                for path in paths:
+                    file_rel_path = path.removeprefix(OUTPUT_DIR)
+                    if group not in groups:
+                        groups[group] = []
+                    groups[group].append(file_rel_path)
 
     # Compose file content.
     content: Dict[str, Any] = {}
@@ -620,12 +625,18 @@ def create_metadata_file(results: List[Dict[str, Any]]):
         json.dump(content, f, ensure_ascii=False)
 
 
+def absoluteFilePaths(directory):
+    for dirpath,_,filenames in os.walk(directory):
+        for f in filenames:
+            yield os.path.abspath(os.path.join(dirpath, f))
+
 def process_model(args):
     job, counter, lock, total_models, verbose = args
 
     result = {
         "source_path": job.source_path,
         "dest_path": job.dest_path,
+        "additional_dest_paths": [],
         "groups": job.groups,
     }
 
@@ -643,6 +654,17 @@ def process_model(args):
 
     if Path(job.dest_path).suffix == ".obj":
         shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
+        # TODO Find mtl from obj, and texture from mtl.
+        source_parent_dir = str(Path(job.source_path).parent)
+        dest_parent_dir = str(Path(job.dest_path).parent)
+        for abs_path in absoluteFilePaths(source_parent_dir):
+            _, file_extension = os.path.splitext(abs_path)
+            if file_extension in [".mtl", ".png"]:
+                filename = Path(abs_path).name
+                dest = os.path.join(dest_parent_dir, filename)
+                shutil.copyfile(abs_path, dest, follow_symlinks=True)
+                result["additional_dest_paths"].append(dest)
+                print(dest)
         result["status"] = "copied"
         return result
     job_type: JobType = job.job_type    
