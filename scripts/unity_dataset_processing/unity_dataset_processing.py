@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-from enum import Enum
 import gzip
 import json
 import os
@@ -13,6 +12,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
+from enum import Enum
 from multiprocessing import Manager, Pool
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Set
@@ -45,6 +45,7 @@ def resolve_relative_path(path: str) -> str:
         else:
             output_path.append(component)
     return os.path.join("", *output_path)
+
 
 class JobType(Enum):
     # Copy the asset as-is, skipping all processing.
@@ -369,9 +370,7 @@ class ObjectDataset:
                 object_render_asset_dir, object_render_asset_file_name
             )
             resolved_path = resolve_relative_path(object_render_asset_path)
-            self.render_assets.add(
-                resolve_relative_path(resolved_path)
-            )
+            self.render_assets.add(resolve_relative_path(resolved_path))
             # > "2a0a80bf0b1b247799ed3a49bfdc9f9bf4fcf2b3"
             stem = Path(object_config_json_path).stem.split(".")[0]
             self.stem_to_resolved_path[stem] = resolved_path
@@ -483,7 +482,7 @@ class GroupedSceneAssets:
             self.articulated_objects.append(AssetInfo(asset_path, groups))
 
 
-#class EpisodeObjectAssets:
+# class EpisodeObjectAssets:
 #    """
 #    All objects used in a episode.
 #    """
@@ -491,7 +490,7 @@ class GroupedSceneAssets:
 #        for asset in assets:
 #            scene_objects = scene_dataset.resolve_object(asset)
 #            for scene_object in scene_objects:
-                
+
 
 class EpisodeSet:
     """
@@ -605,7 +604,7 @@ def create_metadata_file(results: List[Dict[str, Any]]):
             # Hack: Package obj mtl and png.
             paths: List[str] = list(result["additional_dest_paths"])
             paths.append(result["dest_path"])
-                        
+
             for group in result["groups"]:
                 for path in paths:
                     file_rel_path = path.removeprefix(OUTPUT_DIR)
@@ -626,9 +625,10 @@ def create_metadata_file(results: List[Dict[str, Any]]):
 
 
 def absoluteFilePaths(directory):
-    for dirpath,_,filenames in os.walk(directory):
+    for dirpath, _, filenames in os.walk(directory):
         for f in filenames:
             yield os.path.abspath(os.path.join(dirpath, f))
+
 
 def process_model(args):
     job, counter, lock, total_models, verbose = args
@@ -667,7 +667,7 @@ def process_model(args):
                 print(dest)
         result["status"] = "copied"
         return result
-    job_type: JobType = job.job_type    
+    job_type: JobType = job.job_type
     if job_type == JobType.COPY:
         shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
         result["status"] = "copied"
@@ -852,7 +852,7 @@ def main():
     additional_asset_group_size = 50
     objects_in_current_group = 0
     current_group_index = 0
-    #shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
+    # shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
     processed_objects: Set[str] = set()
     for episode in episode_set.episodes:
         rigid_objs = episode["rigid_objs"]
@@ -861,11 +861,13 @@ def main():
             rigid_obj_stem = Path(rigid_obj[0]).stem.split(".")[0]
             for object_dataset in episode_set.additional_datasets.values():
                 if rigid_obj_stem in object_dataset.stem_to_resolved_path:
-                    resolved_rigid_objs = [object_dataset.stem_to_resolved_path[rigid_obj_stem]]
+                    resolved_rigid_objs = [
+                        object_dataset.stem_to_resolved_path[rigid_obj_stem]
+                    ]
                     continue
             # Look for the object in the scene dataset.
             # HACK: We create duplicates for these objects.
-            #for scene_dataset in episode_set.scene_datasets.values():
+            # for scene_dataset in episode_set.scene_datasets.values():
             #    if rigid_obj_stem in scene_dataset.objects:
             #        resolved_rigid_objs = scene_dataset.objects[rigid_obj_stem]
             #        for resolved in resolved_rigid_objs:
@@ -888,7 +890,7 @@ def main():
             objects_in_current_group -= additional_asset_group_size
             current_group_index += 1
     ## Sloppy: Add missing assets.
-    #for dataset in episode_set.additional_datasets.values():
+    # for dataset in episode_set.additional_datasets.values():
     #    for asset_path in dataset.render_assets:
     #        jobs.append(
     #            Job(
@@ -918,7 +920,7 @@ def main():
     # Add scene objects.
     # Grouped by scenes, excluding objects also in episodes.
     for obj in episode_set.grouped_scene_assets.objects:
-        #if obj.asset_path in shared_scene_objects:
+        # if obj.asset_path in shared_scene_objects:
         #    continue
         jobs.append(
             Job(
@@ -955,9 +957,7 @@ def main():
         )
 
     # Add humanoid models
-    for filename in Path("data/humanoids/humanoid_data").rglob(
-        "*.glb"
-    ):
+    for filename in Path("data/humanoids/humanoid_data").rglob("*.glb"):
         jobs.append(
             Job(
                 asset_path=str(filename),
@@ -971,13 +971,13 @@ def main():
     # Verify jobs.
     verify_jobs(jobs, OUTPUT_DIR)
 
-    #groups = {}
-    #for job in jobs:
+    # groups = {}
+    # for job in jobs:
     #    for group in job.groups:
     #        if group not in groups:
     #            groups[group] = 0
     #        groups[group] += 1
-    #for group, count in groups.items():
+    # for group, count in groups.items():
     #    print(f"{group}: {str(count)}")
 
     # Start processing.
