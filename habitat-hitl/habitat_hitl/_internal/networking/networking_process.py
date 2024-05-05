@@ -26,6 +26,7 @@ from habitat_hitl._internal.networking.interprocess_record import (
 )
 from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
+    get_error_keyframe,
     get_user_keyframe,
     update_consolidated_keyframe,
     update_consolidated_messages,
@@ -35,6 +36,7 @@ from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
     DisconnectionRecord,
+    Keyframe,
     KeyframeAndMessages,
     Message,
 )
@@ -93,6 +95,7 @@ class Client:
         self.recent_connection_activity_timestamp = self.connection_timestamp
         self.waiting_for_client_ready = True
         self.needs_consolidated_keyframe = True
+        self.is_being_kicked = False
 
 
 class NetworkManager:
@@ -210,33 +213,66 @@ class NetworkManager:
             self.has_connection()
             and user_index in self._user_slots
             and not self._user_slots[user_index].waiting_for_client_ready
+            and not self._user_slots[user_index].is_being_kicked
             and not self._waiting_for_app_ready
         )
+    
+    async def _kick(self, slot: Client, error_keyframe: Keyframe) -> None:
+        """
+        Kick a user. Do not call this directly.
+        """
+        # Convert error keyframe to JSON string
+        wrapper_obj = {"keyframes": [error_keyframe]}
+        json_keyframe = json.dumps(wrapper_obj)
 
-    def _check_kick_client(self):
-        kicked_user_indices = (
+        # Send keyframe.
+        try:
+            await slot.socket.send(json_keyframe)
+        except:
+            self.handle_disconnect(slot.connection_id)
+
+        # Kick.
+        await slot.socket.close()
+    
+    def _process_kick_signals(self) -> Dict[int, Keyframe]:
+        kick_signals = (
             self._interprocess_record.get_queued_kick_signals()
         )
-        for user_index in kicked_user_indices:
-            if user_index in self._user_slots:
-                print(f"Kicking client {user_index}.")
-                user_slot = self._user_slots[user_index]
-                # Don't await this; we want to keep checking keyframes.
-                # Beware that the connection will remain alive for some time after this.
-                asyncio.create_task(user_slot.socket.close())
+        
+        for kick_signal in kick_signals:
+            user_index = kick_signal.user_index
+            if user_index not in self._user_slots:
+                continue
+
+            user_slot = self._user_slots[user_index]
+            if user_slot.is_being_kicked:
+                continue
+
+            print(f"Kicking client {user_index}.")
+            user_slot.is_being_kicked = True
+            error_message = kick_signal.error_message
+            error_keyframe = get_error_keyframe(error_message)
+
+            # Don't await this; we want to keep checking keyframes.
+            # Beware that the connection will remain alive for some time after this.
+            # 'user_slot.is_being_kicked' is used to control for this.
+            asyncio.create_task(self._kick(user_slot, error_keyframe))
+            
+
 
     async def send_keyframes(self) -> None:
         # this runs continuously even when there is no client connection
         user_json_strings: Dict[int, str] = {}
         while True:
             user_json_strings.clear()
-            self._check_kick_client()
 
             time_start_ns = time.time_ns()
             inc_keyframes_and_messages = (
                 self._interprocess_record.get_queued_keyframes()
             )
             inc_keyframes = self._interprocess_record.get_queued_keyframes()
+
+            self._process_kick_signals()
 
             if len(inc_keyframes_and_messages) > 0:
                 # consolidate all inc keyframes into one inc_keyframe

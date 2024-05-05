@@ -12,6 +12,7 @@ from habitat_hitl.core.types import (
     ConnectionRecord,
     DisconnectionRecord,
     KeyframeAndMessages,
+    KickSignal,
 )
 
 
@@ -26,7 +27,7 @@ class InterprocessRecord:
         self._client_state_queue: Queue[ClientState] = Queue()
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
-        self._kick_signal_queue: Queue[int] = Queue()
+        self._kick_signal_queue: Queue[KickSignal] = Queue()
 
         # TODO: Add config for this.
         #       This fixes an issue that occurs when Unity connects when HITL launches.
@@ -46,8 +47,8 @@ class InterprocessRecord:
         # Acquire the semaphore to ensure the simulation doesn't advance too far ahead
         self._keyframe_queue.put(keyframe)
 
-    def send_kick_signal_to_networking_thread(self, user_index: int) -> None:
-        self._kick_signal_queue.put(user_index)
+    def send_kick_signal_to_networking_thread(self, kick_signal: KickSignal) -> None:
+        self._kick_signal_queue.put(kick_signal)
 
     def send_client_state_to_main_thread(
         self, client_state: ClientState
@@ -97,6 +98,6 @@ class InterprocessRecord:
         """Dequeue all disconnection records."""
         return self._dequeue_all(self._disconnection_record_queue)
 
-    def get_queued_kick_signals(self) -> List[int]:
+    def get_queued_kick_signals(self) -> List[KickSignal]:
         """Dequeue all kick signals."""
         return self._dequeue_all(self._kick_signal_queue)

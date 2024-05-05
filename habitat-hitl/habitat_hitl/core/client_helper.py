@@ -131,7 +131,7 @@ class ClientHelper:
             seconds=self._max_idle_duration
         ):
             print(f"User {user_index} is idle. Kicking.")
-            self._remote_client_state.kick(Mask.from_index(user_index))
+            self._remote_client_state.kick(Mask.from_index(user_index, "Maximum idle time reached."))
 
     def _update_frame_counter_and_display_latency(
         self, user_index: int, server_sps: float

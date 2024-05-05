@@ -176,3 +176,12 @@ def get_empty_keyframe() -> Keyframe:
     keyframe["lights"] = []
     # todo: lights, userTransforms
     return keyframe
+
+
+
+def get_error_keyframe(message: str) -> Keyframe:
+    keyframe = get_empty_keyframe()
+    keyframe["messages"] = {
+        "texts": [message]
+    }
+    return keyframe

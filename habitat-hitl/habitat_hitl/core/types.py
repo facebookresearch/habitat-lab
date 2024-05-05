@@ -16,6 +16,11 @@ Keyframe = DataDict
 # Server -> Client communication dictionary that is user specific and added to keyframes before sending the payload to the user (keyframe["message"]).
 Message = DataDict
 
+# Kick signal.
+@dataclass
+class KickSignal:
+    user_index: int
+    error_message: str
 
 # Keyframe and all user messages for a specific frame.
 @dataclass

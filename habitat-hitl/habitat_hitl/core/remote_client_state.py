@@ -25,6 +25,7 @@ from habitat_hitl.core.types import (
     ClientState,
     ConnectionRecord,
     DisconnectionRecord,
+    KickSignal,
 )
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_sim.geo import Ray
@@ -500,8 +501,9 @@ class RemoteClientState:
             self._clicked_ui_buttons[user_index].clear()
             self._textboxes[user_index].clear()
 
-    def kick(self, user_mask: Mask) -> None:
+    def kick(self, user_mask: Mask, error_message: str = "") -> None:
         for user_index in self._users.indices(user_mask):
+            kick_signal = KickSignal(user_index, error_message)
             self._interprocess_record.send_kick_signal_to_networking_thread(
-                user_index
+                kick_signal
             )

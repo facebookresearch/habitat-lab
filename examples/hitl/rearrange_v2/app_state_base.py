@@ -60,6 +60,6 @@ class AppStateBase(AppState):
                 destination_mask=Mask.ALL,
             )
 
-    def _kick_all_users(self) -> None:
+    def _kick_all_users(self, error_message = "") -> None:
         "Kick all users."
-        self._app_service.remote_client_state.kick(Mask.ALL)
+        self._app_service.remote_client_state.kick(Mask.ALL, error_message)
