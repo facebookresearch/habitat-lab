@@ -38,3 +38,4 @@ habitat_hitl:
     client_sync:
       server_camera: False
       server_input: False
+    client_max_idle_duration: 180.0

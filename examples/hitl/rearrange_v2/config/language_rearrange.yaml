@@ -85,7 +85,7 @@ habitat:
       enable_physics: True
   dataset:
     type: "CollaborationDataset-v0"
-    data_path: "2024_04_22_vendor_133_eps_3.json.gz"
+    data_path: "cycled_tuts.json.gz"
     # Hack
     scenes_dir: "data/fpss"
 
