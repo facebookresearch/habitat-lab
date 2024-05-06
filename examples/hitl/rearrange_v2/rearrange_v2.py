@@ -34,8 +34,22 @@ from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 try:
     from habitat_llm.agent.env import dataset  # noqa: F401
+    from habitat_llm.agent.env import (
+        register_actions,
+        register_measures,
+        register_sensors,
+    )
 except ImportError:
     print("Habitat-LLM not installed. Skipping import.")
+
+
+# -------- HABITAT-LLM SPECIFIC CODE --------
+
+
+def register_habitat_llm_extensions(config):
+    register_actions(config)
+    register_measures(config)
+    register_sensors(config)
 
 
 class DataLogger:
@@ -93,6 +107,9 @@ class DataLogger:
         self._app_service.step_recorder.record(
             "task_completed", task_completed
         )
+
+
+# -------- HABITAT-LLM SPECIFIC CODE --------
 
 
 class AppStateRearrangeV2(AppState):
@@ -347,6 +364,8 @@ class AppStateRearrangeV2(AppState):
     version_base=None, config_path="config", config_name="rearrange_v2"
 )
 def main(config):
+    if hasattr(config, "habitat_llm") and config.habitat_llm.enable:
+        register_habitat_llm_extensions(config)
     hitl_main(
         config,
         lambda app_service: AppStateRearrangeV2(app_service),

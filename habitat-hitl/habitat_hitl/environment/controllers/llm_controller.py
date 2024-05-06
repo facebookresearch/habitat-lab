@@ -1,5 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
+import numpy as np
 from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
@@ -30,6 +31,8 @@ class LLMController(SingleAgentBaselinesController):
         self._gym_habitat_env = gym_habitat_env
         self._habitat_env = gym_habitat_env.unwrapped.habitat_env
         self._agent_idx = agent_idx
+        # TODO: gather this from config
+        self._agent_action_length = 28
 
         with habitat.config.read_write(self._config):
             fix_config(self._config)
@@ -51,9 +54,11 @@ class LLMController(SingleAgentBaselinesController):
         # NOTE: using instantiate here, but given this is planning for a single agent
         # always will this ever be an option of Centralized vs Decentralized? Maybe
         # DAG...?
-        self.planner = instantiate(self._config.planner)
+        # NOTE: assuming use of DecentralizedLLMPlanner here
+        planner = instantiate(self._config.evaluation.agents.agent_0.planner)
+        self.planner = planner(env_interface=self.environment_interface)
         self.planner.agents = self.initialize_agents(
-            self._config.planner.agents
+            self._config.evaluation.agents
         )
 
     def initialize_agents(self, agent_configs):
@@ -76,20 +81,22 @@ class LLMController(SingleAgentBaselinesController):
     def on_environment_reset(self):
         # NOTE: the following ONLY resets self._test_recurrent_hidden_states,
         # self._prev_actions and self._not_done_masks
-        super().on_environment_reset()
+        # super().on_environment_reset()
         self.planner.reset()
-        self.environment_interface.reset()
+        self.environment_interface.reset_environment()
 
         self.current_instruction = (
             self.environment_interface.hab_env.current_episode.instruction
         )
 
-    def act(self, observations):
+    def act(self, observations, *args, **kwargs):
         # NOTE: update the world state to reflect the new observations
         self.environment_interface.update_world_state(observations)
 
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
+        # TODO: looping needed here until a physical low-level-action is returned
+        low_level_actions: Union[dict, np.ndarray] = {}
         (
             low_level_actions,
             planner_info,
@@ -98,5 +105,12 @@ class LLMController(SingleAgentBaselinesController):
             self.current_instruction,
             observations,
             self.environment_interface.world_graph,
+            verbose=True,
         )
+        if low_level_actions:
+            low_level_actions = low_level_actions[str(self._agent_idx)]
+            # NOTE: truncating the action here, as this includes both Spot and Human actions
+            low_level_actions = low_level_actions[:-248]
+        else:
+            low_level_actions = np.zeros(self._agent_action_length)
         return low_level_actions

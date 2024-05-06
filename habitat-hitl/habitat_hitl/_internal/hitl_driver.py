@@ -365,8 +365,8 @@ class HitlDriver(AppDriver):
             self._remote_client_state.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
-        if self.ctrl_helper:
-            self.ctrl_helper.on_environment_reset()
+        # if self.ctrl_helper:
+        #     self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()

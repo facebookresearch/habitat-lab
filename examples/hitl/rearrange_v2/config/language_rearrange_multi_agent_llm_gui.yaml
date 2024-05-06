@@ -6,17 +6,17 @@ defaults:
   # - /habitat/task: task_config_base
 
   # Human setup
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
+  - /habitat_conf/habitat_agent@habitat.simulator.agents.agent_1: rgbd_head_rgbd_arm_agent_vis
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
   # following are from hab-llm entry config. Questions:
   # 1. What is the difference between
   #    habitat.task.actions.agent_1_humanoid_base_velocity and
   #    habitat.task.actions.agent_1_base_velocity?
   # 2. What is the humanoidjoint_action? Do we need it here?
-  - /habitat/task/actions@habitat.task.actions.agent_1_humanoid_base_velocity: humanoid_base_velocity
-  - /habitat/task/actions@habitat.task.actions.agent_1_humanoidjoint_action: humanoidjoint_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_humanoid_base_velocity: humanoid_base_velocity
+  # - /habitat/task/actions@habitat.task.actions.agent_1_humanoidjoint_action: humanoidjoint_action
   # - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
-  # - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   # Spot setup
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
   - /habitat_conf/habitat_agent@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_rgbd_jaw_agent_vis
@@ -82,30 +82,30 @@ habitat:
       - agent_0_joint
       - agent_0_ee_pos
       - agent_0_is_holding
-      # - agent_0_dynamic_obj_goal_sensor
-      # - agent_0_dynamic_goal_to_agent_gps_compass
+      - agent_0_dynamic_obj_goal_sensor
+      - agent_0_dynamic_goal_to_agent_gps_compass
       # dynamic_obj_start_sensor is mapped into dynamic_obj_start_sensor automatically
       # due to sensor mapping
-      # - agent_0_dynamic_obj_start_sensor
-      # - agent_0_goal_to_agent_gps_compass
+      - agent_0_dynamic_obj_start_sensor
+      - agent_0_goal_to_agent_gps_compass
       - agent_0_humanoid_detector_sensor
       - agent_0_articulated_agent_jaw_rgb
       - agent_0_articulated_agent_jaw_depth
       - agent_0_articulated_agent_jaw_panoptic
 
       # - agent_1_third_rgb
-      # - agent_1_articulated_agent_arm_depth
-      # - agent_1_articulated_agent_arm_rgb
-      # - agent_1_articulated_agent_arm_panoptic
+      - agent_1_articulated_agent_arm_depth
+      - agent_1_articulated_agent_arm_rgb
+      - agent_1_articulated_agent_arm_panoptic
       - agent_1_head_depth
       - agent_1_head_rgb
       - agent_1_relative_resting_position
       - agent_1_joint
       - agent_1_ee_pos
       - agent_1_is_holding
-      # - agent_1_dynamic_obj_goal_sensor
-      # - agent_1_dynamic_goal_to_agent_gps_compass
-      # - agent_1_dynamic_obj_start_sensor
+      - agent_1_dynamic_obj_goal_sensor
+      - agent_1_dynamic_goal_to_agent_gps_compass
+      - agent_1_dynamic_obj_start_sensor
 # --- habitat-llm block
   environment:
     max_episode_steps: 750  # this is 20000 in habitat-llm
