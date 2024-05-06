@@ -667,7 +667,14 @@ class RearrangeSim(HabitatSim):
             for aoi_handle in ao_mgr.get_object_handles():
                 ao = ao_mgr.get_object_by_handle(aoi_handle)
                 if self._kinematic_mode:
-                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                    if (
+                        ao.motion_type
+                        == habitat_sim.physics.MotionType.DYNAMIC
+                    ):
+                        # NOTE: allow STATIC objects in kinematic mode
+                        ao.motion_type = (
+                            habitat_sim.physics.MotionType.KINEMATIC
+                        )
                     # remove any existing motors when converting to kinematic AO
                     for motor_id in ao.existing_joint_motor_ids:
                         ao.remove_joint_motor(motor_id)
