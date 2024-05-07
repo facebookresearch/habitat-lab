@@ -131,6 +131,7 @@ def test_pddl_actions():
     poss_actions = pddl.get_possible_actions()
     for action in poss_actions:
         action.apply_if_true(sim_info)
+    pddl._sim_info.sim.close()
 
 
 def test_pddl_action_postconds():
@@ -173,6 +174,7 @@ def test_pddl_action_postconds():
         x.compact_str == "object_at(goal0|0,TARGET_goal0|0)"
         for x in true_preds
     )
+    sim_info.sim.close()
 
 
 TEST_CFG_PATHS = list(
@@ -230,16 +232,17 @@ def test_rearrange_tasks(test_cfg_path):
         env_class=env_class, config=config
     )
 
-    with env:
-        for _ in range(2):
-            env.reset()
-            for _ in range(MAX_PER_TASK_TEST_STEPS):
-                action = env.action_space.sample()
-                _, _, done, _ = env.step(  # type:ignore[assignment]
-                    action=action
-                )
-                if done:
-                    break
+    for _ in range(2):
+        env.reset()
+        for _ in range(MAX_PER_TASK_TEST_STEPS):
+            action = env.action_space.sample()
+            _, _, done, _ = env.step(  # type:ignore[assignment]
+                action=action
+            )
+            if done:
+                break
+
+    env.close()
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state

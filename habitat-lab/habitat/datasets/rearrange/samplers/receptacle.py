@@ -1037,8 +1037,13 @@ def get_recs_from_filter_file(
     with open(rec_filter_filepath, "r") as f:
         filter_json = json.load(f)
         for filter_type in filter_types:
-            for filtered_unique_name in filter_json[filter_type]:
-                filtered_unique_names.append(filtered_unique_name)
+            if filter_type in filter_json:
+                for filtered_unique_name in filter_json[filter_type]:
+                    filtered_unique_names.append(filtered_unique_name)
+            else:
+                logger.warning(
+                    f"The filter file '{rec_filter_filepath}' does not contain the requested filter type '{filter_type}'."
+                )
     return list(set(filtered_unique_names))
 
 

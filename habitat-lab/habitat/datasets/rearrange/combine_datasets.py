@@ -7,11 +7,11 @@
 """
 Script to combine multiple dataset files into one. For example:
 ```
-python habitat/datasets/rearrange/combine_datasets.py data/datasets/replica_cad/rearrange/v1/train/rearrange_easy_1.json.gz data/datasets/replica_cad/rearrange/v1/train/rearrange_easy_2.json.gz data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+python habitat/datasets/rearrange/combine_datasets.py data/datasets/replica_cad/rearrange/v2/train/rearrange_easy_1.json.gz data/datasets/replica_cad/rearrange/v2/train/rearrange_easy_2.json.gz data/datasets/replica_cad/rearrange/v2/train/rearrange_easy.json.gz
 ```
 Or if you want to combine every file of the form `rearrange_easy_X.json.gz` you can use regex:
 ```
-python habitat/datasets/rearrange/combine_datasets.py data/datasets/replica_cad/rearrange/v1/train/rearrange_easy_?.json.gz data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+python habitat/datasets/rearrange/combine_datasets.py data/datasets/replica_cad/rearrange/v2/train/rearrange_easy_?.json.gz data/datasets/replica_cad/rearrange/v2/train/rearrange_easy.json.gz
 ```
 
 """

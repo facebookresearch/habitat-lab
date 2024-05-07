@@ -10,9 +10,12 @@ habitat:
   # various config args to ensure the episode never ends
   environment:
     max_episode_steps: 0
+    # Ensure that the episode iterator can be controlled by specifying episode IDs.
     iterator_options:
-      # For the demo, we want to showcase the episodes in the specified order
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
       shuffle: False
+      group_by_scene: False
   task:
     measurements:
       rearrange_cooperate_reward:

@@ -9,6 +9,7 @@ from typing import Optional
 
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.average_helper import AverageHelper
+from habitat_hitl.core.user_mask import Mask
 
 
 class ClientHelper:
@@ -18,6 +19,7 @@ class ClientHelper:
 
     def __init__(self, app_service: AppService):
         self._app_service = app_service
+        self._remote_client_state = app_service.remote_client_state
         self._frame_counter = 0
 
         self._client_frame_latency_avg_helper = AverageHelper(
@@ -73,9 +75,8 @@ class ClientHelper:
                     self._show_idle_kick_warning = True
 
                 if self._idle_frame_counter > max_idle_frames:
-                    self._app_service.client_message_manager.signal_kick_client(
-                        self._client_connection_id
-                    )
+                    # TODO: We only support 1 user at the moment.
+                    self._remote_client_state.kick(Mask.from_index(0))
                     self._idle_frame_counter = None
             else:
                 # reset counter whenever the client isn't idle

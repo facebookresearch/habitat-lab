@@ -48,6 +48,23 @@ def update_consolidated_keyframe(
                 if not found:
                     consolidated_keyframe["stateUpdates"].append(state_update)
 
+    # add or update instance metadata
+    if "metadata" in inc_keyframe:
+        ensure_list(consolidated_keyframe, "metadata")
+        for metadata_container in inc_keyframe["metadata"]:
+            key = metadata_container["instanceKey"]
+            metadata = metadata_container["metadata"]
+            if "metadata" in consolidated_keyframe:
+                found = False
+                for con_metadata_update in consolidated_keyframe["metadata"]:
+                    if con_metadata_update["instanceKey"] == key:
+                        con_metadata_update["metadata"] = metadata
+                        found = True
+                if not found:
+                    consolidated_keyframe["metadata"].append(
+                        metadata_container
+                    )
+
     # add or update rigUpdates
     if "rigUpdates" in inc_keyframe:
         for rig_update in inc_keyframe["rigUpdates"]:
@@ -101,6 +118,14 @@ def update_consolidated_keyframe(
                 if entry["instanceKey"] not in inc_deletions
             ]
 
+        # remove instance metadata for the deleted keys
+        if "metadata" in consolidated_keyframe:
+            consolidated_keyframe["metadata"] = [
+                entry
+                for entry in consolidated_keyframe["metadata"]
+                if entry["instanceKey"] not in inc_deletions
+            ]
+
     if "message" in inc_keyframe:
         inc_message = inc_keyframe["message"]
         # add/update all messages
@@ -119,6 +144,7 @@ def get_empty_keyframe() -> Keyframe:
     keyframe["creations"] = []
     keyframe["rigCreations"] = []
     keyframe["stateUpdates"] = []
+    keyframe["metadata"] = []
     keyframe["rigUpdates"] = []
     keyframe["deletions"] = []
     keyframe["lightsChanged"] = False
