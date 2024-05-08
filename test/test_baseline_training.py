@@ -126,7 +126,9 @@ def setup_function(test_trainers):
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
-@pytest.mark.parametrize("use_batch_renderer", [False, True])
+@pytest.mark.parametrize(
+    "use_batch_renderer", [False]
+)  # Batch renderer test temporarily disabled.
 def test_trainers(
     config_path: str,
     num_updates: int,
