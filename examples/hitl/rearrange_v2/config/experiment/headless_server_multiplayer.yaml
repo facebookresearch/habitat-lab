@@ -14,4 +14,4 @@ habitat_hitl:
 
 rearrange_v2:
   data_collection:
-    s3_path: "Phase_2/pilot/multi/"
+    s3_path: "Phase_2/main/multi/"
