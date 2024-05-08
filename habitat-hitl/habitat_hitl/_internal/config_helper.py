@@ -71,10 +71,11 @@ def update_config(
                 )
 
             # avoid camera sensors for GUI-controlled agents
-            # gui_controlled_agent_config = get_agent_config(
-            #     sim_config, agent_id=gui_controlled_agent_index
-            # )
-            # gui_controlled_agent_config.sim_sensors.clear()
+            gui_controlled_agent_config = get_agent_config(
+                sim_config, agent_id=gui_controlled_agent_index
+            )
+            if config.habitat_hitl.remove_gui_sensors:
+                gui_controlled_agent_config.sim_sensors.clear()
 
             lab_sensor_names = ["has_finished_oracle_nav"]
             for lab_sensor_name in lab_sensor_names:

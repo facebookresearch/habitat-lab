@@ -26,6 +26,8 @@ habitat_baselines:
     policy:
 
 habitat_hitl:
+  remove_visual_sensors: True
+  remove_gui_sensors: True
   window:
     title: "Rearrange"
     width: 1300

@@ -19,7 +19,7 @@ habitat_llm:
     # agent_1:
     #   gui_controlled: True
 world_model:
-  partial_obs: False
+  partial_obs: True
 habitat:
   # various config args to ensure the episode never ends
   environment:
@@ -65,6 +65,8 @@ hydra:
     dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}-${file_stem:${habitat.dataset.data_path}}
 
 habitat_hitl:
+  remove_visual_sensors: False
+  remove_gui_sensors: False
   window:
     title: "Rearrange"
     width: 1300
@@ -80,4 +82,3 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
-  remove_visual_sensors: False
