@@ -339,7 +339,7 @@ class ObjectSampler:
                         height=1.3,
                         nav_to_min_distance=self.nav_to_min_distance,
                         nav_island=self.largest_island_id,
-                        target_object_id=new_object.object_id,
+                        target_object_ids=[new_object.object_id],
                     ):
                         logger.info(
                             "   - object is not accessible from navmesh, rejecting placement."
@@ -358,7 +358,7 @@ class ObjectSampler:
                     height=1.3,
                     nav_to_min_distance=self.nav_to_min_distance,
                     nav_island=self.largest_island_id,
-                    target_object_id=new_object.object_id,
+                    target_object_ids=[new_object.object_id],
                 ):
                     logger.info(
                         "   - object is not accessible from navmesh, rejecting placement."
