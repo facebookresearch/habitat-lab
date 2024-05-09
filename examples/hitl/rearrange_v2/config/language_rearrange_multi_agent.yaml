@@ -13,8 +13,8 @@ defaults:
 habitat:
   task:
     actions:
-      agent_1_arm_action:
-        grip_controller: MagicGraspAction
+      #agent_1_arm_action:
+      #  grip_controller: MagicGraspAction
       agent_1_base_velocity:
         lin_speed: 10.0
         ang_speed: 300
