@@ -102,9 +102,18 @@ class AppStateLoadEpisode(AppStateBase):
 
         # Set the ID of the next episode to play in lab.
         next_episode_id = data.episode_ids[episode_index]
-        self._app_service.episode_helper.set_next_episode_by_id(
-            next_episode_id
-        )
+        print(f"Next episode index: {next_episode_id}.")
+        try:
+            next_episode_index = int(next_episode_id)
+            self._app_service.episode_helper.set_next_episode_by_index(
+                next_episode_index
+            )
+        except Exception as e:
+            print(f"ERROR: Invalid episode index {next_episode_id}. {e}")
+            print(f"Loading episode index 0 to avoid crashing the application.")
+            self._app_service.episode_helper.set_next_episode_by_index(
+                0
+            )
 
         # Once an episode ID has been set, lab needs to be reset to load the episode.
         self._app_service.end_episode(do_reset=True)

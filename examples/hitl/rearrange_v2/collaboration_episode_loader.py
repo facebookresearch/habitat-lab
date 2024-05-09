@@ -14,8 +14,8 @@ try:
     from habitat_llm.agent.env.dataset import CollaborationEpisode
 
     collaboration_episode_enabled = True
-except ImportError:
-    print("Unable to load CollaborationDataset episode format.")
+except ImportError as ex:
+    print(f"Unable to load CollaborationDataset episode format. {ex}")
     collaboration_episode_enabled = False
 
 
