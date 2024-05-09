@@ -35,7 +35,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
 )
-from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_hitl.environment.hablab_utils import get_agent_art_obj, get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 
@@ -257,11 +257,17 @@ class UserData:
         )
 
     def _get_camera_lookat_pos(self) -> mn.Vector3:
-        agent_root = get_agent_art_obj_transform(
+        agent = get_agent_art_obj(
             self.app_service.sim,
             self.gui_agent_controller._agent_idx,
         )
-        lookat_y_offset = UP
+        agent_root = agent.transformation
+        # HACK: Camera height values are hardcoded by agent type.
+        # TODO: Agent transform may not be grounded.
+        height_factor = 1.0
+        if isinstance(self.gui_agent_controller, GuiRobotController):
+            height_factor = 0.6
+        lookat_y_offset = UP * height_factor
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
