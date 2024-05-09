@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
+import numpy as np
 
 import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
@@ -1218,6 +1219,93 @@ def get_object_regions(
     )
 
     return sim.semantic_scene.get_regions_for_points(key_points)
+
+
+def get_floor_point_in_region(
+    sim: habitat_sim.Simulator,
+    region_index: int,
+    island_index: int = -1,
+    max_center_samples: int = 100,
+    max_global_samples: int = 1000,
+    quick_return: bool = False,
+) -> Optional[mn.Vector3]:
+    """
+    Sample the navmesh to find a point on the floor within a given region.
+
+    This method attempts to find a point in the region with maximum navmesh clearance by sorting candidates on `distance_to_closest_obstacle`.
+    Because this method uses multiple sampling passes it is advised to use it in initialization and pre-processes rather than within an application loop.
+
+    :param sim: The Simulator instance.
+    :param region_index: The index of the Region within which to sample.
+    :param island_index: The index of the navmesh island representing the active floor area. Default -1 is all islands. Should be set to the same island used for other navmesh operations in the application. For example, the largest indoor island for the scene.
+    :param max_center_samples: The number of samples near the center point to attempt if applicable. This will be done first. <=0 skips center sampling.
+    :param max_global_samples: The number of global navmesh samples to attempt if center point samples were unsuccessful. <=0 skips this step.
+    :param quick_return: If True, the first valid sample will be returned instead of continuing to search for a better sample. Use this option when speed is more important than the quality or consistency.
+
+    :return: The sampled floor point within the given region or None if a point could not be found.
+    """
+
+    # get the SemanticRegion from the index
+    region = sim.semantic_scene.regions[region_index]
+
+    #################
+    # sampling points:
+    attempts = 0
+    best_sample: Optional[mn.Vector3] = None
+    best_navmesh_dist = -1
+
+    # first try aiming at the center (nice for convex regions)
+    if max_center_samples > 0:
+        # get the center of the region's bounds and attempt to snap it to the navmesh
+        region_center = region.aabb.center
+        region_center_snap = sim.pathfinder.snap_point(
+            region_center, island_index=island_index
+        )
+
+        if not np.isnan(region_center_snap[0]):
+            # sampling near the center
+            while attempts < max_center_samples:
+                # get a point within 1 meter of the snapped region center if possible
+                sample = sim.pathfinder.get_random_navigable_point_near(
+                    region_center_snap, radius=1.0, island_index=island_index
+                )
+                if not np.isnan(sample[0]) and region.contains(sample):
+                    navmesh_dist = sim.pathfinder.distance_to_closest_obstacle(
+                        sample
+                    )
+                    if navmesh_dist > best_navmesh_dist:
+                        # found a valid point in a more "open" part of the region
+                        best_sample = sample
+                        best_navmesh_dist = navmesh_dist
+                        if quick_return:
+                            # short-circuit to return the first valid sample
+                            return best_sample
+                attempts += 1
+        else:
+            # region center doesn't snap, so move on
+            pass
+
+    # try again without aiming for the center (in case of concave region)
+    if best_sample is None:
+        attempts = 0
+        while attempts < max_global_samples:
+            sample = sim.pathfinder.get_random_navigable_point(
+                island_index=island_index
+            )
+            if region.contains(sample):
+                navmesh_dist = sim.pathfinder.distance_to_closest_obstacle(
+                    sample
+                )
+                if navmesh_dist > best_navmesh_dist:
+                    # found a valid point in a more "open" part of the region
+                    best_sample = sample
+                    best_navmesh_dist = navmesh_dist
+                    if quick_return:
+                        # short-circuit to return the first valid sample
+                        return best_sample
+            attempts += 1
+
+    return best_sample
 
 
 def get_link_normalized_joint_position(
