@@ -1514,6 +1514,8 @@ class SocialNavReward(MeasurementConfig):
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
     collide_penalty: float = 1.0
+    # Did not end on coliision
+    end_on_collision_to_human: bool = True
 
 
 @dataclass

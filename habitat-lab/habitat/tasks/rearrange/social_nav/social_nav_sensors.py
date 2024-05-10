@@ -172,7 +172,7 @@ class SocialNavReward(RearrangeReward):
         did_collide = task.measurements.measures[
             DidAgentsCollide._get_uuid()
         ].get_metric()
-        if did_collide:
+        if did_collide and self._config.end_on_collision_to_human:
             task.should_end = True
             social_nav_reward -= self._collide_penalty
 
