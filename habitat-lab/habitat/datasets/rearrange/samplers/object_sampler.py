@@ -306,17 +306,20 @@ class ObjectSampler:
                     ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
                         receptacle.parent_object_handle
                     )
-                    for (
-                        object_id,
-                        link_ix,
-                    ) in ao_instance.link_object_ids.items():
-                        if receptacle.parent_link == link_ix:
-                            support_object_ids = [
-                                object_id,
-                                ao_instance.object_id,
-                            ]
-                            break
+                    if receptacle.parent_link == -1:
+                        # Receptacle is attached to the body link, so only allow placements there
+                        support_object_ids = [ao_instance.object_id]
+                    else:
+                        # Receptacle is attached to a moveable link, only allow samples on that link
+                        for (
+                            object_id,
+                            link_ix,
+                        ) in ao_instance.link_object_ids.items():
+                            if receptacle.parent_link == link_ix:
+                                support_object_ids = [object_id]
+                                break
                 elif receptacle.parent_object_handle is not None:
+                    # rigid object receptacle
                     support_object_ids = [
                         sim.get_rigid_object_manager()
                         .get_object_by_handle(receptacle.parent_object_handle)
