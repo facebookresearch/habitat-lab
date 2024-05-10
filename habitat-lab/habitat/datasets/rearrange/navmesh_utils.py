@@ -49,7 +49,7 @@ def snap_point_is_occluded(
         ):
             for hit in raycast_results.hits:
                 if hit.ray_distance > 1:
-                    # exceeded the distance check without hitting a occlusion
+                    # exceeded the distance check without hitting an occlusion
                     return False
 
                 if (
