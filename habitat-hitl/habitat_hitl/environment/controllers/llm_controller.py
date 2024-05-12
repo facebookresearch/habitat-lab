@@ -1,3 +1,5 @@
+import logging
+import threading
 from typing import Any, Dict, Union
 
 import numpy as np
@@ -5,6 +7,7 @@ from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
 from habitat_llm.utils import fix_config, setup_config
+from habitat_llm.utils.analysis import CodeTimer
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -33,6 +36,20 @@ class LLMController(SingleAgentBaselinesController):
         self._agent_idx = agent_idx
         # TODO: gather this from config
         self._agent_action_length = 28
+        self._thread: Union[None, threading.Thread] = None
+        self._low_level_actions: Union[None, dict, np.ndarray] = {}
+        self._iter = 0
+        self._skip_iters = 0
+        logging.basicConfig(
+            filename="/home/priyamp/hitl/act_timing.log",
+            filemode="a",
+            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
+            level=logging.DEBUG,
+            force=True,
+        )
+        self._analysis_logger = logging.getLogger("LLMController")
+        self._analysis_logger.debug("LLMController initialized")
 
         with habitat.config.read_write(self._config):
             fix_config(self._config)
@@ -82,23 +99,32 @@ class LLMController(SingleAgentBaselinesController):
         # NOTE: the following ONLY resets self._test_recurrent_hidden_states,
         # self._prev_actions and self._not_done_masks
         # super().on_environment_reset()
-        self.planner.reset()
         self.environment_interface.reset_environment()
+        self.planner.reset()
+        if self._thread is not None:
+            self._thread.join()
+            self._thread = None  # noqa: F841
+            self._low_level_actions = {}
 
         self.current_instruction = (
             self.environment_interface.hab_env.current_episode.instruction
         )
+        print(f"Instruction: {self.current_instruction}")
+        self._analysis_logger.debug(
+            f"------\nInstruction: {self.current_instruction}"
+        )
+        self._analysis_logger.debug("NEW EPISODE STARTING")
+        self._iter = 0
 
-    def act(self, observations, *args, **kwargs):
+    def _act(self, observations, *args, **kwargs):
         # NOTE: update the world state to reflect the new observations
         self.environment_interface.update_world_state(observations)
-
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
         # TODO: looping needed here until a physical low-level-action is returned
-        low_level_actions: Union[dict, np.ndarray] = {}
+        # low_level_actions: Union[dict, np.ndarray] = {}
         (
-            low_level_actions,
+            self._low_level_actions,
             planner_info,
             task_done,
         ) = self.planner.get_next_action(
@@ -107,10 +133,35 @@ class LLMController(SingleAgentBaselinesController):
             self.environment_interface.world_graph,
             verbose=True,
         )
-        if low_level_actions:
-            low_level_actions = low_level_actions[str(self._agent_idx)]
-            # NOTE: truncating the action here, as this includes both Spot and Human actions
-            low_level_actions = low_level_actions[:-248]
-        else:
+        if task_done:
+            print("Task Done")
+        return
+
+    def act(self, observations, *args, **kwargs):
+        if self._iter < self._skip_iters:
+            self._iter += 1
+            return np.zeros(self._agent_action_length)
+        with CodeTimer("LLMController.act", self._analysis_logger):
             low_level_actions = np.zeros(self._agent_action_length)
+            if self._thread is None:
+                self._thread = threading.Thread(
+                    target=self._act, args=(observations,), kwargs=kwargs
+                )
+                self._thread.start()
+            else:
+                if self._thread.is_alive():
+                    pass
+                else:
+                    self._thread = None
+                    if self._low_level_actions != {}:
+                        low_level_actions = self._low_level_actions[
+                            str(self._agent_idx)
+                        ][:-248]
+
+        # if low_level_actions:
+        #     low_level_actions = low_level_actions[str(self._agent_idx)]
+        #     # NOTE: truncating the action here, as this includes both Spot and Human actions
+        #     low_level_actions = low_level_actions[:-248]
+        # else:
+        #     low_level_actions = np.zeros(self._agent_action_length)
         return low_level_actions
