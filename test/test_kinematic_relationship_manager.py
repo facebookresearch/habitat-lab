@@ -62,7 +62,9 @@ def test_kinematic_relationship_manager():
         #     )
 
         # create some known mappings from objects to their supporting receptacles
-        obj_to_rec_relations = {}
+        obj_to_rec_relations = {
+            table_object.handle: "floor"  # explicitly test a floor parent relationship which should be skipped
+        }
         # objects on the center table
         for table_obj in table_objects:
             obj_to_rec_relations[
