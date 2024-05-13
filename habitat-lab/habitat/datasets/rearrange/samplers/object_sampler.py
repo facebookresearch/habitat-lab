@@ -306,18 +306,22 @@ class ObjectSampler:
                     ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
                         receptacle.parent_object_handle
                     )
-                    if receptacle.parent_link == -1:
+                    link_ids_to_obj_ids = {
+                        v: k for k, v in ao_instance.link_object_ids.items()
+                    }
+                    if receptacle.parent_link <= 0:
                         # Receptacle is attached to the body link, so only allow placements there
-                        support_object_ids = [ao_instance.object_id]
+                        # NOTE: If collision objects are marked STATIC in the URDF (via collision_group==2) then they will be attached to the -1 link as STATIC rigids, even if defined at the 0 link
+                        support_object_ids = [
+                            ao_instance.object_id,
+                            link_ids_to_obj_ids[0],
+                        ]
                     else:
                         # Receptacle is attached to a moveable link, only allow samples on that link
-                        for (
-                            object_id,
-                            link_ix,
-                        ) in ao_instance.link_object_ids.items():
-                            if receptacle.parent_link == link_ix:
-                                support_object_ids = [object_id]
-                                break
+                        support_object_ids = [
+                            link_ids_to_obj_ids[receptacle.parent_link]
+                        ]
+
                 elif receptacle.parent_object_handle is not None:
                     # rigid object receptacle
                     support_object_ids = [
