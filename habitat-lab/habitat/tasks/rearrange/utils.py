@@ -10,7 +10,7 @@ import os.path as osp
 import pickle
 import time
 from functools import wraps
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import attr
 import magnum as mn
@@ -24,6 +24,10 @@ from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
+
+if TYPE_CHECKING:
+    # avoids circular import while allowing type hints
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 rearrange_logger = HabitatLogger(
     name="rearrange_task",
@@ -89,16 +93,42 @@ class CollisionDetails:
         )
 
 
+def general_sim_collision(
+    sim: habitat_sim.Simulator, agent_embodiment: MobileManipulator
+) -> Tuple[bool, CollisionDetails]:
+    """
+    Proxy for "rearrange_collision()" which does not require a RearrangeSim.
+
+    Used for testing functions which require a collision testing routine.
+
+    :return: boolean flag denoting collisions and a details struct (not complete)
+    """
+    colls = sim.get_physics_contact_points()
+
+    agent_embodiment_object_id = agent_embodiment.sim_obj.object_id
+
+    robot_scene_colls = 0
+    for col in colls:
+        if coll_name_matches(col, agent_embodiment_object_id):
+            robot_scene_colls += 1
+
+    return (robot_scene_colls > 0), CollisionDetails(
+        robot_scene_colls=robot_scene_colls
+    )
+
+
 def rearrange_collision(
-    sim,
+    sim: "RearrangeSim",
     count_obj_colls: bool,
     verbose: bool = False,
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
     agent_idx: Optional[int] = None,
-):
-    """Defines what counts as a collision for the Rearrange environment execution"""
+) -> Tuple[bool, CollisionDetails]:
+    """
+    Defines what counts as a collision for the Rearrange environment execution.
+    """
     agent_model = sim.get_agent_data(agent_idx).articulated_agent
     grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
@@ -664,7 +694,10 @@ def _get_robot_spawns(
 
 def get_angle_to_pos(rel_pos: np.ndarray) -> float:
     """
+    Get the 1D orientation angle (around Y axis) for an agent with X axis forward to face toward a relative 3D position.
+
     :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+
     :returns: Angle in radians.
     """
 
