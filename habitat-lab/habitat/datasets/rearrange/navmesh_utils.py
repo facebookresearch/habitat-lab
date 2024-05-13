@@ -17,6 +17,7 @@ def snap_point_is_occluded(
     sim: habitat_sim.Simulator,
     granularity: float = 0.2,
     target_object_ids: Optional[List[int]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
 ) -> bool:
     """
     Uses raycasting to check whether a target is occluded given a navmesh snap point.
@@ -26,7 +27,8 @@ def snap_point_is_occluded(
     :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
     :property sim: The Simulator instance.
     :property granularity: The distance between raycast samples. Finer granularity is more accurate, but more expensive.
-    :property target_object_ids: An optional set of object ids which should be ignored in occlusion check.
+    :property target_object_ids: An optional set of object ids which indicate the target. If one of these objects is hit before any non-ignored object, the test is successful.
+    :property ignore_object_ids: An optional set of object ids which should be ignored in occlusion check.
 
     NOTE: If agent's eye height is known and only that height should be considered, provide eye height and granularity > height for fastest check.
 
@@ -45,17 +47,31 @@ def snap_point_is_occluded(
             raycast_results.has_hits()
             and raycast_results.hits[0].ray_distance < 1
         ):
-            if (
-                target_object_ids is not None
-                and raycast_results.hits[0].object_id in target_object_ids
-            ):
-                # we hit an allowed object (i.e., the target object), so not occluded
-                return False
-            # the ray hit a not-allowed object and is occluded
-            continue
+            for hit in raycast_results.hits:
+                if hit.ray_distance > 1:
+                    # exceeded the distance check without hitting an occlusion
+                    return False
+
+                if (
+                    target_object_ids is not None
+                    and hit.object_id in target_object_ids
+                ):
+                    # we hit an allowed object (i.e., the target object), so not occluded
+                    return False
+                elif (
+                    ignore_object_ids is not None
+                    and hit.object_id in ignore_object_ids
+                ):
+                    # we hit an ignored object, so continue the search
+                    continue
+                else:
+                    # the ray hit a not-allowed object within distance threshold and is occluded at this height
+                    break
         else:
             # ray hit nothing, so not occluded
             return False
+
+    # we tried all heights and found no valid raycast, so the object is occluded
     return True
 
 
@@ -65,6 +81,7 @@ def unoccluded_navmesh_snap(
     pathfinder: habitat_sim.nav.PathFinder,
     sim: habitat_sim.Simulator,
     target_object_ids: Optional[List[int]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
     island_id: int = -1,
     search_offset: float = 1.5,
     test_batch_size: int = 20,
@@ -78,7 +95,8 @@ def unoccluded_navmesh_snap(
     :property height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
     :property pathfinder: The PathFinder defining the NavMesh to use.
     :property sim: The Simulator instance.
-    :property target_object_ids: An optional set of object ids which should be ignored in occlusion check. For example, when pos is an object's COM, that object should not occlude the point.
+    :property target_object_ids: An optional set of object ids which indicate the target. If one of these objects is hit before any non-ignored object, the test is successful. For example, when pos is an object's COM, that object should not occlude the point.
+    :property ignore_object_ids: An optional set of object ids which should be ignored in occlusion check. These objects should not stop the check. For example, the body and links of a robot.
     :property island_id: Optionally restrict the search to a single navmesh island. Default -1 is the full navmesh.
     :property search_offset: The additional radius to search for navmesh points around the target position. Added to the minimum distance from pos to navmesh.
     :property test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
@@ -99,6 +117,7 @@ def unoccluded_navmesh_snap(
         height=height,
         sim=sim,
         target_object_ids=target_object_ids,
+        ignore_object_ids=ignore_object_ids,
     )
 
     # now sample and try different snap options
@@ -141,6 +160,7 @@ def unoccluded_navmesh_snap(
                 height,
                 sim,
                 target_object_ids=target_object_ids,
+                ignore_object_ids=ignore_object_ids,
             ):
                 return batch_sample[0]
 
