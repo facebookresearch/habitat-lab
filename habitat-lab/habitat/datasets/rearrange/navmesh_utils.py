@@ -195,7 +195,7 @@ def embodied_unoccluded_navmesh_snap(
     data_out: Dict[Any, Any] = None,
 ) -> Tuple[mn.Vector3, float, bool]:
     """
-    Snap a point to the navmesh considering point visibility via raycasting.
+    Snap a robot embodiment close to a target point considering embodied constraints via the navmesh and raycasting for point visibility.
 
     :param target_position: The 3D target position to snap.
     :param height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
@@ -212,6 +212,7 @@ def embodied_unoccluded_navmesh_snap(
     :param orientation_noise: Standard deviation of the gaussian used to sample orientation noise. If 0, states always face the target point. Noise is applied delta to this "target facing" orientation.
     :param max_orientation_samples: The number of orientation noise samples to try for each candidate point.
     :param data_out: Optionally provide a dictionary which can be filled with arbitrary detail data for external debugging and visualization.
+
     NOTE: this function is based on sampling and does not guarantee the closest point.
 
     :return: A Tuple containing: 1) An approximation of the closest unoccluded snap point to pos or None if an unoccluded point could not be found, 2) the sampled orientation if found or None, 3) a boolean success flag.
