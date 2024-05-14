@@ -300,7 +300,7 @@ class UI:
         # Cannot place further than reach.
         if not self._is_within_reach(point):
             return False
-        # Cannot place on held object.
+        # Cannot place on objects held by agents.
         if self._is_someone_holding_object(receptacle_object_id):
             return False
         return True
