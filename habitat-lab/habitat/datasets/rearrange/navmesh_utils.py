@@ -182,7 +182,8 @@ def embodied_unoccluded_navmesh_snap(
     height: float,
     sim: habitat_sim.Simulator,
     pathfinder: habitat_sim.nav.PathFinder = None,
-    target_object_id: Optional[int] = None,
+    target_object_ids: Optional[List[int]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
     island_id: int = -1,
     search_offset: float = 1.5,
     test_batch_size: int = 20,
@@ -201,7 +202,8 @@ def embodied_unoccluded_navmesh_snap(
     :param height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
     :param sim: The RearrangeSimulator or Simulator instance. This choice will dictate the collision detection routine.
     :param pathfinder: The PathFinder defining the NavMesh to use.
-    :param target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when pos is an object's COM, that object should not occlude the point.
+    :param target_object_ids: An optional set of object ids which indicate the target. If one of these objects is hit before any non-ignored object, the test is successful. For example, when pos is an object's COM, that object should not occlude the point.
+    :param ignore_object_ids: An optional set of object ids which should be ignored in occlusion check. These objects should not stop the check. For example, the body and links of a robot.
     :param island_id: Optionally restrict the search to a single navmesh island. Default -1 is the full navmesh.
     :param search_offset: The additional radius to search for navmesh points around the target position. Added to the minimum distance from pos to navmesh.
     :param test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
@@ -267,7 +269,8 @@ def embodied_unoccluded_navmesh_snap(
             batch_sample[0],
             height,
             sim,
-            target_object_ids=[target_object_id],
+            target_object_ids=target_object_ids,
+            ignore_object_ids=ignore_object_ids,
         ):
             facing_target_angle = get_angle_to_pos(
                 np.array(target_position - batch_sample[0])
