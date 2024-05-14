@@ -105,6 +105,10 @@ class DataLogger:
 
 
 class UserData:
+    """
+    User-specific states for the ongoing rearrangement session.
+    """
+
     def __init__(
         self,
         app_service: AppService,
