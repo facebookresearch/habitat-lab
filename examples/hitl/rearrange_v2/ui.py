@@ -80,7 +80,10 @@ class UI:
         self._selections: List[Selection] = []
         # Track hovered object.
         self._hover_selection = Selection(
-            self._sim, self._gui_input, Selection.hover_fn
+            self._sim,
+            self._gui_input,
+            Selection.hover_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._hover_selection)
         # Track left-clicked object.
@@ -88,6 +91,7 @@ class UI:
             self._sim,
             self._gui_input,
             Selection.left_click_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._click_selection)
 
@@ -105,8 +109,13 @@ class UI:
             self._sim,
             self._gui_input,
             place_selection_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._place_selection)
+
+    def selection_discriminator_ignore_agents(self, object_id: int) -> bool:
+        """Allow selection through agents."""
+        return object_id not in self._world._agent_object_ids
 
     def reset(self) -> None:
         """
