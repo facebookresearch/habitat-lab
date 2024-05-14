@@ -300,6 +300,9 @@ class UI:
         # Cannot place further than reach.
         if not self._is_within_reach(point):
             return False
+        # Cannot place on held object.
+        if self._is_someone_holding_object(receptacle_object_id):
+            return False
         return True
 
     def _draw_aabb(
