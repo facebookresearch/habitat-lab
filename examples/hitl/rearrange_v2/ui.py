@@ -108,14 +108,11 @@ class UI:
         )
         self._selections.append(self._place_selection)
 
-    def reset(
-        self, object_receptacle_pairs: List[Tuple[List[int], List[int]]]
-    ) -> None:
+    def reset(self) -> None:
         """
         Reset the UI. Call on simulator reset.
         """
         self._held_object_id = None
-        self._object_receptacle_pairs = object_receptacle_pairs
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
@@ -384,7 +381,7 @@ class UI:
 
     def _draw_goals(self) -> None:
         """Draw goal object-receptacle pairs."""
-        if not SHOW_GOALS:
+        if not SHOW_GOALS or not self._object_receptacle_pairs:
             return
 
         # TODO: Cache

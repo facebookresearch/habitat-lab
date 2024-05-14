@@ -24,6 +24,7 @@ import habitat_sim
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
+from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe
 from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
     terminate_networking_process,
@@ -44,6 +45,7 @@ from habitat_hitl.core.serialize_utils import (
     save_as_pickle_gzip,
 )
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.core.types import KeyframeAndMessages
 from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
@@ -171,8 +173,7 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        # TODO: Only one user is currently supported.
-        users = Users(1)
+        users = Users(max(self._hitl_config.networking.max_client_count, 1))
 
         self._client_message_manager = None
         if self.network_server_enabled:
@@ -231,7 +232,10 @@ class HitlDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.networking.enable
+        return (
+            self._hitl_config.networking.enable
+            and self._hitl_config.networking.max_client_count > 0
+        )
 
     def _check_init_server(
         self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
@@ -244,7 +248,9 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record, gui_drawer, users
+                self._interprocess_record,
+                gui_drawer,
+                users,
             )
             # Bind the server input to user 0
             if self._hitl_config.networking.client_sync.server_input:
@@ -477,7 +483,9 @@ class HitlDriver(AppDriver):
             ] = self._pending_cursor_style
             self._pending_cursor_style = None
 
-        keyframes = (
+        keyframes: List[
+            str
+        ] = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
@@ -519,9 +527,6 @@ class HitlDriver(AppDriver):
             np.flipud(image) for image in debug_images
         ]
 
-        if self._remote_client_state:
-            self._remote_client_state.on_frame_end()
-
         if self.network_server_enabled:
             if (
                 self._hitl_config.networking.client_sync.server_camera
@@ -535,25 +540,36 @@ class HitlDriver(AppDriver):
                         cam_transform
                     )
 
-            for keyframe_json in keyframes:
-                obj = json.loads(keyframe_json)
-                assert "keyframe" in obj
-                keyframe_obj = obj["keyframe"]
-                # Remove rigs from keyframe if skinning is disabled
-                if not self._hitl_config.networking.client_sync.skinning:
-                    if "rigCreations" in keyframe_obj:
-                        del keyframe_obj["rigCreations"]
-                    if "rigUpdates" in keyframe_obj:
-                        del keyframe_obj["rigUpdates"]
-                # Insert server->client message into the keyframe
-                # TODO: Only one user is currently supported.
-                message = self._client_message_manager.get_messages()[0]
-                if len(message) > 0:
-                    keyframe_obj["message"] = message
-                    self._client_message_manager.clear_messages()
-                # Send the keyframe
-                self._interprocess_record.send_keyframe_to_networking_thread(
-                    keyframe_obj
-                )
+            self._remote_client_state.on_frame_end()
+            self._send_keyframes(keyframes)
 
         return post_sim_update_dict
+
+    def _send_keyframes(self, keyframes_json: List[str]):
+        assert self.network_server_enabled
+
+        keyframes = []
+        for keyframe_json in keyframes_json:
+            obj = json.loads(keyframe_json)
+            assert "keyframe" in obj
+            keyframe_obj = obj["keyframe"]
+            keyframes.append(keyframe_obj)
+
+        # If messages need to be sent, but no keyframe is available, create an empty keyframe.
+        if self._client_message_manager.any_message() and len(keyframes) == 0:
+            keyframes.append(get_empty_keyframe())
+
+        for keyframe in keyframes:
+            # Remove rigs from keyframe if skinning is disabled.
+            if not self._hitl_config.networking.client_sync.skinning:
+                if "rigCreations" in keyframe:
+                    del keyframe["rigCreations"]
+                if "rigUpdates" in keyframe:
+                    del keyframe["rigUpdates"]
+            # Insert server->client message into the keyframe.
+            messages = self._client_message_manager.get_messages()
+            self._client_message_manager.clear_messages()
+            # Send the keyframe.
+            self._interprocess_record.send_keyframe_to_networking_thread(
+                KeyframeAndMessages(keyframe, messages)
+            )
