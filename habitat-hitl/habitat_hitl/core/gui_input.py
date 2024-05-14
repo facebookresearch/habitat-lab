@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 
 
@@ -97,3 +99,15 @@ class GuiInput:
         self._mouse_button_up.clear()
         self._relative_mouse_position = [0, 0]
         self._mouse_scroll_offset = 0.0
+
+    def copy_from(self, other: GuiInput):
+        self._key_down = set(other._key_down)
+        self._key_up = set(other._key_up)
+        self._key_held = set(other._key_held)
+        self._mouse_button_down = set(other._mouse_button_down)
+        self._mouse_button_up = set(other._mouse_button_up)
+        self._mouse_button_held = set(other._mouse_button_held)
+        self._mouse_position = list(other._mouse_position)
+        self._relative_mouse_position = list(other._relative_mouse_position)
+        self._mouse_scroll_offset = other._mouse_scroll_offset
+        self._mouse_ray = other._mouse_ray

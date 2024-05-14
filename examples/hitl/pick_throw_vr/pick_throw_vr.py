@@ -175,7 +175,9 @@ class AppStatePickThrowVr(AppState):
         hand_positions = []
         num_hands = 2
         for i in range(num_hands):
-            hand_pos, _ = remote_client_state.get_hand_pose(i)
+            hand_pos, _ = remote_client_state.get_hand_pose(
+                user_index=0, hand_idx=i
+            )
             if hand_pos:
                 hand_positions.append(hand_pos)
         if len(hand_positions) == 0:
@@ -262,10 +264,10 @@ class AppStatePickThrowVr(AppState):
             assert history_len >= 2
             history_offset = 1
             pos1, _ = remote_client_state.get_hand_pose(
-                hand_idx, history_index=history_offset
+                user_index=0, hand_idx=hand_idx, history_index=history_offset
             )
             pos0, _ = remote_client_state.get_hand_pose(
-                hand_idx, history_index=history_len - 1
+                user_index=0, hand_idx=hand_idx, history_index=history_len - 1
             )
             if pos0 and pos1:
                 vel = (pos1 - pos0) / (
@@ -281,7 +283,7 @@ class AppStatePickThrowVr(AppState):
         else:
             # snap to hand
             hand_pos, hand_rotation = remote_client_state.get_hand_pose(
-                self._remote_held_hand_idx
+                user_index=0, hand_idx=self._remote_held_hand_idx
             )
             assert hand_pos is not None
 
