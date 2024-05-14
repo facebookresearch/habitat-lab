@@ -48,6 +48,7 @@ class Selection:
         :param gui_input: GuiInput to track.
         :param selection_fn: Function that returns true if gui_input is attempting selection.
         :param object_id_discriminator: Function that determines whether an object ID is selectable.
+                                        Rejected objects are transparent to selection.
                                         By default, all objects are selectable.
         """
         self._sim = simulator
@@ -105,6 +106,10 @@ class Selection:
                 self.deselect()
 
     def _raycast(self, ray: Ray) -> Optional[RayHitInfo]:
+        """
+        Raycast the scene using the specified ray.
+        Objects rejected by the discriminator function are transparent to selection.
+        """
         raycast_results = self._sim.cast_ray(ray=ray)
         if not raycast_results.has_hits():
             return None
