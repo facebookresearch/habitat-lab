@@ -97,20 +97,24 @@ class Selection:
                     self.deselect()
                     return
 
-                object_id: int = hit_info.object_id
-
-                if self._discriminator(object_id):
-                    self._selected = True
-                    self._object_id = object_id
-                    self._point = hit_info.point
-                    self._normal = hit_info.normal
-                else:
-                    self.deselect()
+                self._selected = True
+                self._object_id = hit_info.object_id
+                self._point = hit_info.point
+                self._normal = hit_info.normal
+            else:
+                self.deselect()
 
     def _raycast(self, ray: Ray) -> Optional[RayHitInfo]:
         raycast_results = self._sim.cast_ray(ray=ray)
         if not raycast_results.has_hits():
             return None
         # Results are sorted by distance. [0] is the nearest one.
-        hit_info = raycast_results.hits[0]
-        return hit_info
+        hits = raycast_results.hits
+        for hit in hits:
+            object_id: int = hit.object_id
+            if not self._discriminator(object_id):
+                continue
+            else:
+                return hit
+
+        return None
