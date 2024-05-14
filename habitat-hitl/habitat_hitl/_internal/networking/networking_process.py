@@ -328,12 +328,28 @@ class NetworkManager:
             await asyncio.sleep(wait_time)
 
     def has_connection(self) -> bool:
+        """
+        Returns true if at least one user is connected.
+        """
         return len(self._connected_clients) > 0
 
+    def is_server_available(self) -> bool:
+        """
+        Returns true if the server should advertise itself as available.
+        """
+        return (
+            not self.has_connection()
+            and self._interprocess_record.new_connections_allowed()
+        )
+
     def can_accept_connection(self) -> bool:
+        """
+        Returns true if the server had the capacity for a new connection.
+        """
         return (
             len(self._connected_clients)
             < self._networking_config.max_client_count
+            and self._interprocess_record.new_connections_allowed()
         )
 
     def handle_disconnect(self, connection_id: int) -> None:
@@ -496,7 +512,7 @@ async def start_http_availability_server(
         # return an HTTP code to indicate available or not
         code = (
             networking_config.http_availability_server.code_available
-            if not network_mgr.has_connection()
+            if network_mgr.is_server_available()
             else networking_config.http_availability_server.code_unavailable
         )
         # print(f"Returned availability HTTP code {code}")

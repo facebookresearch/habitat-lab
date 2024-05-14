@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from multiprocessing import Queue
+from multiprocessing import Queue, Value
 from typing import Any, List
 
 from habitat_hitl.core.types import (
@@ -27,6 +27,15 @@ class InterprocessRecord:
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
         self._kick_signal_queue: Queue[int] = Queue()
+        self._allow_new_connections = Value("b", False)
+
+    def enable_new_connections(self, enabled: bool):
+        """Signal the networking process whether it should accept new connections."""
+        self._allow_new_connections.value = enabled  # type: ignore
+
+    def new_connections_allowed(self) -> bool:
+        """Get whether new connections are allowed."""
+        return self._allow_new_connections.value  # type: ignore
 
     def send_keyframe_to_networking_thread(
         self, keyframe: KeyframeAndMessages
