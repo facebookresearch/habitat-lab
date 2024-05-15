@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import magnum as mn
 
@@ -51,6 +51,7 @@ class RemoteClientState:
 
         # TODO: Handle UI in a different class.
         self._pressed_ui_buttons: List[Set[str]] = []
+        self._textboxes: List[Dict[str, str]] = []
 
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
@@ -60,6 +61,7 @@ class RemoteClientState:
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
             self._pressed_ui_buttons.append(set())
+            self._textboxes.append({})
 
         self._client_loading: List[bool] = [False] * users.max_user_count
 
@@ -101,6 +103,10 @@ class RemoteClientState:
 
     def ui_button_pressed(self, user_index: int, button_id: str) -> bool:
         return button_id in self._pressed_ui_buttons[user_index]
+
+    def get_textbox_content(self, user_index: int, textbox_id: str) -> str:
+        user_textboxes = self._textboxes[user_index]
+        return user_textboxes.get(textbox_id, "")
 
     def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
@@ -236,6 +242,8 @@ class RemoteClientState:
                 if ui is not None:
                     for button in ui.get("buttonsPressed", []):
                         self._pressed_ui_buttons[user_index].add(button)
+                    for textbox_id, text in ui.get("textboxes", {}).items():
+                        self._textboxes[user_index][textbox_id] = text
 
                 input_json = (
                     client_state["input"] if "input" in client_state else None
@@ -472,12 +480,14 @@ class RemoteClientState:
         for user_index in self._users.indices(Mask.ALL):
             self._gui_inputs[user_index].on_frame_end()
             self._pressed_ui_buttons[user_index].clear()
+            self._textboxes[user_index].clear()
         self._new_connection_records = None
 
     def clear_history(self, user_mask=Mask.ALL) -> None:
         for user_index in self._users.indices(user_mask):
             self._client_state_history[user_index].clear()
             self._pressed_ui_buttons[user_index].clear()
+            self._textboxes[user_index].clear()
 
     def kick(self, user_mask: Mask) -> None:
         """
