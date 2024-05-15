@@ -1,0 +1,26 @@
+# This config is derived from habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human.yaml
+# @package _global_
+
+defaults:
+  - language_rearrange
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: spot
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_rgbd_arm_agent
+  - /habitat/task/actions@habitat.task.actions.agent_1_arm_action: arm_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - _self_
+
+habitat:
+  task:
+    actions:
+      agent_1_base_velocity:
+        lin_speed: 10.0
+        ang_speed: 300.0
+  gym:
+    obs_keys:
+      - agent_0_is_holding
+      - agent_0_ee_pos
+  simulator:
+    agents_order:
+      - agent_0
+      - agent_1
