@@ -12,6 +12,9 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      group_by_scene: False
 
 habitat_baselines:
   # todo: document these choices
