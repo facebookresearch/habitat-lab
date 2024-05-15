@@ -289,11 +289,9 @@ class RemoteClientState:
             last_client_state = client_states[-1]
 
             # Loading states.
-            self._client_loading[user_index] = False
-            if "isLoading" in last_client_state:
-                self._client_loading[user_index] = last_client_state[
-                    "isLoading"
-                ]
+            self._client_loading[user_index] = last_client_state.get(
+                "isLoading", False
+            )
 
             input_json = (
                 last_client_state["input"]
