@@ -164,23 +164,25 @@ class UserData:
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset()
 
-        # Assign user agent objects to their own layer.
-        agent_index = self.gui_agent_controller._agent_idx
-        agent_object_ids = self.world.get_agent_object_ids(agent_index)
-        for agent_object_id in agent_object_ids:
-            self.app_service.client_message_manager.set_object_visibility_layer(
-                object_id=agent_object_id,
-                layer_id=agent_index,
+        # If networking is enabled...
+        if self.app_service.client_message_manager:
+            # Assign user agent objects to their own layer.
+            agent_index = self.gui_agent_controller._agent_idx
+            agent_object_ids = self.world.get_agent_object_ids(agent_index)
+            for agent_object_id in agent_object_ids:
+                self.app_service.client_message_manager.set_object_visibility_layer(
+                    object_id=agent_object_id,
+                    layer_id=agent_index,
+                    destination_mask=Mask.from_index(self.user_index),
+                )
+
+            # Show all layers except "user_index" in the default viewport.
+            # This hides the user's own agent in the first person view.
+            self.app_service.client_message_manager.set_viewport_properties(
+                viewport_id=-1,
+                visible_layer_ids=Mask.all_except_index(agent_index),
                 destination_mask=Mask.from_index(self.user_index),
             )
-
-        # Show all layers except "user_index" in the default viewport.
-        # This hides the user's own agent in the first person view.
-        self.app_service.client_message_manager.set_viewport_properties(
-            viewport_id=-1,
-            visible_layer_ids=Mask.all_except_index(agent_index),
-            destination_mask=Mask.from_index(self.user_index),
-        )
 
     def update(self, dt: float):
         if self.gui_input.get_key_down(GuiInput.KeyNS.H):
@@ -212,6 +214,10 @@ class UserData:
         """
         Draw a picture-in-picture viewport showing another agent's perspective.
         """
+        # If networking is disabled, skip.
+        if not self.app_service.client_message_manager:
+            return
+
         # Lazy init:
         if not self.pip_initialized:
             self.pip_initialized = True
