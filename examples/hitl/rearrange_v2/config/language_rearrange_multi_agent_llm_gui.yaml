@@ -44,7 +44,7 @@ defaults:
   - _self_
 
 habitat:
-  # task:
+  task:
     # type: RearrangeEmptyTask-v0
     # reward_measure: num_steps
     # success_measure: num_steps
@@ -57,10 +57,10 @@ habitat:
     # task_spec_base_path: benchmark/multi_agent/
     # task_spec: pddl/multi_agent_tidy_house
     # pddl_domain_def: fp
-    # actions:
-    #   agent_0_base_velocity:
-    #     lin_speed: 40.0
-    #     ang_speed: 20.0
+    actions:
+      agent_1_base_velocity:
+        lin_speed: 10.0
+        ang_speed: 300
 
     # robot_at_thresh: 3.0
     # lab_sensors:
