@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_hitl.core.types import Keyframe
+from typing import List
+
+from habitat_hitl.core.types import Keyframe, KeyframeAndMessages, Message
 
 
 def update_consolidated_keyframe(
@@ -126,16 +128,38 @@ def update_consolidated_keyframe(
                 if entry["instanceKey"] not in inc_deletions
             ]
 
-    if "message" in inc_keyframe:
-        inc_message = inc_keyframe["message"]
-        # add/update all messages
-        for message_key in inc_message:
-            ensure_dict(consolidated_keyframe, "message")
-            consolidated_keyframe["message"][message_key] = inc_message[
-                message_key
-            ]
-
     # todo: lights, userTransforms
+
+
+def update_consolidated_message(
+    consolidated_message: Message, inc_message: Message
+) -> None:
+    """Consolidate single user message."""
+    for message_item_key in inc_message:
+        consolidated_message[message_item_key] = inc_message[message_item_key]
+
+
+def update_consolidated_messages(
+    consolidated_messages: List[Message], inc_messages: List[Message]
+) -> None:
+    """Consolidate messages on a per-user basis."""
+    assert len(consolidated_messages) == len(inc_messages)
+    for user_index in range(len(inc_messages)):
+        inc_message = inc_messages[user_index]
+        consolidated_message = consolidated_messages[user_index]
+        update_consolidated_message(consolidated_message, inc_message)
+
+
+def get_user_keyframe(
+    keyframe_and_messages: KeyframeAndMessages, user_index: int
+) -> Keyframe:
+    """
+    Create a new keyframe containing user-specific message dict as "message" key.
+    """
+    assert "message" not in keyframe_and_messages.keyframe
+    user_keyframe: Keyframe = keyframe_and_messages.keyframe.copy()
+    user_keyframe["message"] = keyframe_and_messages.messages[user_index]
+    return user_keyframe
 
 
 def get_empty_keyframe() -> Keyframe:

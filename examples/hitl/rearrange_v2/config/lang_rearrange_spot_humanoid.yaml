@@ -12,6 +12,9 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      group_by_scene: False
   dataset:
     data_path: "data/prerelease_1k_v2.json.gz"
     scenes_dir: "data/fpss"

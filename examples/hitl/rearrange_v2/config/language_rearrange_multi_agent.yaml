@@ -13,15 +13,11 @@ defaults:
 habitat:
   task:
     actions:
-      agent_1_arm_action:
-        grip_controller: MagicGraspAction
       agent_1_base_velocity:
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 300.0
   gym:
     obs_keys:
-      - agent_0_head_rgb
-      - agent_1_head_rgb
       - agent_0_is_holding
       - agent_1_is_holding
       - agent_0_ee_pos

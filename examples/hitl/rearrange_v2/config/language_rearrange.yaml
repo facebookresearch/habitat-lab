@@ -44,13 +44,12 @@ habitat:
     pddl_domain_def: fp
     actions:
       agent_0_base_velocity:
-        lin_speed: 40.0
-        ang_speed: 20.0
+        lin_speed: 10.0
+        ang_speed: 300
 
     robot_at_thresh: 3.0
   gym:
     obs_keys:
-      - head_depth
       - is_holding
       - ee_pos
       - localization_sensor

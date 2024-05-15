@@ -80,7 +80,10 @@ class UI:
         self._selections: List[Selection] = []
         # Track hovered object.
         self._hover_selection = Selection(
-            self._sim, self._gui_input, Selection.hover_fn
+            self._sim,
+            self._gui_input,
+            Selection.hover_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._hover_selection)
         # Track left-clicked object.
@@ -88,6 +91,7 @@ class UI:
             self._sim,
             self._gui_input,
             Selection.left_click_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._click_selection)
 
@@ -105,17 +109,19 @@ class UI:
             self._sim,
             self._gui_input,
             place_selection_fn,
+            self.selection_discriminator_ignore_agents,
         )
         self._selections.append(self._place_selection)
 
-    def reset(
-        self, object_receptacle_pairs: List[Tuple[List[int], List[int]]]
-    ) -> None:
+    def selection_discriminator_ignore_agents(self, object_id: int) -> bool:
+        """Allow selection through agents."""
+        return object_id not in self._world._agent_object_ids
+
+    def reset(self) -> None:
         """
         Reset the UI. Call on simulator reset.
         """
         self._held_object_id = None
-        self._object_receptacle_pairs = object_receptacle_pairs
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
@@ -303,6 +309,9 @@ class UI:
         # Cannot place further than reach.
         if not self._is_within_reach(point):
             return False
+        # Cannot place on objects held by agents.
+        if self._is_someone_holding_object(receptacle_object_id):
+            return False
         return True
 
     def _draw_aabb(
@@ -384,7 +393,7 @@ class UI:
 
     def _draw_goals(self) -> None:
         """Draw goal object-receptacle pairs."""
-        if not SHOW_GOALS:
+        if not SHOW_GOALS or not self._object_receptacle_pairs:
             return
 
         # TODO: Cache

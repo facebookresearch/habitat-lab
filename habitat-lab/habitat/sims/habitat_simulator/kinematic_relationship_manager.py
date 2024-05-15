@@ -182,6 +182,10 @@ class KinematicRelationshipManager:
 
         # construct the parent relations
         for obj_handle, rec_unique_name in obj_to_rec.items():
+            if rec_unique_name == "floor":
+                # NOTE: floor placements are denoted by this explicit name string and do not result in any parenting relationships
+                continue
+
             obj = sutils.get_obj_from_handle(self.sim, obj_handle)
             assert (
                 obj is not None

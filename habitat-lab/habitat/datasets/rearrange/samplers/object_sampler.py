@@ -306,17 +306,24 @@ class ObjectSampler:
                     ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
                         receptacle.parent_object_handle
                     )
-                    for (
-                        object_id,
-                        link_ix,
-                    ) in ao_instance.link_object_ids.items():
-                        if receptacle.parent_link == link_ix:
-                            support_object_ids = [
-                                object_id,
-                                ao_instance.object_id,
-                            ]
-                            break
+                    link_ids_to_obj_ids = {
+                        v: k for k, v in ao_instance.link_object_ids.items()
+                    }
+                    if receptacle.parent_link <= 0:
+                        # Receptacle is attached to the body link, so only allow placements there
+                        # NOTE: If collision objects are marked STATIC in the URDF (via collision_group==2) then they will be attached to the -1 link as STATIC rigids, even if defined at the 0 link
+                        support_object_ids = [
+                            ao_instance.object_id,
+                            link_ids_to_obj_ids[0],
+                        ]
+                    else:
+                        # Receptacle is attached to a moveable link, only allow samples on that link
+                        support_object_ids = [
+                            link_ids_to_obj_ids[receptacle.parent_link]
+                        ]
+
                 elif receptacle.parent_object_handle is not None:
+                    # rigid object receptacle
                     support_object_ids = [
                         sim.get_rigid_object_manager()
                         .get_object_by_handle(receptacle.parent_object_handle)
@@ -339,7 +346,7 @@ class ObjectSampler:
                         height=1.3,
                         nav_to_min_distance=self.nav_to_min_distance,
                         nav_island=self.largest_island_id,
-                        target_object_id=new_object.object_id,
+                        target_object_ids=[new_object.object_id],
                     ):
                         logger.info(
                             "   - object is not accessible from navmesh, rejecting placement."
@@ -358,7 +365,7 @@ class ObjectSampler:
                     height=1.3,
                     nav_to_min_distance=self.nav_to_min_distance,
                     nav_island=self.largest_island_id,
-                    target_object_id=new_object.object_id,
+                    target_object_ids=[new_object.object_id],
                 ):
                     logger.info(
                         "   - object is not accessible from navmesh, rejecting placement."

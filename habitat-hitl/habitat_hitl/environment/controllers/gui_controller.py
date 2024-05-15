@@ -140,10 +140,10 @@ class GuiRobotController(GuiController):
         )
 
         # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyNS.F):
+        if gui_input.get_key(KeyNS.W):
             # walk forward in the camera yaw direction
             base_action[0] += 1
-        if gui_input.get_key(KeyNS.V):
+        if gui_input.get_key(KeyNS.S):
             # walk forward in the opposite to camera yaw direction
             base_action[0] -= 1
 
