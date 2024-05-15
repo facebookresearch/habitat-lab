@@ -13,6 +13,7 @@ from habitat_hitl.core.types import Message
 from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
+DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
 
 
 # TODO: Move to another file.
@@ -242,10 +243,29 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["serverKeyframeId"] = keyframe_id
 
+    def set_object_visibility_layer(
+        self,
+        object_id: int,
+        layer_id: int = -1,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Set the visibility layer of the instance associated with specified habitat-sim objectId.
+        The layer_id '-1' is the default layer and is visible to all viewports.
+        There are 8 additional layers for controlling visibility (0 to 7).
+        """
+        assert layer_id >= -1
+        assert layer_id < 8
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            object_properties = _obtain_object_properties(message, object_id)
+            object_properties["layer"] = layer_id
+
     def set_viewport_properties(
         self,
         viewport_id: int,
-        viewport_rect_xywh: List[float],
+        viewport_rect_xywh: List[float] = DEFAULT_VIEWPORT_SIZE,
+        visible_layer_ids: Mask = Mask.ALL,
         destination_mask: Mask = Mask.ALL,
     ):
         r"""
@@ -255,12 +275,18 @@ class ClientMessageManager:
         viewport_id: Unique identifier of the viewport.
         viewport_rect_xywh: Viewport rect (x position, y position, width, height).
                             In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
+        visible_layer_ids: Visibility layers. Only objects assigned to these layers will be visible to this viewport.
         """
+        layers = Users(8)  # Maximum of 8 layers.
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
             viewport_properties = _obtain_viewport_properties(
                 message, viewport_id
             )
+            # TODO: Use mask int instead of array
+            viewport_properties["layers"] = []
+            for layer in layers.indices(visible_layer_ids):
+                viewport_properties["layers"].append(layer)
             viewport_properties["rect"] = viewport_rect_xywh
 
     def show_viewport(
@@ -345,6 +371,17 @@ def _create_transform_dict(transform: mn.Matrix4) -> Dict[str, List[float]]:
         "translation": [p[0], p[1], p[2]],
         "rotation": [r.scalar, rv[0], rv[1], rv[2]],
     }
+
+
+def _obtain_object_properties(
+    message: Message, object_id: int
+) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "objects" not in message:
+        message["objects"] = {}
+    if object_id not in message["objects"]:
+        message["objects"][object_id] = {}
+    return message["objects"][object_id]
 
 
 def _obtain_viewport_properties(
