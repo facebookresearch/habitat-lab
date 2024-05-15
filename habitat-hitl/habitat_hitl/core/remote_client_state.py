@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Set, Tuple
 
 import magnum as mn
 
@@ -49,6 +49,9 @@ class RemoteClientState:
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
 
+        # TODO: Handle UI in a different class.
+        self._pressed_ui_buttons: List[Set[str]] = []
+
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
         self._receive_rate_trackers: List[AverageRateTracker] = []
@@ -56,6 +59,7 @@ class RemoteClientState:
             self._gui_inputs.append(GuiInput())
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
+            self._pressed_ui_buttons.append(set())
 
         # temp map VR button to key
         self._button_map = {
@@ -88,6 +92,9 @@ class RemoteClientState:
         """
         assert user_index < len(self._gui_inputs)
         self._gui_inputs[user_index] = gui_input
+
+    def ui_button_pressed(self, user_index: int, button_id: str) -> bool:
+        return button_id in self._pressed_ui_buttons[user_index]
 
     def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
@@ -211,13 +218,19 @@ class RemoteClientState:
         if len(all_client_states) == 0 or len(self._gui_inputs) == 0:
             return
 
-        # Gather all recent keyDown and keyUp events
+        # Gather all input events.
         for user_index in range(len(all_client_states)):
             client_states = all_client_states[user_index]
             if len(client_states) == 0:
                 continue
             gui_input = self._gui_inputs[user_index]
             for client_state in client_states:
+                # UI element events.
+                ui = client_state.get("ui", None)
+                if ui is not None:
+                    for button in ui.get("buttonsPressed", []):
+                        self._pressed_ui_buttons[user_index].add(button)
+
                 input_json = (
                     client_state["input"] if "input" in client_state else None
                 )
@@ -447,11 +460,13 @@ class RemoteClientState:
     def on_frame_end(self) -> None:
         for user_index in self._users.indices(Mask.ALL):
             self._gui_inputs[user_index].on_frame_end()
+            self._pressed_ui_buttons[user_index].clear()
         self._new_connection_records = None
 
     def clear_history(self, user_mask=Mask.ALL) -> None:
         for user_index in self._users.indices(user_mask):
             self._client_state_history[user_index].clear()
+            self._pressed_ui_buttons[user_index].clear()
 
     def kick(self, user_mask: Mask) -> None:
         """
