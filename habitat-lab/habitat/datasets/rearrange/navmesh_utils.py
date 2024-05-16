@@ -189,7 +189,7 @@ def embodied_unoccluded_navmesh_snap(
     test_batch_size: int = 20,
     max_samples: int = 200,
     min_sample_dist: float = 0.5,
-    embodiment_heuristic_offsets: Optional[List[Tuple[float, float]]] = None,
+    embodiment_heuristic_offsets: Optional[List[mn.Vector2]] = None,
     agent_embodiment: Optional[MobileManipulator] = None,
     orientation_noise: float = 0,
     max_orientation_samples: int = 5,
@@ -209,7 +209,7 @@ def embodied_unoccluded_navmesh_snap(
     :param test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
     :param max_samples: The maximum number of attempts to sample navmesh points for the test batch.
     :param min_sample_dist: The minimum allowed L2 distance between samples in the test batch.
-    :param embodiment_heuristic_offsets: A set of 2D offsets describing navmesh cylinder center points forming a proxy for agent embodiment. Assumes x-forward, y to the side and 3D height fixed to navmesh. If provided, this proxy embodiment will be used for collision checking.
+    :param embodiment_heuristic_offsets: A set of 2D offsets describing navmesh cylinder center points forming a proxy for agent embodiment. Assumes x-forward, y to the side and 3D height fixed to navmesh. If provided, this proxy embodiment will be used for collision checking. If provided with an agent_embodiment, will be used instead of the MobileManipulatorParams.navmesh_offsets
     :param agent_embodiment: The MobileManipulator to be used for collision checking if provided.
     :param orientation_noise: Standard deviation of the gaussian used to sample orientation noise. If 0, states always face the target point. Noise is applied delta to this "target facing" orientation.
     :param max_orientation_samples: The number of orientation noise samples to try for each candidate point.
@@ -230,6 +230,10 @@ def embodied_unoccluded_navmesh_snap(
         pathfinder = sim.pathfinder
 
     assert pathfinder.is_loaded
+
+    # when an agent_embodiment is provided, use its navmesh_offsets unless overridden by input
+    if embodiment_heuristic_offsets is None and agent_embodiment is not None:
+        embodiment_heuristic_offsets = agent_embodiment.params.navmesh_offsets
 
     # first try the closest snap point
     snap_point = pathfinder.snap_point(target_position, island_id)
@@ -346,6 +350,7 @@ def embodied_unoccluded_navmesh_snap(
                     agent_embodiment.base_rot = desired_angle
 
                     details = None
+                    sim.perform_discrete_collision_detection()
                     # Make sure the robot is not colliding with anything in this state.
                     if sim.__class__.__name__ == "RearrangeSim":
                         _, details = rearrange_collision(
