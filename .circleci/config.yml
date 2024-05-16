@@ -203,6 +203,9 @@ jobs:
       - run:
           name: Download test data
           command: |
+              # Disable clone protection for git lfs
+              export GIT_CLONE_PROTECTION_ACTIVE=false
+
               sudo apt install git-lfs
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat
