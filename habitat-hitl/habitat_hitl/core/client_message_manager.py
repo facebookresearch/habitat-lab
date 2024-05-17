@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from dataclasses import dataclass
 from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
@@ -13,6 +14,31 @@ from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
+
+
+# TODO: Move to another file.
+@dataclass
+class UIButton:
+    """
+    Networked UI button. Use RemoteClientState.ui_button_pressed() to retrieve state.
+    """
+
+    def __init__(self, button_id: str, text: str, enabled: bool):
+        self.button_id = button_id
+        self.text = text
+        self.enabled = enabled
+
+
+@dataclass
+class UITextbox:
+    """
+    Networked UI textbox. Use RemoteClientState.get_textbox_content() to retrieve content.
+    """
+
+    def __init__(self, textbox_id: str, text: str, enabled: bool):
+        self.textbox_id = textbox_id
+        self.text = text
+        self.enabled = enabled
 
 
 class ClientMessageManager:
@@ -145,6 +171,41 @@ class ClientMessageManager:
                 {"text": text, "position": [pos[0], pos[1]]}
             )
 
+    def show_modal_dialogue_box(
+        self,
+        title: str,
+        text: str,
+        buttons: List[UIButton],
+        textbox: Optional[UITextbox] = None,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Show a modal dialog box with buttons.
+        There can only be one modal dialog box at a time.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+
+            message["dialog"] = {
+                "title": title,
+                "text": text,
+                "buttons": [],
+            }
+            if textbox is not None:
+                message["dialog"]["textbox"] = {
+                    "id": textbox.textbox_id,
+                    "text": textbox.text,
+                    "enabled": textbox.enabled,
+                }
+            for button in buttons:
+                message["dialog"]["buttons"].append(
+                    {
+                        "id": button.button_id,
+                        "text": button.text,
+                        "enabled": button.enabled,
+                    }
+                )
+
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
     ) -> None:
@@ -212,7 +273,8 @@ class ClientMessageManager:
         Use viewport_id '-1' to edit the default viewport.
 
         viewport_id: Unique identifier of the viewport.
-        viewport_rect_xywh: Viewport rect, in normalized coordinated.
+        viewport_rect_xywh: Viewport rect (x position, y position, width, height).
+                            In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
         visible_layer_ids: Visibility layers. Only objects assigned to these layers will be visible to this viewport.
         """
         layers = Users(8)  # Maximum of 8 layers.
