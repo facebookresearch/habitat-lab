@@ -28,6 +28,18 @@ class UIButton:
         self.enabled = enabled
 
 
+@dataclass
+class UITextbox:
+    """
+    Networked UI textbox. Use RemoteClientState.get_textbox_content() to retrieve content.
+    """
+
+    def __init__(self, textbox_id: str, text: str, enabled: bool):
+        self.textbox_id = textbox_id
+        self.text = text
+        self.enabled = enabled
+
+
 class ClientMessageManager:
     r"""
     Extends gfx-replay keyframes to include server messages to be interpreted by the clients.
@@ -163,6 +175,7 @@ class ClientMessageManager:
         title: str,
         text: str,
         buttons: List[UIButton],
+        textbox: Optional[UITextbox] = None,
         destination_mask: Mask = Mask.ALL,
     ):
         r"""
@@ -177,6 +190,12 @@ class ClientMessageManager:
                 "text": text,
                 "buttons": [],
             }
+            if textbox is not None:
+                message["dialog"]["textbox"] = {
+                    "id": textbox.textbox_id,
+                    "text": textbox.text,
+                    "enabled": textbox.enabled,
+                }
             for button in buttons:
                 message["dialog"]["buttons"].append(
                     {
