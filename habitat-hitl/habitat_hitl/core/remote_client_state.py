@@ -27,6 +27,7 @@ class RemoteGuiInput:
 
         # TODO: Handle UI in a different class.
         self._pressed_ui_buttons: List[Set[str]] = []
+        self._textboxes: List[Dict[str, str]] = []
 
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
@@ -36,6 +37,7 @@ class RemoteGuiInput:
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
             self._pressed_ui_buttons.append(set())
+            self._textboxes.append({})
 
         self._client_loading: List[bool] = [False] * users.max_user_count
 
@@ -57,6 +59,10 @@ class RemoteGuiInput:
 
     def ui_button_pressed(self, user_index: int, button_id: str) -> bool:
         return button_id in self._pressed_ui_buttons[user_index]
+
+    def get_textbox_content(self, user_index: int, textbox_id: str) -> str:
+        user_textboxes = self._textboxes[user_index]
+        return user_textboxes.get(textbox_id, "")
 
     def get_history_length(self) -> int:
         """Length of client state history preserved. Anything beyond this horizon is discarded."""
@@ -518,6 +524,7 @@ class RemoteGuiInput:
         for user_index in self._users.indices(Mask.ALL):
             self._gui_inputs[user_index].on_frame_end()
             self._pressed_ui_buttons[user_index].clear()
+            self._textboxes[user_index].clear()
         self._new_connection_records = None
 
     def get_receive_count(self):
