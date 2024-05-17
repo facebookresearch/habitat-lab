@@ -57,6 +57,8 @@ class RemoteClientState:
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
 
+        self._client_loading: List[bool] = [False] * users.max_user_count
+
         # temp map VR button to key
         self._button_map = {
             0: GuiInput.KeyNS.ZERO,
@@ -80,6 +82,10 @@ class RemoteClientState:
     def get_gui_inputs(self) -> List[GuiInput]:
         """Get a list of all GuiInputs indexed by user index."""
         return self._gui_inputs
+
+    def is_user_loading(self, user_index: int) -> bool:
+        """Return true if the specified user's client is in a loading state."""
+        return self._client_loading[user_index]
 
     def bind_gui_input(self, gui_input: GuiInput, user_index: int) -> None:
         """
@@ -281,6 +287,11 @@ class RemoteClientState:
             # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
             # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
             last_client_state = client_states[-1]
+
+            # Loading states.
+            self._client_loading[user_index] = last_client_state.get(
+                "isLoading", False
+            )
 
             input_json = (
                 last_client_state["input"]
