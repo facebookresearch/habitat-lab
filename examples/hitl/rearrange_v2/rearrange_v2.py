@@ -44,26 +44,6 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
-try:
-    from habitat_llm.agent.env import (
-        register_actions,
-        register_measures,
-        register_sensors,
-    )
-except ImportError:
-    print("Habitat-LLM not installed. Skipping import.")
-
-
-# -------- HABITAT-LLM SPECIFIC CODE --------
-
-
-def register_habitat_llm_extensions(config):
-    register_actions(config)
-    register_measures(config)
-    register_sensors(config)
-
-
-# -------- HABITAT-LLM SPECIFIC CODE --------
 UP = mn.Vector3(0, 1, 0)
 
 
@@ -437,7 +417,7 @@ class AppStateRearrangeV2(AppState):
 )
 def main(config):
     if hasattr(config, "habitat_llm") and config.habitat_llm.enable:
-        register_habitat_llm_extensions(config)
+        collaboration_episode_loader.register_habitat_llm_extensions(config)
     hitl_main(
         config,
         lambda app_service: AppStateRearrangeV2(app_service),

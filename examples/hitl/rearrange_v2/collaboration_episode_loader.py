@@ -10,6 +10,11 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 try:
     from habitat_llm.agent.env import dataset  # noqa: F401
+    from habitat_llm.agent.env import (
+        register_actions,
+        register_measures,
+        register_sensors,
+    )
     from habitat_llm.agent.env.dataset import CollaborationEpisode
 
     collaboration_episode_enabled = True
@@ -37,6 +42,11 @@ if collaboration_episode_enabled:
         episode_data.instruction = episode.instruction
 
         return episode_data
+
+    def register_habitat_llm_extensions(config):
+        register_actions(config)
+        register_measures(config)
+        register_sensors(config)
 
 else:
 
