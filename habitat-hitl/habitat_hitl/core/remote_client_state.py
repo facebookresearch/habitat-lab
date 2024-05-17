@@ -15,6 +15,8 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
+from habitat_hitl.core.client_helper import ClientHelper
+from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -36,6 +38,8 @@ class RemoteClientState:
 
     def __init__(
         self,
+        hitl_config,  # TODO: Coupling with ClientHelper
+        client_message_manager: ClientMessageManager,  # TODO: Coupling with ClientHelper
         interprocess_record: InterprocessRecord,
         gui_drawer: GuiDrawer,
         users: Users,
@@ -56,6 +60,12 @@ class RemoteClientState:
             self._gui_inputs.append(GuiInput())
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
+
+        # TODO: Temporary coupling.
+        #       ClientHelper lifetime is directly coupled with RemoteClientState.
+        self._client_helper = ClientHelper(
+            hitl_config, self, client_message_manager, users
+        )
 
         # temp map VR button to key
         self._button_map = {
