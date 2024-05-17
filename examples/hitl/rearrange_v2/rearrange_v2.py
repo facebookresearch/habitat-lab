@@ -118,7 +118,6 @@ class UserData:
         self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
         self.task_instruction = ""
-        self.signal_change_episode = False
         self.pip_initialized = False
 
         # If in remote mode, get the remote input. Else get the server (local) input.
@@ -151,7 +150,6 @@ class UserData:
         gui_agent_controller._gui_input = self.gui_input
 
     def reset(self):
-        self.signal_change_episode = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset()
 
@@ -180,7 +178,8 @@ class UserData:
             self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self.signal_change_episode = True
+            self.episode_finished = True
+            self.episode_success = True
 
         if self.client_helper:
             self.client_helper.update(
