@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from __future__ import annotations
+
 # Must call this before importing Habitat or Magnum.
 # fmt: off
 import ctypes
@@ -12,7 +14,6 @@ import sys
 
 sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 # fmt: on
-
 
 from typing import List, Optional
 
@@ -45,6 +46,7 @@ from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 UP = mn.Vector3(0, 1, 0)
+PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
 
 class DataLogger:
@@ -127,6 +129,7 @@ class UserData:
         self.show_gui_text = True
         self.task_instruction = ""
         self.signal_change_episode = False
+        self.pip_initialized = False
 
         # If in remote mode, get the remote input. Else get the server (local) input.
         self.gui_input = (
@@ -185,6 +188,28 @@ class UserData:
 
         self.ui.update()
         self.ui.draw_ui()
+
+    def draw_pip_viewport(self, pip_user_data: UserData):
+        """
+        Draw a picture-in-picture viewport showing another agent's perspective.
+        """
+        # Lazy init:
+        if not self.pip_initialized:
+            self.pip_initialized = True
+
+            # Define picture-in-picture (PIP) viewport.
+            self.app_service.client_message_manager.set_viewport_properties(
+                viewport_id=PIP_VIEWPORT_ID,
+                viewport_rect_xywh=[0.8, 0.02, 0.18, 0.18],
+                destination_mask=Mask.from_index(self.user_index),
+            )
+
+        # Show picture-in-picture (PIP) viewport.
+        self.app_service.client_message_manager.show_viewport(
+            viewport_id=PIP_VIEWPORT_ID,
+            cam_transform=pip_user_data.cam_transform,
+            destination_mask=Mask.from_index(self.user_index),
+        )
 
     def _get_camera_lookat_pos(self) -> mn.Vector3:
         agent_root = get_agent_art_obj_transform(
@@ -395,6 +420,11 @@ class AppStateRearrangeV2(AppState):
                 server_user_input.copy_from(self._server_gui_input)
 
         self._sps_tracker.increment()
+
+        # Draw the picture-in-picture showing other agent's perspective.
+        if self._users.max_user_count == 2:
+            self._user_data[0].draw_pip_viewport(self._user_data[1])
+            self._user_data[1].draw_pip_viewport(self._user_data[0])
 
         if not self._paused:
             for user_index in self._users.indices(Mask.ALL):

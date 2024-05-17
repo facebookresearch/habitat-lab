@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Final, List, Optional, Union
+from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
 
@@ -242,6 +242,50 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["serverKeyframeId"] = keyframe_id
 
+    def set_viewport_properties(
+        self,
+        viewport_id: int,
+        viewport_rect_xywh: List[float],
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Set the properties of a viewport. Unlike show_viewport(), this does not have to be called every frame.
+        Use viewport_id '-1' to edit the default viewport.
+
+        viewport_id: Unique identifier of the viewport.
+        viewport_rect_xywh: Viewport rect (x position, y position, width, height).
+                            In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
+            viewport_properties["rect"] = viewport_rect_xywh
+
+    def show_viewport(
+        self,
+        viewport_id: int,
+        cam_transform: mn.Matrix4,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        """
+        Show a picture-in-picture viewport rendering the specified camera matrix.
+        This must be repeatedly called for the viewport to stay visible.
+        The viewport_id '-1' is reserved for the main viewport. It is always visible.
+        Use set_viewport_properties() to configure the viewport.
+        """
+        assert viewport_id != -1
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
+            viewport_properties["enabled"] = True
+            viewport_properties["camera"] = _create_transform_dict(
+                cam_transform
+            )
+
     def update_navmesh_triangles(
         self,
         triangle_vertices: List[List[float]],
@@ -290,3 +334,25 @@ class ClientMessageManager:
                 rot[2],
                 rot[3],
             ]
+
+
+def _create_transform_dict(transform: mn.Matrix4) -> Dict[str, List[float]]:
+    """Create a message dictionary from a transform."""
+    p = transform.translation
+    r = mn.Quaternion.from_matrix(transform.rotation())
+    rv = r.vector
+    return {
+        "translation": [p[0], p[1], p[2]],
+        "rotation": [r.scalar, rv[0], rv[1], rv[2]],
+    }
+
+
+def _obtain_viewport_properties(
+    message: Message, viewport_id: int
+) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "viewports" not in message:
+        message["viewports"] = {}
+    if viewport_id not in message["viewports"]:
+        message["viewports"][viewport_id] = {}
+    return message["viewports"][viewport_id]
