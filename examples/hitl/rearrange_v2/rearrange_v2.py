@@ -121,6 +121,7 @@ class UserData:
         client_helper: ClientHelper,
     ):
         self.app_service = app_service
+        self.world = world
         self.user_index = user_index
         self.gui_agent_controller = gui_agent_controller
         self.server_sps_tracker = server_sps_tracker
@@ -163,6 +164,26 @@ class UserData:
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset()
 
+        # If networking is enabled...
+        if self.app_service.client_message_manager:
+            # Assign user agent objects to their own layer.
+            agent_index = self.gui_agent_controller._agent_idx
+            agent_object_ids = self.world.get_agent_object_ids(agent_index)
+            for agent_object_id in agent_object_ids:
+                self.app_service.client_message_manager.set_object_visibility_layer(
+                    object_id=agent_object_id,
+                    layer_id=agent_index,
+                    destination_mask=Mask.from_index(self.user_index),
+                )
+
+            # Show all layers except "user_index" in the default viewport.
+            # This hides the user's own agent in the first person view.
+            self.app_service.client_message_manager.set_viewport_properties(
+                viewport_id=-1,
+                visible_layer_ids=Mask.all_except_index(agent_index),
+                destination_mask=Mask.from_index(self.user_index),
+            )
+
     def update(self, dt: float):
         if self.gui_input.get_key_down(GuiInput.KeyNS.H):
             self.show_gui_text = not self.show_gui_text
@@ -193,14 +214,31 @@ class UserData:
         """
         Draw a picture-in-picture viewport showing another agent's perspective.
         """
+        # If networking is disabled, skip.
+        if not self.app_service.client_message_manager:
+            return
+
         # Lazy init:
         if not self.pip_initialized:
             self.pip_initialized = True
 
+            # Assign pip agent objects to their own layer.
+            pip_agent_index = pip_user_data.gui_agent_controller._agent_idx
+            agent_object_ids = self.world.get_agent_object_ids(pip_agent_index)
+            for agent_object_id in agent_object_ids:
+                self.app_service.client_message_manager.set_object_visibility_layer(
+                    object_id=agent_object_id,
+                    layer_id=pip_agent_index,
+                    destination_mask=Mask.from_index(self.user_index),
+                )
+
             # Define picture-in-picture (PIP) viewport.
+            # Show all layers except "pip_user_index".
+            # This hides the other agent in the picture-in-picture viewport.
             self.app_service.client_message_manager.set_viewport_properties(
                 viewport_id=PIP_VIEWPORT_ID,
                 viewport_rect_xywh=[0.8, 0.02, 0.18, 0.18],
+                visible_layer_ids=Mask.all_except_index(pip_agent_index),
                 destination_mask=Mask.from_index(self.user_index),
             )
 
