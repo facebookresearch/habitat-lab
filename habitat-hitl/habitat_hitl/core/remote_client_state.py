@@ -33,6 +33,8 @@ class RemoteGuiInput:
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
 
+        self._client_loading: List[bool] = [False] * users.max_user_count
+
         # temp map VR button to key
         self._button_map = {
             0: GuiInput.KeyNS.ZERO,
