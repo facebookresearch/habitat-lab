@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+# This controller assumes you are using a habitat-llm Agent downstream
+# code for interface followed by a habitat-llm Agent will be released in the future
+
 import logging
 import threading
 from typing import Any, Dict, Union
@@ -7,7 +16,6 @@ from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
 from habitat_llm.utils import fix_config, setup_config
-from habitat_llm.utils.analysis import CodeTimer
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -28,6 +36,7 @@ class LLMController(SingleAgentBaselinesController):
         is_multi_agent: bool,
         config: DictConfig,
         gym_habitat_env: GymHabitatEnv,
+        log_to_file: bool = False,
     ):
         self._config = config
         self._is_multi_agent = is_multi_agent
@@ -38,18 +47,23 @@ class LLMController(SingleAgentBaselinesController):
         self._agent_action_length = 28
         self._thread: Union[None, threading.Thread] = None
         self._low_level_actions: Union[None, dict, np.ndarray] = {}
+        self._task_done = False
         self._iter = 0
         self._skip_iters = 0
-        logging.basicConfig(
-            filename="/home/priyamp/hitl/act_timing.log",
-            filemode="a",
-            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.DEBUG,
-            force=True,
-        )
-        self._analysis_logger = logging.getLogger("LLMController")
-        self._analysis_logger.debug("LLMController initialized")
+        if log_to_file:
+            import datetime
+
+            now = datetime.datetime.now()
+            logging.basicConfig(
+                filename=f"./act_timing_{now:%Y-%m-%d}_{now:%H-%M}.log",
+                filemode="a",
+                format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+                datefmt="%H:%M:%S",
+                level=logging.DEBUG,
+                force=True,
+            )
+            self._analysis_logger = logging.getLogger("LLMController")
+            self._analysis_logger.debug("LLMController initialized")
 
         with habitat.config.read_write(self._config):
             fix_config(self._config)
@@ -85,8 +99,6 @@ class LLMController(SingleAgentBaselinesController):
             agent = Agent(
                 agent_conf.uid, agent_conf.config, self.environment_interface
             )
-
-            # Make sure that its unique by adding to the set
             agents.append(agent)
         return agents
 
@@ -126,42 +138,33 @@ class LLMController(SingleAgentBaselinesController):
         (
             self._low_level_actions,
             planner_info,
-            task_done,
+            self._task_done,
         ) = self.planner.get_next_action(
             self.current_instruction,
             observations,
             self.environment_interface.world_graph,
             verbose=True,
         )
-        if task_done:
-            print("Task Done")
         return
 
     def act(self, observations, *args, **kwargs):
-        if self._iter < self._skip_iters:
+        if self._iter < self._skip_iters or self._task_done:
             self._iter += 1
             return np.zeros(self._agent_action_length)
-        with CodeTimer("LLMController.act", self._analysis_logger):
-            low_level_actions = np.zeros(self._agent_action_length)
-            if self._thread is None:
-                self._thread = threading.Thread(
-                    target=self._act, args=(observations,), kwargs=kwargs
-                )
-                self._thread.start()
+        low_level_actions = np.zeros(self._agent_action_length)
+        if self._thread is None:
+            self._thread = threading.Thread(
+                target=self._act, args=(observations,), kwargs=kwargs
+            )
+            self._thread.start()
+        else:
+            if self._thread.is_alive():
+                pass
             else:
-                if self._thread.is_alive():
-                    pass
-                else:
-                    self._thread = None
-                    if self._low_level_actions != {}:
-                        low_level_actions = self._low_level_actions[
-                            str(self._agent_idx)
-                        ][:-248]
+                self._thread = None
+                if self._low_level_actions != {}:
+                    low_level_actions = self._low_level_actions[
+                        str(self._agent_idx)
+                    ][:-248]
 
-        # if low_level_actions:
-        #     low_level_actions = low_level_actions[str(self._agent_idx)]
-        #     # NOTE: truncating the action here, as this includes both Spot and Human actions
-        #     low_level_actions = low_level_actions[:-248]
-        # else:
-        #     low_level_actions = np.zeros(self._agent_action_length)
         return low_level_actions
