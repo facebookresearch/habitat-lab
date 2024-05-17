@@ -27,7 +27,10 @@ class InterprocessRecord:
         self._connection_record_queue: Queue[ConnectionRecord] = Queue()
         self._disconnection_record_queue: Queue[DisconnectionRecord] = Queue()
         self._kick_signal_queue: Queue[int] = Queue()
-        self._allow_new_connections = Value("b", False)
+
+        self._allow_new_connections = Value(
+            "b", networking_config.enable_connections_by_default
+        )
 
     def enable_new_connections(self, enabled: bool):
         """Signal the networking process whether it should accept new connections."""

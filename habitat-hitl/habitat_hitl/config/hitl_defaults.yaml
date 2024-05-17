@@ -23,6 +23,9 @@ habitat_hitl:
     # Number of accepted concurrent clients (multiplayer if higher than one). All connections beyond this count will be rejected. Beware that this can be different from the agent count.
     max_client_count: 1
 
+    # Accept incoming connections by default. If disabled, connections must be activated using InterprocessRecord.enable_new_connections().
+    enable_connections_by_default: True
+
     # We'll listen for incoming client connections at this port.
     port: 8888
 
