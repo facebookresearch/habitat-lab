@@ -253,7 +253,8 @@ class ClientMessageManager:
         Use viewport_id '-1' to edit the default viewport.
 
         viewport_id: Unique identifier of the viewport.
-        viewport_rect_xywh: Viewport rect, in normalized coordinated.
+        viewport_rect_xywh: Viewport rect (x position, y position, width, height).
+                            In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
