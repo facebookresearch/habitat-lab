@@ -484,6 +484,8 @@ class AppStateRearrangeV2(AppState):
     version_base=None, config_path="config", config_name="rearrange_v2"
 )
 def main(config):
+    if hasattr(config, "habitat_llm") and config.habitat_llm.enable:
+        collaboration_episode_loader.register_habitat_llm_extensions(config)
     hitl_main(
         config,
         lambda app_service: AppStateRearrangeV2(app_service),

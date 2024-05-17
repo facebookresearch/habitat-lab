@@ -19,7 +19,9 @@ habitat:
   gym:
     obs_keys:
       - agent_0_is_holding
+      - agent_1_is_holding
       - agent_0_ee_pos
+      - agent_1_ee_pos
   simulator:
     agents_order:
       - agent_0

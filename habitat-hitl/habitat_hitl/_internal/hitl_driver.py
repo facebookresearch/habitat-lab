@@ -10,6 +10,7 @@ See README.md in this directory.
 
 import abc
 import json
+import logging
 from datetime import datetime
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
@@ -85,6 +86,7 @@ class HitlDriver(AppDriver):
         debug_line_drawer: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
+        log_to_file: bool = False,
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -95,6 +97,21 @@ class HitlDriver(AppDriver):
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
         self._gui_input = gui_input
+        self._logger = None
+        if log_to_file:
+            import datetime
+
+            now = datetime.datetime.now()
+            logging.basicConfig(
+                filename=f"./hitl_driver_timing_{now:%Y-%m-%d}_{now:%H-%M}.log",
+                filemode="a",
+                format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+                datefmt="%H:%M:%S",
+                level=logging.DEBUG,
+                force=True,
+            )
+            self._logger = logging.getLogger("HitlDriver")
+            self._logger.debug("HitlDriver initialized")
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication

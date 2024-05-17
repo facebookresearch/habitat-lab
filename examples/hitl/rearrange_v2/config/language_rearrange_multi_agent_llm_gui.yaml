@@ -1,0 +1,153 @@
+# This config is derived from habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human.yaml
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  # - /habitat/task: task_config_base
+
+  # Human setup
+  - /habitat_conf/habitat_agent@habitat.simulator.agents.agent_1: rgbd_head_rgbd_arm_agent_vis
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
+  # following are from hab-llm entry config. Questions:
+  # 1. What is the difference between
+  #    habitat.task.actions.agent_1_humanoid_base_velocity and
+  #    habitat.task.actions.agent_1_base_velocity?
+  # 2. What is the humanoidjoint_action? Do we need it here?
+  # - /habitat/task/actions@habitat.task.actions.agent_1_humanoid_base_velocity: humanoid_base_velocity
+  # - /habitat/task/actions@habitat.task.actions.agent_1_humanoidjoint_action: humanoidjoint_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  # Spot setup
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: spot
+  - /habitat_conf/habitat_agent@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_rgbd_jaw_agent_vis
+  # - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+  # - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  # - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+
+  - /habitat/dataset/rearrangement: hssd
+  - /habitat/task/measurements:
+    - num_steps
+  - /habitat/task/lab_sensors:
+    # from previous hitl config
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    # from habitat-llm
+    - humanoid_detector_sensor
+
+  - _self_
+
+habitat:
+  task:
+    # type: RearrangeEmptyTask-v0
+    # reward_measure: num_steps
+    # success_measure: num_steps
+    # success_reward: 10.0
+    # min_distance_start_agents: 5.0
+    # slack_reward: -0.0005
+    # end_on_success: True
+    # constraint_violation_ends_episode: False
+    # constraint_violation_drops_object: True
+    # task_spec_base_path: benchmark/multi_agent/
+    # task_spec: pddl/multi_agent_tidy_house
+    # pddl_domain_def: fp
+    actions:
+      agent_1_base_velocity:
+        lin_speed: 10.0
+        ang_speed: 300
+
+    # robot_at_thresh: 3.0
+    # lab_sensors:
+    #   # Defien the human detector
+    #   humanoid_detector_sensor:
+    #     # If the human detector function is image or binary flag
+    #     return_image: False
+    #     is_return_image_bbox: False
+  gym:
+    obs_keys:
+# --- habitat-llm block
+      # - agent_0_third_rgb
+      # - agent_0_articulated_agent_arm_depth
+      # - agent_0_articulated_agent_arm_rgb
+      - agent_0_articulated_agent_arm_panoptic
+      # - agent_0_head_depth
+      # - agent_0_head_rgb
+      - agent_0_relative_resting_position
+      - agent_0_joint
+      - agent_0_ee_pos
+      - agent_0_is_holding
+      - agent_0_dynamic_obj_goal_sensor
+      - agent_0_dynamic_goal_to_agent_gps_compass
+      # dynamic_obj_start_sensor is mapped into dynamic_obj_start_sensor automatically
+      # due to sensor mapping
+      - agent_0_dynamic_obj_start_sensor
+      - agent_0_goal_to_agent_gps_compass
+      - agent_0_humanoid_detector_sensor
+      # - agent_0_articulated_agent_jaw_rgb
+      # - agent_0_articulated_agent_jaw_depth
+      - agent_0_articulated_agent_jaw_panoptic
+
+      # - agent_1_third_rgb
+      # - agent_1_articulated_agent_arm_depth
+      # - agent_1_articulated_agent_arm_rgb
+      # - agent_1_articulated_agent_arm_panoptic
+      # - agent_1_head_depth
+      - agent_1_head_rgb
+      - agent_1_head_panoptic
+      # - agent_1_relative_resting_position
+      # - agent_1_joint
+      # - agent_1_ee_pos
+      - agent_1_is_holding
+      # - agent_1_dynamic_obj_goal_sensor
+      # - agent_1_dynamic_goal_to_agent_gps_compass
+      # - agent_1_dynamic_obj_start_sensor
+# --- habitat-llm block
+  environment:
+    max_episode_steps: 750  # this is 20000 in habitat-llm
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+
+    # --- habitat-llm block
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: SpotRobot
+        joint_start_noise: 0.0
+      agent_1:
+        radius: 0.3
+        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: SpotRobot
+        joint_start_noise: 0.0
+    # --- habitat-llm block
+
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
+      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
+      - "data/objects_ovmm/train_val/google_scanned/configs/"
+      - "data/objects_ovmm/train_val/hssd/configs/objects/"
+    concur_render: True
+    auto_sleep: True
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+    # Q. What is this agents_order?
+    agents_order:
+      - agent_0
+      - agent_1
+
+  dataset:
+    type: "CollaborationDataset-v0"
+    split: train
+    scenes_dir: data/fpss
