@@ -37,8 +37,8 @@ class KinematicHumanoid(MobileManipulator):
             cameras={
                 "head": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.0, 0.5, 0.25),
-                    cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
-                    attached_link_id=-1,
+                    cam_look_at_pos=mn.Vector3(0.0, 0.325, 0.75),
+                    attached_link_id=-2,
                 ),
                 "third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),

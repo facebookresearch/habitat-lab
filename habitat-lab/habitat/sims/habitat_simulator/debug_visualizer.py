@@ -15,6 +15,7 @@ import habitat_sim
 from habitat.core.logging import logger
 from habitat.utils.common import check_make_dir
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
+from habitat_sim.agent.agent import AgentState
 
 
 class DebugObservation:
@@ -185,6 +186,7 @@ class DebugVisualizer:
         )
         self.agent = self.sim.agents[-1]
         self.agent_id = len(self.sim.agents) - 1
+        self.agent.initial_state = AgentState()
         self.sim._Simulator__sensors.append({})
         self.sim._update_simulator_sensors(self.sensor_uuid, self.agent_id)
         self.sensor = self.sim._Simulator__sensors[self.agent_id][
@@ -518,7 +520,7 @@ class DebugVisualizer:
         fov = self.sensor._spec.hfov
         aspect = (
             float(self.sensor._spec.resolution[1])
-            / self.sensor._spec.resolution[0]
+            / self.sensor._spec.resolution[0] * 2.0
         )
         import math
 
