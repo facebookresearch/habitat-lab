@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
-from habitat_llm.utils.analysis import CodeTimer
 
 import habitat
 import habitat.gym
@@ -87,6 +86,7 @@ class HitlDriver(AppDriver):
         debug_line_drawer: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
+        log_to_file: bool = False,
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -97,16 +97,21 @@ class HitlDriver(AppDriver):
         self._play_episodes_filter_str = self._hitl_config.episodes_filter
         self._num_recorded_episodes = 0
         self._gui_input = gui_input
-        logging.basicConfig(
-            filename="/home/priyamp/hitl/app_timing.log",
-            filemode="a",
-            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.DEBUG,
-            force=True,
-        )
-        self._logger = logging.getLogger("HitlDriver")
-        self._logger.debug("HitlDriver initialized")
+        self._logger = None
+        if log_to_file:
+            import datetime
+
+            now = datetime.datetime.now()
+            logging.basicConfig(
+                filename=f"./hitl_driver_timing_{now:%Y-%m-%d}_{now:%H-%M}.log",
+                filemode="a",
+                format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+                datefmt="%H:%M:%S",
+                level=logging.DEBUG,
+                force=True,
+            )
+            self._logger = logging.getLogger("HitlDriver")
+            self._logger.debug("HitlDriver initialized")
 
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
@@ -337,9 +342,8 @@ class HitlDriver(AppDriver):
         if self._hitl_config.disable_policies_and_stepping:
             return
 
-        with CodeTimer("compute_action_and_step_env", self._logger):
-            action = self.ctrl_helper.update(self._obs)
-            self._env_step(action)
+        action = self.ctrl_helper.update(self._obs)
+        self._env_step(action)
 
         if self._save_episode_record:
             self._record_action(action)
@@ -385,8 +389,8 @@ class HitlDriver(AppDriver):
             self._remote_client_state.clear_history()
 
         # todo: fix duplicate calls to self.ctrl_helper.on_environment_reset() here
-        # if self.ctrl_helper:
-        #     self.ctrl_helper.on_environment_reset()
+        if self.ctrl_helper:
+            self.ctrl_helper.on_environment_reset()
 
         if self._save_episode_record:
             self._reset_episode_recorder()
