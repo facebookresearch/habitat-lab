@@ -41,6 +41,12 @@ class RemoteGuiInput:
 
         self._client_loading: List[bool] = [False] * users.max_user_count
 
+        # TODO: Temporary coupling.
+        #       ClientHelper lifetime is directly coupled with RemoteClientState.
+        self._client_helper = ClientHelper(
+            hitl_config, self, client_message_manager, users
+        )
+
         # temp map VR button to key
         self._button_map = {
             0: GuiInput.KeyNS.ZERO,
