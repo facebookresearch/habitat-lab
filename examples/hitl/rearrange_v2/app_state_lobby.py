@@ -12,6 +12,8 @@ from app_states import create_app_state_rearrange
 
 from habitat_hitl.app_states.app_service import AppService
 
+# Delay to start the session after all users have connected.
+# Occasionally, connection errors may occur rapidly after connecting, causing the session to start needlessly.
 START_SESSION_DELAY: Final[float] = 0.5
 
 
