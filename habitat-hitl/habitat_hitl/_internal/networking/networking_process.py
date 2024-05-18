@@ -9,6 +9,7 @@ import json
 import os
 import signal
 import ssl
+import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Process
 from typing import Dict, List, Optional
@@ -28,7 +29,12 @@ from habitat_hitl._internal.networking.keyframe_utils import (
     get_empty_keyframe,
     update_consolidated_keyframe,
 )
-from habitat_hitl.core.types import ClientState, ConnectionRecord, Keyframe
+from habitat_hitl.core.types import (
+    ClientState,
+    ConnectionRecord,
+    DisconnectionRecord,
+    Keyframe,
+)
 
 # Boolean variable to indicate whether to use SSL
 use_ssl = False
@@ -233,17 +239,18 @@ class NetworkManager:
         print(f"Closed connection to client  {websocket.remote_address}")
         del self._connected_clients[websocket_id]
 
+        disconnection_record: DisconnectionRecord = {}
+        disconnection_record["connectionId"] = websocket_id
+        self._interprocess_record.send_disconnection_record_to_main_thread(
+            disconnection_record
+        )
+
     def parse_connection_record(self, message: str) -> ConnectionRecord:
-        connection_record: ConnectionRecord
-        if message == "client ready!":
-            # legacy message format for initial client message
-            connection_record = {"isClientReady": True}
-        else:
-            connection_record = json.loads(message)
-            if "isClientReady" not in connection_record:
-                raise ValueError(
-                    "isClientReady key not found in initial client message."
-                )
+        connection_record: ConnectionRecord = json.loads(message)
+        if "isClientReady" not in connection_record:
+            raise ValueError(
+                "isClientReady key not found in initial client message."
+            )
         return connection_record
 
     async def handle_connection(self, websocket: ClientConnection) -> None:
@@ -377,7 +384,7 @@ async def networking_main_async(
     )
 
     # Define tasks (concurrent looping coroutines).
-    tasks = []
+    tasks: List[asyncio.Future] = []
     tasks.append(asyncio.create_task(network_mgr.check_keyframe_queue()))
     tasks.append(
         asyncio.create_task(network_mgr.check_close_broken_connection())
@@ -395,13 +402,34 @@ async def networking_main_async(
     ]
     for stop_signal in stop_signals:
         loop.add_signal_handler(stop_signal, stop.set_result, None)
+    # Add the stop signal as a task.
+    tasks.append(stop)
 
     # Run tasks.
-    tasks = asyncio.gather(*tasks)
+    abort = False
+    while tasks:
+        # Execute tasks until one is done (or fails).
+        done_tasks, pending = await asyncio.wait(
+            tasks, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done_tasks:
+            # Print exception for failed tasks.
+            try:
+                await task
+            except Exception as e:
+                print(f"Exception raised in network process. Aborting: {e}.")
+                traceback.print_exc()
+                abort = True
+        # Abort if exception was raised, or if a termination signal was caught.
+        if abort or stop.done():
+            if stop.done():
+                print(f"Caught termination signal: {stop.result}.")
+            break
+        # Resume pending tasks.
+        tasks = pending
 
-    # Wait for cancellation (from termination signals).
-    await stop
-    print("Networking process terminating.")
+    # Terminate network process.
+    print("Networking process terminating...")
 
     # Close servers.
     websocket_server.close()
@@ -409,9 +437,6 @@ async def networking_main_async(
 
     if http_runner:
         await http_runner.cleanup()
-
-    # Cancel running tasks.
-    tasks.cancel()
 
 
 def networking_main(interprocess_record: InterprocessRecord) -> None:

@@ -427,6 +427,7 @@ def snap_down(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     dbv: Optional[DebugVisualizer] = None,
+    max_collision_depth: float = 0.01,
 ) -> bool:
     """
     Attempt to project an object in the gravity direction onto the surface below it.
@@ -435,6 +436,7 @@ def snap_down(
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (0).
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
+    :param max_collision_depth: The maximum contact penetration depth between the object and the support surface. Higher values are easier to sample, but result in less dynamically stabile states.
 
     :return: boolean placement success.
 
@@ -472,7 +474,9 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.05)
+                (
+                    cp.contact_distance < (-1 * max_collision_depth)
+                )  # contact depth is negative distance
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
@@ -623,6 +627,54 @@ def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
             ao_link_map[link_id] = ao.object_id
 
     return ao_link_map
+
+
+def get_ao_default_link(
+    ao: habitat_sim.physics.ManagedArticulatedObject,
+    compute_if_not_found: bool = False,
+) -> Optional[int]:
+    """
+    Get the "default" link index for a ManagedArticulatedObject.
+    The "default" link is the one link which should be used if only one joint can be actuated. For example, the largest or most accessible drawer or door.
+    The default link is determined by:
+        - must be "prismatic" or "revolute" joint type
+        - first look in the metadata Configuration for an annotated link.
+        - (if compute_if_not_found) - if not annotated, it is programmatically computed from a heuristic.
+
+    Default link heuristic: the link with the lowest Y value in the bounding box with appropriate joint type.
+
+    :param compute_if_not_found: If true, try to compute the default link if it isn't found.
+
+    :return: The default link index or None if not found. Cannot be base link (-1).
+    """
+
+    # first look in metadata
+    default_link = ao.user_attributes.get("default_link")
+
+    if default_link is None and compute_if_not_found:
+        valid_joint_types = [
+            habitat_sim.physics.JointType.Revolute,
+            habitat_sim.physics.JointType.Prismatic,
+        ]
+        lowest_link = None
+        lowest_y: int = None
+        # compute the default link
+        for link_id in ao.get_link_ids():
+            if ao.get_link_joint_type(link_id) in valid_joint_types:
+                # use minimum global keypoint Y value
+                link_lowest_y = min(
+                    get_articulated_link_global_keypoints(ao, link_id),
+                    key=lambda x: x[1],
+                )[1]
+                if lowest_y is None or link_lowest_y < lowest_y:
+                    lowest_y = link_lowest_y
+                    lowest_link = link_id
+        if lowest_link is not None:
+            default_link = lowest_link
+            # if found, set in metadata for next time
+            ao.user_attributes.set("default_link", default_link)
+
+    return default_link
 
 
 def get_obj_from_id(

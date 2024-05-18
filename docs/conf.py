@@ -103,6 +103,7 @@ INPUT_PAGES = [
     "pages/habitat-lab-tdmap-viz.rst",
     "pages/habitat2.rst",
     "pages/view-transform-warp.rst",
+    "pages/metadata-taxonomy.rst",
 ]
 
 PLUGINS = [
@@ -137,6 +138,7 @@ LINKS_NAVBAR1 = [
             ("Habitat Lab TopdownMap Visualization", "habitat-lab-tdmap-viz"),
             ("Habitat 2.0 Overview", "habitat2"),
             ("View, Transform and Warp", "view-transform-warp"),
+            ("'user_defined' Metadata Taxonomy", "metadata-taxonomy"),
         ],
     ),
     ("Classes", "classes", []),
