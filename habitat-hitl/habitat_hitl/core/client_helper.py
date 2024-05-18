@@ -55,6 +55,14 @@ class ClientHelper:
             self._on_client_disconnected
         )
 
+    def activate_users(self) -> None:
+        """
+        Reset idle timer for all users.
+        """
+        for user_index in range(self._users.max_user_count):
+            self._show_idle_kick_warning[user_index] = False
+            self._last_activity[user_index] = datetime.now()
+
     def _reset_user(self, user_index: int):
         self._show_idle_kick_warning[user_index] = False
         self._last_activity[user_index] = datetime.now()
@@ -82,10 +90,25 @@ class ClientHelper:
         """Indicates that the user should be warned that they will be kicked imminently."""
         return self._show_idle_kick_warning[user_index]
 
+    def get_idle_time(self, user_index: int) -> int:
+        """Returns the current idle time."""
+        if not self._kick_active:
+            return 0
+        now = datetime.now()
+        last_activity = self._last_activity[user_index]
+        span = now - last_activity
+        return int(span.total_seconds())
+
+    def get_remaining_idle_time(self, user_index: int) -> int:
+        """Returns the remaining idle time before kicking."""
+        if not self._kick_active:
+            return 0
+        return int(self._max_idle_duration - self.get_idle_time(user_index))
+
     def _update_idle_kick(
         self, user_index: int, is_user_idle_this_frame: bool
     ) -> None:
-        """Tracks whether the user is AFK. After some time, they will be kicked."""
+        """Tracks whether the user is idle. After some time, they will be kicked."""
 
         if not self._kick_active or user_index not in self._users.indices(
             self._connected_users

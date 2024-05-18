@@ -6,7 +6,20 @@
 
 from time import time
 
+import magnum as mn
+
+UP = mn.Vector3(0, 1, 0)
+FWD = mn.Vector3(0, 0, 1)
+
 
 def timestamp() -> str:
     "Generate a Unix timestamp at the current time."
     return str(int(time()))
+
+
+def get_empty_view(sim) -> mn.Matrix4:
+    """
+    Get a view looking into the void.
+    Used to avoid displaying previously-loaded content in intermediate stages.
+    """
+    return mn.Matrix4.look_at(1000 * FWD, FWD, UP)
