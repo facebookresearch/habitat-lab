@@ -7,6 +7,7 @@
 import math
 import random
 import time
+import numpy as np
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -36,7 +37,9 @@ class ObjectSampler:
     def __init__(
         self,
         object_set: List[str],
+        receptacles,
         allowed_recep_set_names: List[str],
+        sampler_range_type: str,
         num_objects: Tuple[int, int] = (1, 1),
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
@@ -44,6 +47,8 @@ class ObjectSampler:
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
         translation_up_offset: float = 0.08,
         constrain_to_largest_nav_island: bool = False,
+        dynamic_lower_bound_proportion: float = 1.5,
+        dynamic_upper_bound_proportion: float = 2.0,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -61,6 +66,10 @@ class ObjectSampler:
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
         self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
+        self._sampler_range_type = sampler_range_type
+        self._dynamic_lower_bound_proportion = dynamic_lower_bound_proportion
+        self._dynamic_upper_bound_proportion = dynamic_upper_bound_proportion
+        self.receptacles = receptacles
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -70,6 +79,26 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
+        
+        if self._sampler_range_type == "dynamic":
+            total_receptacle_area = sum(rec.total_area for rec in self.receptacles)
+            self.num_objects = (
+                int(np.floor(total_receptacle_area * self._dynamic_lower_bound_proportion)),
+                int(np.floor(total_receptacle_area * self._dynamic_upper_bound_proportion)),
+            )
+            assert self.num_objects[1] >= self.num_objects[0]
+            self.set_num_samples()
+        elif self._sampler_range_type == "fixed":
+            self.num_objects = (
+                num_objects  # tuple of [min,max] objects to sample
+            )
+            assert self.num_objects[1] >= self.num_objects[0]
+            self.set_num_samples()
+        else:
+            raise ValueError(
+                f"Sampler range type {self._sampler_range_type} not recognized."
+            )
+
         self.num_objects = num_objects  # tuple of [min,max] objects to sample
         assert self.num_objects[1] >= self.num_objects[0]
         self.orientation_sample = (

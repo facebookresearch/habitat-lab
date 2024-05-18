@@ -87,6 +87,7 @@ class BalancedSceneSampler(SceneSampler):
         """
         assert len(scenes) > 0, "No scenes provided to BalancedSceneSampler."
         self.scenes = scenes
+        print(self.scenes)
         self.num_episodes = num_episodes
         assert self.num_episodes % len(
             self.scenes

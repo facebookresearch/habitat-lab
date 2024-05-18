@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import os.path as osp
 import random
 import time
@@ -227,6 +228,10 @@ class RearrangeEpisodeGenerator:
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
                     object_set=object_handles,
+                    receptacles=find_receptacles(self.sim),
+                    sampler_range_type=obj_sampler_info["params"].get(
+                        "sampler_range_type", "fixed"
+                    ),
                     allowed_recep_set_names=obj_sampler_info["params"][
                         "receptacle_sets"
                     ],
@@ -249,6 +254,13 @@ class RearrangeEpisodeGenerator:
                     constrain_to_largest_nav_island=obj_sampler_info[
                         "params"
                     ].get("constrain_to_largest_nav_island", False),
+                    dynamic_lower_bound_proportion=obj_sampler_info["params"].get(
+                        "dynamic_lower_bound_proportion", 1.5
+                    ),
+                    dynamic_upper_bound_proportion=obj_sampler_info["params"].get(
+                        "dynamic_upper_bound_proportion", 2.0
+                    ),
+
                 )
             else:
                 logger.info(
@@ -277,6 +289,10 @@ class RearrangeEpisodeGenerator:
                 ] = samplers.ObjectTargetSampler(
                     # Add object set later
                     object_instance_set=[],
+                    receptacles=find_receptacles(self.sim),
+                    sampler_range_type=target_sampler_info["params"].get(
+                        "sampler_range_type", "fixed"
+                    ),
                     allowed_recep_set_names=target_sampler_info["params"][
                         "receptacle_sets"
                     ],
@@ -299,6 +315,12 @@ class RearrangeEpisodeGenerator:
                     constrain_to_largest_nav_island=target_sampler_info[
                         "params"
                     ].get("constrain_to_largest_nav_island", False),
+                    dynamic_lower_bound_proportion=target_sampler_info["params"].get(
+                        "dynamic_lower_bound_proportion", 1.5
+                    ),
+                    dynamic_upper_bound_proportion=target_sampler_info["params"].get(
+                        "dynamic_upper_bound_proportion", 2.0
+                    ),
                 )
             else:
                 logger.info(
@@ -464,9 +486,12 @@ class RearrangeEpisodeGenerator:
             try:
                 self._scene_sampler.set_cur_episode(len(generated_episodes))
                 new_episode = self.generate_single_episode()
-            except Exception:
+            except Exception as e:
                 new_episode = None
                 logger.error("Generation failed with exception...")
+                logger.error(e)
+                import traceback
+                traceback.print_exc()
             if new_episode is None:
                 failed_episodes += 1
                 continue
@@ -559,7 +584,12 @@ class RearrangeEpisodeGenerator:
         for sampler_name, num_targets in target_numbers.items():
             new_target_receptacles: List[Receptacle] = []
             failed_samplers: Dict[str, bool] = defaultdict(bool)
-            while len(new_target_receptacles) < num_targets:
+            
+            tries = 0
+            max_tries = 100
+            while len(new_target_receptacles) < num_targets and tries < max_tries:
+                tries += 1
+
                 assert len(failed_samplers.keys()) < len(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 ), f"All target samplers failed to find a match for '{sampler_name}'."
@@ -590,6 +620,10 @@ class RearrangeEpisodeGenerator:
                 )  # type: ignore
                 if len(new_receptacle) != 0:  # type: ignore
                     new_target_receptacles.append(new_receptacle[0])  # type: ignore
+
+            assert (
+                len(new_target_receptacles) >= num_targets
+            ), "Unable to sample target Receptacles for all requested targets."
 
             target_receptacles[obj_sampler_name].extend(new_target_receptacles)
             all_target_receptacles.extend(new_target_receptacles)
