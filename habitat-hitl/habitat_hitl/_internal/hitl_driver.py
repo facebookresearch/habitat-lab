@@ -265,9 +265,11 @@ class HitlDriver(AppDriver):
             )
             launch_networking_process(self._interprocess_record)
             self._remote_client_state = RemoteClientState(
-                self._interprocess_record,
-                gui_drawer,
-                users,
+                hitl_config=self._hitl_config,
+                client_message_manager=self._client_message_manager,
+                interprocess_record=self._interprocess_record,
+                gui_drawer=gui_drawer,
+                users=users,
             )
             # Bind the server input to user 0
             if self._hitl_config.networking.client_sync.server_input:

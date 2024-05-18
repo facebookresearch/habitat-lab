@@ -7,33 +7,22 @@
 
 from __future__ import annotations
 
-# Must call this before importing Habitat or Magnum.
-# fmt: off
-import ctypes
-import sys
+from typing import Dict, List, Optional
 
-sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
-# fmt: on
-
-from typing import List, Optional
-
-# This registers collaboration episodes into this application.
-import collaboration_episode_loader  # noqa: 401
-import hydra
 import magnum as mn
 import numpy as np
+from app_data import AppData
+from app_state_base import AppStateBase
+from app_states import create_app_state_reset
 from ui import UI
+from util import UP
 from world import World
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.client_helper import ClientHelper
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.hitl_main import hitl_main
-from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -45,7 +34,6 @@ from habitat_hitl.environment.controllers.gui_controller import (
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
-UP = mn.Vector3(0, 1, 0)
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
 
@@ -118,18 +106,18 @@ class UserData:
         world: World,
         gui_agent_controller: GuiController,
         server_sps_tracker: AverageRateTracker,
-        client_helper: ClientHelper,
     ):
         self.app_service = app_service
         self.world = world
         self.user_index = user_index
         self.gui_agent_controller = gui_agent_controller
         self.server_sps_tracker = server_sps_tracker
-        self.client_helper = client_helper
+        self.client_helper = (
+            self.app_service.remote_client_state._client_helper
+        )
         self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
         self.task_instruction = ""
-        self.signal_change_episode = False
         self.pip_initialized = False
 
         # If in remote mode, get the remote input. Else get the server (local) input.
@@ -138,6 +126,8 @@ class UserData:
             if app_service.remote_client_state is not None
             else self.app_service.gui_input
         )
+        self.episode_finished = False
+        self.episode_success = False
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -160,7 +150,6 @@ class UserData:
         gui_agent_controller._gui_input = self.gui_input
 
     def reset(self):
-        self.signal_change_episode = False
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset()
 
@@ -189,7 +178,8 @@ class UserData:
             self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self.signal_change_episode = True
+            self.episode_finished = True
+            self.episode_success = True
 
         if self.client_helper:
             self.client_helper.update(
@@ -262,40 +252,28 @@ class UserData:
         return not self.gui_input.get_any_input()
 
 
-class AppStateRearrangeV2(AppState):
+class AppStateRearrangeV2(AppStateBase):
     """
     Multiplayer rearrangement HITL application.
     """
 
-    def __init__(self, app_service: AppService):
+    def __init__(self, app_service: AppService, app_data: AppData):
+        super().__init__(app_service, app_data)
+        self._save_keyframes = False  # Done on env step (rearrange_sim).
         self._app_service = app_service
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
-        self._num_users = len(self._gui_agent_controllers)
-        self._can_grasp_place_threshold = (
-            self._app_service.hitl_config.can_grasp_place_threshold
-        )
         self._num_agents = len(self._gui_agent_controllers)
         self._users = self._app_service.users
-        self._paused = False
-        self._client_helper: Optional[ClientHelper] = None
 
-        if self._app_service.hitl_config.networking.enable:
-            self._client_helper = ClientHelper(
-                self._app_service.hitl_config,
-                self._app_service.remote_client_state,
-                self._app_service.client_message_manager,
-                self._users,
-            )
-
+        self._sps_tracker = AverageRateTracker(2.0)
         self._server_user_index = 0
         self._server_gui_input = self._app_service.gui_input
         self._server_input_enabled = False
-
-        self._sps_tracker = AverageRateTracker(2.0)
+        self._elapsed_time = 0.0
 
         self._user_data: List[UserData] = []
 
-        self._world = World(self._app_service.sim)
+        self._world = World(app_service.sim)
 
         for user_index in self._users.indices(Mask.ALL):
             self._user_data.append(
@@ -306,31 +284,62 @@ class AppStateRearrangeV2(AppState):
                     gui_agent_controller=self._gui_agent_controllers[
                         user_index
                     ],
-                    client_helper=self._client_helper,
                     server_sps_tracker=self._sps_tracker,
                 )
             )
 
+        # Reset the environment immediately.
+        self.on_environment_reset(None)
+
+    def get_next_state(self) -> Optional[AppStateBase]:
+        # If cancelled, skip upload and clean-up.
+        if self._cancel or self._is_episode_finished():
+            return create_app_state_reset(self._app_service, self._app_data)
+        else:
+            return None
+
+    def on_enter(self):
+        super().on_enter()
+
+        user_index_to_agent_index_map: Dict[int, int] = {}
+        for user_index in range(len(self._user_data)):
+            user_index_to_agent_index_map[user_index] = self._user_data[
+                user_index
+            ].gui_agent_controller._agent_idx
+
+    def on_exit(self):
+        super().on_exit()
+
+    def _is_episode_finished(self) -> bool:
+        """
+        Determines whether all users have finished their tasks.
+        """
+        return all(
+            self._user_data[user_index].episode_finished
+            for user_index in self._users.indices(Mask.ALL)
+        )
+
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
 
+        # Reset AFK timers.
+        # TODO: Move to idle_kick_timer class. Make it per-user. Couple it with "user_data" class
+        # TODO
+        self._app_service.remote_client_state._client_helper.activate_users()
+
         # Set the task instruction
         current_episode = self._app_service.env.current_episode
+        if hasattr(current_episode, "instruction"):
+            task_instruction = current_episode.instruction
+            # TODO: Users will have different instructions.
+            for user_index in self._users.indices(Mask.ALL):
+                self._user_data[user_index].task_instruction = task_instruction
 
-        episode_data = (
-            collaboration_episode_loader.load_collaboration_episode_data(
-                current_episode
-            )
-        )
         for user_index in self._users.indices(Mask.ALL):
-            self._user_data[
-                user_index
-            ].task_instruction = episode_data.instruction
             self._user_data[user_index].reset()
 
-        client_message_manager = self._app_service.client_message_manager
-        if client_message_manager:
-            client_message_manager.signal_scene_change(Mask.ALL)
+        # Insert a keyframe immediately.
+        self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def _update_grasping_and_set_act_hints(self, user_index: int):
         gui_agent_controller = self._user_data[user_index].gui_agent_controller
@@ -349,31 +358,29 @@ class AppStateRearrangeV2(AppState):
             reach_pos=None,
         )
 
-    def _get_gui_controlled_agent_index(self, user_index) -> int:
+    def _get_gui_controlled_agent_index(self, user_index):
         return self._gui_agent_controllers[user_index]._agent_idx
 
     def _get_controls_text(self, user_index: int):
-        if self._paused:
-            return "Session ended."
-
-        if not self._user_data[user_index].show_gui_text:
-            return ""
-
         controls_str: str = ""
-        controls_str += "H: Toggle help\n"
-        controls_str += "Look: Middle click (drag), I, K\n"
-        controls_str += "Walk: W, S\n"
-        controls_str += "Turn: A, D\n"
-        controls_str += "Finish episode: Zero (0)\n"
-        controls_str += "Open/close: Double-click\n"
-        controls_str += "Pick object: Double-click\n"
-        controls_str += "Place object: Right click (hold)\n"
+        if self._user_data[user_index].show_gui_text:
+            controls_str += "H: Toggle help\n"
+            controls_str += "Look: Middle click (drag), I, K\n"
+            controls_str += "Walk: W, S\n"
+            controls_str += "Turn: A, D\n"
+            controls_str += "Finish episode: Zero (0)\n"
+            controls_str += "Open/close: Double-click\n"
+            controls_str += "Pick object: Double-click\n"
+            controls_str += "Place object: Right click (hold)\n"
+
+        client_helper = self._app_service.remote_client_state._client_helper
+        idle_time = client_helper.get_idle_time(user_index)
+        if idle_time > 10:
+            controls_str += f"Idle time {idle_time}s\n"
+
         return controls_str
 
     def _get_status_text(self, user_index: int):
-        if self._paused:
-            return ""
-
         status_str = ""
 
         if len(self._user_data[user_index].task_instruction) > 0:
@@ -382,12 +389,22 @@ class AppStateRearrangeV2(AppState):
                 + self._user_data[user_index].task_instruction
                 + "\n"
             )
-        if self._user_data[user_index].client_helper and self._user_data[
-            user_index
-        ].client_helper.do_show_idle_kick_warning(user_index):
-            status_str += (
-                "\n\nAre you still there?\nPress any key to keep playing!\n"
+
+        if (
+            self._users.max_user_count > 1
+            and not self._user_data[user_index].episode_finished
+        ):
+            if self._has_any_user_finished_success():
+                status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
+            elif self._has_any_user_finished_failure():
+                status_str += "\n\nThe other participant has signaled a problem with the task.\nPress '0' to continue."
+
+        client_helper = self._app_service.remote_client_state._client_helper
+        if client_helper.do_show_idle_kick_warning(user_index):
+            remaining_time = str(
+                client_helper.get_remaining_idle_time(user_index)
             )
+            status_str += f"\n\nAre you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
 
         return status_str
 
@@ -410,42 +427,32 @@ class AppStateRearrangeV2(AppState):
                 destination_mask=Mask.from_index(user_index),
             )
 
-    def is_user_idle_this_frame(self) -> bool:
-        return not self._app_service.gui_input.get_any_input()
-
-    def _check_change_episode(self):
-        # If all users signaled to change episode:
-        change_episode = True
-        for user_index in self._users.indices(Mask.ALL):
-            change_episode &= self._user_data[user_index].signal_change_episode
-
-        if (
-            change_episode
-            and self._app_service.episode_helper.next_episode_exists()
-        ):
-            # for user_index in self._users.indices(Mask.ALL):
-            #    self._user_data[user_index].signal_change_episode = False
-            self._app_service.end_episode(do_reset=True)
-
     def sim_update(self, dt: float, post_sim_update_dict):
-        if (
-            not self._app_service.hitl_config.networking.enable
-            and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
-        ):
-            self._app_service.end_episode()
-            post_sim_update_dict["application_exit"] = True
-            return
+        if not self._app_service.hitl_config.experimental.headless.do_headless:
+            # Server GUI exit.
+            if (
+                not self._app_service.hitl_config.networking.enable
+                and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
+            ):
+                self._app_service.end_episode()
+                post_sim_update_dict["application_exit"] = True
+                return
 
-        # Switch the server-controlled user.
-        if (
-            self._users.max_user_count > 0
-            and self._server_gui_input.get_key_down(GuiInput.KeyNS.TAB)
-        ):
-            self._server_user_index = (
-                self._server_user_index + 1
-            ) % self._users.max_user_count
+            # Skip the form when changing the episode from the server.
+            if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+                server_user = self._user_data[self._server_user_index]
+                server_user.episode_finished = True
+                server_user.episode_success = True
 
-        # Copy server input to user input.
+            # Switch the server-controlled user.
+            if self._num_agents > 0 and self._server_gui_input.get_key_down(
+                GuiInput.KeyNS.TAB
+            ):
+                self._server_user_index = (
+                    self._server_user_index + 1
+                ) % self._num_agents
+
+        # Copy server input to user input when server input is active.
         if self._app_service.hitl_config.networking.enable:
             server_user_input = self._user_data[
                 self._server_user_index
@@ -459,19 +466,17 @@ class AppStateRearrangeV2(AppState):
 
         self._sps_tracker.increment()
 
+        for user_index in self._users.indices(Mask.ALL):
+            self._user_data[user_index].update(dt)
+            self._update_grasping_and_set_act_hints(user_index)
+            self._update_help_text(user_index)
+
         # Draw the picture-in-picture showing other agent's perspective.
         if self._users.max_user_count == 2:
             self._user_data[0].draw_pip_viewport(self._user_data[1])
             self._user_data[1].draw_pip_viewport(self._user_data[0])
 
-        if not self._paused:
-            for user_index in self._users.indices(Mask.ALL):
-                self._user_data[user_index].update(dt)
-                self._update_grasping_and_set_act_hints(user_index)
-            self._app_service.compute_action_and_step_env()
-
-        for user_index in self._users.indices(Mask.ALL):
-            self._update_help_text(user_index)
+        self._app_service.compute_action_and_step_env()
 
         # Set the server camera.
         server_cam_transform = self._user_data[
@@ -479,19 +484,28 @@ class AppStateRearrangeV2(AppState):
         ].cam_transform
         post_sim_update_dict["cam_transform"] = server_cam_transform
 
+        #  Collect data.
+        self._elapsed_time += dt
+        if self._is_any_user_active():
+            # TODO: Add data collection.
+            pass
 
-@hydra.main(
-    version_base=None, config_path="config", config_name="rearrange_v2"
-)
-def main(config):
-    if hasattr(config, "habitat_llm") and config.habitat_llm.enable:
-        collaboration_episode_loader.register_habitat_llm_extensions(config)
-    hitl_main(
-        config,
-        lambda app_service: AppStateRearrangeV2(app_service),
-    )
+    def _is_any_user_active(self) -> bool:
+        return any(
+            self._user_data[user_index].gui_input.get_any_input()
+            for user_index in range(self._app_data.max_user_count)
+        )
 
+    def _has_any_user_finished_success(self) -> bool:
+        return any(
+            self._user_data[user_index].episode_finished
+            and self._user_data[user_index].episode_success
+            for user_index in range(self._app_data.max_user_count)
+        )
 
-if __name__ == "__main__":
-    register_hydra_plugins()
-    main()
+    def _has_any_user_finished_failure(self) -> bool:
+        return any(
+            self._user_data[user_index].episode_finished
+            and not self._user_data[user_index].episode_success
+            for user_index in range(self._app_data.max_user_count)
+        )
