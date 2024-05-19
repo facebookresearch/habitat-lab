@@ -42,7 +42,10 @@ class AppStateLoadEpisode(AppStateBase):
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
             return create_app_state_cancel_session(
-                self._app_service, self._app_data, self._session, "User disconnected."
+                self._app_service,
+                self._app_data,
+                self._session,
+                "User disconnected.",
             )
         if self._session_ended:
             return create_app_state_end_session(
@@ -107,10 +110,8 @@ class AppStateLoadEpisode(AppStateBase):
             )
         except Exception as e:
             print(f"ERROR: Invalid episode index {next_episode_id}. {e}")
-            print(f"Loading episode index 0.")
-            self._app_service.episode_helper.set_next_episode_by_index(
-                0
-            )
+            print("Loading episode index 0.")
+            self._app_service.episode_helper.set_next_episode_by_index(0)
 
         # Once an episode ID has been set, lab needs to be reset to load the episode.
         self._app_service.end_episode(do_reset=True)

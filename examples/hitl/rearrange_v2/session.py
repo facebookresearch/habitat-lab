@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Any, Dict, List
+
 from habitat_hitl.core.types import ConnectionRecord
 
 

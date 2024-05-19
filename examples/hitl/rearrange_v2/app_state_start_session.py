@@ -35,7 +35,10 @@ class AppStateStartSession(AppStateBase):
 
             if self._cancel:
                 return create_app_state_cancel_session(
-                    self._app_service, self._app_data, self._new_session, "User disconnected"
+                    self._app_service,
+                    self._app_data,
+                    self._new_session,
+                    "User disconnected",
                 )
             else:
                 return create_app_state_load_episode(
@@ -49,7 +52,10 @@ class AppStateStartSession(AppStateBase):
                 dict(self._app_data.connected_users),
             )
             return create_app_state_cancel_session(
-                self._app_service, self._app_data, self._new_session, "Invalid session"
+                self._app_service,
+                self._app_data,
+                self._new_session,
+                "Invalid session",
             )
 
     def _try_get_episodes(self) -> Optional[List[str]]:
@@ -129,9 +135,9 @@ class AppStateStartSession(AppStateBase):
             temp = last_episode_id
             last_episode_id = start_episode_id
             start_episode_id = temp
-        
-        episode_ids: List[int] = []
+
+        episode_ids: List[str] = []
         for episode_id in range(start_episode_id, last_episode_id):
-            episode_ids.append(episode_id)
+            episode_ids.append(str(episode_id))
 
         return episode_ids

@@ -13,7 +13,10 @@ import magnum as mn
 import numpy as np
 from app_data import AppData
 from app_state_base import AppStateBase
-from app_states import create_app_state_cancel_session, create_app_state_load_episode
+from app_states import (
+    create_app_state_cancel_session,
+    create_app_state_load_episode,
+)
 from session import Session
 from ui import UI
 from util import UP
@@ -258,7 +261,9 @@ class AppStateRearrangeV2(AppStateBase):
     Multiplayer rearrangement HITL application.
     """
 
-    def __init__(self, app_service: AppService, app_data: AppData, session: Session):
+    def __init__(
+        self, app_service: AppService, app_data: AppData, session: Session
+    ):
         super().__init__(app_service, app_data)
         self._save_keyframes = False  # Done on env step (rearrange_sim).
         self._app_service = app_service
@@ -299,12 +304,12 @@ class AppStateRearrangeV2(AppStateBase):
                 self._app_service,
                 self._app_data,
                 self._session,
-                "User disconnected")
+                "User disconnected",
+            )
         elif self._is_episode_finished():
             return create_app_state_load_episode(
-                self._app_service,
-                self._app_data,
-                self._session)
+                self._app_service, self._app_data, self._session
+            )
         else:
             return None
 

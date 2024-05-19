@@ -40,9 +40,8 @@ class AppStateEndSession(AppStateBase):
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._elapsed_time > SESSION_END_DELAY:
             self._end_session()
-            return create_app_state_reset(
-                self._app_service, self._app_data
-            )
+            return create_app_state_reset(self._app_service, self._app_data)
+        return None
 
     def sim_update(self, dt: float, post_sim_update_dict):
         # Top-down view.

@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from time import time
-from typing import Optional
 
 import magnum as mn
 

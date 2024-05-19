@@ -30,6 +30,7 @@ def create_app_state_lobby(
 
     return AppStateLobby(app_service, app_data)
 
+
 def create_app_state_start_session(
     app_service: AppService, app_data: AppData
 ) -> AppStateBase:
@@ -68,6 +69,7 @@ def create_app_state_end_session(
     from app_state_end_session import AppStateEndSession
 
     return AppStateEndSession(app_service, app_data, session)
+
 
 def create_app_state_cancel_session(
     app_service: AppService, app_data: AppData, session: Session, error: str

@@ -8,7 +8,10 @@ from typing import List, Optional
 
 from app_data import AppData
 from app_state_base import AppStateBase
-from app_states import create_app_state_cancel_session, create_app_state_end_session, create_app_state_rearrange
+from app_states import (
+    create_app_state_cancel_session,
+    create_app_state_rearrange,
+)
 from session import Session
 from util import get_top_down_view
 
@@ -43,9 +46,7 @@ class AppStateStartScreen(AppStateBase):
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
-            error = (
-                "Timeout" if self._timeout else "User disconnected"
-            )
+            error = "Timeout" if self._timeout else "User disconnected"
             return create_app_state_cancel_session(
                 self._app_service, self._app_data, self._session, error
             )
