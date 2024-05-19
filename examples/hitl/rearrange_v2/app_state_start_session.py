@@ -24,7 +24,7 @@ class AppStateStartSession(AppStateBase):
         self._save_keyframes = False
 
     def get_next_state(self) -> Optional[AppStateBase]:
-        episode_ids = self._try_get_episodes()
+        episode_ids = self._try_get_episode_ids()
         if episode_ids is not None:
             # Start the session.
             self._new_session = Session(
@@ -45,7 +45,7 @@ class AppStateStartSession(AppStateBase):
                     self._app_service, self._app_data, self._new_session
                 )
         else:
-            # Create partial session record.
+            # Create partial session record for data collection.
             self._new_session = Session(
                 self._app_service.config,
                 [],
@@ -58,10 +58,18 @@ class AppStateStartSession(AppStateBase):
                 "Invalid session",
             )
 
-    def _try_get_episodes(self) -> Optional[List[str]]:
+    def _try_get_episode_ids(self) -> Optional[List[str]]:
         """
         Attempt to get episodes from client connection parameters.
+        Episode IDs are indices within the episode sets.
+
         Format: {lower_bound_inclusive}-{upper_bound_exclusive} (e.g. "100-110").
+
+        Returns None if the episode set cannot be resolved. This can happen in multiple cases:
+        * 'episodes' field is missing from connection parameters.
+        * Users are requesting different episodes in a multiplayer session, indicating a matching issue.
+        * Invalid 'episodes' format.
+        * Episode indices out of bounds.
         """
         data = self._app_data
 
@@ -69,9 +77,7 @@ class AppStateStartSession(AppStateBase):
         if len(data.connected_users) == 0:
             print("No user connected. Cancelling session.")
             return None
-        connection_record = episodes_str = list(data.connected_users.values())[
-            0
-        ]
+        connection_record = list(data.connected_users.values())[0]
 
         # Validate that episodes are selected.
         if "episodes" not in connection_record:
