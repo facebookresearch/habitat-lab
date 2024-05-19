@@ -13,7 +13,8 @@ import magnum as mn
 import numpy as np
 from app_data import AppData
 from app_state_base import AppStateBase
-from app_states import create_app_state_reset
+from app_states import create_app_state_cancel_session, create_app_state_load_episode
+from session import Session
 from ui import UI
 from util import UP
 from world import World
@@ -257,10 +258,11 @@ class AppStateRearrangeV2(AppStateBase):
     Multiplayer rearrangement HITL application.
     """
 
-    def __init__(self, app_service: AppService, app_data: AppData):
+    def __init__(self, app_service: AppService, app_data: AppData, session: Session):
         super().__init__(app_service, app_data)
         self._save_keyframes = False  # Done on env step (rearrange_sim).
         self._app_service = app_service
+        self._session = session
         self._gui_agent_controllers = self._app_service.gui_agent_controllers
         self._num_agents = len(self._gui_agent_controllers)
         self._users = self._app_service.users
@@ -292,9 +294,17 @@ class AppStateRearrangeV2(AppStateBase):
         self.on_environment_reset(None)
 
     def get_next_state(self) -> Optional[AppStateBase]:
-        # If cancelled, skip upload and clean-up.
-        if self._cancel or self._is_episode_finished():
-            return create_app_state_reset(self._app_service, self._app_data)
+        if self._cancel:
+            return create_app_state_cancel_session(
+                self._app_service,
+                self._app_data,
+                self._session,
+                "User disconnected")
+        elif self._is_episode_finished():
+            return create_app_state_load_episode(
+                self._app_service,
+                self._app_data,
+                self._session)
         else:
             return None
 
