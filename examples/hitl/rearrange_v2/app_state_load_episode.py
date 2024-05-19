@@ -61,20 +61,19 @@ class AppStateLoadEpisode(AppStateBase):
     def sim_update(self, dt: float, post_sim_update_dict):
         self._status_message("Loading...")
 
-        # HACK: Skip a frame so that the status message reaches the client before the server blocks.
-        # TODO: Clean this up.
+        # Skip a frame so that the status message reaches the client before the server loads the scene and blocks.
         if self._frame_number == 1:
             self._increment_episode()
+        # Once the scene loaded, show a top-down view.
         elif self._frame_number > 1:
-            # Top-down view.
             cam_matrix = get_top_down_view(self._app_service.sim)
             post_sim_update_dict["cam_transform"] = cam_matrix
             self._app_service._client_message_manager.update_camera_transform(
                 cam_matrix, destination_mask=Mask.ALL
             )
-
-            # HACK: Wait before checking whether clients are loading. The server isn't immediately aware of this.
-            # TODO: Use the keyframe ID from 'ClientMessageManager.set_server_keyframe_id()' to find the exact client response frames.
+            # Wait for clients to signal that content finished loading on their end.
+            # HACK: The server isn't immediately aware that clients are loading. For now, we simply skip some frames.
+            # TODO: Use the keyframe ID from 'ClientMessageManager.set_server_keyframe_id()' to find the when the loading state is up-to-date.
             if self._frame_number > 20:
                 any_client_loading = False
                 for user_index in range(self._app_data.max_user_count):
