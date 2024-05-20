@@ -78,10 +78,8 @@ class AppStateEndSession(AppStateBase):
             config = self._app_service.config
             data_collection_config = config.rearrange_v2.data_collection
             s3_path = data_collection_config.s3_path
-            if s3_path[-1] != "/":
-                s3_path += "/"
             s3_subdir = "complete" if session.success else "incomplete"
-            s3_path += s3_subdir
+            s3_path = os.path.join(s3_path, s3_subdir)
 
             # Use the port as a discriminator for when there are multiple concurrent servers.
             output_folder_suffix = str(config.habitat_hitl.networking.port)
