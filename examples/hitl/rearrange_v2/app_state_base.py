@@ -63,3 +63,9 @@ class AppStateBase(AppState):
     def _kick_all_users(self) -> None:
         "Kick all users."
         self._app_service.remote_client_state.kick(Mask.ALL)
+
+    def _is_server_gui_enabled(self) -> bool:
+        "Returns true if the local server GUI is available."
+        return (
+            not self._app_service.hitl_config.experimental.headless.do_headless
+        )

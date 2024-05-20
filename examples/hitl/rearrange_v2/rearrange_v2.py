@@ -443,7 +443,7 @@ class AppStateRearrangeV2(AppStateBase):
             )
 
     def sim_update(self, dt: float, post_sim_update_dict):
-        if not self._app_service.hitl_config.experimental.headless.do_headless:
+        if self._is_server_gui_enabled():
             # Server GUI exit.
             if (
                 not self._app_service.hitl_config.networking.enable
