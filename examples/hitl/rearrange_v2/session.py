@@ -6,6 +6,8 @@
 
 from typing import Any, Dict, List
 
+from session_recorder import SessionRecorder
+
 from habitat_hitl.core.types import ConnectionRecord
 
 
@@ -25,8 +27,9 @@ class Session:
         self.episode_ids = episode_ids
         self.current_episode_index = 0
         self.connection_records = connection_records
-        self.error = ""  # Use this to display error that causes termination
 
-        # Use the port as a discriminator for when there are multiple concurrent servers.
-        output_folder_suffix = str(config.habitat_hitl.networking.port)
-        self.output_folder = f"output_{output_folder_suffix}"
+        self.session_recorder = SessionRecorder(
+            config, connection_records, episode_ids
+        )
+
+        self.error = ""  # Use this to display error that causes termination

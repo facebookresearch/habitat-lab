@@ -4,6 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
@@ -12,6 +15,7 @@ from world import World
 
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
@@ -113,6 +117,49 @@ class UI:
         )
         self._selections.append(self._place_selection)
 
+        # Set up user events
+        self._on_pick = Event()
+        self._on_place = Event()
+        self._on_open = Event()
+        self._on_close = Event()
+
+    @dataclass
+    class PickEventData:
+        object_id: int
+        object_handle: str
+
+    @property
+    def on_pick(self) -> Event:
+        return self._on_pick
+
+    @dataclass
+    class PlaceEventData:
+        object_id: int
+        object_handle: str
+        receptacle_id: int
+
+    @property
+    def on_place(self) -> Event:
+        return self._on_place
+
+    @dataclass
+    class OpenEventData:
+        object_id: int
+        object_handle: str
+
+    @property
+    def on_open(self) -> Event:
+        return self._on_open
+
+    @dataclass
+    class CloseEventData:
+        object_id: int
+        object_handle: str
+
+    @property
+    def on_close(self) -> Event:
+        return self._on_close
+
     def selection_discriminator_ignore_agents(self, object_id: int) -> bool:
         """Allow selection through agents."""
         return object_id not in self._world._agent_object_ids
@@ -186,6 +233,12 @@ class UI:
                     self._held_object_id = object_id
                     self._place_selection.deselect()
                     self._world._all_held_object_ids.add(object_id)
+                    self._on_pick.invoke(
+                        UI.PickEventData(
+                            object_id=object_id,
+                            object_handle=rigid_object.handle,
+                        )
+                    )
 
     def _update_held_object_placement(self) -> None:
         """Update the location of the held object."""
@@ -228,6 +281,13 @@ class UI:
             self._held_object_id = None
             self._place_selection.deselect()
             self._world._all_held_object_ids.remove(object_id)
+            self._on_place.invoke(
+                UI.PlaceEventData(
+                    object_id=object_id,
+                    object_handle=rigid_object.handle,
+                    receptacle_id=self._place_selection.object_id,
+                )
+            )
 
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""
@@ -245,9 +305,21 @@ class UI:
                     if link_id in self._world._opened_link_set:
                         sim_utilities.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
+                        self._on_close.invoke(
+                            UI.OpenEventData(
+                                object_id=object_id,
+                                object_handle=ao.handle,
+                            )
+                        )
                     else:
                         sim_utilities.open_link(ao, link_index)
                         self._world._opened_link_set.add(link_id)
+                        self._on_open.invoke(
+                            UI.CloseEventData(
+                                object_id=object_id,
+                                object_handle=ao.handle,
+                            )
+                        )
 
     def _user_pos(self) -> mn.Vector3:
         """Get the translation of the agent controlled by the user."""
