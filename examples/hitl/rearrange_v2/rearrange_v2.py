@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -41,10 +41,14 @@ from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
 
-class DataLogger:
-    def __init__(self, app_service: AppService):
+class FrameRecorder:
+    def __init__(
+        self, app_service: AppService, app_data: AppData, world: World
+    ):
         self._app_service = app_service
+        self._app_data = app_data
         self._sim = app_service.sim
+        self._world = world
 
     def get_num_agents(self):
         return len(self._sim.agents_mgr._all_agent_data)
@@ -87,15 +91,29 @@ class DataLogger:
             )
         return object_states
 
-    def record_state(self, task_completed: bool = False):
-        agent_states = self.get_agents_state()
-        object_states = self.get_objects_state()
+    def record_state(
+        self, elapsed_time: float, user_data: List[UserData]
+    ) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
+            "t": elapsed_time,
+            "users": [],
+            "object_states": self.get_objects_state(),
+            "agent_states": self.get_agents_state(),
+        }
 
-        self._app_service.step_recorder.record("agent_states", agent_states)
-        self._app_service.step_recorder.record("object_states", object_states)
-        self._app_service.step_recorder.record(
-            "task_completed", task_completed
-        )
+        for user_index in range(len(user_data)):
+            u = user_data[user_index]
+            user_data_dict = {
+                "task_completed": u.episode_finished,
+                "task_succeeded": u.episode_success,
+                "camera_transform": u.cam_transform,
+                "held_object": u.ui._held_object_id,
+                "hovered_object": u.ui._hover_selection.object_id,
+                "events": u.pop_ui_events(),
+            }
+            data["users"].append(user_data_dict)
+
+        return data
 
 
 class UserData:
@@ -124,6 +142,9 @@ class UserData:
         self.task_instruction = ""
         self.pip_initialized = False
 
+        # Events for data collection.
+        self.ui_events: List[Dict[str, Any]] = []
+
         # If in remote mode, get the remote input. Else get the server (local) input.
         self.gui_input = (
             app_service.remote_client_state.get_gui_input(user_index)
@@ -148,6 +169,12 @@ class UserData:
             gui_drawer=app_service.gui_drawer,
             camera_helper=self.camera_helper,
         )
+
+        # Register UI callbacks
+        self.ui.on_pick.registerCallback(self._on_pick)
+        self.ui.on_place.registerCallback(self._on_place)
+        self.ui.on_open.registerCallback(self._on_open)
+        self.ui.on_close.registerCallback(self._on_close)
 
         # HACK: Work around GuiController input.
         # TODO: Communicate to the controller via action hints.
@@ -243,6 +270,11 @@ class UserData:
             destination_mask=Mask.from_index(self.user_index),
         )
 
+    def pop_ui_events(self) -> List[Dict[str, Any]]:
+        events = list(self.ui_events)
+        self.ui_events.clear()
+        return events
+
     def _get_camera_lookat_pos(self) -> mn.Vector3:
         agent_root = get_agent_art_obj_transform(
             self.app_service.sim,
@@ -254,6 +286,43 @@ class UserData:
 
     def _is_user_idle_this_frame(self) -> bool:
         return not self.gui_input.get_any_input()
+
+    def _on_pick(self, e: UI.PickEventData):
+        self.ui_events.append(
+            {
+                "type": "pick",
+                "obj_handle": e.object_handle,
+                "obj_id": e.object_id,
+            }
+        )
+
+    def _on_place(self, e: UI.PlaceEventData):
+        self.ui_events.append(
+            {
+                "type": "place",
+                "obj_handle": e.object_handle,
+                "obj_id": e.object_id,
+                "receptacle_id": e.receptacle_id,
+            }
+        )
+
+    def _on_open(self, e: UI.OpenEventData):
+        self.ui_events.append(
+            {
+                "type": "open",
+                "obj_handle": e.object_handle,
+                "obj_id": e.object_id,
+            }
+        )
+
+    def _on_close(self, e: UI.CloseEventData):
+        self.ui_events.append(
+            {
+                "type": "close",
+                "obj_handle": e.object_handle,
+                "obj_id": e.object_id,
+            }
+        )
 
 
 class AppStateRearrangeV2(AppStateBase):
@@ -295,6 +364,10 @@ class AppStateRearrangeV2(AppStateBase):
                 )
             )
 
+        self._frame_recorder = FrameRecorder(
+            app_service, app_data, self._world
+        )
+
         # Reset the environment immediately.
         self.on_environment_reset(None)
 
@@ -322,8 +395,23 @@ class AppStateRearrangeV2(AppStateBase):
                 user_index
             ].gui_agent_controller._agent_idx
 
+        episode = self._app_service.episode_helper.current_episode
+        self._session.session_recorder.start_episode(
+            episode.episode_id,
+            episode.scene_id,
+            episode.scene_dataset_config,
+            user_index_to_agent_index_map,
+        )
+
     def on_exit(self):
         super().on_exit()
+
+        episode_success = all(
+            self._user_data[user_index].episode_success
+            for user_index in range(self._app_data.max_user_count)
+        )
+
+        self._session.session_recorder.end_episode(episode_success)
 
     def _is_episode_finished(self) -> bool:
         """
@@ -501,9 +589,12 @@ class AppStateRearrangeV2(AppStateBase):
 
         #  Collect data.
         self._elapsed_time += dt
+        # TODO: Always record with non-human agent.
         if self._is_any_user_active():
-            # TODO: Add data collection.
-            pass
+            frame_data = self._frame_recorder.record_state(
+                self._elapsed_time, self._user_data
+            )
+            self._session.session_recorder.record_frame(frame_data)
 
     def _is_any_user_active(self) -> bool:
         return any(
