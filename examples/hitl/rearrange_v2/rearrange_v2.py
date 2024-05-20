@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import magnum as mn
@@ -17,6 +18,7 @@ from app_states import (
     create_app_state_cancel_session,
     create_app_state_load_episode,
 )
+from end_episode_form import EndEpisodeForm, ErrorReport
 from session import Session
 from ui import UI
 from util import UP
@@ -39,6 +41,12 @@ from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
+
+
+class EpisodeCompletionStatus(Enum):
+    PENDING = (0,)
+    SUCCESS = (1,)
+    FAILURE = (2,)
 
 
 class FrameRecorder:
@@ -104,8 +112,10 @@ class FrameRecorder:
         for user_index in range(len(user_data)):
             u = user_data[user_index]
             user_data_dict = {
-                "task_completed": u.episode_finished,
-                "task_succeeded": u.episode_success,
+                "task_completed": u.episode_completion_status
+                != EpisodeCompletionStatus.PENDING,
+                "task_succeeded": u.episode_completion_status
+                == EpisodeCompletionStatus.SUCCESS,
                 "camera_transform": u.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
@@ -151,8 +161,6 @@ class UserData:
             if app_service.remote_client_state is not None
             else self.app_service.gui_input
         )
-        self.episode_finished = False
-        self.episode_success = False
 
         self.camera_helper = CameraHelper(
             app_service.hitl_config,
@@ -170,11 +178,24 @@ class UserData:
             camera_helper=self.camera_helper,
         )
 
+        self.end_episode_form = EndEpisodeForm(user_index, app_service)
+        self.episode_completion_status = EpisodeCompletionStatus.PENDING
+
         # Register UI callbacks
         self.ui.on_pick.registerCallback(self._on_pick)
         self.ui.on_place.registerCallback(self._on_place)
         self.ui.on_open.registerCallback(self._on_open)
         self.ui.on_close.registerCallback(self._on_close)
+
+        self.end_episode_form.on_cancel.registerCallback(
+            self._on_episode_form_cancelled
+        )
+        self.end_episode_form.on_episode_success.registerCallback(
+            self._on_episode_success
+        )
+        self.end_episode_form.on_error_reported.registerCallback(
+            self._on_error_reported
+        )
 
         # HACK: Work around GuiController input.
         # TODO: Communicate to the controller via action hints.
@@ -205,12 +226,15 @@ class UserData:
             )
 
     def update(self, dt: float):
+        if self.end_episode_form.is_form_shown():
+            self.end_episode_form.step()
+            return
+
         if self.gui_input.get_key_down(GuiInput.KeyNS.H):
             self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self.episode_finished = True
-            self.episode_success = True
+            self.end_episode_form.show()
 
         if self.client_helper:
             self.client_helper.update(
@@ -324,6 +348,35 @@ class UserData:
             }
         )
 
+    def _on_episode_form_cancelled(self, _e: Any = None):
+        self.ui_events.append(
+            {
+                "type": "end_episode_form_cancelled",
+            }
+        )
+        self.episode_completion_status = EpisodeCompletionStatus.PENDING
+
+    def _on_episode_success(self, _e: Any = None):
+        self.ui_events.append(
+            {
+                "type": "episode_success",
+            }
+        )
+        self.episode_completion_status = EpisodeCompletionStatus.SUCCESS
+        print(f"User {self.user_index} has signaled the episode as completed.")
+
+    def _on_error_reported(self, error_report: ErrorReport):
+        self.ui_events.append(
+            {
+                "type": "episode_failure",
+                "error_report": error_report.user_message,
+            }
+        )
+        self.episode_completion_status = EpisodeCompletionStatus.FAILURE
+        print(
+            f"User {self.user_index} has signaled a problem with the episode: '{error_report.user_message}'."
+        )
+
 
 class AppStateRearrangeV2(AppStateBase):
     """
@@ -406,28 +459,14 @@ class AppStateRearrangeV2(AppStateBase):
     def on_exit(self):
         super().on_exit()
 
-        episode_success = all(
-            self._user_data[user_index].episode_success
-            for user_index in range(self._app_data.max_user_count)
-        )
-
+        episode_success = self._is_episode_successful()
         self._session.session_recorder.end_episode(episode_success)
-
-    def _is_episode_finished(self) -> bool:
-        """
-        Determines whether all users have finished their tasks.
-        """
-        return all(
-            self._user_data[user_index].episode_finished
-            for user_index in self._users.indices(Mask.ALL)
-        )
 
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
 
         # Reset AFK timers.
         # TODO: Move to idle_kick_timer class. Make it per-user. Couple it with "user_data" class
-        # TODO
         self._app_service.remote_client_state._client_helper.activate_users()
 
         # Set the task instruction
@@ -495,12 +534,13 @@ class AppStateRearrangeV2(AppStateBase):
 
         if (
             self._users.max_user_count > 1
-            and not self._user_data[user_index].episode_finished
+            and self._user_data[user_index].episode_completion_status
+            == EpisodeCompletionStatus.PENDING
         ):
             if self._has_any_user_finished_success():
-                status_str += "\n\nThe other participant has signaled that the task is completed.\nPress '0' when you are done."
+                status_str += "\n\nThe other participant signaled that the task is completed.\nPress '0' when you are done."
             elif self._has_any_user_finished_failure():
-                status_str += "\n\nThe other participant has signaled a problem with the task.\nPress '0' to continue."
+                status_str += "\n\nThe other participant signaled a problem with the task.\nPress '0' to continue."
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
@@ -544,8 +584,11 @@ class AppStateRearrangeV2(AppStateBase):
             # Skip the form when changing the episode from the server.
             if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
                 server_user = self._user_data[self._server_user_index]
-                server_user.episode_finished = True
-                server_user.episode_success = True
+                if (
+                    server_user.episode_completion_status
+                    == EpisodeCompletionStatus.PENDING
+                ):
+                    server_user._on_episode_success()
 
             # Switch the server-controlled user.
             if self._num_agents > 0 and self._server_gui_input.get_key_down(
@@ -597,21 +640,51 @@ class AppStateRearrangeV2(AppStateBase):
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_any_user_active(self) -> bool:
+        """
+        Returns true if any user is active during the frame.
+        """
         return any(
             self._user_data[user_index].gui_input.get_any_input()
+            or len(self._user_data[user_index].ui_events) > 0
             for user_index in range(self._app_data.max_user_count)
         )
 
     def _has_any_user_finished_success(self) -> bool:
+        """
+        Returns true if any user completed the episode successfully.
+        """
         return any(
-            self._user_data[user_index].episode_finished
-            and self._user_data[user_index].episode_success
+            self._user_data[user_index].episode_completion_status
+            == EpisodeCompletionStatus.SUCCESS
             for user_index in range(self._app_data.max_user_count)
         )
 
     def _has_any_user_finished_failure(self) -> bool:
+        """
+        Returns true if any user completed the episode unsuccessfully.
+        """
         return any(
-            self._user_data[user_index].episode_finished
-            and not self._user_data[user_index].episode_success
+            self._user_data[user_index].episode_completion_status
+            == EpisodeCompletionStatus.FAILURE
+            for user_index in range(self._app_data.max_user_count)
+        )
+
+    def _is_episode_finished(self) -> bool:
+        """
+        Returns true if all users finished the episode, regardless of success.
+        """
+        return all(
+            self._user_data[user_index].episode_completion_status
+            != EpisodeCompletionStatus.PENDING
+            for user_index in range(self._app_data.max_user_count)
+        )
+
+    def _is_episode_successful(self) -> bool:
+        """
+        Returns true if all users finished the episode successfully.
+        """
+        return all(
+            self._user_data[user_index].episode_completion_status
+            == EpisodeCompletionStatus.SUCCESS
             for user_index in range(self._app_data.max_user_count)
         )
