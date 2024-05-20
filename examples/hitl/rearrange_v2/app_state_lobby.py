@@ -8,7 +8,7 @@ from typing import Final, Optional
 
 from app_data import AppData
 from app_state_base import AppStateBase
-from app_states import create_app_state_rearrange
+from app_states import create_app_state_start_session
 
 from habitat_hitl.app_states.app_service import AppService
 
@@ -51,7 +51,7 @@ class AppStateLobby(AppStateBase):
             == self._app_data.max_user_count
             and self._time_since_last_connection > START_SESSION_DELAY
         ):
-            return create_app_state_rearrange(
+            return create_app_state_start_session(
                 self._app_service, self._app_data
             )
         return None
