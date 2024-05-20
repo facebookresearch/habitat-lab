@@ -37,12 +37,13 @@ class AppStateStartScreen(AppStateBase):
     ):
         super().__init__(app_service, app_data)
         self._session = session
-        self._ready_to_start: List[bool] = [
+        self._has_user_pressed_start_button: List[bool] = [
             False
         ] * self._app_data.max_user_count
         self._elapsed_time: float = 0.0
         self._timeout = False  # TODO: Error management
         self._save_keyframes = True
+        self._cam_matrix = get_top_down_view(self._app_service.sim)
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
@@ -53,7 +54,7 @@ class AppStateStartScreen(AppStateBase):
 
         # If all users pressed the "Start" button, begin the session.
         ready_to_start = True
-        for user_ready in self._ready_to_start:
+        for user_ready in self._has_user_pressed_start_button:
             ready_to_start &= user_ready
         if ready_to_start or SKIP_START_SCREEN:
             return create_app_state_rearrange(
@@ -64,7 +65,7 @@ class AppStateStartScreen(AppStateBase):
 
     def sim_update(self, dt: float, post_sim_update_dict):
         # Top-down view.
-        cam_matrix = get_top_down_view(self._app_service.sim)
+        cam_matrix = self._cam_matrix
         post_sim_update_dict["cam_transform"] = cam_matrix
         self._app_service._client_message_manager.update_camera_transform(
             cam_matrix, destination_mask=Mask.ALL
@@ -87,9 +88,9 @@ class AppStateStartScreen(AppStateBase):
                     user_index, START_BUTTON_ID
                 )
             )
-            self._ready_to_start[user_index] |= button_pressed
+            self._has_user_pressed_start_button[user_index] |= button_pressed
 
-            if not self._ready_to_start[user_index]:
+            if not self._has_user_pressed_start_button[user_index]:
                 self._app_service.client_message_manager.show_modal_dialogue_box(
                     title,
                     "Press 'Start' to begin the experiment.",
@@ -105,15 +106,15 @@ class AppStateStartScreen(AppStateBase):
                 )
 
         # Server-only: Press numeric keys to start episode on behalf of users.
-        if not self._app_service.hitl_config.experimental.headless.do_headless:
+        if self._is_server_gui_enabled():
             server_message = "Press numeric keys to start on behalf of users."
             first_key = int(KeyCode.ONE)
-            for user_index in range(len(self._ready_to_start)):
+            for user_index in range(len(self._has_user_pressed_start_button)):
                 if self._app_service.gui_input.get_key_down(
                     KeyCode(first_key + user_index)
                 ):
-                    self._ready_to_start[user_index] = True
-                user_ready = self._ready_to_start[user_index]
+                    self._has_user_pressed_start_button[user_index] = True
+                user_ready = self._has_user_pressed_start_button[user_index]
                 server_message += f"\n[{user_index + 1}]: User {user_index}: {'Ready' if user_ready else 'Not ready'}."
 
             self._app_service.text_drawer.add_text(
