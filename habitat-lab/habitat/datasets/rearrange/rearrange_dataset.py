@@ -57,7 +57,7 @@ class RearrangeDatasetV0(PointNavDatasetV1):
 
         if config and not self.check_config_paths_exist(config):
             raise ValueError(
-                f"Requested RearrangeDataset config paths '{config.split}' or '{config.scenes_dir}' are not downloaded locally. Aborting."
+                f"Requested RearrangeDataset config paths '{config.data_path.format(split=config.split)}' or '{config.scenes_dir}' are not downloaded locally. Aborting."
             )
 
         check_and_gen_physics_config()
