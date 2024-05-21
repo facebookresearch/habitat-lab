@@ -19,7 +19,8 @@ except ImportError:
 
 
 class CollaborationEpisodeData:
-    instruction: str = ""
+    def __init__(self):
+        self.instruction: str = ""
 
 
 if collaboration_episode_enabled:

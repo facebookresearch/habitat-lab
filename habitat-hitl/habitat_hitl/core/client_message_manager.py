@@ -4,13 +4,41 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from dataclasses import dataclass
 from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
 
+from habitat_hitl.core.types import Message
 from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
+DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
+
+
+# TODO: Move to another file.
+@dataclass
+class UIButton:
+    """
+    Networked UI button. Use RemoteClientState.ui_button_pressed() to retrieve state.
+    """
+
+    def __init__(self, button_id: str, text: str, enabled: bool):
+        self.button_id = button_id
+        self.text = text
+        self.enabled = enabled
+
+
+@dataclass
+class UITextbox:
+    """
+    Networked UI textbox. Use RemoteClientState.get_textbox_content() to retrieve content.
+    """
+
+    def __init__(self, textbox_id: str, text: str, enabled: bool):
+        self.textbox_id = textbox_id
+        self.text = text
+        self.enabled = enabled
 
 
 class ClientMessageManager:
@@ -18,13 +46,18 @@ class ClientMessageManager:
     Extends gfx-replay keyframes to include server messages to be interpreted by the clients.
     Unlike keyframes, messages are client-specific.
     """
-    Message = Dict[str, Any]
     _messages: List[Message]
     _users: Users
 
     def __init__(self, users: Users):
         self._users = users
         self.clear_messages()
+
+    def any_message(self) -> bool:
+        """
+        Returns true if a message is ready to be sent for any user.
+        """
+        return any(len(message) > 0 for message in self._messages)
 
     def get_messages(self) -> List[Message]:
         r"""
@@ -138,6 +171,41 @@ class ClientMessageManager:
                 {"text": text, "position": [pos[0], pos[1]]}
             )
 
+    def show_modal_dialogue_box(
+        self,
+        title: str,
+        text: str,
+        buttons: List[UIButton],
+        textbox: Optional[UITextbox] = None,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Show a modal dialog box with buttons.
+        There can only be one modal dialog box at a time.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+
+            message["dialog"] = {
+                "title": title,
+                "text": text,
+                "buttons": [],
+            }
+            if textbox is not None:
+                message["dialog"]["textbox"] = {
+                    "id": textbox.textbox_id,
+                    "text": textbox.text,
+                    "enabled": textbox.enabled,
+                }
+            for button in buttons:
+                message["dialog"]["buttons"].append(
+                    {
+                        "id": button.button_id,
+                        "text": button.text,
+                        "enabled": button.enabled,
+                    }
+                )
+
     def change_humanoid_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
     ) -> None:
@@ -174,6 +242,75 @@ class ClientMessageManager:
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
             message["serverKeyframeId"] = keyframe_id
+
+    def set_object_visibility_layer(
+        self,
+        object_id: int,
+        layer_id: int = -1,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Set the visibility layer of the instance associated with specified habitat-sim objectId.
+        The layer_id '-1' is the default layer and is visible to all viewports.
+        There are 8 additional layers for controlling visibility (0 to 7).
+        """
+        assert layer_id >= -1
+        assert layer_id < 8
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            object_properties = _obtain_object_properties(message, object_id)
+            object_properties["layer"] = layer_id
+
+    def set_viewport_properties(
+        self,
+        viewport_id: int,
+        viewport_rect_xywh: List[float] = DEFAULT_VIEWPORT_SIZE,
+        visible_layer_ids: Mask = Mask.ALL,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        r"""
+        Set the properties of a viewport. Unlike show_viewport(), this does not have to be called every frame.
+        Use viewport_id '-1' to edit the default viewport.
+
+        viewport_id: Unique identifier of the viewport.
+        viewport_rect_xywh: Viewport rect (x position, y position, width, height).
+                            In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
+        visible_layer_ids: Visibility layers. Only objects assigned to these layers will be visible to this viewport.
+        """
+        layers = Users(8)  # Maximum of 8 layers.
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
+            # TODO: Use mask int instead of array
+            viewport_properties["layers"] = []
+            for layer in layers.indices(visible_layer_ids):
+                viewport_properties["layers"].append(layer)
+            viewport_properties["rect"] = viewport_rect_xywh
+
+    def show_viewport(
+        self,
+        viewport_id: int,
+        cam_transform: mn.Matrix4,
+        destination_mask: Mask = Mask.ALL,
+    ):
+        """
+        Show a picture-in-picture viewport rendering the specified camera matrix.
+        This must be repeatedly called for the viewport to stay visible.
+        The viewport_id '-1' is reserved for the main viewport. It is always visible.
+        Use set_viewport_properties() to configure the viewport.
+        """
+        assert viewport_id != -1
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            viewport_properties = _obtain_viewport_properties(
+                message, viewport_id
+            )
+            viewport_properties["enabled"] = True
+            viewport_properties["camera"] = _create_transform_dict(
+                cam_transform
+            )
 
     def update_navmesh_triangles(
         self,
@@ -223,3 +360,36 @@ class ClientMessageManager:
                 rot[2],
                 rot[3],
             ]
+
+
+def _create_transform_dict(transform: mn.Matrix4) -> Dict[str, List[float]]:
+    """Create a message dictionary from a transform."""
+    p = transform.translation
+    r = mn.Quaternion.from_matrix(transform.rotation())
+    rv = r.vector
+    return {
+        "translation": [p[0], p[1], p[2]],
+        "rotation": [r.scalar, rv[0], rv[1], rv[2]],
+    }
+
+
+def _obtain_object_properties(
+    message: Message, object_id: int
+) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "objects" not in message:
+        message["objects"] = {}
+    if object_id not in message["objects"]:
+        message["objects"][object_id] = {}
+    return message["objects"][object_id]
+
+
+def _obtain_viewport_properties(
+    message: Message, viewport_id: int
+) -> Dict[str, Any]:
+    """Get or create the properties dict of an object_id."""
+    if "viewports" not in message:
+        message["viewports"] = {}
+    if viewport_id not in message["viewports"]:
+        message["viewports"][viewport_id] = {}
+    return message["viewports"][viewport_id]

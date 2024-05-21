@@ -454,7 +454,22 @@ class EpisodeIterator(Iterator[T]):
         self._prev_scene_id = next_episode.scene_id
         return next_episode
 
-    def set_next_episode_by_id(self, episode_id):
+    def set_next_episode_by_index(self, episode_index: int) -> None:
+        """
+        Set the next episode to run by episode index.
+        The new episode will be loading upon resetting the simulator.
+        """
+        if episode_index < 0 or episode_index >= len(self.episodes):
+            raise ValueError(
+                f"Episode index is out of bounds: {episode_index}."
+            )
+        self._iterator = iter([self.episodes[episode_index]])
+
+    def set_next_episode_by_id(self, episode_id: str) -> None:
+        """
+        Set the next episode to run by episode ID.
+        The new episode will be loading upon resetting the simulator.
+        """
         self._iterator = iter(self.episodes)
         for episode in self.episodes:
             if episode.episode_id == episode_id:

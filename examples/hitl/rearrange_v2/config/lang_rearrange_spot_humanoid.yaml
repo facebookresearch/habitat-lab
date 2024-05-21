@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - language_rearrange
+  - language_rearrange_multi_agent
   - hitl_defaults
   - _self_
 
@@ -12,6 +12,9 @@ habitat:
     iterator_options:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      group_by_scene: False
 
 habitat_baselines:
   # todo: document these choices
@@ -22,7 +25,6 @@ habitat_baselines:
       num_pool_agents_per_type: [1, 1]
     policy:
 
-
 habitat_hitl:
   window:
     title: "Rearrange"
@@ -32,7 +34,10 @@ habitat_hitl:
     - agent_index: 0
       lin_speed: 10.0
       ang_speed: 300
-  hide_humanoid_in_gui: True
+    - agent_index: 1
+      lin_speed: 10.0
+      ang_speed: 300
+  hide_humanoid_in_gui: False
   camera:
     first_person_mode: True
   networking:

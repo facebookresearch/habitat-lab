@@ -134,7 +134,9 @@ class ControllerHelper:
                         # sloppy: derive turn scale. This is the change in yaw (in radians) corresponding to a base ang vel action of 1.0. See also Habitat-lab BaseVelAction.
                         turn_scale = (
                             config.habitat.simulator.ctrl_freq
-                            / config.habitat.task.actions.agent_0_base_velocity.ang_speed
+                            / config.habitat.task.actions[
+                                f"{agent_k}_base_velocity"
+                            ].ang_speed
                         )
 
                         gui_agent_controller = GuiRobotController(

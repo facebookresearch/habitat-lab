@@ -203,12 +203,15 @@ jobs:
       - run:
           name: Download test data
           command: |
+              # Disable clone protection for git lfs
+              export GIT_CLONE_PROTECTION_ACTIVE=false
+
               sudo apt install git-lfs
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat
               git lfs install
               conda install -y gitpython git-lfs
-              python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm hab3_bench_assets --data-path habitat-sim/data/ --no-replace --no-prune
+              python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm hab3_bench_assets ycb rearrange_dataset_v2 --data-path habitat-sim/data/ --no-replace --no-prune
       - run:
           name: Run sim benchmark
           command: |
@@ -281,6 +284,7 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              export GIT_CLONE_PROTECTION_ACTIVE=false
               python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
               python -m pytest habitat-hitl/test
       - run:

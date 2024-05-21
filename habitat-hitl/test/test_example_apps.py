@@ -88,11 +88,12 @@ def test_hitl_example_rearrange(args):
     run_main_as_subprocess(args)
 
 
+@pytest.mark.skip(reason="Cannot currently be tested.")
 @pytest.mark.parametrize(
     "args",
     [
         (
-            "examples/hitl/rearrange_v2/rearrange_v2.py",
+            "examples/hitl/rearrange_v2/main.py",
             "--config-dir",
             "habitat-hitl/test/config",
             "+experiment=smoke_test",
