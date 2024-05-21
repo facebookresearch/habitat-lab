@@ -2,9 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set, Tuple
 
-import attr
 import magnum as mn
 import numpy as np
 import quaternion
@@ -12,88 +10,18 @@ import quaternion
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
+    MobileManipulatorParams,
 )
-
-
-@attr.s(auto_attribs=True, slots=True)
-class SpotParams:
-    """Data to configure a mobile manipulator.
-    :property arm_joints: The joint ids of the arm joints.
-    :property gripper_joints: The habitat sim joint ids of any grippers.
-    :property arm_init_params: The starting joint angles of the arm. If None,
-        resets to 0.
-    :property gripper_init_params: The starting joint positions of the gripper. If None,
-        resets to 0.
-    :property ee_offset: The 3D offset from the end-effector link to the true
-        end-effector position.
-    :property ee_link: The Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (2, 3) shaped array specifying the upper and
-        lower limits for the 3D end-effector position.
-    :property cameras: The cameras and where they should go. The key is the
-        prefix to match in the sensor names. For example, a key of `"head"`
-        will match sensors `"head_rgb"` and `"head_depth"`
-    :property gripper_closed_state: All gripper joints must achieve this
-        state for the gripper to be considered closed.
-    :property gripper_open_state: All gripper joints must achieve this
-        state for the gripper to be considered open.
-    :property gripper_state_eps: Error margin for detecting whether gripper is closed.
-    :property arm_mtr_pos_gain: The position gain of the arm motor.
-    :property arm_mtr_vel_gain: The velocity gain of the arm motor.
-    :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
-    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
-    :property base_link_names: The name of the links
-    :property leg_joints: The joint ids of the legs if applicable. If the legs are not controlled, then this should be None
-    :property leg_init_params: The starting joint positions of the leg joints. If None,
-        resets to 0.
-    :property leg_mtr_pos_gain: The position gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
-        there are legs).
-    :property ee_count: how many end effectors
-    """
-
-    arm_joints: List[int]
-    gripper_joints: List[int]
-
-    arm_init_params: Optional[List[float]]
-    gripper_init_params: Optional[List[float]]
-
-    ee_offset: List[mn.Vector3]
-    ee_links: List[int]
-    ee_constraint: np.ndarray
-
-    cameras: Dict[str, ArticulatedAgentCameraParams]
-
-    gripper_closed_state: List[float]
-    gripper_open_state: List[float]
-    gripper_state_eps: float
-
-    arm_mtr_pos_gain: float
-    arm_mtr_vel_gain: float
-    arm_mtr_max_impulse: float
-
-    base_offset: mn.Vector3
-    base_link_names: Set[str]
-
-    leg_joints: Optional[List[int]] = None
-    leg_init_params: Optional[List[float]] = None
-    leg_mtr_pos_gain: Optional[float] = None
-    leg_mtr_vel_gain: Optional[float] = None
-    leg_mtr_max_impulse: Optional[float] = None
-
-    ee_count: Optional[int] = 1
 
 
 class SpotRobot(MobileManipulator):
     def _get_spot_params(self):
-        return SpotParams(
+        return MobileManipulatorParams(
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            gripper_init_params=[-1.56],
+            arm_init_params=np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]),
+            gripper_init_params=np.array([-1.56]),
             leg_init_params=[
                 0.0,
                 0.7,
@@ -172,8 +100,8 @@ class SpotRobot(MobileManipulator):
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
             },
-            gripper_closed_state=[0.0],
-            gripper_open_state=[-1.56],
+            gripper_closed_state=np.array([0.0], dtype=np.float32),
+            gripper_open_state=np.array([-1.56], dtype=np.float32),
             gripper_state_eps=0.01,
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
@@ -185,6 +113,7 @@ class SpotRobot(MobileManipulator):
             base_link_names={
                 "base",
             },
+            navmesh_offsets=[[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]],
         )
 
     @property

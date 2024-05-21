@@ -40,6 +40,7 @@ class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
+    :property ee_offset: The 3D offset from the end-effector link to the true end-effector position.
     :property wheel_joints: The joint ids of the wheels. If the wheels are not controlled, then this should be None
     :property arm_init_params: The starting joint angles of the arm. If None,
         resets to 0.
@@ -61,22 +62,29 @@ class MobileManipulatorParams:
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
-    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if
-        there are wheels).
-    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if
-        there are wheels).
-    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
-        there are wheels).
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property base_link_names: The names of all links which should be treated as the frozen base of the robot/agent.
+    :property arm_init_params: The starting joint angles of the arm. If None, resets to 0.
+    :property gripper_init_params: The starting joint positions of the gripper. If None, resets to 0.
+    :property wheel_joints: The joint ids of the wheels. If the wheels are not controlled, then this should be None
+    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if there are wheels).
+    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if there are wheels).
+    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if there are wheels).
+    :property leg_joints: The joint ids of the legs if applicable. If the legs are not controlled, then this should be None
+    :property leg_init_params: The starting joint positions of the leg joints. If None,
+        resets to 0.
+    :property leg_mtr_pos_gain: The position gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
+        there are legs).
     :property ee_count: how many end effectors
+    :property navmesh_offsets: Optional list of 2D offsets from the robot's base_pos (x-forward) defining the centers of a set of cylinders forming a navmesh approximation of the robot for fast collision checking with PathFinder API
     """
 
     arm_joints: List[int]
     gripper_joints: List[int]
-    wheel_joints: Optional[List[int]]
-
-    arm_init_params: Optional[np.ndarray]
-    gripper_init_params: Optional[np.ndarray]
 
     ee_offset: List[mn.Vector3]
     ee_links: List[int]
@@ -92,14 +100,26 @@ class MobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
-    wheel_mtr_pos_gain: Optional[float]
-    wheel_mtr_vel_gain: Optional[float]
-    wheel_mtr_max_impulse: Optional[float]
-
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
+    arm_init_params: Optional[np.ndarray] = None
+    gripper_init_params: Optional[np.ndarray] = None
+
+    wheel_joints: Optional[List[int]] = None
+    wheel_mtr_pos_gain: Optional[float] = None
+    wheel_mtr_vel_gain: Optional[float] = None
+    wheel_mtr_max_impulse: Optional[float] = None
+
+    leg_joints: Optional[List[int]] = None
+    leg_init_params: Optional[List[float]] = None
+    leg_mtr_pos_gain: Optional[float] = None
+    leg_mtr_vel_gain: Optional[float] = None
+    leg_mtr_max_impulse: Optional[float] = None
+
     ee_count: Optional[int] = 1
+
+    navmesh_offsets: Optional[List[mn.Vector2]] = None
 
 
 class MobileManipulator(Manipulator, ArticulatedAgentBase):

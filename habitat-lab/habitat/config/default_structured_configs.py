@@ -314,8 +314,6 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     # There is a collision if the difference between the clamped NavMesh position and target position
     # is more than collision_threshold for any point.
     collision_threshold: float = 1e-5
-    # The x and y locations of the clamped NavMesh position
-    navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
     # If the condition of sliding includs the checking of rotation
