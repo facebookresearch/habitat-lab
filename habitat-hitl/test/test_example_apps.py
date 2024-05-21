@@ -7,7 +7,7 @@
 import multiprocessing
 import runpy
 import sys
-from os import path
+from os import path as osp
 
 import pytest
 
@@ -15,8 +15,8 @@ import pytest
 def run_main(*args):
     sys.argv = list(args)
     target = args[0]
-    if path.isfile(target):
-        sys.path.insert(0, path.dirname(target))
+    if osp.isfile(target):
+        sys.path.insert(0, osp.dirname(target))
     runpy.run_path(target, run_name="__main__")
 
 
@@ -28,6 +28,10 @@ def run_main_as_subprocess(args):
     assert process.exitcode == 0
 
 
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 @pytest.mark.parametrize(
     "args",
     [
@@ -43,6 +47,10 @@ def test_hitl_example_basic_viewer(args):
     run_main_as_subprocess(args)
 
 
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 @pytest.mark.parametrize(
     "args",
     [
@@ -58,6 +66,10 @@ def test_hitl_example_minimal(args):
     run_main_as_subprocess(args)
 
 
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 @pytest.mark.parametrize(
     "args",
     [
@@ -73,6 +85,10 @@ def test_hitl_example_pick_throw_vr(args):
     run_main_as_subprocess(args)
 
 
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 @pytest.mark.parametrize(
     "args",
     [
@@ -89,6 +105,10 @@ def test_hitl_example_rearrange(args):
 
 
 @pytest.mark.skip(reason="Cannot currently be tested.")
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 @pytest.mark.parametrize(
     "args",
     [
