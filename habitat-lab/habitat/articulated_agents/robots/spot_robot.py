@@ -2,15 +2,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set
 
-import attr
 import magnum as mn
 import numpy as np
 
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
+    MobileManipulatorParams,
 )
 
 
@@ -97,8 +96,8 @@ class SpotRobot(MobileManipulator):
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            gripper_init_params=[-1.56],
+            arm_init_params=np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]),
+            gripper_init_params=np.array([-1.56]),
             leg_init_params=[
                 0.0,
                 0.7,
@@ -177,8 +176,8 @@ class SpotRobot(MobileManipulator):
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
             },
-            gripper_closed_state=[0.0],
-            gripper_open_state=[-1.56],
+            gripper_closed_state=np.array([0.0], dtype=np.float32),
+            gripper_open_state=np.array([-1.56], dtype=np.float32),
             gripper_state_eps=0.01,
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,

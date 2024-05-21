@@ -11,6 +11,9 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.mobile_manipulator import (
+    MobileManipulatorParams,
+)
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -561,7 +564,15 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
         self._lateral_lin_speed = self._config.lateral_lin_speed
         self._ang_speed = self._config.ang_speed
-        self._navmesh_offset = self._config.navmesh_offset
+        assert isinstance(
+            self.cur_articulated_agent.params, MobileManipulatorParams
+        ), "ArticulatedAgent must be a MobileManipulator to use this action."
+        self._navmesh_offset = (
+            self.cur_articulated_agent.params.navmesh_offsets
+        )
+        assert (
+            self._navmesh_offset is not None
+        ), "MobileManipulatorParams must define a set of 2D navmesh_offset points to use this action."
         self._enable_lateral_move = self._config.enable_lateral_move
 
     @property
@@ -597,6 +608,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         """
         # Get the offset positions
         num_check_cylinder = len(self._navmesh_offset)
+        # TODO: height 0 is not a good assumption in general. This must be changed to query current navmesh height.
         nav_pos_3d = [
             np.array([xz[0], 0.0, xz[1]]) for xz in self._navmesh_offset
         ]
