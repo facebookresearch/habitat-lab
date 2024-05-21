@@ -148,7 +148,7 @@
     agent_max_climb: 0.01
 
     check_navigable: True
-    navmesh_offset: [[0, 0], [0, 0.15], [0, -0.15]]
+    navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
     max_collision_rate_for_navigable: 0.3
     angle_threshold: 0.05
     angular_velocity: 1.0

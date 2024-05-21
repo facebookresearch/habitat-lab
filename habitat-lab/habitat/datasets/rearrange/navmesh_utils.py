@@ -438,6 +438,7 @@ def compute_turn(
 class SimpleVelocityControlEnv:
     """
     A simple environment to control the velocity of the robot.
+    Assumes x-forward in robot local space.
     """
 
     def __init__(self, integration_frequency: float = 60.0):
@@ -446,6 +447,7 @@ class SimpleVelocityControlEnv:
 
         :param integration_frequency: The frequency of integration. Number of integration steps in a second. Integration step size = 1.0/integration_frequency.
         """
+
         # the velocity control
         self.vel_control = VelocityControl()
         self.vel_control.controlling_lin_vel = True
@@ -463,11 +465,12 @@ class SimpleVelocityControlEnv:
 
         :return: The updated agent transformation matrix.
         """
+
         linear_velocity = vel[0]
         angular_velocity = vel[1]
         # Map velocity actions
         self.vel_control.linear_velocity = mn.Vector3(
-            [0.0, 0.0, -linear_velocity]
+            [linear_velocity, 0.0, 0.0]
         )
         self.vel_control.angular_velocity = mn.Vector3(
             [0.0, angular_velocity, 0.0]
@@ -650,7 +653,7 @@ def path_is_navigable_given_robot(
     obj_targ_pos = np.array(curr_path_points[-1])
     # the velocity control
     vc = SimpleVelocityControlEnv()
-    forward = np.array([0, 0, -1.0])
+    forward = np.array([1.0, 0, 0])
 
     at_goal = False
 
