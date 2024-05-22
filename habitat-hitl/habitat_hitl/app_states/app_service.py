@@ -12,14 +12,13 @@ from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.client_message_manager import ClientMessageManager
-from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.remote_client_state import RemoteClientState
+from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
-from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.episode_helper import EpisodeHelper
+from habitat_sim.gfx import DebugLineRender
 
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
@@ -29,10 +28,9 @@ class AppService:
         *,
         config,
         hitl_config,
-        users: Users,
         gui_input: GuiInput,
-        remote_client_state: RemoteClientState,
-        gui_drawer: GuiDrawer,
+        remote_gui_input: RemoteGuiInput,
+        line_render: DebugLineRender,
         text_drawer: AbstractTextDrawer,
         get_anim_fraction: Callable,
         env: Env,
@@ -50,10 +48,9 @@ class AppService:
     ):
         self._config = config
         self._hitl_config = hitl_config
-        self._users = users
         self._gui_input = gui_input
-        self._remote_client_state = remote_client_state
-        self._gui_drawer = gui_drawer
+        self._remote_gui_input = remote_gui_input
+        self._line_render = line_render
         self._text_drawer = text_drawer
         self._get_anim_fraction = get_anim_fraction
         self._env = env
@@ -78,20 +75,16 @@ class AppService:
         return self._hitl_config
 
     @property
-    def users(self) -> Users:
-        return self._users
-
-    @property
     def gui_input(self) -> GuiInput:
         return self._gui_input
 
     @property
-    def remote_client_state(self) -> RemoteClientState:
-        return self._remote_client_state
+    def remote_gui_input(self) -> RemoteGuiInput:
+        return self._remote_gui_input
 
     @property
-    def gui_drawer(self) -> GuiDrawer:
-        return self._gui_drawer
+    def line_render(self) -> DebugLineRender:
+        return self._line_render
 
     @property
     def text_drawer(self) -> AbstractTextDrawer:

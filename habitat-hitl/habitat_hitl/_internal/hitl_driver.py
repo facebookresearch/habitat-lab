@@ -47,6 +47,7 @@ from habitat_hitl.core.serialize_utils import (
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.core.types import KeyframeAndMessages
 from habitat_hitl.core.user_mask import Users
+from habitat_hitl.environment.controllers.controller_abc import Controller
 from habitat_hitl.environment.controllers.controller_helper import (
     ControllerHelper,
 )
@@ -190,6 +191,9 @@ class HitlDriver(AppDriver):
         gui_agent_controllers: Any = (
             self.ctrl_helper.get_gui_agent_controllers()
         )
+        all_agent_controllers: List[
+            Controller
+        ] = self.ctrl_helper.get_all_agent_controllers()
 
         # TODO: Dependency injection
         text_drawer._client_message_manager = self._client_message_manager
@@ -214,6 +218,7 @@ class HitlDriver(AppDriver):
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=gui_agent_controllers,
+            all_agent_controllers=all_agent_controllers,
         )
 
         self._app_state: AppState = None
