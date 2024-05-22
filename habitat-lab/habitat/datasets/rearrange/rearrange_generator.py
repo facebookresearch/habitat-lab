@@ -43,6 +43,38 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
 
+import signal
+import time
+from functools import wraps
+
+class TimeoutException(Exception):
+    pass
+
+def timeout_decorator(timeout_minutes):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def handler(signum, frame):
+                raise TimeoutException(f'Timeout! The function {func.__name__} took longer than {timeout_minutes} minutes.')
+
+            # Register the signal function handler
+            signal.signal(signal.SIGALRM, handler)
+            # Schedule the timeout
+            signal.alarm(timeout_minutes * 60)
+
+            try:
+                result = func(*args, **kwargs)
+            except TimeoutException:
+                result = 'failed'
+            finally:
+                # Disable the alarm
+                signal.alarm(0)
+            
+            return result
+        return wrapper
+    return decorator
+
+
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     sample_region_ratios: Dict[str, float] = defaultdict(lambda: 1.0)
@@ -219,6 +251,11 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["object_sets"]
                     for x in self._obj_sets[y]
                 ]
+                object_set_sampler_probs = {
+                    x: 1 / len(self._obj_sets[y])
+                    for y in obj_sampler_info["params"]["object_sets"]
+                    for x in self._obj_sets[y]
+                }
                 object_handles = sorted(set(object_handles))
                 if len(object_handles) == 0:
                     raise ValueError(
@@ -248,6 +285,7 @@ class RearrangeEpisodeGenerator:
                     nav_to_min_distance=obj_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
+                    object_set_sample_probs=object_set_sampler_probs,
                     recep_set_sample_probs=obj_sampler_info["params"].get(
                         "sample_probs", None
                     ),
@@ -479,12 +517,13 @@ class RearrangeEpisodeGenerator:
         Generate a fixed number of episodes.
         """
         generated_episodes: List[RearrangeEpisode] = []
+        cur_episode = 0
         failed_episodes = 0
         if verbose:
             pbar = tqdm(total=num_episodes)
-        while len(generated_episodes) < num_episodes:
+        while cur_episode < num_episodes:
             try:
-                self._scene_sampler.set_cur_episode(len(generated_episodes))
+                self._scene_sampler.set_cur_episode(cur_episode)
                 new_episode = self.generate_single_episode()
             except Exception as e:
                 new_episode = None
@@ -492,10 +531,17 @@ class RearrangeEpisodeGenerator:
                 logger.error(e)
                 import traceback
                 traceback.print_exc()
+                new_episode = 'failed'
             if new_episode is None:
                 failed_episodes += 1
                 continue
+            elif isinstance(new_episode, str) and new_episode == 'failed':
+                failed_episodes += 1
+                cur_episode += 1
+                continue
+
             generated_episodes.append(new_episode)
+            cur_episode += 1
             if verbose:
                 pbar.update(1)
         if verbose:
@@ -507,6 +553,7 @@ class RearrangeEpisodeGenerator:
 
         return generated_episodes
 
+    @timeout_decorator(30)
     def generate_single_episode(self) -> Optional[RearrangeEpisode]:
         """
         Generate a single episode, sampling the scene.
@@ -586,7 +633,7 @@ class RearrangeEpisodeGenerator:
             failed_samplers: Dict[str, bool] = defaultdict(bool)
             
             tries = 0
-            max_tries = 100
+            max_tries = 1000
             while len(new_target_receptacles) < num_targets and tries < max_tries:
                 tries += 1
 
@@ -1034,7 +1081,7 @@ class RearrangeEpisodeGenerator:
             "Computing placement stability report:\n----------------------------------------"
         )
         max_settle_displacement = 0
-        error_eps = 0.1
+        error_eps = 0.25
         unstable_placements: List[str] = []  # list of unstable object handles
         for new_object in self.ep_sampled_objects:
             error = (
