@@ -4,7 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from os import path as osp
+
 import magnum
+import pytest
 from hydra import compose, initialize
 
 from habitat_hitl.app_states.app_state_abc import AppState
@@ -37,6 +40,10 @@ def main(config) -> None:
     hitl_main(config, lambda app_service: AppStateTest(app_service))
 
 
+@pytest.mark.skipif(
+    not osp.exists("data/scene_datasets/hssd-hab"),
+    reason="Requires public Habitat-HSSD scene dataset. TODO: should be updated to a new dataset.",
+)
 def test_hitl_main():
     register_hydra_plugins()
     with initialize(version_base=None, config_path="config"):
