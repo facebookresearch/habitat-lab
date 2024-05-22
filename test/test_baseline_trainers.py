@@ -20,7 +20,6 @@ try:
     import torch
     import torch.distributed
 
-    import habitat_sim.utils.datasets_download as data_downloader
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
@@ -44,14 +43,6 @@ from habitat_baselines.config.default_structured_configs import (
     Cube2FishConfig,
 )
 from habitat_baselines.rl.ppo.evaluator import pause_envs
-
-
-@pytest.fixture(scope="module", autouse=True)
-def download_data():
-    # Download the needed datasets
-    data_downloader.main(
-        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
-    )
 
 
 @pytest.mark.skipif(
