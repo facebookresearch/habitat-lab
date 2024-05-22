@@ -578,8 +578,7 @@ class AppStateRearrangeV2(AppStateBase):
         self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def _update_grasping_and_set_act_hints(self, user_index: int):
-        # TODO: Figure out how to set grasped object
-        # See: get_grasped_objects_idxs
+        # TODO: Read/write from grasp manager.
         gui_agent_controller = self._user_data[user_index].gui_agent_controller
         assert isinstance(
             gui_agent_controller, (GuiHumanoidController, GuiRobotController)
