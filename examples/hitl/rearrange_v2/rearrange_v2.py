@@ -151,16 +151,16 @@ class AgentData:
         self.task_instruction = ""
 
         self.render_camera = render_camera
-
-        # TODO: Get agent camera transform for PIP view.
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
 
-    def reset(self):
-        pass
-
-    def update(self, dt: float):
+    def update_camera_from_sensor(self) -> None:
+        """
+        Update the camera transform from the agent's sensor.
+        Agents controlled by users have their camera updated using CameraHelper.
+        For AI-controlled agents, the camera transform can be inferred from this function.
+        """
         if self.render_camera is not None:
             self.cam_transform = np.linalg.inv(
                 self.render_camera.camera_matrix
@@ -717,6 +717,11 @@ class AppStateRearrangeV2(AppStateBase):
                 user_agent_idx = self._user_to_agent_index[user_index]
                 other_agent_idx = user_agent_idx ^ 1
                 other_agent_data = self._agent_data[other_agent_idx]
+
+                # If the other agent is AI-controlled, update its camera.
+                if other_agent_idx not in self._user_to_agent_index:
+                    other_agent_data.update_camera_from_sensor()
+
                 self._user_data[user_index].draw_pip_viewport(other_agent_data)
 
         self._app_service.compute_action_and_step_env()
