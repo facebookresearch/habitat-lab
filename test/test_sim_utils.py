@@ -150,6 +150,14 @@ def test_snap_down(support_margin, obj_margin, stage_support):
                 assert (
                     bb_ray_prescreen_results["surface_snap_point"] is not None
                 )
+
+                # reset the object and try again, ignoring the supports instead
+                cube_obj.translation = mn.Vector3(0, 0.2, 0)
+                snap_success = sutils.snap_down(
+                    sim, cube_obj, ignore_obj_ids=support_obj_ids
+                )
+                assert not snap_success
+
                 if stage_support:
                     # don't need 3 iterations for stage b/c no motion types to test
                     break

@@ -327,6 +327,7 @@ def bb_ray_prescreen(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
+    ignore_obj_ids: Optional[List[int]] = None,
     check_all_corners: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -335,6 +336,7 @@ def bb_ray_prescreen(
     :param sim: The Simulator instance.
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection.
+    :param ignore_obj_ids: A list of object ids which should be ignored in contact checks and raycasts. For example, the body of the agent placing an object.
     :param check_all_corners: Optionally cast rays from all bounding box corners instead of only casting a ray from the center of mass.
 
     :return: a dict of raycast metadata: "base_rel_height","surface_snap_point", "raycast_results"
@@ -373,7 +375,11 @@ def bb_ray_prescreen(
             raycast_results.append(sim.cast_ray(ray))
             # classify any obstructions before hitting the support surface
             for hit in raycast_results[-1].hits:
-                if hit.object_id == obj.object_id:
+                if (
+                    hit.object_id == obj.object_id
+                    or ignore_obj_ids is not None
+                    and hit.object_id in ignore_obj_ids
+                ):
                     continue
                 elif hit.object_id in support_obj_ids:
                     hit_point = hit.point
@@ -427,6 +433,7 @@ def snap_down(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
+    ignore_obj_ids: Optional[List[int]] = None,
     dbv: Optional[DebugVisualizer] = None,
     max_collision_depth: float = 0.01,
 ) -> bool:
@@ -436,6 +443,7 @@ def snap_down(
     :param sim: The Simulator instance.
     :param obj: The RigidObject instance.
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection. If none provided, default support surface is the stage/ground mesh (0).
+    :param ignore_obj_ids: A list of object ids which should be ignored in contact checks and raycasts. For example, the body of the agent placing an object.
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
     :param max_collision_depth: The maximum contact penetration depth between the object and the support surface. Higher values are easier to sample, but result in less dynamically stabile states.
 
@@ -454,8 +462,12 @@ def snap_down(
         # set default support surface to stage/ground mesh
         support_obj_ids = [habitat_sim.stage_id]
 
+    if ignore_obj_ids is None:
+        # default empty to avoid extra none checks in-loop later
+        ignore_obj_ids = []
+
     bb_ray_prescreen_results = bb_ray_prescreen(
-        sim, obj, support_obj_ids, check_all_corners=False
+        sim, obj, support_obj_ids, ignore_obj_ids, check_all_corners=False
     )
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:
@@ -472,15 +484,28 @@ def snap_down(
         cps = sim.get_physics_contact_points()
         for cp in cps:
             if (
-                cp.object_id_a == obj.object_id
-                or cp.object_id_b == obj.object_id
-            ) and (
                 (
-                    cp.contact_distance < (-1 * max_collision_depth)
-                )  # contact depth is negative distance
-                or not (
-                    cp.object_id_a in support_obj_ids
-                    or cp.object_id_b in support_obj_ids
+                    # the object is involved in the contact
+                    cp.object_id_a == obj.object_id
+                    or cp.object_id_b == obj.object_id
+                )
+                and not (
+                    # the contact does not involve ignored objects
+                    cp.object_id_a in ignore_obj_ids
+                    or cp.object_id_b in ignore_obj_ids
+                )
+                and (
+                    (
+                        # contact exceeds maximum depth
+                        # NOTE: contact depth is negative distance
+                        cp.contact_distance
+                        < (-1 * max_collision_depth)
+                    )
+                    or not (
+                        # contact is not with a support object
+                        cp.object_id_a in support_obj_ids
+                        or cp.object_id_b in support_obj_ids
+                    )
                 )
             ):
                 obj.translation = cached_position
