@@ -17,7 +17,10 @@ from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.core.user_mask import Users
-from habitat_hitl.environment.controllers.controller_abc import GuiController
+from habitat_hitl.environment.controllers.controller_abc import (
+    Controller,
+    GuiController,
+)
 from habitat_hitl.environment.episode_helper import EpisodeHelper
 
 
@@ -44,6 +47,7 @@ class AppService:
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
         gui_agent_controllers: List[GuiController],
+        all_agent_controllers: List[Controller],
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -63,6 +67,7 @@ class AppService:
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
         self._gui_agent_controllers = gui_agent_controllers
+        self._all_agent_controllers = all_agent_controllers
 
     @property
     def config(self):
@@ -135,3 +140,7 @@ class AppService:
     @property
     def gui_agent_controllers(self) -> List[GuiController]:
         return self._gui_agent_controllers
+
+    @property
+    def all_agent_controllers(self) -> List[Controller]:
+        return self._all_agent_controllers
