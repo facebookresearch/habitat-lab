@@ -188,6 +188,12 @@ class ControllerHelper:
             )
         return gui_agent_controllers
 
+    def get_all_agent_controllers(self) -> List[Controller]:
+        """
+        Return a list of controllers indexed by agent index.
+        """
+        return self.controllers
+
     def update(self, obs):
         actions = []
 

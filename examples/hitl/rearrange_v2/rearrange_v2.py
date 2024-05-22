@@ -30,9 +30,12 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
-from habitat_hitl.core.user_mask import Mask
+from habitat_hitl.core.user_mask import Mask, Users
 from habitat_hitl.environment.camera_helper import CameraHelper
-from habitat_hitl.environment.controllers.controller_abc import GuiController
+from habitat_hitl.environment.controllers.controller_abc import (
+    Controller,
+    GuiController,
+)
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
@@ -112,11 +115,11 @@ class FrameRecorder:
         for user_index in range(len(user_data)):
             u = user_data[user_index]
             user_data_dict = {
-                "task_completed": u.episode_completion_status
+                "task_completed": u.agent_data.episode_completion_status
                 != EpisodeCompletionStatus.PENDING,
-                "task_succeeded": u.episode_completion_status
+                "task_succeeded": u.agent_data.episode_completion_status
                 == EpisodeCompletionStatus.SUCCESS,
-                "camera_transform": u.cam_transform,
+                "camera_transform": u.agent_data.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
                 "events": u.pop_ui_events(),
@@ -124,6 +127,44 @@ class FrameRecorder:
             data["users"].append(user_data_dict)
 
         return data
+
+
+class AgentData:
+    """
+    Agent-specific states for the ongoing rearrangement session.
+    Agents can be controlled by either a user or an AI.
+    """
+
+    def __init__(
+        self,
+        app_service: AppService,
+        world: World,
+        agent_controller: Controller,
+        agent_index: int,
+        render_camera: Optional[Any],
+    ):
+        self.app_service = app_service
+        self.world = world
+        self.agent_controller = agent_controller
+        self.agent_index = agent_index
+
+        self.task_instruction = ""
+
+        self.render_camera = render_camera
+
+        # TODO: Get agent camera transform for PIP view.
+        self.cam_transform = mn.Matrix4.identity_init()
+
+        self.episode_completion_status = EpisodeCompletionStatus.PENDING
+
+    def reset(self):
+        pass
+
+    def update(self, dt: float):
+        if self.render_camera is not None:
+            self.cam_transform = np.linalg.inv(
+                self.render_camera.camera_matrix
+            )
 
 
 class UserData:
@@ -136,21 +177,25 @@ class UserData:
         app_service: AppService,
         user_index: int,
         world: World,
-        gui_agent_controller: GuiController,
+        agent_data: AgentData,
         server_sps_tracker: AverageRateTracker,
     ):
         self.app_service = app_service
-        self.world = world
         self.user_index = user_index
-        self.gui_agent_controller = gui_agent_controller
+        self.world = world
+        self.agent_data = agent_data
         self.server_sps_tracker = server_sps_tracker
         self.client_helper = (
             self.app_service.remote_client_state._client_helper
         )
-        self.cam_transform = mn.Matrix4.identity_init()
         self.show_gui_text = True
-        self.task_instruction = ""
         self.pip_initialized = False
+
+        gui_agent_controller = agent_data.agent_controller
+        assert isinstance(
+            gui_agent_controller, GuiController
+        ), "User agent controller must be a GuiController"
+        self.gui_agent_controller = gui_agent_controller
 
         # Events for data collection.
         self.ui_events: List[Dict[str, Any]] = []
@@ -171,7 +216,7 @@ class UserData:
             hitl_config=app_service.hitl_config,
             user_index=user_index,
             world=world,
-            gui_controller=gui_agent_controller,
+            gui_controller=self.gui_agent_controller,
             sim=app_service.sim,
             gui_input=self.gui_input,
             gui_drawer=app_service.gui_drawer,
@@ -179,7 +224,6 @@ class UserData:
         )
 
         self.end_episode_form = EndEpisodeForm(user_index, app_service)
-        self.episode_completion_status = EpisodeCompletionStatus.PENDING
 
         # Register UI callbacks
         self.ui.on_pick.registerCallback(self._on_pick)
@@ -244,18 +288,18 @@ class UserData:
             )
 
         self.camera_helper.update(self._get_camera_lookat_pos(), dt)
-        self.cam_transform = self.camera_helper.get_cam_transform()
+        self.agent_data.cam_transform = self.camera_helper.get_cam_transform()
 
         if self.app_service.hitl_config.networking.enable:
             self.app_service._client_message_manager.update_camera_transform(
-                self.cam_transform,
+                self.agent_data.cam_transform,
                 destination_mask=Mask.from_index(self.user_index),
             )
 
         self.ui.update()
         self.ui.draw_ui()
 
-    def draw_pip_viewport(self, pip_user_data: UserData):
+    def draw_pip_viewport(self, pip_agent_data: AgentData):
         """
         Draw a picture-in-picture viewport showing another agent's perspective.
         """
@@ -268,7 +312,7 @@ class UserData:
             self.pip_initialized = True
 
             # Assign pip agent objects to their own layer.
-            pip_agent_index = pip_user_data.gui_agent_controller._agent_idx
+            pip_agent_index = pip_agent_data.agent_index
             agent_object_ids = self.world.get_agent_object_ids(pip_agent_index)
             for agent_object_id in agent_object_ids:
                 self.app_service.client_message_manager.set_object_visibility_layer(
@@ -290,7 +334,7 @@ class UserData:
         # Show picture-in-picture (PIP) viewport.
         self.app_service.client_message_manager.show_viewport(
             viewport_id=PIP_VIEWPORT_ID,
-            cam_transform=pip_user_data.cam_transform,
+            cam_transform=pip_agent_data.cam_transform,
             destination_mask=Mask.from_index(self.user_index),
         )
 
@@ -354,7 +398,9 @@ class UserData:
                 "type": "end_episode_form_cancelled",
             }
         )
-        self.episode_completion_status = EpisodeCompletionStatus.PENDING
+        self.agent_data.episode_completion_status = (
+            EpisodeCompletionStatus.PENDING
+        )
 
     def _on_episode_success(self, _e: Any = None):
         self.ui_events.append(
@@ -362,7 +408,9 @@ class UserData:
                 "type": "episode_success",
             }
         )
-        self.episode_completion_status = EpisodeCompletionStatus.SUCCESS
+        self.agent_data.episode_completion_status = (
+            EpisodeCompletionStatus.SUCCESS
+        )
         print(f"User {self.user_index} has signaled the episode as completed.")
 
     def _on_error_reported(self, error_report: ErrorReport):
@@ -372,7 +420,9 @@ class UserData:
                 "error_report": error_report.user_message,
             }
         )
-        self.episode_completion_status = EpisodeCompletionStatus.FAILURE
+        self.agent_data.episode_completion_status = (
+            EpisodeCompletionStatus.FAILURE
+        )
         print(
             f"User {self.user_index} has signaled a problem with the episode: '{error_report.user_message}'."
         )
@@ -387,32 +437,74 @@ class AppStateRearrangeV2(AppStateBase):
         self, app_service: AppService, app_data: AppData, session: Session
     ):
         super().__init__(app_service, app_data)
+        sim = app_service.sim
+        agent_mgr = sim.agents_mgr
         self._save_keyframes = False  # Done on env step (rearrange_sim).
+
         self._app_service = app_service
         self._session = session
-        self._gui_agent_controllers = self._app_service.gui_agent_controllers
-        self._num_agents = len(self._gui_agent_controllers)
-        self._users = self._app_service.users
+        self._gui_agent_controllers = app_service.gui_agent_controllers
+
+        self._users = app_service.users
+        self._num_users = self._users.max_user_count
+        self._agents = Users(len(agent_mgr._all_agent_data))
+        self._num_agents = self._agents.max_user_count
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._server_user_index = 0
-        self._server_gui_input = self._app_service.gui_input
+        self._server_gui_input = app_service.gui_input
         self._server_input_enabled = False
         self._elapsed_time = 0.0
 
-        self._user_data: List[UserData] = []
-
         self._world = World(app_service.sim)
 
+        self._agent_to_user_index: Dict[int, int] = {}
+        self._user_to_agent_index: Dict[int, int] = {}
+
+        self._agent_data: List[AgentData] = []
+        for agent_index in range(self._num_agents):
+            agent = agent_mgr._all_agent_data[agent_index]
+            camera_name: Optional[Any] = (
+                agent.articulated_agent._cameras[0]
+                if len(agent.articulated_agent._cameras) > 0
+                else None
+            )
+            render_camera: Optional[Any] = (
+                sim.agents[agent_index]._sensors[camera_name].render_camera
+                if camera_name is not None
+                else None
+            )
+            agent_controller = app_service.all_agent_controllers[agent_index]
+
+            # Match agent and user indices.
+            for user_index in range(len(self._gui_agent_controllers)):
+                gui_agent_controller = self._gui_agent_controllers[user_index]
+                if gui_agent_controller._agent_idx == agent_index:
+                    self._agent_to_user_index[agent_index] = user_index
+                    self._user_to_agent_index[user_index] = agent_index
+                    break
+
+            self._agent_data.append(
+                AgentData(
+                    app_service=app_service,
+                    world=self._world,
+                    agent_controller=agent_controller,
+                    agent_index=agent_index,
+                    render_camera=render_camera,
+                )
+            )
+
+        self._user_data: List[UserData] = []
         for user_index in self._users.indices(Mask.ALL):
+            agent_data = self._agent_data[
+                self._user_to_agent_index[user_index]
+            ]
             self._user_data.append(
                 UserData(
                     app_service=app_service,
                     user_index=user_index,
                     world=self._world,
-                    gui_agent_controller=self._gui_agent_controllers[
-                        user_index
-                    ],
+                    agent_data=agent_data,
                     server_sps_tracker=self._sps_tracker,
                 )
             )
@@ -473,9 +565,11 @@ class AppStateRearrangeV2(AppStateBase):
         current_episode = self._app_service.env.current_episode
         if hasattr(current_episode, "instruction"):
             task_instruction = current_episode.instruction
-            # TODO: Users will have different instructions.
-            for user_index in self._users.indices(Mask.ALL):
-                self._user_data[user_index].task_instruction = task_instruction
+            # TODO: Agents will have different instructions.
+            for agent_index in self._agents.indices(Mask.ALL):
+                self._agent_data[
+                    agent_index
+                ].task_instruction = task_instruction
 
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].reset()
@@ -484,6 +578,8 @@ class AppStateRearrangeV2(AppStateBase):
         self._app_service.sim.gfx_replay_manager.save_keyframe()
 
     def _update_grasping_and_set_act_hints(self, user_index: int):
+        # TODO: Figure out how to set grasped object
+        # See: get_grasped_objects_idxs
         gui_agent_controller = self._user_data[user_index].gui_agent_controller
         assert isinstance(
             gui_agent_controller, (GuiHumanoidController, GuiRobotController)
@@ -499,9 +595,6 @@ class AppStateRearrangeV2(AppStateBase):
             throw_vel=None,
             reach_pos=None,
         )
-
-    def _get_gui_controlled_agent_index(self, user_index):
-        return self._gui_agent_controllers[user_index]._agent_idx
 
     def _get_controls_text(self, user_index: int):
         controls_str: str = ""
@@ -525,21 +618,22 @@ class AppStateRearrangeV2(AppStateBase):
     def _get_status_text(self, user_index: int):
         status_str = ""
 
-        if len(self._user_data[user_index].task_instruction) > 0:
-            status_str += (
-                "Instruction: "
-                + self._user_data[user_index].task_instruction
-                + "\n"
-            )
+        task_instruction = self._user_data[
+            user_index
+        ].agent_data.task_instruction
+        if len(task_instruction) > 0:
+            status_str += "Instruction: " + task_instruction + "\n"
 
         if (
             self._users.max_user_count > 1
-            and self._user_data[user_index].episode_completion_status
+            and self._user_data[
+                user_index
+            ].agent_data.episode_completion_status
             == EpisodeCompletionStatus.PENDING
         ):
-            if self._has_any_user_finished_success():
+            if self._has_any_agent_finished_success():
                 status_str += "\n\nThe other participant signaled that the task is completed.\nPress '0' when you are done."
-            elif self._has_any_user_finished_failure():
+            elif self._has_any_agent_finished_failure():
                 status_str += "\n\nThe other participant signaled a problem with the task.\nPress '0' to continue."
 
         client_helper = self._app_service.remote_client_state._client_helper
@@ -585,18 +679,18 @@ class AppStateRearrangeV2(AppStateBase):
             if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
                 server_user = self._user_data[self._server_user_index]
                 if (
-                    server_user.episode_completion_status
+                    server_user.agent_data.episode_completion_status
                     == EpisodeCompletionStatus.PENDING
                 ):
                     server_user._on_episode_success()
 
             # Switch the server-controlled user.
-            if self._num_agents > 0 and self._server_gui_input.get_key_down(
+            if self._num_users > 0 and self._server_gui_input.get_key_down(
                 GuiInput.KeyNS.TAB
             ):
                 self._server_user_index = (
                     self._server_user_index + 1
-                ) % self._num_agents
+                ) % self._num_users
 
         # Copy server input to user input when server input is active.
         if self._app_service.hitl_config.networking.enable:
@@ -618,73 +712,82 @@ class AppStateRearrangeV2(AppStateBase):
             self._update_help_text(user_index)
 
         # Draw the picture-in-picture showing other agent's perspective.
-        if self._users.max_user_count == 2:
-            self._user_data[0].draw_pip_viewport(self._user_data[1])
-            self._user_data[1].draw_pip_viewport(self._user_data[0])
+        if self._num_agents == 2:
+            for user_index in range(self._num_users):
+                user_agent_idx = self._user_to_agent_index[user_index]
+                other_agent_idx = user_agent_idx ^ 1
+                other_agent_data = self._agent_data[other_agent_idx]
+                self._user_data[user_index].draw_pip_viewport(other_agent_data)
 
         self._app_service.compute_action_and_step_env()
 
         # Set the server camera.
         server_cam_transform = self._user_data[
             self._server_user_index
-        ].cam_transform
+        ].agent_data.cam_transform
         post_sim_update_dict["cam_transform"] = server_cam_transform
 
         #  Collect data.
         self._elapsed_time += dt
-        # TODO: Always record with non-human agent.
-        if self._is_any_user_active():
+        if self._is_any_agent_policy_driven() or self._is_any_user_active():
             frame_data = self._frame_recorder.record_state(
                 self._elapsed_time, self._user_data
             )
             self._session.session_recorder.record_frame(frame_data)
 
+    def _is_any_agent_policy_driven(self) -> bool:
+        """
+        Returns true if any of the agents is policy-driven.
+        Returns false if all agents are user-driven.
+        """
+        return self._num_agents > self._num_users
+
     def _is_any_user_active(self) -> bool:
         """
         Returns true if any user is active during the frame.
         """
-        return any(
+        return self._is_any_agent_policy_driven() or any(
             self._user_data[user_index].gui_input.get_any_input()
             or len(self._user_data[user_index].ui_events) > 0
             for user_index in range(self._app_data.max_user_count)
         )
 
-    def _has_any_user_finished_success(self) -> bool:
+    def _has_any_agent_finished_success(self) -> bool:
         """
-        Returns true if any user completed the episode successfully.
+        Returns true if any agent completed the episode successfully.
         """
         return any(
-            self._user_data[user_index].episode_completion_status
+            self._agent_data[agent_index].episode_completion_status
             == EpisodeCompletionStatus.SUCCESS
-            for user_index in range(self._app_data.max_user_count)
+            for agent_index in range(self._num_agents)
         )
 
-    def _has_any_user_finished_failure(self) -> bool:
+    def _has_any_agent_finished_failure(self) -> bool:
         """
-        Returns true if any user completed the episode unsuccessfully.
+        Returns true if any agent completed the episode unsuccessfully.
         """
         return any(
-            self._user_data[user_index].episode_completion_status
+            self._agent_data[agent_index].episode_completion_status
             == EpisodeCompletionStatus.FAILURE
-            for user_index in range(self._app_data.max_user_count)
+            for agent_index in range(self._num_agents)
         )
 
     def _is_episode_finished(self) -> bool:
         """
-        Returns true if all users finished the episode, regardless of success.
+        Returns true if all agents finished the episode, regardless of success.
         """
         return all(
-            self._user_data[user_index].episode_completion_status
+            self._agent_data[agent_index].episode_completion_status
             != EpisodeCompletionStatus.PENDING
-            for user_index in range(self._app_data.max_user_count)
+            for agent_index in range(self._num_agents)
         )
 
     def _is_episode_successful(self) -> bool:
         """
-        Returns true if all users finished the episode successfully.
+        Returns true if all agents finished the episode successfully.
         """
         return all(
-            self._user_data[user_index].episode_completion_status
+            self._agent_data[agent_index].episode_completion_status
             == EpisodeCompletionStatus.SUCCESS
-            for user_index in range(self._app_data.max_user_count)
+            for agent_index in range(self._num_agents)
         )
