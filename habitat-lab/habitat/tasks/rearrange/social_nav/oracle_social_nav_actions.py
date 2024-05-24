@@ -9,14 +9,15 @@ from gym import spaces
 
 import habitat_sim
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.navmesh_utils import (
+    SimpleVelocityControlEnv,
+    compute_turn,
+)
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.actions.oracle_nav_action import (
-    OracleNavAction,
-    SimpleVelocityControlEnv,
-)
+from habitat.tasks.rearrange.actions.oracle_nav_action import OracleNavAction
 from habitat.tasks.rearrange.social_nav.utils import (
     robot_human_vec_dot_product,
 )
@@ -133,7 +134,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             vel = [self._config.forward_velocity, 0]
                         else:
                             # Robot's rear looks at the target waypoint.
-                            vel = OracleNavAction._compute_turn(
+                            vel = compute_turn(
                                 rel_targ,
                                 self._config.turn_velocity,
                                 robot_backward,
@@ -141,7 +142,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                     else:
                         if dist_to_final_nav_targ < self._config.dist_thresh:
                             # Look at the object
-                            vel = OracleNavAction._compute_turn(
+                            vel = compute_turn(
                                 rel_pos,
                                 self._config.turn_velocity,
                                 robot_forward,
@@ -151,7 +152,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             vel = [self._config.forward_velocity, 0]
                         else:
                             # Look at the target waypoint.
-                            vel = OracleNavAction._compute_turn(
+                            vel = compute_turn(
                                 rel_targ,
                                 self._config.turn_velocity,
                                 robot_forward,
@@ -291,7 +292,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
 
             if dist_to_final_nav_targ < self._config.dist_thresh:
                 # Look at the object
-                vel = OracleNavAction._compute_turn(
+                vel = compute_turn(
                     rel_pos,
                     self._config.turn_velocity * _vel_scale,
                     robot_forward,
@@ -301,7 +302,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
                 vel = [self._config.forward_velocity * _vel_scale, 0]
             else:
                 # Look at the target waypoint.
-                vel = OracleNavAction._compute_turn(
+                vel = compute_turn(
                     rel_targ,
                     self._config.turn_velocity * _vel_scale,
                     robot_forward,
