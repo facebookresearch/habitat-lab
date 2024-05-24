@@ -10,13 +10,13 @@ from gym import spaces
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
+from habitat.datasets.rearrange.navmesh_utils import compute_turn
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
-from habitat_sim.physics import VelocityControl
 
 
 @registry.register_task_action
@@ -52,15 +52,6 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self._prev_ep_id = None
         self.skill_done = False
         self._targets = {}
-
-    @staticmethod
-    def _compute_turn(rel, turn_vel, robot_forward):
-        is_left = np.cross(robot_forward, rel) > 0
-        if is_left:
-            vel = [0, -turn_vel]
-        else:
-            vel = [0, turn_vel]
-        return vel
 
     def lazy_inst_humanoid_controller(self, task, config):
         # Lazy instantiation of humanoid controller
@@ -212,7 +203,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
-                        vel = OracleNavAction._compute_turn(
+                        vel = compute_turn(
                             rel_pos, self._config.turn_velocity, robot_forward
                         )
                     elif angle_to_target < self._config.turn_thresh:
@@ -220,7 +211,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         vel = [self._config.forward_velocity, 0]
                     else:
                         # Look at the target waypoint.
-                        vel = OracleNavAction._compute_turn(
+                        vel = compute_turn(
                             rel_targ, self._config.turn_velocity, robot_forward
                         )
                 else:
@@ -282,15 +273,6 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
 
         else:
             raise ValueError("Unrecognized motion type for oracle nav  action")
-
-    @staticmethod
-    def _compute_turn(rel, turn_vel, robot_forward):
-        is_left = np.cross(robot_forward, rel) > 0
-        if is_left:
-            vel = [0, -turn_vel]
-        else:
-            vel = [0, turn_vel]
-        return vel
 
     def lazy_inst_humanoid_controller(self, task, config):
         # Lazy instantiation of humanoid controller
@@ -457,7 +439,7 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
-                        vel = OracleNavAction._compute_turn(
+                        vel = compute_turn(
                             rel_pos,
                             self._config.turn_velocity,
                             robot_forward,
@@ -467,7 +449,7 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
                         vel = [self._config.forward_velocity, 0]
                     else:
                         # Look at the target waypoint.
-                        vel = OracleNavAction._compute_turn(
+                        vel = compute_turn(
                             rel_targ,
                             self._config.turn_velocity,
                             robot_forward,
@@ -511,48 +493,3 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
-
-
-class SimpleVelocityControlEnv:
-    """
-    Simple velocity control environment for moving agent
-    """
-
-    def __init__(self, sim_freq=120.0):
-        # the velocity control
-        self.vel_control = VelocityControl()
-        self.vel_control.controlling_lin_vel = True
-        self.vel_control.controlling_ang_vel = True
-        self.vel_control.lin_vel_is_local = True
-        self.vel_control.ang_vel_is_local = True
-        self._sim_freq = sim_freq
-
-    def act(self, trans, vel):
-        linear_velocity = vel[0]
-        angular_velocity = vel[1]
-        # Map velocity actions
-        self.vel_control.linear_velocity = mn.Vector3(
-            [linear_velocity, 0.0, 0.0]
-        )
-        self.vel_control.angular_velocity = mn.Vector3(
-            [0.0, angular_velocity, 0.0]
-        )
-        # Compute the rigid state
-        rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
-        )
-        # Get the target rigit state based on the simulation frequency
-        target_rigid_state = self.vel_control.integrate_transform(
-            1 / self._sim_freq, rigid_state
-        )
-        # Get the ending pos of the agent
-        end_pos = target_rigid_state.translation
-        # Offset the height
-        end_pos[1] = trans.translation[1]
-        # Construct the target trans
-        target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(),
-            target_rigid_state.translation,
-        )
-
-        return target_trans
