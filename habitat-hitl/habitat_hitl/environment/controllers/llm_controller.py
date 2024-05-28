@@ -62,8 +62,6 @@ class LLMController(SingleAgentBaselinesController):
                 level=logging.DEBUG,
                 force=True,
             )
-            self._analysis_logger = logging.getLogger("LLMController")
-            self._analysis_logger.debug("LLMController initialized")
 
         with habitat.config.read_write(self._config):
             fix_config(self._config)
@@ -122,10 +120,6 @@ class LLMController(SingleAgentBaselinesController):
             self.environment_interface.hab_env.current_episode.instruction
         )
         print(f"Instruction: {self.current_instruction}")
-        self._analysis_logger.debug(
-            f"------\nInstruction: {self.current_instruction}"
-        )
-        self._analysis_logger.debug("NEW EPISODE STARTING")
         self._iter = 0
 
     def _act(self, observations, *args, **kwargs):
