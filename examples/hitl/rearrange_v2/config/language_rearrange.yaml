@@ -81,6 +81,13 @@ habitat:
     data_path: "data/episodes/cycled_tuts.json.gz"
     scenes_dir: "data/fpss"
 
+habitat_hitl:
+  networking:
+    client_sync:
+      server_camera: False
+      server_input: False
+    client_max_idle_duration: 180.0
+
 rearrange_v2:
   data_collection:
     s3_path: "Placeholder/"

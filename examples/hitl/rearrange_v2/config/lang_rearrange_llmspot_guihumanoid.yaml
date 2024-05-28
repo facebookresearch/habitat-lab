@@ -34,7 +34,8 @@ habitat:
       # For the demo, we want to showcase the episodes in the specified order
       shuffle: False
   dataset:
-    data_path: "data/prerelease_1k_v2.json.gz"
+    type: "CollaborationDataset-v0"
+    data_path: "data/episodes/cycled_tuts.json.gz"
     scenes_dir: "data/fpss"
     # metadata:
     #   metadata_folder: "data/fpss/metadata"
@@ -88,3 +89,8 @@ habitat_hitl:
   hide_humanoid_in_gui: True
   camera:
     first_person_mode: True
+  networking:
+    client_sync:
+      server_camera: False
+      server_input: False
+    client_max_idle_duration: 180.0
