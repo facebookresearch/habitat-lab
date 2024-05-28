@@ -54,3 +54,6 @@ else:
         episode: RearrangeEpisode,
     ) -> CollaborationEpisodeData:
         return CollaborationEpisodeData()
+
+    def register_habitat_llm_extensions(config):
+        pass

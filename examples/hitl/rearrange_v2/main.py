@@ -30,6 +30,8 @@ def main(config):
     # We don't sync the server camera. Instead, we maintain one camera per user.
     assert config.habitat_hitl.networking.client_sync.server_camera == False
 
+    collaboration_episode_loader.register_habitat_llm_extensions(config)
+
     hitl_main(
         config,
         lambda app_service: StateMachine(app_service),
