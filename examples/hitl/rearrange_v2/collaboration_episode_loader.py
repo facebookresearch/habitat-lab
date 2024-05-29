@@ -44,9 +44,12 @@ if collaboration_episode_enabled:
         return episode_data
 
     def register_habitat_llm_extensions(config):
-        register_actions(config)
-        register_measures(config)
-        register_sensors(config)
+        try:
+            register_actions(config)
+            register_measures(config)
+            register_sensors(config)
+        except Exception as e:
+            print(f"Config incompatible with LLM. {e}")
 
 else:
 
