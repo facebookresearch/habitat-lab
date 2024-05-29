@@ -15,9 +15,6 @@ habitat:
       max_scene_repeat_steps: -1
       max_scene_repeat_episodes: -1
       group_by_scene: False
-  dataset:
-    data_path: "data/prerelease_1k_v2.json.gz"
-    scenes_dir: "data/fpss"
 
 habitat_baselines:
   # todo: document these choices
