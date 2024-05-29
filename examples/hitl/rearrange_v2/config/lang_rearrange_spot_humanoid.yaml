@@ -47,3 +47,9 @@ habitat_hitl:
       server_camera: False
       server_input: False
     client_max_idle_duration: 180.0
+
+rearrange_v2:
+  data_collection:
+    s3_path: "Placeholder/"
+    output_file_name: "session"
+  head_sensor_substring: "head_sensor"
