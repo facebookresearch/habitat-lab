@@ -6,6 +6,7 @@
 
 import os.path as osp
 
+import magnum as mn
 import pytest
 from omegaconf import DictConfig
 
@@ -112,3 +113,77 @@ def test_unoccluded_snapping_utils(scene_id):
                 )
 
                 assert not table_occluded
+
+        # try some expected failures
+
+        # 1. a point far off the navmesh
+        (
+            snap_point,
+            orientation,
+            success,
+        ) = nav_utils.embodied_unoccluded_navmesh_snap(
+            target_position=mn.Vector3(1000, 0, 0),
+            height=1.3,
+            sim=sim,
+            target_object_ids=[table_object.object_id],
+            ignore_object_ids=agent_object_ids,
+            agent_embodiment=spot,
+            orientation_noise=orientation_noise_level,
+        )
+
+        assert snap_point is None
+        assert orientation is None
+        assert not success
+
+        #########################################
+        # 2. pass in nan vectors, expect ValueError
+        caught_error = False
+        try:
+            (
+                snap_point,
+                orientation,
+                success,
+            ) = nav_utils.embodied_unoccluded_navmesh_snap(
+                target_position=mn.Vector3(
+                    float("nan"), float("nan"), float("nan")
+                ),
+                height=1.3,
+                sim=sim,
+                target_object_ids=[table_object.object_id],
+                ignore_object_ids=agent_object_ids,
+                agent_embodiment=spot,
+                orientation_noise=orientation_noise_level,
+            )
+        except ValueError:
+            caught_error = True
+        assert caught_error
+
+        caught_error = False
+        try:
+            _ = nav_utils.snap_point_is_occluded(
+                target=mn.Vector3(float("nan"), float("nan"), float("nan")),
+                snap_point=mn.Vector3(1, 0, 0),
+                height=1.3,
+                sim=sim,
+                target_object_ids=[table_object.object_id],
+                ignore_object_ids=agent_object_ids,
+            )
+        except ValueError:
+            caught_error = True
+        assert caught_error
+
+        caught_error = False
+        try:
+            _ = nav_utils.snap_point_is_occluded(
+                target=mn.Vector3(1, 0, 0),
+                snap_point=mn.Vector3(
+                    float("nan"), float("nan"), float("nan")
+                ),
+                height=1.3,
+                sim=sim,
+                target_object_ids=[table_object.object_id],
+                ignore_object_ids=agent_object_ids,
+            )
+        except ValueError:
+            caught_error = True
+        assert caught_error
