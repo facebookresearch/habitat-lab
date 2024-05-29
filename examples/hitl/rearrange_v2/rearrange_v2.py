@@ -462,18 +462,22 @@ class AppStateRearrangeV2(AppStateBase):
         self._user_to_agent_index: Dict[int, int] = {}
 
         self._agent_data: List[AgentData] = []
+
+        # HACK: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
+        sim_agent = sim.agents[0]
+        config = self._app_service.config
+        head_sensor_substring: str = config.rearrange_v2.head_sensor_substring
         for agent_index in range(self._num_agents):
             agent = agent_mgr._all_agent_data[agent_index]
-            camera_name: Optional[Any] = (
-                agent.articulated_agent._cameras[0]
-                if len(agent.articulated_agent._cameras) > 0
-                else None
-            )
-            render_camera: Optional[Any] = (
-                sim.agents[agent_index]._sensors[camera_name].render_camera
-                if camera_name is not None
-                else None
-            )
+
+            render_camera: Optional[Any] = None
+            for camera_name in agent.articulated_agent._cameras:
+                if head_sensor_substring in camera_name:
+                    sensor = sim_agent._sensors.get(camera_name, None)
+                    if sensor is not None and hasattr(sensor, "render_camera"):
+                        render_camera = sensor.render_camera
+                        break
+
             agent_controller = app_service.all_agent_controllers[agent_index]
 
             # Match agent and user indices.
@@ -518,6 +522,7 @@ class AppStateRearrangeV2(AppStateBase):
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
+            # TODO: Reset LLM controller.
             return create_app_state_cancel_session(
                 self._app_service,
                 self._app_data,
@@ -525,6 +530,7 @@ class AppStateRearrangeV2(AppStateBase):
                 "User disconnected",
             )
         elif self._is_episode_finished():
+            # TODO: Reset LLM controller.
             return create_app_state_load_episode(
                 self._app_service, self._app_data, self._session
             )
