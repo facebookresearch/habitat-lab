@@ -40,6 +40,13 @@ def snap_point_is_occluded(
 
     :return: whether or not the target is considered occluded from the snap_point.
     """
+
+    if np.any(np.isnan(target)):
+        raise ValueError(f"target point {target} is not valid.")
+
+    if np.any(np.isnan(snap_point)):
+        raise ValueError(f"snap_point {snap_point} is not valid.")
+
     # start from the top, assuming the agent's eyes are not at the bottom.
     cur_height = height
     while cur_height > 0:
@@ -226,6 +233,9 @@ def embodied_unoccluded_navmesh_snap(
     assert max_samples > 0
     assert orientation_noise >= 0
 
+    if np.any(np.isnan(target_position)):
+        raise ValueError(f"target_position {target_position} is not valid.")
+
     if pathfinder is None:
         pathfinder = sim.pathfinder
 
@@ -235,13 +245,15 @@ def embodied_unoccluded_navmesh_snap(
     if embodiment_heuristic_offsets is None and agent_embodiment is not None:
         embodiment_heuristic_offsets = agent_embodiment.params.navmesh_offsets
 
-    # first try the closest snap point
+    # set the search radius
+    search_radius = search_offset
+    # try the closest snap point to find expected distance
     snap_point = pathfinder.snap_point(target_position, island_id)
-
-    # distance to closest snap point is the absolute minimum
-    min_radius = (snap_point - target_position).length()
-    # expand the search radius
-    search_radius = min_radius + search_offset
+    if not np.any(np.isnan(snap_point)):
+        # distance to closest snap point is the absolute minimum radius
+        min_radius = (snap_point - target_position).length()
+        # expand the search radius
+        search_radius = min_radius + search_offset
 
     # gather a test batch
     test_batch: List[Tuple[mn.Vector3, float]] = []
@@ -252,15 +264,17 @@ def embodied_unoccluded_navmesh_snap(
             radius=search_radius,
             island_index=island_id,
         )
-        reject = False
-        for batch_sample in test_batch:
-            if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
-                reject = True
-                break
-        if not reject:
-            test_batch.append(
-                (sample, float(np.linalg.norm(sample - target_position)))
-            )
+        # validate the sample before caching
+        if not np.any(np.isnan(sample)):
+            reject = False
+            for batch_sample in test_batch:
+                if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
+                    reject = True
+                    break
+            if not reject:
+                test_batch.append(
+                    (sample, float(np.linalg.norm(sample - target_position)))
+                )
         sample_count += 1
 
     # sort the test batch points by distance to the target
