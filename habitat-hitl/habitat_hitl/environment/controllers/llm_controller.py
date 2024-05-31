@@ -7,6 +7,7 @@
 # This controller assumes you are using a habitat-llm Agent downstream
 # code for interface followed by a habitat-llm Agent will be released in the future
 
+import copy
 import logging
 import threading
 from typing import Any, Dict, Union
@@ -16,12 +17,14 @@ from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
 from habitat_llm.utils import fix_config, setup_config
+from habitat_llm.utils.analysis import CodeTimer
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 import habitat
 import habitat.config
 from habitat.core.environments import GymHabitatEnv
+from habitat.sims.habitat_simulator.sim_utilities import get_obj_from_id
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
 )
@@ -44,7 +47,7 @@ class LLMController(SingleAgentBaselinesController):
         self._habitat_env = gym_habitat_env.unwrapped.habitat_env
         self._agent_idx = agent_idx
         # TODO: gather this from config
-        self._agent_action_length = 28
+        self._agent_action_length = 36
         self._thread: Union[None, threading.Thread] = None
         self._low_level_actions: Union[None, dict, np.ndarray] = {}
         self._task_done = False
@@ -78,6 +81,7 @@ class LLMController(SingleAgentBaselinesController):
         self.initialize_environment_interface()
         self.initialize_planner()
         self.info: Dict[str, Any] = {}
+        self._human_action_history = []
 
     def initialize_planner(self):
         # NOTE: using instantiate here, but given this is planning for a single agent
@@ -122,13 +126,31 @@ class LLMController(SingleAgentBaselinesController):
         print(f"Instruction: {self.current_instruction}")
         self._iter = 0
 
+    def _on_pick(self, _e: Any = None):
+        action = {
+            "action": "PICK",
+            "object_id": _e.object_id,
+            "object_handle": _e.object_handle,
+        }
+
+        self._human_action_history.append(action)
+
+    def _on_place(self, _e: Any = None):
+        action = {
+            "action": "PLACE",
+            "object_id": _e.object_id,
+            "object_handle": _e.object_handle,
+            "receptacle_id": _e.receptacle_id,
+            # "receptacle_name": self.environment_interface.world_graph.get_node_from_sim_handle(
+            #     get_obj_from_id(self.environment_interface.sim, _e.receptacle_id).handle
+            # ),
+        }
+
+        self._human_action_history.append(action)
+
     def _act(self, observations, *args, **kwargs):
-        # NOTE: update the world state to reflect the new observations
-        self.environment_interface.update_world_state(observations)
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
-        # TODO: looping needed here until a physical low-level-action is returned
-        # low_level_actions: Union[dict, np.ndarray] = {}
         (
             self._low_level_actions,
             planner_info,
@@ -142,6 +164,28 @@ class LLMController(SingleAgentBaselinesController):
         return
 
     def act(self, observations, *args, **kwargs):
+        # NOTE: update the world state to reflect the new observations
+        # TODO: might need a lock on world-state here?
+        self.environment_interface.update_world_state(
+            observations, disable_logging=True
+        )
+        # update agent state history
+        while self._human_action_history:
+            action = self._human_action_history.pop(0)
+            if action["action"] == "PICK":
+                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                    action['object_handle']
+                ).name
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent picked up {object_name}"
+                )
+            elif action["action"] == "PLACE":
+                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                    action['object_handle']
+                ).name
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent placed {object_name} in {action['receptacle_id']}"
+                )
         if self._iter < self._skip_iters or self._task_done:
             self._iter += 1
             return np.zeros(self._agent_action_length)

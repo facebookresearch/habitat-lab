@@ -40,6 +40,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
 )
+from habitat_hitl.environment.controllers.llm_controller import LLMController
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
@@ -512,6 +513,12 @@ class AppStateRearrangeV2(AppStateBase):
                     server_sps_tracker=self._sps_tracker,
                 )
             )
+            for agent_controller in app_service.all_agent_controllers:
+                # register callbacks for LLMController
+                if isinstance(agent_controller, LLMController):
+                    self._user_data[-1].ui.on_pick.registerCallback(agent_controller._on_pick)
+                    self._user_data[-1].ui.on_place.registerCallback(agent_controller._on_place)
+
 
         self._frame_recorder = FrameRecorder(
             app_service, app_data, self._world
