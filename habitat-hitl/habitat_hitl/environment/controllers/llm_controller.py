@@ -148,6 +148,24 @@ class LLMController(SingleAgentBaselinesController):
 
         self._human_action_history.append(action)
 
+    def _on_open(self, _e: Any = None):
+        action = {
+            "action": "OPEN",
+            "object_id": _e.object_id,
+            "object_handle": _e.object_handle,
+        }
+
+        self._human_action_history.append(action)
+
+    def _on_close(self, _e: Any = None):
+        action = {
+            "action": "CLOSE",
+            "object_id": _e.object_id,
+            "object_handle": _e.object_handle,
+        }
+
+        self._human_action_history.append(action)
+
     def _act(self, observations, *args, **kwargs):
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
