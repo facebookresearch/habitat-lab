@@ -7,7 +7,6 @@
 # This controller assumes you are using a habitat-llm Agent downstream
 # code for interface followed by a habitat-llm Agent will be released in the future
 
-import copy
 import logging
 import threading
 from typing import Any, Dict, Union
@@ -192,14 +191,14 @@ class LLMController(SingleAgentBaselinesController):
             action = self._human_action_history.pop(0)
             if action["action"] == "PICK":
                 object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action['object_handle']
+                    action["object_handle"]
                 ).name
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent picked up {object_name}"
                 )
             elif action["action"] == "PLACE":
                 object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action['object_handle']
+                    action["object_handle"]
                 ).name
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent placed {object_name} in {action['receptacle_id']}"
@@ -208,19 +207,15 @@ class LLMController(SingleAgentBaselinesController):
             self._iter += 1
             return np.zeros(self._agent_action_length)
         low_level_actions = np.zeros(self._agent_action_length)
-        if self._thread is None:
-            self._thread = threading.Thread(
+
+        if self._thread is None or not self._thread.is_alive():
+            if self._low_level_actions != {}:
+                low_level_actions = self._low_level_actions[
+                    str(self._agent_idx)
+                ][:-248]
+            self._thread = self._thread = threading.Thread(
                 target=self._act, args=(observations,), kwargs=kwargs
             )
             self._thread.start()
-        else:
-            if self._thread.is_alive():
-                pass
-            else:
-                self._thread = None
-                if self._low_level_actions != {}:
-                    low_level_actions = self._low_level_actions[
-                        str(self._agent_idx)
-                    ][:-248]
 
         return low_level_actions
