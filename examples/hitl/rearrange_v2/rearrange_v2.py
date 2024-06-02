@@ -516,11 +516,18 @@ class AppStateRearrangeV2(AppStateBase):
             for agent_controller in app_service.all_agent_controllers:
                 # register callbacks for LLMController
                 if isinstance(agent_controller, LLMController):
-                    self._user_data[-1].ui.on_pick.registerCallback(agent_controller._on_pick)
-                    self._user_data[-1].ui.on_place.registerCallback(agent_controller._on_place)
-                    self._user_data[-1].ui.on_open.registerCallback(agent_controller._on_open)
-                    self._user_data[-1].ui.on_close.registerCallback(agent_controller._on_close)
-
+                    self._user_data[-1].ui.on_pick.registerCallback(
+                        agent_controller._on_pick
+                    )
+                    self._user_data[-1].ui.on_place.registerCallback(
+                        agent_controller._on_place
+                    )
+                    self._user_data[-1].ui.on_open.registerCallback(
+                        agent_controller._on_open
+                    )
+                    self._user_data[-1].ui.on_close.registerCallback(
+                        agent_controller._on_close
+                    )
 
         self._frame_recorder = FrameRecorder(
             app_service, app_data, self._world

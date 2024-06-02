@@ -9,21 +9,19 @@
 
 import logging
 import threading
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
 from habitat_llm.utils import fix_config, setup_config
-from habitat_llm.utils.analysis import CodeTimer
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
 import habitat
 import habitat.config
 from habitat.core.environments import GymHabitatEnv
-from habitat.sims.habitat_simulator.sim_utilities import get_obj_from_id
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
 )
@@ -80,7 +78,7 @@ class LLMController(SingleAgentBaselinesController):
         self.initialize_environment_interface()
         self.initialize_planner()
         self.info: Dict[str, Any] = {}
-        self._human_action_history = []
+        self._human_action_history: List[Any] = []
 
     def initialize_planner(self):
         # NOTE: using instantiate here, but given this is planning for a single agent
