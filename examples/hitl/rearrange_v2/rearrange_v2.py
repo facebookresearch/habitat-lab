@@ -163,9 +163,7 @@ class AgentData:
         For AI-controlled agents, the camera transform can be inferred from this function.
         """
         if self.render_camera is not None:
-            self.cam_transform = np.linalg.inv(
-                self.render_camera.camera_matrix
-            )
+            self.cam_transform = self.render_camera.camera_matrix.inverted()
 
 
 class UserData:
@@ -467,15 +465,16 @@ class AppStateRearrangeV2(AppStateBase):
         # HACK: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
         sim_agent = sim.agents[0]
         config = self._app_service.config
-        head_sensor_substring: str = config.rearrange_v2.head_sensor_substring
+        head_sensor_substrings: List[
+            str
+        ] = config.rearrange_v2.head_sensor_substrings
         for agent_index in range(self._num_agents):
-            agent = agent_mgr._all_agent_data[agent_index]
-
             render_camera: Optional[Any] = None
-            for camera_name in agent.articulated_agent._cameras:
-                if head_sensor_substring in camera_name:
-                    sensor = sim_agent._sensors.get(camera_name, None)
-                    if sensor is not None and hasattr(sensor, "render_camera"):
+            for substring in head_sensor_substrings:
+                for sensor_name, sensor in sim_agent._sensors.items():
+                    if substring in sensor_name and hasattr(
+                        sensor, "render_camera"
+                    ):
                         render_camera = sensor.render_camera
                         break
 
@@ -740,7 +739,7 @@ class AppStateRearrangeV2(AppStateBase):
                 other_agent_data = self._agent_data[other_agent_idx]
 
                 # If the other agent is AI-controlled, update its camera.
-                if other_agent_idx not in self._user_to_agent_index:
+                if other_agent_idx not in self._agent_to_user_index:
                     other_agent_data.update_camera_from_sensor()
 
                 self._user_data[user_index].draw_pip_viewport(other_agent_data)

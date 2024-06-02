@@ -156,4 +156,6 @@ rearrange_v2:
   data_collection:
     s3_path: "Placeholder/"
     output_file_name: "session"
-  head_sensor_substring: "head_sensor"
+  head_sensor_substrings:
+    - "head"
+    - "jaw"
