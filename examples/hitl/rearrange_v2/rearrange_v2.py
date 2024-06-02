@@ -471,6 +471,7 @@ class AppStateRearrangeV2(AppStateBase):
         for agent_index in range(self._num_agents):
             render_camera: Optional[Any] = None
             for substring in head_sensor_substrings:
+                # TODO: Validate that the lab agent owns the sensor.
                 for sensor_name, sensor in sim_agent._sensors.items():
                     if substring in sensor_name and hasattr(
                         sensor, "render_camera"
