@@ -69,7 +69,7 @@ class ArticulatedAgentManager:
 
     def __init__(self, cfg, sim):
         self._sim = sim
-        self._all_agent_data = []
+        self._all_agent_data: List[ArticulatedAgentData] = []
         self._is_pb_installed = is_pb_installed()
         self.agent_names = cfg.agents
 
