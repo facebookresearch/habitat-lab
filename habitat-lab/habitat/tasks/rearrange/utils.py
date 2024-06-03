@@ -354,7 +354,7 @@ except ImportError:
     p = None
 
 
-def is_pb_installed():
+def is_pb_installed() -> bool:
     return p is not None
 
 
