@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import magnum as mn
 from world import World
@@ -24,6 +24,11 @@ from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+
+if TYPE_CHECKING:
+    from habitat.tasks.rearrange.rearrange_grasp_manager import (
+        RearrangeGraspManager,
+    )
 
 # Verticality threshold for successful placement.
 MINIMUM_DROP_VERTICALITY: float = 0.9
@@ -123,6 +128,9 @@ class UI:
         self._on_open = Event()
         self._on_close = Event()
 
+        # Disable the snap manager automatic object positioning so that object placement is controlled here.
+        self._get_grasp_manager()._automatically_update_snapped_object = False
+
     @dataclass
     class PickEventData:
         object_id: int
@@ -218,6 +226,11 @@ class UI:
         self._draw_hovered_pickable()
         self._draw_goals()
 
+    def _get_grasp_manager(self) -> "RearrangeGraspManager":
+        agent_mgr = self._sim.agents_mgr
+        agent_data = agent_mgr._all_agent_data[self._gui_controller._agent_idx]
+        return agent_data.grasp_mgr
+
     def _pick_object(self, object_id: int) -> None:
         """Pick the specified object_id. The object must be pickable and held by nobody else."""
         if (
@@ -233,6 +246,14 @@ class UI:
                     self._held_object_id = object_id
                     self._place_selection.deselect()
                     self._world._all_held_object_ids.add(object_id)
+
+                    # Set the snapped object without adding a constraint.
+                    grasp_mgr = self._get_grasp_manager()
+                    grasp_mgr.snap_to_obj(
+                        snap_obj_id=object_id,
+                        force=True,
+                    )
+
                     self._on_pick.invoke(
                         UI.PickEventData(
                             object_id=object_id,
@@ -281,6 +302,10 @@ class UI:
             self._held_object_id = None
             self._place_selection.deselect()
             self._world._all_held_object_ids.remove(object_id)
+
+            grasp_mgr = self._get_grasp_manager()
+            grasp_mgr.desnap(force=True)
+
             self._on_place.invoke(
                 UI.PlaceEventData(
                     object_id=object_id,
