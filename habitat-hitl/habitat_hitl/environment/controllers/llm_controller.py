@@ -120,7 +120,6 @@ class LLMController(SingleAgentBaselinesController):
         self.current_instruction = (
             self.environment_interface.hab_env.current_episode.instruction
         )
-        print(f"Instruction: {self.current_instruction}")
         self._iter = 0
 
     def _on_pick(self, _e: Any = None):
@@ -201,6 +200,21 @@ class LLMController(SingleAgentBaselinesController):
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent placed {object_name} in {action['receptacle_id']}"
                 )
+            elif action["action"] == "OPEN":
+                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                    action["object_handle"]
+                ).name
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent opened {object_name}"
+                )
+            elif action["action"] == "CLOSE":
+                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                    action["object_handle"]
+                ).name
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent closed {object_name}"
+                )
+
         if self._iter < self._skip_iters or self._task_done:
             self._iter += 1
             return np.zeros(self._agent_action_length)
