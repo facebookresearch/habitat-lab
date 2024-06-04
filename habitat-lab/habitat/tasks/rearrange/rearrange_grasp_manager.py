@@ -55,6 +55,7 @@ class RearrangeGraspManager:
         self._config = config
         self._managed_articulated_agent = articulated_agent
         self.ee_index = ee_index
+        self._automatically_update_snapped_object = True
 
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
 
@@ -213,15 +214,16 @@ class RearrangeGraspManager:
         if self._kinematic_mode:
             return
 
-        self._snap_constraints = [
-            self.create_hold_constraint(
-                RigidConstraintType.PointToPoint,
-                mn.Vector3(0.0, 0.0, 0.0),
-                mn.Vector3(*marker.offset_position),
-                marker.ao_parent.object_id,
-                marker.link_id,
-            ),
-        ]
+        if self._automatically_update_snapped_object:
+            self._snap_constraints = [
+                self.create_hold_constraint(
+                    RigidConstraintType.PointToPoint,
+                    mn.Vector3(0.0, 0.0, 0.0),
+                    mn.Vector3(*marker.offset_position),
+                    marker.ao_parent.object_id,
+                    marker.link_id,
+                ),
+            ]
 
     def create_hold_constraint(
         self,
@@ -299,7 +301,10 @@ class RearrangeGraspManager:
         is grasped then nothing will happen.
         """
 
-        if self._snapped_obj_id is None:
+        if (
+            self._snapped_obj_id is None
+            or not self._automatically_update_snapped_object
+        ):
             # Not grasping anything, so do nothing.
             return
 
@@ -367,16 +372,17 @@ class RearrangeGraspManager:
         if rel_pos is None:
             rel_pos = mn.Vector3.zero_init()
 
-        self._snap_constraints = [
-            self.create_hold_constraint(
-                RigidConstraintType.Fixed,
-                # link pivot is the object in link space
-                pivot_in_link=rel_pos,
-                # object pivot is local origin
-                pivot_in_obj=mn.Vector3.zero_init(),
-                obj_id_b=self._snapped_obj_id,
-            ),
-        ]
+        if self._automatically_update_snapped_object:
+            self._snap_constraints = [
+                self.create_hold_constraint(
+                    RigidConstraintType.Fixed,
+                    # link pivot is the object in link space
+                    pivot_in_link=rel_pos,
+                    # object pivot is local origin
+                    pivot_in_obj=mn.Vector3.zero_init(),
+                    obj_id_b=self._snapped_obj_id,
+                ),
+            ]
 
         if should_open_gripper:
             self._managed_articulated_agent.open_gripper()
