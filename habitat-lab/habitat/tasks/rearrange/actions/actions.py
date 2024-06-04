@@ -403,7 +403,6 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         for mask in self._arm_joint_mask:
             if mask == 0:
                 tgt_idx += 1
-                src_idx += 1
                 continue
             expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
             tgt_idx += 1
