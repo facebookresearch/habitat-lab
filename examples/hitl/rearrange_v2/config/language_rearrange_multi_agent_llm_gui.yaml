@@ -53,7 +53,7 @@ habitat:
     # slack_reward: -0.0005
     # end_on_success: True
     # constraint_violation_ends_episode: False
-    # constraint_violation_drops_object: True
+    constraint_violation_drops_object: False
     # task_spec_base_path: benchmark/multi_agent/
     # task_spec: pddl/multi_agent_tidy_house
     # pddl_domain_def: fp
