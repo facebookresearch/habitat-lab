@@ -50,6 +50,7 @@ class LLMController(SingleAgentBaselinesController):
         self._task_done = False
         self._iter = 0
         self._skip_iters = 0
+        self._log: list = []
         if log_to_file:
             import datetime
 
@@ -121,6 +122,7 @@ class LLMController(SingleAgentBaselinesController):
             self.environment_interface.hab_env.current_episode.instruction
         )
         self._iter = 0
+        self._log = []
 
     def _on_pick(self, _e: Any = None):
         action = {
@@ -186,31 +188,35 @@ class LLMController(SingleAgentBaselinesController):
         # update agent state history
         while self._human_action_history:
             action = self._human_action_history.pop(0)
-            if action["action"] == "PICK":
+            object_name = None
+            try:
                 object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
                     action["object_handle"]
                 ).name
+            except Exception as e:
+                self._log.append(e)
+                continue
+            if action["action"] == "PICK":
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent picked up {object_name}"
                 )
             elif action["action"] == "PLACE":
-                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action["object_handle"]
-                ).name
-                self.environment_interface.agent_state_history[1].append(
-                    f"Agent placed {object_name} in {action['receptacle_id']}"
-                )
+                if action["receptacle_id"] is not None:
+                    receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                        action["receptacle_id"]
+                    ).name
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent placed {object_name} in {receptacle_name}"
+                    )
+                else:
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent placed {object_name} in {action['receptacle_id']}"
+                    )
             elif action["action"] == "OPEN":
-                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action["object_handle"]
-                ).name
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent opened {object_name}"
                 )
             elif action["action"] == "CLOSE":
-                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action["object_handle"]
-                ).name
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent closed {object_name}"
                 )
