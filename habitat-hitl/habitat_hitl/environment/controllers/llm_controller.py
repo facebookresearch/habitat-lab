@@ -22,6 +22,7 @@ from omegaconf import DictConfig
 import habitat
 import habitat.config
 from habitat.core.environments import GymHabitatEnv
+from habitat.sims.habitat_simulator.sim_utilities import get_obj_from_id
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
 )
@@ -203,14 +204,20 @@ class LLMController(SingleAgentBaselinesController):
             elif action["action"] == "PLACE":
                 if action["receptacle_id"] is not None:
                     receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                        action["receptacle_id"]
+                        get_obj_from_id(
+                            self.environment_interface.sim,
+                            action["receptacle_id"],
+                        ).handle
                     ).name
                     self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in {receptacle_name}"
+                        f"Agent placed {object_name} in/on {receptacle_name}"
+                    )
+                    print(
+                        f"Agent placed {object_name} in/on {receptacle_name}"
                     )
                 else:
                     self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in {action['receptacle_id']}"
+                        f"Agent placed {object_name} in unknown location"
                     )
             elif action["action"] == "OPEN":
                 self.environment_interface.agent_state_history[1].append(
@@ -236,4 +243,5 @@ class LLMController(SingleAgentBaselinesController):
             )
             self._thread.start()
 
+        self._iter += 1
         return low_level_actions
