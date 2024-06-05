@@ -74,7 +74,7 @@ habitat:
 # --- habitat-llm block
       # - agent_0_third_rgb
       # - agent_0_articulated_agent_arm_depth
-      # - agent_0_articulated_agent_arm_rgb
+      - agent_0_articulated_agent_arm_rgb
       - agent_0_articulated_agent_arm_panoptic
       # - agent_0_head_depth
       # - agent_0_head_rgb
