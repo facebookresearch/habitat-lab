@@ -187,9 +187,9 @@ class KinematicRelationshipManager:
                 continue
 
             obj = sutils.get_obj_from_handle(self.sim, obj_handle)
-            assert (
-                obj is not None
-            ), f"Object with handle '{obj_handle}' could not be found in the scene. Has the Episode been initialized?"
+            if obj is None:
+                # ignore
+                continue
             rec = unique_name_to_rec[rec_unique_name]
             parent_obj = sutils.get_obj_from_handle(
                 self.sim, rec.parent_object_handle

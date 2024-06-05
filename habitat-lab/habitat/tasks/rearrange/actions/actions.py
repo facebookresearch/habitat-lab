@@ -409,9 +409,8 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
             src_idx += 1
 
         min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
-
         set_arm_pos = (
-            expanded_delta_pos + self.cur_articulated_agent.arm_motor_pos
+            expanded_delta_pos + self.cur_articulated_agent.arm_joint_pos
         )
         # Perform roll over to the joints so that the user cannot control
         # the motor 2, 3, 4 for the arm.
@@ -428,6 +427,10 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
 
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            self.cur_grasp_mgr.update_object_to_grasp()
 
 
 @registry.register_task_action
