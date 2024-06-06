@@ -9,8 +9,11 @@
 
 import logging
 import threading
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Union
 
+import cv2
 import numpy as np
 from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
@@ -23,9 +26,20 @@ import habitat
 import habitat.config
 from habitat.core.environments import GymHabitatEnv
 from habitat.sims.habitat_simulator.sim_utilities import get_obj_from_id
+from habitat_hitl.core.event import Event
 from habitat_hitl.environment.controllers.baselines_controller import (
     SingleAgentBaselinesController,
 )
+
+
+class PlannerStatus(Enum):
+    SUCCESS = 0
+    FAILED = 1
+
+
+@dataclass
+class AgentTerminationEvent:
+    status: PlannerStatus
 
 
 class LLMController(SingleAgentBaselinesController):
@@ -81,6 +95,11 @@ class LLMController(SingleAgentBaselinesController):
         self.initialize_planner()
         self.info: Dict[str, Any] = {}
         self._human_action_history: List[Any] = []
+        self._planner_info: dict = {}
+
+        # interfacing with HitL
+        self._on_termination = Event()
+        self._termination_reported = False
 
     def initialize_planner(self):
         # NOTE: using instantiate here, but given this is planning for a single agent
@@ -116,13 +135,18 @@ class LLMController(SingleAgentBaselinesController):
         self.planner.reset()
         if self._thread is not None:
             self._thread.join()
-            self._thread = None  # noqa: F841
-            self._low_level_actions = {}
+        self._thread = None
 
         self.current_instruction = (
             self.environment_interface.hab_env.current_episode.instruction
         )
         self._iter = 0
+        self._log = []
+        self._termination_reported = False
+        self._low_level_actions = {}
+        self._task_done = False
+        self._iter = 0
+        self._skip_iters = 0
         self._log = []
 
     def _on_pick(self, _e: Any = None):
@@ -170,7 +194,7 @@ class LLMController(SingleAgentBaselinesController):
         # and it returns the actions for the agent
         (
             self._low_level_actions,
-            planner_info,
+            self._planner_info,
             self._task_done,
         ) = self.planner.get_next_action(
             self.current_instruction,
@@ -180,68 +204,106 @@ class LLMController(SingleAgentBaselinesController):
         )
         return
 
-    def act(self, observations, *args, **kwargs):
-        # NOTE: update the world state to reflect the new observations
-        # TODO: might need a lock on world-state here?
-        self.environment_interface.update_world_state(
-            observations, disable_logging=True
-        )
-        # update agent state history
-        while self._human_action_history:
-            action = self._human_action_history.pop(0)
-            object_name = None
-            try:
-                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                    action["object_handle"]
-                ).name
-            except Exception as e:
-                self._log.append(e)
-                continue
-            if action["action"] == "PICK":
-                self.environment_interface.agent_state_history[1].append(
-                    f"Agent picked up {object_name}"
+    def act(self, observations, debug_obs: bool = False, *args, **kwargs):
+        # set the task as done and report it back
+        if self._task_done and not self._termination_reported:
+            if (
+                self._planner_info["replanning_count"]
+                >= self._planner_info["replanning_threshold"]
+            ):
+                self._on_termination.invoke(
+                    AgentTerminationEvent(PlannerStatus.FAILED)
                 )
-            elif action["action"] == "PLACE":
-                if action["receptacle_id"] is not None:
-                    receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                        get_obj_from_id(
-                            self.environment_interface.sim,
-                            action["receptacle_id"],
-                        ).handle
-                    ).name
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in/on {receptacle_name}"
-                    )
-                    print(
-                        f"Agent placed {object_name} in/on {receptacle_name}"
-                    )
-                else:
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in unknown location"
-                    )
-            elif action["action"] == "OPEN":
-                self.environment_interface.agent_state_history[1].append(
-                    f"Agent opened {object_name}"
+            else:
+                self._on_termination.invoke(
+                    AgentTerminationEvent(PlannerStatus.SUCCESS)
                 )
-            elif action["action"] == "CLOSE":
-                self.environment_interface.agent_state_history[1].append(
-                    f"Agent closed {object_name}"
-                )
+            self._termination_reported = True
 
-        if self._iter < self._skip_iters or self._task_done:
-            self._iter += 1
-            return np.zeros(self._agent_action_length)
         low_level_actions = np.zeros(self._agent_action_length)
 
-        if self._thread is None or not self._thread.is_alive():
-            if self._low_level_actions != {}:
-                low_level_actions = self._low_level_actions[
-                    str(self._agent_idx)
-                ][:-248]
-            self._thread = self._thread = threading.Thread(
-                target=self._act, args=(observations,), kwargs=kwargs
+        if debug_obs:
+            rgb = observations["agent_1_head_rgb"]
+            panoptic = observations["agent_1_head_panoptic"]
+            cv2.imwrite(
+                f"./visuals/agent_1/rgb_{self._iter}.png",
+                cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
             )
-            self._thread.start()
+            cv2.imwrite(
+                f"./visuals/agent_1/panoptic_{self._iter}.png", panoptic
+            )
+            rgb = observations["agent_0_articulated_agent_arm_rgb"]
+            panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
+            cv2.imwrite(
+                f"./visuals/agent_0/rgb_{self._iter}.png",
+                cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
+            )
+            cv2.imwrite(
+                f"./visuals/agent_0/panoptic_{self._iter}.png", panoptic
+            )
+
+        # planning logic when task is not done
+        if not self._task_done:
+            # NOTE: update the world state to reflect the new observations
+            # TODO: might need a lock on world-state here?
+            self.environment_interface.update_world_state(
+                observations, disable_logging=True
+            )
+            # update agent state history
+            while self._human_action_history:
+                action = self._human_action_history.pop(0)
+                object_name = None
+                try:
+                    object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                        action["object_handle"]
+                    ).name
+                except Exception as e:
+                    self._log.append(e)
+                    continue
+                if action["action"] == "PICK":
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent picked up {object_name}"
+                    )
+                elif action["action"] == "PLACE":
+                    if action["receptacle_id"] is not None:
+                        receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                            get_obj_from_id(
+                                self.environment_interface.sim,
+                                action["receptacle_id"],
+                            ).handle
+                        ).name
+                        self.environment_interface.agent_state_history[
+                            1
+                        ].append(
+                            f"Agent placed {object_name} in/on {receptacle_name}"
+                        )
+                        # print(
+                        #     f"Agent placed {object_name} in/on {receptacle_name}"
+                        # )
+                    else:
+                        self.environment_interface.agent_state_history[
+                            1
+                        ].append(
+                            f"Agent placed {object_name} in unknown location"
+                        )
+                elif action["action"] == "OPEN":
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent opened {object_name}"
+                    )
+                elif action["action"] == "CLOSE":
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent closed {object_name}"
+                    )
+
+            if self._thread is None or not self._thread.is_alive():
+                if self._low_level_actions != {}:
+                    low_level_actions = self._low_level_actions[
+                        str(self._agent_idx)
+                    ][:-248]
+                self._thread = self._thread = threading.Thread(
+                    target=self._act, args=(observations,), kwargs=kwargs
+                )
+                self._thread.start()
 
         self._iter += 1
         return low_level_actions
