@@ -40,7 +40,10 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
     GuiRobotController,
 )
-from habitat_hitl.environment.controllers.llm_controller import LLMController
+from habitat_hitl.environment.controllers.llm_controller import (
+    LLMController,
+    PlannerStatus,
+)
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
@@ -155,6 +158,12 @@ class AgentData:
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
+
+    def _on_termination_cb(self, _e: Any = None):
+        if _e.status == PlannerStatus.SUCCESS:
+            self.episode_completion_status = EpisodeCompletionStatus.SUCCESS
+        else:
+            self.episode_completion_status = EpisodeCompletionStatus.FAILURE
 
     def update_camera_from_sensor(self) -> None:
         """
@@ -498,6 +507,10 @@ class AppStateRearrangeV2(AppStateBase):
                     render_camera=render_camera,
                 )
             )
+            if isinstance(agent_controller, LLMController):
+                agent_controller._on_termination.registerCallback(
+                    self._agent_data[agent_index]._on_termination_cb
+                )
 
         self._user_data: List[UserData] = []
         for user_index in self._users.indices(Mask.ALL):
@@ -645,6 +658,7 @@ class AppStateRearrangeV2(AppStateBase):
         if len(task_instruction) > 0:
             status_str += "Instruction: " + task_instruction + "\n"
 
+        # the multi-agent case
         if (
             self._users.max_user_count > 1
             and self._user_data[
@@ -656,6 +670,18 @@ class AppStateRearrangeV2(AppStateBase):
                 status_str += "\n\nThe other participant signaled that the task is completed.\nPress '0' when you are done."
             elif self._has_any_agent_finished_failure():
                 status_str += "\n\nThe other participant signaled a problem with the task.\nPress '0' to continue."
+
+        # the single-learn agent case
+        if (
+            (len(self._user_data) == 1)
+            and len(self._agent_data) == 2
+            and any(
+                self._agent_data[agent_index].episode_completion_status
+                != EpisodeCompletionStatus.PENDING
+                for agent_index in range(self._num_agents)
+            )
+        ):
+            status_str += "\n\nThe other participant finished working on their part of the task.\nPress '0' when you are done."
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
