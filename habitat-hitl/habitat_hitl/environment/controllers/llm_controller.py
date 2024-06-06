@@ -189,6 +189,49 @@ class LLMController(SingleAgentBaselinesController):
 
         self._human_action_history.append(action)
 
+    def push_user_actions_to_llm(self):
+        # update agent state history
+        while self._human_action_history:
+            action = self._human_action_history.pop(0)
+            object_name = None
+            try:
+                object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                    action["object_handle"]
+                ).name
+            except Exception as e:
+                self._log.append(e)
+                continue
+            if action["action"] == "PICK":
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent picked up {object_name}"
+                )
+            elif action["action"] == "PLACE":
+                if action["receptacle_id"] is not None:
+                    receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
+                        get_obj_from_id(
+                            self.environment_interface.sim,
+                            action["receptacle_id"],
+                        ).handle
+                    ).name
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent placed {object_name} in/on {receptacle_name}"
+                    )
+                    # print(
+                    #     f"Agent placed {object_name} in/on {receptacle_name}"
+                    # )
+                else:
+                    self.environment_interface.agent_state_history[1].append(
+                        f"Agent placed {object_name} in unknown location"
+                    )
+            elif action["action"] == "OPEN":
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent opened {object_name}"
+                )
+            elif action["action"] == "CLOSE":
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent closed {object_name}"
+                )
+
     def _act(self, observations, *args, **kwargs):
         # NOTE: this is where the LLM magic happens, the agent is given the observations
         # and it returns the actions for the agent
@@ -244,62 +287,21 @@ class LLMController(SingleAgentBaselinesController):
 
         # planning logic when task is not done
         if not self._task_done:
-            # NOTE: update the world state to reflect the new observations
+            # update world-graph and action history
             # TODO: might need a lock on world-state here?
             self.environment_interface.update_world_state(
                 observations, disable_logging=True
             )
-            # update agent state history
-            while self._human_action_history:
-                action = self._human_action_history.pop(0)
-                object_name = None
-                try:
-                    object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                        action["object_handle"]
-                    ).name
-                except Exception as e:
-                    self._log.append(e)
-                    continue
-                if action["action"] == "PICK":
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent picked up {object_name}"
-                    )
-                elif action["action"] == "PLACE":
-                    if action["receptacle_id"] is not None:
-                        receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                            get_obj_from_id(
-                                self.environment_interface.sim,
-                                action["receptacle_id"],
-                            ).handle
-                        ).name
-                        self.environment_interface.agent_state_history[
-                            1
-                        ].append(
-                            f"Agent placed {object_name} in/on {receptacle_name}"
-                        )
-                        # print(
-                        #     f"Agent placed {object_name} in/on {receptacle_name}"
-                        # )
-                    else:
-                        self.environment_interface.agent_state_history[
-                            1
-                        ].append(
-                            f"Agent placed {object_name} in unknown location"
-                        )
-                elif action["action"] == "OPEN":
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent opened {object_name}"
-                    )
-                elif action["action"] == "CLOSE":
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent closed {object_name}"
-                    )
+            self.push_user_actions_to_llm()
 
+            # read thread result and create thread if previous thread is done
             if self._thread is None or not self._thread.is_alive():
                 if self._low_level_actions != {}:
                     low_level_actions = self._low_level_actions[
                         str(self._agent_idx)
-                    ][:-248]
+                    ][
+                        :-248
+                    ]  # TODO: bad; fix this by reading action-space from config
                 self._thread = self._thread = threading.Thread(
                     target=self._act, args=(observations,), kwargs=kwargs
                 )
