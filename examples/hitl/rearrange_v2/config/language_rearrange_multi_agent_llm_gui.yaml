@@ -64,7 +64,7 @@ habitat:
 
     # robot_at_thresh: 3.0
     # lab_sensors:
-    #   # Defien the human detector
+    #   # Define the human detector
     #   humanoid_detector_sensor:
     #     # If the human detector function is image or binary flag
     #     return_image: False
