@@ -17,7 +17,7 @@ from habitat_sim.utils.common import orthonormalize_rotation_shear
 
 
 class Manipulator(ArticulatedAgentInterface):
-    """Generic manupulator interface defines standard API functions. Robot with a controllable arm."""
+    """Generic manipulator interface defines standard API functions. Robot with a controllable arm."""
 
     def __init__(
         self,
@@ -28,6 +28,7 @@ class Manipulator(ArticulatedAgentInterface):
         fixed_based: bool = True,
         sim_obj=None,
         maintain_link_order=False,
+        auto_update_sensor_transform=True,
         **kwargs,
     ):
         r"""Constructor"""
@@ -40,6 +41,7 @@ class Manipulator(ArticulatedAgentInterface):
         self._fixed_base = fixed_based
         self.sim_obj = sim_obj
         self._maintain_link_order = maintain_link_order
+        self._auto_update_sensor_transforms = auto_update_sensor_transform
 
         # Adapt Manipulator params to support multiple end effector indices
         # NOTE: the follow members cache static info for improved efficiency over querying the API
@@ -140,7 +142,7 @@ class Manipulator(ArticulatedAgentInterface):
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
-        if self._cameras is not None:
+        if self._cameras is not None and self._auto_update_sensor_transforms:
             # get the transformation
             agent_node = self._sim._default_agent.scene_node
             inv_T = agent_node.transformation.inverted()
