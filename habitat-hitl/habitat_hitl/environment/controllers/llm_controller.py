@@ -247,7 +247,7 @@ class LLMController(SingleAgentBaselinesController):
         )
         return
 
-    def act(self, observations, debug_obs: bool = False, *args, **kwargs):
+    def act(self, observations, debug_obs: bool = True, *args, **kwargs):
         # set the task as done and report it back
         if self._task_done and not self._termination_reported:
             if (
@@ -275,6 +275,7 @@ class LLMController(SingleAgentBaselinesController):
             cv2.imwrite(
                 f"./visuals/agent_1/panoptic_{self._iter}.png", panoptic
             )
+        if debug_obs and "agent_0_articulated_agent_arm_rgb" in observations:
             rgb = observations["agent_0_articulated_agent_arm_rgb"]
             panoptic = observations["agent_0_articulated_agent_arm_panoptic"]
             cv2.imwrite(
