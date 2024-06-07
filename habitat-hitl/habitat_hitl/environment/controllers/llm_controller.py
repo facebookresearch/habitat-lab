@@ -132,11 +132,11 @@ class LLMController(SingleAgentBaselinesController):
         # NOTE: the following ONLY resets self._test_recurrent_hidden_states,
         # self._prev_actions and self._not_done_masks
         # super().on_environment_reset()
-        self.environment_interface.reset_environment(reset_habitat=False)
-        self.planner.reset()
         if self._thread is not None:
             self._thread.join()
         self._thread = None
+        self.environment_interface.reset_environment(reset_habitat=False)
+        self.planner.reset()
 
         self.current_instruction = (
             self.environment_interface.hab_env.current_episode.instruction
