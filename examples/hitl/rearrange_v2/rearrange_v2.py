@@ -17,6 +17,7 @@ from app_state_base import AppStateBase
 from app_states import (
     create_app_state_cancel_session,
     create_app_state_load_episode,
+    create_app_state_skip_episode,
 )
 from end_episode_form import EndEpisodeForm, ErrorReport
 from session import Session
@@ -48,6 +49,8 @@ from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
+
+UI_SHOW_TASK_SUCCESS = False  # Turn on to display current task success.
 
 
 class EpisodeCompletionStatus(Enum):
@@ -115,6 +118,10 @@ class FrameRecorder:
             "object_states": self.get_objects_state(),
             "agent_states": self.get_agents_state(),
         }
+
+        metrics = self._app_service.get_metrics()
+        if "task_percent_complete" in metrics:
+            data["task_percent_complete"] = metrics["task_percent_complete"]
 
         for user_index in range(len(user_data)):
             u = user_data[user_index]
@@ -499,6 +506,9 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._agent_data: List[AgentData] = []
 
+        # If set, the episode will skip with the following error message.
+        self._skip_episode_error_message: Optional[str] = None
+
         # HACK: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
         sim_agent = sim.agents[0]
         config = self._app_service.config
@@ -540,6 +550,9 @@ class AppStateRearrangeV2(AppStateBase):
                 agent_controller._on_termination.registerCallback(
                     self._agent_data[agent_index]._on_termination_cb
                 )
+                agent_controller._on_termination.registerCallback(
+                    self._on_termination_cb
+                )
 
         self._user_data: List[UserData] = []
         for user_index in self._users.indices(Mask.ALL):
@@ -580,7 +593,6 @@ class AppStateRearrangeV2(AppStateBase):
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
-            # TODO: Reset LLM controller.
             return create_app_state_cancel_session(
                 self._app_service,
                 self._app_data,
@@ -588,9 +600,15 @@ class AppStateRearrangeV2(AppStateBase):
                 "User disconnected",
             )
         elif self._is_episode_finished():
-            # TODO: Reset LLM controller.
             return create_app_state_load_episode(
                 self._app_service, self._app_data, self._session
+            )
+        elif self._skip_episode_error_message is not None:
+            return create_app_state_skip_episode(
+                self._app_service,
+                self._app_data,
+                self._session,
+                self._skip_episode_error_message,
             )
         else:
             return None
@@ -688,9 +706,10 @@ class AppStateRearrangeV2(AppStateBase):
             status_str += "Instruction: " + task_instruction + "\n"
 
         # get recent metrics
-        metrics = self._app_service.get_metrics()
-        if "task_percent_complete" in metrics:
-            status_str += f"Task progress: {(metrics['task_percent_complete']*100):.2f}%\n"
+        if UI_SHOW_TASK_SUCCESS:
+            metrics = self._app_service.get_metrics()
+            if "task_percent_complete" in metrics:
+                status_str += f"Task progress: {(metrics['task_percent_complete']*100):.2f}%\n"
 
         # the multi-agent case
         if (
@@ -857,7 +876,17 @@ class AppStateRearrangeV2(AppStateBase):
             for agent_index in range(self._num_agents)
         )
 
-    def _is_episode_finished(self) -> bool:
+    def _have_all_users_reported_errors(self) -> bool:
+        """
+        Returns true if all GUI users reported errors.
+        """
+        return all(
+            self._user_data[user_index].agent_data.episode_completion_status
+            == EpisodeCompletionStatus.FAILURE
+            for user_index in range(self._num_users)
+        )
+
+    def _have_all_agents_finished_episode(self) -> bool:
         """
         Returns true if all agents finished the episode, regardless of success.
         """
@@ -865,6 +894,15 @@ class AppStateRearrangeV2(AppStateBase):
             self._agent_data[agent_index].episode_completion_status
             != EpisodeCompletionStatus.PENDING
             for agent_index in range(self._num_agents)
+        )
+
+    def _is_episode_finished(self) -> bool:
+        """
+        Returns true if the episode is finished.
+        """
+        return (
+            self._have_all_agents_finished_episode()
+            or self._have_all_users_reported_errors()
         )
 
     def _is_episode_successful(self) -> bool:
@@ -876,3 +914,8 @@ class AppStateRearrangeV2(AppStateBase):
             == EpisodeCompletionStatus.SUCCESS
             for agent_index in range(self._num_agents)
         )
+
+    def _on_termination_cb(self, _e: Any = None):
+        # Trigger episode change sequence when an agent error occurs.
+        if _e.status == PlannerStatus.FAILED:
+            self._skip_episode_error_message = "The other participant has encountered an error. Skipping episode."
