@@ -687,6 +687,11 @@ class AppStateRearrangeV2(AppStateBase):
         if len(task_instruction) > 0:
             status_str += "Instruction: " + task_instruction + "\n"
 
+        # get recent metrics
+        metrics = self._app_service.get_metrics()
+        if "task_percent_complete" in metrics:
+            status_str += f"Task progress: {(metrics['task_percent_complete']*100):.2f}%\n"
+
         # the multi-agent case
         if (
             self._users.max_user_count > 1
