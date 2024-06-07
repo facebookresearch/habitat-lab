@@ -209,13 +209,13 @@ class LLMController(SingleAgentBaselinesController):
             elif action["action"] == "PLACE":
                 furniture_name = "unknown furniture"
                 if action["receptacle_id"] is not None:
-                    try:
-                        receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(
-                            get_obj_from_id(
-                                self.environment_interface.sim,
-                                action["receptacle_id"],
-                            ).handle
-                        )
+                    receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(
+                        get_obj_from_id(
+                            self.environment_interface.sim,
+                            action["receptacle_id"],
+                        ).handle
+                    )
+                    if receptacle_node is not None:
                         furnitures = self.environment_interface.world_graph.get_neighbors_of_type(
                             receptacle_node, Furniture
                         )
@@ -228,10 +228,8 @@ class LLMController(SingleAgentBaselinesController):
                                 " ",
                                 receptacle_node.name,
                             )
-                    except ValueError:
-                        print(
-                            f"Receptacle not found: {get_obj_from_id(self.environment_interface.sim, action['receptacle_id']).handle}"
-                        )
+                    else:
+                        print("Receptacle not found")
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent placed {object_name} in/on {furniture_name}"
                 )
