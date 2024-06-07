@@ -216,11 +216,18 @@ class LLMController(SingleAgentBaselinesController):
                                 action["receptacle_id"],
                             ).handle
                         )
-                        furniture_name = self.environment_interface.world_graph.get_neighbors_of_type(
+                        furnitures = self.environment_interface.world_graph.get_neighbors_of_type(
                             receptacle_node, Furniture
-                        )[
-                            0
-                        ].name
+                        )
+                        if len(furnitures) > 0:
+                            furniture_name = furnitures[0].name
+                        else:
+                            print(
+                                "Could not find furniture for receptacle: ",
+                                receptacle_node.handle,
+                                " ",
+                                receptacle_node.name,
+                            )
                     except ValueError:
                         print(
                             f"Receptacle not found: {get_obj_from_id(self.environment_interface.sim, action['receptacle_id']).handle}"
