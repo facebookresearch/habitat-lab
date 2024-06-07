@@ -47,6 +47,14 @@ def create_app_state_load_episode(
     return AppStateLoadEpisode(app_service, app_data, session)
 
 
+def create_app_state_skip_episode(
+    app_service: AppService, app_data: AppData, session: Session, message: str
+) -> AppStateBase:
+    from app_state_skip_episode import AppStateSkipEpisode
+
+    return AppStateSkipEpisode(app_service, app_data, session, message)
+
+
 def create_app_state_start_screen(
     app_service: AppService, app_data: AppData, session: Session
 ) -> AppStateBase:

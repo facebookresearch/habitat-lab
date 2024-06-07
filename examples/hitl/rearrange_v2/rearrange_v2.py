@@ -17,6 +17,7 @@ from app_state_base import AppStateBase
 from app_states import (
     create_app_state_cancel_session,
     create_app_state_load_episode,
+    create_app_state_skip_episode,
 )
 from end_episode_form import EndEpisodeForm, ErrorReport
 from session import Session
@@ -603,9 +604,11 @@ class AppStateRearrangeV2(AppStateBase):
                 self._app_service, self._app_data, self._session
             )
         elif self._skip_episode_error_message is not None:
-            # TODO: Skip episode state.
-            return create_app_state_load_episode(
-                self._app_service, self._app_data, self._session
+            return create_app_state_skip_episode(
+                self._app_service,
+                self._app_data,
+                self._session,
+                self._skip_episode_error_message,
             )
         else:
             return None
