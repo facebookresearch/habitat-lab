@@ -19,6 +19,7 @@ from habitat_llm.agent import Agent
 from habitat_llm.agent.env import EnvironmentInterface
 from habitat_llm.planner.llm_planner import LLMPlanner
 from habitat_llm.utils import fix_config, setup_config
+from habitat_llm.world_model import Furniture
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 
@@ -206,23 +207,27 @@ class LLMController(SingleAgentBaselinesController):
                     f"Agent picked up {object_name}"
                 )
             elif action["action"] == "PLACE":
+                furniture_name = "unknown furniture"
                 if action["receptacle_id"] is not None:
-                    receptacle_name = self.environment_interface.world_graph.get_node_from_sim_handle(
-                        get_obj_from_id(
-                            self.environment_interface.sim,
-                            action["receptacle_id"],
-                        ).handle
-                    ).name
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in/on {receptacle_name}"
-                    )
-                    # print(
-                    #     f"Agent placed {object_name} in/on {receptacle_name}"
-                    # )
-                else:
-                    self.environment_interface.agent_state_history[1].append(
-                        f"Agent placed {object_name} in unknown location"
-                    )
+                    try:
+                        receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(
+                            get_obj_from_id(
+                                self.environment_interface.sim,
+                                action["receptacle_id"],
+                            ).handle
+                        )
+                        furniture_name = self.environment_interface.world_graph.get_neighbors_of_type(
+                            receptacle_node, Furniture
+                        )[
+                            0
+                        ].name
+                    except ValueError:
+                        print(
+                            f"Receptacle not found: {get_obj_from_id(self.environment_interface.sim, action['receptacle_id']).handle}"
+                        )
+                self.environment_interface.agent_state_history[1].append(
+                    f"Agent placed {object_name} in/on {furniture_name}"
+                )
             elif action["action"] == "OPEN":
                 self.environment_interface.agent_state_history[1].append(
                     f"Agent opened {object_name}"
@@ -247,7 +252,7 @@ class LLMController(SingleAgentBaselinesController):
         )
         return
 
-    def act(self, observations, debug_obs: bool = True, *args, **kwargs):
+    def act(self, observations, debug_obs: bool = False, *args, **kwargs):
         # set the task as done and report it back
         if self._task_done and not self._termination_reported:
             if (
