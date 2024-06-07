@@ -1681,6 +1681,11 @@ class AgentConfig(HabitatBaseConfig):
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
 
+    # Hack: UI-controlled agents may use a first-person camera.
+    #       To avoid discrepancies, sensors are moved to the first-person view.
+    #       This flag allows for disabling automatic sensor transform update.
+    auto_update_sensor_transform: bool = True
+
 
 @dataclass
 class RendererConfig(HabitatBaseConfig):

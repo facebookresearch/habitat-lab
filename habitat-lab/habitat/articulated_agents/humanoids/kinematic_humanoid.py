@@ -59,6 +59,8 @@ class KinematicHumanoid(MobileManipulator):
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=False, fixed_base=False
     ):
+        auto_update_sensor_transform = agent_cfg.auto_update_sensor_transform
+
         super().__init__(
             self._get_humanoid_params(),
             agent_cfg,
@@ -66,6 +68,7 @@ class KinematicHumanoid(MobileManipulator):
             limit_robo_joints,
             fixed_base,
             maintain_link_order=True,
+            auto_update_sensor_transform=auto_update_sensor_transform,
         )
 
         # The offset and base transform are used so that the
@@ -164,7 +167,7 @@ class KinematicHumanoid(MobileManipulator):
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
-        if self._cameras is not None:
+        if self._cameras is not None and self._auto_update_sensor_transforms:
             # get the transformation
             agent_node = self._sim._default_agent.scene_node
             inv_T = agent_node.transformation.inverted()

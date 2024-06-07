@@ -64,6 +64,7 @@ class StaticManipulator(Manipulator):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        auto_update_sensor_transform=False,
     ):
         r"""Constructor
         :param params: The parameter of the manipulator robot.
@@ -81,6 +82,7 @@ class StaticManipulator(Manipulator):
             sim=sim,
             limit_robo_joints=limit_robo_joints,
             fixed_based=fixed_base,
+            auto_update_sensor_transform=auto_update_sensor_transform,
         )
 
     def reconfigure(self) -> None:
