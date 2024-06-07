@@ -145,7 +145,7 @@ class AgentData:
         world: World,
         agent_controller: Controller,
         agent_index: int,
-        render_camera: Optional[Any],
+        render_cameras: List[Any],
     ):
         self.app_service = app_service
         self.world = world
@@ -154,7 +154,7 @@ class AgentData:
 
         self.task_instruction = ""
 
-        self.render_camera = render_camera
+        self.render_cameras = render_cameras
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
@@ -168,11 +168,35 @@ class AgentData:
     def update_camera_from_sensor(self) -> None:
         """
         Update the camera transform from the agent's sensor.
-        Agents controlled by users have their camera updated using CameraHelper.
         For AI-controlled agents, the camera transform can be inferred from this function.
         """
-        if self.render_camera is not None:
-            self.cam_transform = self.render_camera.camera_matrix.inverted()
+        if len(self.render_cameras) > 0:
+            self.cam_transform = self.render_cameras[
+                0
+            ].camera_matrix.inverted()
+
+    def update_camera_transform(
+        self, global_cam_transform: mn.Matrix4
+    ) -> None:
+        """
+        Updates the camera transform of the agent.
+        If the agent has 'head sensors', this will also update their transform.
+        """
+        self.cam_transform = global_cam_transform
+
+        for render_camera in self.render_cameras:
+            # TODO: There is currently no utility to set a global transform.
+            cumulative_transform = mn.Matrix4.identity_init()
+            node = render_camera.node.parent
+            while node is not None and hasattr(node, "transformation"):
+                cumulative_transform @= node.transformation
+                node = node.parent
+            inv_cumulative_transform = cumulative_transform.inverted()
+
+            if render_camera is not None:
+                render_camera.node.transformation = (
+                    inv_cumulative_transform @ global_cam_transform
+                )
 
 
 class UserData:
@@ -254,7 +278,7 @@ class UserData:
         gui_agent_controller._gui_input = self.gui_input
 
     def reset(self):
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self._update_camera()
         self.ui.reset()
 
         # If networking is enabled...
@@ -295,14 +319,7 @@ class UserData:
                 self.server_sps_tracker.get_smoothed_rate(),
             )
 
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt)
-        self.agent_data.cam_transform = self.camera_helper.get_cam_transform()
-
-        if self.app_service.hitl_config.networking.enable:
-            self.app_service._client_message_manager.update_camera_transform(
-                self.agent_data.cam_transform,
-                destination_mask=Mask.from_index(self.user_index),
-            )
+        self._update_camera()
 
         self.ui.update()
         self.ui.draw_ui()
@@ -359,6 +376,17 @@ class UserData:
         lookat_y_offset = UP
         lookat = agent_root.translation + lookat_y_offset
         return lookat
+
+    def _update_camera(self) -> None:
+        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        cam_transform = self.camera_helper.get_cam_transform()
+        self.agent_data.update_camera_transform(cam_transform)
+
+        if self.app_service.hitl_config.networking.enable:
+            self.app_service._client_message_manager.update_camera_transform(
+                cam_transform,
+                destination_mask=Mask.from_index(self.user_index),
+            )
 
     def _is_user_idle_this_frame(self) -> bool:
         return not self.gui_input.get_any_input()
@@ -474,19 +502,20 @@ class AppStateRearrangeV2(AppStateBase):
         # HACK: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
         sim_agent = sim.agents[0]
         config = self._app_service.config
-        head_sensor_substrings: List[
-            str
+        head_sensor_substrings: Dict[
+            str, str
         ] = config.rearrange_v2.head_sensor_substrings
         for agent_index in range(self._num_agents):
-            render_camera: Optional[Any] = None
-            for substring in head_sensor_substrings:
-                # TODO: Validate that the lab agent owns the sensor.
-                for sensor_name, sensor in sim_agent._sensors.items():
-                    if substring in sensor_name and hasattr(
-                        sensor, "render_camera"
-                    ):
-                        render_camera = sensor.render_camera
-                        break
+            render_cameras: List[Any] = []
+            agent_id = config.habitat.simulator.agents_order[agent_index]
+            substring = head_sensor_substrings[agent_id]
+            for sensor_name, sensor in sim_agent._sensors.items():
+                if (
+                    substring in sensor_name
+                    and agent_id in sensor_name
+                    and hasattr(sensor, "render_camera")
+                ):
+                    render_cameras.append(sensor.render_camera)
 
             agent_controller = app_service.all_agent_controllers[agent_index]
 
@@ -504,7 +533,7 @@ class AppStateRearrangeV2(AppStateBase):
                     world=self._world,
                     agent_controller=agent_controller,
                     agent_index=agent_index,
-                    render_camera=render_camera,
+                    render_cameras=render_cameras,
                 )
             )
             if isinstance(agent_controller, LLMController):
@@ -764,14 +793,13 @@ class AppStateRearrangeV2(AppStateBase):
                 user_agent_idx = self._user_to_agent_index[user_index]
                 other_agent_idx = user_agent_idx ^ 1
                 other_agent_data = self._agent_data[other_agent_idx]
-
-                # If the other agent is AI-controlled, update its camera.
-                if other_agent_idx not in self._agent_to_user_index:
-                    other_agent_data.update_camera_from_sensor()
-
                 self._user_data[user_index].draw_pip_viewport(other_agent_data)
 
         self._app_service.compute_action_and_step_env()
+
+        # Update agent cameras.
+        for agent_index in range(self._num_agents):
+            self._agent_data[agent_index].update_camera_from_sensor()
 
         # Set the server camera.
         server_cam_transform = self._user_data[
