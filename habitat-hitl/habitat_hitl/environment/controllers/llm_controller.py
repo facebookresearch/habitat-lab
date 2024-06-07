@@ -265,7 +265,7 @@ class LLMController(SingleAgentBaselinesController):
 
         low_level_actions = np.zeros(self._agent_action_length)
 
-        if debug_obs:
+        if debug_obs and "agent_1_head_rgb" in observations:
             rgb = observations["agent_1_head_rgb"]
             panoptic = observations["agent_1_head_panoptic"]
             cv2.imwrite(
