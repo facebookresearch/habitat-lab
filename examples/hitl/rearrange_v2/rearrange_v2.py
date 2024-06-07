@@ -49,6 +49,8 @@ from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
+UI_SHOW_TASK_SUCCESS = False  # Turn on to display current task success.
+
 
 class EpisodeCompletionStatus(Enum):
     PENDING = (0,)
@@ -115,6 +117,10 @@ class FrameRecorder:
             "object_states": self.get_objects_state(),
             "agent_states": self.get_agents_state(),
         }
+
+        metrics = self._app_service.get_metrics()
+        if "task_percent_complete" in metrics:
+            data["task_percent_complete"] = metrics["task_percent_complete"]
 
         for user_index in range(len(user_data)):
             u = user_data[user_index]
@@ -688,9 +694,10 @@ class AppStateRearrangeV2(AppStateBase):
             status_str += "Instruction: " + task_instruction + "\n"
 
         # get recent metrics
-        metrics = self._app_service.get_metrics()
-        if "task_percent_complete" in metrics:
-            status_str += f"Task progress: {(metrics['task_percent_complete']*100):.2f}%\n"
+        if UI_SHOW_TASK_SUCCESS:
+            metrics = self._app_service.get_metrics()
+            if "task_percent_complete" in metrics:
+                status_str += f"Task progress: {(metrics['task_percent_complete']*100):.2f}%\n"
 
         # the multi-agent case
         if (
