@@ -224,7 +224,7 @@ class LLMController(SingleAgentBaselinesController):
                         else:
                             print(
                                 "Could not find furniture for receptacle: ",
-                                receptacle_node.handle,
+                                receptacle_node.sim_handle,
                                 " ",
                                 receptacle_node.name,
                             )
