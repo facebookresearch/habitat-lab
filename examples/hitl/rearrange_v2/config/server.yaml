@@ -15,3 +15,7 @@ habitat_hitl:
   experimental:
     headless:
       do_headless: True
+
+rearrange_v2:
+  data_collection:
+    s3_path: "Phase_3/"
