@@ -20,7 +20,7 @@ from habitat_sim.utils.settings import default_sim_settings, make_cfg
 def test_debug_visualizer():
     ######################
     # NOTE: set show_images==True to see the output images from the various dbv features
-    show_images = True
+    show_images = False
     ######################
 
     sim_settings = default_sim_settings.copy()
