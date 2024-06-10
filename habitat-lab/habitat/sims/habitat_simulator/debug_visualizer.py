@@ -158,6 +158,8 @@ class DebugVisualizer:
         sim: habitat_sim.Simulator,
         output_path: str = "visual_debug_output/",
         resolution: Tuple[int, int] = (500, 500),
+        clear_color: Optional[mn.Color4] = None,
+        equirect=False,
     ) -> None:
         """
         Initialize the debugger provided a Simulator and the uuid of the debug sensor.
@@ -166,6 +168,7 @@ class DebugVisualizer:
         :param sim: Simulator instance must be provided for attachment.
         :param output_path: Directory path for saving debug images and videos.
         :param resolution: The desired sensor resolution for any new debug agent.
+        :param equirect: Optionally use an Equirectangular (360 cube-map) sensor.
         """
 
         self.sim = sim
@@ -178,6 +181,32 @@ class DebugVisualizer:
         self.sensor: habitat_sim.simulator.Sensor = None
         self.agent: habitat_sim.simulator.Agent = None
         self.agent_id = 0
+        # default black background
+        self.clear_color = (
+            mn.Color4.from_linear_rgb_int(0)
+            if clear_color is None
+            else clear_color
+        )
+        self._equirect = equirect
+
+    @property
+    def equirect(self) -> bool:
+        return self._equirect
+
+    @equirect.setter
+    def equirect(self, equirect: bool) -> None:
+        """
+        Set the equirect mode on or off.
+        If dbv is already initialized to a different mode, re-initialize it.
+        """
+
+        if self._equirect != equirect:
+            # change the value
+            self._equirect = equirect
+            if self.agent is not None:
+                # re-initialize the agent
+                self.remove_dbv_agent()
+                self.create_dbv_agent(self.sensor_resolution)
 
     def create_dbv_agent(
         self, resolution: Tuple[int, int] = (500, 500)
@@ -192,11 +221,16 @@ class DebugVisualizer:
 
         debug_agent_config = habitat_sim.agent.AgentConfiguration()
 
-        debug_sensor_spec = habitat_sim.CameraSensorSpec()
+        debug_sensor_spec = (
+            habitat_sim.CameraSensorSpec()
+            if not self._equirect
+            else habitat_sim.EquirectangularSensorSpec()
+        )
         debug_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
         debug_sensor_spec.position = [0.0, 0.0, 0.0]
         debug_sensor_spec.resolution = [resolution[0], resolution[1]]
         debug_sensor_spec.uuid = self.sensor_uuid
+        debug_sensor_spec.clear_color = self.clear_color
 
         debug_agent_config.sensor_specifications = [debug_sensor_spec]
         self.sim.agents.append(
@@ -214,6 +248,20 @@ class DebugVisualizer:
         self.sensor = self.sim._Simulator__sensors[self.agent_id][
             self.sensor_uuid
         ]
+
+    def remove_dbv_agent(self):
+        """
+        Clean up a previously initialized DBV agent.
+        """
+
+        if self.agent is None:
+            print("No active dbv agent to remove.")
+            return
+        del self.sim._Simulator__sensors[self.agent_id]
+        del self.sim.agents[self.agent_id]
+        self.agent = None
+        self.agent_id = 0
+        self.sensor = None
 
     def look_at(
         self,
@@ -539,7 +587,7 @@ class DebugVisualizer:
             world_transform = mn.Matrix4.identity_init()
         look_at = world_transform.transform_point(bb.center())
         bb_size = bb.size()
-        fov = self.sensor._spec.hfov
+        fov = 90 if self._equirect else self.sensor._spec.hfov
         aspect = (
             float(self.sensor._spec.resolution[1])
             / self.sensor._spec.resolution[0]
@@ -547,7 +595,7 @@ class DebugVisualizer:
         import math
 
         # compute the optimal view distance from the camera specs and object size
-        distance = (np.amax(np.array(bb_size)) * 1.1 / aspect) / math.tan(
+        distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
             fov / (360 / math.pi)
         )
         if cam_local_pos is None:
@@ -609,7 +657,7 @@ class DebugVisualizer:
         :param output_path: Optional directory path for saving the video. Otherwise use self.output_path.
         :param prefix: Optional prefix for output filename. Filename format: "<output_path><prefix><timestamp>"
         :param fps: Framerate of the video. Defaults to 4FPS expecting disjoint still frames.
-        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self.debug_obs.
+        :param obs_cache: Optionally provide an external observation cache datastructure in place of self.debug_obs.
         """
 
         if output_path is None:
