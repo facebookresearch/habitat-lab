@@ -20,6 +20,7 @@ from habitat_hitl.core.user_mask import Mask
 
 SKIP_EPISODE_MESSAGE_DURATION = 5.0
 
+
 class AppStateSkipEpisode(AppStateBase):
     """
     Skip an episode.
@@ -27,7 +28,11 @@ class AppStateSkipEpisode(AppStateBase):
     """
 
     def __init__(
-        self, app_service: AppService, app_data: AppData, session: Session, message: str
+        self,
+        app_service: AppService,
+        app_data: AppData,
+        session: Session,
+        message: str,
     ):
         super().__init__(app_service, app_data)
         self._session = session
