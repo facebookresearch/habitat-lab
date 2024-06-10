@@ -189,6 +189,12 @@ class DebugVisualizer:
         )
         self._equirect = equirect
 
+    def __del__(self) -> None:
+        """
+        When a DBV is removed, it should clean up its agent/sensor.
+        """
+        self.remove_dbv_agent()
+
     @property
     def equirect(self) -> bool:
         return self._equirect
