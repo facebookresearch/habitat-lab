@@ -57,6 +57,7 @@ class EpisodeCompletionStatus(Enum):
     PENDING = (0,)
     SUCCESS = (1,)
     FAILURE = (2,)
+    ERROR   = (3,)
 
 
 class FrameRecorder:
@@ -165,12 +166,16 @@ class AgentData:
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
+        self._episode_completion_message = ''
 
     def _on_termination_cb(self, _e: Any = None):
         if _e.status == PlannerStatus.SUCCESS:
             self.episode_completion_status = EpisodeCompletionStatus.SUCCESS
-        else:
+        elif _e.status == PlannerStatus.FAILED:
             self.episode_completion_status = EpisodeCompletionStatus.FAILURE
+        elif _e.status == PlannerStatus.ERROR:
+            self.episode_completion_status = EpisodeCompletionStatus.ERROR
+            self._episode_message = _e.message
 
     def update_camera_from_sensor(self) -> None:
         """
@@ -917,5 +922,7 @@ class AppStateRearrangeV2(AppStateBase):
 
     def _on_termination_cb(self, _e: Any = None):
         # Trigger episode change sequence when an agent error occurs.
+        if _e.status == PlannerStatus.ERROR:
+            self._skip_episode_error_message = f"Other participant encountered an error: {_e.message}. Skipping episode."
         if _e.status == PlannerStatus.FAILED:
             self._skip_episode_error_message = "The other participant has encountered an error. Skipping episode."
