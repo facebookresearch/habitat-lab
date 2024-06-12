@@ -167,9 +167,6 @@ class LLMController(SingleAgentBaselinesController):
             "object_id": _e.object_id,
             "object_handle": _e.object_handle,
             "receptacle_id": _e.receptacle_id,
-            # "receptacle_name": self.environment_interface.world_graph.get_node_from_sim_handle(
-            #     get_obj_from_id(self.environment_interface.sim, _e.receptacle_id).handle
-            # ),
         }
 
         self._human_action_history.append(action)
@@ -196,12 +193,12 @@ class LLMController(SingleAgentBaselinesController):
         # update agent state history
         while self._human_action_history:
             action = self._human_action_history.pop(0)
-            object_name = None
+            object_name = "unknown object"
             try:
                 object_name = self.environment_interface.world_graph.get_node_from_sim_handle(
                     action["object_handle"]
                 ).name
-            except Exception as e:
+            except ValueError as e:
                 self._log.append(e)
                 continue
             if action["action"] == "PICK":
@@ -211,12 +208,14 @@ class LLMController(SingleAgentBaselinesController):
             elif action["action"] == "PLACE":
                 furniture_name = "unknown furniture"
                 if action["receptacle_id"] is not None:
-                    receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(
-                        get_obj_from_id(
-                            self.environment_interface.sim,
-                            action["receptacle_id"],
-                        ).handle
-                    )
+                    receptacle_object = get_obj_from_id(self.environment_interface.sim, action["receptacle_id"])
+                    receptacle_handle = receptacle_object.handle if hasattr(receptacle_object, "handle") else None
+                    receptacle_node = None
+                    if receptacle_handle is not None:
+                        try:
+                            receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(receptacle_handle)
+                        except ValueError as e:
+                            self._log.append(e)
                     if receptacle_node is not None:
                         if isinstance(receptacle_node, Furniture):
                             furniture_name = receptacle_node.name
