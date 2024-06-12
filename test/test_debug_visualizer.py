@@ -6,10 +6,14 @@
 
 import os.path as osp
 
+import numpy as np
 import pytest
 
 import habitat_sim
-from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+from habitat.sims.habitat_simulator.debug_visualizer import (
+    DebugVisualizer,
+    stitch_image_matrix,
+)
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
@@ -75,3 +79,53 @@ def test_debug_visualizer():
         if show_images:
             for im in dbv_obs:
                 im.show()
+
+        # test the deconstructor
+        del dbv
+
+        # test the image matrix stitching utility
+        # NOTE: PIL.Image.Image.size is (width, height) while VisualSensor.resolution is (height, width)
+        im_width = 200
+        im_height = 100
+        dbv = DebugVisualizer(sim, resolution=(im_height, im_width))
+        # get 10 random images
+        obs_cache = [
+            dbv.get_observation(np.random.uniform(size=3), np.zeros(3))
+            for _ in range(10)
+        ]
+        im_cache = [obs.get_image() for obs in obs_cache]
+        # 3-column stitch of 10 images == 3x4
+        stitch_3_col_all = stitch_image_matrix(im_cache, num_col=3)
+        assert stitch_3_col_all.get_image().size == (
+            im_width * 3,
+            im_height * 4,
+        )
+        # 3-column stitch of 9 images == 3x3
+        stitch_3_col_9 = stitch_image_matrix(im_cache[1:], num_col=3)
+        assert stitch_3_col_9.get_image().size == (im_width * 3, im_height * 3)
+        # 8-column stitch of 10 images == 8x2
+        stitch_3_col_9 = stitch_image_matrix(im_cache, num_col=8)
+        assert stitch_3_col_9.get_image().size == (im_width * 8, im_height * 2)
+        # 8-column stitch of 8 images == 8x1
+        stitch_3_col_9 = stitch_image_matrix(im_cache[-8:], num_col=8)
+        assert stitch_3_col_9.get_image().size == (im_width * 8, im_height)
+        # 8-column stitch of 4 images == 8x1
+        stitch_3_col_9 = stitch_image_matrix(im_cache[-4:], num_col=8)
+        assert stitch_3_col_9.get_image().size == (im_width * 8, im_height)
+
+        # test assertion that images sizes must match by adding a larger image
+        dbv.remove_dbv_agent()
+        dbv.create_dbv_agent(resolution=(im_height * 2, im_width * 2))
+        larger_image = dbv.get_observation(
+            np.random.uniform(size=3), np.zeros(3)
+        )
+        try:
+            stitch_image_matrix(im_cache + [larger_image.get_image()])
+        except ValueError as e:
+            assert "Image sizes must all match" in (str(e))
+
+        # test assertion that images must be provided
+        try:
+            stitch_image_matrix([])
+        except ValueError as e:
+            assert "No images provided" in (str(e))

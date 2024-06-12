@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import os
 from typing import List, Optional, Tuple, Union
 
@@ -17,9 +18,45 @@ from habitat.utils.common import check_make_dir
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 
+def stitch_image_matrix(images: List[Image.Image], num_col: int = 8):
+    """
+    Stitch together a set of images into a single image matrix.
+
+    :param images: The PIL.Image.Image objects
+    :param num_col: The number of columns in the matrix
+    :return: A DebugObservation wrapper with the stitched image.
+    """
+
+    if len(images) == 0:
+        raise ValueError("No images provided.")
+
+    image_mode = images[0].mode
+    image_size = images[0].size
+    for image in images:
+        if image.size != image_size:
+            # TODO: allow shrinking/growing images
+            raise ValueError("Image sizes must all match.")
+    num_rows = math.ceil(len(images) / float(num_col))
+    stitched_image = Image.new(
+        image_mode, size=(image_size[0] * num_col, image_size[1] * num_rows)
+    )
+
+    for ix, image in enumerate(images):
+        col = ix % num_col
+        row = math.floor(ix / num_col)
+        coords = (int(col * image_size[0]), int(row * image_size[1]))
+        stitched_image.paste(image, box=coords)
+
+    bdo = DebugObservation(np.array(stitched_image))
+    bdo.image = stitched_image
+    return bdo
+
+
 class DebugObservation:
     """
     Observation wrapper to provide a simple interface for managing debug observations and caching the image.
+
+    NOTE: PIL.Image.Image.size is (width, height) while VisualSensor.resolution is (height, width)
     """
 
     def __init__(self, obs_data: np.ndarray):
@@ -167,7 +204,7 @@ class DebugVisualizer:
 
         :param sim: Simulator instance must be provided for attachment.
         :param output_path: Directory path for saving debug images and videos.
-        :param resolution: The desired sensor resolution for any new debug agent.
+        :param resolution: The desired sensor resolution for any new debug agent (height, width).
         :param equirect: Optionally use an Equirectangular (360 cube-map) sensor.
         """
 
@@ -263,8 +300,14 @@ class DebugVisualizer:
         if self.agent is None:
             print("No active dbv agent to remove.")
             return
-        del self.sim._Simulator__sensors[self.agent_id]
-        del self.sim.agents[self.agent_id]
+
+        # NOTE: this guards against cases where the Simulator is deconstructed before the DBV
+        if self.agent_id < len(self.sim.agents):
+            # remove the agent and sensor from the Simulator instance
+            self.agent.close()
+            del self.sim._Simulator__sensors[self.agent_id]
+            del self.sim.agents[self.agent_id]
+
         self.agent = None
         self.agent_id = 0
         self.sensor = None
@@ -398,7 +441,7 @@ class DebugVisualizer:
         :param debug_lines: A set of debug line strips with accompanying colors. Each list entry contains a list of points and a color.
         """
 
-        # support None input to make useage easier elsewhere
+        # support None input to make usage easier elsewhere
         if debug_lines is not None:
             for points, color in debug_lines:
                 for p_ix, point in enumerate(points):
@@ -423,7 +466,7 @@ class DebugVisualizer:
         :param debug_circles: A list of debug line render circle Tuples, each with (center, radius, normal, color).
         """
 
-        # support None input to make useage easier elsewhere
+        # support None input to make usage easier elsewhere
         if debug_circles is not None:
             for center, radius, normal, color in debug_circles:
                 self.debug_line_render.draw_circle(
