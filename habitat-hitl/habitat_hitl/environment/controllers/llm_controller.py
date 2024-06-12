@@ -269,15 +269,23 @@ class LLMController(SingleAgentBaselinesController):
                 >= self._planner_info["replanning_threshold"]
             ):
                 self._on_termination.invoke(
-                    AgentTerminationEvent(status=PlannerStatus.FAILED, message="replanning threshold exceeded")
+                    AgentTerminationEvent(
+                        status=PlannerStatus.FAILED,
+                        message="replanning threshold exceeded",
+                    )
                 )
             elif "ConnectionError" in self._planner_info["prompts"][0]:
                 self._on_termination.invoke(
-                    AgentTerminationEvent(status=PlannerStatus.ERROR, message="LLM connection error")
+                    AgentTerminationEvent(
+                        status=PlannerStatus.ERROR,
+                        message="LLM connection error",
+                    )
                 )
             else:
                 self._on_termination.invoke(
-                    AgentTerminationEvent(status=PlannerStatus.SUCCESS, message="")
+                    AgentTerminationEvent(
+                        status=PlannerStatus.SUCCESS, message=""
+                    )
                 )
             self._termination_reported = True
 
