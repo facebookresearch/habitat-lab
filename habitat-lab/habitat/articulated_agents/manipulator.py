@@ -53,6 +53,8 @@ class Manipulator(ArticulatedAgentInterface):
         self.joint_dof_indices: Dict[int, int] = {}
         # set the fixed joint values
         self._fix_joint_values: Optional[np.ndarray] = None
+        # cache camera transformation
+        self._cameras_transformation: Dict[str, mn.Matrix4] = {}
 
         # defaults for optional params
         if self.params.gripper_init_params is None:
@@ -176,6 +178,12 @@ class Manipulator(ArticulatedAgentInterface):
                         @ cam_transform
                         @ cam_info.relative_transform
                     )
+
+                    # We cache camera transformations to expose them as APIs
+                    self._cameras_transformation[sensor_name] = mn.Matrix4(
+                        cam_transform
+                    )
+
                     cam_transform = inv_T @ cam_transform
 
                     sens_obj.node.transformation = (
@@ -283,6 +291,10 @@ class Manipulator(ArticulatedAgentInterface):
             self.params.ee_constraint[ee_index, :, 0],
             self.params.ee_constraint[ee_index, :, 1],
         )
+
+    def get_camera_transform(self) -> Dict[str, mn.Matrix4]:
+        """Return camera transformation"""
+        return self._cameras_transformation
 
     @property
     def gripper_joint_pos(self):
