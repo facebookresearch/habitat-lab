@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from util import timestamp
 
@@ -68,10 +68,14 @@ class SessionRecorder:
     def end_episode(
         self,
         success: bool,
+        episode_failure_error_message: Optional[str],
     ):
         self.data["episodes"][-1]["end_timestamp"] = timestamp()
         self.data["episodes"][-1]["success"] = success
         self.data["episodes"][-1]["completed"] = True
+        self.data["episodes"][-1][
+            "error_message"
+        ] = episode_failure_error_message
 
     def record_frame(
         self,

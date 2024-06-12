@@ -42,6 +42,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiRobotController,
 )
 from habitat_hitl.environment.controllers.llm_controller import (
+    AgentTerminationEvent,
     LLMController,
     PlannerStatus,
 )
@@ -57,7 +58,6 @@ class EpisodeCompletionStatus(Enum):
     PENDING = (0,)
     SUCCESS = (1,)
     FAILURE = (2,)
-    ERROR   = (3,)
 
 
 class FrameRecorder:
@@ -166,15 +166,15 @@ class AgentData:
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
-        self._episode_completion_message = ''
+        self._episode_completion_message = ""
 
-    def _on_termination_cb(self, _e: Any = None):
+    def _on_termination_cb(self, _e: AgentTerminationEvent = None):
         if _e.status == PlannerStatus.SUCCESS:
             self.episode_completion_status = EpisodeCompletionStatus.SUCCESS
         elif _e.status == PlannerStatus.FAILED:
             self.episode_completion_status = EpisodeCompletionStatus.FAILURE
         elif _e.status == PlannerStatus.ERROR:
-            self.episode_completion_status = EpisodeCompletionStatus.ERROR
+            self.episode_completion_status = EpisodeCompletionStatus.FAILURE
             self._episode_message = _e.message
 
     def update_camera_from_sensor(self) -> None:
@@ -639,7 +639,9 @@ class AppStateRearrangeV2(AppStateBase):
         super().on_exit()
 
         episode_success = self._is_episode_successful()
-        self._session.session_recorder.end_episode(episode_success)
+        self._session.session_recorder.end_episode(
+            episode_success, self._skip_episode_error_message
+        )
 
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
@@ -920,7 +922,7 @@ class AppStateRearrangeV2(AppStateBase):
             for agent_index in range(self._num_agents)
         )
 
-    def _on_termination_cb(self, _e: Any = None):
+    def _on_termination_cb(self, _e: AgentTerminationEvent = None):
         # Trigger episode change sequence when an agent error occurs.
         if _e.status == PlannerStatus.ERROR:
             self._skip_episode_error_message = f"Other participant encountered an error: {_e.message}. Skipping episode."
