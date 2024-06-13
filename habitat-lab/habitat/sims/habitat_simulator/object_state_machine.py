@@ -11,6 +11,7 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat import logger
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
@@ -284,7 +285,9 @@ class ObjectStateMachine:
         for state in self.active_states:
             if state.is_affordance_of_obj(obj):
                 self.objects_with_states[obj.handle].append(state)
-                print(f"registered state {state} for object {obj.handle}")
+                logger.debug(
+                    f"registered state {state} for object {obj.handle}"
+                )
 
     def update_states(self, sim: habitat_sim.Simulator, dt: float) -> None:
         """
