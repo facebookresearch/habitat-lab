@@ -94,7 +94,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
             )
         if resume_state is not None:
-            self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.load_state_dict(
                 {
                     "actor_critic." + k: v
