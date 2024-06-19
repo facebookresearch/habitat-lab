@@ -13,10 +13,9 @@ import numpy as np
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
-from habitat_hitl.core.key_mapping import KeyCode
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
@@ -187,9 +186,7 @@ class AppStateRearrange(AppState):
             ) = self._nav_helper.get_humanoid_walk_hints_from_ray_cast(
                 visualize_path=True
             )
-            if self._app_service.gui_input.get_mouse_button(
-                GuiInput.MouseNS.RIGHT
-            ):
+            if self._app_service.gui_input.get_mouse_button(MouseButton.RIGHT):
                 walk_dir = candidate_walk_dir
                 distance_multiplier = candidate_distance_multiplier
 

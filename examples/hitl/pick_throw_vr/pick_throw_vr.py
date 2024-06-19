@@ -13,10 +13,9 @@ import numpy as np
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
-from habitat_hitl.core.key_mapping import KeyCode
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.avatar_switcher import AvatarSwitcher
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -429,9 +428,7 @@ class AppStatePickThrowVr(AppState):
         walk_dir = None
         distance_multiplier = 1.0
 
-        if self._app_service.gui_input.get_mouse_button(
-            GuiInput.MouseNS.RIGHT
-        ):
+        if self._app_service.gui_input.get_mouse_button(MouseButton.RIGHT):
             (
                 candidate_walk_dir,
                 candidate_distance_multiplier,
