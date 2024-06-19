@@ -16,6 +16,7 @@ from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.avatar_switcher import AvatarSwitcher
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -149,10 +150,10 @@ class AppStatePickThrowVr(AppState):
 
     def get_grasp_keys_by_hand(self, hand_idx):
         if hand_idx == 0:
-            return [GuiInput.KeyNS.ZERO, GuiInput.KeyNS.ONE]
+            return [KeyCode.ZERO, KeyCode.ONE]
         else:
             assert hand_idx == 1
-            return [GuiInput.KeyNS.TWO, GuiInput.KeyNS.THREE]
+            return [KeyCode.TWO, KeyCode.THREE]
 
     def _try_grasp_remote(self):
         assert not self._held_target_obj_idx
@@ -350,7 +351,7 @@ class AppStatePickThrowVr(AppState):
         self._has_grasp_preview = False
 
         if self._held_target_obj_idx is not None:
-            if self._app_service.gui_input.get_key(GuiInput.KeyNS.SPACE):
+            if self._app_service.gui_input.get_key(KeyCode.SPACE):
                 if self._recent_reach_pos:
                     # Continue reaching towards the recent reach position (the
                     # original position of the grasped object before it was snapped
@@ -368,7 +369,7 @@ class AppStatePickThrowVr(AppState):
                     # also preview throw
                     _ = self._throw_helper.viz_and_get_humanoid_throw()
 
-            if self._app_service.gui_input.get_key_up(GuiInput.KeyNS.SPACE):
+            if self._app_service.gui_input.get_key_up(KeyCode.SPACE):
                 if self._recent_reach_pos:
                     # this spacebar release means we've finished the reach-and-grasp motion
                     self._recent_reach_pos = None
@@ -413,9 +414,7 @@ class AppStatePickThrowVr(AppState):
                     )
                     self._has_grasp_preview = True
 
-                    if self._app_service.gui_input.get_key_down(
-                        GuiInput.KeyNS.SPACE
-                    ):
+                    if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
                         self._recent_reach_pos = (
                             self._get_target_object_position(min_i)
                         )
@@ -614,7 +613,7 @@ class AppStatePickThrowVr(AppState):
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+        if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
@@ -624,11 +623,11 @@ class AppStatePickThrowVr(AppState):
         episode_id_by_scene_index = ["0", "5", "10", "15", "20"]
         for scene_idx in range(num_fetch_scenes):
             key_map = [
-                GuiInput.KeyNS.ONE,
-                GuiInput.KeyNS.TWO,
-                GuiInput.KeyNS.THREE,
-                GuiInput.KeyNS.FOUR,
-                GuiInput.KeyNS.FIVE,
+                KeyCode.ONE,
+                KeyCode.TWO,
+                KeyCode.THREE,
+                KeyCode.FOUR,
+                KeyCode.FIVE,
             ]
             key = key_map[scene_idx]
             if self._app_service.gui_input.get_key_down(key):
@@ -637,10 +636,10 @@ class AppStatePickThrowVr(AppState):
                 )
                 self._app_service.end_episode(do_reset=True)
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
+        if self._app_service.gui_input.get_key_down(KeyCode.P):
             self._paused = not self._paused
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.H):
+        if self._app_service.gui_input.get_key_down(KeyCode.H):
             self._hide_gui_text = not self._hide_gui_text
 
         # toggle remote/local under certain conditions:
@@ -650,7 +649,7 @@ class AppStatePickThrowVr(AppState):
             self._app_service.hitl_config.networking.enable
             and self._held_target_obj_idx is None
             and (
-                self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
+                self._app_service.gui_input.get_key_down(KeyCode.T)
                 or (
                     not self._is_remote_active_toggle
                     and self._app_service.remote_client_state.get_gui_input().get_any_key_down()
@@ -659,7 +658,7 @@ class AppStatePickThrowVr(AppState):
         ):
             self._is_remote_active_toggle = not self._is_remote_active_toggle
 
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.TAB):
+        if self._app_service.gui_input.get_key_down(KeyCode.TAB):
             self._avatar_switch_helper.switch_avatar()
 
         if not self._paused:

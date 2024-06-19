@@ -10,7 +10,7 @@ import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -130,7 +130,6 @@ class GuiRobotController(GuiController):
         base_action_space = ac_spaces[base_name][base_k]
         base_action = np.zeros(base_action_space.shape[0])
 
-        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
         # Add 180 degrees due to our camera convention. See camera_helper.py _get_eye_and_lookat. Our camera yaw is used to offset the camera eye pos away from the lookat pos, so the resulting look direction yaw (from eye to lookat) is actually 180 degrees away from this yaw.
@@ -140,10 +139,10 @@ class GuiRobotController(GuiController):
         )
 
         # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyNS.W):
+        if gui_input.get_key(KeyCode.W):
             # walk forward in the camera yaw direction
             base_action[0] += 1
-        if gui_input.get_key(KeyNS.S):
+        if gui_input.get_key(KeyCode.S):
             # walk forward in the opposite to camera yaw direction
             base_action[0] -= 1
 
@@ -153,66 +152,66 @@ class GuiRobotController(GuiController):
         # if isinstance(arm_ctrlr, ArmEEAction):
         #     EE_FACTOR = 0.5
         #     # End effector control
-        #     if gui_input.get_key_down(KeyNS.D):
+        #     if gui_input.get_key_down(KeyCode.D):
         #         arm_action[1] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.A):
+        #     elif gui_input.get_key_down(KeyCode.A):
         #         arm_action[1] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.W):
+        #     elif gui_input.get_key_down(KeyCode.W):
         #         arm_action[0] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.S):
+        #     elif gui_input.get_key_down(KeyCode.S):
         #         arm_action[0] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.Q):
+        #     elif gui_input.get_key_down(KeyCode.Q):
         #         arm_action[2] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.E):
+        #     elif gui_input.get_key_down(KeyCode.E):
         #         arm_action[2] -= EE_FACTOR
         # else:
         #     # Velocity control. A different key for each joint
-        #     if gui_input.get_key_down(KeyNS.Q):
+        #     if gui_input.get_key_down(KeyCode.Q):
         #         arm_action[0] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.ONE):
+        #     elif gui_input.get_key_down(KeyCode.ONE):
         #         arm_action[0] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.W):
+        #     elif gui_input.get_key_down(KeyCode.W):
         #         arm_action[1] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.TWO):
+        #     elif gui_input.get_key_down(KeyCode.TWO):
         #         arm_action[1] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.E):
+        #     elif gui_input.get_key_down(KeyCode.E):
         #         arm_action[2] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.THREE):
+        #     elif gui_input.get_key_down(KeyCode.THREE):
         #         arm_action[2] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.R):
+        #     elif gui_input.get_key_down(KeyCode.R):
         #         arm_action[3] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.FOUR):
+        #     elif gui_input.get_key_down(KeyCode.FOUR):
         #         arm_action[3] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.T):
+        #     elif gui_input.get_key_down(KeyCode.T):
         #         arm_action[4] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.FIVE):
+        #     elif gui_input.get_key_down(KeyCode.FIVE):
         #         arm_action[4] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.Y):
+        #     elif gui_input.get_key_down(KeyCode.Y):
         #         arm_action[5] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.SIX):
+        #     elif gui_input.get_key_down(KeyCode.SIX):
         #         arm_action[5] = -1.0
 
-        #     elif gui_input.get_key_down(KeyNS.U):
+        #     elif gui_input.get_key_down(KeyCode.U):
         #         arm_action[6] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.SEVEN):
+        #     elif gui_input.get_key_down(KeyCode.SEVEN):
         #         arm_action[6] = -1.0
 
-        # if gui_input.get_key_down(KeyNS.P):
+        # if gui_input.get_key_down(KeyCode.P):
         #     # logger.info("[play.py]: Unsnapping")
         #     # Unsnap
         #     grasp = -1
-        # elif gui_input.get_key_down(KeyNS.O):
+        # elif gui_input.get_key_down(KeyCode.O):
         #     # Snap
         #     # logger.info("[play.py]: Snapping")
         #     grasp = 1
 
         # reference code
-        # if gui_input.get_key_down(KeyNS.PERIOD):
+        # if gui_input.get_key_down(KeyCode.PERIOD):
         #     # Print the current position of the robot, useful for debugging.
         #     pos = [
         #         float("%.3f" % x) for x in env._sim.robot.sim_obj.translation
@@ -222,7 +221,7 @@ class GuiRobotController(GuiController):
         #     logger.info(
         #         f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         #     )
-        # elif gui_input.get_key_down(KeyNS.COMMA):
+        # elif gui_input.get_key_down(KeyCode.COMMA):
         #     # Print the current arm state of the robot, useful for debugging.
         #     # joint_state = [
         #     #     float("%.3f" % x) for x in env._sim.robot.arm_joint_pos
@@ -466,15 +465,14 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._hint_throw_vel = None
 
-        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
         humancontroller_base_user_input = np.zeros(3)
         # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyNS.W):
+        if gui_input.get_key(KeyCode.W):
             # walk forward in the camera yaw direction
             humancontroller_base_user_input[0] += 1
-        if gui_input.get_key(KeyNS.S):
+        if gui_input.get_key(KeyCode.S):
             # walk forward in the opposite to camera yaw direction
             humancontroller_base_user_input[0] -= 1
 

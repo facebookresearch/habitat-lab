@@ -121,7 +121,7 @@ class AppStateMinimal(AppState):
         )
 
         # exit when the ESC key is pressed
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+        if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             post_sim_update_dict["application_exit"] = True
 
 

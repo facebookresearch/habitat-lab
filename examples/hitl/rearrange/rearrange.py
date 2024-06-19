@@ -16,6 +16,7 @@ from habitat_hitl.app_states.app_state_tutorial import AppStateTutorial
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.gui_controller import (
@@ -142,7 +143,7 @@ class AppStateRearrange(AppState):
                 mn.Color3(255 / 255, 255 / 255, 0),
             )
 
-            if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
                 translation = self._get_agent_translation()
                 dist_to_obj = np.linalg.norm(goal_position - translation)
                 if dist_to_obj < self._can_grasp_place_threshold:
@@ -153,9 +154,7 @@ class AppStateRearrange(AppState):
             if self._held_target_obj_idx is None:
                 assert not self._gui_agent_ctrl.is_grasped
                 # pick up an object
-                if self._app_service.gui_input.get_key_down(
-                    GuiInput.KeyNS.SPACE
-                ):
+                if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
                     translation = self._get_agent_translation()
 
                     min_dist = self._can_grasp_place_threshold
@@ -438,12 +437,12 @@ class AppStateRearrange(AppState):
         return lookat
 
     def sim_update(self, dt, post_sim_update_dict):
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+        if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
         if (
-            self._app_service.gui_input.get_key_down(GuiInput.KeyNS.M)
+            self._app_service.gui_input.get_key_down(KeyCode.M)
             and self._episode_helper.next_episode_exists()
         ):
             self._app_service.end_episode(do_reset=True)

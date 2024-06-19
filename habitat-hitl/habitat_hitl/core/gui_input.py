@@ -16,7 +16,6 @@ class GuiInput:
     This class isn't usable by itself for getting input from the underlying OS. I.e. it won't self-populate from underlying OS input APIs. See also gui_application.py InputHandlerApplication.
     """
 
-    KeyNS = KeyCode
     MouseNS = MouseButton
 
     def __init__(self):

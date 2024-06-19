@@ -28,7 +28,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -274,10 +274,10 @@ class UserData:
             self.end_episode_form.step()
             return
 
-        if self.gui_input.get_key_down(GuiInput.KeyNS.H):
+        if self.gui_input.get_key_down(KeyCode.H):
             self.show_gui_text = not self.show_gui_text
 
-        if self.gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+        if self.gui_input.get_key_down(KeyCode.ZERO):
             self.end_episode_form.show()
 
         if self.client_helper:
@@ -668,14 +668,14 @@ class AppStateRearrangeV2(AppStateBase):
             # Server GUI exit.
             if (
                 not self._app_service.hitl_config.networking.enable
-                and self._server_gui_input.get_key_down(GuiInput.KeyNS.ESC)
+                and self._server_gui_input.get_key_down(KeyCode.ESC)
             ):
                 self._app_service.end_episode()
                 post_sim_update_dict["application_exit"] = True
                 return
 
             # Skip the form when changing the episode from the server.
-            if self._server_gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+            if self._server_gui_input.get_key_down(KeyCode.ZERO):
                 server_user = self._user_data[self._server_user_index]
                 if (
                     server_user.agent_data.episode_completion_status
@@ -685,7 +685,7 @@ class AppStateRearrangeV2(AppStateBase):
 
             # Switch the server-controlled user.
             if self._num_users > 0 and self._server_gui_input.get_key_down(
-                GuiInput.KeyNS.TAB
+                KeyCode.TAB
             ):
                 self._server_user_index = (
                     self._server_user_index + 1
