@@ -223,7 +223,7 @@ class UI:
         if (
             not self._is_holding_object()
             and self._is_object_pickable(object_id)
-            and not self._is_someone_holding_object(object_id)
+            and not self._world.is_any_agent_holding_object(object_id)
         ):
             rigid_object = self._world.get_rigid_object(object_id)
             if rigid_object is not None:
@@ -353,10 +353,6 @@ class UI:
         """Returns true if the user is holding an object."""
         return self._held_object_id is not None
 
-    def _is_someone_holding_object(self, object_id: int) -> bool:
-        """Returns true if any user is holding the specified object."""
-        return object_id in self._world._all_held_object_ids
-
     def _is_within_reach(self, target_pos: mn.Vector3) -> bool:
         """Returns true if the target can be reached by the user."""
         return (
@@ -382,7 +378,7 @@ class UI:
         if not self._is_within_reach(point):
             return False
         # Cannot place on objects held by agents.
-        if self._is_someone_holding_object(receptacle_object_id):
+        if self._world.is_any_agent_holding_object(receptacle_object_id):
             return False
         return True
 
@@ -451,7 +447,7 @@ class UI:
         object_id = self._hover_selection.object_id
         if not self._is_object_pickable(
             object_id
-        ) or self._is_someone_holding_object(object_id):
+        ) or self._world.is_any_agent_holding_object(object_id):
             return
 
         managed_object = sim_utilities.get_obj_from_id(
