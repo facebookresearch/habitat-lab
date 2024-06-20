@@ -37,10 +37,6 @@ habitat:
     type: "CollaborationDataset-v0"
     data_path: "data/episodes/cycled_tuts.json.gz"
     scenes_dir: "data/fpss"
-    # metadata:
-    #   metadata_folder: "data/fpss/metadata"
-    #   obj_metadata: object_categories_filtered.csv
-      # staticobj_metadata: fpmodels-with-decomposed.csv
   task:
     pddl_domain_def: fp
   simulator:
@@ -64,6 +60,11 @@ paths:
   epi_result_file_path: "${paths.results_dir}/episode_result_log.csv"
   run_result_file_path: "${paths.results_dir}/run_result_log.csv"
   end_result_file_path: "${paths.results_dir}/end_result_log.csv"
+
+metadata:
+  metadata_folder: "data/fpss/metadata"
+  obj_metadata: object_categories_filtered.csv
+  staticobj_metadata: fpmodels-with-decomposed.csv
 
 hydra:
   job:

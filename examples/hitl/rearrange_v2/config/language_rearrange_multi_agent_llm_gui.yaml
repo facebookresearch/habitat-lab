@@ -111,7 +111,7 @@ habitat:
   environment:
     max_episode_steps: 750  # this is 20000 in habitat-llm
   simulator:
-    type: RearrangeSim-v0
+    type: CollaborationSim-v0
     seed: 100
 
     # --- habitat-llm block

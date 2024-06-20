@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from omegaconf import OmegaConf
+
 import habitat
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -19,6 +21,14 @@ def update_config(
     debug_third_person_height=None,
 ):
     with habitat.config.read_write(config):  # type: ignore
+        # Move the metadata info to the habitat simulator config
+        if "metadata" in config:
+            config_dict = OmegaConf.create(
+                OmegaConf.to_container(config.habitat, resolve=True)
+            )
+            config_dict.simulator.metadata = config.metadata
+            config.habitat = config_dict
+
         habitat_config = config.habitat
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
