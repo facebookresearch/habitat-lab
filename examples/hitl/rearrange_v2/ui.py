@@ -285,7 +285,7 @@ class UI:
                 UI.PlaceEventData(
                     object_id=object_id,
                     object_handle=rigid_object.handle,
-                    receptacle_id=self._place_selection.object_id,
+                    receptacle_id=receptacle_object_id,
                 )
             )
 
