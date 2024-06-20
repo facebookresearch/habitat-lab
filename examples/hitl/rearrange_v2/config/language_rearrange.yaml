@@ -56,7 +56,7 @@ habitat:
   environment:
     max_episode_steps: 750
   simulator:
-    type: RearrangeSim-v0
+    type: CollaborationSim-v0
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"

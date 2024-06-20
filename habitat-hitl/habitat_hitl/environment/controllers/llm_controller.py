@@ -208,12 +208,20 @@ class LLMController(SingleAgentBaselinesController):
             elif action["action"] == "PLACE":
                 furniture_name = "unknown furniture"
                 if action["receptacle_id"] is not None:
-                    receptacle_object = get_obj_from_id(self.environment_interface.sim, action["receptacle_id"])
-                    receptacle_handle = receptacle_object.handle if hasattr(receptacle_object, "handle") else None
+                    receptacle_object = get_obj_from_id(
+                        self.environment_interface.sim, action["receptacle_id"]
+                    )
+                    receptacle_handle = (
+                        receptacle_object.handle
+                        if hasattr(receptacle_object, "handle")
+                        else None
+                    )
                     receptacle_node = None
                     if receptacle_handle is not None:
                         try:
-                            receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(receptacle_handle)
+                            receptacle_node = self.environment_interface.world_graph.get_node_from_sim_handle(
+                                receptacle_handle
+                            )
                         except ValueError as e:
                             self._log.append(e)
                     if receptacle_node is not None:
@@ -262,6 +270,13 @@ class LLMController(SingleAgentBaselinesController):
         return
 
     def act(self, observations, debug_obs: bool = False, *args, **kwargs):
+        # Example fetching object states in HITL
+        print(
+            "Current object states:\n",
+            self.environment_interface.sim.object_state_machine.get_snapshot_dict(
+                self.environment_interface.sim
+            ),
+        )
         # set the task as done and report it back
         if self._task_done and not self._termination_reported:
             if (
