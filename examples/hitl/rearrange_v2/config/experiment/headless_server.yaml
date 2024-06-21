@@ -6,7 +6,8 @@ habitat_hitl:
     enable: True
     http_availability_server:
       enable: True
-    client_max_idle_duration: 30.0
+    client_max_idle_duration: 180.0
+    enable_connections_by_default: False
   experimental:
     headless:
       do_headless: True
