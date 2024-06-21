@@ -456,6 +456,8 @@ def snap_down(
     To use this utility, generate an initial placement for any object above any of the designated support surfaces and call this function to attempt to snap it onto the nearest surface in the gravity direction.
     """
 
+    aom = sim.get_articulated_object_manager()
+
     cached_position = obj.translation
 
     if support_obj_ids is None:
@@ -484,34 +486,49 @@ def snap_down(
         cps = sim.get_physics_contact_points()
         for cp in cps:
             if (
-                (
-                    # the object is involved in the contact
-                    cp.object_id_a == obj.object_id
-                    or cp.object_id_b == obj.object_id
-                )
-                and not (
+                # the object is involved in the contact
+                cp.object_id_a == obj.object_id
+                or cp.object_id_b == obj.object_id
+            ):
+                cp_obj_id_a = cp.object_id_a
+                cp_obj_id_b = cp.object_id_b
+                if cp.link_id_a > 0:
+                    # object_a is an AO and we need to get the link object id
+                    ao_a = aom.get_object_by_id(cp.object_id_a)
+                    links_to_obj_ids = {
+                        v: k for k, v in ao_a.link_object_ids.items()
+                    }
+                    cp_obj_id_a = links_to_obj_ids[cp.link_id_a]
+                if cp.link_id_b > 0:
+                    # object_b is an AO and we need to get the link object id
+                    ao_b = aom.get_object_by_id(cp.object_id_b)
+                    links_to_obj_ids = {
+                        v: k for k, v in ao_b.link_object_ids.items()
+                    }
+                    cp_obj_id_b = links_to_obj_ids[cp.link_id_b]
+
+                if not (
                     # the contact does not involve ignored objects
-                    cp.object_id_a in ignore_obj_ids
-                    or cp.object_id_b in ignore_obj_ids
-                )
-                and (
-                    (
+                    cp_obj_id_a in ignore_obj_ids
+                    or cp_obj_id_b in ignore_obj_ids
+                ) and (
+                    not (
+                        # contact is not with a support object
+                        cp_obj_id_a in support_obj_ids
+                        or cp_obj_id_b in support_obj_ids
+                    )
+                    or (
                         # contact exceeds maximum depth
                         # NOTE: contact depth is negative distance
                         cp.contact_distance
                         < (-1 * max_collision_depth)
                     )
-                    or not (
-                        # contact is not with a support object
-                        cp.object_id_a in support_obj_ids
-                        or cp.object_id_b in support_obj_ids
-                    )
-                )
-            ):
-                obj.translation = cached_position
-                # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
-                # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
-                return False
+                ):
+                    obj.translation = cached_position
+                    return False
+                    # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
+                    # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
+
         return True
     else:
         # no valid position found, reset and return failure
