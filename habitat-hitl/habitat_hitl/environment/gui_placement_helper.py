@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import magnum as mn
 
@@ -21,6 +21,10 @@ RADIUS_PLACE_PREVIEW_INVALID = 0.05
 FAR_AWAY_HIDDEN_POSITION = mn.Vector3(0, -1000, 0)
 DEFAULT_GRAVITY = mn.Vector3(0, -1, 0)
 
+if TYPE_CHECKING:
+    from habitat_sim.geo import Ray
+    from habitat_sim.physics import ManagedBulletRigidObject
+
 
 class GuiPlacementHelper:
     """Helper for placing objects from the GUI."""
@@ -35,7 +39,9 @@ class GuiPlacementHelper:
         self._user_index = user_index
         self._gravity_dir = gravity_dir
 
-    def _snap_or_hide_object(self, ray, query_obj) -> tuple[bool, mn.Vector3]:
+    def _snap_or_hide_object(
+        self, ray: Ray, query_obj: ManagedBulletRigidObject
+    ) -> tuple[bool, mn.Vector3]:
         sim = self._app_service.sim
 
         assert query_obj.collidable
@@ -93,7 +99,7 @@ class GuiPlacementHelper:
 
         return True, adjusted_hit_pos
 
-    def update(self, ray, query_obj_id):
+    def update(self, ray: Ray, query_obj_id: int):
         sim = self._app_service.sim
         query_obj = sim.get_rigid_object_manager().get_object_by_id(
             query_obj_id

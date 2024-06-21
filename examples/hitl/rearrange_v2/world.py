@@ -11,7 +11,10 @@ from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentManager,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat_sim.physics import ManagedArticulatedObject
+from habitat_sim.physics import (
+    ManagedBulletArticulatedObject,
+    ManagedBulletRigidObject,
+)
 
 
 class World:
@@ -68,7 +71,7 @@ class World:
         self._interactable_object_ids = set()
         aom = sim.get_articulated_object_manager()
         all_ao: List[
-            ManagedArticulatedObject
+            ManagedBulletArticulatedObject
         ] = aom.get_objects_by_handle_substring().values()
         # Classify all non-root links.
         for ao in all_ao:
@@ -85,7 +88,9 @@ class World:
                         if link_index:
                             sim_utilities.close_link(ao, link_index)
 
-    def get_rigid_object(self, object_id: int) -> Optional[Any]:
+    def get_rigid_object(
+        self, object_id: int
+    ) -> Optional[ManagedBulletRigidObject]:
         """Get the rigid object with the specified ID. Returns None if unsuccessful."""
         rom = self._sim.get_rigid_object_manager()
         return rom.get_object_by_id(object_id)
@@ -102,7 +107,7 @@ class World:
         )
         if (
             obj is not None
-            and isinstance(obj, ManagedArticulatedObject)
+            and isinstance(obj, ManagedBulletArticulatedObject)
             and object_id in obj.link_object_ids
         ):
             return obj.link_object_ids[object_id]
@@ -112,7 +117,7 @@ class World:
         """Get the IDs of objects composing an agent (including links)."""
         # TODO: Cache
         sim = self._sim
-        agent_manager: ArticulatedAgentManager = sim.agents_mgr
+        agent_manager = sim.agents_mgr
         agent_object_ids: Set[int] = set()
         agent = agent_manager[agent_index]
         agent_ao = agent.articulated_agent.sim_obj
