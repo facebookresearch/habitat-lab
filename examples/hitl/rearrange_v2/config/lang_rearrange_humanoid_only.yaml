@@ -9,9 +9,12 @@ habitat:
   # various config args to ensure the episode never ends
   environment:
     max_episode_steps: 0
+    # Ensure that the episode iterator can be controlled by specifying episode IDs.
     iterator_options:
-      # For the demo, we want to showcase the episodes in the specified order
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
       shuffle: False
+      group_by_scene: False
 
 habitat_baselines:
   # todo: document these choices
@@ -32,7 +35,7 @@ habitat_hitl:
     - agent_index: 0
       lin_speed: 10.0
       ang_speed: 300
-  hide_humanoid_in_gui: True
+  hide_humanoid_in_gui: False
   camera:
     first_person_mode: True
   networking:
@@ -40,3 +43,4 @@ habitat_hitl:
       server_camera: False
       server_input: False
     client_max_idle_duration: 180.0
+    enable_connections_by_default: False
