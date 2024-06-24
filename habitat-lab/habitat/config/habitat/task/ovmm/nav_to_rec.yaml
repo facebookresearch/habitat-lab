@@ -50,7 +50,7 @@ measurements:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
   ovmm_nav_to_obj_reward:
-    navmesh_violate_pen: 0.3
+    navmesh_violate_pen: 0.0 # finetune with 0.3
     turn_reward_dist: 3.0
     angle_dist_reward: 1.0
     dist_reward: 1.0
@@ -64,6 +64,8 @@ lab_sensors:
   joint_velocity_sensor:
     dimensionality: 10
   ovmm_nav_goal_segmentation_sensor:
-    blank_out_prob: 0.5
+    blank_out_prob: 0.0 # disable for first stage of training
+    # blank_out_prob: 0.5 # enable for second stage of training
   receptacle_segmentation_sensor:
-    blank_out_prob: 0.5
+    blank_out_prob: 0.0 # disable for first stage of training
+    # blank_out_prob: 0.5 # enable for second stage of training

@@ -84,13 +84,15 @@ measurements:
     object_goal: True
     angle_reward_min_dist: 0.0
     angle_reward_scale: 1.0
-    navmesh_violate_pen: 0.3
+    navmesh_violate_pen: 0.0 # finetune with 0.3
 lab_sensors:
   joint_sensor:
     dimensionality: 10
   joint_velocity_sensor:
     dimensionality: 10
   start_recep_segmentation_sensor:
-    blank_out_prob: 0.5
+    blank_out_prob: 0.0 # disable for first stage of training
+    # blank_out_prob: 0.5 # enable for second stage of training
   object_segmentation_sensor:
-    blank_out_prob: 0.5
+    blank_out_prob: 0.0 # disable for first stage of training
+    # blank_out_prob: 0.5 # enable for second stage of training
