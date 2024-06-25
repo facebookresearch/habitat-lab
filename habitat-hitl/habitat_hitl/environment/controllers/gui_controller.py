@@ -10,7 +10,7 @@ import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -108,29 +108,14 @@ class GuiRobotController(GuiController):
             agent_k = f"agent_{self._agent_idx}_"
         else:
             agent_k = ""
-        # arm_k = f"{agent_k}arm_action"
-        # grip_k = f"{agent_k}grip_action"
         base_k = f"{agent_k}base_vel"
-        # arm_name = f"{agent_k}arm_action"
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
-
-        # reference code in case we want to control the arm in the future
-        # if arm_name in ac_spaces:
-        #     arm_action_space = ac_spaces[arm_name][arm_k]
-        #     arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
-        #     arm_action = np.zeros(arm_action_space.shape[0])
-        #     grasp = 0
-        # else:
-        #     arm_ctrlr = None
-        #     arm_action = None
-        #     grasp = None
 
         assert base_name in ac_spaces
         base_action_space = ac_spaces[base_name][base_k]
         base_action = np.zeros(base_action_space.shape[0])
 
-        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
         # Add 180 degrees due to our camera convention. See camera_helper.py _get_eye_and_lookat. Our camera yaw is used to offset the camera eye pos away from the lookat pos, so the resulting look direction yaw (from eye to lookat) is actually 180 degrees away from this yaw.
@@ -140,95 +125,15 @@ class GuiRobotController(GuiController):
         )
 
         # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyNS.W):
+        if gui_input.get_key(KeyCode.W):
             # walk forward in the camera yaw direction
             base_action[0] += 1
-        if gui_input.get_key(KeyNS.S):
+        if gui_input.get_key(KeyCode.S):
             # walk forward in the opposite to camera yaw direction
             base_action[0] -= 1
 
         # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so, in the next env step, we may not turn as much as computed here. This can cause the Spot facing direction to slightly lag behind the camera yaw as yaw changes, which is fine.
         base_action[1] = -turn_angle * self._turn_scale
-
-        # if isinstance(arm_ctrlr, ArmEEAction):
-        #     EE_FACTOR = 0.5
-        #     # End effector control
-        #     if gui_input.get_key_down(KeyNS.D):
-        #         arm_action[1] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.A):
-        #         arm_action[1] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.W):
-        #         arm_action[0] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.S):
-        #         arm_action[0] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.Q):
-        #         arm_action[2] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyNS.E):
-        #         arm_action[2] -= EE_FACTOR
-        # else:
-        #     # Velocity control. A different key for each joint
-        #     if gui_input.get_key_down(KeyNS.Q):
-        #         arm_action[0] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.ONE):
-        #         arm_action[0] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.W):
-        #         arm_action[1] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.TWO):
-        #         arm_action[1] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.E):
-        #         arm_action[2] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.THREE):
-        #         arm_action[2] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.R):
-        #         arm_action[3] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.FOUR):
-        #         arm_action[3] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.T):
-        #         arm_action[4] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.FIVE):
-        #         arm_action[4] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.Y):
-        #         arm_action[5] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.SIX):
-        #         arm_action[5] = -1.0
-
-        #     elif gui_input.get_key_down(KeyNS.U):
-        #         arm_action[6] = 1.0
-        #     elif gui_input.get_key_down(KeyNS.SEVEN):
-        #         arm_action[6] = -1.0
-
-        # if gui_input.get_key_down(KeyNS.P):
-        #     # logger.info("[play.py]: Unsnapping")
-        #     # Unsnap
-        #     grasp = -1
-        # elif gui_input.get_key_down(KeyNS.O):
-        #     # Snap
-        #     # logger.info("[play.py]: Snapping")
-        #     grasp = 1
-
-        # reference code
-        # if gui_input.get_key_down(KeyNS.PERIOD):
-        #     # Print the current position of the robot, useful for debugging.
-        #     pos = [
-        #         float("%.3f" % x) for x in env._sim.robot.sim_obj.translation
-        #     ]
-        #     rot = env._sim.robot.sim_obj.rotation
-        #     ee_pos = env._sim.robot.ee_transform.translation
-        #     logger.info(
-        #         f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
-        #     )
-        # elif gui_input.get_key_down(KeyNS.COMMA):
-        #     # Print the current arm state of the robot, useful for debugging.
-        #     # joint_state = [
-        #     #     float("%.3f" % x) for x in env._sim.robot.arm_joint_pos
-        #     # ]
-
-        #     # logger.info(f"Robot arm joint state: {joint_state}")
 
         assert len(base_action) == self._num_base_vel_actions
         self._actions[
@@ -466,15 +371,14 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._hint_throw_vel = None
 
-        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
         humancontroller_base_user_input = np.zeros(3)
         # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyNS.W):
+        if gui_input.get_key(KeyCode.W):
             # walk forward in the camera yaw direction
             humancontroller_base_user_input[0] += 1
-        if gui_input.get_key(KeyNS.S):
+        if gui_input.get_key(KeyCode.S):
             # walk forward in the opposite to camera yaw direction
             humancontroller_base_user_input[0] -= 1
 

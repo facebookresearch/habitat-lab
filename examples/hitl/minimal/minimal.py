@@ -3,15 +3,14 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 import hydra
 import magnum
 
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
+from habitat_hitl.core.key_mapping import KeyCode
 
 
 class AppStateMinimal(AppState):
@@ -40,7 +39,7 @@ class AppStateMinimal(AppState):
         )
 
         # exit when the ESC key is pressed
-        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+        if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             post_sim_update_dict["application_exit"] = True
 
 
