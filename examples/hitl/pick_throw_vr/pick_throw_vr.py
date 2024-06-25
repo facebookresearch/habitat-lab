@@ -51,11 +51,7 @@ class AppStatePickThrowVr(AppState):
 
     def __init__(self, app_service: AppService):
         self._app_service = app_service
-        self._gui_agent_ctrl: Any = (
-            self._app_service.gui_agent_controllers[0]
-            if len(self._app_service.gui_agent_controllers)
-            else None
-        )
+        self._gui_agent_ctrl: Any = self._app_service.gui_agent_controller
         self._can_grasp_place_threshold = (
             self._app_service.hitl_config.can_grasp_place_threshold
         )
@@ -79,9 +75,7 @@ class AppStatePickThrowVr(AppState):
         assert not self._app_service.hitl_config.camera.first_person_mode
 
         self._nav_helper = GuiNavigationHelper(
-            self._app_service,
-            self.get_gui_controlled_agent_index(),
-            user_index=0,
+            self._app_service, self.get_gui_controlled_agent_index()
         )
         self._throw_helper = GuiThrowHelper(
             self._app_service, self.get_gui_controlled_agent_index()
@@ -90,6 +84,8 @@ class AppStatePickThrowVr(AppState):
         self._avatar_switch_helper = AvatarSwitcher(
             self._app_service, self._gui_agent_ctrl
         )
+
+        self._gui_agent_ctrl.line_renderer = app_service.line_render
 
         self._is_remote_active_toggle: bool = False
         self._count_tsteps_stop: int = 0
@@ -170,14 +166,12 @@ class AppStatePickThrowVr(AppState):
         assert not self._held_target_obj_idx
         self._recent_reach_pos = None
         self._recent_hand_idx = None
-        remote_client_state = self._app_service.remote_client_state
+        remote_gui_input = self._app_service.remote_gui_input
 
         hand_positions = []
         num_hands = 2
         for i in range(num_hands):
-            hand_pos, _ = remote_client_state.get_hand_pose(
-                user_index=0, hand_idx=i
-            )
+            hand_pos, _ = remote_gui_input.get_hand_pose(i)
             if hand_pos:
                 hand_positions.append(hand_pos)
         if len(hand_positions) == 0:
@@ -186,7 +180,7 @@ class AppStatePickThrowVr(AppState):
 
         grasped_objects_idxs = get_grasped_objects_idxs(self.get_sim())
 
-        remote_button_input = remote_client_state.get_gui_input()
+        remote_button_input = remote_gui_input.get_gui_input()
 
         found_obj_idx = None
         found_hand_idx = None
@@ -245,8 +239,8 @@ class AppStatePickThrowVr(AppState):
         assert self._held_target_obj_idx is not None
         assert self._remote_held_hand_idx is not None
 
-        remote_client_state = self._app_service.remote_client_state
-        remote_button_input = remote_client_state.get_gui_input()
+        remote_gui_input = self._app_service.remote_gui_input
+        remote_button_input = remote_gui_input.get_gui_input()
 
         do_throw = False
         for key in self.get_grasp_keys_by_hand(self._remote_held_hand_idx):
@@ -260,18 +254,18 @@ class AppStatePickThrowVr(AppState):
             rom_obj.collidable = True
 
             hand_idx = self._remote_held_hand_idx
-            history_len = remote_client_state.get_history_length()
+            history_len = remote_gui_input.get_history_length()
             assert history_len >= 2
             history_offset = 1
-            pos1, _ = remote_client_state.get_hand_pose(
-                user_index=0, hand_idx=hand_idx, history_index=history_offset
+            pos1, _ = remote_gui_input.get_hand_pose(
+                hand_idx, history_index=history_offset
             )
-            pos0, _ = remote_client_state.get_hand_pose(
-                user_index=0, hand_idx=hand_idx, history_index=history_len - 1
+            pos0, _ = remote_gui_input.get_hand_pose(
+                hand_idx, history_index=history_len - 1
             )
             if pos0 and pos1:
                 vel = (pos1 - pos0) / (
-                    remote_client_state.get_history_timestep()
+                    remote_gui_input.get_history_timestep()
                     * (history_len - history_offset)
                 )
                 rom_obj.linear_velocity = vel
@@ -282,8 +276,8 @@ class AppStatePickThrowVr(AppState):
             self._remote_held_hand_idx = None
         else:
             # snap to hand
-            hand_pos, hand_rotation = remote_client_state.get_hand_pose(
-                user_index=0, hand_idx=self._remote_held_hand_idx
+            hand_pos, hand_rotation = remote_gui_input.get_hand_pose(
+                self._remote_held_hand_idx
             )
             assert hand_pos is not None
 
@@ -303,7 +297,7 @@ class AppStatePickThrowVr(AppState):
             walk_dir,
             distance_multiplier,
             forward_dir,
-        ) = self._nav_helper.get_humanoid_walk_hints_from_remote_client_state(
+        ) = self._nav_helper.get_humanoid_walk_hints_from_remote_gui_input(
             visualize_path=False
         )
 
@@ -499,10 +493,12 @@ class AppStatePickThrowVr(AppState):
         )
 
     def _draw_circle(self, pos, color, radius):
-        self._app_service.gui_drawer.draw_circle(
+        num_segments = 24
+        self._app_service.line_render.draw_circle(
             pos,
             radius,
             color,
+            num_segments,
         )
 
     def _add_target_object_highlight_ring(
@@ -652,7 +648,7 @@ class AppStatePickThrowVr(AppState):
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SIX):
             self._app_service.episode_helper.set_next_episode_by_id(
                 self._app_service.episode_helper.current_episode.episode_id
-            )            
+            )
             self._app_service.end_episode(do_reset=True)
 
         if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
@@ -671,7 +667,7 @@ class AppStatePickThrowVr(AppState):
                 self._app_service.gui_input.get_key_down(GuiInput.KeyNS.T)
                 or (
                     not self._is_remote_active_toggle
-                    and self._app_service.remote_client_state.get_gui_input().get_any_key_down()
+                    and self._app_service.remote_gui_input.get_gui_input().get_any_key_down()
                 )
             )
         ):

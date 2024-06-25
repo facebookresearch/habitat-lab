@@ -49,10 +49,10 @@ class RemoteGuiInput:
 
         # temp map VR button to key
         self._button_map = {
-            0: GuiInput.KeyNS.ZERO,
-            1: GuiInput.KeyNS.ONE,
-            2: GuiInput.KeyNS.TWO,
-            3: GuiInput.KeyNS.THREE,
+            0: KeyCode.ZERO,
+            1: KeyCode.ONE,
+            2: KeyCode.TWO,
+            3: KeyCode.THREE,
         }
 
         self._gui_input = GuiInput()
