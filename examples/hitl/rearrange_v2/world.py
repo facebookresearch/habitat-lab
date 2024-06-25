@@ -127,3 +127,18 @@ class World:
             agent_object_ids.add(link_object_id)
 
         return agent_object_ids
+
+    def is_any_agent_holding_object(self, object_id: int) -> bool:
+        """
+        Checks whether the specified object is being held by an agent.
+        This function looks up both the HITL world state and grasp managers.
+        """
+        sim = self._sim
+        agents_mgr = sim.agents_mgr
+
+        for agent_index in range(len(agents_mgr.agent_names)):
+            grasp_mgr = agents_mgr._all_agent_data[agent_index].grasp_mgr
+            if grasp_mgr._snapped_obj_id == object_id:
+                return True
+
+        return object_id in self._all_held_object_ids
