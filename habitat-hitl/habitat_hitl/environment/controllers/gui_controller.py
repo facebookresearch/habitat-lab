@@ -108,23 +108,9 @@ class GuiRobotController(GuiController):
             agent_k = f"agent_{self._agent_idx}_"
         else:
             agent_k = ""
-        # arm_k = f"{agent_k}arm_action"
-        # grip_k = f"{agent_k}grip_action"
         base_k = f"{agent_k}base_vel"
-        # arm_name = f"{agent_k}arm_action"
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
-
-        # reference code in case we want to control the arm in the future
-        # if arm_name in ac_spaces:
-        #     arm_action_space = ac_spaces[arm_name][arm_k]
-        #     arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
-        #     arm_action = np.zeros(arm_action_space.shape[0])
-        #     grasp = 0
-        # else:
-        #     arm_ctrlr = None
-        #     arm_action = None
-        #     grasp = None
 
         assert base_name in ac_spaces
         base_action_space = ac_spaces[base_name][base_k]
@@ -148,86 +134,6 @@ class GuiRobotController(GuiController):
 
         # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so, in the next env step, we may not turn as much as computed here. This can cause the Spot facing direction to slightly lag behind the camera yaw as yaw changes, which is fine.
         base_action[1] = -turn_angle * self._turn_scale
-
-        # if isinstance(arm_ctrlr, ArmEEAction):
-        #     EE_FACTOR = 0.5
-        #     # End effector control
-        #     if gui_input.get_key_down(KeyCode.D):
-        #         arm_action[1] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyCode.A):
-        #         arm_action[1] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyCode.W):
-        #         arm_action[0] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyCode.S):
-        #         arm_action[0] -= EE_FACTOR
-        #     elif gui_input.get_key_down(KeyCode.Q):
-        #         arm_action[2] += EE_FACTOR
-        #     elif gui_input.get_key_down(KeyCode.E):
-        #         arm_action[2] -= EE_FACTOR
-        # else:
-        #     # Velocity control. A different key for each joint
-        #     if gui_input.get_key_down(KeyCode.Q):
-        #         arm_action[0] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.ONE):
-        #         arm_action[0] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.W):
-        #         arm_action[1] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.TWO):
-        #         arm_action[1] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.E):
-        #         arm_action[2] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.THREE):
-        #         arm_action[2] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.R):
-        #         arm_action[3] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.FOUR):
-        #         arm_action[3] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.T):
-        #         arm_action[4] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.FIVE):
-        #         arm_action[4] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.Y):
-        #         arm_action[5] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.SIX):
-        #         arm_action[5] = -1.0
-
-        #     elif gui_input.get_key_down(KeyCode.U):
-        #         arm_action[6] = 1.0
-        #     elif gui_input.get_key_down(KeyCode.SEVEN):
-        #         arm_action[6] = -1.0
-
-        # if gui_input.get_key_down(KeyCode.P):
-        #     # logger.info("[play.py]: Unsnapping")
-        #     # Unsnap
-        #     grasp = -1
-        # elif gui_input.get_key_down(KeyCode.O):
-        #     # Snap
-        #     # logger.info("[play.py]: Snapping")
-        #     grasp = 1
-
-        # reference code
-        # if gui_input.get_key_down(KeyCode.PERIOD):
-        #     # Print the current position of the robot, useful for debugging.
-        #     pos = [
-        #         float("%.3f" % x) for x in env._sim.robot.sim_obj.translation
-        #     ]
-        #     rot = env._sim.robot.sim_obj.rotation
-        #     ee_pos = env._sim.robot.ee_transform.translation
-        #     logger.info(
-        #         f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
-        #     )
-        # elif gui_input.get_key_down(KeyCode.COMMA):
-        #     # Print the current arm state of the robot, useful for debugging.
-        #     # joint_state = [
-        #     #     float("%.3f" % x) for x in env._sim.robot.arm_joint_pos
-        #     # ]
-
-        #     # logger.info(f"Robot arm joint state: {joint_state}")
 
         assert len(base_action) == self._num_base_vel_actions
         self._actions[
