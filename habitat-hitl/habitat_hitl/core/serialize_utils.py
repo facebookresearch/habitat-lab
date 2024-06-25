@@ -57,11 +57,17 @@ def convert_to_json_friendly(obj):
         return convert_to_json_friendly(list(obj))
     else:
         # If obj is a complex object, convert its attributes to a dictionary
-        attributes = {
-            attr: convert_to_json_friendly(getattr(obj, attr))
-            for attr in dir(obj)
-            if not attr.startswith("__") and not callable(getattr(obj, attr))
-        }
+        attributes = {}
+        for attr in dir(obj):
+            try:
+                if not attr.startswith("__") and not callable(
+                    getattr(obj, attr)
+                ):
+                    attributes[attr] = getattr(obj, attr)
+            except Exception as e:
+                print(
+                    f"Unable to convert attribute to JSON: {attr}. Skipping. {e}"
+                )
         return convert_to_json_friendly(attributes)
 
 
