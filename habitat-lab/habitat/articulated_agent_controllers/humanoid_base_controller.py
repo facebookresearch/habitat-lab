@@ -10,6 +10,9 @@ from typing import List, Union
 import magnum as mn
 import numpy as np
 
+# The default offset from the root of the character and its feet
+BASE_HUMANOID_OFFSET: mn.Vector3 = mn.Vector3(0, 0.9, 0)
+
 
 # TODO: The implementation here assumes a SMPLX representation of humanoids
 # where all joints are represented as quaternions. In future PRs we need
@@ -76,15 +79,13 @@ class HumanoidBaseController:
     def __init__(
         self,
         motion_fps: int = 30,
-        base_offset: mn.Vector3 = None,  # default (0, 0.9, 0)
+        base_offset: mn.Vector3 = BASE_HUMANOID_OFFSET,
     ):
         """
         :param motion_fps: the 'frames per second' at which we should be playing the motion.
-        :param base_offset: what is the offset between the root of the character and their feet. Default (0, 0.9, 0) if not provided.
+        :param base_offset: what is the offset between the root of the character and their feet.
         """
 
-        if base_offset is None:
-            base_offset = mn.Vector3(0, 0.9, 0)
         self.base_offset = base_offset
         self.motion_fps = motion_fps
 

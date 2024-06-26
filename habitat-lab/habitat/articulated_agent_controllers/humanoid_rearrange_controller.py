@@ -16,6 +16,9 @@ from habitat.articulated_agent_controllers import (
     Motion,
     Pose,
 )
+from habitat.articulated_agent_controllers.humanoid_base_controller import (
+    BASE_HUMANOID_OFFSET,
+)
 
 MIN_ANGLE_TURN: float = 5.0  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
 TURNING_STEP_AMOUNT: float = (
@@ -38,12 +41,12 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self,
         walk_pose_path: str,
         motion_fps: int = 30,
-        base_offset: mn.Vector3 = None,  # default (0, 0.9, 0)
+        base_offset: mn.Vector3 = BASE_HUMANOID_OFFSET,
     ):
         """
         :param walk_pose_path: file containing the walking poses we care about.
         :param motion_fps: the 'frames per second' at which we should be advancing the pose.
-        :base_offset: what is the offset between the root of the character and their feet. Default (0, 0.9, 0) if not provided.
+        :base_offset: what is the offset between the root of the character and their feet.
         """
 
         self.obj_transform_base = mn.Matrix4()
