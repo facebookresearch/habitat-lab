@@ -17,31 +17,35 @@ from habitat.articulated_agent_controllers import (
     Pose,
 )
 
-MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
-TURNING_STEP_AMOUNT = (
-    20  # The maximum angle we should be rotating at a given step
+MIN_ANGLE_TURN: float = 5.0  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
+TURNING_STEP_AMOUNT: float = (
+    20.0  # The maximum angle we should be rotating at a given step
 )
-THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
-DIST_TO_STOP = (
+THRESHOLD_ROTATE_NOT_MOVE: float = 20.0  # The rotation angle above which we should only walk as if rotating in place
+DIST_TO_STOP: float = (
     1e-9  # If the amount to move is this distance, just stop the character
 )
+
+from typing import List, Tuple
 
 
 class HumanoidRearrangeController(HumanoidBaseController):
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions
-
-        :param walk_pose_path: file containing the walking poses we care about.
-        :param motion_fps: the FPS at which we should be advancing the pose.
-        :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
         self,
-        walk_pose_path,
-        motion_fps=30,
-        base_offset=(0, 0.9, 0),
+        walk_pose_path: str,
+        motion_fps: int = 30,
+        base_offset: mn.Vector3 = None,  # default (0, 0.9, 0)
     ):
+        """
+        :param walk_pose_path: file containing the walking poses we care about.
+        :param motion_fps: the 'frames per second' at which we should be advancing the pose.
+        :base_offset: what is the offset between the root of the character and their feet. Default (0, 0.9, 0) if not provided.
+        """
+
         self.obj_transform_base = mn.Matrix4()
         super().__init__(motion_fps, base_offset)
 
@@ -106,8 +110,17 @@ class HumanoidRearrangeController(HumanoidBaseController):
             else:
                 self.hand_processed_data[hand_name] = None
 
-    def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
-        """Set the speed of the humanoid according to the simulator speed"""
+    def set_framerate_for_linspeed(
+        self, lin_speed: float, ang_speed: float, ctrl_freq: int
+    ) -> None:
+        """
+        Set the linear and angular speed of the humanoid's root motion based on the relative framerate of the simulator and the motion trajectory.
+
+        :param lin_speed: Speed of linear translation.
+        :param ang_speed: Speed of the angular rotation (about Y-axis).
+        :param ctrl_freq: Simulator step frequency. How many times does Simulator step to progress 1 second.
+        """
+
         seconds_per_step = 1.0 / ctrl_freq
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
@@ -117,16 +130,17 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.turning_step_amount = rotate_amount
         self.threshold_rotate_not_move = rotate_amount
 
-    def calculate_stop_pose(self):
+    def calculate_stop_pose(self) -> None:
         """
-        Calculates a stop, standing pose
+        Calculates a stationary standing pose and sets it in the controller. Does not update the ManagedArticulatedObject state.
         """
+
         # the object transform does not change
         self.joint_pose = self.stop_pose.joints
 
-    def calculate_turn_pose(self, target_position: mn.Vector3):
+    def calculate_turn_pose(self, target_position: mn.Vector3) -> None:
         """
-        Generate some motion without base transform, just turn
+        Calculates next frame of motion (joint positions + root rotation) to rotate the character towards the target position without translation and sets it in the controller.  Does not update the ManagedArticulatedObject state.
         """
         self.calculate_walk_pose(target_position, distance_multiplier=0)
 
@@ -134,13 +148,14 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self,
         target_position: mn.Vector3,
         distance_multiplier: float = 1.0,
-    ):
+    ) -> None:
         """
-        Computes a walking pose and transform, so that the humanoid moves to the relative position
+        Calculates next frame of a walking motion (joint positions + root rotation and translation), so that the humanoid moves toward the relative target_position. Does not update the ManagedArticulatedObject state.
 
-        :param position: target position, relative to the character root translation
-        :param distance_multiplier: allows to create walk motion while not translating, good for turning
+        :param target_position: target position to move the character towards. Relative to the character's root translation.
+        :param distance_multiplier: multiplier on translation speed. '== 0' creates a walk motion while not translating, for example to turn in place.
         """
+
         deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if (
@@ -265,16 +280,16 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self,
         target_position: mn.Vector3,
         distance_multiplier=1.0,
-        target_dir=None,
-    ):
+        target_dir: mn.Vector3 = None,
+    ) -> None:
         """
-        Computes a walking pose and transform, so that the humanoid moves to the relative position
+        Calculates next frame of a walking motion (joint positions + root rotation and translation), so that the humanoid moves toward the relative target_position while facing the direction 'target_dir'. Does not update the ManagedArticulatedObject state.
 
-        :param position: target position, relative to the character root translation
-        :param distance_multiplier: allows to create walk motion while not translating, good for turning
-        :param target_dir: the position we should be looking at. If this is None, rotates the agent to face target_position
-        otherwise, it moves the agent towards target_position but facing target_dir. This is important for moving backwards.
+        :param target_position: target position to move the character towards. Relative to the character's root translation.
+        :param distance_multiplier: multiplier on translation speed. '== 0' creates a walk motion while not translating, for example to turn in place.
+        :param target_dir: the relative position we should be looking at. If None, rotates the agent to face target_position. Otherwise, it moves the agent towards target_position but facing target_dir. This is important for moving backwards.
         """
+
         deg_per_rads = 180.0 / np.pi
         epsilon = 1e-5
 
@@ -350,7 +365,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         forward_V = forward_V.normalized()
         self.prev_orientation = forward_V_orientation
 
-        # TODO: Scale step size based on deltatime.
+        # TODO: Scale step size based on delta time.
         # step_size = int(self.walk_motion.fps / self.draw_fps)
         step_size = int(self.walk_motion.fps / 30.0)
 
@@ -436,12 +451,17 @@ class HumanoidRearrangeController(HumanoidBaseController):
         self.obj_transform_base = obj_transform_base @ rot_offset
         self.joint_pose = joint_pose
 
-    def build_ik_vectors(self, hand_motion):
+    def build_ik_vectors(
+        self, hand_motion: Motion
+    ) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
         """
-        Given a hand_motion Motion file, containing different humanoid poses
-        to reach objects with the hand, builds a matrix fo joint angles, root offset translations and rotations
-        so that they can be easily interpolated when reaching poses.
+        Given a hand_motion Motion file containing different humanoid poses to reach objects with the hand, builds matrices of joint angles, root offset translations, and rotations so that they can be easily interpolated when reaching poses.
+
+        :param hand_motion: The hand Motion object.
+
+        :return: A Tuple of Lists containing joint quats, rotation quats, and translation vectors respectfully. Each list entry is a formatted matrix for the aforementioned values at a single Motion frame.
         """
+
         rotations, translations, joints = [], [], []
         for ind in range(len(hand_motion.poses)):
             curr_transform = mn.Matrix4(hand_motion.poses[ind].root_transform)
@@ -480,16 +500,31 @@ class HumanoidRearrangeController(HumanoidBaseController):
         translations.append(np.array(curr_transform.translation)[None, ...])
         return (joints, rotations, translations)
 
-    def _trilinear_interpolate_pose(self, position, hand_data):
+    def _trilinear_interpolate_pose(
+        self,
+        position: mn.Vector3,
+        hand_data: Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray]],
+    ) -> Tuple[List[np.ndarray], mn.Matrix4]:
         """
-        Given a 3D coordinate position, computes humanoid's joints, rotations and
-        translations to reach that position, doing trilinear interpolation.
+        Given a 3D coordinate position, computes the humanoid's joints states + root rotations and translations to reach that position using trilinear interpolation.
+
+        :param position: The position to reach for.
+        :param hand_data: The joint quats, root rotations, and root translation for each frame of the input reaching Motion.
+
+        :return: joint state and root transform for the next step in the reaching sequence.
         """
+
         assert hand_data is not None
 
         joints, rotations, translations = hand_data
 
-        def find_index_quant(minv, maxv, num_bins, value, interp=False):
+        def find_index_quant(
+            minv: float,
+            maxv: float,
+            num_bins: int,
+            value: float,
+            interp: bool = False,
+        ) -> Tuple[int, int, float]:
             # Find the quantization bins where a given value falls
             # E.g. if we have 3 points, min=0, max=1, value=0.75, it
             # will fall between 1 and 2
@@ -507,13 +542,15 @@ class HumanoidRearrangeController(HumanoidBaseController):
             value_norm_t = index - lower
             if lower < 0:
                 min_poss_val = 0.0
-                lower = (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
+                lower = int(
+                    (min_poss_val - minv) * (num_bins - 1) / (maxv - minv)
+                )
                 value_norm_t = (index - lower) / -lower
                 lower = -1
 
             return lower, upper, value_norm_t
 
-        def comp_inter(x_i, y_i, z_i):
+        def comp_inter(x_i: int, y_i: int, z_i: int) -> int:
             # Given an integer index from 0 to num_bins - 1
             # on each dimension, compute the final index
 
@@ -528,18 +565,24 @@ class HumanoidRearrangeController(HumanoidBaseController):
             )
             return index
 
-        def normalize_quat(quat_tens):
+        def normalize_quat(quat_tens: np.ndarray) -> np.ndarray:
             # The last dimension contains the quaternion
             return quat_tens / np.linalg.norm(quat_tens, axis=-1)[..., None]
 
-        def inter_data(x_i, y_i, z_i, dat, is_quat=False):
+        def inter_data(
+            x_i: Tuple[int, int, float],
+            y_i: Tuple[int, int, float],
+            z_i: Tuple[int, int, float],
+            dat: np.ndarray,
+            is_quat: bool = False,
+        ) -> np.ndarray:
             """
             General trilinear interpolation function. Performs trilinear interpolation,
             normalizing the result if the values are represented as quaternions (is_quat)
 
             :param x_i, y_i, z_i: For the x,y,z dimensions, specifies the lower, upper, and normalized value
             so that we can perform interpolation in 3 dimensions
-            :param data: the values we want to interpolate.
+            :param dat: the values we want to interpolate.
             :param is_quat: used to normalize the value in case we are interpolating quaternions
 
             """
@@ -601,10 +644,14 @@ class HumanoidRearrangeController(HumanoidBaseController):
         )
         return joint_list, transform
 
-    def calculate_reach_pose(self, obj_pos: mn.Vector3, index_hand=0):
+    def calculate_reach_pose(
+        self, obj_pos: mn.Vector3, index_hand: int = 0
+    ) -> None:
         """
-        Updates the humanoid position to reach position obj_pos with the hand.
-        index_hand is 0 or 1 corresponding to the left or right hand
+        Updates the controller's humanoid state to reach position, obj_pos, with the hand.
+
+        :param obj_pos: The position to reach with the hand
+        :param index_hand: is 0 or 1 corresponding to the left or right hand
         """
         assert index_hand < 2
         hand_name = self._hand_names[index_hand]
