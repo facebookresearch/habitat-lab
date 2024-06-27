@@ -485,7 +485,8 @@ class AnyObjectReceptacle(Receptacle):
 
         obj = sutils.get_obj_from_handle(sim, self.parent_object_handle)
         global_keypoints = None
-        if isinstance(obj, habitat_sim.physics.ManagedRigidObject):
+        if not obj.is_articulated:
+            # rigid object
             global_keypoints = sutils.get_rigid_object_global_keypoints(obj)
         elif self.parent_link is not None and self.parent_link >= 0:
             # link

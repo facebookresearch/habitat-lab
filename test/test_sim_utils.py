@@ -12,7 +12,7 @@ import pytest
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat_sim import Simulator, built_with_bullet, stage_id
 from habitat_sim.metadata import MetadataMediator
-from habitat_sim.physics import JointType, ManagedRigidObject, MotionType
+from habitat_sim.physics import JointType, MotionType
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
@@ -721,7 +721,7 @@ def test_on_floor_and_next_to():
 
         for obj_id, handle in all_objects.items():
             obj = sutils.get_obj_from_id(sim, obj_id, ao_link_map)
-            if isinstance(obj, ManagedRigidObject):
+            if not obj.is_articulated:
                 obj_on_floor = sutils.on_floor(
                     sim, obj, ao_link_map=ao_link_map, ao_aabbs=ao_aabbs
                 )
