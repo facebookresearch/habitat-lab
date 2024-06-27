@@ -107,7 +107,7 @@ class World:
         )
         if (
             obj is not None
-            and isinstance(obj, ManagedBulletArticulatedObject)
+            and obj.is_articulated
             and object_id in obj.link_object_ids
         ):
             return obj.link_object_ids[object_id]

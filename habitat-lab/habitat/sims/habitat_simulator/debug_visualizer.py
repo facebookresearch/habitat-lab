@@ -134,7 +134,7 @@ def draw_object_highlight(
         color = mn.Color4.magenta()
 
     obj_bb = None
-    if isinstance(obj, ManagedArticulatedObject):
+    if obj.is_articulated:
         from habitat.sims.habitat_simulator.sim_utilities import get_ao_root_bb
 
         obj_bb = get_ao_root_bb(obj)

@@ -28,9 +28,9 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
 
     This means that new action names can be added, but old action names cannot
     be removed nor can their mapping be altered. This also ensures that all
-    actions are always contigously mapped in :py:`[0, len(HabitatSimActions) - 1]`
+    actions are always contiguously mapped in :py:`[0, len(HabitatSimActions) - 1]`
 
-    This accesible as the global singleton :ref:`HabitatSimActions`
+    This accessible as the global singleton :ref:`HabitatSimActions`
     """
 
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
