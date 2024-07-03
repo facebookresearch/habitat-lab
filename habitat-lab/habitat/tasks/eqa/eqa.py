@@ -19,6 +19,7 @@ from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 @attr.s(auto_attribs=True)
 class QuestionData:
+    """TODO: Add class description"""
     question_text: str
     answer_text: str
     question_tokens: Optional[List[str]] = None
@@ -28,16 +29,18 @@ class QuestionData:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class EQAEpisode(NavigationEpisode):
-    r"""Specification of episode that includes initial position and rotation of
-    agent, goal, question specifications and optional shortest paths.
+    """Specification of episode that includes initial position and rotation of agent, goal, question specifications and optional shortest paths.
 
     Args:
+
         scene_id: id of scene inside the simulator.
+
         start_position: numpy ndarray containing 3 entries for (x, y, z).
-        start_rotation: numpy ndarray with 4 entries for (x, y, z, w)
-            elements of unit quaternion (versor) representing agent 3D
-            orientation.
+
+        start_rotation: numpy ndarray with 4 entries for (x, y, z, w) elements of unit quaternion (versor) representing agent 3D orientation.
+    
         goals: relevant goal object/room.
+    
         question: question related to goal object.
     """
 
@@ -48,6 +51,7 @@ class EQAEpisode(NavigationEpisode):
 
 @registry.register_sensor
 class QuestionSensor(Sensor):
+    """TODO: Add class description"""
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
         super().__init__(*args, **kwargs)
@@ -75,7 +79,7 @@ class QuestionSensor(Sensor):
 
 @registry.register_measure
 class CorrectAnswer(Measure):
-    """CorrectAnswer"""
+    """TODO: Add class description"""
 
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
@@ -93,7 +97,7 @@ class CorrectAnswer(Measure):
 
 @registry.register_measure
 class EpisodeInfo(Measure):
-    """Episode Info"""
+    """TODO: Add class description"""
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
@@ -113,7 +117,7 @@ class EpisodeInfo(Measure):
 
 @registry.register_measure
 class AnswerAccuracy(Measure):
-    """AnswerAccuracy"""
+    """TODO: Add class description"""
 
     def __init__(self, dataset, *args: Any, **kwargs: Any):
         self._dataset = dataset
@@ -144,28 +148,29 @@ class AnswerAccuracy(Measure):
 class EQATask(NavigationTask):
     """
     Embodied Question Answering Task
-    Usage example:
-        env = habitat.Env(config=eqa_config)
-
-        env.reset()
-
-        for i in range(10):
-            action = sample_non_stop_action(env.action_space)
-            if action["action"] != AnswerAction.name:
-                env.step(action)
-            metrics = env.get_metrics() # to check distance to target
-
-        correct_answer_id = env.current_episode.question.answer_token
-        env.step(
-            {
-                "action": AnswerAction.name,
-                "action_args": {"answer_id": correct_answer_id},
-            }
-        )
-
-        metrics = env.get_metrics()
+    
+    Example:
+        >>> env = habitat.Env(config=eqa_config)
+        >>> env.reset()
+        >>> 
+        >>> for i in range(10):
+        >>>     action = sample_non_stop_action(env.action_space)
+        >>>     if action["action"] != AnswerAction.name:
+        >>>         env.step(action)
+        >>>     metrics = env.get_metrics() # to check distance to target
+        >>> 
+        >>> correct_answer_id = env.current_episode.question.answer_token
+        >>>  
+        >>> env.step(
+        >>>     {
+        >>>         "action": AnswerAction.name,
+        >>>         "action_args": {"answer_id": correct_answer_id},
+        >>>     }
+        >>> )
+        >>> 
+        >>> metrics = env.get_metrics()
+    
     """
-
     is_valid: bool = False
     answer: Optional[int] = None
     invalid_reason: Optional[str] = None
@@ -178,6 +183,7 @@ class EQATask(NavigationTask):
 
 @registry.register_task_action
 class AnswerAction(Action):
+    """TODO: Add class description"""
     _answer: Optional[str]
     name: str = "answer"
 
