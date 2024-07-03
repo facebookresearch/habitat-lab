@@ -21,7 +21,6 @@ import habitat_sim
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.debug_visualizer import dblr_draw_bb
-from habitat.tasks.rearrange.utils import get_ao_link_aabb, get_rigid_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 from habitat_sim.utils.common import quat_from_two_vectors as qf2v
 from habitat_sim.utils.common import quat_to_magnum as qtm
@@ -484,20 +483,19 @@ class AnyObjectReceptacle(Receptacle):
         """
 
         obj = sutils.get_obj_from_handle(sim, self.parent_object_handle)
-        global_keypoints = None
-        if not obj.is_articulated:
-            # rigid object
-            global_keypoints = sutils.get_rigid_object_global_keypoints(obj)
-        elif self.parent_link is not None and self.parent_link >= 0:
-            # link
-            global_keypoints = sutils.get_articulated_link_global_keypoints(
-                obj, self.parent_link
-            )
+
+        # get the global keypoints of the object
+        receptacle_bb, local_to_global = None, None
+        if self.parent_link >= 0:
+            link_node = obj.get_link_scene_node(self.parent_link)
+            receptacle_bb = link_node.cumulative_bb
+            local_to_global = link_node.absolute_transformation()
         else:
-            # AO
-            global_keypoints = sutils.get_articulated_object_global_keypoints(
-                obj
-            )
+            receptacle_bb = obj.aabb
+            local_to_global = obj.transformation
+        global_keypoints = sutils.get_global_keypoints_from_bb(
+            receptacle_bb, local_to_global
+        )
 
         # find min and max
         global_bb = mn.Range3D(
@@ -1187,21 +1185,22 @@ def get_navigable_receptacles(
     max_access_height = 1.3
     navigable_receptacles: List[Receptacle] = []
     for receptacle in receptacles:
-        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
-        receptacle_obj = obj_mgr.get_object_by_handle(
-            receptacle.parent_object_handle
+        receptacle_obj = sutils.get_obj_from_handle(
+            sim, receptacle.parent_object_handle
         )
+
+        # get the global bounding box of the object
         receptacle_bb = None
-        if receptacle.is_parent_object_articulated:
-            receptacle_bb = get_ao_link_aabb(
-                receptacle_obj.object_id,
-                receptacle.parent_link,
-                sim,
-                transformed=True,
+        if receptacle.parent_link >= 0:
+            link_node = receptacle_obj.get_link_scene_node(
+                receptacle.parent_link
+            )
+            receptacle_bb = habitat_sim.geo.get_transformed_bb(
+                link_node.cumulative_bb, link_node.absolute_transformation()
             )
         else:
-            receptacle_bb = get_rigid_aabb(
-                receptacle_obj.object_id, sim, transformed=True
+            receptacle_bb = habitat_sim.geo.get_transformed_bb(
+                receptacle_obj.aabb, receptacle_obj.transformation
             )
 
         recep_points = [
