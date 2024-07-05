@@ -236,14 +236,17 @@ Heading 3
 - :return: \<DESCRIPTION OF FUNCTION OUTPUT>
   - Used at function level
 
-- :py: \<PYTHON CODE VARIBLE>
+- :py: \`\<PYTHON CODE VARIBLE>\`
   - Reformat string into Python code format
 
 - :ref: \<MODDULE>.\<MODULE>.[...]\<CLASS>
   - Make a hyperlink that references to other parts of documentation
 
-- :math: \<LATEX MATH FUNCTION>
+- :math: \`\<LATEX MATH FUNCTION>\`
   - This if meant to display math functions inline using LaTeX notation. NOTE:  use double slash \\\\ instead of \\ for special LaTeX functions.
+
+- :property \<NAME OF PROPERTY>:  \<DESCRIPTION OF PROPERTY>
+	- Between a class function and a class method. Usually for publically accessible setters and getters
 	
 References to more syntax examples and options:
 
