@@ -3,7 +3,8 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""TODO: Add module description"""
+# TODO: Double check that comments and docstrings are up to date.
 import os
 from collections import OrderedDict
 from typing import Callable, Dict, List, Union
@@ -32,7 +33,6 @@ from habitat.sims.habitat_simulator.habitat_simulator import (
 )
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 from habitat_sim.sensor import SensorSpec as BackendSensorSpec
-
 
 class EnvBatchRenderer:
     r"""
