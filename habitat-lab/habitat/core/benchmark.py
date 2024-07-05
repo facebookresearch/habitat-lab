@@ -6,7 +6,7 @@
 r"""Implements evaluation of ``habitat.Agent`` inside ``habitat.Env``.
 ``habitat.Benchmark`` creates a ``habitat.Env`` which is specified through
 the ``config_env`` parameter in constructor. The evaluation is task agnostic
-and is implemented through metrics defined for ``habitat.EmbodiedTask``.
+and implemented through metrics defined for ``habitat.EmbodiedTask``. TODO: Description needs clarity
 """
 
 import os
@@ -21,13 +21,13 @@ from habitat.core.env import Env
 
 
 class Benchmark:
-    r"""Benchmark for evaluating agents in environments."""
+    r"""Benchmark for evaluating agents in environments. TODO: Description needs clarity"""
 
     def __init__(
         self, config_paths: Optional[str] = None, eval_remote: bool = False
     ) -> None:
-        r"""..
-
+        r"""
+        TODO: Add class description
         :param config_paths: file to be used for creating the environment
         :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
         """
@@ -42,6 +42,7 @@ class Benchmark:
     def remote_evaluate(
         self, agent: "Agent", num_episodes: Optional[int] = None
     ):
+        """TODO: Add class description, and is the bottom comment still true?"""
         # The modules imported below are specific to habitat-challenge remote evaluation.
         # These modules are not part of the habitat-lab repository.
         import pickle
@@ -160,7 +161,7 @@ class Benchmark:
     def evaluate(
         self, agent: "Agent", num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
-        r"""..
+        r""" TODO: Add class description
 
         :param agent: agent to be evaluated in environment.
         :param num_episodes: count of number of episodes for which the
