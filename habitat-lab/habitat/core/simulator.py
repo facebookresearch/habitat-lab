@@ -3,6 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+"""TODO: ADD MODULE DESCRIPTION"""
 import abc
 import time
 from collections import OrderedDict
@@ -37,6 +38,9 @@ VisualObservation = Union[np.ndarray, "Tensor"]
 
 @attr.s(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
+    """TODO: ADD CLASS DESCRIPTION
+    :param config: TODO ADD CONFIG DESCRIPTION
+    """
     config: "DictConfig"
 
     @abc.abstractmethod
@@ -66,11 +70,12 @@ class SensorTypes(Enum):
 class Sensor(metaclass=abc.ABCMeta):
     r"""Represents a sensor that provides data from the environment to agent.
 
-    :data uuid: universally unique id.
-    :data sensor_type: type of Sensor, use SensorTypes enum if your sensor
+    :param uuid: universally unique id.
+    :param sensor_type: type of Sensor, use SensorTypes enum if your sensor
         comes under one of it's categories.
-    :data observation_space: ``gym.Space`` object corresponding to observation
+    :param observation_space: ``gym.Space`` object corresponding to observation
         of sensor.
+    :param config: TODO ADD DESCRIPTION
 
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
@@ -102,9 +107,7 @@ class Sensor(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        r"""
-        Returns:
-            current observation for Sensor.
+        r""" Returns current observation for Sensor.
         """
         raise NotImplementedError
 
@@ -119,10 +122,11 @@ class Observations(Dict[str, Any]):
         should_time: bool = False,
         **kwargs: Any,
     ) -> None:
-        """Constructor
+        """..
 
         :param sensors: list of sensors whose observations are fetched and
             packaged.
+        :param should_time: TODO DESCRIPTION
         """
         data = []
         for uuid, sensor in sensors.items():
@@ -136,6 +140,7 @@ class Observations(Dict[str, Any]):
 
 
 class RGBSensor(Sensor, metaclass=abc.ABCMeta):
+    """TODO: ADD CLASS DESCRIPTION"""
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -153,6 +158,7 @@ class RGBSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class DepthSensor(Sensor, metaclass=abc.ABCMeta):
+    """TODO: ADD CLASS DESCRIPTION"""
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -170,6 +176,7 @@ class DepthSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class SemanticSensor(Sensor):
+    """TODO: ADD CLASS DESCRIPTION"""
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -187,6 +194,7 @@ class SemanticSensor(Sensor):
 
 
 class BumpSensor(Sensor):
+    """TODO: ADD CLASS DESCRIPTION"""
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -212,7 +220,7 @@ class SensorSuite:
     observation_spaces: spaces.Dict
 
     def __init__(self, sensors: Iterable[Sensor]) -> None:
-        """Constructor
+        """..
 
         :param sensors: list containing sensors for the environment, uuid of
             each sensor must be unique.
@@ -239,12 +247,14 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
+    """TODO: ADD CLASS DESCRIPTION"""
     position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 
 @attr.s(auto_attribs=True)
 class ShortestPathPoint:
+    """TODO: ADD CLASS DESCRIPTION"""
     position: List[Any]
     rotation: List[Any]
     action: Union[int, np.ndarray, None] = None
