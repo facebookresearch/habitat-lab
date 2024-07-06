@@ -3,12 +3,13 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""TODO: ADD MODULE DESCRIPTION"""
 import logging
 import os
 
 
 class HabitatLogger(logging.Logger):
+    """TODO: ADD CLASS DESCRIPTION"""
     def __init__(
         self,
         name,
@@ -20,6 +21,16 @@ class HabitatLogger(logging.Logger):
         dateformat=None,
         style="%",
     ):
+        """TODO: MISSING PARAMETER DESCRIPTIONS
+        :param name: ADD DESCRIPTION
+        :param level: ADD DESCRIPTION
+        :param filename=None: ADD DESCRIPTION
+        :param filemode="a": ADD DESCRIPTION
+        :param stream=None: ADD DESCRIPTION
+        :param format_str=None: ADD DESCRIPTION
+        :param dateformat=None: ADD DESCRIPTION
+        :param style="%": ADD DESCRIPTION
+        """
         super().__init__(name, level)
         if filename is not None:
             handler = logging.FileHandler(filename, filemode)  # type:ignore
@@ -30,6 +41,9 @@ class HabitatLogger(logging.Logger):
         super().addHandler(handler)
 
     def add_filehandler(self, log_filename):
+        """TODO: ADD FUNCTION DESCRIPTION
+        MISSING PARAM DESCRIPTIONS
+        """
         filehandler = logging.FileHandler(log_filename)
         filehandler.setFormatter(self._formatter)
         self.addHandler(filehandler)
