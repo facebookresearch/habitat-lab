@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""TODO: Add module description"""
 import cmath
 import dataclasses
 import json
@@ -32,12 +32,8 @@ except ImportError:
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
     r"""Tile multiple images into single image
 
-    Args:
-        images: list of images where each image has dimension
-            (height x width x channels)
-
-    Returns:
-        tiled image (new_height x width x channels)
+    :param images: list of images where each image has dimension (height x width x channels)
+    :return: tiled image (new_height x width x channels)
     """
     assert len(images) > 0, "empty list of images"
     np_images = np.asarray(images)
@@ -65,6 +61,7 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 def not_none_validator(
     self: Any, attribute: attr.Attribute, value: Optional[Any]
 ) -> None:
+    """TODO: ADD FUNCTION DESCRIPTION"""
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
 
@@ -103,6 +100,7 @@ class Singleton(type):
 
 
 def center_crop(obs, new_shape):
+    """TODO: ADD FUNCTION DESCRIPTION"""
     top_left = (
         (obs.shape[0] // 2) - (new_shape[0] // 2),
         (obs.shape[1] // 2) - (new_shape[1] // 2),
@@ -117,6 +115,7 @@ def center_crop(obs, new_shape):
 
 
 class DatasetJSONEncoder(json.JSONEncoder):
+    """TODO: ADD CLASS DESCRIPTION"""
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
