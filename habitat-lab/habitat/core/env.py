@@ -70,7 +70,7 @@ class Env:
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset[Episode]] = None
     ) -> None:
-        """Constructor
+        """..
 
         :param config: config for the environment. Should contain id for
             simulator and ``task_name`` which are passed into ``make_sim`` and
@@ -155,6 +155,7 @@ class Env:
 
     @current_episode.setter
     def current_episode(self, episode: Episode) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._current_episode = episode
         # This allows the current episode to be set here
         # and then reset be called without the episode changing
@@ -167,6 +168,7 @@ class Env:
 
     @episode_iterator.setter
     def episode_iterator(self, new_iter: Iterator[Episode]) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._episode_iterator = new_iter
         self._episode_force_changed = True
         self._episode_from_iter_on_reset = True
@@ -181,6 +183,7 @@ class Env:
 
     @episodes.setter
     def episodes(self, episodes: List[Episode]) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         assert (
             len(episodes) > 0
         ), "Environment doesn't accept empty episodes list."
@@ -217,9 +220,11 @@ class Env:
         return time.time() - self._episode_start_time
 
     def get_metrics(self) -> Metrics:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._task.measurements.get_metrics()
 
     def _past_limit(self) -> bool:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return (
             self._max_episode_steps != 0
             and self._max_episode_steps <= self._elapsed_steps
@@ -229,6 +234,7 @@ class Env:
         )
 
     def _reset_stats(self) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._episode_start_time = time.time()
         self._elapsed_steps = 0
         self._episode_over = False
@@ -270,6 +276,7 @@ class Env:
         return observations
 
     def _update_step_stats(self) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._elapsed_steps += 1
         self._episode_over = not self._task.is_episode_active
         if self._past_limit():
@@ -325,10 +332,12 @@ class Env:
     @staticmethod
     @numba.njit
     def _seed_numba(seed: int):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         random.seed(seed)
         np.random.seed(seed)
 
     def seed(self, seed: int) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         random.seed(seed)
         np.random.seed(seed)
         self._seed_numba(seed)
@@ -336,6 +345,7 @@ class Env:
         self._task.seed(seed)
 
     def reconfigure(self, config: "DictConfig") -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._config = self._task.overwrite_sim_config(
             config, self.current_episode
         )
@@ -343,9 +353,11 @@ class Env:
         self._sim.reconfigure(self._config.simulator, self.current_episode)
 
     def render(self, mode="rgb") -> np.ndarray:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._sim.render(mode)
 
     def close(self) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._sim.close()
 
     def __enter__(self):
@@ -372,7 +384,7 @@ class RLEnv(gym.Env):
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ) -> None:
-        """Constructor
+        """..
 
         :param config: config to construct :ref:`Env`
         :param dataset: dataset to construct :ref:`Env`.
@@ -479,12 +491,15 @@ class RLEnv(gym.Env):
         return observations, reward, done, info
 
     def seed(self, seed: Optional[int] = None) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._env.seed(seed)
 
     def render(self, mode: str = "rgb") -> np.ndarray:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._env.render(mode)
 
     def close(self) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         self._env.close()
 
     def __enter__(self):
