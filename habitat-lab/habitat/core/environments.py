@@ -3,11 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-r"""
-This file hosts task-specific or trainer-specific environments for trainers.
-All environments here should be a (direct or indirect ) subclass of Env class
-in habitat. Customized environments should be registered using
-``@habitat.registry.register_env(name="myEnv")` for reusability
+r"""This file hosts task-specific or trainer-specific environments for trainers. All environments here should be a (direct or indirect) subclass of Env class in habitat. Customized environments should be registered using ``@habitat.registry.register_env(name="myEnv")`` for reusability
 """
 
 import importlib
@@ -30,19 +26,23 @@ RLTaskEnvObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
     r"""Return environment class based on name.
 
-    Args:
-        env_name: name of the environment.
+    :param env_name: name of the environment.
 
-    Returns:
-        Type[habitat.RLEnv]: env class.
+    :return: Type[habitat.RLEnv]: env class.
     """
     return habitat.registry.get_env(env_name)
 
 
 class RLTaskEnv(habitat.RLEnv):
+    """TODO: MISSING CLASS DESCRIPTION"""
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
+        """TODO MISSING PARAMETER DESCRIPTIONS, for __init__, replace this comment with ".." when finished.
+
+        :param config: MISSING
+        :param dataset: MISSING
+        """
         super().__init__(config, dataset)
         self._reward_measure_name = self.config.task.reward_measure
         self._success_measure_name = self.config.task.success_measure
@@ -59,18 +59,22 @@ class RLTaskEnv(habitat.RLEnv):
     def reset(
         self, *args, return_info: bool = False, **kwargs
     ) -> Union[RLTaskEnvObsType, Tuple[RLTaskEnvObsType, Dict]]:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return super().reset(*args, return_info=return_info, **kwargs)
 
     def step(
         self, *args, **kwargs
     ) -> Tuple[RLTaskEnvObsType, float, bool, dict]:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return super().step(*args, **kwargs)
 
     def get_reward_range(self):
-        # We don't know what the reward measure is bounded by
+        """TODO: ADD FUNCTION DESCRIPTION"""
+        # NOTE: We don't know what the reward measure is bounded by
         return (-np.inf, np.inf)
 
     def get_reward(self, observations):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         current_measure = self._env.get_metrics()[self._reward_measure_name]
         reward = self._slack_reward
 
@@ -82,9 +86,11 @@ class RLTaskEnv(habitat.RLEnv):
         return reward
 
     def _episode_success(self):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._env.get_metrics()[self._success_measure_name]
 
     def get_done(self, observations):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         done = False
         if self._env.episode_over:
             done = True
@@ -93,6 +99,7 @@ class RLTaskEnv(habitat.RLEnv):
         return done
 
     def get_info(self, observations):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._env.get_metrics()
 
 
@@ -106,6 +113,11 @@ class GymRegistryEnv(gym.Wrapper):
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
+        """TODO MISSING PARAMETER DESCRIPTIONS, for __init__, replace this comment with ".." when finished.
+        
+        :param config: MISSING
+        :param dataset: MISSING
+        """
         for dependency in config["env_task_gym_dependencies"]:
             importlib.import_module(dependency)
         env_name = config["env_task_gym_id"]
@@ -123,6 +135,11 @@ class GymHabitatEnv(gym.Wrapper):
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
+        """TODO MISSING PARAMETER DESCRIPTIONS, for __init__, replace this comment with ".." when finished.
+        
+        :param config: MISSING
+        :param dataset: MISSING
+        """
         base_env = RLTaskEnv(config=config, dataset=dataset)
         env = HabGymWrapper(env=base_env)
         super().__init__(env)
