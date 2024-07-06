@@ -44,7 +44,7 @@ class Action:
     def step(self, *args: Any, **kwargs: Any) -> Observations:
         r"""Step method is called from ``Env`` on each ``step``. Can call
         simulator or task method, change task's state.
-
+        :param kwargs: TODO: MISSING DESCRIPTION
         :param kwargs: optional parameters for the action, like distance/force.
         :return: observations after taking action in the task, including ones
             coming from a simulator.
@@ -119,7 +119,7 @@ class Measure:
         raise NotImplementedError
 
     def get_metric(self):
-        r"""..
+        r"""Getter for the current metric for :ref:`Measure`.
 
         :return: the current metric for :ref:`Measure`.
         """
@@ -130,7 +130,7 @@ class Metrics(dict):
     r"""Dictionary containing measurements."""
 
     def __init__(self, measures: Dict[str, Measure]) -> None:
-        """Constructor
+        """Constructor TODO: EXPLAIN
 
         :param measures: list of :ref:`Measure` whose metrics are fetched and
             packaged.
@@ -149,10 +149,9 @@ class Measurements:
     measures: Dict[str, Measure]
 
     def __init__(self, measures: Iterable[Measure]) -> None:
-        """Constructor
+        """..
 
-        :param measures: list containing :ref:`Measure`, uuid of each
-            :ref:`Measure` must be unique.
+        :param measures: list containing :ref:`Measure`, uuid of each :ref:`Measure` must be unique.
         """
         self.measures = OrderedDict()
         for measure in measures:
@@ -184,11 +183,11 @@ class Measurements:
     def check_measure_dependencies(
         self, measure_name: str, dependencies: List[str]
     ):
-        r"""Checks if dependencies measures are enabled and calculatethat the measure
+        r"""Checks if dependencies measures are enabled and calculate that the measure
+        
         :param measure_name: a name of the measure for which has dependencies.
-        :param dependencies: a list of a measure names that are required by
-        the measure.
-        :return:
+        :param dependencies: a list of a measure names that are required by the measure.
+        :return: TODO: WHAT DOES THIS RETURN?
         """
         measure_index = self._get_measure_index(measure_name)
         for dependency_measure in dependencies:
@@ -214,13 +213,12 @@ class EmbodiedTask:
     the task that opens opportunity for others to propose solutions and
     include it into benchmark results.
 
-    Args:
-        config: config for the task.
-        sim: reference to the simulator for calculating task observations.
-        dataset: reference to dataset for task instance level information.
-
-    :data measurements: set of task measures.
-    :data sensor_suite: suite of task sensors.
+    
+    - config: config for the task.
+    - sim: reference to the simulator for calculating task observations.
+    - dataset: reference to dataset for task instance level information.
+    - measurements: set of task measures.
+    - sensor_suite: suite of task sensors.
     """
 
     _config: Any
