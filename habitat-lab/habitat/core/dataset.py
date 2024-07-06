@@ -6,7 +6,7 @@
 r"""Implements dataset functionality to be used ``habitat.EmbodiedTask``.
 ``habitat.core.dataset`` abstracts over a collection of
 ``habitat.core.Episode``. Each episode consists of a single instantiation
-of a ``habitat.Agent`` inside ``habitat.Env``.
+of a ``habitat.Agent`` inside ``habitat.Env``. 
 """
 import copy
 import os
@@ -43,7 +43,7 @@ ALL_SCENES_MASK = "*"
 class BaseEpisode:
     """
     Base class for episode specification that includes only the episode_id
-    and scene id. This class allows passing the minimum required episode
+    and scene_id. This class allows passing the minimum required episode
     information to identify the episode (unique key) to the habitat baseline process, thus saving evaluation time.
 
     :property episode_id: id of episode in the dataset, usually episode number.
@@ -58,14 +58,15 @@ class BaseEpisode:
 class Episode(BaseEpisode):
     r"""Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode.
-    :property start_position: list of length 3 for cartesian coordinates `(x, y, z)`
-    :property start_rotation: list of length 4 for (x, y, z, w) elements
-    of unit quaternion (versor) representing 3D agent orientation
-    (https://en.wikipedia.org/wiki/Versor). The rotation specifying the
-    agent's orientation is relative to the world coordinate axes.
 
     This information is provided by a :ref:`Dataset` instance.
+
+    :property start_position: list of length 3 for cartesian coordinates :math:`$(x, y, z)$`
+
+    :property start_rotation: list of length 4 for :math:`$(x, y, z)$` elements of unit quaternion (versor) representing 3D agent orientation (https://en.wikipedia.org/wiki/Versor). The rotation specifying the agent's orientation is relative to the world coordinate axes. 
+
     """
+
     # path to the SceneDataset config file
     scene_dataset_config: str = attr.ib(
         default="default", validator=not_none_validator
@@ -116,21 +117,17 @@ class Dataset(Generic[T]):
     def scene_from_scene_path(scene_path: str) -> str:
         r"""Helper method to get the scene name from an episode.
 
-        :param scene_path: The path to the scene, assumes this is formatted
-                            ``/path/to/<scene_name>.<ext>``
-
+        :param scene_path: The path to the scene, assumes this is formatted: :py:`/path/to/<scene_name>.<ext>`
         :return: <scene_name> from the path
         """
         return os.path.splitext(os.path.basename(scene_path))[0]
 
     @classmethod
     def get_scenes_to_load(cls, config: "DictConfig") -> List[str]:
-        r"""Returns a list of scene names that would be loaded with this dataset.
-
-        Useful for determining what scenes to split up among different workers.
+        r"""
+        Returns a list of scene names that would be loaded with this dataset. Useful for determining what scenes to split up among different workers.
 
         :param config: The config for the dataset
-
         :return: A list of scene names that would be loaded with the dataset
         """
         assert cls.check_config_paths_exist(config)  # type: ignore[attr-defined]
@@ -139,8 +136,9 @@ class Dataset(Generic[T]):
 
     @classmethod
     def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
-        r"""Returns a filter function that takes an episode and returns True if that
-        episode is valid under the content_scenes feild of the provided config
+        r"""
+        Returns a filter function that takes an episode and returns True if that
+        episode is valid under the content_scenes field of the provided config
         """
         scenes_to_load = set(config.content_scenes)
 
@@ -163,7 +161,7 @@ class Dataset(Generic[T]):
         return sorted({episode.scene_id for episode in self.episodes})
 
     def get_scene_episodes(self, scene_id: str) -> List[T]:
-        r"""..
+        r"""TODO: ADD FUNCTION DESCRIPTION
 
         :param scene_id: id of scene in scene dataset.
         :return: list of episodes for the :p:`scene_id`.
@@ -173,7 +171,7 @@ class Dataset(Generic[T]):
         )
 
     def get_episodes(self, indexes: List[int]) -> List[T]:
-        r"""..
+        r"""TODO: ADD FUNCTION DESCRIPTION
 
         :param indexes: episode indices in dataset.
         :return: list of episodes corresponding to indexes.
@@ -329,28 +327,21 @@ class EpisodeIterator(Iterator[T]):
     r"""Episode Iterator class that gives options for how a list of episodes
     should be iterated.
 
-    Some of those options are desirable for the internal simulator to get
-    higher performance. More context: simulator suffers overhead when switching
-    between scenes, therefore episodes of the same scene should be loaded
-    consecutively. However, if too many consecutive episodes from same scene
-    are feed into RL model, the model will risk to overfit that scene.
+    Some options are desirable for better internal simulator performance. 
+    
+    More context: simulator suffers overhead when switching
+    between scenes, therefore episodes of the same scene should be consecutively loaded. However, if too many consecutive episodes from same scene
+    are feed into RL model, the model will risk overfitting that scene.
     Therefore it's better to load same scene consecutively and switch once a
     number threshold is reached.
 
     Currently supports the following features:
 
-    Cycling:
-        when all episodes are iterated, cycle back to start instead of throwing
-        StopIteration.
-    Cycling with shuffle:
-        when cycling back, shuffle episodes groups grouped by scene.
-    Group by scene:
-        episodes of same scene will be grouped and loaded consecutively.
-    Set max scene repeat:
-        set a number threshold on how many episodes from the same scene can be
-        loaded consecutively.
-    Sample episodes:
-        sample the specified number of episodes.
+    - **Cycling:** when all episodes are iterated, cycle back to start instead of throwing StopIteration.
+    - **Cycling with shuffle:** when cycling back, shuffle episodes groups grouped by scene.
+    - **Group by scene:** episodes of same scene will be grouped and loaded consecutively.
+    - **Set max scene repeat:** set a number threshold on how many episodes from the same scene can be loaded consecutively.
+    - **Sample episodes:** sample the specified number of episodes.
     """
 
     def __init__(
@@ -380,11 +371,8 @@ class EpisodeIterator(Iterator[T]):
             scene can be taken consecutively. :py:`-1` for no limit
         :param num_episode_sample: number of episodes to be sampled. :py:`-1`
             for no sampling.
-        :param step_repetition_range: The maximum number of steps within each scene is
-            uniformly drawn from
-            [1 - step_repeat_range, 1 + step_repeat_range] * max_scene_repeat_steps
-            on each scene switch.  This stops all workers from swapping scenes at
-            the same time
+        :param step_repetition_range: The maximum number of steps within each scene is uniformly drawn from [1 - step_repeat_range, 1 + step_repeat_range] * max_scene_repeat_steps on each scene switch.  This stops all workers from swapping scenes at the same time
+        :param seed: TODO: ADD PARAMETER DESCRIPTION
         """
         if seed:
             random.seed(seed)
@@ -426,7 +414,7 @@ class EpisodeIterator(Iterator[T]):
         return self
 
     def __next__(self) -> Episode:
-        r"""The main logic for handling how episodes will be iterated.
+        r"""Main logic for handling how episodes iterate.
 
         :return: next episode.
         """
@@ -456,8 +444,7 @@ class EpisodeIterator(Iterator[T]):
 
     def set_next_episode_by_index(self, episode_index: int) -> None:
         """
-        Set the next episode to run by episode index.
-        The new episode will be loading upon resetting the simulator.
+        Set the next episode to run by episode index. The new episode will be loading upon resetting the simulator.
         """
         if episode_index < 0 or episode_index >= len(self.episodes):
             raise ValueError(
@@ -467,8 +454,7 @@ class EpisodeIterator(Iterator[T]):
 
     def set_next_episode_by_id(self, episode_id: str) -> None:
         """
-        Set the next episode to run by episode ID.
-        The new episode will be loading upon resetting the simulator.
+        Set the next episode to run by episode ID. The new episode will be loading upon resetting the simulator.
         """
         self._iterator = iter(self.episodes)
         for episode in self.episodes:
@@ -479,8 +465,7 @@ class EpisodeIterator(Iterator[T]):
             raise ValueError(f"Episode with ID {episode_id} not found.")
 
     def _forced_scene_switch(self) -> None:
-        r"""Internal method to switch the scene. Moves remaining episodes
-        from current scene to the end and switch to next scene episodes.
+        r"""Internal method to switch the scene. Moves remaining episodes from current scene to the end and switch to next scene episodes.
         """
         grouped_episodes = [
             list(g)
@@ -494,8 +479,7 @@ class EpisodeIterator(Iterator[T]):
         self._iterator = iter(sum(grouped_episodes, []))
 
     def _shuffle(self) -> None:
-        r"""Internal method that shuffles the remaining episodes.
-        If self.group_by_scene is true, then shuffle groups of scenes.
+        r"""Internal method that shuffles the remaining episodes. If :py:`self.group_by_scene` is true, then shuffle groups of scenes.
         """
         assert self.shuffle
         episodes = list(self._iterator)
