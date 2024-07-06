@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""TODO: ADD MODULE DESCRIPTION"""
 import signal
 import warnings
 from multiprocessing.connection import Connection
@@ -306,6 +306,7 @@ class VectorEnv:
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[_ReadWrapper], List[_WriteWrapper]]:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         parent_connections, worker_connections = zip(
             *[
                 [ConnectionWrapper(c) for c in self._mp_ctx.Pipe(duplex=True)]
@@ -346,6 +347,7 @@ class VectorEnv:
         return read_fns, write_fns
 
     def current_episodes(self):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         for write_fn in self._connection_write_fns:
             write_fn((CALL_COMMAND, (CURRENT_EPISODE_NAME, None)))
         results = []
@@ -354,6 +356,7 @@ class VectorEnv:
         return results
 
     def count_episodes(self):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         for write_fn in self._connection_write_fns:
             write_fn((COUNT_EPISODES_COMMAND, None))
         results = []
@@ -362,6 +365,7 @@ class VectorEnv:
         return results
 
     def episode_over(self):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         for write_fn in self._connection_write_fns:
             write_fn((CALL_COMMAND, (EPISODE_OVER_NAME, None)))
         results = []
@@ -370,6 +374,7 @@ class VectorEnv:
         return results
 
     def get_metrics(self):
+        """TODO: ADD FUNCTION DESCRIPTION"""
         for write_fn in self._connection_write_fns:
             write_fn((CALL_COMMAND, (GET_METRICS_NAME, None)))
         results = []
@@ -407,6 +412,7 @@ class VectorEnv:
 
     @profiling_wrapper.RangeContext("wait_step_at")
     def wait_step_at(self, index_env: int) -> Any:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self._connection_read_fns[index_env]()
 
     def step_at(self, index_env: int, action: Union[int, np.ndarray]):
