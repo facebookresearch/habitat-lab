@@ -3,11 +3,11 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+"""NOTE: This module hidden from HTML documentation because it imports from a seperate library."""
 
 from collections import OrderedDict
 from collections.abc import Collection
 from typing import Dict, List, Union
-
 import gym
 from gym import Space
 
