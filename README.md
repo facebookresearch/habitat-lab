@@ -213,6 +213,8 @@ Doctrings follow reStructuredText from docutils library.
 
 - ">>>" lines of code
 
+- For boldfont, surround text with "**"  "\*\*\<TEXT>\*\*", 
+
 
 ```
 Heading 1
@@ -227,11 +229,13 @@ Heading 3
 
 **Directive options:**
 
+NOTE, Be aware of spaces, and backtick should be used, not single quote
+
 - :param \<VARIABLE NAME>:\<VARIABLE NAME DESCRIPTION>
   - Should be used for parameter descriptions
 
 - :data \<VARIABLE NAME>: \<VARIABLE NAME VALUE>
-  - Should be used for global variables
+  - Should be used for class parameters, ENUMS
 
 - :return: \<DESCRIPTION OF FUNCTION OUTPUT>
   - Used at function level
@@ -242,7 +246,7 @@ Heading 3
 - :ref: \<MODDULE>.\<MODULE>.[...]\<CLASS>
   - Make a hyperlink that references to other parts of documentation
 
-- :math: \`\<LATEX MATH FUNCTION>\`
+- :math: \`\$\<LATEX MATH FUNCTION>\$`
   - This if meant to display math functions inline using LaTeX notation. NOTE:  use double slash \\\\ instead of \\ for special LaTeX functions.
 
 - :property \<NAME OF PROPERTY>:  \<DESCRIPTION OF PROPERTY>
