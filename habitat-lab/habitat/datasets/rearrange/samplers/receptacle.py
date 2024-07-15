@@ -486,7 +486,7 @@ class AnyObjectReceptacle(Receptacle):
 
         # get the global keypoints of the object
         receptacle_bb, local_to_global = None, None
-        if self.parent_link >= 0:
+        if self.parent_link is not None and self.parent_link >= 0:
             link_node = obj.get_link_scene_node(self.parent_link)
             receptacle_bb = link_node.cumulative_bb
             local_to_global = link_node.absolute_transformation()
