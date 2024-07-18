@@ -2,11 +2,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""TODO: ADD MODULE DESCRIPTION"""
+
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
 
 
 def _try_register_habitat_sim():
+
+    """TODO: ADD FUNCTION DESCRIPTION"""
+
     try:
         import habitat_sim  # noqa: F401
 
