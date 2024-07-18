@@ -4,6 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
+"""TODO: ADD MODULE DESCRIPTION"""
+
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator import _try_register_habitat_sim
@@ -11,6 +14,10 @@ from habitat.sims.pyrobot import _try_register_pyrobot
 
 
 def make_sim(id_sim, **kwargs):
+    """TODO: ADD MODULE DESCRIPTION
+    
+    :param id_sim: TODO: PARAMETER DESCRIPTION
+    """
     logger.info("initializing sim {}".format(id_sim))
     _sim = registry.get_simulator(id_sim)
     assert _sim is not None, "Could not find simulator with name {}".format(
