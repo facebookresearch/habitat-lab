@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""TODO: ADD MODULE DESCRIPTION"""
+
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -59,14 +61,18 @@ def overwrite_config(
     Habitat-Sim config with Habitat Lab values, where a field name is present
     in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
     code.
-    Args:
-        config_from: Habitat Lab config node.
-        config_to: Habitat-Sim config structure.
-        ignore_keys: Optional set of keys to ignore in config_to
-        trans_dict: A Dict of str, callable which can be used on any value that has a matching key if not in ignore_keys.
+
+    :param config_from: Habitat Lab config node.
+    :param config_to: Habitat-Sim config structure.
+    :param ignore_keys: Optional set of keys to ignore in config_to
+    :param trans_dict: A Dict of str, callable which can be used on any value that has a matching key if not in ignore_keys.
     """
 
     def if_config_to_lower(config):
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param config: TODO: DESCRIPTION
+        """
         if isinstance(config, DictConfig):
             return {
                 key.lower(): val
@@ -96,6 +102,7 @@ def overwrite_config(
 
 
 class HabitatSimSensor:
+    """TODO: ADD FUNCTION DESCRIPTION"""
     sim_sensor_type: habitat_sim.SensorType
     _get_default_spec = Callable[..., habitat_sim.sensor.SensorSpec]
     _config_ignore_keys = {"height", "type", "width"}
@@ -103,6 +110,7 @@ class HabitatSimSensor:
 
 @registry.register_sensor
 class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
+    """TODO: ADD FUNCTION DESCRIPTION"""
     _get_default_spec = habitat_sim.CameraSensorSpec
     sim_sensor_type = habitat_sim.SensorType.COLOR
 
@@ -112,6 +120,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
+        """TODO: ADD FUNCTION DESCRIPTION? PRIVATE?"""
         return spaces.Box(
             low=0,
             high=255,
@@ -126,6 +135,11 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
     def get_observation(
         self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param sim_obs: TODO: DESCRIPTION
+        :return: TODO: DESCRIPTION
+        """
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
 
@@ -136,6 +150,8 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 
 @registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
+    """TODO: ADD CLASS DESCRIPTION"""
+
     _get_default_spec = habitat_sim.CameraSensorSpec
     _config_ignore_keys = {
         "max_depth",
@@ -148,6 +164,10 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     max_depth_value: float
 
     def __init__(self, config: DictConfig) -> None:
+        """..
+        
+        :param config: TODO: DESCRIPTION
+        """
         self.min_depth_value = config.min_depth
         self.max_depth_value = config.max_depth
         self.normalize_depth = config.normalize_depth
@@ -169,11 +189,18 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
+        """TODO: ADD FUNCTION DESCRIPTION? PRIVATE?"""
         return self._obs_shape
 
     def get_observation(
         self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param sim_obs: TODO: DESCRIPTION
+
+        """
+
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         if isinstance(obs, np.ndarray):
@@ -198,6 +225,8 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
 
 @registry.register_sensor
 class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
+    """TODO: ADD CLASS DESCRIPTION"""
+
     _get_default_spec = habitat_sim.CameraSensorSpec
     sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
@@ -205,6 +234,12 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
+        """TODO: ADD FUNCTION DESCRIPTION? PRIVATE?
+        
+        :return: TODO DESCRIPTION
+        
+        """
+
         return spaces.Box(
             low=np.iinfo(np.uint32).min,
             high=np.iinfo(np.uint32).max,
@@ -215,6 +250,10 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     def get_observation(
         self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
     ) -> VisualObservation:
+        
+
+
+
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         # make semantic observation a 3D array
@@ -259,6 +298,9 @@ class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
 def check_sim_obs(
     obs: Union[np.ndarray, "Tensor", None], sensor: Sensor
 ) -> None:
+    
+    """TODO: ADD FUNCTION DESCRIPTION"""
+
     assert obs is not None, (
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
@@ -270,12 +312,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     r"""Simulator wrapper over habitat-sim
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
-
-    Args:
-        config: configuration for initializing the simulator.
     """
 
     def __init__(self, config: DictConfig) -> None:
+        """..
+        
+        :param config: configuration for initializing the simulator.
+        """
+
         self.habitat_config = config
 
         sim_sensors = []
@@ -309,6 +353,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def create_sim_config(
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param _sensor_suite: TODO: DESCRIPTION
+        
+        """
         sim_config = habitat_sim.SimulatorConfiguration()
         # Check if Habitat-Sim is post Scene Config Update
         if not hasattr(sim_config, "scene_id"):
@@ -433,13 +482,22 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     @property
     def sensor_suite(self) -> SensorSuite:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :return: TODO: DESCRIPTION
+        """
         return self._sensor_suite
 
     @property
     def action_space(self) -> Space:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :return: TODO: DESCRIPTION
+        """
         return self._action_space
 
     def _update_agents_state(self) -> bool:
+        """TODO: ADD FUNCTION DESCRIPTION? PRIVATE?"""
         is_updated = False
         for agent_id, agent_name in enumerate(
             self.habitat_config.agents_order
@@ -456,6 +514,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return is_updated
 
     def reset(self) -> Observations:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :return: TODO: DESCRIPTION
+        """
         sim_obs = super().reset()
         if self._update_agents_state():
             sim_obs = self.get_sensor_observations()
@@ -470,6 +532,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def step(
         self, action: Optional[Union[str, np.ndarray, int]]
     ) -> Observations:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param action: TODO: ADD DESCRIPTION
+        :return: TODO: DESCRIPTION
+        """
         if action is None:
             sim_obs = self.get_sensor_observations()
         else:
@@ -483,12 +550,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def render(self, mode: str = "rgb") -> Any:
         r"""
-        Args:
-            mode: sensor whose observation is used for returning the frame,
+        TODO: ADD FUNCTION DESCRIPTION
+
+        :param mode: sensor whose observation is used for returning the frame,
                 eg: "rgb", "depth", "semantic"
 
-        Returns:
-            rendered frame according to the mode
+        :return: rendered frame according to the mode
         """
         assert not self.config.enable_batch_renderer
 
@@ -510,6 +577,13 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param habitat_config: TODO DESCRIPTION
+        :param ep_info: TODO DESCRIPTION
+        :param should_close_on_new_scene: TODO DESCRIPTION
+        
+        """
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = habitat_config.scene == self._current_scene
         self.habitat_config = habitat_config
@@ -530,6 +604,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         ],
         episode: Optional[Episode] = None,
     ) -> float:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param position_a: TODO DESCRIPTION
+        :param position_b: TODO DESCRIPTION
+        :param episode: TODO DESCRIPTION
+        
+        """
+
         if episode is None or episode._shortest_path_cache is None:
             path = habitat_sim.MultiGoalShortestPath()
             if isinstance(position_b[0], (Sequence, np.ndarray)):
@@ -557,14 +639,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         agent_id: int = 0,
     ) -> List[ShortestPathPoint]:
         r"""
-        Returns:
-            List of agent states and actions along the shortest path from
-            source to the nearest target (both included). If one of the
-            target(s) is identical to the source, a list containing only
-            one node with the identical agent state is returned. Returns
-            an empty list in case none of the targets are reachable from
-            the source. For the last item in the returned list the action
-            will be None.
+        TODO: ADD FUNCTION DESCRIPTION
+        
+        :return: List of agent states and actions along the shortest path from source to the nearest target (both included). If one of the target(s) is identical to the source, a list containing only one node with the identical agent state is returned. Returns an empty list in case none of the targets are reachable from the source. For the last item in the returned list the action will be None.
         """
         raise NotImplementedError(
             "This function is no longer implemented. Please use the greedy "
@@ -573,13 +650,21 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     @property
     def up_vector(self) -> np.ndarray:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return np.array([0.0, 1.0, 0.0])
 
     @property
     def forward_vector(self) -> np.ndarray:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return -np.array([0.0, 0.0, 1.0])
 
     def get_straight_shortest_path_points(self, position_a, position_b):
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param position_a: TODO DESCRIPTION
+        :param position_b: TODO DESCRIPTION
+        
+        """
         path = habitat_sim.ShortestPath()
         path.requested_start = position_a
         path.requested_end = position_b
@@ -587,44 +672,44 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return path.points
 
     def sample_navigable_point(self) -> List[float]:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self.pathfinder.get_random_navigable_point().tolist()
 
     def is_navigable(self, point: List[float]) -> bool:
+        """TODO: ADD FUNCTION DESCRIPTION"""
         return self.pathfinder.is_navigable(point)
 
     def semantic_annotations(self):
         r"""
-        Returns:
-            SemanticScene which is a three level hierarchy of semantic
-            annotations for the current scene. Specifically this method
-            returns a SemanticScene which contains a list of SemanticLevel's
-            where each SemanticLevel contains a list of SemanticRegion's where
-            each SemanticRegion contains a list of SemanticObject's.
+        SemanticScene which is a three level hierarchy of semantic annotations for the current scene. Specifically this method returns a SemanticScene which contains a list of SemanticLevel's where each SemanticLevel contains a list of SemanticRegion's where each SemanticRegion contains a list of SemanticObject's.
 
-            SemanticScene has attributes: aabb(axis-aligned bounding box) which
-            has attributes aabb.center and aabb.sizes which are 3d vectors,
-            categories, levels, objects, regions.
+        SemanticScene has attributes: aabb(axis-aligned bounding box) which has attributes aabb.center and aabb.sizes which are 3d vectors, categories, levels, objects, regions.
 
-            SemanticLevel has attributes: id, aabb, objects and regions.
+        SemanticLevel has attributes: id, aabb, objects and regions.
 
-            SemanticRegion has attributes: id, level, aabb, category (to get
-            name of category use category.name()) and objects.
+        SemanticRegion has attributes: id, level, aabb, category (to get name of category use category.name()) and objects.
 
-            SemanticObject has attributes: id, region, aabb, obb (oriented
-            bounding box) and category.
+        SemanticObject has attributes: id, region, aabb, obb (oriented bounding box) and category.
 
-            SemanticScene contains List[SemanticLevels]
-            SemanticLevel contains List[SemanticRegion]
-            SemanticRegion contains List[SemanticObject]
+        SemanticScene contains List[SemanticLevels]
+        SemanticLevel contains List[SemanticRegion]
+        SemanticRegion contains List[SemanticObject]
 
-            Example to loop through in a hierarchical fashion:
-            for level in semantic_scene.levels:
-                for region in level.regions:
-                    for obj in region.objects:
+        Example to loop through in a hierarchical fashion:
+
+
+        >>> for level in semantic_scene.levels:
+        >>>     for region in level.regions:
+        >>>         for obj in region.objects:
         """
         return self.semantic_scene
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param agent_d: TODO DESCRIPTION
+        
+        """
         return self.get_agent(agent_id).get_state()
 
     def set_agent_state(
@@ -638,18 +723,12 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         creation. On failure to place the agent in the proper position, it is
         moved back to its previous pose.
 
-        Args:
-            position: list containing 3 entries for (x, y, z).
-            rotation: list with 4 entries for (x, y, z, w) elements of unit
-                quaternion (versor) representing agent 3D orientation,
-                (https://en.wikipedia.org/wiki/Versor)
-            agent_id: int identification of agent from multiagent setup.
-            reset_sensors: bool for if sensor changes (e.g. tilt) should be
-                reset).
+        :param position: list containing 3 entries for :math:`$(x, y, z)$`.
+        :param rotation: list with 4 entries for :math:`$(x, y, z, w)$` elements of unit quaternion (versor) representing agent 3D orientation, (https://en.wikipedia.org/wiki/Versor)
+        :param agent_id: int identification of agent from multiagent setup.
+        :param reset_sensors: bool for if sensor changes (e.g. tilt) should be reset).
 
-        Returns:
-            True if the set was successful else moves the agent back to its
-            original pose and returns false.
+        :return: True if the set was successful else moves the agent back to its original pose and returns false.
         """
         agent = self.get_agent(agent_id)
         new_state = self.get_agent(agent_id).get_state()
@@ -671,6 +750,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         rotation: Optional[List[float]] = None,
         keep_agent_at_new_pose: bool = False,
     ) -> Optional[Observations]:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param position: TODO DESCRIPTION
+        :param rotation: TODO DESCRIPTION
+        :param keep_agent_at_new_pose: TODO DESCRIPTION
+        
+        """
+
         current_state = self.get_agent_state()
         if position is None or rotation is None:
             success = True
@@ -698,25 +785,35 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def distance_to_closest_obstacle(
         self, position: np.ndarray, max_search_radius: float = 2.0
     ) -> float:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param position: TODO DESCRIPTION
+        :param max_search_radius: TODO DESCRIPTION
+        :return: TODO DESCRIPTION
+        """
         return self.pathfinder.distance_to_closest_obstacle(
             position, max_search_radius
         )
 
     def island_radius(self, position: Sequence[float]) -> float:
+        """TODO: ADD FUNCTION DESCRIPTION
+        
+        :param position: TODO DESCRIPTION
+        :return: TODO DESCRIPTION
+        """
         return self.pathfinder.island_radius(position)
 
     @property
     def previous_step_collided(self):
         r"""Whether or not the previous step resulted in a collision
 
-        Returns:
-            bool: True if the previous step resulted in a collision, false otherwise
+        Warning: 
 
-        Warning:
-            This field is only updated when :meth:`step`, :meth:`reset`, or :meth:`get_observations_at` are
-            called.  It does not update when the agent is moved to a new location.  Furthermore, it
-            will _always_ be false after :meth:`reset` or :meth:`get_observations_at` as neither of those
-            result in an action (step) being taken.
+        This field is only updated when :py:`step`, :py:`reset`, or :py:`get_observations_at` are called.  It does not update when the agent is moved to a new location.  Furthermore, it will _always_ be false after :py:`reset` or :py:`get_observations_at` as neither of those result in an action (step) being taken.
+
+        :return: boolean: :py:`True` if the previous step resulted in a collision, :py:`false` otherwise
+
+        
         """
         return self._prev_sim_obs.get("collided", False)
 
