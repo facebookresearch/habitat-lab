@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""TODO: ADD MODULE DESCRIPTION"""
+
 import math
 import os
 from typing import List, Optional, Tuple, Union
@@ -60,6 +62,12 @@ class DebugObservation:
     """
 
     def __init__(self, obs_data: np.ndarray):
+        """..
+        
+        :param obs_data: TODO:  DESCRIPTION OF PARAMETER
+
+        """
+
         self.obs_data: np.ndarray = obs_data
         self.image: Image.Image = (
             None  # creation deferred to show or save time
@@ -97,8 +105,7 @@ class DebugObservation:
         Save the Image as png to a given location.
 
         :param output_path: Directory path for saving the image.
-        :param prefix: Optional prefix for output filename. Filename format: "<prefix>month_day_year_hourminutesecondmicrosecond.png"
-
+        :param prefix: Optional prefix for output filename. Filename format: :py:`<prefix>month_day_year_hourminutesecondmicrosecond.png`
         :return: file path of the saved image.
         """
 
@@ -182,12 +189,14 @@ class DebugVisualizer:
     Assumes the default agent (0) is a camera (i.e. there exists an RGB sensor coincident with agent 0 transformation).
 
     Available for visual debugging from PDB!
+
     Example:
-    from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
-    dbv = DebugVisualizer(sim)
-    dbv.get_observation().show()
-    dbv.translate(mn.Vector3(1,0,0), show=True)
-    dbv.peek(my_object, peek_all_axis=True).show()
+
+    >>> from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+    >>> dbv = DebugVisualizer(sim)
+    >>> dbv.get_observation().show()
+    >>> dbv.translate(mn.Vector3(1,0,0), show=True)
+    >>> dbv.peek(my_object, peek_all_axis=True).show()
     """
 
     def __init__(
@@ -357,7 +366,6 @@ class DebugVisualizer:
         :param vec: The delta vector to translate by.
         :param local: If True, the delta vector is applied in local space.
         :param show: If True, show the image from the resulting state.
-
         :return: if show is selected, the resulting observation is returned. Otherwise None.
         """
 
@@ -388,7 +396,6 @@ class DebugVisualizer:
         :param axis: The rotation axis. Default Y axis.
         :param local: If True, the delta vector is applied in local space.
         :param show: If True, show the image from the resulting state.
-
         :return: if show is selected, the resulting observation is returned. Otherwise None.
         """
 
@@ -419,7 +426,6 @@ class DebugVisualizer:
 
         :param look_at: 3D global position to point the camera towards.
         :param look_from: 3D global position of the camera.
-
         :return: a DebugObservation wrapping the np.ndarray.
         """
 
@@ -525,7 +531,6 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
-
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
@@ -625,7 +630,6 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
-
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
