@@ -94,7 +94,7 @@ class CollisionDetails:
 
 
 def general_sim_collision(
-        sim: habitat_sim.Simulator, agent_embodiment: MobileManipulator, ignore_names:  Optional[List[str]] = None
+        sim: habitat_sim.Simulator, agent_embodiment: MobileManipulator, ignore_object_ids:  Optional[List[str]] = None
 ) -> Tuple[bool, CollisionDetails]:
     """
     Proxy for "rearrange_collision()" which does not require a RearrangeSim.
@@ -109,7 +109,7 @@ def general_sim_collision(
 
     robot_scene_colls = 0
     for col in colls:
-        if coll_name_matches(col, agent_embodiment_object_id) and (ignore_names is None or not any([coll_name_matches(col, ignored_name) for ignored_name in ignore_names])):
+        if coll_name_matches(col, agent_embodiment_object_id) and (ignore_object_ids is None or not any([coll_name_matches(col, ignore_object_id) for ignore_object_id in ignore_object_ids])):
             robot_scene_colls += 1
 
     return (robot_scene_colls > 0), CollisionDetails(
@@ -121,7 +121,7 @@ def rearrange_collision(
     sim: "RearrangeSim",
     count_obj_colls: bool,
     verbose: bool = False,
-    ignore_names: Optional[List[str]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
     agent_idx: Optional[int] = None,
@@ -142,10 +142,10 @@ def rearrange_collision(
             if match_link is not None and agent_model.is_base_link(match_link):
                 return False
 
-        if ignore_names is not None:
+        if ignore_object_ids is not None:
             should_ignore = any(
-                coll_name_matches(x, ignore_name)
-                for ignore_name in ignore_names
+                coll_name_matches(x, ignore_object_id)
+                for ignore_object_id in ignore_object_ids
             )
             if should_ignore:
                 return False

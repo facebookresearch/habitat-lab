@@ -371,13 +371,13 @@ def embodied_unoccluded_navmesh_snap(
                         _, details = rearrange_collision(
                             sim,
                             False,
-                            ignore_names=ignore_object_collision_ids,
+                            ignore_object_ids=ignore_object_collision_ids,
                             ignore_base=False,
                         )
                     else:
                         _, details = general_sim_collision(
                             sim, agent_embodiment,
-                            ignore_names=ignore_object_collision_ids,
+                            ignore_object_ids=ignore_object_collision_ids,
                         )
 
                     # reset agent state
