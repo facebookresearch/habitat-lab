@@ -97,7 +97,7 @@ class CollisionDetails:
 def general_sim_collision(
     sim: habitat_sim.Simulator,
     agent_embodiment: MobileManipulator,
-    ignore_object_ids: Optional[List[str]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
 ) -> Tuple[bool, CollisionDetails]:
     """
     Proxy for "rearrange_collision()" which does not require a RearrangeSim.

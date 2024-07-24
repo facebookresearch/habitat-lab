@@ -15,6 +15,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
+
 def snap_point_is_occluded(
     target: mn.Vector3,
     snap_point: mn.Vector3,
@@ -190,7 +191,7 @@ def embodied_unoccluded_navmesh_snap(
     pathfinder: habitat_sim.nav.PathFinder = None,
     target_object_ids: Optional[List[int]] = None,
     ignore_object_ids: Optional[List[int]] = None,
-    ignore_object_collision_ids:  Optional[List[int]] = None,
+    ignore_object_collision_ids: Optional[List[int]] = None,
     island_id: int = -1,
     search_offset: float = 1.5,
     test_batch_size: int = 20,
@@ -301,7 +302,7 @@ def embodied_unoccluded_navmesh_snap(
             ):
                 # No embodiment for collision detection, so return closest unoccluded point
                 return batch_sample[0], facing_target_angle, True
-            
+
             # get orientation noise offset
             orientation_noise_samples = []
             if orientation_noise > 0 and max_orientation_samples > 0:
@@ -375,7 +376,8 @@ def embodied_unoccluded_navmesh_snap(
                         )
                     else:
                         _, details = general_sim_collision(
-                            sim, agent_embodiment,
+                            sim,
+                            agent_embodiment,
                             ignore_object_ids=ignore_object_collision_ids,
                         )
 
