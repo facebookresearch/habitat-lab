@@ -15,8 +15,6 @@ from habitat.tasks.rearrange.utils import (
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import VelocityControl
 
-
-
 def snap_point_is_occluded(
     target: mn.Vector3,
     snap_point: mn.Vector3,
