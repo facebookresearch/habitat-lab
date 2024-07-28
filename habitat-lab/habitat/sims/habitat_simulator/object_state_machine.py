@@ -80,6 +80,8 @@ class ObjectStateSpec:
         self.name = "AbstractState"
         # What type of data describes this state
         self.type = None
+        # Human-readable name for display
+        self.display_name = "Abstract State"
         # S list of semantic classes labels with pre-define membership in the state set. All objects in these classes are assumed to have this state, whether or not a value is defined in metadata.
         self.accepted_semantic_classes = []
 
@@ -167,6 +169,9 @@ class BooleanObjectState(ObjectStateSpec):
     def __init__(self):
         self.name = "BooleanState"
         self.type = bool
+        self.display_name = "Boolean State"
+        self.display_name_true = "True"
+        self.display_name_false = "False"
 
     def default_value(self) -> Any:
         """
@@ -224,6 +229,9 @@ class ObjectIsClean(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_clean"
+        self.display_name = "Clean"
+        self.display_name_true = "Clean"
+        self.display_name_false = "Dirty"
         # TODO: set the semantic class membership list
         self.accepted_semantic_classes = []
 
@@ -236,6 +244,9 @@ class ObjectIsPoweredOn(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_powered_on"
+        self.display_name = "Powered On"
+        self.display_name_true = "On"
+        self.display_name_false = "Off"
         # TODO: set the semantic class membership list
         self.accepted_semantic_classes = []
 
@@ -255,7 +266,7 @@ class ObjectStateMachine:
     def __init__(self, active_states: List[ObjectStateSpec] = None) -> None:
         # a list of ObjectStateSpec singleton instances which are active in the current scene
         self.active_states = active_states if active_states is not None else []
-        # map tracked objects to their set of state properies
+        # map tracked objects to their set of state properties
         self.objects_with_states: Dict[
             str, List[ObjectStateSpec]
         ] = defaultdict(lambda: [])
