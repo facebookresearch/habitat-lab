@@ -495,7 +495,7 @@ class AppStateRearrangeV2(AppStateBase):
             )
 
         self._user_data: List[UserData] = []
-        for user_index in self._users.indices(Mask.ALL):
+        for user_index in range(self._users.max_user_count):
             agent_data = self._agent_data[
                 self._user_to_agent_index[user_index]
             ]

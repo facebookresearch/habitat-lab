@@ -158,6 +158,9 @@ class NetworkManager:
         assert user_index in self._user_slots
         del self._user_slots[user_index]
 
+        # Remove user-specific messages.
+        self._consolidated_keyframe_and_messages.messages[user_index].clear()
+
     def _update_consolidated_keyframes_and_messages(
         self,
         consolidated_keyframes_and_messages: KeyframeAndMessages,
@@ -231,18 +234,22 @@ class NetworkManager:
             inc_keyframes_and_messages = (
                 self._interprocess_record.get_queued_keyframes()
             )
-            inc_keyframes = self._interprocess_record.get_queued_keyframes()
 
             if len(inc_keyframes_and_messages) > 0:
-                # consolidate all inc keyframes into one inc_keyframe
+                # Consolidate all inc keyframes into one inc_keyframe
                 tmp_con_keyframe = inc_keyframes_and_messages[0]
                 if len(inc_keyframes_and_messages) > 1:
-                    for i in range(1, len(inc_keyframes)):
+                    for i in range(1, len(inc_keyframes_and_messages)):
                         self._update_consolidated_keyframes_and_messages(
                             tmp_con_keyframe, inc_keyframes_and_messages[i]
                         )
-                        inc_keyframes_and_messages = [tmp_con_keyframe]
-                    inc_keyframes = [tmp_con_keyframe]
+                    # Discard messages for disconnected users.
+                    messages = tmp_con_keyframe.messages
+                    for user_index in range(len(messages)):
+                        if user_index not in self._user_slots:
+                            messages[user_index].clear()
+
+                    inc_keyframes_and_messages = [tmp_con_keyframe]
 
                 for user_index in self._user_slots.keys():
                     slot = self._user_slots[user_index]
