@@ -51,6 +51,7 @@ class Mask(IntFlag):
 class Users:
     """
     Represents a set of users with a max_user_count upper bound.
+    By default, all users are "inactive". Add new users using the 'add_user' method.
     """
 
     _max_user_count: int
@@ -78,10 +79,12 @@ class Users:
             bitset ^= user_bit
 
     def add_user(self, user_index: int) -> None:
+        """Activate an user."""
         if user_index < self._max_user_count:
             self._active_user_mask |= Mask.from_index(user_index)
 
     def remove_user(self, user_index: int) -> None:
+        """Deactivate an user."""
         self._active_user_mask &= ~Mask.from_index(user_index)
 
     def to_index_list(self, user_mask: Mask) -> List[int]:
