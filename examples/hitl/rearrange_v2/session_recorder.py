@@ -67,11 +67,14 @@ class SessionRecorder:
 
     def end_episode(
         self,
-        success: bool,
+        episode_finished: bool,
+        episode_successful: bool,
+        metrics: Dict[str, Any],
     ):
         self.data["episodes"][-1]["end_timestamp"] = timestamp()
-        self.data["episodes"][-1]["success"] = success
-        self.data["episodes"][-1]["completed"] = True
+        self.data["episodes"][-1]["success"] = episode_successful
+        self.data["episodes"][-1]["completed"] = episode_finished
+        self.data["episodes"][-1]["metrics"] = metrics
 
     def record_frame(
         self,
