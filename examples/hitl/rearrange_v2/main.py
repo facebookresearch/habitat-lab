@@ -14,11 +14,11 @@ import sys
 sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 # fmt: on
 
-# This registers collaboration episodes into this application.
-import collaboration_episode_loader  # noqa: 401
 import hydra
 from state_machine import StateMachine
 
+# This registers collaboration episodes into this application.
+import examples.hitl.rearrange_v2.habitat_llm_loader as habitat_llm_loader  # noqa: 401
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 
@@ -29,6 +29,9 @@ from habitat_hitl.core.hydra_utils import register_hydra_plugins
 def main(config):
     # We don't sync the server camera. Instead, we maintain one camera per user.
     assert config.habitat_hitl.networking.client_sync.server_camera == False
+
+    # Attempt to load 'habitat_llm' (external project).
+    habitat_llm_loader.register_habitat_llm_extensions(config)
 
     hitl_main(
         config,
