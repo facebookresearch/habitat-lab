@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from habitat_hitl.app_states.app_service import AppService
 
@@ -11,7 +11,7 @@ class Metrics:
     def __init__(self, app_service: AppService):
         self._get_metrics = app_service.get_metrics
 
-    def get_task_success(self) -> Optional[float]:
+    def get_task_percent_complete(self) -> Optional[float]:
         """
         Get the current progression of the task, from 0.0 to 1.0.
         Returns None if the metric is unavailable.
@@ -26,3 +26,9 @@ class Metrics:
         """
         metrics = self._get_metrics()
         return metrics.get("task_explanation", None)
+
+    def get_all_metrics(self) -> Dict[str, Any]:
+        """
+        Gets all available metrics.
+        """
+        return self._get_metrics()

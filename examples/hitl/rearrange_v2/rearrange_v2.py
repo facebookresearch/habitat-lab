@@ -19,6 +19,7 @@ from app_states import (
     create_app_state_load_episode,
 )
 from end_episode_form import EndEpisodeForm, ErrorReport
+from metrics import Metrics
 from session import Session
 from ui import UI
 from util import UP
@@ -103,22 +104,24 @@ class FrameRecorder:
         return object_states
 
     def record_state(
-        self, elapsed_time: float, user_data: List[UserData]
+        self,
+        elapsed_time: float,
+        user_data: List[UserData],
+        task_percent_complete: Optional[float],
     ) -> Dict[str, Any]:
         data: Dict[str, Any] = {
             "t": elapsed_time,
             "users": [],
             "object_states": self.get_objects_state(),
             "agent_states": self.get_agents_state(),
+            "task_percent_complete": task_percent_complete,
         }
 
         for user_index in range(len(user_data)):
             u = user_data[user_index]
             user_data_dict = {
-                "task_completed": u.agent_data.episode_completion_status
+                "finished_episode": u.agent_data.episode_completion_status
                 != EpisodeCompletionStatus.PENDING,
-                "task_succeeded": u.agent_data.episode_completion_status
-                == EpisodeCompletionStatus.SUCCESS,
                 "camera_transform": u.agent_data.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
@@ -235,7 +238,7 @@ class UserData:
             self._on_episode_form_cancelled
         )
         self.end_episode_form.on_episode_success.registerCallback(
-            self._on_episode_success
+            self._on_episode_finished
         )
         self.end_episode_form.on_error_reported.registerCallback(
             self._on_error_reported
@@ -402,10 +405,10 @@ class UserData:
             EpisodeCompletionStatus.PENDING
         )
 
-    def _on_episode_success(self, _e: Any = None):
+    def _on_episode_finished(self, _e: Any = None):
         self.ui_events.append(
             {
-                "type": "episode_success",
+                "type": "episode_finished",
             }
         )
         self.agent_data.episode_completion_status = (
@@ -416,7 +419,7 @@ class UserData:
     def _on_error_reported(self, error_report: ErrorReport):
         self.ui_events.append(
             {
-                "type": "episode_failure",
+                "type": "error_reported",
                 "error_report": error_report.user_message,
             }
         )
@@ -457,6 +460,7 @@ class AppStateRearrangeV2(AppStateBase):
         self._elapsed_time = 0.0
 
         self._world = World(app_service.sim)
+        self._metrics = Metrics(app_service)
 
         self._agent_to_user_index: Dict[int, int] = {}
         self._user_to_agent_index: Dict[int, int] = {}
@@ -551,8 +555,11 @@ class AppStateRearrangeV2(AppStateBase):
     def on_exit(self):
         super().on_exit()
 
-        episode_success = self._is_episode_successful()
-        self._session.session_recorder.end_episode(episode_success)
+        self._session.session_recorder.end_episode(
+            episode_finished=self._is_episode_finished(),
+            episode_successful=self._is_episode_successful(),
+            metrics=self._metrics.get_all_metrics(),
+        )
 
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
@@ -681,7 +688,7 @@ class AppStateRearrangeV2(AppStateBase):
                     server_user.agent_data.episode_completion_status
                     == EpisodeCompletionStatus.PENDING
                 ):
-                    server_user._on_episode_success()
+                    server_user._on_episode_finished()
 
             # Switch the server-controlled user.
             if self._num_users > 0 and self._server_gui_input.get_key_down(
@@ -735,7 +742,9 @@ class AppStateRearrangeV2(AppStateBase):
         self._elapsed_time += dt
         if self._is_any_agent_policy_driven() or self._is_any_user_active():
             frame_data = self._frame_recorder.record_state(
-                self._elapsed_time, self._user_data
+                self._elapsed_time,
+                self._user_data,
+                self._metrics.get_task_percent_complete(),
             )
             self._session.session_recorder.record_frame(frame_data)
 
@@ -788,10 +797,22 @@ class AppStateRearrangeV2(AppStateBase):
 
     def _is_episode_successful(self) -> bool:
         """
-        Returns true if all agents finished the episode successfully.
+        Returns true if:
+        * Task success is >99%.
+        * All agents finished the episode without reporting an error.
         """
-        return all(
+
+        task_percent_complete = self._metrics.get_task_percent_complete()
+        task_successful = (
+            task_percent_complete > 0.99
+            if task_percent_complete is not None
+            else True
+        )
+
+        all_agents_reported_success = all(
             self._agent_data[agent_index].episode_completion_status
             == EpisodeCompletionStatus.SUCCESS
             for agent_index in range(self._num_agents)
         )
+
+        return task_successful and all_agents_reported_success

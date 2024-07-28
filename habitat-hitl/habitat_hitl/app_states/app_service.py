@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, List
+from typing import Any, Callable, Dict, List
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -41,7 +41,7 @@ class AppService:
         sim: RearrangeSim,
         compute_action_and_step_env: Callable,
         step_recorder: BaseRecorder,
-        get_metrics: Callable,
+        get_metrics: Callable[[], Dict[str, Any]],
         end_episode: Callable,
         set_cursor_style: Callable,
         episode_helper: EpisodeHelper,
@@ -118,7 +118,7 @@ class AppService:
         return self._step_recorder
 
     @property
-    def get_metrics(self) -> Callable:
+    def get_metrics(self) -> Callable[[], Dict[str, Any]]:
         return self._get_metrics
 
     @property
