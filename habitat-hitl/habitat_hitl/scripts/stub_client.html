@@ -36,6 +36,8 @@
     <br>
     <button id="connectButton">Connect</button>
     <button id="disconnectButton" disabled>Disconnect</button>
+    <input type="checkbox" id="autoConnectCheckbox"/>
+    <label for="autoConnectCheckbox">Auto-Connect</label>
     <hr>
     <div id="status">Disconnected</div>
     <div id="serverUrl">Server URL:</div>
@@ -68,6 +70,7 @@
         var messageCount = 0;
         var stats = null;
         var lastUpdateTime = Date.now();
+        var connected = false;
 
         function connect() {
             var ip = document.getElementById('serverIp').value;
@@ -84,6 +87,7 @@
                 document.getElementById('disconnectButton').disabled = false;
                 document.getElementById('serverIp').disabled = true;
                 document.getElementById('serverPort').disabled = true;
+                connected = true
 
                 let connectionParams = {
                     isClientReady: true
@@ -112,6 +116,7 @@
                 document.getElementById('disconnectButton').disabled = true;
                 document.getElementById('serverIp').disabled = false;
                 document.getElementById('serverPort').disabled = false;
+                connected = false
 
                 if (sendIntervalId) {
                     clearInterval(sendIntervalId);
@@ -194,9 +199,17 @@
             lastUpdateTime = now;
         }
 
+        function autoConnect() {
+            if (!connected && document.getElementById("autoConnectCheckbox").checked)
+            {
+                connect();
+            }
+        }
+
         document.getElementById('connectButton').addEventListener('click', connect);
         document.getElementById('disconnectButton').addEventListener('click', disconnect);
-        setInterval(updateMessageRate, 2000);  // Update message rate every 2 seconds
+        setInterval(updateMessageRate, 1000);  // Update message rate every second.
+        setInterval(autoConnect, 1000); // Try connecting automatically every second.
     </script>
 </body>
 </html>
