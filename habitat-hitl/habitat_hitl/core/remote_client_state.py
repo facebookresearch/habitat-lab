@@ -248,12 +248,15 @@ class RemoteClientState:
             gui_input = self._gui_inputs[user_index]
             for client_state in client_states:
                 # UI element events.
-                ui = client_state.get("ui", None)
-                if ui is not None:
-                    for button in ui.get("buttonsPressed", []):
-                        self._pressed_ui_buttons[user_index].add(button)
-                    for textbox_id, text in ui.get("textboxes", {}).items():
-                        self._textboxes[user_index][textbox_id] = text
+                for ui_dict in ["ui", "legacyUi"]:
+                    ui = client_state.get(ui_dict, None)
+                    if ui is not None:
+                        for button in ui.get("buttonsPressed", []):
+                            self._pressed_ui_buttons[user_index].add(button)
+                        for textbox_id, text in ui.get(
+                            "textboxes", {}
+                        ).items():
+                            self._textboxes[user_index][textbox_id] = text
 
                 input_json = (
                     client_state["input"] if "input" in client_state else None
