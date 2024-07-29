@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
@@ -14,6 +14,9 @@ from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
+
+
+from habitat_hitl.core.ui_elements import UIUpdate
 
 
 # TODO: Move to another file.
@@ -360,6 +363,45 @@ class ClientMessageManager:
                 rot[2],
                 rot[3],
             ]
+
+    def update_ui(
+        self, ui_update: UIUpdate, destination_mask: Mask = Mask.ALL
+    ) -> None:
+        r"""
+        Add or update UI element.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "uiUpdates" not in message:
+                message["uiUpdates"] = []
+            message["uiUpdates"].append(asdict(ui_update))
+
+    def clear_canvas(
+        self, canvas: str, destination_mask: Mask = Mask.ALL
+    ) -> None:
+        r"""
+        Delete all UI elements from a canvas.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "clearCanvases" not in message:
+                message["clearCanvases"] = []
+            message["clearCanvases"].append(canvas)
+
+    def move_canvas(
+        self,
+        canvas: str,
+        world_position: list[float],
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Move a floating canvas to align with the specified world position.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "canvasPositions" not in message:
+                message["canvasPositions"] = {}
+            message["canvasPositions"][canvas] = world_position
 
 
 def _create_transform_dict(transform: mn.Matrix4) -> Dict[str, List[float]]:
