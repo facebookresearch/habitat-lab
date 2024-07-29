@@ -3,18 +3,9 @@
 defaults:
   - language_rearrange_multi_agent
   - hitl_defaults
+  - dataset
   - _self_
 
-habitat:
-  # various config args to ensure the episode never ends
-  environment:
-    max_episode_steps: 0
-    # Ensure that the episode iterator can be controlled by specifying episode IDs.
-    iterator_options:
-      max_scene_repeat_steps: -1
-      max_scene_repeat_episodes: -1
-      shuffle: False
-      group_by_scene: False
 
 habitat_baselines:
   # todo: document these choices

@@ -3,11 +3,14 @@
 
 defaults:
   - language_rearrange
+
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: spot
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_rgbd_arm_agent
   - /habitat/task/actions@habitat.task.actions.agent_1_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_humanoidjoint_action: humanoidjoint_action
+
   - _self_
 
 habitat:
