@@ -14,11 +14,11 @@ import sys
 sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 # fmt: on
 
+# This registers collaboration episodes into this application.
+import habitat_llm_loader
 import hydra
 from state_machine import StateMachine
 
-# This registers collaboration episodes into this application.
-import examples.hitl.rearrange_v2.habitat_llm_loader as habitat_llm_loader  # noqa: 401
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 
