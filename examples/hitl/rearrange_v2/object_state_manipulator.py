@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from habitat_llm.sims.collaboration_sim import CollaborationSim
 from habitat_llm.tools.motor_skills.object_states.oracle_clean_skills import (
@@ -31,11 +32,13 @@ from habitat.tasks.rearrange.articulated_agent_manager import (
 BooleanActionMap = Dict[bool, OracleObjectStateInPlaceSkill]
 
 
-class StateAction:
+@dataclass
+class BooleanAction:
     state_spec: ObjectStateSpec
-    current_value: Any
-    action_value: Any
-    can_execute_action: bool
+    current_value: bool
+    target_value: bool
+    available: bool
+    enabled: bool
 
 
 class ObjectStateManipulator:
@@ -123,9 +126,42 @@ class ObjectStateManipulator:
         Try executing an action on the specified object.
         Returns whether the action was successful, and an error message if it wasn't.
         """
-        can_execute_action, error_message = self.can_execute_action(
+        success, error_message = self.can_execute_action(
             state_name, state_value, object_handle
         )
-        if can_execute_action:
+        if success:
             self.set_object_state(object_handle, state_name, state_value)
-        return (can_execute_action, error_message)
+        return (success, error_message)
+
+    def get_all_available_boolean_actions(
+        self, object_handle: str
+    ) -> List[BooleanAction]:
+        """
+        Return all boolean actions available for the specified object.
+        """
+        actions: List[BooleanAction] = []
+        world = self._world
+        states = world.get_states_for_object_handle(object_handle)
+        for state in states:
+            spec = state.state_spec
+            if spec.type == bool:
+                name = spec.name
+                value = cast(bool, state.value)
+                target_value = not value
+                action = self.get_boolean_action(name, target_value)
+                action_available = action is not None
+                action_enabled = False
+                if action_available:
+                    action_enabled, _ = self.can_execute_action(
+                        name, target_value, object_handle
+                    )
+                actions.append(
+                    BooleanAction(
+                        state_spec=spec,
+                        current_value=state.value,
+                        target_value=target_value,
+                        available=action_available,
+                        enabled=action_enabled,
+                    )
+                )
+        return actions
