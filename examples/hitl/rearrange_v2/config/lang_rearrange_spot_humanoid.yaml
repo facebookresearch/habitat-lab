@@ -3,6 +3,7 @@
 defaults:
   - language_rearrange_multi_agent
   - hitl_defaults
+  - content
   - _self_
 
 habitat:
