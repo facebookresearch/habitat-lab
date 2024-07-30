@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 import magnum as mn
 
-from habitat_hitl.core.user_mask import Mask
+from habitat_hitl.core.user_mask import Mask, Users
 
 if TYPE_CHECKING:
-    from habitat_hitl.app_states.app_service import AppService
-
+    from habitat_hitl.core.client_message_manager import ClientMessageManager
+    from habitat_hitl.core.remote_client_state import RemoteClientState
 
 Color = Optional[List[float]]
 
@@ -103,11 +103,15 @@ class UIManager:
     Helper class for handling UI using UIElements.
     """
 
-    def __init__(self, app_service: AppService, user_index: int):
-        self._client_state = app_service.remote_client_state
-        self._client_message_manager = app_service.client_message_manager
-        self._user_index = user_index
-        self._users = app_service.users
+    def __init__(
+        self,
+        users: Users,
+        client_state: "RemoteClientState",
+        client_message_manager: "ClientMessageManager",
+    ):
+        self._client_state = client_state
+        self._client_message_manager = client_message_manager
+        self._users = users
 
         # TODO: Canvases are currently predefined.
         self._canvases: Dict[str, Dict[str, UIElement]] = {
@@ -118,16 +122,21 @@ class UIManager:
             "floating": {},
         }
 
-    def update_canvas(self, canvas_name: str) -> UIContext:
+    def update_canvas(
+        self, canvas_name: str, destination_mask: Mask
+    ) -> UIContext:
         assert canvas_name in self._canvases
         return UIContext(
             canvas_name=canvas_name,
-            user_index=self._user_index,
+            destination_mask=destination_mask,
             manager=self,
         )
 
     def commit_canvas_content(
-        self, canvas_name: str, ui_elements: Dict[str, UIElement]
+        self,
+        canvas_name: str,
+        ui_elements: Dict[str, UIElement],
+        destination_mask: Mask,
     ):
         assert canvas_name in self._canvases
 
@@ -166,32 +175,34 @@ class UIManager:
         for dirty_element in dirty_elements:
             self._client_message_manager.update_ui(
                 ui_update=dirty_element,
-                destination_mask=Mask.from_index(self._user_index),
+                destination_mask=destination_mask,
             )
 
         # If the canvas is dirty, clear it.
         if canvas_dirty:
-            self.clear_canvas(canvas_name)
+            self.clear_canvas(canvas_name, destination_mask)
 
         # Register UI elements.
         for uid, element in ui_elements.items():
             self._canvases[canvas_name][uid] = element
 
-    def is_button_pressed(self, uid: str) -> bool:
-        return self._client_state.ui_button_pressed(self._user_index, uid)
+    def is_button_pressed(self, uid: str, user_index: int) -> bool:
+        return self._client_state.ui_button_pressed(user_index, uid)
 
-    def clear_canvas(self, canvas_name: str):
+    def clear_canvas(self, canvas_name: str, destination_mask: Mask):
         assert canvas_name in self._canvases
         self._client_message_manager.clear_canvas(
-            canvas_name, destination_mask=Mask.from_index(self._user_index)
+            canvas_name, destination_mask=destination_mask
         )
         self._canvases[canvas_name].clear()
 
-    def clear_all_canvases(self):
+    def clear_all_canvases(self, destination_mask: Mask):
         for canvas_name in self._canvases.keys():
-            self.clear_canvas(canvas_name)
+            self.clear_canvas(canvas_name, destination_mask)
 
-    def move_canvas(self, canvas: str, world_position: mn.Vector3):
+    def move_canvas(
+        self, canvas: str, world_position: mn.Vector3, destination_mask: Mask
+    ):
         world_pos: List[float] = [
             world_position.x,
             world_position.y,
@@ -200,15 +211,17 @@ class UIManager:
         self._client_message_manager.move_canvas(
             canvas,
             world_pos,
-            destination_mask=Mask.from_index(self._user_index),
+            destination_mask=Mask.from_index(destination_mask),
         )
 
 
 class UIContext:
-    def __init__(self, canvas_name: str, user_index: int, manager: UIManager):
+    def __init__(
+        self, canvas_name: str, destination_mask: Mask, manager: UIManager
+    ):
         self._canvas_name = canvas_name
         self._manager = manager
-        self._user_index = user_index
+        self._destination_mask = destination_mask
         self._ui_updates: List[UIUpdate] = []
         self._ui_elements: Dict[str, UIElement] = {}
 
@@ -294,6 +307,6 @@ class UIContext:
 
     def __exit__(self, exception_type, _exception_val, _trace):
         self._manager.commit_canvas_content(
-            self._canvas_name, self._ui_elements
+            self._canvas_name, self._ui_elements, self._destination_mask
         )
         return exception_type == None

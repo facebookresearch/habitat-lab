@@ -16,6 +16,7 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
+from habitat_hitl.core.ui_elements import UIManager
 from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_abc import (
     Controller,
@@ -35,6 +36,7 @@ class AppService:
         gui_input: GuiInput,
         remote_client_state: RemoteClientState,
         gui_drawer: GuiDrawer,
+        ui_manager: UIManager,
         text_drawer: AbstractTextDrawer,
         get_anim_fraction: Callable,
         env: Env,
@@ -56,6 +58,7 @@ class AppService:
         self._remote_client_state = remote_client_state
         self._gui_drawer = gui_drawer
         self._text_drawer = text_drawer
+        self._ui_manager = ui_manager
         self._get_anim_fraction = get_anim_fraction
         self._env = env
         self._sim = sim
@@ -96,6 +99,10 @@ class AppService:
     @property
     def text_drawer(self) -> AbstractTextDrawer:
         return self._text_drawer
+
+    @property
+    def ui_manager(self) -> UIManager:
+        return self._ui_manager
 
     @property
     def get_anim_fraction(self) -> Callable:

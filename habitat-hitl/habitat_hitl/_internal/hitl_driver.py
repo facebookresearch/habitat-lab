@@ -46,6 +46,7 @@ from habitat_hitl.core.serialize_utils import (
 )
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.core.types import KeyframeAndMessages
+from habitat_hitl.core.ui_elements import UIManager
 from habitat_hitl.core.user_mask import Users
 from habitat_hitl.environment.controllers.controller_abc import Controller
 from habitat_hitl.environment.controllers.controller_helper import (
@@ -201,6 +202,12 @@ class HitlDriver(AppDriver):
         # TODO: Dependency injection
         text_drawer._client_message_manager = self._client_message_manager
 
+        ui_manager = UIManager(
+            users,
+            self._remote_client_state,
+            self._client_message_manager,
+        )
+
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
@@ -209,6 +216,7 @@ class HitlDriver(AppDriver):
             remote_client_state=self._remote_client_state,
             gui_drawer=gui_drawer,
             text_drawer=text_drawer,
+            ui_manager=ui_manager,
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
             sim=self.get_sim(),

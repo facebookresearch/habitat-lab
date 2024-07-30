@@ -6,19 +6,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from functools import partial
 import textwrap
-from typing import TYPE_CHECKING, Any, Callable, Dict, Final, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple, cast
 
-from habitat.sims.habitat_simulator.object_state_machine import ObjectStateSpec
-from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.ui_elements import HorizontalAlignment, UIManager
 import magnum as mn
-from world import World
+
+from habitat.sims.habitat_simulator.object_state_machine import (
+    BooleanObjectState,
+    ObjectStateSpec,
+)
+from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.ui_elements import HorizontalAlignment
+from habitat_hitl.core.user_mask import Mask
 
 FONT_SIZE_LARGE: Final[int] = 32
 FONT_SIZE_SMALL: Final[int] = 24
+
 
 @dataclass
 class ObjectStateControl:
@@ -26,11 +30,10 @@ class ObjectStateControl:
     value: bool
     enabled: bool
     available: bool
-    callback: Callable [[
-        str, # object_handle
-        str, # state_name
-        Any # state_value
-        ], None]
+    callback: Callable[
+        [str, str, Any], None  # object_handle  # state_name  # state_value
+    ]
+
 
 class UIOverlay:
     """
@@ -42,17 +45,19 @@ class UIOverlay:
         app_service: AppService,
         user_index: int,
     ):
-        self._ui_manager = UIManager(app_service, user_index)
+        self._ui_manager = app_service.ui_manager
         self._buttons: Dict[str, Callable] = {}
+        self._user_index = user_index
+        self._dest_mask: Mask = Mask.from_index(user_index)
 
     def update(self):
         manager = self._ui_manager
         for uid, callback in self._buttons.items():
-            if manager.is_button_pressed(uid):
+            if manager.is_button_pressed(uid, self._user_index):
                 callback()
 
     def reset(self):
-        self._ui_manager.clear_all_canvases()
+        self._ui_manager.clear_all_canvases(self._dest_mask)
         self._buttons.clear()
 
     def update_instructions_panel(
@@ -63,27 +68,27 @@ class UIOverlay:
         manager = self._ui_manager
         has_instructions = instructions is not None and len(instructions) > 0
         has_status_text = status_text is not None and len(status_text) > 0
-        with manager.update_canvas("top_left") as ctx:
-            if has_instructions:            
+        with manager.update_canvas("top_left", self._dest_mask) as ctx:
+            if has_instructions:
                 ctx.label(
                     uid="instr_title",
                     text="Instructions",
                     font_size=FONT_SIZE_LARGE,
-                    horizontal_alignment=HorizontalAlignment.LEFT
+                    horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
                 multiline_instructions = textwrap.fill(
                     instructions,
                     width=70,
                     break_long_words=False,
-                    break_on_hyphens=True
+                    break_on_hyphens=True,
                 )
 
                 ctx.label(
                     uid="instr_content",
                     text=multiline_instructions,
                     font_size=FONT_SIZE_SMALL,
-                    horizontal_alignment=HorizontalAlignment.LEFT
+                    horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
             if has_status_text:
@@ -91,7 +96,7 @@ class UIOverlay:
                     status_text,
                     width=70,
                     break_long_words=False,
-                    break_on_hyphens=True
+                    break_on_hyphens=True,
                 )
 
                 ctx.label(
@@ -100,7 +105,7 @@ class UIOverlay:
                     font_size=FONT_SIZE_SMALL,
                     bold=True,
                     horizontal_alignment=HorizontalAlignment.LEFT,
-                    color=[1.0, 0.75, 0.5, 1.0]
+                    color=[1.0, 0.75, 0.5, 1.0],
                 )
 
     def update_controls_panel(
@@ -108,7 +113,7 @@ class UIOverlay:
         controls: Optional[List[Tuple[str, str]]],
     ):
         manager = self._ui_manager
-        with manager.update_canvas("top_right") as ctx:
+        with manager.update_canvas("top_right", self._dest_mask) as ctx:
             if controls is None:
                 return
 
@@ -116,10 +121,11 @@ class UIOverlay:
                 "ctrl_title",
                 text="Controls",
                 font_size=FONT_SIZE_LARGE,
-                horizontal_alignment=HorizontalAlignment.RIGHT
+                horizontal_alignment=HorizontalAlignment.RIGHT,
             )
 
             current_item_id = 0
+
             def create_list_item(left: str, right: str):
                 nonlocal current_item_id
                 item_key = f"ctrl_{current_item_id}"
@@ -131,8 +137,8 @@ class UIOverlay:
                 )
                 current_item_id += 1
 
-            for tuple in controls:
-                create_list_item(tuple[0], tuple[1])
+            for control in controls:
+                create_list_item(control[0], control[1])
 
     def update_hovered_object_info_panel(
         self,
@@ -140,7 +146,7 @@ class UIOverlay:
         object_states: List[Tuple[str, str]],
     ):
         manager = self._ui_manager
-        with manager.update_canvas("bottom_left") as ctx:
+        with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
 
@@ -150,10 +156,11 @@ class UIOverlay:
                 "hover_title",
                 text=title,
                 font_size=FONT_SIZE_LARGE,
-                horizontal_alignment=HorizontalAlignment.LEFT
+                horizontal_alignment=HorizontalAlignment.LEFT,
             )
 
             current_item_id = 0
+
             def create_list_item(left: str, right: str):
                 nonlocal current_item_id
                 item_key = f"hover_{current_item_id}"
@@ -165,8 +172,8 @@ class UIOverlay:
                 )
                 current_item_id += 1
 
-            for tuple in object_states:
-                create_list_item(tuple[0], tuple[1])
+            for state in object_states:
+                create_list_item(state[0], state[1])
 
     def update_selected_object_panel(
         self,
@@ -175,21 +182,21 @@ class UIOverlay:
         canvas_position: Optional[mn.Vector3],
     ):
         manager = self._ui_manager
-        with manager.update_canvas("floating") as ctx:
+        with manager.update_canvas("floating", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
-            
+
             title = _display_str(object_category_name)
 
             ctx.label(
                 "select_title",
                 text=title,
                 font_size=FONT_SIZE_LARGE,
-                horizontal_alignment=HorizontalAlignment.CENTER
+                horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
             def create_toggle(toggle: ObjectStateControl) -> str:
-                spec = toggle.spec
+                spec = cast(BooleanObjectState, toggle.spec)
                 item_key = f"select_{spec.name}"
                 ctx.toggle(
                     item_key,
@@ -205,8 +212,9 @@ class UIOverlay:
                 self._buttons[button_key] = toggle.callback
 
         if canvas_position is not None:
-            manager.move_canvas("floating", canvas_position)
-    
+            manager.move_canvas("floating", canvas_position, self._dest_mask)
+
+
 def _display_str(string: str):
     """Convert 'internal_case' to 'Title Case'."""
     return string.replace("_", " ").replace("-", " ").replace(".", " ").title()
