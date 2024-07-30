@@ -8,13 +8,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
 
 import magnum as mn
+from ui_overlay import ObjectStateControl, UIOverlay
 from world import World
 
 from habitat.sims.habitat_simulator import sim_utilities
+from habitat.sims.habitat_simulator.object_state_machine import (
+    BooleanObjectState,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -58,6 +64,7 @@ class UI:
         self,
         hitl_config,
         user_index: int,
+        app_service: AppService,
         world: World,
         gui_controller: GuiController,
         sim: RearrangeSim,
@@ -120,14 +127,35 @@ class UI:
         )
         self._selections.append(self._place_selection)
 
+        # Set up UI overlay
+        self._ui_overlay = UIOverlay(app_service, user_index)
+        self._is_help_shown = True
+
         # Set up user events
         self._on_pick = Event()
         self._on_place = Event()
         self._on_open = Event()
         self._on_close = Event()
+        self._on_object_state_change = Event()
 
         # Disable the snap manager automatic object positioning so that object placement is controlled here.
         self._get_grasp_manager()._automatically_update_snapped_object = False
+
+        # Object state manipulation
+        self._object_state_manipulator: Optional[
+            "ObjectStateManipulator"
+        ] = None
+        try:
+            from object_state_manipulator import ObjectStateManipulator
+
+            self._object_state_manipulator = ObjectStateManipulator(
+                sim=sim,
+                agent=sim.agents_mgr[gui_controller._agent_idx],
+                world=world,
+                maximum_distance=self._can_grasp_place_threshold,
+            )
+        except Exception as e:
+            print(f"Cannot load object state manipulator. {e}")
 
     @dataclass
     class PickEventData:
@@ -166,6 +194,16 @@ class UI:
     def on_close(self) -> Event:
         return self._on_close
 
+    @dataclass
+    class StateChangeEventData:
+        object_handle: str
+        state_name: str
+        new_value: Any
+
+    @property
+    def on_state_change(self) -> Event:
+        return self._on_object_state_change
+
     def selection_discriminator_ignore_agents(self, object_id: int) -> bool:
         """Allow selection through agents."""
         return object_id not in self._world._agent_object_ids
@@ -178,11 +216,13 @@ class UI:
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
+        self._ui_overlay.reset()
 
     def update(self) -> None:
         """
         Handle user actions and update the UI.
         """
+        self._ui_overlay.update()
 
         def _handle_double_click() -> bool:
             time_since_last_click = datetime.now() - self._last_click_time
@@ -214,10 +254,18 @@ class UI:
             self._place_object()
             self._place_selection.deselect()
 
+        # Toggle help text.
+        if self._gui_input.get_key_down(KeyCode.H):
+            self._is_help_shown = not self._is_help_shown
+
     def draw_ui(self) -> None:
         """
         Draw the UI.
         """
+        self._update_overlay_help_text()
+        self._update_overlay_hovered_object()
+        self._update_overlay_selected_object()
+
         self._update_held_object_placement()
         self._draw_place_selection()
         self._draw_hovered_interactable()
@@ -403,6 +451,140 @@ class UI:
         if self._world.is_any_agent_holding_object(receptacle_object_id):
             return False
         return True
+
+    def update_overlay_instructions(
+        self, instructions: Optional[str], status_text: Optional[str]
+    ):
+        overlay = self._ui_overlay
+        overlay.update_instructions_panel(instructions, status_text)
+
+    def _update_overlay_help_text(self):
+        """
+        Update the UI overlay.
+        """
+        overlay = self._ui_overlay
+
+        controls: Optional[List[Tuple[str, str]]] = (
+            [
+                ("H", "Toggle Help"),
+                ("WASD", "Move"),
+                ("Left-Click", "Select"),
+                ("Middle-Click or R", "Look Around"),
+                ("Double-Click", "Pick-up"),
+                ("Double-Click", "Open/Close"),
+                ("Right-Click", "Drop"),
+                ("0", "Finish Task"),
+            ]
+            if self._is_help_shown
+            else None
+        )
+
+        overlay.update_controls_panel(controls)
+
+    def _update_overlay_hovered_object(self):
+        object_id = self._hover_selection.object_id
+
+        object_category: Optional[str] = None
+        object_states: List[Tuple[str, str]] = []
+
+        if object_id is not None:
+            world = self._world
+            sim = self._sim
+            obj = sim_utilities.get_obj_from_id(
+                sim, object_id, world._link_id_to_ao_map
+            )
+            if obj is not None:
+                object_category = world.get_category_from_handle(obj.handle)
+
+                obj_states = world.get_states_for_object_handle(obj.handle)
+                for state in obj_states:
+                    spec = state.state_spec
+                    if isinstance(spec, BooleanObjectState):
+                        val = cast(bool, state.value)
+                        object_states.append(
+                            (
+                                spec.display_name,
+                                spec.display_name_true
+                                if val
+                                else spec.display_name_false,
+                            )
+                        )
+                    else:
+                        # Unsupported type.
+                        pass
+
+        overlay = self._ui_overlay
+        overlay.update_hovered_object_info_panel(
+            object_category, object_states
+        )
+
+    def _update_overlay_selected_object(self):
+        object_id = self._click_selection.object_id
+
+        object_category: Optional[str] = None
+        object_states: List[ObjectStateControl] = []
+        object_position: Optional[mn.Vector3] = None
+
+        if object_id is not None:
+            world = self._world
+            sim = self._sim
+            obj = sim_utilities.get_obj_from_id(
+                sim, object_id, world._link_id_to_ao_map
+            )
+            if obj is not None:
+                object_category = world.get_category_from_handle(obj.handle)
+                object_position = obj.translation
+
+                # Requires object state manipulator.
+                osm = self._object_state_manipulator
+                if osm is not None:
+                    # Get all possible actions for this object.
+                    all_possible_actions = (
+                        osm.get_all_available_boolean_actions(obj.handle)
+                    )
+                    for action in all_possible_actions:
+                        spec = action.state_spec
+                        object_states.append(
+                            ObjectStateControl(
+                                spec=spec,
+                                value=action.current_value,
+                                enabled=action.enabled,
+                                available=action.available,
+                                callback=partial(
+                                    self._state_change_callback,
+                                    spec.name,
+                                    action.target_value,
+                                    obj.handle,
+                                ),
+                            )
+                        )
+
+        overlay = self._ui_overlay
+        overlay.update_selected_object_panel(
+            object_category, object_states, object_position
+        )
+
+    def _state_change_callback(
+        self, state_name: str, target_value: Any, object_handle: str
+    ):
+        # Requires object state manipulator.
+        osm = self._object_state_manipulator
+        if osm is None:
+            return
+
+        success, error = osm.try_execute_action(
+            state_name, target_value, object_handle
+        )
+        if success:
+            self._on_object_state_change.invoke(
+                UI.StateChangeEventData(
+                    object_handle=object_handle,
+                    state_name=state_name,
+                    new_value=target_value,
+                )
+            )
+        else:
+            print(error)
 
     def discriminator_default(_object_id: int) -> bool:  # type: ignore
         """Pick any object ID."""

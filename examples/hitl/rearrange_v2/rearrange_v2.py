@@ -30,7 +30,6 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 )
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.key_mapping import KeyCode
-from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import (
@@ -191,7 +190,6 @@ class UserData:
         self.client_helper = (
             self.app_service.remote_client_state._client_helper
         )
-        self.show_gui_text = True
         self.pip_initialized = False
 
         gui_agent_controller = agent_data.agent_controller
@@ -219,6 +217,7 @@ class UserData:
             hitl_config=app_service.hitl_config,
             user_index=user_index,
             world=world,
+            app_service=app_service,
             gui_controller=self.gui_agent_controller,
             sim=app_service.sim,
             gui_input=self.gui_input,
@@ -233,6 +232,7 @@ class UserData:
         self.ui.on_place.registerCallback(self._on_place)
         self.ui.on_open.registerCallback(self._on_open)
         self.ui.on_close.registerCallback(self._on_close)
+        self.ui.on_state_change.registerCallback(self._on_state_change)
 
         self.end_episode_form.on_cancel.registerCallback(
             self._on_episode_form_cancelled
@@ -276,9 +276,6 @@ class UserData:
         if self.end_episode_form.is_form_shown():
             self.end_episode_form.step()
             return
-
-        if self.gui_input.get_key_down(KeyCode.H):
-            self.show_gui_text = not self.show_gui_text
 
         if self.gui_input.get_key_down(KeyCode.ZERO):
             self.end_episode_form.show()
@@ -395,6 +392,16 @@ class UserData:
             }
         )
 
+    def _on_state_change(self, e: UI.StateChangeEventData):
+        self.ui_events.append(
+            {
+                "type": "state_change",
+                "obj_handle": e.object_handle,
+                "state_name": e.state_name,
+                "new_value": e.new_value,
+            }
+        )
+
     def _on_episode_form_cancelled(self, _e: Any = None):
         self.ui_events.append(
             {
@@ -452,6 +459,8 @@ class AppStateRearrangeV2(AppStateBase):
         self._num_users = self._users.max_user_count
         self._agents = Users(len(agent_mgr._all_agent_data))
         self._num_agents = self._agents.max_user_count
+        for agent_index in range(self._num_agents):
+            self._agents.add_user(agent_index)
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._server_user_index = 0
@@ -459,7 +468,7 @@ class AppStateRearrangeV2(AppStateBase):
         self._server_input_enabled = False
         self._elapsed_time = 0.0
 
-        self._world = World(app_service.sim)
+        self._world = World(app_service.sim, self._app_service.config)
         self._metrics = Metrics(app_service)
 
         self._agent_to_user_index: Dict[int, int] = {}
@@ -561,6 +570,9 @@ class AppStateRearrangeV2(AppStateBase):
             metrics=self._metrics.get_all_metrics(),
         )
 
+        for user_data in self._user_data:
+            user_data.ui.reset()
+
     def on_environment_reset(self, episode_recorder_dict):
         self._world.reset()
 
@@ -602,34 +614,12 @@ class AppStateRearrangeV2(AppStateBase):
             reach_pos=None,
         )
 
-    def _get_controls_text(self, user_index: int):
-        controls_str: str = ""
-        if self._user_data[user_index].show_gui_text:
-            controls_str += "H: Toggle help\n"
-            controls_str += "Look: Middle click (drag), I, K\n"
-            controls_str += "Walk: W, S\n"
-            controls_str += "Turn: A, D\n"
-            controls_str += "Finish episode: Zero (0)\n"
-            controls_str += "Open/close: Double-click\n"
-            controls_str += "Pick object: Double-click\n"
-            controls_str += "Place object: Right click (hold)\n"
-
-        client_helper = self._app_service.remote_client_state._client_helper
-        idle_time = client_helper.get_idle_time(user_index)
-        if idle_time > 10:
-            controls_str += f"Idle time {idle_time}s\n"
-
-        return controls_str
-
-    def _get_status_text(self, user_index: int):
-        status_str = ""
-
+    def _update_status_text(self, user_index: int):
         task_instruction = self._user_data[
             user_index
         ].agent_data.task_instruction
-        if len(task_instruction) > 0:
-            status_str += "Instruction: " + task_instruction + "\n"
 
+        status_str = ""
         if (
             self._users.max_user_count > 1
             and self._user_data[
@@ -638,37 +628,23 @@ class AppStateRearrangeV2(AppStateBase):
             == EpisodeCompletionStatus.PENDING
         ):
             if self._has_any_agent_finished_success():
-                status_str += "\n\nThe other participant signaled that the task is completed.\nPress '0' when you are done."
+                status_str += "The other participant signaled that the task is completed.\nPress '0' when you are done.\n"
             elif self._has_any_agent_finished_failure():
-                status_str += "\n\nThe other participant signaled a problem with the task.\nPress '0' to continue."
+                status_str += "The other participant signaled a problem with the task.\nPress '0' to continue.\n"
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
             remaining_time = str(
                 client_helper.get_remaining_idle_time(user_index)
             )
-            status_str += f"\n\nAre you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
+            status_str += f"Are you still there?\nPress any key in the next {remaining_time}s to keep playing!\n"
 
-        return status_str
+        self._user_data[user_index].ui.update_overlay_instructions(
+            task_instruction, status_str
+        )
 
     def _update_help_text(self, user_index: int):
-        status_str = self._get_status_text(user_index)
-        if len(status_str) > 0:
-            self._app_service.text_drawer.add_text(
-                status_str,
-                TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-280,
-                text_delta_y=-50,
-                destination_mask=Mask.from_index(user_index),
-            )
-
-        controls_str = self._get_controls_text(user_index)
-        if len(controls_str) > 0:
-            self._app_service.text_drawer.add_text(
-                controls_str,
-                TextOnScreenAlignment.TOP_LEFT,
-                destination_mask=Mask.from_index(user_index),
-            )
+        self._update_status_text(user_index)
 
     def sim_update(self, dt: float, post_sim_update_dict):
         if self._is_server_gui_enabled():
@@ -697,6 +673,9 @@ class AppStateRearrangeV2(AppStateBase):
                 self._server_user_index = (
                     self._server_user_index + 1
                 ) % self._num_users
+
+        # Update world.
+        self._world.update(dt)
 
         # Copy server input to user input when server input is active.
         if self._app_service.hitl_config.networking.enable:
