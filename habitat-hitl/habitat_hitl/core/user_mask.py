@@ -57,11 +57,15 @@ class Users:
     _max_user_count: int
     _active_user_mask: Mask
 
-    def __init__(self, max_user_count: int) -> None:
+    def __init__(
+        self, max_user_count: int, activate_users: bool = True
+    ) -> None:
         assert max_user_count >= 0
         assert max_user_count <= Mask.MAX_VALUE
         self._max_user_count = max_user_count
-        self._active_user_mask = Mask.NONE
+        self._active_user_mask = (
+            Mask.MAX_VALUE if activate_users else Mask.NONE
+        )
 
     def indices(self, user_mask: Mask) -> Generator[int, Any, None]:
         """
