@@ -57,7 +57,7 @@ class AppStateBase(AppState):
             ctx.label(
                 uid="status",
                 text=message,
-                font_size=32,
+                font_size=24,
                 horizontal_alignment=HorizontalAlignment.LEFT,
             )
         # Server-side message.
