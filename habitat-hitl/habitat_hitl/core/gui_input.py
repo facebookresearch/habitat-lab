@@ -99,8 +99,6 @@ class GuiInput:
         self._key_up.clear()
         self._mouse_button_down.clear()
         self._mouse_button_up.clear()
-        self._relative_mouse_position = [0, 0]
-        self._mouse_scroll_offset = 0.0
 
     def copy_from(self, other: GuiInput):
         self._key_down = set(other._key_down)

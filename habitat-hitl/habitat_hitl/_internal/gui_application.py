@@ -179,7 +179,12 @@ class GuiApplication(InputHandlerApplication):
 
         for _ in range(num_sim_updates):
             post_sim_update_dict = self._driver.sim_update(sim_dt)
-            self._gui_input.on_frame_end()
+
+            gui_input = self._gui_input
+            gui_input.on_frame_end()
+            gui_input._relative_mouse_position = [0, 0]
+            gui_input._mouse_scroll_offset = 0.0
+
             self._post_sim_update(post_sim_update_dict)
             if "application_exit" in post_sim_update_dict:
                 return
