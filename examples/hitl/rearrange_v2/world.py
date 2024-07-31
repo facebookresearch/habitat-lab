@@ -67,6 +67,8 @@ class World:
         self._object_state_machine: Optional[ObjectStateMachine] = None
         # Cache of categories for each object handles.
         self._object_handle_categories: Dict[str, Optional[str]] = {}
+        # Interface for handling scene metadata.
+        self._metadata_interface: Optional[Any] = None
 
         # Object id <-> handle mapping
         self._id_to_handle: Dict[int, str] = {}
@@ -286,6 +288,7 @@ class World:
             metadata_interface.refresh_scene_caches(
                 sim, filter_receptacles=False
             )
+            self._metadata_interface = metadata_interface
             osm = initialize_object_state_machine(sim, metadata_interface)
             self._object_state_machine = osm
 

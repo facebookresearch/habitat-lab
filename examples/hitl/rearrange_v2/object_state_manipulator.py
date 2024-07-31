@@ -51,12 +51,12 @@ class ObjectStateManipulator:
     def __init__(
         self,
         sim: CollaborationSim,
-        agent: ArticulatedAgentData,
+        agent_index: int,
         world: World,
         maximum_distance: float,
     ):
         self._sim = sim
-        self._agent = agent
+        self._agent_index = agent_index
         self._maximum_distance = maximum_distance
         self._world = world
 
@@ -116,7 +116,7 @@ class ObjectStateManipulator:
         action = self.get_action(state_name, state_value)
         if action is not None:
             return action.can_modify_state_impl(
-                self._sim, self._agent, object_handle, self._maximum_distance
+                self._sim, self._agent_index, object_handle, state_name, self._maximum_distance, self._world._metadata_interface
             )
         return (False, f"Undefined action: '{state_name} -> {state_value}'.")
 

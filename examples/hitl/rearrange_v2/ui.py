@@ -155,7 +155,7 @@ class UI:
 
             self._object_state_manipulator = ObjectStateManipulator(
                 sim=sim,
-                agent=sim.agents_mgr[gui_controller._agent_idx],
+                agent_index=gui_controller._agent_idx,
                 world=world,
                 maximum_distance=self._can_grasp_place_threshold,
             )
