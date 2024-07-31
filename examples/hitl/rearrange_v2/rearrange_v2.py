@@ -16,6 +16,7 @@ from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import (
     create_app_state_cancel_session,
+    create_app_state_feedback,
     create_app_state_load_episode,
 )
 from end_episode_form import EndEpisodeForm, ErrorReport
@@ -538,9 +539,21 @@ class AppStateRearrangeV2(AppStateBase):
                 "User disconnected",
             )
         elif self._is_episode_finished():
-            return create_app_state_load_episode(
-                self._app_service, self._app_data, self._session
-            )
+            success = self._metrics.get_task_percent_complete()
+            feedback = self._metrics.get_task_explanation()
+
+            if success is not None and feedback is not None:
+                return create_app_state_feedback(
+                    self._app_service,
+                    self._app_data,
+                    self._session,
+                    success,
+                    feedback,
+                )
+            else:
+                return create_app_state_load_episode(
+                    self._app_service, self._app_data, self._session
+                )
         else:
             return None
 
