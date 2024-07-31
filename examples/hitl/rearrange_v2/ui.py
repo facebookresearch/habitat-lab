@@ -11,11 +11,11 @@ from datetime import datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
 
-import habitat_sim
 import magnum as mn
 from ui_overlay import ObjectStateControl, UIOverlay
 from world import World
 
+import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
@@ -247,6 +247,9 @@ class UI:
         ) or self._gui_input.get_key_down(KeyCode.ESC):
             clicked_object_id = None
             self._click_selection.deselect()
+            # Select held object.
+            if self._held_object_id is not None:
+                self._click_selection._object_id = self._held_object_id
 
         # Handle double-click.
         if self._gui_input.get_mouse_button_down(MouseButton.LEFT):
@@ -573,9 +576,7 @@ class UI:
                         )
 
         overlay = self._ui_overlay
-        overlay.update_selected_object_panel(
-            object_category, object_states
-        )
+        overlay.update_selected_object_panel(object_category, object_states)
 
     def _state_change_callback(
         self, state_name: str, target_value: Any, object_handle: str
@@ -747,6 +748,9 @@ class UI:
 
     def _draw_pickable_object_highlights(self):
         """Highlight visible pickable objects."""
+        if self._is_holding_object():
+            return
+
         sim = self._sim
         world = self._world
         draw_gui_circle = self._gui_drawer.draw_circle
@@ -782,18 +786,20 @@ class UI:
                     billboard=True,
                     destination_mask=dest_mask,
                 )
-    
+
     def _draw_hovered_object(self) -> None:
         """Highlight the hovered object."""
         object_id = self._hover_selection.object_id
         if object_id is None:
             return
-                
+
         sim = self._sim
-        obj = sim_utilities.get_obj_from_id(sim, object_id, self._world._link_id_to_ao_map)
+        obj = sim_utilities.get_obj_from_id(
+            sim, object_id, self._world._link_id_to_ao_map
+        )
         if obj is None:
             return
-        
+
         # Draw the bounding box of the highlighted interactable link (e.g. drawer in a cabinet).
         if self._is_object_interactable(object_id):
             link_index = self._world.get_link_index(object_id)
@@ -809,11 +815,14 @@ class UI:
         # Skip highlight if select object is the same as hovered object.
         selected_obj_id = self._click_selection.object_id
         if selected_obj_id is not None:
-            selected_obj = sim_utilities.get_obj_from_id(sim, selected_obj_id, self._world._link_id_to_ao_map)
+            selected_obj = sim_utilities.get_obj_from_id(
+                sim, selected_obj_id, self._world._link_id_to_ao_map
+            )
             if selected_obj is not None:
                 if obj.handle == selected_obj.handle:
                     return
 
+        return
         # Draw the bounding box of the entire object (e.g. entire cabinet).
         if isinstance(obj, habitat_sim.physics.ManagedArticulatedObject):
             aabb = sim_utilities.get_ao_root_bb(obj)
@@ -823,15 +832,16 @@ class UI:
 
         self._draw_aabb(aabb, root_node.transformation, COLOR_HOVER)
 
-
     def _draw_selected_object(self) -> None:
         """Highlight the selected object."""
         object_id = self._click_selection.object_id
         if object_id is None:
             return
-                
+
         sim = self._sim
-        obj = sim_utilities.get_obj_from_id(sim, object_id, self._world._link_id_to_ao_map)
+        obj = sim_utilities.get_obj_from_id(
+            sim, object_id, self._world._link_id_to_ao_map
+        )
         if obj is None:
             return
 

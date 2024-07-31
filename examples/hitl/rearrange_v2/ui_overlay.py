@@ -79,7 +79,7 @@ class UIOverlay:
                     font_size=FONT_SIZE_LARGE,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
-            
+
                 # TODO: Separator element.
                 ctx.list_item(
                     "instr_separator",
@@ -201,7 +201,7 @@ class UIOverlay:
         with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
-            
+
             color_available = [0.1, 0.8, 0.8, 1.0]
 
             ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
@@ -229,7 +229,9 @@ class UIOverlay:
                     text_true=spec.display_name_true,
                     toggled=toggle.value,
                     enabled=toggle.enabled and toggle.available,
-                    tooltip=toggle.tooltip if toggle.available else "Action unavailable.",
+                    tooltip=toggle.tooltip
+                    if toggle.available
+                    else "Action unavailable.",
                     color=color_available if toggle.available else None,
                 )
                 return item_key
