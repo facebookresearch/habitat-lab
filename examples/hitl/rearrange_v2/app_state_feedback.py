@@ -91,8 +91,10 @@ class AppStateFeedback(AppStateBase):
         success = self._success
         if success:
             title = "Task Success"
+            content = "The task was completed successfully."
         else:
-            title = f"Task Failure ({success:.0%} success)"
+            title = f"Task Failure ({success:.0%} Success)"
+            content = self._feedback
 
         for user_index in range(self._app_data.max_user_count):
             with self._app_service.ui_manager.update_canvas(
@@ -114,7 +116,7 @@ class AppStateFeedback(AppStateBase):
 
                 ctx.label(
                     uid="feedback_content",
-                    text=f"{self._feedback}\n\n",
+                    text=f"{content}\n\n",
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
