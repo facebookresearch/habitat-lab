@@ -16,3 +16,8 @@ habitat_hitl:
   experimental:
     headless:
       do_headless: True
+
+rearrange_v2:
+  data_collection:
+    output_file_name: "session"
+    s3_path: "Phase_4/test/single/"
