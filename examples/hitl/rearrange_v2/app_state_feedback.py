@@ -96,18 +96,12 @@ class AppStateFeedback(AppStateBase):
         else:
             title = f"Task Failure ({success:.0%} success)"
 
-        multiline_feedback = textwrap.fill(
-            self._feedback,
-            width=70,
-            break_long_words=False,
-            break_on_hyphens=True,
-        )
-        multiline_feedback += "\n\n"
-
         for user_index in range(self._app_data.max_user_count):
             with self._app_service.ui_manager.update_canvas(
                 "top_left", Mask.from_index(user_index)
             ) as ctx:
+                ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
+                
                 ctx.label(
                     uid="feedback_title",
                     text=title,
@@ -122,7 +116,7 @@ class AppStateFeedback(AppStateBase):
 
                 ctx.label(
                     uid="feedback_content",
-                    text=multiline_feedback,
+                    text=f"{self._feedback}\n\n",
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
