@@ -79,6 +79,11 @@ class UIOverlay:
                     font_size=FONT_SIZE_LARGE,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
+            
+                # TODO: Separator element.
+                ctx.list_item(
+                    "instr_separator",
+                )
 
                 multiline_instructions = textwrap.fill(
                     instructions,
@@ -166,6 +171,11 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
+            # TODO: Separator element.
+            ctx.list_item(
+                "hover_separator",
+            )
+
             current_item_id = 0
 
             def create_list_item(left: str, right: str):
@@ -186,12 +196,13 @@ class UIOverlay:
         self,
         object_category_name: Optional[str],
         toggles: List[ObjectStateControl],
-        canvas_position: Optional[mn.Vector3],
     ):
         manager = self._ui_manager
         with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
+            
+            color_available = [0.1, 0.8, 0.8, 1.0]
 
             ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
 
@@ -204,6 +215,11 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
+            # TODO: Separator element.
+            ctx.list_item(
+                "select_separator",
+            )
+
             def create_toggle(toggle: ObjectStateControl) -> str:
                 spec = cast(BooleanObjectState, toggle.spec)
                 item_key = f"select_{spec.name}"
@@ -213,7 +229,8 @@ class UIOverlay:
                     text_true=spec.display_name_true,
                     toggled=toggle.value,
                     enabled=toggle.enabled and toggle.available,
-                    tooltip=toggle.tooltip,
+                    tooltip=toggle.tooltip if toggle.available else "Action unavailable.",
+                    color=color_available if toggle.available else None,
                 )
                 return item_key
 

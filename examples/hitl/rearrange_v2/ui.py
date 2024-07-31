@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
 
+import habitat_sim
 import magnum as mn
 from ui_overlay import ObjectStateControl, UIOverlay
 from world import World
@@ -51,7 +52,11 @@ COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 # Color for an invalid action.
 COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
-COLOR_HIGHLIGHT = mn.Color4(_LO, _HI, _HI, 1.0)  # Cyan
+COLOR_HIGHLIGHT = mn.Color4(_LO, _HI, _HI, 0.5)  # Transparent Cyan
+# Color for hovered objects.
+COLOR_HOVER = mn.Color4(_HI, _HI, _HI, 0.2)  # Transparent Grey
+# Color for selected objects.
+COLOR_SELECTION = mn.Color4(_LO, _HI, _HI, 1.0)  # Cyan
 
 
 class UI:
@@ -278,6 +283,8 @@ class UI:
         self._draw_hovered_interactable()
         self._draw_hovered_pickable()
         self._draw_pickable_object_highlights()
+        self._draw_hovered_object()
+        self._draw_selected_object()
 
     def _get_grasp_manager(self) -> "RearrangeGraspManager":
         agent_mgr = self._sim.agents_mgr
@@ -530,7 +537,6 @@ class UI:
 
         object_category: Optional[str] = None
         object_states: List[ObjectStateControl] = []
-        object_position: Optional[mn.Vector3] = None
 
         if object_id is not None:
             world = self._world
@@ -540,7 +546,6 @@ class UI:
             )
             if obj is not None:
                 object_category = world.get_category_from_handle(obj.handle)
-                object_position = obj.translation
 
                 # Requires object state manipulator.
                 osm = self._object_state_manipulator
@@ -569,7 +574,7 @@ class UI:
 
         overlay = self._ui_overlay
         overlay.update_selected_object_panel(
-            object_category, object_states, object_position
+            object_category, object_states
         )
 
     def _state_change_callback(
@@ -721,6 +726,7 @@ class UI:
 
     def _draw_hovered_pickable(self) -> None:
         """Highlight the hovered pickable object."""
+        return
         if not self._hover_selection.selected or self._is_holding_object():
             return
 
@@ -745,7 +751,6 @@ class UI:
         world = self._world
         draw_gui_circle = self._gui_drawer.draw_circle
         dest_mask = self._dest_mask
-        color = COLOR_HIGHLIGHT
 
         for object_id in world._pickable_object_ids:
             if not world.is_any_agent_holding_object(
@@ -758,11 +763,85 @@ class UI:
                 opacity = max(min(dot_object, 1.0), 0.0)
                 opacity *= opacity
 
-                color_goal = mn.Color4(color.r, color.g, color.b, opacity)
+                # Calculate radius
+                aabb = obj.collision_shape_aabb
+                diameter = max(aabb.size_x(), aabb.size_y(), aabb.size_z())
+                radius = diameter * 0.65
+
+                # Calculate color
+                if self._hover_selection.object_id == object_id:
+                    reachable = self._is_within_reach(obj.translation)
+                    color = COLOR_VALID if reachable else COLOR_INVALID
+                else:
+                    color = COLOR_HIGHLIGHT
+
                 draw_gui_circle(
                     translation=obj.translation,
-                    radius=0.25,
-                    color=color_goal,
+                    radius=radius,
+                    color=color,
                     billboard=True,
                     destination_mask=dest_mask,
                 )
+    
+    def _draw_hovered_object(self) -> None:
+        """Highlight the hovered object."""
+        object_id = self._hover_selection.object_id
+        if object_id is None:
+            return
+                
+        sim = self._sim
+        obj = sim_utilities.get_obj_from_id(sim, object_id, self._world._link_id_to_ao_map)
+        if obj is None:
+            return
+        
+        # Draw the bounding box of the highlighted interactable link (e.g. drawer in a cabinet).
+        if self._is_object_interactable(object_id):
+            link_index = self._world.get_link_index(object_id)
+            if link_index:
+                link_node = obj.get_link_scene_node(link_index)
+                aabb = link_node.cumulative_bb
+                reachable = self._is_within_reach(link_node.translation)
+                color = COLOR_VALID if reachable else COLOR_INVALID
+                self._draw_aabb(aabb, link_node.transformation, color)
+
+        root_node = obj.root_scene_node
+
+        # Skip highlight if select object is the same as hovered object.
+        selected_obj_id = self._click_selection.object_id
+        if selected_obj_id is not None:
+            selected_obj = sim_utilities.get_obj_from_id(sim, selected_obj_id, self._world._link_id_to_ao_map)
+            if selected_obj is not None:
+                if obj.handle == selected_obj.handle:
+                    return
+
+        # Draw the bounding box of the entire object (e.g. entire cabinet).
+        if isinstance(obj, habitat_sim.physics.ManagedArticulatedObject):
+            aabb = sim_utilities.get_ao_root_bb(obj)
+        # Draw the bounding box of rigid objects.
+        else:
+            aabb = obj.root_scene_node.cumulative_bb
+
+        self._draw_aabb(aabb, root_node.transformation, COLOR_HOVER)
+
+
+    def _draw_selected_object(self) -> None:
+        """Highlight the selected object."""
+        object_id = self._click_selection.object_id
+        if object_id is None:
+            return
+                
+        sim = self._sim
+        obj = sim_utilities.get_obj_from_id(sim, object_id, self._world._link_id_to_ao_map)
+        if obj is None:
+            return
+
+        root_node = obj.root_scene_node
+
+        # Draw the bounding box of the entire object (e.g. entire cabinet).
+        if isinstance(obj, habitat_sim.physics.ManagedArticulatedObject):
+            aabb = sim_utilities.get_ao_root_bb(obj)
+        # Draw the bounding box of rigid objects.
+        else:
+            aabb = obj.root_scene_node.cumulative_bb
+
+        self._draw_aabb(aabb, root_node.transformation, COLOR_SELECTION)
