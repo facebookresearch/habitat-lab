@@ -39,6 +39,7 @@ class BooleanAction:
     target_value: bool
     available: bool
     enabled: bool
+    error: Optional[str]
 
 
 class ObjectStateManipulator:
@@ -151,8 +152,9 @@ class ObjectStateManipulator:
                 action = self.get_boolean_action(name, target_value)
                 action_available = action is not None
                 action_enabled = False
+                error = None
                 if action_available:
-                    action_enabled, _ = self.can_execute_action(
+                    action_enabled, error = self.can_execute_action(
                         name, target_value, object_handle
                     )
                 actions.append(
@@ -162,6 +164,7 @@ class ObjectStateManipulator:
                         target_value=target_value,
                         available=action_available,
                         enabled=action_enabled,
+                        error=error,
                     )
                 )
         return actions

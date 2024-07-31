@@ -33,6 +33,7 @@ class ObjectStateControl:
     callback: Callable[
         [str, str, Any], None  # object_handle  # state_name  # state_value
     ]
+    tooltip: Optional[str]
 
 
 class UIOverlay:
@@ -70,6 +71,8 @@ class UIOverlay:
         has_status_text = status_text is not None and len(status_text) > 0
         with manager.update_canvas("top_left", self._dest_mask) as ctx:
             if has_instructions:
+                ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
+
                 ctx.label(
                     uid="instr_title",
                     text="Instructions",
@@ -117,6 +120,8 @@ class UIOverlay:
             if controls is None:
                 return
 
+            ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
+
             ctx.label(
                 "ctrl_title",
                 text="Controls",
@@ -146,9 +151,11 @@ class UIOverlay:
         object_states: List[Tuple[str, str]],
     ):
         manager = self._ui_manager
-        with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
+        with manager.update_canvas("bottom", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
+
+            ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
 
             title = _display_str(object_category_name)
 
@@ -156,7 +163,7 @@ class UIOverlay:
                 "hover_title",
                 text=title,
                 font_size=FONT_SIZE_LARGE,
-                horizontal_alignment=HorizontalAlignment.LEFT,
+                horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
             current_item_id = 0
@@ -182,9 +189,11 @@ class UIOverlay:
         canvas_position: Optional[mn.Vector3],
     ):
         manager = self._ui_manager
-        with manager.update_canvas("floating", self._dest_mask) as ctx:
+        with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
             if object_category_name is None:
                 return
+
+            ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
 
             title = _display_str(object_category_name)
 
@@ -204,15 +213,13 @@ class UIOverlay:
                     text_true=spec.display_name_true,
                     toggled=toggle.value,
                     enabled=toggle.enabled and toggle.available,
+                    tooltip=toggle.tooltip,
                 )
                 return item_key
 
             for toggle in toggles:
                 button_key = create_toggle(toggle)
                 self._buttons[button_key] = toggle.callback
-
-        if canvas_position is not None:
-            manager.move_canvas("floating", canvas_position, self._dest_mask)
 
 
 def _display_str(string: str):

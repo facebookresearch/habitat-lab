@@ -25,6 +25,16 @@ class UIElement:
 
 
 @dataclass
+class UICanvas(UIElement):
+    """
+    Canvas properties
+    """
+
+    padding: int
+    backgroundColor: Color
+
+
+@dataclass
 class UILabel(UIElement):
     """
     Text label.
@@ -48,6 +58,7 @@ class UIToggle(UIElement):
     textFalse: str
     textTrue: str
     color: Color
+    tooltip: str
 
 
 @dataclass
@@ -79,7 +90,8 @@ class UIUpdate:
     Set of UI updates for a specific canvas.
     """
 
-    canvas: str
+    canvasUid: str
+    canvas: Optional[UICanvas]
     label: Optional[UILabel]
     toggle: Optional[UIToggle]
     button: Optional[UIButton]
@@ -116,10 +128,15 @@ class UIManager:
         # TODO: Canvases are currently predefined.
         self._canvases: Dict[str, Dict[str, UIElement]] = {
             "top_left": {},
+            "top": {},
             "top_right": {},
+            "left": {},
+            "center": {},
+            "right": {},
             "bottom_left": {},
+            "bottom": {},
             "bottom_right": {},
-            "floating": {},
+            "tooltip": {},
         }
 
     def update_canvas(
@@ -155,7 +172,10 @@ class UIManager:
             if canvas_dirty or element != canvas_elements[uid]:
                 dirty_elements.append(
                     UIUpdate(
-                        canvas=canvas_name,
+                        canvasUid=canvas_name,
+                        canvas=element
+                        if isinstance(element, UICanvas)
+                        else None,
                         label=element
                         if isinstance(element, UILabel)
                         else None,
@@ -228,6 +248,19 @@ class UIContext:
     def update_element(self, element: UIElement):
         self._ui_elements[element.uid] = element
 
+    def canvas(
+        self,
+        padding: int = 0,
+        background_color: Optional[List[float]] = None,
+    ) -> None:
+        self.update_element(
+            UICanvas(
+                uid=self._canvas_name,
+                padding=padding,
+                backgroundColor=background_color,
+            )
+        )
+
     def label(
         self,
         uid: str,
@@ -274,6 +307,7 @@ class UIContext:
         text_true: str,
         enabled: bool = True,
         color: Optional[List[float]] = None,
+        tooltip: Optional[str] = None,
     ) -> None:
         self.update_element(
             UIToggle(
@@ -283,6 +317,7 @@ class UIContext:
                 toggled=toggled,
                 textFalse=text_false,
                 textTrue=text_true,
+                tooltip=tooltip,
             )
         )
 

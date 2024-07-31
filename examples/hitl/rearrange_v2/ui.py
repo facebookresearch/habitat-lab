@@ -236,6 +236,14 @@ class UI:
         for selection in self._selections:
             selection.update()
 
+        # Deselect on right click or escape.
+        if self._gui_input.get_mouse_button_down(
+            MouseButton.RIGHT
+        ) or self._gui_input.get_key_down(KeyCode.ESC):
+            clicked_object_id = None
+            self._click_selection.deselect()
+
+        # Handle double-click.
         if self._gui_input.get_mouse_button_down(MouseButton.LEFT):
             clicked_object_id = self._click_selection.object_id
             if _handle_double_click():
@@ -247,7 +255,6 @@ class UI:
                     self._interact_with_object(clicked_object_id)
 
         # Drop when releasing right click.
-        # TODO: Temp keyboard equivalent
         if self._gui_input.get_mouse_button_up(
             MouseButton.RIGHT
         ) or self._gui_input.get_key_up(KeyCode.SPACE):
@@ -556,6 +563,7 @@ class UI:
                                     action.target_value,
                                     obj.handle,
                                 ),
+                                tooltip=action.error,
                             )
                         )
 
