@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - lang_rearrange_spot_humanoid.yaml
+  - _self_
+
+habitat_hitl:
+  window: ~
+  networking:
+    enable: True
+    max_client_count: 2
+    http_availability_server:
+      enable: True
+    client_max_idle_duration: 180.0
+    enable_connections_by_default: False
+  experimental:
+    headless:
+      do_headless: True
