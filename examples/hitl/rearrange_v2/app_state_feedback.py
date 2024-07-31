@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import textwrap
 from typing import Final, List, Optional
 
 from app_data import AppData
@@ -17,7 +16,6 @@ from session import Session
 from util import get_top_down_view
 
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.client_message_manager import UIButton
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.ui_elements import HorizontalAlignment
@@ -101,7 +99,7 @@ class AppStateFeedback(AppStateBase):
                 "top_left", Mask.from_index(user_index)
             ) as ctx:
                 ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
-                
+
                 ctx.label(
                     uid="feedback_title",
                     text=title,
@@ -135,32 +133,6 @@ class AppStateFeedback(AppStateBase):
             ] |= self._app_service.remote_client_state.ui_button_pressed(
                 user_index, "feedback_button"
             )
-
-        """
-        # Show dialogue box with feedback and "OK" button.
-        for user_index in range(self._app_data.max_user_count):
-            button_pressed = (
-                self._app_service.remote_client_state.ui_button_pressed(
-                    user_index, OK_BUTTON_ID
-                )
-            )
-            self._has_user_pressed_ok_button[user_index] |= button_pressed
-
-            if not self._has_user_pressed_ok_button[user_index]:
-                self._app_service.client_message_manager.show_modal_dialogue_box(
-                    title,
-                    self._feedback,
-                    [UIButton(OK_BUTTON_ID, "Ok", True)],
-                    destination_mask=Mask.from_index(user_index),
-                )
-            else:
-                self._app_service.client_message_manager.show_modal_dialogue_box(
-                    title,
-                    "Waiting for other participants...",
-                    [UIButton(OK_BUTTON_ID, "Ok", False)],
-                    destination_mask=Mask.from_index(user_index),
-                )
-        """
 
         # Server-only: Press numeric keys to assess feedback on behalf of users.
         if self._is_server_gui_enabled():

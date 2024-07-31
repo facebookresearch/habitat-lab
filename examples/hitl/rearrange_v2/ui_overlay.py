@@ -10,8 +10,6 @@ import textwrap
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Final, List, Optional, Tuple, cast
 
-import magnum as mn
-
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
     ObjectStateSpec,

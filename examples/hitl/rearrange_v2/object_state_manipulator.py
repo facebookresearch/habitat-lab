@@ -25,9 +25,6 @@ from habitat.sims.habitat_simulator.object_state_machine import (
     ObjectStateSpec,
     set_state_of_obj,
 )
-from habitat.tasks.rearrange.articulated_agent_manager import (
-    ArticulatedAgentData,
-)
 
 BooleanActionMap = Dict[bool, OracleObjectStateInPlaceSkill]
 
@@ -116,7 +113,12 @@ class ObjectStateManipulator:
         action = self.get_action(state_name, state_value)
         if action is not None:
             return action.can_modify_state_impl(
-                self._sim, self._agent_index, object_handle, state_name, self._maximum_distance, self._world._metadata_interface
+                self._sim,
+                self._agent_index,
+                object_handle,
+                state_name,
+                self._maximum_distance,
+                self._world._metadata_interface,
             )
         return (False, f"Undefined action: '{state_name} -> {state_value}'.")
 

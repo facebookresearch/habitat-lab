@@ -818,9 +818,8 @@ class UI:
             selected_obj = sim_utilities.get_obj_from_id(
                 sim, selected_obj_id, self._world._link_id_to_ao_map
             )
-            if selected_obj is not None:
-                if obj.handle == selected_obj.handle:
-                    return
+            if selected_obj is not None and obj.handle == selected_obj.handle:
+                return
 
         return
         # Draw the bounding box of the entire object (e.g. entire cabinet).
