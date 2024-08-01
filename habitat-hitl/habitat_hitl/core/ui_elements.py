@@ -84,6 +84,22 @@ class UIButton(UIElement):
     color: Color
 
 
+@dataclass
+class UISeparator(UIElement):
+    """
+    Horizontal or vertical line that helps separate content sections.
+    """
+
+
+@dataclass
+class UISpacer(UIElement):
+    """
+    Horizontal or vertical empty space.
+    """
+
+    size: float
+
+
 class HorizontalAlignment(IntEnum):
     LEFT = 0
     CENTER = 1
@@ -117,7 +133,28 @@ class UIElementUpdate:
     toggle: Optional[UIToggle]
     button: Optional[UIButton]
     listItem: Optional[UIListItem]
+    separator: Optional[UISeparator]
+    spacer: Optional[UISpacer]
 
+def _create_default_canvases() -> Dict[str, List[UIElement]]:
+    return {
+        "top_left": {},
+        "top": {},
+        "top_right": {},
+        "left": {},
+        "center": {},
+        "right": {},
+        "bottom_left": {},
+        "bottom": {},
+        "bottom_right": {},
+        "tooltip": {},
+    }
+
+def _create_default_user_canvases(user_count: int) -> List[Dict[str, List[UIElement]]]:
+    user_canvases: List[Dict[str, List[UIElement]]] = []
+    for _ in range(user_count):
+        user_canvases.append(_create_default_canvases())
+    return user_canvases
 
 class UIManager:
     """
@@ -133,9 +170,7 @@ class UIManager:
         self._client_state = client_state
         self._client_message_manager = client_message_manager
         self._users = users
-
-        self._user_canvases: List[Dict[str, Dict[str, UIElement]]] = []
-        self.reset()
+        self._user_canvases = _create_default_user_canvases(users.max_user_count)
 
     def update_canvas(
         self, canvas_uid: str, destination_mask: Mask
@@ -189,6 +224,12 @@ class UIManager:
                             listItem=element
                             if isinstance(element, UIListItem)
                             else None,
+                            separator=element
+                            if isinstance(element, UISeparator)
+                            else None,
+                            spacer=element
+                            if isinstance(element, UISpacer)
+                            else None,
                         )
                     )
 
@@ -224,27 +265,11 @@ class UIManager:
                 self.clear_canvas(canvas_uid, Mask.from_index(user_index))
 
     def reset(self):
-        # Reset internal state.
-        self._user_canvases = []
-        for _ in range(self._users.max_user_count):
-            # TODO: Canvases are currently predefined.
-            self._user_canvases.append(
-                {
-                    "top_left": {},
-                    "top": {},
-                    "top_right": {},
-                    "left": {},
-                    "center": {},
-                    "right": {},
-                    "bottom_left": {},
-                    "bottom": {},
-                    "bottom_right": {},
-                    "tooltip": {},
-                }
-            )
-
         # If users are connected, clear their UI.
         self.clear_all_canvases(Mask.ALL)
+
+        # Reset internal state.
+        self._user_canvases = _create_default_user_canvases(self._users.max_user_count)
 
 
 class UIContext:
@@ -349,6 +374,16 @@ class UIContext:
                 color=color,
             )
         )
+
+    def separator(self, uid: str = AUTO):
+        self.update_element(UISeparator(uid=uid))
+
+    def spacer(
+        self,
+        uid: str = AUTO,
+        size: float = 24,
+    ):
+        self.update_element(UISpacer(uid=uid, size=size))
 
     def _generate_uid(self) -> str:
         return f"{self._canvas_uid}_{len(self._ui_elements)}"

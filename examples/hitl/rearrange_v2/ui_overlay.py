@@ -20,6 +20,7 @@ from habitat_hitl.core.user_mask import Mask
 
 FONT_SIZE_LARGE: Final[int] = 32
 FONT_SIZE_SMALL: Final[int] = 24
+SPACE_SIZE = 6
 
 
 @dataclass
@@ -79,7 +80,7 @@ class UIOverlay:
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
-                ctx.list_item()  # TODO: Separator element.
+                ctx.separator()
 
                 multiline_instructions = textwrap.fill(
                     instructions,
@@ -95,6 +96,9 @@ class UIOverlay:
                 )
 
             if has_status_text:
+                if has_instructions:
+                    ctx.spacer(size=SPACE_SIZE)
+
                 multiline_status = textwrap.fill(
                     status_text,
                     width=70,
@@ -168,6 +172,8 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
+            ctx.spacer(size=SPACE_SIZE)
+
             region_name = (
                 _display_str(primary_region_name)
                 if primary_region_name is not None
@@ -178,6 +184,8 @@ class UIOverlay:
                 text_right=region_name,
                 font_size=FONT_SIZE_SMALL,
             )
+
+            ctx.spacer(size=SPACE_SIZE)
 
             current_item_id = 0
 
@@ -220,6 +228,8 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
+            ctx.spacer(size=SPACE_SIZE)
+
             region_name = (
                 _display_str(primary_region_name)
                 if primary_region_name is not None
@@ -230,6 +240,8 @@ class UIOverlay:
                 text_right=region_name,
                 font_size=FONT_SIZE_SMALL,
             )
+
+            ctx.spacer(size=SPACE_SIZE)
 
             def create_toggle(toggle: ObjectStateControl) -> str:
                 spec = cast(BooleanObjectState, toggle.spec)

@@ -110,7 +110,7 @@ class AppStateFeedback(AppStateBase):
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
-                ctx.list_item()  # TODO: Separator element.
+                ctx.separator()
 
                 ctx.label(
                     text=f"{content}\n\n",
