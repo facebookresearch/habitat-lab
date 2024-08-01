@@ -100,22 +100,20 @@ class AppStateFeedback(AppStateBase):
             with self._app_service.ui_manager.update_canvas(
                 "top_left", Mask.from_index(user_index)
             ) as ctx:
-                ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
+                )
 
                 ctx.label(
-                    uid="feedback_title",
                     text=title,
                     font_size=FONT_SIZE_LARGE,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
                 # TODO: Separator element.
-                ctx.list_item(
-                    "feedback_separator",
-                )
+                ctx.list_item()
 
                 ctx.label(
-                    uid="feedback_content",
                     text=f"{content}\n\n",
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.LEFT,

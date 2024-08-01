@@ -77,6 +77,7 @@ class StateMachine(AppState):
         next_state = self._app_state.get_next_state()
         if next_state is not None:
             self._app_state.on_exit()
+            self._app_service.ui_manager.reset()
             self._app_state = next_state
             self._app_state.on_enter()
 

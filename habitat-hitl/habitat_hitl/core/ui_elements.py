@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Dict, List, Optional
-
-import magnum as mn
+from typing import TYPE_CHECKING, Dict, Final, List, Optional
 
 from habitat_hitl.core.user_mask import Mask, Users
 
@@ -13,6 +11,8 @@ if TYPE_CHECKING:
     from habitat_hitl.core.remote_client_state import RemoteClientState
 
 Color = Optional[List[float]]
+
+AUTO: Final[str] = ""
 
 
 @dataclass
@@ -84,20 +84,6 @@ class UIButton(UIElement):
     color: Color
 
 
-@dataclass
-class UIUpdate:
-    """
-    Set of UI updates for a specific canvas.
-    """
-
-    canvasUid: str
-    canvas: Optional[UICanvas]
-    label: Optional[UILabel]
-    toggle: Optional[UIToggle]
-    button: Optional[UIButton]
-    listItem: Optional[UIListItem]
-
-
 class HorizontalAlignment(IntEnum):
     LEFT = 0
     CENTER = 1
@@ -108,6 +94,29 @@ class VerticalAlignment(IntEnum):
     TOP = 0
     CENTER = 1
     BOTTOM = 2
+
+
+@dataclass
+class UICanvasUpdate:
+    """
+    Set of UI updates for a specific canvas.
+    """
+
+    clear: bool
+    elements: Optional[List[UIElementUpdate]]
+
+
+@dataclass
+class UIElementUpdate:
+    """
+    UI element to be updated or created.
+    """
+
+    canvasProperties: Optional[UICanvas]
+    label: Optional[UILabel]
+    toggle: Optional[UIToggle]
+    button: Optional[UIButton]
+    listItem: Optional[UIListItem]
 
 
 class UIManager:
@@ -126,58 +135,46 @@ class UIManager:
         self._users = users
 
         self._user_canvases: List[Dict[str, Dict[str, UIElement]]] = []
-        for _ in range(self._users.max_user_count):
-            # TODO: Canvases are currently predefined.
-            self._user_canvases.append(
-                {
-                    "top_left": {},
-                    "top": {},
-                    "top_right": {},
-                    "left": {},
-                    "center": {},
-                    "right": {},
-                    "bottom_left": {},
-                    "bottom": {},
-                    "bottom_right": {},
-                    "tooltip": {},
-                }
-            )
+        self.reset()
 
     def update_canvas(
-        self, canvas_name: str, destination_mask: Mask
+        self, canvas_uid: str, destination_mask: Mask
     ) -> UIContext:
         return UIContext(
-            canvas_name=canvas_name,
+            canvas_uid=canvas_uid,
             destination_mask=destination_mask,
             manager=self,
         )
 
     def commit_canvas_content(
         self,
-        canvas_name: str,
+        canvas_uid: str,
         ui_elements: Dict[str, UIElement],
         destination_mask: Mask,
     ):
         for user_index in self._users.indices(destination_mask):
-            canvas_elements = self._user_canvases[user_index].get(
-                canvas_name, {}
+            cached_elements = self._user_canvases[user_index].get(
+                canvas_uid, {}
             )
-            canvas_dirty = len(canvas_elements) != len(ui_elements)
-            dirty_elements: List[UIUpdate] = []
+            self._user_canvases[user_index][canvas_uid] = ui_elements
 
-            for uid, element in ui_elements.items():
-                if not canvas_dirty and (
-                    uid not in canvas_elements
-                    or type(element) != type(canvas_elements[uid])
-                ):
-                    canvas_dirty = True
+            def is_canvas_dirty() -> bool:
+                if len(cached_elements) != len(ui_elements):
+                    return True
+                else:
+                    return any(
+                        uid not in cached_elements
+                        or element != cached_elements[uid]
+                        for uid, element in ui_elements.items()
+                    )
 
-                # If the element has changed or the canvas is dirty, update the element.
-                if canvas_dirty or element != canvas_elements[uid]:
+            if is_canvas_dirty():
+                dirty_elements: List[UIElementUpdate] = []
+
+                for element in ui_elements.values():
                     dirty_elements.append(
-                        UIUpdate(
-                            canvasUid=canvas_name,
-                            canvas=element
+                        UIElementUpdate(
+                            canvasProperties=element
                             if isinstance(element, UICanvas)
                             else None,
                             label=element
@@ -195,72 +192,83 @@ class UIManager:
                         )
                     )
 
-            # Submit the UI updates.
-            for dirty_element in dirty_elements:
-                self._client_message_manager.update_ui(
-                    ui_update=dirty_element,
+                # Submit the canvas update.
+                canvas_update = UICanvasUpdate(
+                    clear=True,
+                    elements=dirty_elements,
+                )
+                self._client_message_manager.update_ui_canvas(
+                    canvas_uid=canvas_uid,
+                    canvas_update=canvas_update,
                     destination_mask=Mask.from_index(user_index),
                 )
-
-            # If the canvas is dirty, clear it.
-            if canvas_dirty:
-                self.clear_canvas(canvas_name, Mask.from_index(user_index))
-
-            # Register UI elements.
-            for uid, element in ui_elements.items():
-                self._user_canvases[user_index][canvas_name][uid] = element
 
     def is_button_pressed(self, uid: str, user_index: int) -> bool:
         return self._client_state.ui_button_pressed(user_index, uid)
 
-    def clear_canvas(self, canvas_name: str, destination_mask: Mask):
-        self._client_message_manager.clear_canvas(
-            canvas_name, destination_mask=destination_mask
+    def clear_canvas(self, canvas_uid: str, destination_mask: Mask):
+        self._client_message_manager.update_ui_canvas(
+            canvas_uid=canvas_uid,
+            canvas_update=UICanvasUpdate(
+                clear=True,
+                elements=None,
+            ),
+            destination_mask=destination_mask,
         )
         for user_index in self._users.indices(destination_mask):
-            self._user_canvases[user_index][canvas_name].clear()
+            self._user_canvases[user_index][canvas_uid].clear()
 
     def clear_all_canvases(self, destination_mask: Mask):
         for user_index in self._users.indices(destination_mask):
-            for canvas_name in self._user_canvases[user_index].keys():
-                self.clear_canvas(canvas_name, Mask.from_index(user_index))
+            for canvas_uid in self._user_canvases[user_index].keys():
+                self.clear_canvas(canvas_uid, Mask.from_index(user_index))
 
-    def move_canvas(
-        self, canvas: str, world_position: mn.Vector3, destination_mask: Mask
-    ):
-        world_pos: List[float] = [
-            world_position.x,
-            world_position.y,
-            world_position.z,
-        ]
-        self._client_message_manager.move_canvas(
-            canvas,
-            world_pos,
-            destination_mask=Mask.from_index(destination_mask),
-        )
+    def reset(self):
+        # Reset internal state.
+        self._user_canvases = []
+        for _ in range(self._users.max_user_count):
+            # TODO: Canvases are currently predefined.
+            self._user_canvases.append(
+                {
+                    "top_left": {},
+                    "top": {},
+                    "top_right": {},
+                    "left": {},
+                    "center": {},
+                    "right": {},
+                    "bottom_left": {},
+                    "bottom": {},
+                    "bottom_right": {},
+                    "tooltip": {},
+                }
+            )
+
+        # If users are connected, clear their UI.
+        self.clear_all_canvases(Mask.ALL)
 
 
 class UIContext:
     def __init__(
-        self, canvas_name: str, destination_mask: Mask, manager: UIManager
+        self, canvas_uid: str, destination_mask: Mask, manager: UIManager
     ):
-        self._canvas_name = canvas_name
+        self._canvas_uid = canvas_uid
         self._manager = manager
         self._destination_mask = destination_mask
-        self._ui_updates: List[UIUpdate] = []
         self._ui_elements: Dict[str, UIElement] = {}
 
     def update_element(self, element: UIElement):
+        if element.uid == AUTO:
+            element.uid = self._generate_uid()
         self._ui_elements[element.uid] = element
 
-    def canvas(
+    def canvas_properties(
         self,
         padding: int = 0,
         background_color: Optional[List[float]] = None,
     ) -> None:
         self.update_element(
             UICanvas(
-                uid=self._canvas_name,
+                uid=self._canvas_uid,
                 padding=padding,
                 backgroundColor=background_color,
             )
@@ -268,7 +276,7 @@ class UIContext:
 
     def label(
         self,
-        uid: str,
+        uid: str = AUTO,
         text: str = "",
         font_size: int = 24,
         bold: bool = False,
@@ -288,7 +296,7 @@ class UIContext:
 
     def list_item(
         self,
-        uid: str,
+        uid: str = AUTO,
         text_left: str = "",
         text_right: str = "",
         font_size: int = 24,
@@ -306,10 +314,10 @@ class UIContext:
 
     def toggle(
         self,
-        uid: str,
-        toggled: bool,
-        text_false: str,
-        text_true: str,
+        uid: str = AUTO,
+        toggled: bool = False,
+        text_false: str = "",
+        text_true: str = "",
         enabled: bool = True,
         color: Optional[List[float]] = None,
         tooltip: Optional[str] = None,
@@ -328,7 +336,7 @@ class UIContext:
 
     def button(
         self,
-        uid: str,
+        uid: str = AUTO,
         text: str = "",
         enabled: bool = True,
         color: Optional[List[float]] = None,
@@ -342,11 +350,14 @@ class UIContext:
             )
         )
 
+    def _generate_uid(self) -> str:
+        return f"{self._canvas_uid}_{len(self._ui_elements)}"
+
     def __enter__(self) -> UIContext:
         return self
 
     def __exit__(self, exception_type, _exception_val, _trace):
         self._manager.commit_canvas_content(
-            self._canvas_name, self._ui_elements, self._destination_mask
+            self._canvas_uid, self._ui_elements, self._destination_mask
         )
         return exception_type == None

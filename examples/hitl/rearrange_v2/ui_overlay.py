@@ -69,19 +69,18 @@ class UIOverlay:
         has_status_text = status_text is not None and len(status_text) > 0
         with manager.update_canvas("top_left", self._dest_mask) as ctx:
             if has_instructions:
-                ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
+                )
 
                 ctx.label(
-                    uid="instr_title",
                     text="Instructions",
                     font_size=FONT_SIZE_LARGE,
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
                 # TODO: Separator element.
-                ctx.list_item(
-                    "instr_separator",
-                )
+                ctx.list_item()
 
                 multiline_instructions = textwrap.fill(
                     instructions,
@@ -91,7 +90,6 @@ class UIOverlay:
                 )
 
                 ctx.label(
-                    uid="instr_content",
                     text=multiline_instructions,
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.LEFT,
@@ -106,7 +104,6 @@ class UIOverlay:
                 )
 
                 ctx.label(
-                    uid="instr_status",
                     text=multiline_status,
                     font_size=FONT_SIZE_SMALL,
                     bold=True,
@@ -123,10 +120,11 @@ class UIOverlay:
             if controls is None:
                 return
 
-            ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
+            ctx.canvas_properties(
+                padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
+            )
 
             ctx.label(
-                "ctrl_title",
                 text="Controls",
                 font_size=FONT_SIZE_LARGE,
                 horizontal_alignment=HorizontalAlignment.RIGHT,
@@ -158,21 +156,20 @@ class UIOverlay:
             if object_category_name is None:
                 return
 
-            ctx.canvas(padding=12, background_color=[0.7, 0.7, 0.7, 0.3])
+            ctx.canvas_properties(
+                padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
+            )
 
             title = _display_str(object_category_name)
 
             ctx.label(
-                "hover_title",
                 text=title,
                 font_size=FONT_SIZE_LARGE,
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
             # TODO: Separator element.
-            ctx.list_item(
-                "hover_separator",
-            )
+            ctx.list_item()
 
             current_item_id = 0
 
@@ -202,21 +199,20 @@ class UIOverlay:
 
             color_available = [0.1, 0.8, 0.8, 1.0]
 
-            ctx.canvas(padding=12, background_color=[0.3, 0.3, 0.3, 0.7])
+            ctx.canvas_properties(
+                padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
+            )
 
             title = _display_str(object_category_name)
 
             ctx.label(
-                "select_title",
                 text=title,
                 font_size=FONT_SIZE_LARGE,
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
             # TODO: Separator element.
-            ctx.list_item(
-                "select_separator",
-            )
+            ctx.list_item()
 
             def create_toggle(toggle: ObjectStateControl) -> str:
                 spec = cast(BooleanObjectState, toggle.spec)
