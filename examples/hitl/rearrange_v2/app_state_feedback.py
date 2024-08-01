@@ -121,14 +121,18 @@ class AppStateFeedback(AppStateBase):
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
-                # TODO: Separator element.
-                ctx.list_item(
-                    "feedback_separator",
-                )
+                if (
+                    len(self._app_data.connected_users) > 1
+                    and self._has_user_pressed_ok_button[user_index]
+                ):
+                    button_text = "Waiting for other user..."
+                else:
+                    button_text = "OK"
 
                 ctx.button(
                     uid="feedback_button",
-                    text="OK",
+                    text=button_text,
+                    enabled=not self._has_user_pressed_ok_button[user_index],
                 )
             self._has_user_pressed_ok_button[
                 user_index
