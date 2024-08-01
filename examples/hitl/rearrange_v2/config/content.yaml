@@ -7,7 +7,7 @@ defaults:
 habitat:
   dataset:
     type: "CollaborationDataset-v0"
-    data_path: "rsto_test_jun28.json.gz"
+    data_path: "2024_07_19_test_hitl_stacked.json.gz"
     scenes_dir: "data/fpss"
     metadata:
       metadata_folder: "data/fpss/metadata"
