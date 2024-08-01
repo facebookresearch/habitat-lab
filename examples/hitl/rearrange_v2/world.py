@@ -24,6 +24,7 @@ from habitat_sim.physics import (
     ManagedBulletArticulatedObject,
     ManagedBulletRigidObject,
 )
+from habitat_sim.scene import SemanticRegion
 
 
 @dataclass
@@ -63,20 +64,14 @@ class World:
         self._all_states: Optional[Dict[str, ObjectStateSpec]] = None
         # Cache of object states.
         self._state_snapshot_dict: Dict[str, Dict[str, Any]] = {}
+        # Cache of region names.
+        self._regions: Dict[int, SemanticRegion] = {}
         # Object state container.
         self._object_state_machine: Optional[ObjectStateMachine] = None
         # Cache of categories for each object handles.
         self._object_handle_categories: Dict[str, Optional[str]] = {}
         # Interface for handling scene metadata.
         self._metadata_interface: Optional[Any] = None
-
-        # Object id <-> handle mapping
-        self._id_to_handle: Dict[int, str] = {}
-        self._handle_to_id: Dict[str, int] = {}
-        all_objects = sim_utilities.get_all_objects(sim)
-        for obj in all_objects:
-            self._id_to_handle[obj.object_id] = obj.handle
-            self._handle_to_id[obj.handle] = obj.object_id
 
         self._try_initialize_object_states(sim, config)
 
@@ -95,6 +90,11 @@ class World:
             rigid_obj = self.get_rigid_object(pickable_obj_id)
             # Ensure that rigid objects are collidable.
             rigid_obj.collidable = True
+
+        # Find regions.
+        regions = sim.semantic_scene.regions
+        for region_index in range(len(regions)):
+            self._regions[region_index] = regions[region_index]
 
         # Get set of interactable articulated object links.
         # Exclude all agents.
@@ -124,6 +124,14 @@ class World:
                         link_index = self.get_link_index(link_object_id)
                         if link_index:
                             sim_utilities.close_link(ao, link_index)
+
+        # Object id <-> handle mapping
+        self._id_to_handle: Dict[int, str] = {}
+        self._handle_to_id: Dict[str, int] = {}
+        all_objects = sim_utilities.get_all_objects(sim)
+        for obj in all_objects:
+            self._id_to_handle[obj.object_id] = obj.handle
+            self._handle_to_id[obj.handle] = obj.object_id
 
     def update(self, dt: float) -> None:
         """
@@ -249,6 +257,19 @@ class World:
             agent_object_ids.add(link_object_id)
 
         return agent_object_ids
+
+    def get_primary_object_region(
+        self, obj: ManagedBulletArticulatedObject | ManagedBulletRigidObject
+    ) -> Optional[SemanticRegion]:
+        """Get the name of the region that contains most of an object."""
+        object_regions = sim_utilities.get_object_regions(
+            sim=self._sim, object_a=obj, ao_link_map=self._link_id_to_ao_map
+        )
+        if len(object_regions) > 0:
+            primary_region = object_regions[0]
+            region_name = primary_region[0]
+            return self._regions[region_name]
+        return None
 
     def is_any_agent_holding_object(self, object_id: int) -> bool:
         """
