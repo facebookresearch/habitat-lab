@@ -79,8 +79,7 @@ class UIOverlay:
                     horizontal_alignment=HorizontalAlignment.LEFT,
                 )
 
-                # TODO: Separator element.
-                ctx.list_item()
+                ctx.list_item()  # TODO: Separator element.
 
                 multiline_instructions = textwrap.fill(
                     instructions,
@@ -118,38 +117,39 @@ class UIOverlay:
         manager = self._ui_manager
         with manager.update_canvas("top_right", self._dest_mask) as ctx:
             if controls is None:
-                return
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
+                )
 
-            ctx.canvas_properties(
-                padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
-            )
-
-            ctx.label(
-                text="Controls",
-                font_size=FONT_SIZE_LARGE,
-                horizontal_alignment=HorizontalAlignment.RIGHT,
-            )
-
-            current_item_id = 0
-
-            def create_list_item(left: str, right: str):
-                nonlocal current_item_id
-                item_key = f"ctrl_{current_item_id}"
                 ctx.list_item(
-                    item_key,
-                    text_left=left,
-                    text_right=right,
+                    text_left="H",
+                    text_right="Show Help",
                     font_size=FONT_SIZE_SMALL,
                 )
-                current_item_id += 1
 
-            for control in controls:
-                create_list_item(control[0], control[1])
+            else:
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
+                )
+
+                ctx.label(
+                    text="Controls",
+                    font_size=FONT_SIZE_LARGE,
+                    horizontal_alignment=HorizontalAlignment.RIGHT,
+                )
+
+                for control in controls:
+                    ctx.list_item(
+                        text_left=control[0],
+                        text_right=control[1],
+                        font_size=FONT_SIZE_SMALL,
+                    )
 
     def update_hovered_object_info_panel(
         self,
         object_category_name: Optional[str],
         object_states: List[Tuple[str, str]],
+        primary_region_name: Optional[str],
     ):
         manager = self._ui_manager
         with manager.update_canvas("bottom", self._dest_mask) as ctx:
@@ -168,8 +168,16 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
-            # TODO: Separator element.
-            ctx.list_item()
+            region_name = (
+                _display_str(primary_region_name)
+                if primary_region_name is not None
+                else "None"
+            )
+            ctx.list_item(
+                text_left="Room",
+                text_right=region_name,
+                font_size=FONT_SIZE_SMALL,
+            )
 
             current_item_id = 0
 
@@ -191,6 +199,7 @@ class UIOverlay:
         self,
         object_category_name: Optional[str],
         toggles: List[ObjectStateControl],
+        primary_region_name: Optional[str],
     ):
         manager = self._ui_manager
         with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
@@ -211,8 +220,16 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
-            # TODO: Separator element.
-            ctx.list_item()
+            region_name = (
+                _display_str(primary_region_name)
+                if primary_region_name is not None
+                else "None"
+            )
+            ctx.list_item(
+                text_left="Room",
+                text_right=region_name,
+                font_size=FONT_SIZE_SMALL,
+            )
 
             def create_toggle(toggle: ObjectStateControl) -> str:
                 spec = cast(BooleanObjectState, toggle.spec)

@@ -483,7 +483,7 @@ class UI:
 
         controls: Optional[List[Tuple[str, str]]] = (
             [
-                ("H", "Toggle Help"),
+                ("H", "Hide Help"),
                 ("WASD", "Move"),
                 ("Left-Click", "Select"),
                 ("Middle-Click or R", "Look Around"),
@@ -503,6 +503,7 @@ class UI:
 
         object_category: Optional[str] = None
         object_states: List[Tuple[str, str]] = []
+        primary_region_name: Optional[str] = None
 
         if object_id is not None:
             world = self._world
@@ -521,18 +522,20 @@ class UI:
                         object_states.append(
                             (
                                 spec.display_name,
-                                spec.display_name_true
-                                if val
-                                else spec.display_name_false,
+                                "True" if val else "False",
                             )
                         )
                     else:
                         # Unsupported type.
                         pass
 
+                primary_region = world.get_primary_object_region(obj)
+                if primary_region is not None:
+                    primary_region_name = primary_region.category.name()
+
         overlay = self._ui_overlay
         overlay.update_hovered_object_info_panel(
-            object_category, object_states
+            object_category, object_states, primary_region_name
         )
 
     def _update_overlay_selected_object(self):
@@ -540,6 +543,7 @@ class UI:
 
         object_category: Optional[str] = None
         object_states: List[ObjectStateControl] = []
+        primary_region_name: Optional[str] = None
 
         if object_id is not None:
             world = self._world
@@ -575,8 +579,14 @@ class UI:
                             )
                         )
 
+                primary_region = world.get_primary_object_region(obj)
+                if primary_region is not None:
+                    primary_region_name = primary_region.category.name()
+
         overlay = self._ui_overlay
-        overlay.update_selected_object_panel(object_category, object_states)
+        overlay.update_selected_object_panel(
+            object_category, object_states, primary_region_name
+        )
 
     def _state_change_callback(
         self, state_name: str, target_value: Any, object_handle: str
