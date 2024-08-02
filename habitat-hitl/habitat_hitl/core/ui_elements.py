@@ -136,7 +136,8 @@ class UIElementUpdate:
     separator: Optional[UISeparator]
     spacer: Optional[UISpacer]
 
-def _create_default_canvases() -> Dict[str, List[UIElement]]:
+
+def _create_default_canvases() -> Dict[str, Dict[str, UIElement]]:
     return {
         "top_left": {},
         "top": {},
@@ -150,11 +151,15 @@ def _create_default_canvases() -> Dict[str, List[UIElement]]:
         "tooltip": {},
     }
 
-def _create_default_user_canvases(user_count: int) -> List[Dict[str, List[UIElement]]]:
-    user_canvases: List[Dict[str, List[UIElement]]] = []
+
+def _create_default_user_canvases(
+    user_count: int,
+) -> List[Dict[str, Dict[str, UIElement]]]:
+    user_canvases: List[Dict[str, Dict[str, UIElement]]] = []
     for _ in range(user_count):
         user_canvases.append(_create_default_canvases())
     return user_canvases
+
 
 class UIManager:
     """
@@ -170,7 +175,9 @@ class UIManager:
         self._client_state = client_state
         self._client_message_manager = client_message_manager
         self._users = users
-        self._user_canvases = _create_default_user_canvases(users.max_user_count)
+        self._user_canvases = _create_default_user_canvases(
+            users.max_user_count
+        )
 
     def update_canvas(
         self, canvas_uid: str, destination_mask: Mask
@@ -269,7 +276,9 @@ class UIManager:
         self.clear_all_canvases(Mask.ALL)
 
         # Reset internal state.
-        self._user_canvases = _create_default_user_canvases(self._users.max_user_count)
+        self._user_canvases = _create_default_user_canvases(
+            self._users.max_user_count
+        )
 
 
 class UIContext:

@@ -208,6 +208,7 @@ class UIOverlay:
         object_category_name: Optional[str],
         toggles: List[ObjectStateControl],
         primary_region_name: Optional[str],
+        held: bool,
     ):
         manager = self._ui_manager
         with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
@@ -227,6 +228,13 @@ class UIOverlay:
                 font_size=FONT_SIZE_LARGE,
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
+
+            if held:
+                ctx.label(
+                    text="(Held Object)",
+                    font_size=FONT_SIZE_SMALL,
+                    horizontal_alignment=HorizontalAlignment.CENTER,
+                )
 
             ctx.spacer(size=SPACE_SIZE)
 

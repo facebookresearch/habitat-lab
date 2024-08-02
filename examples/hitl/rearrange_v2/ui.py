@@ -46,13 +46,14 @@ MINIMUM_DROP_VERTICALITY: float = 0.9
 DOUBLE_CLICK_DELAY: float = 0.33
 
 _HI = 0.8
+_MID = 0.5
 _LO = 0.1
 # Color for a valid action.
 COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 # Color for an invalid action.
 COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
-COLOR_HIGHLIGHT = mn.Color4(_LO, _HI, _HI, 0.5)  # Transparent Cyan
+COLOR_HIGHLIGHT = mn.Color4(_HI, _MID, _LO, _HI)  # Orange
 # Color for hovered objects.
 COLOR_HOVER = mn.Color4(_HI, _HI, _HI, 0.2)  # Transparent Grey
 # Color for selected objects.
@@ -245,7 +246,6 @@ class UI:
         if self._gui_input.get_mouse_button_down(
             MouseButton.RIGHT
         ) or self._gui_input.get_key_down(KeyCode.ESC):
-            clicked_object_id = None
             self._click_selection.deselect()
             # Select held object.
             if self._held_object_id is not None:
@@ -585,7 +585,10 @@ class UI:
 
         overlay = self._ui_overlay
         overlay.update_selected_object_panel(
-            object_category, object_states, primary_region_name
+            object_category,
+            object_states,
+            primary_region_name,
+            self._held_object_id == object_id,
         )
 
     def _state_change_callback(
