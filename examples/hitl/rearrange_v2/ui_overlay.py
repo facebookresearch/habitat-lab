@@ -29,10 +29,13 @@ class ObjectStateControl:
     value: bool
     enabled: bool
     available: bool
-    callback: Callable[
-        [str, str, Any], None  # object_handle  # state_name  # state_value
+    callback: Optional[
+        Callable[
+            [str, str, Any], None  # object_handle  # state_name  # state_value
+        ]
     ]
     tooltip: Optional[str]
+    recently_changed: bool
 
 
 class UIOverlay:
@@ -216,6 +219,7 @@ class UIOverlay:
                 return
 
             color_available = [0.1, 0.8, 0.8, 1.0]
+            color_changed = [0.1, 0.8, 0.1, 1.0]
 
             ctx.canvas_properties(
                 padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
@@ -254,22 +258,26 @@ class UIOverlay:
             def create_toggle(toggle: ObjectStateControl) -> str:
                 spec = cast(BooleanObjectState, toggle.spec)
                 item_key = f"select_{spec.name}"
+                color = None
+                if toggle.recently_changed:
+                    color = color_changed
+                elif toggle.available:
+                    color = color_available
                 ctx.toggle(
                     item_key,
                     text_false=spec.display_name_false,
                     text_true=spec.display_name_true,
                     toggled=toggle.value,
                     enabled=toggle.enabled and toggle.available,
-                    tooltip=toggle.tooltip
-                    if toggle.available
-                    else "Action unavailable.",
-                    color=color_available if toggle.available else None,
+                    tooltip=toggle.tooltip,
+                    color=color,
                 )
                 return item_key
 
             for toggle in toggles:
                 button_key = create_toggle(toggle)
-                self._buttons[button_key] = toggle.callback
+                if toggle.callback is not None:
+                    self._buttons[button_key] = toggle.callback
 
 
 def _display_str(string: str):

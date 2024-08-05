@@ -77,6 +77,7 @@ class UI:
         gui_input: GuiInput,
         gui_drawer: GuiDrawer,
         camera_helper: CameraHelper,
+        can_change_object_states: bool,
     ):
         self._user_index = user_index
         self._dest_mask = Mask.from_index(self._user_index)
@@ -86,6 +87,7 @@ class UI:
         self._gui_input = gui_input
         self._gui_drawer = gui_drawer
         self._camera_helper = camera_helper
+        self._can_change_object_states = can_change_object_states
 
         self._can_grasp_place_threshold = hitl_config.can_grasp_place_threshold
 
@@ -136,6 +138,9 @@ class UI:
         # Set up UI overlay
         self._ui_overlay = UIOverlay(app_service, user_index)
         self._is_help_shown = True
+        self._last_changed_state_timestamp: Optional[
+            Tuple[str, datetime]
+        ] = None
 
         # Set up user events
         self._on_pick = Event()
@@ -563,19 +568,54 @@ class UI:
                     )
                     for action in all_possible_actions:
                         spec = action.state_spec
+
+                        recently_changed = False
+                        if self._can_change_object_states:
+                            enabled = action.enabled
+                            available = action.available
+                            tooltip = (
+                                action.error
+                                if action.available
+                                else "Action unavailable."
+                            )
+                            callback = partial(
+                                self._state_change_callback,
+                                spec.name,
+                                action.target_value,
+                                obj.handle,
+                            )
+
+                            if (
+                                self._last_changed_state_timestamp is not None
+                                and self._last_changed_state_timestamp[0]
+                                == spec.name
+                            ):
+                                time_since_last_state_change = (
+                                    datetime.now()
+                                    - self._last_changed_state_timestamp[1]
+                                )
+                                recently_changed = (
+                                    time_since_last_state_change
+                                    < timedelta(seconds=2.0)
+                                )
+                                if recently_changed:
+                                    tooltip = "Action executed."
+
+                        else:
+                            enabled = False
+                            available = False
+                            tooltip = "The robot cannot do this action."
+                            callback = None
+
                         object_states.append(
                             ObjectStateControl(
                                 spec=spec,
                                 value=action.current_value,
-                                enabled=action.enabled,
-                                available=action.available,
-                                callback=partial(
-                                    self._state_change_callback,
-                                    spec.name,
-                                    action.target_value,
-                                    obj.handle,
-                                ),
-                                tooltip=action.error,
+                                enabled=enabled,
+                                available=available,
+                                callback=callback,
+                                tooltip=tooltip,
+                                recently_changed=recently_changed,
                             )
                         )
 
@@ -596,7 +636,7 @@ class UI:
     ):
         # Requires object state manipulator.
         osm = self._object_state_manipulator
-        if osm is None:
+        if osm is None or not self._can_change_object_states:
             return
 
         success, error = osm.try_execute_action(
@@ -610,6 +650,8 @@ class UI:
                     new_value=target_value,
                 )
             )
+
+            self._last_changed_state_timestamp = (state_name, datetime.now())
         else:
             print(error)
 

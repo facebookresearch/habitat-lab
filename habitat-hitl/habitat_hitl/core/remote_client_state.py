@@ -224,7 +224,7 @@ class RemoteClientState:
         Group a list of client states by user index.
         """
         output: List[List[ClientState]] = []
-        for _ in self._users.indices(Mask.ALL):
+        for _ in range(self._users.max_user_count):
             output.append([])
 
         for client_state in client_states:

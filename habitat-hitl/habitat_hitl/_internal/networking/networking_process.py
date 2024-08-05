@@ -147,6 +147,10 @@ class NetworkManager:
         while user_index in self._user_slots:
             user_index += 1
         self._user_slots[user_index] = client
+
+        # Remove user-specific messages.
+        self._consolidated_keyframe_and_messages.messages[user_index].clear()
+
         return user_index
 
     def _free_user_slot(self, user_index: int) -> None:

@@ -217,6 +217,11 @@ class UserData:
             self.gui_input,
         )
 
+        # HACK: Actions are hardcoded by agent type.
+        self._can_change_object_states = isinstance(
+            self.gui_agent_controller, GuiHumanoidController
+        )
+
         self.ui = UI(
             hitl_config=app_service.hitl_config,
             user_index=user_index,
@@ -227,6 +232,7 @@ class UserData:
             gui_input=self.gui_input,
             gui_drawer=app_service.gui_drawer,
             camera_helper=self.camera_helper,
+            can_change_object_states=self._can_change_object_states,
         )
 
         self.end_episode_form = EndEpisodeForm(user_index, app_service)
@@ -336,9 +342,9 @@ class UserData:
             )
 
         # Show picture-in-picture (PIP) viewport.
-        self.app_service.client_message_manager.show_viewport(
-            viewport_id=PIP_VIEWPORT_ID,
+        self.app_service.client_message_manager.update_camera_transform(
             cam_transform=pip_agent_data.cam_transform,
+            viewport_id=PIP_VIEWPORT_ID,
             destination_mask=Mask.from_index(self.user_index),
         )
 
