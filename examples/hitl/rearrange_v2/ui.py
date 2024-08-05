@@ -505,8 +505,9 @@ class UI:
             [
                 ("H", "Hide Help"),
                 ("WASD", "Move"),
+                ("R/Middle-Click", "Look Around"),
+                ("I/K", "Look Up/Down"),
                 ("Left-Click", "Select"),
-                ("Middle-Click or R", "Look Around"),
                 ("Double-Click", "Pick-up"),
                 ("Double-Click", "Open/Close"),
                 ("Right-Click", "Drop"),
