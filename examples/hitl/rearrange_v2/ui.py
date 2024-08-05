@@ -296,7 +296,6 @@ class UI:
 
         self._update_held_object_placement()
         self._draw_place_selection()
-        self._draw_hovered_interactable()
         self._draw_pickable_object_highlights()
         self._draw_hovered_object()
         self._draw_selected_object()
@@ -485,7 +484,9 @@ class UI:
         self, instructions: Optional[str], status_text: Optional[str]
     ):
         overlay = self._ui_overlay
-        overlay.update_instructions_panel(instructions, status_text)
+        overlay.update_instructions_panel(
+            instructions, status_text, self._is_help_shown
+        )
 
     def _update_overlay_help_text(self):
         """
@@ -556,6 +557,8 @@ class UI:
         object_category: Optional[str] = None
         object_states: List[ObjectStateControl] = []
         primary_region_name: Optional[str] = None
+        contextual_info: Optional[str] = None
+        contextual_color: Optional[List[float]] = None
 
         if object_id is not None:
             world = self._world
@@ -565,6 +568,8 @@ class UI:
             )
             if obj is not None:
                 object_category = world.get_category_from_handle(obj.handle)
+                if object_category is None:
+                    object_category = "Object"
 
                 # Requires object state manipulator.
                 osm = self._object_state_manipulator
@@ -630,12 +635,67 @@ class UI:
                 if primary_region is not None:
                     primary_region_name = primary_region.category.name()
 
+                color: Optional[mn.Color4] = None
+                if self._is_object_pickable(object_id):
+                    if self._held_object_id == None:
+                        if self._is_within_reach(obj.translation):
+                            contextual_info = "Double-click to pick up."
+                            color = COLOR_VALID
+                        else:
+                            contextual_info = "Too far to pick up."
+                            color = COLOR_INVALID
+                    elif self._held_object_id == object_id:
+                        if self._place_selection.point is not None:
+                            point = self._place_selection.point
+                            normal = self._place_selection.normal
+                            receptacle_object_id = (
+                                self._place_selection.object_id
+                            )
+                            placement_valid = (
+                                self._is_location_suitable_for_placement(
+                                    point, normal, receptacle_object_id
+                                )
+                            )
+                            if placement_valid:
+                                contextual_info = "Release to place."
+                                color = COLOR_VALID
+                            else:
+                                contextual_info = "Cannot place object here."
+                                color = COLOR_INVALID
+                        else:
+                            contextual_info = "Hold right-click to place."
+                elif self._is_object_interactable(object_id):
+                    link_id = object_id
+                    link_index = self._world.get_link_index(link_id)
+                    if link_index:
+                        ao_id = self._world._link_id_to_ao_map[link_id]
+                        ao = self._world.get_articulated_object(ao_id)
+                        link_node = ao.get_link_scene_node(link_index)
+                        link_pos = link_node.translation
+
+                        action_name = (
+                            "close"
+                            if object_id in world._opened_link_set
+                            else "open"
+                        )
+                        if self._is_within_reach(link_pos):
+                            contextual_info = f"Double-click to {action_name}."
+                            color = COLOR_VALID
+                        else:
+                            contextual_info = f"Too far to {action_name}."
+                            color = COLOR_INVALID
+                if color is not None:
+                    contextual_color = [color.r, color.g, color.b, color.a]
+                    contextual_color[3] = 1.0
+
         overlay = self._ui_overlay
         overlay.update_selected_object_panel(
             object_category,
             object_states,
             primary_region_name,
             self._held_object_id == object_id,
+            contextual_info=contextual_info,
+            contextual_color=contextual_color,
         )
 
     def _state_change_callback(
@@ -767,26 +827,6 @@ class UI:
             destination_mask=self._dest_mask,
         )
 
-    def _draw_hovered_interactable(self) -> None:
-        """Highlight the hovered interactable object."""
-        if not self._hover_selection.selected:
-            return
-
-        object_id = self._hover_selection.object_id
-        if not self._is_object_interactable(object_id):
-            return
-
-        link_index = self._world.get_link_index(object_id)
-        if link_index:
-            ao = sim_utilities.get_obj_from_id(
-                self._sim, object_id, self._world._link_id_to_ao_map
-            )
-            link_node = ao.get_link_scene_node(link_index)
-            aabb = link_node.cumulative_bb
-            reachable = self._is_within_reach(link_node.translation)
-            color = COLOR_VALID if reachable else COLOR_INVALID
-            self._draw_aabb(aabb, link_node.transformation, color)
-
     def _draw_pickable_object_highlights(self):
         """Highlight visible pickable objects."""
         if self._is_holding_object():
@@ -817,6 +857,11 @@ class UI:
                 if self._hover_selection.object_id == object_id:
                     reachable = self._is_within_reach(obj.translation)
                     color = COLOR_VALID if reachable else COLOR_INVALID
+                    color[3] = (
+                        0.3
+                        if self._click_selection.object_id != object_id
+                        else 1.0
+                    )
                 else:
                     color = COLOR_HIGHLIGHT
 
@@ -849,6 +894,7 @@ class UI:
                 aabb = link_node.cumulative_bb
                 reachable = self._is_within_reach(link_node.translation)
                 color = COLOR_VALID if reachable else COLOR_INVALID
+                color[3] = 0.3  # Make hover color dimmer than selection.
                 self._draw_aabb(aabb, link_node.transformation, color)
 
         # Skip highlight if select object is the same as hovered object.
@@ -874,6 +920,19 @@ class UI:
             return
 
         world = self._world
+
+        # Draw the bounding box of the highlighted interactable link (e.g. drawer in a cabinet).
+        if self._is_object_interactable(object_id):
+            link_index = self._world.get_link_index(object_id)
+            if link_index:
+                link_node = obj.get_link_scene_node(link_index)
+                aabb = link_node.cumulative_bb
+                reachable = self._is_within_reach(link_node.translation)
+                color = COLOR_VALID if reachable else COLOR_INVALID
+                self._draw_aabb(aabb, link_node.transformation, color)
+
+        # Draw outline of selected object.
+        # Articulated objects are always fully contoured.
         object_ids: Set[int] = set()
         object_ids.add(object_id)
         if object_id in world._link_id_to_ao_map:

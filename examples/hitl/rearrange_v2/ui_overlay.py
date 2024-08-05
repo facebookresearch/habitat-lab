@@ -67,6 +67,7 @@ class UIOverlay:
         self,
         instructions: Optional[str],
         status_text: Optional[str],
+        is_help_shown: bool,
     ):
         manager = self._ui_manager
         has_instructions = instructions is not None and len(instructions) > 0
@@ -77,13 +78,14 @@ class UIOverlay:
                     padding=12, background_color=[0.7, 0.7, 0.7, 0.3]
                 )
 
-                ctx.label(
-                    text="Instructions",
-                    font_size=FONT_SIZE_LARGE,
-                    horizontal_alignment=HorizontalAlignment.LEFT,
-                )
+                if is_help_shown:
+                    ctx.label(
+                        text="Instructions",
+                        font_size=FONT_SIZE_LARGE,
+                        horizontal_alignment=HorizontalAlignment.LEFT,
+                    )
 
-                ctx.separator()
+                    ctx.separator()
 
                 multiline_instructions = textwrap.fill(
                     instructions,
@@ -188,11 +190,11 @@ class UIOverlay:
                 font_size=FONT_SIZE_SMALL,
             )
 
-            ctx.spacer(size=SPACE_SIZE)
-
             current_item_id = 0
 
             def create_list_item(left: str, right: str):
+                ctx.spacer(size=SPACE_SIZE)
+
                 nonlocal current_item_id
                 item_key = f"hover_{current_item_id}"
                 ctx.list_item(
@@ -212,6 +214,8 @@ class UIOverlay:
         toggles: List[ObjectStateControl],
         primary_region_name: Optional[str],
         held: bool,
+        contextual_info: Optional[str],
+        contextual_color: Optional[List[float]],
     ):
         manager = self._ui_manager
         with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
@@ -233,11 +237,12 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
-            if held:
+            if contextual_info is not None:
                 ctx.label(
-                    text="(Held Object)",
+                    text=contextual_info,
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.CENTER,
+                    color=contextual_color,
                 )
 
             ctx.spacer(size=SPACE_SIZE)
@@ -253,9 +258,9 @@ class UIOverlay:
                 font_size=FONT_SIZE_SMALL,
             )
 
-            ctx.spacer(size=SPACE_SIZE)
-
             def create_toggle(toggle: ObjectStateControl) -> str:
+                ctx.spacer(size=SPACE_SIZE)
+
                 spec = cast(BooleanObjectState, toggle.spec)
                 item_key = f"select_{spec.name}"
                 color = None
