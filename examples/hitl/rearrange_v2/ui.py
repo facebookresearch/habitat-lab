@@ -61,7 +61,7 @@ COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 # Color for an invalid action.
 COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
-COLOR_HIGHLIGHT = mn.Color4(_HI, _MID, _LO, _HI)  # Orange
+COLOR_HIGHLIGHT = mn.Color4(_HI, _HI, _LO, _HI)  # Yellow
 # Color for hovered objects.
 COLOR_HOVER = mn.Color4(_HI, _HI, _HI, 0.2)  # Transparent Grey
 # Color for selected objects.
