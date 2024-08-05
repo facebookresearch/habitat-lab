@@ -228,6 +228,16 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["sceneChanged"] = True
 
+    def highlight_objects(
+        self, object_ids: List[int], destination_mask: Mask = Mask.ALL
+    ) -> None:
+        r"""
+        Draw outline of the specified object IDs.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            message["selectedObjects"] = list(object_ids)
+
     def signal_app_ready(self, destination_mask: Mask = Mask.ALL):
         r"""
         See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.

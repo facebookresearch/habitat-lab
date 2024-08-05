@@ -9,13 +9,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    cast,
+)
 
 import magnum as mn
 from ui_overlay import ObjectStateControl, UIOverlay
 from world import World
 
-import habitat_sim
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
@@ -289,7 +297,6 @@ class UI:
         self._update_held_object_placement()
         self._draw_place_selection()
         self._draw_hovered_interactable()
-        self._draw_hovered_pickable()
         self._draw_pickable_object_highlights()
         self._draw_hovered_object()
         self._draw_selected_object()
@@ -780,27 +787,6 @@ class UI:
             color = COLOR_VALID if reachable else COLOR_INVALID
             self._draw_aabb(aabb, link_node.transformation, color)
 
-    def _draw_hovered_pickable(self) -> None:
-        """Highlight the hovered pickable object."""
-        return
-        if not self._hover_selection.selected or self._is_holding_object():
-            return
-
-        object_id = self._hover_selection.object_id
-        if not self._is_object_pickable(
-            object_id
-        ) or self._world.is_any_agent_holding_object(object_id):
-            return
-
-        managed_object = sim_utilities.get_obj_from_id(
-            self._sim, object_id, self._world._link_id_to_ao_map
-        )
-        translation = managed_object.translation
-        reachable = self._is_within_reach(translation)
-        color = COLOR_VALID if reachable else COLOR_INVALID
-        aabb = managed_object.collision_shape_aabb
-        self._draw_aabb(aabb, managed_object.transformation, color)
-
     def _draw_pickable_object_highlights(self):
         """Highlight visible pickable objects."""
         if self._is_holding_object():
@@ -865,8 +851,6 @@ class UI:
                 color = COLOR_VALID if reachable else COLOR_INVALID
                 self._draw_aabb(aabb, link_node.transformation, color)
 
-        root_node = obj.root_scene_node
-
         # Skip highlight if select object is the same as hovered object.
         selected_obj_id = self._click_selection.object_id
         if selected_obj_id is not None:
@@ -875,16 +859,6 @@ class UI:
             )
             if selected_obj is not None and obj.handle == selected_obj.handle:
                 return
-
-        return
-        # Draw the bounding box of the entire object (e.g. entire cabinet).
-        if isinstance(obj, habitat_sim.physics.ManagedArticulatedObject):
-            aabb = sim_utilities.get_ao_root_bb(obj)
-        # Draw the bounding box of rigid objects.
-        else:
-            aabb = obj.root_scene_node.cumulative_bb
-
-        self._draw_aabb(aabb, root_node.transformation, COLOR_HOVER)
 
     def _draw_selected_object(self) -> None:
         """Highlight the selected object."""
@@ -899,13 +873,18 @@ class UI:
         if obj is None:
             return
 
-        root_node = obj.root_scene_node
+        world = self._world
+        object_ids: Set[int] = set()
+        object_ids.add(object_id)
+        if object_id in world._link_id_to_ao_map:
+            ao_id = world._link_id_to_ao_map[object_id]
+            ao = sim_utilities.get_obj_from_id(
+                sim, ao_id, world._link_id_to_ao_map
+            )
+            link_object_ids = ao.link_object_ids
+            for link_id in link_object_ids.keys():
+                object_ids.add(link_id)
 
-        # Draw the bounding box of the entire object (e.g. entire cabinet).
-        if isinstance(obj, habitat_sim.physics.ManagedArticulatedObject):
-            aabb = sim_utilities.get_ao_root_bb(obj)
-        # Draw the bounding box of rigid objects.
-        else:
-            aabb = obj.root_scene_node.cumulative_bb
-
-        self._draw_aabb(aabb, root_node.transformation, COLOR_SELECTION)
+        self._gui_drawer._client_message_manager.highlight_objects(
+            list(object_ids)
+        )
