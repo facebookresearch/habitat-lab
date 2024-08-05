@@ -904,13 +904,19 @@ class UI:
             link_index = self._world.get_link_index(object_id)
             if link_index:
                 link_node = obj.get_link_scene_node(link_index)
-                aabb = link_node.cumulative_bb
                 reachable = self._can_open_close_receptacle(
                     link_node.translation
                 )
                 color = COLOR_VALID if reachable else COLOR_INVALID
+                color = self._to_color_array(color)
                 color[3] = 0.3  # Make hover color dimmer than selection.
-                self._draw_aabb(aabb, link_node.transformation, color)
+                self._gui_drawer._client_message_manager.draw_object_outline(
+                    priority=1,
+                    color=color,
+                    line_width=8.0,
+                    object_ids=[object_id],
+                    destination_mask=Mask.from_index(self._user_index),
+                )
 
         # Skip highlight if select object is the same as hovered object.
         selected_obj_id = self._click_selection.object_id
@@ -941,12 +947,18 @@ class UI:
             link_index = self._world.get_link_index(object_id)
             if link_index:
                 link_node = obj.get_link_scene_node(link_index)
-                aabb = link_node.cumulative_bb
                 reachable = self._can_open_close_receptacle(
                     link_node.translation
                 )
                 color = COLOR_VALID if reachable else COLOR_INVALID
-                self._draw_aabb(aabb, link_node.transformation, color)
+                color = self._to_color_array(color)
+                self._gui_drawer._client_message_manager.draw_object_outline(
+                    priority=2,
+                    color=color,
+                    line_width=8.0,
+                    object_ids=[object_id],
+                    destination_mask=Mask.from_index(self._user_index),
+                )
 
         # Draw outline of selected object.
         # Articulated objects are always fully contoured.
@@ -961,6 +973,14 @@ class UI:
             for link_id in link_object_ids.keys():
                 object_ids.add(link_id)
 
-        self._gui_drawer._client_message_manager.highlight_objects(
-            list(object_ids)
+        self._gui_drawer._client_message_manager.draw_object_outline(
+            priority=0,
+            color=self._to_color_array(COLOR_SELECTION),
+            line_width=4.0,
+            object_ids=list(object_ids),
+            destination_mask=Mask.from_index(self._user_index),
         )
+
+    @staticmethod
+    def _to_color_array(color: mn.Color4) -> List[float]:
+        return [color.r, color.g, color.b, color.a]

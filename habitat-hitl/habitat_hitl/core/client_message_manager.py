@@ -228,15 +228,29 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["sceneChanged"] = True
 
-    def highlight_objects(
-        self, object_ids: List[int], destination_mask: Mask = Mask.ALL
+    def draw_object_outline(
+        self,
+        priority: int,
+        color: List[float],
+        line_width: float,
+        object_ids: List[int],
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         r"""
         Draw outline of the specified object IDs.
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            message["selectedObjects"] = list(object_ids)
+            if "outlines" not in message:
+                message["outlines"] = []
+            message["outlines"].append(
+                {
+                    "priority": priority,
+                    "color": color,
+                    "width": line_width,
+                    "objectIds": object_ids,
+                }
+            )
 
     def signal_app_ready(self, destination_mask: Mask = Mask.ALL):
         r"""
