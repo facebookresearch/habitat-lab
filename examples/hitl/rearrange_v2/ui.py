@@ -282,6 +282,10 @@ class UI:
             self._place_object()
             self._place_selection.deselect()
 
+        # Clear drop selection if not holding right click.
+        if not self._gui_input.get_mouse_button(MouseButton.RIGHT):
+            self._place_selection.deselect()
+
         # Toggle help text.
         if self._gui_input.get_key_down(KeyCode.H):
             self._is_help_shown = not self._is_help_shown
@@ -387,6 +391,9 @@ class UI:
                 )
             )
 
+    def _can_open_close_receptacle(self, link_pos: mn.Vector3) -> bool:
+        return self._is_within_reach(link_pos) and self._held_object_id is None
+
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""
         if self._is_object_interactable(object_id):
@@ -398,8 +405,8 @@ class UI:
                 link_node = ao.get_link_scene_node(link_index)
                 link_pos = link_node.translation
 
-                if self._is_within_reach(link_pos):
-                    # Open/close object.
+                if self._can_open_close_receptacle(link_pos):
+                    # Open/close receptacle.
                     if link_id in self._world._opened_link_set:
                         sim_utilities.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
@@ -635,15 +642,16 @@ class UI:
                 if primary_region is not None:
                     primary_region_name = primary_region.category.name()
 
-                color: Optional[mn.Color4] = None
+                color_ui_valid = [0.2, 1.0, 0.2, 1.0]
+                color_ui_invalid = [1.0, 0.2, 0.2, 1.0]
                 if self._is_object_pickable(object_id):
                     if self._held_object_id == None:
                         if self._is_within_reach(obj.translation):
                             contextual_info = "Double-click to pick up."
-                            color = COLOR_VALID
+                            contextual_color = color_ui_valid
                         else:
                             contextual_info = "Too far to pick up."
-                            color = COLOR_INVALID
+                            contextual_color = color_ui_invalid
                     elif self._held_object_id == object_id:
                         if self._place_selection.point is not None:
                             point = self._place_selection.point
@@ -658,35 +666,39 @@ class UI:
                             )
                             if placement_valid:
                                 contextual_info = "Release to place."
-                                color = COLOR_VALID
+                                contextual_color = color_ui_valid
                             else:
                                 contextual_info = "Cannot place object here."
-                                color = COLOR_INVALID
+                                contextual_color = color_ui_invalid
                         else:
                             contextual_info = "Hold right-click to place."
                 elif self._is_object_interactable(object_id):
                     link_id = object_id
                     link_index = self._world.get_link_index(link_id)
                     if link_index:
-                        ao_id = self._world._link_id_to_ao_map[link_id]
-                        ao = self._world.get_articulated_object(ao_id)
-                        link_node = ao.get_link_scene_node(link_index)
-                        link_pos = link_node.translation
-
                         action_name = (
                             "close"
                             if object_id in world._opened_link_set
                             else "open"
                         )
-                        if self._is_within_reach(link_pos):
-                            contextual_info = f"Double-click to {action_name}."
-                            color = COLOR_VALID
+
+                        if self._held_object_id is not None:
+                            contextual_info = f"Cannot {action_name} while holding an object."
+                            contextual_color = color_ui_invalid
                         else:
-                            contextual_info = f"Too far to {action_name}."
-                            color = COLOR_INVALID
-                if color is not None:
-                    contextual_color = [color.r, color.g, color.b, color.a]
-                    contextual_color[3] = 1.0
+                            ao_id = self._world._link_id_to_ao_map[link_id]
+                            ao = self._world.get_articulated_object(ao_id)
+                            link_node = ao.get_link_scene_node(link_index)
+                            link_pos = link_node.translation
+
+                            if self._is_within_reach(link_pos):
+                                contextual_info = (
+                                    f"Double-click to {action_name}."
+                                )
+                                contextual_color = color_ui_valid
+                            else:
+                                contextual_info = f"Too far to {action_name}."
+                                contextual_color = color_ui_invalid
 
         overlay = self._ui_overlay
         overlay.update_selected_object_panel(
@@ -892,7 +904,9 @@ class UI:
             if link_index:
                 link_node = obj.get_link_scene_node(link_index)
                 aabb = link_node.cumulative_bb
-                reachable = self._is_within_reach(link_node.translation)
+                reachable = self._can_open_close_receptacle(
+                    link_node.translation
+                )
                 color = COLOR_VALID if reachable else COLOR_INVALID
                 color[3] = 0.3  # Make hover color dimmer than selection.
                 self._draw_aabb(aabb, link_node.transformation, color)
@@ -927,7 +941,9 @@ class UI:
             if link_index:
                 link_node = obj.get_link_scene_node(link_index)
                 aabb = link_node.cumulative_bb
-                reachable = self._is_within_reach(link_node.translation)
+                reachable = self._can_open_close_receptacle(
+                    link_node.translation
+                )
                 color = COLOR_VALID if reachable else COLOR_INVALID
                 self._draw_aabb(aabb, link_node.transformation, color)
 
