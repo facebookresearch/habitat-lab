@@ -11,6 +11,7 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.core.logging import logger
 from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 
 
@@ -41,7 +42,7 @@ class RelationshipGraph:
 
         assert parent != child
         if (parent, child) in self.relation_types:
-            print(
+            logger.warn(
                 f"Redundant relationship detected. Changing '{parent}' {self.relation_types[(parent, child)]} '{child}' to '{parent}' {rel_type} '{child}'"
             )
         else:
@@ -49,7 +50,7 @@ class RelationshipGraph:
                 self.obj_to_children[parent] = []
             self.obj_to_children[parent].append(child)
             if child in self.obj_to_parents:
-                print(
+                logger.warn(
                     f"Inconsistent relationship requested: child object '{child}' already parented to '{self.obj_to_parents[child]}'. Changing parent to '{parent}' and removing previous relationship."
                 )
                 self.remove_relation(self.obj_to_parents[child], child)
