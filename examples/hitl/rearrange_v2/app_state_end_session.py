@@ -103,7 +103,7 @@ class AppStateEndSession(AppStateBase):
 
         # Generate unique session ID
         session_id = generate_unique_session_id(
-            session.episode_ids, session.connection_records
+            session.episode_indices, session.connection_records
         )
 
         # Upload output directory
