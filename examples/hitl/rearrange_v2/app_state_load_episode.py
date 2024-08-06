@@ -89,8 +89,8 @@ class AppStateLoadEpisode(AppStateBase):
 
     def _increment_episode(self):
         session = self._session
-        assert session.episode_ids is not None
-        if session.current_episode_index < len(session.episode_ids):
+        assert session.episode_indices is not None
+        if session.current_episode_index < len(session.episode_indices):
             self._set_episode(session.current_episode_index)
             session.current_episode_index += 1
         else:
@@ -101,15 +101,14 @@ class AppStateLoadEpisode(AppStateBase):
         app_service = self._app_service
 
         # Set the ID of the next episode to play in lab.
-        next_episode_id = session.episode_ids[episode_index]
-        print(f"Next episode index: {next_episode_id}.")
+        next_episode_index = session.episode_indices[episode_index]
+        print(f"Next episode index: {next_episode_index}.")
         try:
-            next_episode_index = int(next_episode_id)
             app_service.episode_helper.set_next_episode_by_index(
                 next_episode_index
             )
         except Exception as e:
-            print(f"ERROR: Invalid episode index {next_episode_id}. {e}")
+            print(f"ERROR: Invalid episode index {next_episode_index}. {e}")
             print("Loading episode index 0.")
             app_service.episode_helper.set_next_episode_by_index(0)
 

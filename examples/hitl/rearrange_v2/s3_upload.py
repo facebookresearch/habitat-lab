@@ -61,17 +61,17 @@ else:
 
 
 def generate_unique_session_id(
-    episode_ids: List[str], connection_records: Dict[int, ConnectionRecord]
+    episode_indices: List[int], connection_records: Dict[int, ConnectionRecord]
 ) -> str:
     """
     Generate a unique name for a session.
     """
     # Generate episodes string
-    episodes_str = "no-episode"
-    if len(episode_ids) == 1:
-        episodes_str = episode_ids[0]
-    elif len(episode_ids) > 1:
-        episodes_str = f"{episode_ids[0]}-{episode_ids[-1]}"
+    episodes_str = (
+        "-".join(str(x) for x in episode_indices)
+        if len(episode_indices) > 0
+        else "no-episode"
+    )
 
     # Generate users string
     users_str = ""
@@ -117,18 +117,18 @@ def _test():
     # TODO: Temporary test. Move to a dedicated test file.
 
     # Test generate_unique_session_id.
-    episode_ids: List[str] = []
+    episode_ids: List[int] = []
     connection_records: Dict[int, ConnectionRecord] = {}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_no-user_{timestamp()}"
-    episode_ids = ["2"]
+    episode_ids = [2]
     connection_records = {}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"2_no-user_{timestamp()}"
-    episode_ids = ["2", "3", "4", "5"]
+    episode_ids = [2, 3, 4, 5]
     connection_records = {}
     session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"2-5_no-user_{timestamp()}"
+    assert session_id == f"2-3-4-5_no-user_{timestamp()}"
     episode_ids = []
     connection_records = {0: {"user_id": "test"}}
     session_id = generate_unique_session_id(episode_ids, connection_records)

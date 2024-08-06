@@ -16,10 +16,10 @@ class SessionRecorder:
         self,
         config: Dict[str, Any],
         connection_records: Dict[int, ConnectionRecord],
-        episode_ids: List[str],
+        episode_indices: List[int],
     ):
         self.data = {
-            "episode_ids": episode_ids,
+            "episode_indices": episode_indices,
             "completed": False,
             "error": "",
             "start_timestamp": timestamp(),
