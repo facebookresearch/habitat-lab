@@ -647,12 +647,20 @@ class UI:
                 color_ui_invalid = [1.0, 0.2, 0.2, 1.0]
                 if self._is_object_pickable(object_id):
                     if self._held_object_id == None:
-                        if self._is_within_reach(obj.translation):
-                            contextual_info = "Double-click to pick up."
-                            contextual_color = color_ui_valid
-                        else:
-                            contextual_info = "Too far to pick up."
+                        if self._world.is_any_agent_holding_object(
+                            self._held_object_id
+                        ):
+                            contextual_info = (
+                                "The object is held by another agent."
+                            )
                             contextual_color = color_ui_invalid
+                        else:
+                            if self._is_within_reach(obj.translation):
+                                contextual_info = "Double-click to pick up."
+                                contextual_color = color_ui_valid
+                            else:
+                                contextual_info = "Too far to pick up."
+                                contextual_color = color_ui_invalid
                     elif self._held_object_id == object_id:
                         if self._place_selection.point is not None:
                             point = self._place_selection.point
