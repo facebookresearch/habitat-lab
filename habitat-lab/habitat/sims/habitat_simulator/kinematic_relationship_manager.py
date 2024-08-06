@@ -48,6 +48,11 @@ class RelationshipGraph:
             if parent not in self.obj_to_children:
                 self.obj_to_children[parent] = []
             self.obj_to_children[parent].append(child)
+            if child in self.obj_to_parents:
+                print(
+                    f"Inconsistent relationship requested: child object '{child}' already parented to '{self.obj_to_parents[child]}'. Changing parent to '{parent}' and removing previous relationship."
+                )
+                self.remove_relation(self.obj_to_parents[child], child)
             self.obj_to_parents[child] = parent
         self.relation_types[(parent, child)] = rel_type
 

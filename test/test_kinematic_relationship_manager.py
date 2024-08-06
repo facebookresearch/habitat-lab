@@ -152,3 +152,27 @@ def test_kinematic_relationship_manager():
         krm.relationship_graph.get_human_readable_relationship_forest(
             sim, do_print=False
         )
+
+        # attempt an invalid parenting re-assignment (should trigger message and adjust the tree)
+        test_child = list(krm.relationship_graph.obj_to_parents.keys())[0]
+        test_parent = krm.relationship_graph.obj_to_parents[test_child]
+        assert test_parent in krm.relationship_graph.obj_to_children
+        assert (
+            test_child in krm.relationship_graph.obj_to_children[test_parent]
+        )
+        # now add the previously removed parent as parent of this child
+        new_test_parent = table_objects[0].object_id
+        krm.relationship_graph.add_relation(new_test_parent, test_child, "on")
+        assert (
+            test_child
+            not in krm.relationship_graph.obj_to_children[test_parent]
+        )
+        assert new_test_parent in krm.relationship_graph.obj_to_children
+        assert (
+            test_child
+            in krm.relationship_graph.obj_to_children[new_test_parent]
+        )
+        assert (
+            krm.relationship_graph.obj_to_parents[test_child]
+            == new_test_parent
+        )
