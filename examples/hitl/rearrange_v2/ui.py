@@ -382,6 +382,9 @@ class UI:
 
             grasp_mgr = self._get_grasp_manager()
             grasp_mgr.desnap(force=True)
+            grasp_mgr._snapped_obj_id = None
+            grasp_mgr._snapped_marker_id = None
+            grasp_mgr._managed_articulated_agent.close_gripper()
 
             self._on_place.invoke(
                 UI.PlaceEventData(
