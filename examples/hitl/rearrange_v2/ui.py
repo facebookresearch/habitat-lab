@@ -651,7 +651,7 @@ class UI:
                 if self._is_object_pickable(object_id):
                     if self._held_object_id == None:
                         if self._world.is_any_agent_holding_object(
-                            self._held_object_id
+                            object_id
                         ):
                             contextual_info = (
                                 "The object is held by another agent."
