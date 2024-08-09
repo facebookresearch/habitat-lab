@@ -602,7 +602,7 @@ async def networking_main_async(
         # Abort if exception was raised, or if a termination signal was caught.
         if abort or stop.done():
             if stop.done():
-                print(f"Caught termination signal: {stop.result}.")
+                print(f"Caught termination signal: {stop.result()}.")
             break
         # Resume pending tasks.
         tasks = pending
