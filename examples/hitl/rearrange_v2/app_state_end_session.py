@@ -132,7 +132,7 @@ class AppStateEndSession(AppStateBase):
         ]
         for orig_file_name in orig_file_names:
             local_file_path = os.path.join(output_folder, orig_file_name)
-            s3_file_name = make_s3_filename(session_id, orig_file_name)
+            s3_file_name = orig_file_name
             print(
                 f"Uploading '{local_file_path}' to '{s3_path}' as '{s3_file_name}'."
             )
