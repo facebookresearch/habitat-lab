@@ -23,9 +23,10 @@ class Session:
         episode_indices: List[int],
         connection_records: Dict[int, ConnectionRecord],
     ):
-        self.success = False
+        self.finished = False
         self.episode_indices = episode_indices
         self.current_episode_index = 0
+        self.next_session_episode = 0
         self.connection_records = connection_records
 
         self.session_recorder = SessionRecorder(

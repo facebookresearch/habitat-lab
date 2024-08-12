@@ -69,8 +69,3 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
       enable_physics: True
-
-rearrange_v2:
-  data_collection:
-    s3_path: "Placeholder/"
-    output_file_name: "session"

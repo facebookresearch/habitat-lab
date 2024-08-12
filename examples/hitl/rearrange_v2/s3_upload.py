@@ -7,7 +7,7 @@
 
 import os
 import typing
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from util import timestamp
 
@@ -112,6 +112,20 @@ def make_s3_filename(session_id: str, orig_file_name: str) -> str:
     return s3_filename
 
 
+def validate_experiment_name(experiment_name: Optional[str]) -> bool:
+    if experiment_name is None:
+        return False
+
+    if len(experiment_name) > 128:
+        return False
+
+    authorized_chars = ["_", "-", "."]
+    return all(
+        not (not c.isalnum() and c not in authorized_chars)
+        for c in experiment_name
+    )
+
+
 @typing.no_type_check
 def _test():
     # TODO: Temporary test. Move to a dedicated test file.
@@ -169,6 +183,12 @@ def _test():
     s3_filename = make_s3_filename("ab", long_name)
     assert len(s3_filename) == 128
     assert s3_filename[-4:] == ".txt"
+
+    # Test experiment name validation.
+    assert validate_experiment_name(None) == False
+    assert validate_experiment_name("test") == True
+    assert validate_experiment_name("test_test-test.123") == True
+    assert validate_experiment_name("test?") == False
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ from s3_upload import (
     generate_unique_session_id,
     make_s3_filename,
     upload_file_to_s3,
+    validate_experiment_name,
 )
 from session import Session
 from util import get_top_down_view
@@ -71,27 +72,32 @@ class AppStateEndSession(AppStateBase):
 
         # Finalize session.
         if self._session.error == "":
-            session.success = True
+            session.finished = True
         session.session_recorder.end_session(self._session.error)
 
         # Get data collection parameters.
-        try:
-            config = self._app_service.config
-            data_collection_config = config.rearrange_v2.data_collection
-            s3_path = data_collection_config.s3_path
-            s3_subdir = "complete" if session.success else "incomplete"
-            s3_path = os.path.join(s3_path, s3_subdir)
+        config = self._app_service.config
 
-            # Use the port as a discriminator for when there are multiple concurrent servers.
-            output_folder_suffix = str(config.habitat_hitl.networking.port)
-            output_folder = f"output_{output_folder_suffix}"
+        # Set the base S3 path as the experiment name.
+        s3_path: str = "default"
+        if len(session.connection_records) > 0:
+            experiment_name: Optional[str] = session.connection_records[0].get(
+                "experiment", None
+            )
+            if validate_experiment_name(experiment_name):
+                s3_path = experiment_name
+            else:
+                print(f"Invalid experiment name: '{experiment_name}'")
 
-            output_file_name = data_collection_config.output_file_name
-            output_file = f"{output_file_name}.json.gz"
+        # Generate unique session ID
+        session_id = generate_unique_session_id(
+            session.episode_indices, session.connection_records
+        )
+        s3_path = os.path.join(s3_path, session_id)
 
-        except Exception as e:
-            print(f"Invalid data collection config. Skipping S3 upload. {e}")
-            return
+        # Use the port as a discriminator for when there are multiple concurrent servers.
+        output_folder_suffix = str(config.habitat_hitl.networking.port)
+        output_folder = f"output_{output_folder_suffix}"
 
         # Delete previous output directory
         if os.path.exists(output_folder):
@@ -99,13 +105,24 @@ class AppStateEndSession(AppStateBase):
 
         # Create new output directory
         os.makedirs(output_folder)
-        json_path = os.path.join(output_folder, output_file)
-        save_as_json_gzip(session.session_recorder, json_path)
 
-        # Generate unique session ID
-        session_id = generate_unique_session_id(
-            session.episode_indices, session.connection_records
+        # Create a session metadata file.
+        session_json_path = os.path.join(output_folder, "session.json.gz")
+        save_as_json_gzip(
+            session.session_recorder.get_session_output(), session_json_path
         )
+
+        # Create one file per episode.
+        episode_outputs = session.session_recorder.get_episode_outputs()
+        for episode_output in episode_outputs:
+            episode_json_path = os.path.join(
+                output_folder,
+                f"{episode_output.episode.episode_index}.json.gz",
+            )
+            save_as_json_gzip(
+                episode_output,
+                episode_json_path,
+            )
 
         # Upload output directory
         orig_file_names = [
@@ -116,4 +133,7 @@ class AppStateEndSession(AppStateBase):
         for orig_file_name in orig_file_names:
             local_file_path = os.path.join(output_folder, orig_file_name)
             s3_file_name = make_s3_filename(session_id, orig_file_name)
+            print(
+                f"Uploading '{local_file_path}' to '{s3_path}' as '{s3_file_name}'."
+            )
             upload_file_to_s3(local_file_path, s3_file_name, s3_path)

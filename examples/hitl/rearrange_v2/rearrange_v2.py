@@ -96,12 +96,24 @@ class FrameRecorder:
             ro = rom.get_object_by_id(obj_id)
             position = np.array(ro.translation).tolist()
             rotation = quat_to_coeffs(quat_from_magnum(ro.rotation)).tolist()
+
+            states: Dict[str, Any] = {}
+            state_infos = self._world.get_states_for_object_handle(
+                object_handle
+            )
+            for state_info in state_infos:
+                spec = state_info.state_spec
+                state_name = spec.name
+                value = state_info.value
+                states[state_name] = value
+
             object_states.append(
                 {
                     "position": position,
                     "rotation": rotation,
                     "object_handle": object_handle,
                     "object_id": obj_id,
+                    "states": states,
                 }
             )
         return object_states
@@ -128,6 +140,7 @@ class FrameRecorder:
                 "camera_transform": u.agent_data.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
+                "selected_object": u.ui._click_selection.object_id,
                 "events": u.pop_ui_events(),
             }
             data["users"].append(user_data_dict)
@@ -581,20 +594,26 @@ class AppStateRearrangeV2(AppStateBase):
             ].gui_agent_controller._agent_idx
 
         episode = self._app_service.episode_helper.current_episode
+
         self._session.session_recorder.start_episode(
-            episode.episode_id,
-            episode.scene_id,
-            episode.scene_dataset_config,
-            user_index_to_agent_index_map,
+            episode_index=self._session.current_episode_index,
+            episode_id=episode.episode_id,
+            scene_id=episode.scene_id,
+            dataset=episode.scene_dataset_config,
+            user_index_to_agent_index_map=user_index_to_agent_index_map,
+            episode_info=episode.info,
         )
 
     def on_exit(self):
         super().on_exit()
 
+        task_percent_complete = self._metrics.get_task_percent_complete()
+
         self._session.session_recorder.end_episode(
             episode_finished=self._is_episode_finished(),
-            episode_successful=self._is_episode_successful(),
-            metrics=self._metrics.get_all_metrics(),
+            task_percent_complete=task_percent_complete
+            if task_percent_complete is not None
+            else 1.0,
         )
 
         for user_data in self._user_data:
@@ -753,6 +772,8 @@ class AppStateRearrangeV2(AppStateBase):
                 self._metrics.get_task_percent_complete(),
             )
             self._session.session_recorder.record_frame(frame_data)
+        else:
+            self._session.session_recorder.record_frame({})
 
     def _is_any_agent_policy_driven(self) -> bool:
         """
