@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""TODO: ADD MODULE DESCRIPTION"""
+"""The DebugVisualizer (DBV) module provides a singleton class for quickly generating custom debug RGB images from an already instantiated Simulator instance. DebugObservation provides a wrapper class for accessing, saving, showing, and manipulating numpy image matrices with PIL. The module also provides some helper functions for highlighting objects with DebugLineRender and stitching images together into a matrix of images."""
 
 import math
 import os
@@ -61,10 +61,10 @@ class DebugObservation:
     NOTE: PIL.Image.Image.size is (width, height) while VisualSensor.resolution is (height, width)
     """
 
-    def __init__(self, obs_data: np.ndarray):
+    def __init__(self, obs_data: np.ndarray) -> None:
         """..
-        
-        :param obs_data: TODO:  DESCRIPTION OF PARAMETER
+
+        :param obs_data: The visual sensor observation output matrix. E.g. from `sensor.get_observation()`
 
         """
 
@@ -301,7 +301,7 @@ class DebugVisualizer:
             self.sensor_uuid
         ]
 
-    def remove_dbv_agent(self):
+    def remove_dbv_agent(self) -> None:
         """
         Clean up a previously initialized DBV agent.
         """
