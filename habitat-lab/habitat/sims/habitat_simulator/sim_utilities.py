@@ -25,111 +25,6 @@ def object_shortname_from_handle(object_handle: str) -> str:
     return object_handle.split("/")[-1].split(".")[0].split("_:")[0]
 
 
-def register_custom_wireframe_box_template(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    template_name: str = "custom_wireframe_box",
-) -> str:
-    """
-    Generate and register a custom template for a wireframe box of given size.
-
-    :param sim: TODO DESCRIPTION
-    :param size:  TODO DESCRIPTION
-    :param template_name: TODO DESCRIPTION
-    :return: the new template's handle.
-    """
-    obj_attr_mgr = sim.get_object_template_manager()
-    cube_template = obj_attr_mgr.get_template_by_handle(
-        obj_attr_mgr.get_template_handles("cubeWireframe")[0]
-    )
-    cube_template.scale = size
-    obj_attr_mgr.register_template(cube_template, template_name)
-    return template_name
-
-
-def add_wire_box(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    center: mn.Vector3,
-    attach_to: Optional[habitat_sim.scene.SceneNode] = None,
-    orientation: Optional[mn.Quaternion] = None,
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Generate a wire box object and optionally attach it to another existing object (automatically applies object scale).
-    
-    :param sim: TODO DESCRIPTION
-    :param size:  TODO DESCRIPTION
-    :param center: TODO DESCRIPTION
-    :param attach_to: TODO DESCRIPTION
-    :param orientation:  TODO DESCRIPTION
-    :return: the new object. TODO MORE DESCRIPTION
-    """
-    if orientation is None:
-        orientation = mn.Quaternion()
-    box_template_handle = register_custom_wireframe_box_template(sim, size)
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        box_template_handle, attach_to
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    # translate to local offset if attached or global offset if not
-    new_object.translation = center
-    new_object.rotation = orientation
-    return new_object
-
-
-def add_transformed_wire_box(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    transform: Optional[mn.Matrix4] = None,
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Generate a transformed wire box in world space.
-
-    :param sim: TODO DESCRIPTION
-    :param size: TODO DESCRIPTION
-    :param transform:  TODO DESCRIPTION
-    :return: the new object. TODO MORE DESCRIPTION
-    """
-    if transform is None:
-        transform = mn.Matrix4()
-    box_template_handle = register_custom_wireframe_box_template(sim, size)
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        box_template_handle
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    # translate to local offset if attached or global offset if not
-    new_object.transformation = transform
-    return new_object
-
-
-def add_viz_sphere(
-    sim: habitat_sim.Simulator, radius: float, pos: mn.Vector3
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Add a visualization-only sphere to the world at a global position.
-
-    :param sim: TODO DESCRIPTION
-    :param radius: TODO DESCRIPTION
-    :param pos:  TODO DESCRIPTION
-    :return: the new object. TODO MORE DESCRIPTION
-    """
-    obj_attr_mgr = sim.get_object_template_manager()
-    sphere_template = obj_attr_mgr.get_template_by_handle(
-        obj_attr_mgr.get_template_handles("icosphereWireframe")[0]
-    )
-    sphere_template.scale = mn.Vector3(radius)
-    obj_attr_mgr.register_template(sphere_template, "viz_sphere")
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        "viz_sphere"
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    new_object.translation = pos
-    return new_object
-
-
 def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     """
     :param range3d:  TODO DESCRIPTION
@@ -683,7 +578,7 @@ def get_ao_default_link(
 
     Default link heuristic: the link with the lowest Y value in the bounding box with appropriate joint type.
 
-    
+
     """
 
     # first look in metadata
@@ -1219,7 +1114,7 @@ def get_floor_point_in_region(
     This method attempts to find a point in the region with maximum navmesh clearance by sorting candidates on `distance_to_closest_obstacle`.
     Because this method uses multiple sampling passes it is advised to use it in initialization and pre-processes rather than within an application loop.
 
-    
+
     """
 
     # get the SemanticRegion from the index
@@ -1326,7 +1221,7 @@ def set_link_normalized_joint_position(
 
     Assumes the joint has valid joint limits.
 
-    
+
     """
 
     assert object_a.get_link_joint_type(link_ix) in [
