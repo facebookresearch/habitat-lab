@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-"""TODO: ADD MODULE DESCRIPTION"""
+"""This module provides a diverse set of functional utilities for common operations involving the Simulator and ManagedObjects including: object getters from id and handle, geometric utilities, prepositional logic, region queries, articulated object interactions, and more."""
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -451,65 +451,6 @@ def get_all_objects(
     for mngr in managers:
         all_objects.extend(mngr.get_objects_by_handle_substring().values())
     return all_objects
-
-
-def get_ao_root_bb(
-    ao: habitat_sim.physics.ManagedArticulatedObject,
-) -> mn.Range3D:
-    """
-    Get the local bounding box of all links of an articulated object in the root frame.
-
-    :param ao: The ArticulatedObject instance.
-    :return: TODO DESCRIPTION
-    """
-
-    # NOTE: we'd like to use SceneNode AABB, but this won't work because the links are not in the subtree of the root:
-    # ao.root_scene_node.compute_cumulative_bb()
-
-    ao_local_part_bb_corners = []
-
-    link_nodes = [ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)]
-    for link_node in link_nodes:
-        local_bb_corners = get_bb_corners(link_node.cumulative_bb)
-        global_bb_corners = [
-            link_node.absolute_transformation().transform_point(bb_corner)
-            for bb_corner in local_bb_corners
-        ]
-        ao_local_bb_corners = [
-            ao.transformation.inverted().transform_point(p)
-            for p in global_bb_corners
-        ]
-        ao_local_part_bb_corners.extend(ao_local_bb_corners)
-
-    # get min and max of each dimension
-    # TODO: use numpy arrays for more elegance...
-    max_vec = mn.Vector3(ao_local_part_bb_corners[0])
-    min_vec = mn.Vector3(ao_local_part_bb_corners[0])
-    for point in ao_local_part_bb_corners:
-        for dim in range(3):
-            max_vec[dim] = max(max_vec[dim], point[dim])
-            min_vec[dim] = min(min_vec[dim], point[dim])
-    return mn.Range3D(min_vec, max_vec)
-
-
-def get_ao_root_bbs(
-    sim: habitat_sim.Simulator,
-) -> Dict[int, mn.Range3D]:
-    """
-    Computes a dictionary mapping AO handles to a global bounding box of parts.
-    Must be updated when AO state changes to correctly bound the full set of links.
-
-    :param sim: The Simulator instance.
-    :return: dictionary mapping ArticulatedObjects' object_id to their bounding box in local space.
-    """
-
-    ao_local_bbs: Dict[
-        habitat_sim.physics.ManagedBulletArticulatedObject, mn.Range3D
-    ] = {}
-    aom = sim.get_articulated_object_manager()
-    for ao in aom.get_objects_by_handle_substring().values():
-        ao_local_bbs[ao.object_id] = get_ao_root_bb(ao)
-    return ao_local_bbs
 
 
 def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:

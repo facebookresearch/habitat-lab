@@ -133,14 +133,7 @@ def draw_object_highlight(
     if color is None:
         color = mn.Color4.magenta()
 
-    obj_bb = None
-    if obj.is_articulated:
-        from habitat.sims.habitat_simulator.sim_utilities import get_ao_root_bb
-
-        obj_bb = get_ao_root_bb(obj)
-    else:
-        obj_bb = obj.root_scene_node.cumulative_bb
-
+    obj_bb = obj.aabb
     obj_center = obj.transformation.transform_point(obj_bb.center())
     obj_size = obj_bb.size().max() / 2
 
