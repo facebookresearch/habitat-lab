@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""TODO: ADD MODULE DESCRIPTION"""
+"""This module provides an extendable Enum singleton manager for mapping simulator action names to integer id values. Be default it provides cylinder agent move and look actions."""
 
 from enum import Enum
 from typing import Dict
@@ -15,7 +15,7 @@ from habitat.core.utils import Singleton
 
 
 class _DefaultHabitatSimActions(Enum):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Enum class for default cylinder agent move and look actions. I.e. pointnav action space."""
 
     stop = 0
     move_forward = 1
@@ -40,7 +40,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
 
     def __attrs_post_init__(self):
-        """TODO: ADD FUNCTION DESCRIPTION?  KEEP PRIVATE?"""
+        """Run after singleton initialization to register the default cylinder agent move and look actions."""
         for action in _DefaultHabitatSimActions:
             self._known_actions[action.name] = action.value
 
