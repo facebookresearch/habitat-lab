@@ -17,7 +17,6 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 def object_shortname_from_handle(object_handle: str) -> str:
     """
     Splits any path directory and instance increment from the handle.
-
     :param object_handle: The raw object template or instance handle.
     :return: the shortened name string.
     """
@@ -27,7 +26,9 @@ def object_shortname_from_handle(object_handle: str) -> str:
 
 def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     """
-    :param range3d:  TODO DESCRIPTION
+    Get the corner points for an Axis-aligned bounding box (AABB).
+
+    :param range3d: The bounding box for which to get the corners.
     :return: a list of AABB (Range3D) corners in object local space.
     """
     return [
@@ -40,32 +41,6 @@ def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
         range3d.front_bottom_right,
         range3d.front_bottom_left,
     ]
-
-
-def get_ao_global_bb(
-    obj: habitat_sim.physics.ManagedArticulatedObject,
-) -> Optional[mn.Range3D]:
-    """
-    Compute the cumulative bounding box of an ArticulatedObject by merging all link bounding boxes.
-
-    :param obj:  TODO DESCRIPTION
-    :return: TODO DESCRIPTION
-    """
-
-    cumulative_global_bb: mn.Range3D = None
-    for link_ix in range(-1, obj.num_links):
-        link_node = obj.get_link_scene_node(link_ix)
-        bb = link_node.cumulative_bb
-        global_bb = habitat_sim.geo.get_transformed_bb(
-            bb, link_node.absolute_transformation()
-        )
-        if cumulative_global_bb is None:
-            cumulative_global_bb = global_bb
-        else:
-            cumulative_global_bb = mn.math.join(
-                cumulative_global_bb, global_bb
-            )
-    return cumulative_global_bb
 
 
 def get_bb_for_object_id(

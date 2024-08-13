@@ -566,34 +566,8 @@ class DebugVisualizer:
                 subject = subject_obj
 
         if subject_bb is None:
-            # if we have gathered an object instance, process the bounding box and transform
-            if isinstance(
-                subject, habitat_sim.physics.ManagedArticulatedObject
-            ):
-                from habitat.sims.habitat_simulator.sim_utilities import (
-                    get_ao_global_bb,
-                )
-
-                obj_bb = get_ao_global_bb(subject)
-                obj_bb_local = mn.Range3D.from_center(
-                    subject.transformation.inverted().transform_point(
-                        obj_bb.center()
-                    ),
-                    obj_bb.size() / 2.0,
-                )
-                subject_bb = obj_bb_local
-                subject_transform = (
-                    subject.root_scene_node.absolute_transformation()
-                )
-            elif isinstance(subject, habitat_sim.physics.ManagedRigidObject):
-                subject_bb = subject.root_scene_node.cumulative_bb
-                subject_transform = (
-                    subject.root_scene_node.absolute_transformation()
-                )
-            else:
-                raise AssertionError(
-                    f"The subject, '{subject}', is not a supported value. Should be an object, object handle, object_id integer, or one of 'stage' or 'scene'."
-                )
+            subject_bb = subject.aabb
+            subject_transform = subject.transformation()
 
         return self._peek_bb(
             bb=subject_bb,
