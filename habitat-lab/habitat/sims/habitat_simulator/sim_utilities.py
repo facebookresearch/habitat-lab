@@ -17,6 +17,7 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 def object_shortname_from_handle(object_handle: str) -> str:
     """
     Splits any path directory and instance increment from the handle.
+
     :param object_handle: The raw object template or instance handle.
     :return: the shortened name string.
     """
@@ -493,8 +494,6 @@ def get_ao_default_link(
         - (if compute_if_not_found) - if not annotated, it is programmatically computed from a heuristic.
 
     Default link heuristic: the link with the lowest Y value in the bounding box with appropriate joint type.
-
-
     """
 
     # first look in metadata
@@ -1029,8 +1028,6 @@ def get_floor_point_in_region(
 
     This method attempts to find a point in the region with maximum navmesh clearance by sorting candidates on `distance_to_closest_obstacle`.
     Because this method uses multiple sampling passes it is advised to use it in initialization and pre-processes rather than within an application loop.
-
-
     """
 
     # get the SemanticRegion from the index
@@ -1136,8 +1133,6 @@ def set_link_normalized_joint_position(
     :param normalized_pos: The normalized position [0,1] to set.
 
     Assumes the joint has valid joint limits.
-
-
     """
 
     assert object_a.get_link_joint_type(link_ix) in [
@@ -1233,16 +1228,19 @@ def bb_next_to(
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
-    Concretely, consists of two checks:
-     1. assert overlap between the vertical range of the two bounding boxes.
-     2. regularized horizontal L2 distance between object centers. Regularized in this case means projected displacement vector is truncated by each object's heuristic size.
-
+    
     :param bb_a: local bounding box of one object
     :param bb_b: local bounding box of another object
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
     :param hor_l2_threshold: regularized horizontal L2 distance allowed between the objects' centers.
     :return: Whether or not the objects are heuristically "next to" one another.
+
+    Concretely, consists of two checks:
+        1. assert overlap between the vertical range of the two bounding boxes.
+
+        2. regularized horizontal L2 distance between object centers. Regularized in this case means projected displacement vector is truncated by each object's heuristic size.
+
     """
 
     if transform_a is None:
@@ -1285,9 +1283,7 @@ def obj_next_to(
 ) -> bool:
     """
     Check whether or not two objects should be considered "next to" one another.
-    Concretely, consists of two checks:
-     1. bounding boxes must overlap vertically.
-     2. regularized horizontal L2 distance between object centers must be less than a threshold. Regularized in this case means displacement vector is truncated by each object's heuristic size.
+    
 
     :param sim: The Simulator instance.
     :param object_id_a: object_id of the first ManagedObject or link.
@@ -1295,6 +1291,10 @@ def obj_next_to(
     :param hor_l2_threshold: regularized horizontal L2 distance allow between the objects' centers. This should be tailored to the scenario.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
     :return: Whether or not the objects are heuristically "next to" one another.
+
+    Concretely, consists of two checks:
+        1. bounding boxes must overlap vertically.
+        2. regularized horizontal L2 distance between object centers must be less than a threshold. Regularized in this case means displacement vector is truncated by each object's heuristic size.
     """
 
     assert object_id_a != object_id_b, "Object cannot be 'next to' itself."
