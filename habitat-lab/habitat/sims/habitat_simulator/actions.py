@@ -27,7 +27,7 @@ class _DefaultHabitatSimActions(Enum):
 
 @attr.s(auto_attribs=True, slots=True)
 class HabitatSimActionsSingleton(metaclass=Singleton):
-    r"""Implements an extendable Enum for the mapping of action names
+    """Implements an extendable Enum for the mapping of action names
     to their integer values.
 
     This means that new action names can be added, but old action names cannot
@@ -45,7 +45,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
             self._known_actions[action.name] = action.value
 
     def extend_action_space(self, name: str) -> int:
-        r"""Extends the action space to accommodate a new action with
+        """Extends the action space to accommodate a new action with
         the name :p:`name`
 
         :param name: The name of the new action
@@ -67,7 +67,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
         return self._known_actions[name]
 
     def has_action(self, name: str) -> bool:
-        r"""Checks to see if action :p:`name` is already register
+        """Checks to see if action :p:`name` is already register
 
         :param name: The name to check
         :return: Whether or not :p:`name` already exists
