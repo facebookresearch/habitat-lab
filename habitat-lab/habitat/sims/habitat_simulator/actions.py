@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""This module provides an extendable Enum singleton manager for mapping simulator action names to integer id values. Be default it provides cylinder agent move and look actions."""
+
 from enum import Enum
 from typing import Dict
 
@@ -13,6 +15,8 @@ from habitat.core.utils import Singleton
 
 
 class _DefaultHabitatSimActions(Enum):
+    """Enum class for default cylinder agent move and look actions. I.e. pointnav action space."""
+
     stop = 0
     move_forward = 1
     turn_left = 2
@@ -23,7 +27,7 @@ class _DefaultHabitatSimActions(Enum):
 
 @attr.s(auto_attribs=True, slots=True)
 class HabitatSimActionsSingleton(metaclass=Singleton):
-    r"""Implements an extendable Enum for the mapping of action names
+    """Implements an extendable Enum for the mapping of action names
     to their integer values.
 
     This means that new action names can be added, but old action names cannot
@@ -36,11 +40,12 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
 
     def __attrs_post_init__(self):
+        """Run after singleton initialization to register the default cylinder agent move and look actions."""
         for action in _DefaultHabitatSimActions:
             self._known_actions[action.name] = action.value
 
     def extend_action_space(self, name: str) -> int:
-        r"""Extends the action space to accommodate a new action with
+        """Extends the action space to accommodate a new action with
         the name :p:`name`
 
         :param name: The name of the new action
@@ -62,7 +67,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
         return self._known_actions[name]
 
     def has_action(self, name: str) -> bool:
-        r"""Checks to see if action :p:`name` is already register
+        """Checks to see if action :p:`name` is already register
 
         :param name: The name to check
         :return: Whether or not :p:`name` already exists
