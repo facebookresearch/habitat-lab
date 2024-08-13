@@ -21,7 +21,6 @@ import numpy as np
 from tqdm import tqdm
 
 import habitat.datasets.rearrange.samplers as samplers
-import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.config import DictConfig
 from habitat.core.logging import logger
@@ -794,9 +793,6 @@ class RearrangeEpisodeGenerator:
                     instance_handle not in self.episode_data["sampled_targets"]
                 ), f"Duplicate target for instance '{instance_handle}'."
                 rom = self.sim.get_rigid_object_manager()
-                target_bb_size = (
-                    target_object.root_scene_node.cumulative_bb.size()
-                )
                 target_transform = target_object.transformation
                 self.episode_data["sampled_targets"][
                     instance_handle
@@ -805,21 +801,6 @@ class RearrangeEpisodeGenerator:
                     instance_handle
                 ] = f"{sampler_name}|{len(target_refs)}"
                 rom.remove_object_by_handle(target_object.handle)
-                if self._render_debug_obs:
-                    sutils.add_transformed_wire_box(
-                        self.sim,
-                        size=target_bb_size / 2.0,
-                        transform=target_transform,
-                    )
-                    self.dbv.look_at(target_transform.translation)
-                    self.dbv.debug_line_render.set_line_width(2.0)
-                    self.dbv.debug_line_render.draw_transformed_line(
-                        target_transform.translation,
-                        rom.get_object_by_handle(instance_handle).translation,
-                        mn.Color4(1.0, 0.0, 0.0, 1.0),
-                        mn.Color4(1.0, 0.0, 0.0, 1.0),
-                    )
-                    self.dbv.debug_obs.append(self.dbv.get_observation())
 
         # collect final object states and serialize the episode
         # TODO: creating shortened names should be automated and embedded in the objects to be done in a uniform way
