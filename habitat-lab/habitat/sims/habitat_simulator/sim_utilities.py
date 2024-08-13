@@ -482,7 +482,7 @@ def get_ao_default_link(
     Get the "default" link index for a ManagedArticulatedObject.
     The "default" link is the one link which should be used if only one joint can be actuated. For example, the largest or most accessible drawer or door.
 
-    :param ao: TODO DESCRIPTION
+    :param ao: The ManagedArticulatedObject instance.
     :param compute_if_not_found: If true, try to compute the default link if it isn't found.
     :return: The default link index or None if not found. Cannot be base link (-1).
 
