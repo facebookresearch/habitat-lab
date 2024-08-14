@@ -25,6 +25,7 @@ habitat_hitl:
       lin_speed: 10.0
       ang_speed: 300
   hide_humanoid_in_gui: False
+  can_grasp_place_threshold: 2.0
   camera:
     first_person_mode: True
   networking:
