@@ -529,8 +529,24 @@ async def start_http_availability_server(
         # print(f"Returned availability HTTP code {code}")
         return aiohttp.web.Response(status=code)
 
+    async def get_status(request):
+        return aiohttp.web.json_response(
+            {
+                "accepting_users": network_mgr.is_server_available(),
+                "user_count": len(network_mgr._user_slots),
+            },
+            text=None,
+            body=None,
+            status=200,
+            reason=None,
+            headers=None,
+            content_type="application/json",
+            dumps=json.dumps,
+        )
+
     app = aiohttp.web.Application()
     app.router.add_get("/", http_handler)
+    app.router.add_get("/status", get_status)
     runner = aiohttp.web.AppRunner(
         app, access_log=None
     )  # access_log=None to silence log spam
