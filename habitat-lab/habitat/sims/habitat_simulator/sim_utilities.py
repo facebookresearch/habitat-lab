@@ -1228,7 +1228,7 @@ def bb_next_to(
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
-    
+
     :param bb_a: local bounding box of one object
     :param bb_b: local bounding box of another object
     :param transform_a: local to global transform for the first object. Default is identity.
@@ -1283,7 +1283,7 @@ def obj_next_to(
 ) -> bool:
     """
     Check whether or not two objects should be considered "next to" one another.
-    
+
 
     :param sim: The Simulator instance.
     :param object_id_a: object_id of the first ManagedObject or link.
