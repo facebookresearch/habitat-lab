@@ -102,7 +102,7 @@ def is_inside(
             check_marker.ao_parent.transformation(),
         )
     else:
-        bb = check_marker.link_node.aabb
+        bb = check_marker.link_node.cumulative_bb
         global_bb = habitat_sim.geo.get_transformed_bb(
             bb, check_marker.link_node.transformation
         )
