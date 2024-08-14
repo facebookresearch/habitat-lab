@@ -89,7 +89,7 @@ class AppStateFeedback(AppStateBase):
             return
 
         success = self._success
-        if success:
+        if success > 0.99:
             title = "Task Success"
             content = "The task was completed successfully."
         else:

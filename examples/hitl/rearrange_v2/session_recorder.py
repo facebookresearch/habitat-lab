@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from util import timestamp
 
@@ -43,6 +43,7 @@ class EpisodeRecord:
     end_timestamp: int
     finished: bool
     task_percent_complete: float
+    task_explanation: Optional[str]
     frame_count: int
 
 
@@ -115,6 +116,7 @@ class SessionRecorder:
                 finished=False,
                 task_percent_complete=0.0,
                 frame_count=0,
+                task_explanation=None,
             )
         )
         self.frames.append([])
@@ -123,6 +125,7 @@ class SessionRecorder:
         self,
         episode_finished: bool,
         task_percent_complete: float,
+        task_explanation: Optional[str],
     ):
         assert len(self.episode_records) > 0
         episode = self.episode_records[-1]
@@ -132,6 +135,7 @@ class SessionRecorder:
         episode.end_timestamp = time
         episode.finished = episode_finished
         episode.task_percent_complete = task_percent_complete
+        episode.task_explanation = task_explanation
 
     def record_frame(
         self,
