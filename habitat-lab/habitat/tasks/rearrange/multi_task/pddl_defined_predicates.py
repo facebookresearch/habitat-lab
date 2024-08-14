@@ -99,7 +99,7 @@ def is_inside(
     if sim_info.check_type_matches(recep, FRIDGE_TYPE):
         global_bb = habitat_sim.geo.get_transformed_bb(
             check_marker.ao_parent.aabb,
-            check_marker.ao_parent.transformation(),
+            check_marker.ao_parent.transformation,
         )
     else:
         bb = check_marker.link_node.cumulative_bb

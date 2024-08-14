@@ -560,7 +560,7 @@ class DebugVisualizer:
 
         if subject_bb is None:
             subject_bb = subject.aabb
-            subject_transform = subject.transformation()
+            subject_transform = subject.transformation
 
         return self._peek_bb(
             bb=subject_bb,
