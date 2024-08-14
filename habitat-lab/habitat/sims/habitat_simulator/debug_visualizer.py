@@ -12,12 +12,37 @@ from typing import List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.utils.common import check_make_dir
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
+
+
+def project_point(
+    render_camera: habitat_sim.sensor.CameraSensor, point: mn.Vector3
+) -> mn.Vector2:
+    """
+    Project a 3D point into the render_camera's 2D screen space.
+
+    :param render_camera: The RenderCamera object. E.g. sensor._sensor_object.render_camera
+    :param point: The 3D global point to project.
+
+    :return: The 2D pixel coordinates in the resulting sensor's observation image.
+    """
+
+    # use the camera and projection matrices to transform the point onto the near plane
+    projected_point_3d = render_camera.projection_matrix.transform_point(
+        render_camera.camera_matrix.transform_point(point)
+    )
+
+    # convert the 3D near plane point to integer pixel space
+    point_2d = mn.Vector2(projected_point_3d[0], -projected_point_3d[1])
+    point_2d = point_2d / render_camera.projection_size()[0]
+    point_2d += mn.Vector2(0.5)
+    point_2d *= render_camera.viewport
+    return mn.Vector2i(point_2d)
 
 
 def stitch_image_matrix(images: List[Image.Image], num_col: int = 8):
@@ -99,6 +124,29 @@ class DebugObservation:
         if self.image is None:
             self.create_image()
         self.image.show()
+
+    def show_point(self, p_2d: np.ndarray) -> None:
+        """
+        Show the image with a 2D point marked on it as a blue circle.
+
+        :param p_2d: The 2D pixel point in the image.
+        """
+        if self.image is None:
+            self.create_image()
+        point_image = self.image.copy()
+        draw = ImageDraw.Draw(point_image)
+        circle_rad = 5  # pixels
+        draw.ellipse(
+            (
+                p_2d[0] - circle_rad,
+                p_2d[1] - circle_rad,
+                p_2d[0] + circle_rad,
+                p_2d[1] + circle_rad,
+            ),
+            fill="blue",
+            outline="blue",
+        )
+        point_image.show()
 
     def save(self, output_path: str, prefix: str = "") -> str:
         """
