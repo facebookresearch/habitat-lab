@@ -137,9 +137,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[
-                self._action_arg_prefix + "grip_action"
-            ] = self.grip_ctrlr.action_space
+            action_spaces[self._action_arg_prefix + "grip_action"] = (
+                self.grip_ctrlr.action_space
+            )
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -733,10 +733,13 @@ class ArmEEAction(ArticulatedAgentAction):
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
+        self.ee_rot_target: Optional[np.ndarray] = None
         self.ee_index: Optional[int] = 0
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
+        self._ee_rot_ctrl_lim = self._config.get("ee_rot_ctrl_lim", 0.0125)
+        self._use_ee_rot = self._config.get("use_ee_rot", False)
         self._ee_ctrl_lim = self._config.ee_ctrl_lim
 
     def reset(self, *args, **kwargs):
@@ -745,11 +748,14 @@ class ArmEEAction(ArticulatedAgentAction):
             np.array(self._sim.articulated_agent.arm_joint_pos)
         )
 
-        self.ee_target = cur_ee
+        self.ee_target, self.ee_rot_target = cur_ee
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+        ee_shape = 3
+        if self._use_ee_rot:
+            ee_shape += 3
+        return spaces.Box(shape=(ee_shape,), low=-1, high=1, dtype=np.float32)
 
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
@@ -763,8 +769,12 @@ class ArmEEAction(ArticulatedAgentAction):
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        self.ee_target += np.array(ee_pos)
-
+        if self._use_ee_rot:
+            self.ee_target += np.array(ee_pos[:3])
+            heading = self.ee_rot_target + np.array(ee_pos[3:])
+            self.ee_rot_target = (heading + np.pi) % (2 * np.pi) - np.pi
+        else:
+            self.ee_target += np.array(ee_pos)
         self.apply_ee_constraints()
 
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
@@ -772,13 +782,25 @@ class ArmEEAction(ArticulatedAgentAction):
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+        des_joint_pos = self._ik_helper.calc_ik(
+            self.ee_target, self.ee_rot_target
+        )
         des_joint_pos = list(des_joint_pos)
-        self._sim.articulated_agent.arm_motor_pos = des_joint_pos
+
+        if self._sim.habitat_config.kinematic_mode:
+            # self._sim.articulated_agent.arm_joint_pos = des_joint_pos
+            self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+            self.cur_articulated_agent.fix_joint_values = des_joint_pos
+        else:
+            self._sim.articulated_agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
-        ee_pos *= self._ee_ctrl_lim
+        if self._use_ee_rot:
+            ee_pos[:3] *= self._ee_ctrl_lim
+            ee_pos[3:] *= self._ee_rot_ctrl_lim
+        else:
+            ee_pos *= self._ee_ctrl_lim
         self.set_desired_ee_pos(ee_pos)
 
         if self._render_ee_target:

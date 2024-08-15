@@ -1,0 +1,98 @@
+# @package _global_
+defaults:
+  - pick
+  - /habitat/task/measurements:
+    - base_to_object_distance
+  - /habitat/task/lab_sensors:
+    - arm_depth_bbox_sensor
+    - end_effector_pos_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - arm_depth_bbox_sensor
+      - articulated_agent_arm_depth
+      - joint
+  task:
+    measurements:
+      end_effector_to_object_distance:
+        if_consider_gaze_angle: True
+        center_cone_vector: [0.0, 1.0, 0.0]
+        desire_distance_between_gripper_object: 0.3
+      pick_reward:
+        force_pen: 0.0001
+        max_force_pen: 0.01
+        force_end_pen: 1.0
+        use_diff: True
+        drop_obj_should_end: True
+        wrong_pick_should_end: True
+        count_coll_pen: 0.05
+        max_count_colls: 100
+        count_coll_end_pen: 5.0
+        wrong_pick_pen: 5.0
+        dist_reward: 20.0
+        # too_far_away_dis: 2.5
+        # too_far_away_pen: 5.0
+        non_desire_ee_local_pos_dis: 0.2
+        non_desire_ee_local_pos_pen: 5.0
+        non_desire_ee_local_pos: [0.3,0.0,0.0]
+        camera_looking_down_angle: 0.959931
+        camera_looking_down_pen: 5.0
+        pick_reward: 2.0
+        constraint_violate_pen: 1.0
+        drop_pen: 0.5
+        max_target_distance_pen: 1.0
+        max_target_distance: -1.0
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+      pick_success:
+        ee_resting_success_threshold: -1.0
+        ee_pose_threshold: -1.0
+    lab_sensors:
+      arm_depth_bbox_sensor:
+        height: 240
+        width: 228
+      joint_sensor:
+        dimensionality: 4
+        arm_joint_mask: [1, 1, 0, 1, 0, 1, 0]
+    actions:
+      base_velocity_non_cylinder: 
+        longitudinal_lin_speed: 0.0
+        ang_speed: 0.5235987755982988
+        allow_dyn_slide: False 
+        allow_back: True
+        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        enable_lateral_move: False
+      arm_action:
+        arm_controller: "ArmRelPosKinematicAction"
+        center_cone_vector: [0.0, 1.0, 0.0]
+        arm_joint_mask: [1, 1, 0, 1, 0, 1, 0]
+        arm_joint_dimensionality: 4
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        gaze_distance_range: [0.2, 0.4]
+        delta_pos_limit: 0.01667
+        auto_grasp: True
+        should_clip: True
+        grasp_thresh_dist: 0.15
+        render_ee_target: False
+        center_cone_angle_threshold: 20.0
+    success_reward: 10.0
+    slack_reward: -0.01
+    spawn_max_dist_to_obj: 1.5
+    base_angle_noise: 0.785398
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 4
+    step_physics: False
+    ctrl_freq: 120
+    agents:
+      main_agent:
+        joint_start_noise: 0.1
+        joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        # The real-world gaze ready location
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]

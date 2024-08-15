@@ -895,7 +895,7 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
             )
             distances += obj_angle
 
-        if self._config.if_consider_detected_portion:
+        if self._config.get("if_consider_detected_portion", False):
             bbox = kwargs["observations"]["arm_depth_bbox_sensor"]
             # Compute the detected portion in the bounding box sensor
             # Since this is the distance, the smaller the value is, the better
@@ -1344,6 +1344,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             and cur_total_colls > self._max_count_colls
         ):
             reward -= self._config.count_coll_end_pen
+            rearrange_logger.debug(f"Exceeded max collisions, ending episode")
             self._task.should_end = True
 
         # update the counter

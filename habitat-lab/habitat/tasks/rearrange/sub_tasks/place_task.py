@@ -120,9 +120,9 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             new_arm_joint_pos.append(target_arm)
 
         # Set the arm
-        self._sim.get_agent_data(
-            None
-        ).articulated_agent.arm_joint_pos = new_arm_joint_pos
+        self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
+            new_arm_joint_pos
+        )
         # Update the initial ee orientation
         _, self.init_ee_orientation = self._sim.get_agent_data(
             None
@@ -195,4 +195,10 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             )
         self.noise_target_location = np.array(noise_target_location)
 
+        # Visualize the placing target for debugging
+        if self._config.render_target:
+            self._sim.viz_ids["reach_target"] = self._sim.visualize_position(
+                self.noise_target_location,
+                self._sim.viz_ids["reach_target"],
+            )
         return self._get_observations(episode)
