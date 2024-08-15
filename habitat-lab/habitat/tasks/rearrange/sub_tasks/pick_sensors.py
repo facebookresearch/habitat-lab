@@ -98,7 +98,8 @@ class RearrangePickReward(RearrangeReward):
         ].get_metric()
 
         # Consider ee pose
-        if self._config.consider_ee_pose:
+        consider_ee_pose = self._config.get("consider_ee_pose", False)
+        if consider_ee_pose:
             target_orientation_distance = float(
                 observations["topdown_or_side_grasping"]
             )
@@ -119,7 +120,7 @@ class RearrangePickReward(RearrangeReward):
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 # Did pick the correct object and the pose is correct
-                if self._config.consider_ee_pose:
+                if consider_ee_pose:
                     # The pick success
                     if (
                         target_orientation_distance
@@ -131,6 +132,9 @@ class RearrangePickReward(RearrangeReward):
                     else:
                         # No a correct pose when pick
                         self._metric -= self._config.wrong_pick_pen
+                        rearrange_logger.debug(
+                            "Not a correct pose when pick, ending episode."
+                        )
                         self._task.should_end = True
                         self._prev_picked = cur_picked
                         self.cur_dist = -1
@@ -172,13 +176,15 @@ class RearrangePickReward(RearrangeReward):
             # Dropped the object
             self._metric -= self._config.drop_pen
             if self._config.drop_obj_should_end:
+                rearrange_logger.debug("Dropped object, ending episode.")
                 self._task.should_end = True
             self._prev_picked = cur_picked
             self.cur_dist = -1
             self.cur_arm_joint_angle = None
             return
 
-        if self._config.max_target_distance != -1:
+        max_target_distance = self._config.get("max_target_distance", -1.0)
+        if max_target_distance != -1:
             # Robot is too far away from the target
             base_to_object_distance = task.measurements.measures[
                 BaseToObjectDistance.cls_uuid
@@ -186,8 +192,11 @@ class RearrangePickReward(RearrangeReward):
             if (
                 base_to_object_distance is not None
                 and base_to_object_distance[str(task.targ_idx)]
-                > self._config.max_target_distance
+                > max_target_distance
             ):
+                rearrange_logger.debug(
+                    "Robot too far away from target, ending episode."
+                )
                 self._task.should_end = True
                 self._metric -= self._config.max_target_distance_pen
                 return
@@ -204,6 +213,9 @@ class RearrangePickReward(RearrangeReward):
             )
             if distance < self._config.non_desire_ee_local_pos_dis:
                 # The robot's EE is too closed to the non-desire ee pos
+                rearrange_logger.debug(
+                    "The robot's EE is too closed to the non-desire ee pos, ending episode."
+                )
                 self._task.should_end = True
                 self._metric -= self._config.non_desire_ee_local_pos_pen
                 return
@@ -226,6 +238,9 @@ class RearrangePickReward(RearrangeReward):
                 and not is_there_an_target_in_bbox
             ):
                 # The robot is looking down too much when there is no object in the frame
+                rearrange_logger.debug(
+                    "The robot is looking down too much when there is no object in the frame, ending episode."
+                )
                 self._task.should_end = True
                 self._metric -= self._config.camera_looking_down_pen
                 return
@@ -280,7 +295,8 @@ class RearrangePickSuccess(Measure):
 
         # if we consider ee pose
         target_orientation_distance = -float("inf")
-        if self._config.ee_pose_threshold != -1.0:
+        ee_pose_threshold = self._config.get("ee_pose_threshold", -1.0)
+        if ee_pose_threshold != -1.0:
             target_orientation_distance = float(
                 observations["topdown_or_side_grasping"]
             )
@@ -292,7 +308,7 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and target_orientation_distance < self._config.ee_pose_threshold
+            and target_orientation_distance < ee_pose_threshold
             and (
                 ee_to_rest_distance < self._config.ee_resting_success_threshold
                 or self._config.ee_resting_success_threshold == -1.0

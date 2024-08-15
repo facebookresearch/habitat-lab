@@ -196,8 +196,8 @@ class GazeGraspAction(MagicGraspAction):
             config.center_cone_vector
         ).normalized()
         self.auto_grasp = config.auto_grasp
-        self.consider_detected_portion_threshold = (
-            config.consider_detected_portion_threshold
+        self.consider_detected_portion_threshold = config.get(
+            "consider_detected_portion_threshold", 0.5
         )
 
     @property

@@ -451,6 +451,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
+    results_dir: str = "results_dir"
     video_fps: int = 10
     test_episode_count: int = -1
     # path to ckpt or path to ckpts dir

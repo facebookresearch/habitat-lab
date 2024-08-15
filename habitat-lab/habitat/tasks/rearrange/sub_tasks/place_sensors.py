@@ -282,7 +282,7 @@ class PlaceReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         self._prev_obj_at_receptacle = False
 
@@ -292,7 +292,7 @@ class PlaceReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         reward = self._metric
 
@@ -331,9 +331,10 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         # Object/EE distance reward
+        ee_to_goal = ee_to_goal_dist[str(task.targ_idx)]
         if (not obj_at_goal) or cur_picked:
             if self._config.use_ee_dist:
-                dist_to_goal = ee_to_goal_dist[str(task.targ_idx)]
+                dist_to_goal = ee_to_goal
             else:
                 dist_to_goal = obj_to_goal_dist[str(task.targ_idx)]
             min_dist = self._config.min_dist_to_goal
@@ -341,6 +342,9 @@ class PlaceReward(RearrangeReward):
             dist_to_goal = ee_to_rest_distance
             min_dist = 0.0
 
+        ee_to_target_threshold = self._config.get(
+            "ee_to_target_threshold", -1.0
+        )
         # Object/EE orientation reward
         ori_to_init = 0.0
         obj_to_target = 0.0
@@ -352,7 +356,9 @@ class PlaceReward(RearrangeReward):
             obj_to_target = object_orientation_to_target_distance
             min_ori = self._config.min_ori_to_init
 
-        if (not self._prev_dropped) and (not cur_picked):
+        if (not self._prev_dropped) and (
+            not cur_picked or not self._config.obj_at_receptacle_success
+        ):
             self._prev_dropped = True
             if (
                 (obj_at_goal and not self._config.obj_at_receptacle_success)
@@ -362,6 +368,7 @@ class PlaceReward(RearrangeReward):
                     and self._config.ee_orientation_to_initial_threshold == -1
                     and self._config.object_orientation_to_target_threshold
                     == -1
+                    and ee_to_target_threshold == -1
                 )
                 or (
                     self._prev_obj_at_receptacle
@@ -370,6 +377,7 @@ class PlaceReward(RearrangeReward):
                     < self._config.ee_orientation_to_initial_threshold
                     and self._config.object_orientation_to_target_threshold
                     == -1
+                    and ee_to_target_threshold == -1
                 )
                 or (
                     self._prev_obj_at_receptacle
@@ -377,6 +385,7 @@ class PlaceReward(RearrangeReward):
                     and self._config.ee_orientation_to_initial_threshold == -1
                     and object_orientation_to_target_distance
                     < self._config.object_orientation_to_target_threshold
+                    and ee_to_target_threshold == -1
                 )
                 or (
                     self._prev_obj_at_receptacle
@@ -385,9 +394,22 @@ class PlaceReward(RearrangeReward):
                     < self._config.ee_orientation_to_initial_threshold
                     and object_orientation_to_target_distance
                     < self._config.object_orientation_to_target_threshold
+                    and ee_to_target_threshold == -1
+                )
+                or (
+                    self._prev_obj_at_receptacle
+                    and self._config.obj_at_receptacle_success
+                    and ee_orientation_to_initial_distance
+                    < self._config.ee_orientation_to_initial_threshold
+                    and object_orientation_to_target_distance
+                    < self._config.object_orientation_to_target_threshold
+                    and ee_to_goal < ee_to_target_threshold
                 )
             ):
                 reward += self._config.place_reward
+                rearrange_logger.debug(
+                    f"Adding place_reward reward: {self._config.place_reward}, Total reward: {reward}"
+                )
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
@@ -396,6 +418,9 @@ class PlaceReward(RearrangeReward):
             else:
                 # Dropped at wrong location or wrong orientation
                 reward -= self._config.drop_pen
+                rearrange_logger.debug(
+                    f"Adding drop_pen reward: {-self._config.drop_pen}, Total reward: {reward}"
+                )
                 if self._config.wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
@@ -415,8 +440,14 @@ class PlaceReward(RearrangeReward):
                 # Filter out the small fluctuations
                 dist_diff = round(dist_diff, 3)
                 reward += self._config.dist_reward * dist_diff
+                rearrange_logger.debug(
+                    f"Adding dist_diff reward: {-self._config.dist_reward * dist_diff}, Total reward: {reward}"
+                )
             else:
                 reward -= self._config.dist_reward * dist_to_goal
+                rearrange_logger.debug(
+                    f"Adding dist_to_goal reward: {-self._config.dist_reward * dist_to_goal}, Total reward: {reward}"
+                )
         self._prev_dist = dist_to_goal
 
         # Update orientation
@@ -430,6 +461,10 @@ class PlaceReward(RearrangeReward):
             # Filter out the small fluctuations
             ori_diff = round(ori_diff, 3)
             reward += self._config.ori_reward * ori_diff
+            rearrange_logger.debug(
+                f"Adding use_ee_ori ori_reward reward: {self._config.ori_reward * ori_diff}, Total reward: {reward}"
+            )
+
         self._prev_ori = ori_to_init
 
         if self._config.use_obj_ori and obj_to_target >= min_ori:
@@ -442,6 +477,10 @@ class PlaceReward(RearrangeReward):
             # Filter out the small fluctuations
             ori_obj_diff = round(ori_obj_diff, 3)
             reward += self._config.ori_reward * ori_obj_diff
+            rearrange_logger.debug(
+                f"Adding use_obj_ori ori_reward reward: {self._config.ori_reward * ori_obj_diff}, Total reward: {reward}"
+            )
+
         self._prev_object_ori = obj_to_target
 
         self._prev_obj_at_receptacle = obj_at_receptacle
@@ -477,7 +516,7 @@ class PlaceSuccess(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         self._prev_obj_at_receptacle = False
 
@@ -510,6 +549,13 @@ class PlaceSuccess(Measure):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
+        ee_to_target_threshold = self._config.get(
+            "ee_to_target_threshold", -1.0
+        )
+        ee_to_goal_dist = task.measurements.measures[
+            EndEffectorToGoalDistance.cls_uuid
+        ].get_metric()[str(task.targ_idx)]
+
         self._metric = (
             not is_holding
             and (
@@ -532,6 +578,10 @@ class PlaceSuccess(Measure):
                 object_orientation_to_target_distance
                 < self._config.object_orientation_to_target_threshold
                 or self._config.object_orientation_to_target_threshold == -1.0
+            )
+            and (
+                ee_to_goal_dist < self._config.ee_to_target_threshold
+                or self._config.ee_to_target_threshold == -1.0
             )
         )
 
