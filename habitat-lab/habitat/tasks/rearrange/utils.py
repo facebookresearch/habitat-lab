@@ -383,7 +383,8 @@ class IkHelper:
             physicsClientId=self.pc_id,
         )
         world_ee = ls[4]
-        return world_ee
+        world_ee_rot = p.getEulerFromQuaternion(ls[5])
+        return world_ee, world_ee_rot
 
     def get_joint_limits(self):
         lower = []
@@ -399,14 +400,20 @@ class IkHelper:
                 upper.append(ret[9])
         return np.array(lower), np.array(upper)
 
-    def calc_ik(self, targ_ee: np.ndarray):
+    def calc_ik(self, targ_ee: np.ndarray, targ_ee_rot: np.ndarray):
         """
         :param targ_ee: 3D target position in the robot BASE coordinate frame
         """
+        target_ori = (
+            p.getQuaternionFromEuler(targ_ee_rot)
+            if targ_ee_rot is not None
+            else None
+        )
         js = p.calculateInverseKinematics(
             self.robo_id,
             self.pb_link_idx,
-            targ_ee,
+            targetPosition=targ_ee,
+            targetOrientation=target_ori,
             physicsClientId=self.pc_id,
         )
         return js[: self._arm_len]
