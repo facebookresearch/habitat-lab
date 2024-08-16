@@ -220,7 +220,15 @@ def bb_ray_prescreen(
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj.root_scene_node.cumulative_bb)
+    col_aabb = obj.collision_shape_aabb
+    render_aabb = obj.aabb
+    # use the full collision and render aabb for best snapping accuracy
+    joined_aabb = mn.Range3D(
+        mn.math.min(col_aabb.min, render_aabb.min),
+        mn.math.max(col_aabb.max, render_aabb.max),
+    )
+    bb_corners = get_bb_corners(joined_aabb)
+
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
