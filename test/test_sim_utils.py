@@ -870,7 +870,7 @@ def test_on_floor_and_next_to():
                 vertical_padding=0,
             ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should not be 'next to' one another."
 
-        # NOTE: the drawers are next_to one another with default 5cm vertical padding
+        # NOTE: the drawers are next_to one another with default 10cm vertical padding
         assert sutils.obj_next_to(
             sim,
             140,

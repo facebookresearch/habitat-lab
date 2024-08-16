@@ -1233,7 +1233,7 @@ def bb_next_to(
     transform_a: mn.Matrix4 = None,
     transform_b: mn.Matrix4 = None,
     hor_l2_threshold: float = 0.3,
-    vertical_padding: float = 0.05,
+    vertical_padding: float = 0.1,
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
@@ -1288,7 +1288,7 @@ def obj_next_to(
     object_id_a: int,
     object_id_b: int,
     hor_l2_threshold: float = 0.5,
-    vertical_padding: float = 0.05,
+    vertical_padding: float = 0.1,
     ao_link_map: Dict[int, int] = None,
 ) -> bool:
     """
