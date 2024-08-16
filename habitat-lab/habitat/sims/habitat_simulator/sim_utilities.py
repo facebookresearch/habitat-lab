@@ -1415,7 +1415,8 @@ def bb_next_to(
     bb_b: mn.Range3D,
     transform_a: mn.Matrix4 = None,
     transform_b: mn.Matrix4 = None,
-    hor_l2_threshold=0.3,
+    hor_l2_threshold: float = 0.3,
+    vertical_padding: float = 0.1,
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
@@ -1428,7 +1429,7 @@ def bb_next_to(
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
     :param hor_l2_threshold: regularized horizontal L2 distance allowed between the objects' centers.
-
+    :param vertical_padding: vertical distance padding used when comparing bounding boxes. Higher value is a looser constraint.
     :return: Whether or not the objects are heuristically "next to" one another.
     """
 
@@ -1446,10 +1447,9 @@ def bb_next_to(
     highest_height_b = max([p[1] for p in keypoints_b])
 
     # check for non-overlapping bounding boxes
-    if (
-        highest_height_a < lowest_height_b
-        or highest_height_b < lowest_height_a
-    ):
+    if (highest_height_a + vertical_padding) < lowest_height_b or (
+        highest_height_b + vertical_padding
+    ) < lowest_height_a:
         return False
 
     if (
@@ -1467,7 +1467,8 @@ def obj_next_to(
     sim: habitat_sim.Simulator,
     object_id_a: int,
     object_id_b: int,
-    hor_l2_threshold=0.5,
+    hor_l2_threshold: float = 0.5,
+    vertical_padding: float = 0.1,
     ao_link_map: Dict[int, int] = None,
 ) -> bool:
     """
@@ -1480,6 +1481,7 @@ def obj_next_to(
     :param object_id_a: object_id of the first ManagedObject or link.
     :param object_id_b: object_id of the second ManagedObject or link.
     :param hor_l2_threshold: regularized horizontal L2 distance allow between the objects' centers. This should be tailored to the scenario.
+    :param vertical_padding: vertical distance padding added when comparing the object's bounding boxes. Higher value is a looser constraint.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
 
     :return: Whether or not the objects are heuristically "next to" one another.
@@ -1501,4 +1503,5 @@ def obj_next_to(
         transform_a,
         transform_b,
         hor_l2_threshold,
+        vertical_padding,
     )
