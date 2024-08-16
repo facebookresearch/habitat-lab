@@ -847,9 +847,9 @@ def test_on_floor_and_next_to():
         ]
         not_next_to_object_pairs = [
             (36, 38),  # books on different shelves
+            (141, 140),  # two non-neighboring drawers in the chest of drawers
             (11, 14),  # sofa pillows on opposite sides
             (51, 53),  # two objects on different table shelves
-            (141, 140),  # two non-neighboring drawers in the chest of drawers
             (129, 132),  # two non-neighboring cabinet doors
             (17, 20),  # potted plant and coffee table
         ]
@@ -859,6 +859,7 @@ def test_on_floor_and_next_to():
                 obj_a_id,
                 obj_b_id,
                 ao_link_map=ao_link_map,
+                vertical_padding=0,
             ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should be 'next to' one another."
         for ix, (obj_a_id, obj_b_id) in enumerate(not_next_to_object_pairs):
             assert not sutils.obj_next_to(
@@ -866,4 +867,13 @@ def test_on_floor_and_next_to():
                 obj_a_id,
                 obj_b_id,
                 ao_link_map=ao_link_map,
+                vertical_padding=0,
             ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should not be 'next to' one another."
+
+        # NOTE: the drawers are next_to one another with default 10cm vertical padding
+        assert sutils.obj_next_to(
+            sim,
+            140,
+            141,
+            ao_link_map=ao_link_map,
+        ), "The drawers should be 'next to' one another with vertical padding."
