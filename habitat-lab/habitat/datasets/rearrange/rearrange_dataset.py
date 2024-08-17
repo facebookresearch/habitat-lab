@@ -55,7 +55,7 @@ class RearrangeDatasetV0(PointNavDatasetV1):
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
 
-        if config and not self.check_config_paths_exist(config):
+        if config and not self.check_config_paths_exist(config) and False:
             logger.info(
                 "Rearrange task assets are not downloaded locally, downloading and extracting now..."
             )

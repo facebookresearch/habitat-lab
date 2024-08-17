@@ -519,7 +519,7 @@ def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
     )
 
     # reformat the mesh data after filtering
-    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
+    mesh = mn.meshtools.interleave(mesh, flags=mn.meshtools.InterleaveFlags.NONE)
 
     return mesh
 
