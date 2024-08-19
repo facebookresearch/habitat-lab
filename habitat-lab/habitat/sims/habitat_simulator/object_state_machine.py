@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""TODO: ADD MODULE DESCRIPTION"""
+"""This module implements a singleton state-machine architecture for representing and managing non-geometric object states via metadata manipulation. For example, tracking and manipulating state such as "powered on" or "clean vs dirty". This interface is intended to provide a foundation which can be extended for downstream applications."""
 
 from collections import defaultdict
 from typing import Any, Dict, List, Union
@@ -17,7 +17,10 @@ from habitat import logger
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
-from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject #BUG: IMPORT ISSUE.  HTML DOCUMENTATION WILL NOT RENDER
+from habitat_sim.physics import (  # BUG: IMPORT ISSUE.  HTML DOCUMENTATION WILL NOT RENDER
+    ManagedArticulatedObject,
+    ManagedRigidObject,
+)
 
 ##################################################
 # Supporting utilities for getting and setting metadata values in ManagedObject "user_defined" Configurations.
@@ -313,7 +316,7 @@ class ObjectStateMachine:
         """
         Scrape all active ObjectStateSpecs to collect a snapshot of the current state of all objects.
 
-        :param sim: TODO DESCRIPTION
+        :param sim: The Simulator instance for which to collect and return current object states.
         :return: The state snapshot as a Dict keyed by object state unique name, value is another dict mapping object instance handles to state values.
 
         Example:
