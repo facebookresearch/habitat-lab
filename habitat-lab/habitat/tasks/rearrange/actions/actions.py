@@ -130,6 +130,11 @@ class ArmAction(ArticulatedAgentAction):
         if self.grip_ctrlr is not None:
             self.grip_ctrlr.reset(*args, **kwargs)
 
+    def get_ee_pose(self):
+        return self._ik_helper.calc_fk(
+            np.array(self._sim.articulated_agent.arm_joint_pos)
+        )
+
     @property
     def action_space(self):
         action_spaces = {
@@ -744,6 +749,8 @@ class ArmEEAction(ArticulatedAgentAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
+        # cur_ee = self.get_ee_pose()
+
         cur_ee = self._ik_helper.calc_fk(
             np.array(self._sim.articulated_agent.arm_joint_pos)
         )
@@ -769,6 +776,9 @@ class ArmEEAction(ArticulatedAgentAction):
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+            np.array(self._sim.articulated_agent.arm_joint_pos)
+        )
         if self._use_ee_rot:
             self.ee_target += np.array(ee_pos[:3])
             heading = self.ee_rot_target + np.array(ee_pos[3:])

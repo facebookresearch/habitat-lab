@@ -114,10 +114,8 @@ class RearrangePickTaskV1(RearrangeTask):
             self._sim.get_agent_data(None).articulated_agent.arm_joint_pos
         )
         # Set the arm to a pose
-        self._sim.get_agent_data(
-            None
-        ).articulated_agent.arm_joint_pos = np.array(
-            random.choice(self._config.semantic_pick_target_arm_pose)
+        self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
+            np.array(random.choice(self._config.semantic_pick_target_arm_pose))
         )
         # Get the initial EE orientation at the time of begining of placing
         _, ee_orientation = self._sim.get_agent_data(
@@ -125,13 +123,12 @@ class RearrangePickTaskV1(RearrangeTask):
         ).articulated_agent.get_ee_local_pose()  # type: ignore
         self.target_obj_orientation = quaternion.quaternion(ee_orientation)
         # Revert the robot arm to the initial pose
-        self._sim.get_agent_data(
-            None
-        ).articulated_agent.arm_joint_pos = robot_init_arm_angle
+        self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
+            robot_init_arm_angle
+        )
 
     def reset(self, episode: Episode, fetch_observations: bool = True):
         sim = self._sim
-
         assert isinstance(
             episode, RearrangeEpisode
         ), "Provided episode needs to be of type RearrangeEpisode for RearrangePickTaskV1"
@@ -150,9 +147,9 @@ class RearrangePickTaskV1(RearrangeTask):
         self._targ_idx = sel_idx
 
         # Set the arm to the target pose, and the revert it
-        if self._config.semantic_pick_training:
+        if self._config.get("semantic_pick_training", False):
             self._set_arm_to_target_pose()
-        if self._config.topdown_side_training:
+        if self._config.get("topdown_side_training", False):
             self.grasping_type = np.random.choice(["topdown", "side"])
 
         if fetch_observations:

@@ -66,6 +66,7 @@ __all__ = [
     "TopDownOrSideGraspingSensorConfig",
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
+    "EEPoseSensorConfig",
     "JointSensorConfig",
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
@@ -617,6 +618,15 @@ class EEPositionSensorConfig(LabSensorConfig):
     """
 
     type: str = "EEPositionSensor"
+
+
+@dataclass
+class EEPoseSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. the cartesian coordinates and rotation (6 floats) of the arm's end effector in the frame of reference of the robot's base.
+    """
+
+    type: str = "EEPoseSensor"
 
 
 @dataclass
@@ -2597,6 +2607,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="end_effector_pos_sensor",
     node=EEPositionSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.end_effector_pose_sensor",
+    group="habitat/task/lab_sensors",
+    name="end_effector_pose_sensor",
+    node=EEPoseSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.is_holding_sensor",
