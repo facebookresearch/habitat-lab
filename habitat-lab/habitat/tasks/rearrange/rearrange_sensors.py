@@ -9,6 +9,7 @@ from collections import defaultdict, deque
 
 import magnum as mn
 import numpy as np
+import quaternion
 import torch
 from gym import spaces
 
@@ -29,7 +30,10 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
-from habitat.utils.geometry_utils import angle_between_quaternions
+from habitat.utils.geometry_utils import (
+    angle_between_quaternions,
+    quat_to_euler,
+)
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -422,6 +426,35 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "ee_pose"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EEPoseSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(6,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        bullet_ee_xyz, bullet_ee_rpy = task.actions["arm_action"].get_ee_pose()
+
+        return np.array([*bullet_ee_xyz, *bullet_ee_rpy], dtype=np.float32)
+
+
+@registry.register_sensor
 class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
     cls_uuid: str = "relative_resting_position"
 
@@ -488,7 +521,6 @@ class RelativeInitialEEOrientationSensor(
         _, ee_orientation = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.get_ee_local_pose()
-
         return np.array(
             [
                 angle_between_quaternions(

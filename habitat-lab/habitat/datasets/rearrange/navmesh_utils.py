@@ -22,7 +22,8 @@ def snap_point_is_occluded(
     height: float,
     sim: habitat_sim.Simulator,
     granularity: float = 0.2,
-    target_object_id: Optional[int] = None,
+    target_object_ids: Optional[List[int]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
 ) -> bool:
     """
     Uses raycasting to check whether a target is occluded given a navmesh snap point.
@@ -35,7 +36,7 @@ def snap_point_is_occluded(
     :param target_object_ids: An optional set of object ids which indicate the target. If one of these objects is hit before any non-ignored object, the test is successful.
     :param ignore_object_ids: An optional set of object ids which should be ignored in occlusion check.
 
-    NOTE: If agent's eye height is known and only that height should be considered, provide eye height and granulatiry > height for fastest check.
+    NOTE: If agent's eye height is known and only that height should be considered, provide eye height and granularity > height for fastest check.
 
     :return: whether or not the target is considered occluded from the snap_point.
     """
@@ -52,17 +53,31 @@ def snap_point_is_occluded(
             raycast_results.has_hits()
             and raycast_results.hits[0].ray_distance < 1
         ):
-            if (
-                target_object_id is not None
-                and raycast_results.hits[0].object_id == target_object_id
-            ):
-                # we hit an allowed object (i.e., the target object), so not occluded
-                return False
-            # the ray hit a not-allowed object and is occluded
-            continue
+            for hit in raycast_results.hits:
+                if hit.ray_distance > 1:
+                    # exceeded the distance check without hitting an occlusion
+                    return False
+
+                if (
+                    target_object_ids is not None
+                    and hit.object_id in target_object_ids
+                ):
+                    # we hit an allowed object (i.e., the target object), so not occluded
+                    return False
+                elif (
+                    ignore_object_ids is not None
+                    and hit.object_id in ignore_object_ids
+                ):
+                    # we hit an ignored object, so continue the search
+                    continue
+                else:
+                    # the ray hit a not-allowed object within distance threshold and is occluded at this height
+                    break
         else:
             # ray hit nothing, so not occluded
             return False
+
+    # we tried all heights and found no valid raycast, so the object is occluded
     return True
 
 
@@ -71,7 +86,8 @@ def unoccluded_navmesh_snap(
     height: float,
     pathfinder: habitat_sim.nav.PathFinder,
     sim: habitat_sim.Simulator,
-    target_object_id: Optional[int] = None,
+    target_object_ids: Optional[List[int]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
     island_id: int = -1,
     search_offset: float = 1.5,
     test_batch_size: int = 20,
@@ -79,7 +95,7 @@ def unoccluded_navmesh_snap(
     min_sample_dist: float = 0.5,
 ) -> Optional[mn.Vector3]:
     """
-    Snap a point to the navmesh considering point visibilty via raycasting.
+    Snap a point to the navmesh considering point visibility via raycasting.
 
     :param pos: The 3D position to snap.
     :param height: The height of the agent above the navmesh. Assumes the navmesh snap point is on the ground. Should be the maximum relative distance from navmesh ground to which a visibility check should indicate non-occlusion. The first check starts from this height. (E.g. agent_eyes_y - agent_base_y)
@@ -93,19 +109,21 @@ def unoccluded_navmesh_snap(
     :param max_samples: The maximum number of attempts to sample navmesh points for the test batch.
     :param min_sample_dist: The minimum allowed L2 distance between samples in the test batch.
 
-    NOTE: this function is based on smapling and does not guarantee the closest point.
+    NOTE: this function is based on sampling and does not guarantee the closest point.
 
     :return: An approximation of the closest unoccluded snap point to pos or None if an unoccluded point could not be found.
     """
 
     # first try the closest snap point
     snap_point = pathfinder.snap_point(pos, island_id)
-    is_occluded = snap_point_is_occluded(
+
+    is_occluded = np.isnan(snap_point[0]) or snap_point_is_occluded(
         target=pos,
         snap_point=snap_point,
         height=height,
         sim=sim,
-        target_object_id=target_object_id,
+        target_object_ids=target_object_ids,
+        ignore_object_ids=ignore_object_ids,
     )
 
     # now sample and try different snap options
@@ -122,15 +140,19 @@ def unoccluded_navmesh_snap(
             sample = pathfinder.get_random_navigable_point_near(
                 circle_center=pos, radius=search_radius, island_index=island_id
             )
-            reject = False
-            for batch_sample in test_batch:
-                if np.linalg.norm(sample - batch_sample[0]) < min_sample_dist:
-                    reject = True
-                    break
-            if not reject:
-                test_batch.append(
-                    (sample, float(np.linalg.norm(sample - pos)))
-                )
+            if not np.isnan(sample[0]):
+                reject = False
+                for batch_sample in test_batch:
+                    if (
+                        np.linalg.norm(sample - batch_sample[0])
+                        < min_sample_dist
+                    ):
+                        reject = True
+                        break
+                if not reject:
+                    test_batch.append(
+                        (sample, float(np.linalg.norm(sample - pos)))
+                    )
             sample_count += 1
 
         # sort the test batch points by distance to the target
@@ -143,7 +165,8 @@ def unoccluded_navmesh_snap(
                 batch_sample[0],
                 height,
                 sim,
-                target_object_id=target_object_id,
+                target_object_ids=target_object_ids,
+                ignore_object_ids=ignore_object_ids,
             ):
                 return batch_sample[0]
 
@@ -476,18 +499,18 @@ def record_robot_nav_debug_image(
     robot_navmesh_offsets: List[Tuple[float, float]],
     robot_navmesh_radius: float,
     in_collision: bool,
-    vdb: DebugVisualizer,
+    dbv: DebugVisualizer,
     obs_cache: List[Any],
 ) -> None:
     """
-    Render a single frame 3rd person view of the robot embodiement approximation following a path with DebugVizualizer and cache it in obs_cache.
+    Render a single frame 3rd person view of the robot embodiment approximation following a path with DebugVizualizer and cache it in obs_cache.
 
     :param curr_path_points: List of current path points.
     :param robot_transformation: Current transformation of the robot.
-    :param robot_navmesh_offsets: Robot embodiement approximation. List of 2D points XZ in robot local space.
-    :param robot_navmesh_radius: The radius of each point approximating the robot embodiement.
-    :param in_collision: Whether or not the robot is in collision with the environment. If so, embodiement is rendered red.
-    :param vdb: The DebugVisualizer instance.
+    :param robot_navmesh_offsets: Robot embodiment approximation. List of 2D points XZ in robot local space.
+    :param robot_navmesh_radius: The radius of each point approximating the robot embodiment.
+    :param in_collision: Whether or not the robot is in collision with the environment. If so, embodiment is rendered red.
+    :param dbv: The DebugVisualizer instance.
     :param obs_cache: The observation cache for later video rendering.
     """
 
@@ -501,14 +524,14 @@ def record_robot_nav_debug_image(
                     mn.Color4.cyan(),
                 )
             )
-    vdb.render_debug_lines(debug_lines=path_point_render_lines)
+    dbv.render_debug_lines(debug_lines=path_point_render_lines)
 
-    # draw the local coordinate axis ofthe robot
-    vdb.render_debug_frame(
+    # draw the local coordinate axis of the robot
+    dbv.render_debug_frame(
         axis_length=0.3, transformation=robot_transformation
     )
 
-    # render the robot embodiement
+    # render the robot embodiment
     nav_pos_3d = [
         np.array([xz[0], 0.0, xz[1]]) for xz in robot_navmesh_offsets
     ]
@@ -517,7 +540,7 @@ def record_robot_nav_debug_image(
         np.array([xz[0], robot_transformation.translation[1], xz[2]])
         for xz in cur_pos
     ]
-    vdb.render_debug_circles(
+    dbv.render_debug_circles(
         [
             (
                 pos,
@@ -531,12 +554,13 @@ def record_robot_nav_debug_image(
 
     # render 3rd person viewer into the observation cache
     robot_position = robot_transformation.translation
-    vdb.get_observation(
-        look_at=robot_position,
-        # 3rd person viewpoint from behind and above the robot
-        look_from=robot_position
-        + robot_transformation.transform_vector(mn.Vector3(0, 1.5, 1.5)),
-        obs_cache=obs_cache,
+    obs_cache.append(
+        dbv.get_observation(
+            look_at=robot_position,
+            # 3rd person viewpoint from behind and above the robot
+            look_from=robot_position
+            + robot_transformation.transform_vector(mn.Vector3(0, 1.5, 1.5)),
+        )
     )
 
 
@@ -551,13 +575,13 @@ def path_is_navigable_given_robot(
     angular_speed: float = 1.0,
     distance_threshold: float = 0.25,
     linear_speed: float = 1.0,
-    vdb: Optional[DebugVisualizer] = None,
+    dbv: Optional[DebugVisualizer] = None,
     render_debug_video: bool = False,
 ) -> bool:
     """
     Compute the ratio of time-steps for which there were collisions detected while the robot navigated from start_pos to goal_pos given the configuration of the sim navmesh.
 
-    :param sim: Habitat Simulaton instance.
+    :param sim: Habitat Simulator instance.
     :param start_pos: Initial translation of the robot's transform. The start of the navigation path.
     :param goal_pos: Target translation of the robot's transform. The end of the navigation path.
     :param robot_navmesh_offsets: The list of 2D points XZ in robot local space which will be used represent the robot's shape. Used to query the navmesh for navigability as a collision heuristic.
@@ -567,7 +591,7 @@ def path_is_navigable_given_robot(
     :param angular_speed: The constant angular speed for turning (radians/sec)
     :param distance_threshold: The euclidean distance between the robot and the target within which navigation is considered successful and the function returns.
     :param linear_speed: The constant linear speed for translation (meters/sec).
-    :param vdb: An optional DebugVisualizer if rendering and video export are desired.
+    :param dbv: An optional DebugVisualizer if rendering and video export are desired.
     :param render_debug_video: Whether or not to render and export a visualization of the navigation. If True, requires a DebugVisualizer instance.
 
     :return: Whether or not the ratio of time-steps where collisions were detected is within the provided threshold.
@@ -587,7 +611,7 @@ def path_is_navigable_given_robot(
     )
 
     if render_debug_video:
-        assert vdb is not None, "Need a vdb for visual debugging."
+        assert dbv is not None, "Need a dbv for visual debugging."
         sim.navmesh_visualization = True
 
     # Create a new pathfinder with slightly stricter radius to provide nav buffer from collision
@@ -699,7 +723,7 @@ def path_is_navigable_given_robot(
                 robot_navmesh_offsets=robot_navmesh_offsets,
                 robot_navmesh_radius=robot_navmesh_radius,
                 in_collision=collision[-1],
-                vdb=vdb,
+                dbv=dbv,
                 obs_cache=debug_video_frames,
             )
         time_since_debug_frame += 1.0 / vc._integration_frequency
@@ -707,7 +731,7 @@ def path_is_navigable_given_robot(
     collision_rate = np.average(collision)
 
     if render_debug_video:
-        vdb.make_debug_video(
+        dbv.make_debug_video(
             output_path="spot_nav_debug",
             prefix=f"{collision_rate}",
             fps=debug_framerate,
@@ -726,19 +750,17 @@ def is_accessible(
     height: float,
     nav_to_min_distance: float,
     nav_island: int = -1,
-    target_object_id: Optional[int] = None,
+    target_object_ids: Optional[List[int]] = None,
 ) -> bool:
     """
     Return True if the point is within a threshold distance (in XZ plane) of the nearest unoccluded navigable point on the selected island.
 
-    :param sim: Habitat Simulaton instance.
+    :param sim: Habitat Simulator instance.
     :param point: The query point.
     :param height: The height of the agent. Given navmesh snap point is grounded, the maximum height from which a visibility check should indicate non-occlusion. First check starts from this height.
     :param nav_to_min_distance: Minimum distance threshold. -1 opts out of the test and returns True (i.e. no minimum distance).
     :param nav_island: The NavMesh island on which to check accessibility. Default -1 is the full NavMesh.
-    :param target_object_id: An optional object_id which should be ignored in the occlusion check. For example, when checking accessibility of an object's COM, that object should not occlude.
-
-    TODO: target_object_id should be a list to correctly support ArticulatedObjects (e.g. the fridge body should not occlude the fridge drawer for this check.)
+    :param target_object_id: An optional set of object ids which should be ignored in occlusion check. For example, when checking accessibility of an object's COM, that object should not occlude.
 
     :return: Whether or not the point is accessible.
     """
@@ -750,7 +772,7 @@ def is_accessible(
         height=height,
         pathfinder=sim.pathfinder,
         sim=sim,
-        target_object_id=target_object_id,
+        target_object_ids=target_object_ids,
         island_id=nav_island,
         search_offset=nav_to_min_distance,
     )
