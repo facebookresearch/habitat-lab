@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""TODO: ADD MODULE DESCRIPTION"""
+"""This module implements a singleton manager class for tracking and applying kinematic relationships between objects in the simulation. It is meant to be instantiated upon Simulator init and then updated and applied as objects are moved, applying relative transformations down a parent->child kinematic tree."""
 
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
@@ -160,8 +160,8 @@ class KinematicRelationshipManager:
 
     def __init__(self, sim: habitat_sim.Simulator) -> None:
         """..
-        
-        :param sim: TODO: DESCRIPTION
+
+        :param sim: The Simulator instance to which this KinematicRelationshipManager is attached.
         """
         self.relationship_graph = RelationshipGraph()
         self.sim = sim
