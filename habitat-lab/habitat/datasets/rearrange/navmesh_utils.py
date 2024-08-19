@@ -191,6 +191,7 @@ def embodied_unoccluded_navmesh_snap(
     pathfinder: habitat_sim.nav.PathFinder = None,
     target_object_ids: Optional[List[int]] = None,
     ignore_object_ids: Optional[List[int]] = None,
+    ignore_object_collision_ids: Optional[List[int]] = None,
     island_id: int = -1,
     search_offset: float = 1.5,
     test_batch_size: int = 20,
@@ -211,6 +212,7 @@ def embodied_unoccluded_navmesh_snap(
     :param pathfinder: The PathFinder defining the NavMesh to use.
     :param target_object_ids: An optional set of object ids which indicate the target. If one of these objects is hit before any non-ignored object, the test is successful. For example, when pos is an object's COM, that object should not occlude the point.
     :param ignore_object_ids: An optional set of object ids which should be ignored in occlusion check. These objects should not stop the check. For example, the body and links of a robot.
+    :param ignore_object_collision_ids: An optional set of object ids which should be ignored in collision check. These objects should not stop the check. For example, the body and links of a robot.
     :param island_id: Optionally restrict the search to a single navmesh island. Default -1 is the full navmesh.
     :param search_offset: The additional radius to search for navmesh points around the target position. Added to the minimum distance from pos to navmesh.
     :param test_batch_size: The number of sample navmesh points to consider when testing for occlusion.
@@ -310,7 +312,6 @@ def embodied_unoccluded_navmesh_snap(
                 ]
             # last one is always no-noise to check forward-facing
             orientation_noise_samples.append(0)
-
             for orientation_noise_sample in orientation_noise_samples:
                 desired_angle = facing_target_angle + orientation_noise_sample
                 if embodiment_heuristic_offsets is not None:
@@ -370,11 +371,14 @@ def embodied_unoccluded_navmesh_snap(
                         _, details = rearrange_collision(
                             sim,
                             False,
+                            ignore_object_ids=ignore_object_collision_ids,
                             ignore_base=False,
                         )
                     else:
                         _, details = general_sim_collision(
-                            sim, agent_embodiment
+                            sim,
+                            agent_embodiment,
+                            ignore_object_ids=ignore_object_collision_ids,
                         )
 
                     # reset agent state

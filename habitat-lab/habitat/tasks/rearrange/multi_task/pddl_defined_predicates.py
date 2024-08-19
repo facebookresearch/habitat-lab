@@ -4,7 +4,6 @@ import magnum as mn
 import numpy as np
 
 import habitat_sim
-from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlEntity,
@@ -98,7 +97,10 @@ def is_inside(
     )
     # Hack to see if an object is inside the fridge.
     if sim_info.check_type_matches(recep, FRIDGE_TYPE):
-        global_bb = get_ao_global_bb(check_marker.ao_parent)
+        global_bb = habitat_sim.geo.get_transformed_bb(
+            check_marker.ao_parent.aabb,
+            check_marker.ao_parent.transformation,
+        )
     else:
         bb = check_marker.link_node.cumulative_bb
         global_bb = habitat_sim.geo.get_transformed_bb(

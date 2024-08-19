@@ -717,13 +717,12 @@ def test_on_floor_and_next_to():
     with Simulator(hab_cfg) as sim:
         all_objects = sutils.get_all_object_ids(sim)
         ao_link_map = sutils.get_ao_link_id_map(sim)
-        ao_aabbs = sutils.get_ao_root_bbs(sim)
 
         for obj_id, handle in all_objects.items():
             obj = sutils.get_obj_from_id(sim, obj_id, ao_link_map)
             if not obj.is_articulated:
                 obj_on_floor = sutils.on_floor(
-                    sim, obj, ao_link_map=ao_link_map, ao_aabbs=ao_aabbs
+                    sim, obj, ao_link_map=ao_link_map
                 )
                 print(f"{handle}: {obj_on_floor}")
                 # check a known set of relationships in this scene
@@ -771,7 +770,6 @@ def test_on_floor_and_next_to():
                 table_object.object_id,
                 obj.object_id,
                 ao_link_map,
-                ao_aabbs,
             )
             # since the objects are in the shelves of the table, regularized distance is o
             assert reg_dist == 0, f"{obj_handle}"
@@ -790,7 +788,6 @@ def test_on_floor_and_next_to():
                 table_object.object_id,
                 obj.object_id,
                 ao_link_map,
-                ao_aabbs,
             )
             # since the objects are "on" the table surface, regularized distance is small, but non-zero
             assert reg_dist != 0, f"{obj_handle}"
@@ -805,7 +802,7 @@ def test_on_floor_and_next_to():
             sim, "frl_apartment_wall_cabinet_01_:0000"
         )
         reg_dist = sutils.size_regularized_object_distance(
-            sim, sofa.object_id, shelf.object_id, ao_link_map, ao_aabbs
+            sim, sofa.object_id, shelf.object_id, ao_link_map
         )
         assert (
             reg_dist < 0.1
@@ -819,7 +816,7 @@ def test_on_floor_and_next_to():
         # test the bb size heuristic with known directions
         sofa.transformation = mn.Matrix4.identity_init()
         sofa_bb, transform = sutils.get_bb_for_object_id(
-            sim, sofa.object_id, ao_link_map, ao_aabbs
+            sim, sofa.object_id, ao_link_map
         )
         assert transform == mn.Matrix4.identity_init()
         # check the obvious axis-aligned vectors
@@ -827,7 +824,7 @@ def test_on_floor_and_next_to():
             vec = mn.Vector3()
             vec[axis] = 1.0
             axis_size_along, _center = sutils.get_obj_size_along(
-                sim, sofa.object_id, vec, ao_link_map, ao_aabbs
+                sim, sofa.object_id, vec, ao_link_map
             )
             assert axis_size_along == sofa_bb.size()[axis] / 2.0
 
@@ -850,9 +847,9 @@ def test_on_floor_and_next_to():
         ]
         not_next_to_object_pairs = [
             (36, 38),  # books on different shelves
+            (141, 140),  # two non-neighboring drawers in the chest of drawers
             (11, 14),  # sofa pillows on opposite sides
             (51, 53),  # two objects on different table shelves
-            (141, 140),  # two non-neighboring drawers in the chest of drawers
             (129, 132),  # two non-neighboring cabinet doors
             (17, 20),  # potted plant and coffee table
         ]
@@ -861,14 +858,22 @@ def test_on_floor_and_next_to():
                 sim,
                 obj_a_id,
                 obj_b_id,
-                ao_aabbs=ao_aabbs,
                 ao_link_map=ao_link_map,
+                vertical_padding=0,
             ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should be 'next to' one another."
         for ix, (obj_a_id, obj_b_id) in enumerate(not_next_to_object_pairs):
             assert not sutils.obj_next_to(
                 sim,
                 obj_a_id,
                 obj_b_id,
-                ao_aabbs=ao_aabbs,
                 ao_link_map=ao_link_map,
+                vertical_padding=0,
             ), f"Objects with ids {obj_a_id} and {obj_b_id} at test pair index {ix} should not be 'next to' one another."
+
+        # NOTE: the drawers are next_to one another with default 10cm vertical padding
+        assert sutils.obj_next_to(
+            sim,
+            140,
+            141,
+            ao_link_map=ao_link_map,
+        ), "The drawers should be 'next to' one another with vertical padding."

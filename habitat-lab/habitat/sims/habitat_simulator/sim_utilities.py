@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+"""This module provides a diverse set of functional utilities for common operations involving the Simulator and ManagedObjects including: object getters from id and handle, geometric utilities, prepositional logic, region queries, articulated object interactions, and more."""
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -19,103 +19,18 @@ def object_shortname_from_handle(object_handle: str) -> str:
     Splits any path directory and instance increment from the handle.
 
     :param object_handle: The raw object template or instance handle.
-
     :return: the shortened name string.
     """
 
     return object_handle.split("/")[-1].split(".")[0].split("_:")[0]
 
 
-def register_custom_wireframe_box_template(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    template_name: str = "custom_wireframe_box",
-) -> str:
-    """
-    Generate and register a custom template for a wireframe box of given size.
-    Return the new template's handle.
-    """
-    obj_attr_mgr = sim.get_object_template_manager()
-    cube_template = obj_attr_mgr.get_template_by_handle(
-        obj_attr_mgr.get_template_handles("cubeWireframe")[0]
-    )
-    cube_template.scale = size
-    obj_attr_mgr.register_template(cube_template, template_name)
-    return template_name
-
-
-def add_wire_box(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    center: mn.Vector3,
-    attach_to: Optional[habitat_sim.scene.SceneNode] = None,
-    orientation: Optional[mn.Quaternion] = None,
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Generate a wire box object and optionally attach it to another existing object (automatically applies object scale).
-    Returns the new object.
-    """
-    if orientation is None:
-        orientation = mn.Quaternion()
-    box_template_handle = register_custom_wireframe_box_template(sim, size)
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        box_template_handle, attach_to
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    # translate to local offset if attached or global offset if not
-    new_object.translation = center
-    new_object.rotation = orientation
-    return new_object
-
-
-def add_transformed_wire_box(
-    sim: habitat_sim.Simulator,
-    size: mn.Vector3,
-    transform: Optional[mn.Matrix4] = None,
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Generate a transformed wire box in world space.
-    Returns the new object.
-    """
-    if transform is None:
-        transform = mn.Matrix4()
-    box_template_handle = register_custom_wireframe_box_template(sim, size)
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        box_template_handle
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    # translate to local offset if attached or global offset if not
-    new_object.transformation = transform
-    return new_object
-
-
-def add_viz_sphere(
-    sim: habitat_sim.Simulator, radius: float, pos: mn.Vector3
-) -> habitat_sim.physics.ManagedRigidObject:
-    """
-    Add a visualization-only sphere to the world at a global position.
-    Returns the new object.
-    """
-    obj_attr_mgr = sim.get_object_template_manager()
-    sphere_template = obj_attr_mgr.get_template_by_handle(
-        obj_attr_mgr.get_template_handles("icosphereWireframe")[0]
-    )
-    sphere_template.scale = mn.Vector3(radius)
-    obj_attr_mgr.register_template(sphere_template, "viz_sphere")
-    new_object = sim.get_rigid_object_manager().add_object_by_template_handle(
-        "viz_sphere"
-    )
-    new_object.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-    new_object.collidable = False
-    new_object.translation = pos
-    return new_object
-
-
 def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     """
-    Return a list of AABB (Range3D) corners in object local space.
+    Get the corner points for an Axis-aligned bounding box (AABB).
+
+    :param range3d: The bounding box for which to get the corners.
+    :return: a list of AABB (Range3D) corners in object local space.
     """
     return [
         range3d.back_bottom_left,
@@ -129,34 +44,10 @@ def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     ]
 
 
-def get_ao_global_bb(
-    obj: habitat_sim.physics.ManagedArticulatedObject,
-) -> Optional[mn.Range3D]:
-    """
-    Compute the cumulative bounding box of an ArticulatedObject by merging all link bounding boxes.
-    """
-
-    cumulative_global_bb: mn.Range3D = None
-    for link_ix in range(-1, obj.num_links):
-        link_node = obj.get_link_scene_node(link_ix)
-        bb = link_node.cumulative_bb
-        global_bb = habitat_sim.geo.get_transformed_bb(
-            bb, link_node.absolute_transformation()
-        )
-        if cumulative_global_bb is None:
-            cumulative_global_bb = global_bb
-        else:
-            cumulative_global_bb = mn.math.join(
-                cumulative_global_bb, global_bb
-            )
-    return cumulative_global_bb
-
-
 def get_bb_for_object_id(
     sim: habitat_sim.Simulator,
     obj_id: int,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> Tuple[mn.Range3D, mn.Matrix4]:
     """
     Wrapper to get a bb and global transform directly from an object id.
@@ -165,8 +56,6 @@ def get_bb_for_object_id(
     :param sim: The Simulator instance.
     :param obj_id: The integer id of the object or link.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: tuple (local_aabb, global_transform)
     """
 
@@ -184,19 +73,9 @@ def get_bb_for_object_id(
             f"object id {obj_id} is not found, this is unexpected. Invalid/stale object id?"
         )
 
-    if not obj.is_articulated:
-        # rigid object
-        return (obj.root_scene_node.cumulative_bb, obj.transformation)
-
-    # ManagedArticulatedObject
+    # ManagedObject
     if obj.object_id == obj_id:
-        # this is the AO itself
-        ao_aabb = None
-        if ao_aabbs is None or obj_id not in ao_aabbs:
-            ao_aabb = get_ao_root_bb(obj)
-        else:
-            ao_aabb = ao_aabbs[obj_id]
-        return (ao_aabb, obj.transformation)
+        return (obj.aabb, obj.transformation)
 
     # this is a link
     link_node = obj.get_link_scene_node(obj.link_object_ids[obj_id])
@@ -209,7 +88,6 @@ def get_obj_size_along(
     object_id: int,
     global_vec: mn.Vector3,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> Tuple[float, mn.Vector3]:
     """
     Uses object bounding box ellipsoid scale as a heuristic to estimate object size in a particular global direction.
@@ -218,14 +96,10 @@ def get_obj_size_along(
     :param object_id: The integer id of the object or link.
     :param global_vec: Vector in global space indicating the direction to approximate object size.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: distance along the specified direction and global center of bounding box from which distance was estimated.
     """
 
-    obj_bb, transform = get_bb_for_object_id(
-        sim, object_id, ao_link_map, ao_aabbs
-    )
+    obj_bb, transform = get_bb_for_object_id(sim, object_id, ao_link_map)
     center = transform.transform_point(obj_bb.center())
     local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
     local_vec = transform.inverted().transform_vector(global_vec).normalized()
@@ -249,7 +123,6 @@ def size_regularized_bb_distance(
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
     :param flatten_axis: Optionally flatten one axis of the displacement vector. This effectively projects the displacement. For example, index "1" would result in horizontal (xz) distance.
-
     :return: heuristic surface-to-surface distance.
     """
 
@@ -288,7 +161,6 @@ def size_regularized_object_distance(
     object_id_a: int,
     object_id_b: int,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> float:
     """
     Get the heuristic surface-to-surface distance between two objects (regularized by their individual heuristic sizes).
@@ -298,8 +170,6 @@ def size_regularized_object_distance(
     :param object_id_a: integer id of the first object
     :param object_id_b: integer id of the second object
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: The heuristic surface-2-surface distance between the objects.
     """
 
@@ -312,12 +182,8 @@ def size_regularized_object_distance(
         and object_id_b != habitat_sim.stage_id
     ), "Cannot compute distance between the scene and its contents."
 
-    obja_bb, transform_a = get_bb_for_object_id(
-        sim, object_id_a, ao_link_map, ao_aabbs
-    )
-    objb_bb, transform_b = get_bb_for_object_id(
-        sim, object_id_b, ao_link_map, ao_aabbs
-    )
+    obja_bb, transform_a = get_bb_for_object_id(sim, object_id_a, ao_link_map)
+    objb_bb, transform_b = get_bb_for_object_id(sim, object_id_b, ao_link_map)
 
     return size_regularized_bb_distance(
         obja_bb, objb_bb, transform_a, transform_b
@@ -339,7 +205,6 @@ def bb_ray_prescreen(
     :param support_obj_ids: A list of object ids designated as valid support surfaces for object placement. Contact with other objects is a criteria for placement rejection.
     :param ignore_obj_ids: A list of object ids which should be ignored in contact checks and raycasts. For example, the body of the agent placing an object.
     :param check_all_corners: Optionally cast rays from all bounding box corners instead of only casting a ray from the center of mass.
-
     :return: a dict of raycast metadata: "base_rel_height","surface_snap_point", "raycast_results"
     """
 
@@ -355,7 +220,15 @@ def bb_ray_prescreen(
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj.root_scene_node.cumulative_bb)
+    col_aabb = obj.collision_shape_aabb
+    render_aabb = obj.aabb
+    # use the full collision and render aabb for best snapping accuracy
+    joined_aabb = mn.Range3D(
+        mn.math.min(col_aabb.min, render_aabb.min),
+        mn.math.max(col_aabb.max, render_aabb.max),
+    )
+    bb_corners = get_bb_corners(joined_aabb)
+
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
@@ -447,7 +320,6 @@ def snap_down(
     :param ignore_obj_ids: A list of object ids which should be ignored in contact checks and raycasts. For example, the body of the agent placing an object.
     :param dbv: Optionally provide a DebugVisualizer (dbv) to render debug images of each object's computed snap position before collision culling.
     :param max_collision_depth: The maximum contact penetration depth between the object and the support surface. Higher values are easier to sample, but result in less dynamically stabile states.
-
     :return: boolean placement success.
 
     Reject invalid placements by checking for penetration with other existing objects.
@@ -542,7 +414,6 @@ def get_all_object_ids(sim: habitat_sim.Simulator) -> Dict[int, str]:
     Generate a dict mapping all active object ids to a descriptive string containing the object instance handle and, for ArticulatedLinks, the link name.
 
     :param sim: The Simulator instance.
-
     :return: a dict mapping object ids to a descriptive string.
     """
 
@@ -578,7 +449,6 @@ def get_all_objects(
     Get a list of all ManagedRigidObjects and ManagedArticulatedObjects in the scene.
 
     :param sim: The Simulator instance.
-
     :return: a list of ManagedObject wrapper instances containing all objects currently instantiated in the scene.
     """
 
@@ -592,72 +462,12 @@ def get_all_objects(
     return all_objects
 
 
-def get_ao_root_bb(
-    ao: habitat_sim.physics.ManagedArticulatedObject,
-) -> mn.Range3D:
-    """
-    Get the local bounding box of all links of an articulated object in the root frame.
-
-    :param ao: The ArticulatedObject instance.
-    """
-
-    # NOTE: we'd like to use SceneNode AABB, but this won't work because the links are not in the subtree of the root:
-    # ao.root_scene_node.compute_cumulative_bb()
-
-    ao_local_part_bb_corners = []
-
-    link_nodes = [ao.get_link_scene_node(ix) for ix in range(-1, ao.num_links)]
-    for link_node in link_nodes:
-        local_bb_corners = get_bb_corners(link_node.cumulative_bb)
-        global_bb_corners = [
-            link_node.absolute_transformation().transform_point(bb_corner)
-            for bb_corner in local_bb_corners
-        ]
-        ao_local_bb_corners = [
-            ao.transformation.inverted().transform_point(p)
-            for p in global_bb_corners
-        ]
-        ao_local_part_bb_corners.extend(ao_local_bb_corners)
-
-    # get min and max of each dimension
-    # TODO: use numpy arrays for more elegance...
-    max_vec = mn.Vector3(ao_local_part_bb_corners[0])
-    min_vec = mn.Vector3(ao_local_part_bb_corners[0])
-    for point in ao_local_part_bb_corners:
-        for dim in range(3):
-            max_vec[dim] = max(max_vec[dim], point[dim])
-            min_vec[dim] = min(min_vec[dim], point[dim])
-    return mn.Range3D(min_vec, max_vec)
-
-
-def get_ao_root_bbs(
-    sim: habitat_sim.Simulator,
-) -> Dict[int, mn.Range3D]:
-    """
-    Computes a dictionary mapping AO handles to a global bounding box of parts.
-    Must be updated when AO state changes to correctly bound the full set of links.
-
-    :param sim: The Simulator instance.
-
-    :return: dictionary mapping ArticulatedObjects' object_id to their bounding box in local space.
-    """
-
-    ao_local_bbs: Dict[
-        habitat_sim.physics.ManagedBulletArticulatedObject, mn.Range3D
-    ] = {}
-    aom = sim.get_articulated_object_manager()
-    for ao in aom.get_objects_by_handle_substring().values():
-        ao_local_bbs[ao.object_id] = get_ao_root_bb(ao)
-    return ao_local_bbs
-
-
 def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
     """
     Construct a dict mapping ArticulatedLink object_id to parent ArticulatedObject object_id.
     NOTE: also maps ao's root object id to itself for ease of use.
 
     :param sim: The Simulator instance.
-
     :return: dict mapping ArticulatedLink object ids to parent object ids.
     """
 
@@ -680,16 +490,18 @@ def get_ao_default_link(
     """
     Get the "default" link index for a ManagedArticulatedObject.
     The "default" link is the one link which should be used if only one joint can be actuated. For example, the largest or most accessible drawer or door.
+
+    :param ao: The ManagedArticulatedObject instance.
+    :param compute_if_not_found: If true, try to compute the default link if it isn't found.
+    :return: The default link index or None if not found. Cannot be base link (-1).
+
     The default link is determined by:
+
         - must be "prismatic" or "revolute" joint type
         - first look in the metadata Configuration for an annotated link.
         - (if compute_if_not_found) - if not annotated, it is programmatically computed from a heuristic.
 
     Default link heuristic: the link with the lowest Y value in the bounding box with appropriate joint type.
-
-    :param compute_if_not_found: If true, try to compute the default link if it isn't found.
-
-    :return: The default link index or None if not found. Cannot be base link (-1).
     """
 
     # first look in metadata
@@ -732,14 +544,13 @@ def get_obj_from_id(
     """
     Get a ManagedRigidObject or ManagedArticulatedObject from an object_id.
 
-    ArticulatedLink object_ids will return the ManagedArticulatedObject.
-    If you want link id, use ManagedArticulatedObject.link_object_ids[obj_id].
-
     :param sim: The Simulator instance.
     :param obj_id: object id for which ManagedObject is desired.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-
     :return: a ManagedObject or None
+
+    ArticulatedLink object_ids will return the ManagedArticulatedObject.
+    If you want link id, use ManagedArticulatedObject.link_object_ids[obj_id].
     """
 
     rom = sim.get_rigid_object_manager()
@@ -768,7 +579,6 @@ def get_obj_from_handle(
 
     :param sim: The Simulator instance.
     :param obj_handle: object instance handle for which ManagedObject is desired.
-
     :return: a ManagedObject or None
     """
 
@@ -793,7 +603,6 @@ def get_obj_transform_from_id(
     :param sim: The Simulator instance.
     :param obj_id: object id for which ManagedObject is desired.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-
     :return: a Matrix4 local to global transform or None
     """
 
@@ -821,7 +630,6 @@ def get_global_keypoints_from_bb(
 
     :param aabb: The local bounding box.
     :param local_to_global: The local to global transformation matrix.
-
     :return: A set of global 3D keypoints for the bounding box.
     """
     local_keypoints = [aabb.center()]
@@ -833,44 +641,6 @@ def get_global_keypoints_from_bb(
     return global_keypoints
 
 
-def get_rigid_object_global_keypoints(
-    object_a: habitat_sim.physics.ManagedRigidObject,
-) -> List[mn.Vector3]:
-    """
-    Get a list of rigid object keypoints in global space.
-    0th point is the bounding box center, others are bounding box corners.
-
-    :param object_a: The ManagedRigidObject from which to extract keypoints.
-
-    :return: A set of global 3D keypoints for the object.
-    """
-
-    bb = object_a.root_scene_node.cumulative_bb
-    return get_global_keypoints_from_bb(bb, object_a.transformation)
-
-
-def get_articulated_object_global_keypoints(
-    object_a: habitat_sim.physics.ManagedArticulatedObject,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
-) -> List[mn.Vector3]:
-    """
-    Get global bb keypoints for an ArticulatedObject.
-
-    :param object_a: The ManagedArticulatedObject from which to extract keypoints.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary. Must contain the subjects of the query.
-
-    :return: A set of global 3D keypoints for the object.
-    """
-
-    ao_bb = None
-    if ao_aabbs is None or object_a.object_id not in ao_aabbs:
-        ao_bb = get_ao_root_bb(object_a)
-    else:
-        ao_bb = ao_aabbs[object_a.object_id]
-
-    return get_global_keypoints_from_bb(ao_bb, object_a.transformation)
-
-
 def get_articulated_link_global_keypoints(
     object_a: habitat_sim.physics.ManagedArticulatedObject, link_index: int
 ) -> List[mn.Vector3]:
@@ -879,7 +649,6 @@ def get_articulated_link_global_keypoints(
 
     :param object_a: The parent ManagedArticulatedObject for the link.
     :param link_index: The local index of the link within the parent ArticulatedObject. Not the object_id of the link.
-
     :return: A set of global 3D keypoints for the link.
     """
     link_node = object_a.get_link_scene_node(link_index)
@@ -893,7 +662,6 @@ def get_global_keypoints_from_object_id(
     sim: habitat_sim.Simulator,
     object_id: int,
     ao_link_map: Optional[Dict[int, int]] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> List[mn.Vector3]:
     """
     Get a list of object keypoints in global space given an object id.
@@ -902,24 +670,19 @@ def get_global_keypoints_from_object_id(
     :param sim: The Simulator instance.
     :param object_id: The integer id for the object from which to extract keypoints.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id. If not provided, recomputed as necessary.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: A set of global 3D keypoints for the object.
     """
 
     obj = get_obj_from_id(sim, object_id, ao_link_map)
 
-    if not obj.is_articulated:
-        # rigid object
-        return get_rigid_object_global_keypoints(obj)
-    elif obj.object_id != object_id:
+    if obj.object_id != object_id:
         # this is an ArticulatedLink
         return get_articulated_link_global_keypoints(
             obj, obj.link_object_ids[object_id]
         )
     else:
-        # ArticulatedObject
-        return get_articulated_object_global_keypoints(obj, ao_aabbs)
+        # ManagedObject
+        return get_global_keypoints_from_bb(obj.aabb, obj.transformation)
 
 
 def object_keypoint_cast(
@@ -933,7 +696,6 @@ def object_keypoint_cast(
     :param sim: The Simulator instance.
     :param object_a: The ManagedRigidObject from which to extract keypoints and raycast.
     :param direction: Optionally provide a unit length global direction vector for the raycast. If None, default to -Y.
-
     :return: A list of RaycastResults, one from each object keypoint.
     """
 
@@ -941,7 +703,9 @@ def object_keypoint_cast(
         # default to downward raycast
         direction = mn.Vector3(0, -1, 0)
 
-    global_keypoints = get_rigid_object_global_keypoints(object_a)
+    global_keypoints = get_global_keypoints_from_bb(
+        object_a.aabb, object_a.transformation
+    )
     return [
         sim.cast_ray(habitat_sim.geo.Ray(keypoint, direction))
         for keypoint in global_keypoints
@@ -966,7 +730,6 @@ def above(
 
     :param sim: The Simulator instance.
     :param object_a: The ManagedRigidObject for which to query the 'above' set.
-
     :return: a list of object ids.
     """
 
@@ -1005,11 +768,12 @@ def within(
     :param max_distance: The maximum ray distance to check in each opposing direction (this is half the "wingspan" of the check). Makes the raycast more efficienct and realistically containing objects will have a limited size.
     :param keypoint_vote_threshold: The minimum number of keypoints which must indicate containment to qualify object_a as "within" another object.
     :param center_ensures_containment: If True, positive test of object_a's center keypoint alone qualifies object_a as "within" another object.
-
     :return: a list of object_id integers.
     """
 
-    global_keypoints = get_rigid_object_global_keypoints(object_a)
+    global_keypoints = get_global_keypoints_from_object_id(
+        sim, object_a.object_id
+    )
 
     # build axes vectors
     pos_axes = [mn.Vector3.x_axis(), mn.Vector3.y_axis(), mn.Vector3.z_axis()]
@@ -1089,7 +853,6 @@ def ontop(
     :param object_a: The ManagedRigidObject or object id for which to query the 'ontop' set.
     :param do_collision_detection: If True, a fresh discrete collision detection is run before the contact point query. Pass False to skip if a recent sim step or pre-process has run a collision detection pass on the current state.
     :param vertical_normal_error_threshold: The allowed error in normal alignment for a contact point to be considered "vertical" for this check. Functionally, if dot(contact normal, Y) <= threshold, the contact is ignored.
-
     :return: a list of integer object_ids for the set of objects "ontop" of object_a.
     """
 
@@ -1147,7 +910,6 @@ def on_floor(
     alt_pathfinder: habitat_sim.nav.PathFinder = None,
     island_index: int = -1,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
     """
     Checks if the object is heuristically considered to be "on the floor" using the navmesh as an abstraction. This function assumes the PathFinder and parameters provided approximate the navigable floor space well.
@@ -1159,8 +921,6 @@ def on_floor(
     :param alt_pathfinder:Optionally provide an alternative PathFinder specifically configured for this check. Defaults to sim.pathfinder.
     :param island_index: Optionally limit allowed navmesh to a specific island. Default (-1) is full navmesh. Note the default is likely not good since large furniture objets could have isolated islands on them which are not the floor.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: Whether or not the object is considered "on the floor" given the configuration.
     """
 
@@ -1179,7 +939,6 @@ def on_floor(
         object_a.object_id,
         mn.Vector3(0.0, -1.0, 0.0),
         ao_link_map=ao_link_map,
-        ao_aabbs=ao_aabbs,
     )
 
     obj_snap = alt_pathfinder.snap_point(center, island_index=island_index)
@@ -1202,7 +961,6 @@ def object_in_region(
     containment_threshold=0.25,
     center_only=False,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> Tuple[bool, float]:
     """
     Check if an object is within a region by checking region containment of keypoints.
@@ -1213,9 +971,6 @@ def object_in_region(
     :param containment_threshold: threshold ratio of keypoints which need to be in a region to count as containment.
     :param center_only: If True, only use the BB center keypoint, all or nothing.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
-
     :return: boolean containment and the ratio of keypoints which are inside the region.
     """
 
@@ -1223,7 +978,6 @@ def object_in_region(
         sim,
         object_id=object_a.object_id,
         ao_link_map=ao_link_map,
-        ao_aabbs=ao_aabbs,
     )
 
     if center_only:
@@ -1242,7 +996,6 @@ def get_object_regions(
         habitat_sim.physics.ManagedArticulatedObject,
     ],
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> List[Tuple[int, float]]:
     """
     Get a sorted list of regions containing an object using bounding box keypoints.
@@ -1250,8 +1003,6 @@ def get_object_regions(
     :param sim: The Simulator instance.
     :param object_a: The object instance.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: A sorted list of region index, ratio pairs. First item in the list the primary containing region.
     """
 
@@ -1259,7 +1010,6 @@ def get_object_regions(
         sim,
         object_id=object_a.object_id,
         ao_link_map=ao_link_map,
-        ao_aabbs=ao_aabbs,
     )
 
     return sim.semantic_scene.get_regions_for_points(key_points)
@@ -1276,17 +1026,16 @@ def get_floor_point_in_region(
     """
     Sample the navmesh to find a point on the floor within a given region.
 
-    This method attempts to find a point in the region with maximum navmesh clearance by sorting candidates on `distance_to_closest_obstacle`.
-    Because this method uses multiple sampling passes it is advised to use it in initialization and pre-processes rather than within an application loop.
-
     :param sim: The Simulator instance.
     :param region_index: The index of the Region within which to sample.
     :param island_index: The index of the navmesh island representing the active floor area. Default -1 is all islands. Should be set to the same island used for other navmesh operations in the application. For example, the largest indoor island for the scene.
     :param max_center_samples: The number of samples near the center point to attempt if applicable. This will be done first. <=0 skips center sampling.
     :param max_global_samples: The number of global navmesh samples to attempt if center point samples were unsuccessful. <=0 skips this step.
     :param quick_return: If True, the first valid sample will be returned instead of continuing to search for a better sample. Use this option when speed is more important than the quality or consistency.
-
     :return: The sampled floor point within the given region or None if a point could not be found.
+
+    This method attempts to find a point in the region with maximum navmesh clearance by sorting candidates on `distance_to_closest_obstacle`.
+    Because this method uses multiple sampling passes it is advised to use it in initialization and pre-processes rather than within an application loop.
     """
 
     # get the SemanticRegion from the index
@@ -1360,7 +1109,6 @@ def get_link_normalized_joint_position(
 
     :param object_a: The parent ArticulatedObject of the link.
     :param link_ix: The index of the link within the parent object. Not the link's object_id.
-
     :return: normalized joint position [0,1]
     """
 
@@ -1388,11 +1136,11 @@ def set_link_normalized_joint_position(
     """
     Set the joint's state within its limits from a normalized range [0,1] -> [min, max]
 
-    Assumes the joint has valid joint limits.
-
     :param object_a: The parent ArticulatedObject of the link.
     :param link_ix: The index of the link within the parent object. Not the link's object_id.
     :param normalized_pos: The normalized position [0,1] to set.
+
+    Assumes the joint has valid joint limits.
     """
 
     assert object_a.get_link_joint_type(link_ix) in [
@@ -1425,7 +1173,6 @@ def link_is_open(
     :param object_a: The parent ArticulatedObject of the link to check.
     :param link_ix: The index of the link within the parent object. Not the link's object_id.
     :param threshold: The normalized threshold ratio of joint ranges which are considered "open". E.g. 0.8 = 80%
-
     :return: Whether or not the link is considered "open".
     """
 
@@ -1444,7 +1191,6 @@ def link_is_closed(
     :param object_a: The parent ArticulatedObject of the link to check.
     :param link_ix: The index of the link within the parent object. Not the link's object_id.
     :param threshold: The normalized threshold ratio of joint ranges which are considered "closed". E.g. 0.1 = 10%
-
     :return: Whether or not the link is considered "closed".
     """
 
@@ -1472,10 +1218,10 @@ def open_link(
     """
     Set a link to the "open" state. Sets the joint position to the maximum joint limit.
 
-    TODO: does not do any collision checking to validate the state or move any other objects which may be contained in or supported by this link.
-
     :param object_a: The parent ArticulatedObject of the link to check.
     :param link_ix: The index of the link within the parent object. Not the link's object_id.
+
+    TODO: does not do any collision checking to validate the state or move any other objects which may be contained in or supported by this link.
     """
 
     set_link_normalized_joint_position(object_a, link_ix, 1.0)
@@ -1486,21 +1232,25 @@ def bb_next_to(
     bb_b: mn.Range3D,
     transform_a: mn.Matrix4 = None,
     transform_b: mn.Matrix4 = None,
-    hor_l2_threshold=0.3,
+    hor_l2_threshold: float = 0.3,
+    vertical_padding: float = 0.1,
 ) -> bool:
     """
     Check whether or not two bounding boxes should be considered "next to" one another.
-    Concretely, consists of two checks:
-     1. assert overlap between the vertical range of the two bounding boxes.
-     2. regularized horizontal L2 distance between object centers. Regularized in this case means projected displacement vector is truncated by each object's heuristic size.
 
     :param bb_a: local bounding box of one object
     :param bb_b: local bounding box of another object
     :param transform_a: local to global transform for the first object. Default is identity.
     :param transform_b: local to global transform for the second object. Default is identity.
     :param hor_l2_threshold: regularized horizontal L2 distance allowed between the objects' centers.
-
+    :param vertical_padding: vertical distance padding used when comparing bounding boxes. Higher value is a looser constraint.
     :return: Whether or not the objects are heuristically "next to" one another.
+
+    Concretely, consists of two checks:
+        1. assert overlap between the vertical range of the two bounding boxes.
+
+        2. regularized horizontal L2 distance between object centers. Regularized in this case means projected displacement vector is truncated by each object's heuristic size.
+
     """
 
     if transform_a is None:
@@ -1517,10 +1267,9 @@ def bb_next_to(
     highest_height_b = max([p[1] for p in keypoints_b])
 
     # check for non-overlapping bounding boxes
-    if (
-        highest_height_a < lowest_height_b
-        or highest_height_b < lowest_height_a
-    ):
+    if (highest_height_a + vertical_padding) < lowest_height_b or (
+        highest_height_b + vertical_padding
+    ) < lowest_height_a:
         return False
 
     if (
@@ -1538,24 +1287,25 @@ def obj_next_to(
     sim: habitat_sim.Simulator,
     object_id_a: int,
     object_id_b: int,
-    hor_l2_threshold=0.5,
+    hor_l2_threshold: float = 0.5,
+    vertical_padding: float = 0.1,
     ao_link_map: Dict[int, int] = None,
-    ao_aabbs: Dict[int, mn.Range3D] = None,
 ) -> bool:
     """
     Check whether or not two objects should be considered "next to" one another.
-    Concretely, consists of two checks:
-     1. bounding boxes must overlap vertically.
-     2. regularized horizontal L2 distance between object centers must be less than a threshold. Regularized in this case means displacement vector is truncated by each object's heuristic size.
+
 
     :param sim: The Simulator instance.
     :param object_id_a: object_id of the first ManagedObject or link.
     :param object_id_b: object_id of the second ManagedObject or link.
     :param hor_l2_threshold: regularized horizontal L2 distance allow between the objects' centers. This should be tailored to the scenario.
+    :param vertical_padding: vertical distance padding added when comparing the object's bounding boxes. Higher value is a looser constraint.
     :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
-    :param ao_aabbs: A pre-computed map from ArticulatedObject object_ids to their local bounding boxes. If not provided, recomputed as necessary.
-
     :return: Whether or not the objects are heuristically "next to" one another.
+
+    Concretely, consists of two checks:
+        1. bounding boxes must overlap vertically.
+        2. regularized horizontal L2 distance between object centers must be less than a threshold. Regularized in this case means displacement vector is truncated by each object's heuristic size.
     """
 
     assert object_id_a != object_id_b, "Object cannot be 'next to' itself."
@@ -1565,12 +1315,8 @@ def obj_next_to(
         and object_id_b != habitat_sim.stage_id
     ), "Cannot compute distance between the stage and its contents."
 
-    obja_bb, transform_a = get_bb_for_object_id(
-        sim, object_id_a, ao_link_map, ao_aabbs
-    )
-    objb_bb, transform_b = get_bb_for_object_id(
-        sim, object_id_b, ao_link_map, ao_aabbs
-    )
+    obja_bb, transform_a = get_bb_for_object_id(sim, object_id_a, ao_link_map)
+    objb_bb, transform_b = get_bb_for_object_id(sim, object_id_b, ao_link_map)
 
     return bb_next_to(
         obja_bb,
@@ -1578,4 +1324,5 @@ def obj_next_to(
         transform_a,
         transform_b,
         hor_l2_threshold,
+        vertical_padding,
     )

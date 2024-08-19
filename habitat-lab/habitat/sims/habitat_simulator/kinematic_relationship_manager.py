@@ -11,6 +11,7 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.core.logging import logger
 from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 
 
@@ -25,7 +26,8 @@ class RelationshipGraph:
     def __init__(self) -> None:
         # bi-directional relationship maps
         self.obj_to_children: Dict[int, List[int]] = {}
-        self.obj_to_parents: Dict[int, List[int]] = {}
+        # any object can only have one parent, otherwise the chain of applied transforms can become self-inconsistent
+        self.obj_to_parents: Dict[int, int] = {}
         # cache the relationship type between two objects (parent,child)
         self.relation_types: Dict[Tuple[int, int], str] = {}
 
@@ -40,16 +42,19 @@ class RelationshipGraph:
 
         assert parent != child
         if (parent, child) in self.relation_types:
-            print(
+            logger.warn(
                 f"Redundant relationship detected. Changing '{parent}' {self.relation_types[(parent, child)]} '{child}' to '{parent}' {rel_type} '{child}'"
             )
         else:
             if parent not in self.obj_to_children:
                 self.obj_to_children[parent] = []
             self.obj_to_children[parent].append(child)
-            if child not in self.obj_to_parents:
-                self.obj_to_parents[child] = []
-            self.obj_to_parents[child].append(parent)
+            if child in self.obj_to_parents:
+                logger.warn(
+                    f"Inconsistent relationship requested: child object '{child}' already parented to '{self.obj_to_parents[child]}'. Changing parent to '{parent}' and removing previous relationship."
+                )
+                self.remove_relation(self.obj_to_parents[child], child)
+            self.obj_to_parents[child] = parent
         self.relation_types[(parent, child)] = rel_type
 
     def remove_relation(self, parent: int, child: int) -> None:
@@ -63,10 +68,8 @@ class RelationshipGraph:
         assert parent != child
         del self.relation_types[(parent, child)]
 
-        if parent in self.obj_to_parents[child]:
-            self.obj_to_parents[child].remove(parent)
-            if len(self.obj_to_parents[child]) == 0:
-                del self.obj_to_parents[child]
+        if child in self.obj_to_parents:
+            del self.obj_to_parents[child]
 
         if child in self.obj_to_children[parent]:
             self.obj_to_children[parent].remove(child)
@@ -89,9 +92,7 @@ class RelationshipGraph:
             for child in self.obj_to_children[obj]:
                 self.remove_relation(obj, child)
         if obj in self.obj_to_parents:
-            while obj in self.obj_to_parents:
-                self.remove_relation(self.obj_to_parents[obj][0], obj)
-            assert obj not in self.obj_to_parents
+            self.remove_relation(self.obj_to_parents[obj], obj)
 
     def get_root_parents(self) -> List[int]:
         """
