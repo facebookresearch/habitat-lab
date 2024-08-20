@@ -58,7 +58,7 @@ class Users:
     _active_user_mask: Mask
 
     def __init__(
-        self, max_user_count: int, activate_users: bool = True
+        self, max_user_count: int, activate_users: bool = False
     ) -> None:
         assert max_user_count >= 0
         assert max_user_count <= Mask.MAX_VALUE
