@@ -1,6 +1,7 @@
-from typing import Any, Dict, Optional
+from typing import Optional, TYPE_CHECKING
 
-from habitat_hitl.app_states.app_service import AppService
+if TYPE_CHECKING:
+    from habitat_hitl.app_states.app_service import AppService
 
 
 class Metrics:
@@ -8,7 +9,7 @@ class Metrics:
     Helper class for accessing experiment metrics.
     """
 
-    def __init__(self, app_service: AppService):
+    def __init__(self, app_service: "AppService"):
         self._get_metrics = app_service.get_metrics
 
     def get_task_percent_complete(self) -> Optional[float]:
@@ -26,9 +27,3 @@ class Metrics:
         """
         metrics = self._get_metrics()
         return metrics.get("task_explanation", None)
-
-    def get_all_metrics(self) -> Dict[str, Any]:
-        """
-        Gets all available metrics.
-        """
-        return self._get_metrics()
