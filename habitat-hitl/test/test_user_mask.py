@@ -8,8 +8,7 @@
 from habitat_hitl.core.user_mask import Mask, Users
 
 
-def test_hitl_user_mask():
-    # Test without any user.
+def test_hitl_user_mask_0_user():
     zero_users = Users(0)
     zero_users.add_user(1)
     assert zero_users.max_user_count == 0
@@ -26,7 +25,8 @@ def test_hitl_user_mask():
     zero_users.remove_user(1)
     assert zero_users.active_user_count == 0
 
-    # Test with 4 users.
+
+def test_hitl_user_mask_4_users():
     four_users = Users(4)
     assert four_users.max_user_count == 4
     assert four_users.active_user_count == 0
@@ -60,7 +60,8 @@ def test_hitl_user_mask():
         )
     assert four_users.active_user_count == 0
 
-    # Test with max users (32).
+
+def test_hitl_user_mask_32_users():
     max_users = Users(32)
     assert max_users.max_user_count == 32
     assert max_users.active_user_count == 0
@@ -80,3 +81,16 @@ def test_hitl_user_mask():
             == max_users.max_user_count - user_index - 1
         )
     assert max_users.active_user_count == 0
+
+
+def test_hitl_user_mask_activate_users():
+    four_users = Users(4, activate_users=True)
+    assert four_users.max_user_count == 4
+    assert four_users.active_user_count == 4
+    assert len(four_users.to_index_list(Mask.ALL)) == 4
+    assert len(four_users.to_index_list(Mask.NONE)) == 0
+    four_users.remove_user(3)
+    assert four_users.max_user_count == 4
+    assert four_users.active_user_count == 3
+    assert len(four_users.to_index_list(Mask.ALL)) == 3
+    assert len(four_users.to_index_list(Mask.NONE)) == 0
