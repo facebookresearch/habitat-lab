@@ -168,6 +168,8 @@ def draw_collision(view: np.ndarray, alpha: float = 0.4) -> np.ndarray:
 def tile_images(render_obs_images: List[np.ndarray]) -> np.ndarray:
     """Tiles multiple images of non-equal size to a single image. Images are
     tiled into columns making the returned image wider than tall.
+
+    NOTE: “candidate for deprecation”: possible duplicate function at habitat-lab/habitat/core/utils.py
     """
     # Get the images in descending order of vertical height.
     render_obs_images = sorted(

@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-"""TODO: Add module description"""
+"""A module providing some disconnected core utilities."""
 import cmath
 import dataclasses
 import json
@@ -31,6 +31,8 @@ except ImportError:
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
     r"""Tile multiple images into single image
+
+    NOTE: “candidate for deprecation”: possible duplicate function at habitat-lab/habitat/utils/visualizations/utils.py
 
     :param images: list of images where each image has dimension (height x width x channels)
     :return: tiled image (new_height x width x channels)
@@ -61,17 +63,27 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 def not_none_validator(
     self: Any, attribute: attr.Attribute, value: Optional[Any]
 ) -> None:
-    """TODO: ADD FUNCTION DESCRIPTION"""
+    """
+    Attr validator to raise a ValueError if a particular attribute's value is None.
+
+    :param self: The calling attrs class instance.
+    :param attribute: The attribute to check in order to provide a precise error message.
+    :param value: The value to check.
+
+    See https://www.attrs.org/en/stable/examples.html#validators
+    """
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")
 
 
 def try_cv2_import():
-    r"""The PyRobot python3 version which is a dependency of Habitat-PyRobot integration
+    """The PyRobot python3 version which is a dependency of Habitat-PyRobot integration
     relies on ROS running in python2.7. In order to import cv2 in python3 we need to remove
     the python2.7 path from sys.path. To use the Habitat-PyRobot integration the user
     needs to export environment variable ROS_PATH which will look something like:
     /opt/ros/kinetic/lib/python2.7/dist-packages
+
+    NOTE: “candidate for deprecation”: pyrobot related
     """
     import os
     import sys
@@ -116,6 +128,7 @@ def center_crop(obs, new_shape):
 
 class DatasetJSONEncoder(json.JSONEncoder):
     """TODO: ADD CLASS DESCRIPTION"""
+
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
