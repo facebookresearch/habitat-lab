@@ -280,6 +280,9 @@ class RearrangeSim(HabitatSim):
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
+        # auto-sleep rigid objects as optimization
+        if self._auto_sleep:
+            self._sleep_all_objects()
         return None
 
     @add_perf_timing_func()
