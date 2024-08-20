@@ -555,10 +555,17 @@ class AppStateRearrangeV2(AppStateBase):
     def on_exit(self):
         super().on_exit()
 
+        task_percent_complete = self._metrics.get_task_percent_complete()
+        feedback = self._metrics.get_task_explanation()
+
+        episode_finished = self._is_episode_finished() and not self._cancel
+
         self._session.session_recorder.end_episode(
-            episode_finished=self._is_episode_finished(),
-            episode_successful=self._is_episode_successful(),
-            metrics=self._metrics.get_all_metrics(),
+            episode_finished=episode_finished,
+            task_percent_complete=task_percent_complete
+            if task_percent_complete is not None
+            else 1.0,
+            task_explanation=feedback,
         )
 
     def on_environment_reset(self, episode_recorder_dict):
