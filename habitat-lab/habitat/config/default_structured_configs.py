@@ -1872,6 +1872,7 @@ class DatasetConfig(HabitatBaseConfig):
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
+    # TODO: Make this field a structured dataclass.
     metadata: Optional[Any] = None
 
 
