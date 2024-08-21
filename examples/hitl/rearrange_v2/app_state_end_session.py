@@ -46,7 +46,8 @@ class AppStateEndSession(AppStateBase):
             self._status += f"\nError: {session.error}"
 
     def get_next_state(self) -> Optional[AppStateBase]:
-        if self._elapsed_time > SESSION_END_DELAY:
+        connected_user_count = len(self._app_data.connected_users)
+        if self._elapsed_time > SESSION_END_DELAY or connected_user_count == 0:
             self._end_session()
             return create_app_state_reset(self._app_service, self._app_data)
         return None
