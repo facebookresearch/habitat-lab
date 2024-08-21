@@ -58,7 +58,7 @@ def create_app_state_start_screen(
 def create_app_state_rearrange(
     app_service: AppService, app_data: AppData, session: Session
 ) -> AppStateBase:
-    from rearrange_v2 import AppStateRearrangeV2
+    from rearrange_v2 import AppStateRearrangeV2  # type: ignore
 
     return AppStateRearrangeV2(app_service, app_data, session)
 
