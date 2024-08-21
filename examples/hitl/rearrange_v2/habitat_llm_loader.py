@@ -33,6 +33,9 @@ if habitat_llm_enabled:
     def load_collaboration_episode_data(
         episode: RearrangeEpisode,
     ) -> CollaborationEpisodeData:
+        """
+        Load the data contained within a 'CollaborationEpisode'.
+        """
         episode_data = CollaborationEpisodeData()
 
         if not isinstance(episode, CollaborationEpisode):
@@ -44,6 +47,9 @@ if habitat_llm_enabled:
         return episode_data
 
     def register_habitat_llm_extensions(config):
+        """
+        Register habitat-llm actions, sensors and measures.
+        """
         register_actions(config)
 
         if hasattr(config.habitat.dataset, "metadata"):
