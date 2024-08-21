@@ -304,7 +304,7 @@ class ObjectStateMachine:
         Update all tracked object states for a simulation step.
 
         :param sim: The Simulator instance.
-        :param dt: TODO: MISSING DESCRIPTION
+        :param dt: The timestep over which to update continuous states. Typically the time between calls to this function.
         """
 
         # first update any state context
