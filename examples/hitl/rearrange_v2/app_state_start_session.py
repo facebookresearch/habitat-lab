@@ -24,12 +24,17 @@ class AppStateStartSession(AppStateBase):
         self._save_keyframes = False
 
     def get_next_state(self) -> Optional[AppStateBase]:
-        episode_ids = self._try_get_episode_ids()
-        if episode_ids is not None:
+        episode_indices = self._try_get_episode_indices(
+            data=self._app_data,
+            total_episode_count=len(
+                self._app_service.episode_helper._episode_iterator.episodes
+            ),
+        )
+        if episode_indices is not None:
             # Start the session.
             self._new_session = Session(
                 self._app_service.config,
-                list(episode_ids),
+                list(episode_indices),
                 dict(self._app_data.connected_users),
             )
 
@@ -58,7 +63,10 @@ class AppStateStartSession(AppStateBase):
                 "Invalid session",
             )
 
-    def _try_get_episode_ids(self) -> Optional[List[str]]:
+    @staticmethod
+    def _try_get_episode_indices(
+        data: AppData, total_episode_count: int
+    ) -> Optional[List[int]]:
         """
         Attempt to get episodes from client connection parameters.
         Episode IDs are indices within the episode sets.
@@ -71,79 +79,62 @@ class AppStateStartSession(AppStateBase):
         * Invalid 'episodes' format.
         * Episode indices out of bounds.
         """
-        data = self._app_data
 
         # Sanity checking.
-        if len(data.connected_users) == 0:
+        user_count = len(data.connected_users)
+        if user_count == 0:
             print("No user connected. Cancelling session.")
             return None
-        connection_record = list(data.connected_users.values())[0]
+        episodes: List[List[int]] = []
 
-        # Validate that episodes are selected.
-        if "episodes" not in connection_record:
-            print("Users did not request episodes. Cancelling session.")
-            return None
-        episodes_str = connection_record["episodes"]
+        # Validate that the episodes are integers.
+        for user_index in range(user_count):
+            episodes.append([])
+            connection_record = list(data.connected_users.values())[user_index]
 
-        # Validate that all users are requesting the same episodes.
-        for connection_record in data.connected_users.values():
-            if connection_record["episodes"] != episodes_str:
+            # Validate that episodes are selected.
+            if "episodes" not in connection_record:
+                print("Users did not request episodes. Cancelling session.")
+                return None
+            episodes_str = connection_record["episodes"]
+
+            # Validate that the parameter is a string.
+            if episodes_str is None or not isinstance(episodes_str, str):
                 print(
-                    "Users are requesting different episodes! Cancelling session."
+                    f"Episodes are supplied in an unexpected format: '{type(episodes_str)}'. Cancelling session."
                 )
                 return None
 
-        # Validate that the episode set is not empty.
-        if episodes_str is None or len(episodes_str) == 0:
-            print("Users did not request episodes. Cancelling session.")
-            return None
+            # Parse episode string.
+            episodes_split = episodes_str.split(",")
 
-        # Format: {lower_bound}-{upper_bound} E.g. 100-110
-        # Upper bound is exclusive.
-        episode_range_str = episodes_str.split("-")
-        if len(episode_range_str) != 2:
-            print("Invalid episode range. Cancelling session.")
-            return None
+            for episode_str in episodes_split:
+                try:
+                    episodes[user_index].append(int(episode_str))
+                except Exception:
+                    print(
+                        f"Episode index '{episode_str}' is not an integer. Cancelling session."
+                    )
+                    return None
 
-        # Validate that episodes are numeric.
-        start_episode_id = (
-            int(episode_range_str[0])
-            if episode_range_str[0].isdecimal()
-            else None
-        )
-        last_episode_id = (
-            int(episode_range_str[1])
-            if episode_range_str[0].isdecimal()
-            else None
-        )
-        if (
-            start_episode_id is None
-            or last_episode_id is None
-            or start_episode_id < 0
-        ):
-            print("Invalid episode names. Cancelling session.")
-            return None
+            # Validate that the episode set is not empty.
+            if len(episodes[0]) == 0:
+                print("User did not request episodes. Cancelling session.")
+                return None
 
-        total_episode_count = len(
-            self._app_service.episode_helper._episode_iterator.episodes
-        )
+            # Validate that all users are requesting the same episodes.
+            if user_index > 0 and episodes[user_index] != episodes[0]:
+                print(
+                    "Users are requesting different episodes. Cancelling session."
+                )
+                return None
 
-        # Validate episode range.
-        if start_episode_id >= total_episode_count:
-            print("Invalid episode names. Cancelling session.")
-            return None
+        # Validate that the episodes are within range.
+        for episode in episodes[0]:
+            if episode < 0 or episode >= total_episode_count:
+                print(
+                    f"Episode index '{episode}' is out of bounds. There are '{total_episode_count}' episodes in this dataset. Cancelling session."
+                )
+                return None
 
-        if last_episode_id >= total_episode_count:
-            last_episode_id = total_episode_count
-
-        # If in decreasing order, swap.
-        if start_episode_id > last_episode_id:
-            temp = last_episode_id
-            last_episode_id = start_episode_id
-            start_episode_id = temp
-
-        episode_ids: List[str] = []
-        for episode_id in range(start_episode_id, last_episode_id):
-            episode_ids.append(str(episode_id))
-
-        return episode_ids
+        return list(episodes[0])
