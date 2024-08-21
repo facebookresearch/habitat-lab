@@ -10,12 +10,17 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 try:
     from habitat_llm.agent.env import dataset  # noqa: F401
+    from habitat_llm.agent.env import (
+        register_actions,
+        register_measures,
+        register_sensors,
+    )
     from habitat_llm.agent.env.dataset import CollaborationEpisode
 
-    collaboration_episode_enabled = True
-except ImportError:
-    print("Unable to load CollaborationDataset episode format.")
-    collaboration_episode_enabled = False
+    habitat_llm_enabled = True
+except ImportError as e:
+    print(f"Unable to load 'habitat_llm'. {e}")
+    habitat_llm_enabled = False
 
 
 class CollaborationEpisodeData:
@@ -23,11 +28,14 @@ class CollaborationEpisodeData:
         self.instruction: str = ""
 
 
-if collaboration_episode_enabled:
+if habitat_llm_enabled:
 
     def load_collaboration_episode_data(
         episode: RearrangeEpisode,
     ) -> CollaborationEpisodeData:
+        """
+        Load the data contained within a 'CollaborationEpisode'.
+        """
         episode_data = CollaborationEpisodeData()
 
         if not isinstance(episode, CollaborationEpisode):
@@ -38,9 +46,24 @@ if collaboration_episode_enabled:
 
         return episode_data
 
+    def register_habitat_llm_extensions(config):
+        """
+        Register habitat-llm actions, sensors and measures.
+        """
+        register_actions(config)
+
+        if hasattr(config.habitat.dataset, "metadata"):
+            register_measures(config)
+
+        if hasattr(config, "habitat_llm") and config.habitat_llm.enable:
+            register_sensors(config)
+
 else:
 
     def load_collaboration_episode_data(
         episode: RearrangeEpisode,
     ) -> CollaborationEpisodeData:
         return CollaborationEpisodeData()
+
+    def register_habitat_llm_extensions(config):
+        pass
