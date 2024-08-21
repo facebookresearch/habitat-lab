@@ -51,20 +51,26 @@ class Mask(IntFlag):
 class Users:
     """
     Represents a set of users with a max_user_count upper bound.
+    By default, all users are "inactive". Add new users using the 'add_user' method.
     """
 
-    _max_user_mask: Mask
     _max_user_count: int
+    _active_user_mask: Mask
 
-    def __init__(self, max_user_count: int) -> None:
+    def __init__(
+        self, max_user_count: int, activate_users: bool = False
+    ) -> None:
         assert max_user_count >= 0
         assert max_user_count <= Mask.MAX_VALUE
         self._max_user_count = max_user_count
 
-        max_user_mask = 0
-        for _ in range(max_user_count):
-            max_user_mask = (max_user_mask << 1) + 1
-        self._max_user_mask = Mask(max_user_mask)
+        if activate_users:
+            user_mask = 0
+            for _ in range(max_user_count):
+                user_mask = (user_mask << 1) + 1
+            self._active_user_mask = Mask(user_mask)
+        else:
+            self._active_user_mask = Mask.NONE
 
     def indices(self, user_mask: Mask) -> Generator[int, Any, None]:
         """
@@ -74,12 +80,21 @@ class Users:
         for user_index in users.indices(Mask.all_except_indices([0,2])):
             ...
         """
-        bitset = user_mask & self._max_user_mask
+        bitset = user_mask & self._active_user_mask
         while bitset != 0:
             user_bit = bitset & -bitset
             user_index = log2(user_bit)
             yield int(user_index)
             bitset ^= user_bit
+
+    def activate_user(self, user_index: int) -> None:
+        """Activate an user."""
+        if user_index < self._max_user_count:
+            self._active_user_mask |= Mask.from_index(user_index)
+
+    def deactivate_user(self, user_index: int) -> None:
+        """Deactivate an user."""
+        self._active_user_mask &= ~Mask.from_index(user_index)
 
     def to_index_list(self, user_mask: Mask) -> List[int]:
         """Returns a list of user indices from the specified Mask."""
@@ -92,3 +107,8 @@ class Users:
     def max_user_count(self) -> int:
         """Returns the size of the user set."""
         return self._max_user_count
+
+    @property
+    def active_user_count(self) -> int:
+        """Returns the number of active users."""
+        return len(list(self.indices(Mask.ALL)))
