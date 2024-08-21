@@ -391,7 +391,7 @@ def draw_path(
     for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
         # Swapping x y
         cv2.line(
-            top_down_map,
+            cv2.Mat(top_down_map),
             prev_pt[::-1],
             next_pt[::-1],
             color,
