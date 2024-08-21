@@ -304,6 +304,7 @@ class ObjectStateMachine:
         Update all tracked object states for a simulation step.
 
         :param sim: The Simulator instance.
+        :param dt: TODO: MISSING DESCRIPTION
         """
 
         # first update any state context
@@ -326,18 +327,18 @@ class ObjectStateMachine:
         :return: The state snapshot as a Dict keyed by object state unique name, value is another dict mapping object instance handles to state values.
 
         Example:
-        >>> {
-        >>>     "is_powered_on": {
-        >>>         "my_lamp.0001": True,
-        >>>         "my_oven": False,
-        >>>         ...
-        >>>     },
-        >>>     "is_clean": {
-        >>>         "my_dish.0002:" False,
-        >>>         ...
-        >>>     },
-        >>>     ...
-        >>> }
+            >>> {
+            >>>     "is_powered_on": {
+            >>>         "my_lamp.0001": True,
+            >>>         "my_oven": False,
+            >>>         ...
+            >>>     },
+            >>>     "is_clean": {
+            >>>         "my_dish.0002:" False,
+            >>>         ...
+            >>>     },
+            >>>     ...
+            >>> }
         """
         snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
         for object_handle, states in self.objects_with_states.items():
