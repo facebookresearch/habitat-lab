@@ -240,19 +240,20 @@ class NetworkManager:
             )
 
             if len(inc_keyframes_and_messages) > 0:
-                # Consolidate all inc keyframes into one inc_keyframe
                 tmp_con_keyframe = inc_keyframes_and_messages[0]
+
+                # Discard messages for disconnected users.
+                messages = tmp_con_keyframe.messages
+                for user_index in range(len(messages)):
+                    if user_index not in self._user_slots:
+                        messages[user_index].clear()
+
+                # Consolidate all inc keyframes into one inc_keyframe
                 if len(inc_keyframes_and_messages) > 1:
                     for i in range(1, len(inc_keyframes_and_messages)):
                         self._update_consolidated_keyframes_and_messages(
                             tmp_con_keyframe, inc_keyframes_and_messages[i]
                         )
-                    # Discard messages for disconnected users.
-                    messages = tmp_con_keyframe.messages
-                    for user_index in range(len(messages)):
-                        if user_index not in self._user_slots:
-                            messages[user_index].clear()
-
                     inc_keyframes_and_messages = [tmp_con_keyframe]
 
                 for user_index in self._user_slots.keys():

@@ -60,7 +60,7 @@ class AppStatePickThrowVr(AppState):
             self._app_service.hitl_config.can_grasp_place_threshold
         )
         # Activate the remote user.
-        app_service.users.add_user(0)
+        app_service.users.activate_user(0)
 
         self._cam_transform: Optional[mn.Matrix4] = None
         self._held_target_obj_idx: Optional[int] = None

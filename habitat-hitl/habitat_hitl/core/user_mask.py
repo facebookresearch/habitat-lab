@@ -87,12 +87,12 @@ class Users:
             yield int(user_index)
             bitset ^= user_bit
 
-    def add_user(self, user_index: int) -> None:
+    def activate_user(self, user_index: int) -> None:
         """Activate an user."""
         if user_index < self._max_user_count:
             self._active_user_mask |= Mask.from_index(user_index)
 
-    def remove_user(self, user_index: int) -> None:
+    def deactivate_user(self, user_index: int) -> None:
         """Deactivate an user."""
         self._active_user_mask &= ~Mask.from_index(user_index)
 

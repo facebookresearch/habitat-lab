@@ -176,7 +176,7 @@ class HitlDriver(AppDriver):
 
         # Create a user container.
         # In local mode, there is always 1 active user.
-        # In remote mode, users must be activated/deactivated with the 'Users.add_user()' and 'remove_user()' methods.
+        # In remote mode, use 'activate_user()' and 'deactivate_user()' when handling connections.
         users = Users(
             max_user_count=max(
                 self._hitl_config.networking.max_client_count, 1
