@@ -101,6 +101,10 @@ def try_cv2_import():
 
 
 class Singleton(type):
+    """
+    This metatclass creates Singleton objects by ensuring only one instance is created and any call is directed to that instance.
+    """
+
     _instances: Dict["Singleton", "Singleton"] = {}
 
     def __call__(cls, *args, **kwargs):
