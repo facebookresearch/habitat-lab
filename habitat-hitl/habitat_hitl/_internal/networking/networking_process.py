@@ -520,7 +520,7 @@ async def start_websocket_server(
 async def start_http_availability_server(
     network_mgr: NetworkManager, networking_config
 ) -> aiohttp.web.AppRunner:
-    async def http_handler(request):
+    async def get_status(request):
         # return an HTTP code to indicate available or not
         code = (
             networking_config.http_availability_server.code_available
@@ -530,8 +530,24 @@ async def start_http_availability_server(
         # print(f"Returned availability HTTP code {code}")
         return aiohttp.web.Response(status=code)
 
+    async def get_server_state(request):
+        return aiohttp.web.json_response(
+            {
+                "accepting_users": network_mgr.is_server_available(),
+                "user_count": len(network_mgr._user_slots),
+            },
+            text=None,
+            body=None,
+            status=200,
+            reason=None,
+            headers=None,
+            content_type="application/json",
+            dumps=json.dumps,
+        )
+
     app = aiohttp.web.Application()
-    app.router.add_get("/", http_handler)
+    app.router.add_get("/", get_status)
+    app.router.add_get("/status", get_server_state)
     runner = aiohttp.web.AppRunner(
         app, access_log=None
     )  # access_log=None to silence log spam
