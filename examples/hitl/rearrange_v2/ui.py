@@ -627,7 +627,7 @@ class UI:
                     billboard=True,
                     destination_mask=dest_mask,
                 )
-    
+
     @staticmethod
     def _to_color_array(color: mn.Color4) -> List[float]:
         return [color.r, color.g, color.b, color.a]

@@ -236,7 +236,7 @@ class ClientMessageManager:
     ) -> None:
         r"""
         Draw an outline around the specified objects.
-        
+
         priority: Higher values are drawn in front of other outlines.
         color: Color of the outline.
         line_width: Width of the outline.
