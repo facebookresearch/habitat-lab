@@ -280,6 +280,17 @@ class RearrangeSim(HabitatSim):
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
+        # Load specified articulated object states from episode config
+        self._set_ao_states_from_ep(self.ep_info)
+        # reset objects to episode initial state
+        self._add_objs(
+            self.ep_info,
+            should_add_objects=False,  # objects should already by loaded
+            new_scene=False,
+        )  # the scene shouldn't change between resets
+        # auto-sleep rigid objects as optimization
+        if self._auto_sleep:
+            self._sleep_all_objects()
         return None
 
     @add_perf_timing_func()
