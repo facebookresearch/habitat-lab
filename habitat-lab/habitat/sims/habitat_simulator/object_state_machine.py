@@ -175,7 +175,6 @@ class BooleanObjectState(ObjectStateSpec):
 
     def default_value(self) -> Any:
         """
-        BUG: IS THIS FUNCTION SAFE??
         If an object does not have a value for this state defined, return a default value.
         """
 
