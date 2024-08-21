@@ -13,14 +13,11 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
-from habitat import logger
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
-from habitat_sim.physics import (  # BUG: IMPORT ISSUE.  HTML DOCUMENTATION WILL NOT RENDER
-    ManagedArticulatedObject,
-    ManagedRigidObject,
-)
+from habitat_sim.logging import logger
+from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 ##################################################
 # Supporting utilities for getting and setting metadata values in ManagedObject "user_defined" Configurations.
@@ -132,7 +129,6 @@ class ObjectStateSpec:
 
     def default_value(self) -> Any:
         """
-        BUG: IS THIS FUNCTION SAFE??
         If an object does not have a value for this state defined, return a default value.
         """
 
