@@ -805,14 +805,16 @@ class AppStateRearrangeV2(AppStateBase):
     def _is_episode_successful(self) -> bool:
         """
         Returns true if:
-        * Task success is >99%.
+        * 'task_percent_complete' is 100%.
         * All agents finished the episode without reporting an error.
         """
 
         task_percent_complete = self._metrics.get_task_percent_complete()
         task_successful = (
+            # We avoid comparing to 1.0 in case the implementation doesn't return a whole number.
             task_percent_complete > 0.99
             if task_percent_complete is not None
+            # If the task success metric isn't available, assume success.
             else True
         )
 
