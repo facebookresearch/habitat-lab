@@ -115,21 +115,6 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def center_crop(obs, new_shape):
-    """TODO: ADD FUNCTION DESCRIPTION"""
-    top_left = (
-        (obs.shape[0] // 2) - (new_shape[0] // 2),
-        (obs.shape[1] // 2) - (new_shape[1] // 2),
-    )
-    bottom_right = (
-        (obs.shape[0] // 2) + (new_shape[0] // 2),
-        (obs.shape[1] // 2) + (new_shape[1] // 2),
-    )
-    obs = obs[top_left[0] : bottom_right[0], top_left[1] : bottom_right[1], :]
-
-    return obs
-
-
 class DatasetJSONEncoder(json.JSONEncoder):
     """TODO: ADD CLASS DESCRIPTION"""
 
