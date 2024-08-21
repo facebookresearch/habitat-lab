@@ -377,7 +377,7 @@ def colorize_topdown_map(
 
 def draw_path(
     top_down_map: np.ndarray,
-    path_points: Sequence[Tuple],
+    path_points: Sequence[Tuple[float, float]],
     color: int = 10,
     thickness: int = 2,
 ) -> None:
