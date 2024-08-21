@@ -377,7 +377,7 @@ def colorize_topdown_map(
 
 def draw_path(
     top_down_map: np.ndarray,
-    path_points: Sequence[Tuple[float, float]],
+    path_points: Sequence[Tuple],
     color: int = 10,
     thickness: int = 2,
 ) -> None:
@@ -392,8 +392,8 @@ def draw_path(
         # Swapping x y
         cv2.line(
             cv2.Mat(top_down_map),
-            prev_pt[::-1],
-            next_pt[::-1],
+            (int(prev_pt[::-1][0]), int(prev_pt[::-1][1])),
+            (int(next_pt[::-1][0]), int(next_pt[::-1][1])),
             color,
             thickness=thickness,
         )
