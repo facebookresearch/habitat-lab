@@ -111,7 +111,7 @@ class PACMANTrainer(BaseILTrainer):
                 thickness,
             )
 
-            frames_with_text.append(frame)
+            frames_with_text.append(np.ndarray(frame))
         generate_video(
             video_option,
             results_dir,
