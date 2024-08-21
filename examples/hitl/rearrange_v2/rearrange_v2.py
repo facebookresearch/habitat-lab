@@ -447,7 +447,9 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._users = app_service.users
         self._num_users = self._users.max_user_count
-        self._agents = Users(len(agent_mgr._all_agent_data))
+        self._agents = Users(
+            len(agent_mgr._all_agent_data), activate_users=True
+        )
         self._num_agents = self._agents.max_user_count
 
         self._sps_tracker = AverageRateTracker(2.0)
@@ -495,7 +497,7 @@ class AppStateRearrangeV2(AppStateBase):
             )
 
         self._user_data: List[UserData] = []
-        for user_index in self._users.indices(Mask.ALL):
+        for user_index in range(self._users.max_user_count):
             agent_data = self._agent_data[
                 self._user_to_agent_index[user_index]
             ]
