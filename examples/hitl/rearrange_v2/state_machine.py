@@ -50,6 +50,7 @@ class StateMachine(AppState):
             )
         self._app_data.connected_users[connection["userIndex"]] = connection
         self._app_state._time_since_last_connection = 0.0
+        self._app_service.users.activate_user(user_index)
 
     def _on_client_disconnected(self, disconnection: DisconnectionRecord):
         user_index = disconnection["userIndex"]
@@ -59,6 +60,8 @@ class StateMachine(AppState):
             # raise RuntimeError(f"User index {user_index} already disconnected! Aborting.")
         else:
             del self._app_data.connected_users[user_index]
+
+        self._app_service.users.deactivate_user(user_index)
 
         # If a user has disconnected, send a cancellation signal to the current state.
         self._app_state.try_cancel()

@@ -174,7 +174,15 @@ class HitlDriver(AppDriver):
 
         self._episode_helper = EpisodeHelper(self.habitat_env)
 
-        users = Users(max(self._hitl_config.networking.max_client_count, 1))
+        # Create a user container.
+        # In local mode, there is always 1 active user.
+        # In remote mode, use 'activate_user()' and 'deactivate_user()' when handling connections.
+        users = Users(
+            max_user_count=max(
+                self._hitl_config.networking.max_client_count, 1
+            ),
+            activate_users=not self._hitl_config.networking.enable,
+        )
 
         self._client_message_manager = None
         if self.network_server_enabled:
