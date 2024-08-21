@@ -391,12 +391,12 @@ def draw_path(
     for prev_pt, next_pt in zip(path_points[:-1], path_points[1:]):
         # Swapping x y
         cv2.line(
-            cv2.Mat(top_down_map),
-            (int(prev_pt[::-1][0]), int(prev_pt[::-1][1])),
-            (int(next_pt[::-1][0]), int(next_pt[::-1][1])),
+            top_down_map,
+            prev_pt[::-1],
+            next_pt[::-1],
             color,
             thickness=thickness,
-        )
+        )  # type: ignore
 
 
 def colorize_draw_agent_and_fit_to_height(

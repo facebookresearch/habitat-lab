@@ -83,7 +83,7 @@ class PACMANTrainer(BaseILTrainer):
         ckpt_no = int(ckpt_epoch[6:])
 
         q_string = q_vocab_dict.token_idx_2_string(question)
-        frames_with_text = []
+        frames_with_text: List[np.ndarray] = []
         for frame in imgs:
             border_width = 32
             font = cv2.FONT_HERSHEY_SIMPLEX
