@@ -60,7 +60,7 @@ class RemoteClientState:
         self._gui_inputs: List[GuiInput] = []
         self._client_state_history: List[List[ClientState]] = []
         self._receive_rate_trackers: List[AverageRateTracker] = []
-        for _ in users.indices(Mask.ALL):
+        for _ in range(users.max_user_count):
             self._gui_inputs.append(GuiInput())
             self._client_state_history.append([])
             self._receive_rate_trackers.append(AverageRateTracker(2.0))
@@ -224,7 +224,7 @@ class RemoteClientState:
         Group a list of client states by user index.
         """
         output: List[List[ClientState]] = []
-        for _ in self._users.indices(Mask.ALL):
+        for _ in range(self._users.max_user_count):
             output.append([])
 
         for client_state in client_states:
