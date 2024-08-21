@@ -4,6 +4,9 @@
 
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
+from habitat.sims.habitat_simulator.object_state_machine import (
+    ObjectStateMachine,
+)
 
 
 def _try_register_habitat_sim():

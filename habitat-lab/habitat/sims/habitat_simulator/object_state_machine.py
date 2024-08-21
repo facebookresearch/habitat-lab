@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""This module implements a singleton state-machine architecture for representing and managing non-geometric object states via metadata manipulation. For example, tracking and manipulating state such as "powered on" or "clean vs dirty". This interface is intended to provide a foundation which can be extended for downstream applications."""
+
 from collections import defaultdict
 from typing import Any, Dict, List, Union
 
@@ -11,10 +13,10 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
-from habitat import logger
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
+from habitat_sim.logging import logger
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 ##################################################
@@ -31,7 +33,6 @@ def get_state_of_obj(
 
     :param obj: The ManagedObject.
     :param state_name: The name/key of the object state property to query.
-
     :return: The state value (variable type) or None if not found.
     """
 
@@ -92,7 +93,6 @@ class ObjectStateSpec:
         Determine whether or not an object instance can have this ObjectStateSpec by checking semantic class against the configured set.
 
         :param obj: The ManagedObject instance.
-
         :return: Whether or not the object has this state affordance.
         """
 
@@ -211,7 +211,6 @@ class BooleanObjectState(ObjectStateSpec):
         Toggles a boolean state, returning the newly set value.
 
         :param obj: The ManagedObject instance.
-
         :return: The new value of the state.
         """
 
@@ -305,6 +304,7 @@ class ObjectStateMachine:
         Update all tracked object states for a simulation step.
 
         :param sim: The Simulator instance.
+        :param dt: The timestep over which to update continuous states. Typically the time between calls to this function.
         """
 
         # first update any state context
@@ -323,21 +323,22 @@ class ObjectStateMachine:
         """
         Scrape all active ObjectStateSpecs to collect a snapshot of the current state of all objects.
 
+        :param sim: The Simulator instance for which to collect and return current object states.
         :return: The state snapshot as a Dict keyed by object state unique name, value is another dict mapping object instance handles to state values.
 
         Example:
-        {
-            "is_powered_on": {
-                "my_lamp.0001": True,
-                "my_oven": False,
-                ...
-            },
-            "is_clean": {
-                "my_dish.0002:" False,
-                ...
-            },
-            ...
-        }
+            >>> {
+            >>>     "is_powered_on": {
+            >>>         "my_lamp.0001": True,
+            >>>         "my_oven": False,
+            >>>         ...
+            >>>     },
+            >>>     "is_clean": {
+            >>>         "my_dish.0002:" False,
+            >>>         ...
+            >>>     },
+            >>>     ...
+            >>> }
         """
         snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
         for object_handle, states in self.objects_with_states.items():
