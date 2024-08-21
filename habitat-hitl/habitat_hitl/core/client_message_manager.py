@@ -226,6 +226,35 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["sceneChanged"] = True
 
+    def draw_object_outline(
+        self,
+        priority: int,
+        color: List[float],
+        line_width: float,
+        object_ids: List[int],
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Draw an outline around the specified objects.
+        
+        priority: Higher values are drawn in front of other outlines.
+        color: Color of the outline.
+        line_width: Width of the outline.
+        object_ids: List of objects to outline.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "outlines" not in message:
+                message["outlines"] = []
+            message["outlines"].append(
+                {
+                    "priority": priority,
+                    "color": color,
+                    "width": line_width,
+                    "objectIds": object_ids,
+                }
+            )
+
     def signal_app_ready(self, destination_mask: Mask = Mask.ALL):
         r"""
         See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.
