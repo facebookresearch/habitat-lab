@@ -243,8 +243,11 @@ class RearrangeTask(NavigationTask):
             self._is_episode_active = True
 
             if self._should_place_articulated_agent:
+                # here we are randomizing the base pos and rotation if necessary
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
+            # here we are setting initial joint states and such from configs, if a configured fixed base start state was provided, it is set
+            self._sim.agents_mgr.post_obj_load_reconfigure()
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
