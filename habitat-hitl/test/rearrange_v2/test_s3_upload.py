@@ -4,12 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys
 from typing import Dict, List
-from habitat_hitl.core.types import ConnectionRecord
 
-from examples.hitl.rearrange_v2.s3_upload import generate_unique_session_id, make_s3_filename
+from examples.hitl.rearrange_v2.s3_upload import (
+    generate_unique_session_id,
+    make_s3_filename,
+)
 from examples.hitl.rearrange_v2.util import timestamp
+from habitat_hitl.core.types import ConnectionRecord
 
 
 def test_generate_unique_session_id():
@@ -18,22 +20,22 @@ def test_generate_unique_session_id():
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_no-user_{timestamp()}"
     episode_ids = [2]
-    connection_records = {}
+    connection_records: Dict[int, ConnectionRecord] = {}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"2_no-user_{timestamp()}"
     episode_ids = [2, 3, 4, 5]
-    connection_records = {}
+    connection_records: Dict[int, ConnectionRecord] = {}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"2-3-4-5_no-user_{timestamp()}"
-    episode_ids = []
+    episode_ids: List[int] = []
     connection_records = {0: {"user_id": "test"}}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_test_{timestamp()}"
-    episode_ids = []
+    episode_ids: List[int] = []
     connection_records = {2: {"user_id": "test"}}
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_test_{timestamp()}"
-    episode_ids = []
+    episode_ids: List[int] = []
     connection_records = {
         0: {"user_id": "a"},
         1: {"user_id": "b"},
@@ -42,13 +44,14 @@ def test_generate_unique_session_id():
     }
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_a-b-c-d_{timestamp()}"
-    episode_ids = []
+    episode_ids: List[int] = []
     connection_records = {
         0: {"uid": "test"},
         1: {"uid": "test"},
     }
     session_id = generate_unique_session_id(episode_ids, connection_records)
     assert session_id == f"no-episode_invalid-user-invalid-user_{timestamp()}"
+
 
 def test_make_s3_filename():
     s3_filename = make_s3_filename("id", "te-st.txt")

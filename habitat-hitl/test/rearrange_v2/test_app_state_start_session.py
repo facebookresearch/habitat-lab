@@ -6,11 +6,12 @@
 
 
 from examples.hitl.rearrange_v2.app_data import AppData
-from examples.hitl.rearrange_v2.app_state_start_session import AppStateStartSession
+from examples.hitl.rearrange_v2.app_state_start_session import (
+    AppStateStartSession,
+)
 
 
 def test_try_get_episode_indices():
-
     total_episode_count = 10
     data = AppData(max_user_count=2)
 

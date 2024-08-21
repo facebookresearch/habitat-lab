@@ -5,10 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
+
 # Fixture for importing local files in 'examples/hitl/rearrange_v2'.
 import sys
-import os
-root_dir = os.path.join(os.path.dirname(__file__), '../../..')
+
+root_dir = os.path.join(os.path.dirname(__file__), "../../..")
 sys.path.insert(0, root_dir)
-rearrange_v2_dir = os.path.join(root_dir, 'examples/hitl/rearrange_v2')
+rearrange_v2_dir = os.path.join(root_dir, "examples/hitl/rearrange_v2")
 sys.path.insert(0, rearrange_v2_dir)
