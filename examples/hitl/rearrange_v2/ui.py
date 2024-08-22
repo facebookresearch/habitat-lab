@@ -547,10 +547,15 @@ class UI:
                 self._sim, object_id, self._world._link_id_to_ao_map
             )
             link_node = ao.get_link_scene_node(link_index)
-            aabb = link_node.cumulative_bb
             reachable = self._is_within_reach(link_node.translation)
             color = COLOR_VALID if reachable else COLOR_INVALID
-            self._draw_aabb(aabb, link_node.transformation, color)
+            self._gui_drawer._client_message_manager.draw_object_outline(
+                priority=1,
+                color=self._to_color_array(color),
+                line_width=8.0,
+                object_ids=[object_id],
+                destination_mask=Mask.from_index(self._user_index),
+            )
 
     def _draw_hovered_pickable(self) -> None:
         """Highlight the hovered pickable object."""
@@ -569,8 +574,13 @@ class UI:
         translation = managed_object.translation
         reachable = self._is_within_reach(translation)
         color = COLOR_VALID if reachable else COLOR_INVALID
-        aabb = managed_object.collision_shape_aabb
-        self._draw_aabb(aabb, managed_object.transformation, color)
+        self._gui_drawer._client_message_manager.draw_object_outline(
+            priority=0,
+            color=self._to_color_array(color),
+            line_width=8.0,
+            object_ids=[object_id],
+            destination_mask=Mask.from_index(self._user_index),
+        )
 
     def _draw_pickable_object_highlights(self):
         """Draw a highlight circle around visible pickable objects."""
@@ -617,3 +627,7 @@ class UI:
                     billboard=True,
                     destination_mask=dest_mask,
                 )
+
+    @staticmethod
+    def _to_color_array(color: mn.Color4) -> List[float]:
+        return [color.r, color.g, color.b, color.a]
