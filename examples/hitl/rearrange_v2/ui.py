@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Callable, List, Optional, Set, Tuple, cast
 
 import magnum as mn
 from ui_overlay import UIOverlay
@@ -51,10 +51,8 @@ COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
 COLOR_HIGHLIGHT = mn.Color4(_HI, _HI, _LO, _HI)  # Yellow
-
-SHOW_GOAL_OBJECTS_HINTS = False
-SHOW_GOAL_RECEPTACLE_HINTS = False
-SHOW_GOALS = SHOW_GOAL_OBJECTS_HINTS and SHOW_GOAL_RECEPTACLE_HINTS
+# Color for selected objects.
+COLOR_SELECTION = mn.Color4(_LO, _HI, _HI, 1.0)  # Cyan
 
 
 class UI:
@@ -227,6 +225,16 @@ class UI:
         for selection in self._selections:
             selection.update()
 
+        # Deselect on right click or escape.
+        if self._gui_input.get_mouse_button_down(
+            MouseButton.RIGHT
+        ) or self._gui_input.get_key_down(KeyCode.ESC):
+            self._click_selection.deselect()
+            # Select held object.
+            if self._held_object_id is not None:
+                self._click_selection._object_id = self._held_object_id
+
+        # Handle double-click.
         if self._gui_input.get_mouse_button_down(MouseButton.LEFT):
             clicked_object_id = self._click_selection.object_id
             if _handle_double_click():
@@ -249,6 +257,10 @@ class UI:
         if self._gui_input.get_key_down(KeyCode.H):
             self._is_help_shown = not self._is_help_shown
 
+        # Clear drop selection if not holding right click.
+        if not self._gui_input.get_mouse_button(MouseButton.RIGHT):
+            self._place_selection.deselect()
+
         self._ui_overlay.update()
 
     def draw_ui(self) -> None:
@@ -259,10 +271,12 @@ class UI:
 
         self._update_held_object_placement()
         self._update_hovered_object_ui()
+        self._update_selected_object_ui()
+
         self._draw_place_selection()
-        self._draw_hovered_interactable()
-        self._draw_hovered_pickable()
         self._draw_pickable_object_highlights()
+        self._draw_hovered_object_highlights()
+        self._draw_selected_object_highlights()
 
     def _get_grasp_manager(self) -> "RearrangeGraspManager":
         agent_mgr = self._sim.agents_mgr
@@ -403,6 +417,9 @@ class UI:
 
         overlay.update_controls_panel(controls)
 
+    def _can_open_close_receptacle(self, link_pos: mn.Vector3) -> bool:
+        return self._is_within_reach(link_pos) and self._held_object_id is None
+
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""
         if self._is_object_interactable(object_id):
@@ -414,8 +431,8 @@ class UI:
                 link_node = ao.get_link_scene_node(link_index)
                 link_pos = link_node.translation
 
-                if self._is_within_reach(link_pos):
-                    # Open/close object.
+                if self._can_open_close_receptacle(link_pos):
+                    # Open/close receptacle.
                     if link_id in self._world._opened_link_set:
                         sim_utilities.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
@@ -546,7 +563,7 @@ class UI:
             cam_direction.normalized(), ray_direction.normalized()
         )
 
-    def _is_pickable_object_visible(self, object_id: int) -> bool:
+    def _is_object_visible(self, object_id: int) -> bool:
         """
         Returns true if the camera can see the object.
         """
@@ -617,6 +634,9 @@ class UI:
             # print(f"States: {object_states}")
             pass
 
+    def _update_selected_object_ui(self):
+        """Draw a UI for the currently selected object."""
+
     def _draw_aabb(
         self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3
     ) -> None:
@@ -654,56 +674,6 @@ class UI:
             destination_mask=self._dest_mask,
         )
 
-    def _draw_hovered_interactable(self) -> None:
-        """Highlight the hovered interactable object."""
-        if not self._hover_selection.selected:
-            return
-
-        object_id = self._hover_selection.object_id
-        if not self._is_object_interactable(object_id):
-            return
-
-        link_index = self._world.get_link_index(object_id)
-        if link_index:
-            ao = sim_utilities.get_obj_from_id(
-                self._sim, object_id, self._world._link_id_to_ao_map
-            )
-            link_node = ao.get_link_scene_node(link_index)
-            reachable = self._is_within_reach(link_node.translation)
-            color = COLOR_VALID if reachable else COLOR_INVALID
-            self._gui_drawer._client_message_manager.draw_object_outline(
-                priority=1,
-                color=self._to_color_array(color),
-                line_width=8.0,
-                object_ids=[object_id],
-                destination_mask=Mask.from_index(self._user_index),
-            )
-
-    def _draw_hovered_pickable(self) -> None:
-        """Highlight the hovered pickable object."""
-        if not self._hover_selection.selected or self._is_holding_object():
-            return
-
-        object_id = self._hover_selection.object_id
-        if not self._is_object_pickable(
-            object_id
-        ) or self._world.is_any_agent_holding_object(object_id):
-            return
-
-        managed_object = sim_utilities.get_obj_from_id(
-            self._sim, object_id, self._world._link_id_to_ao_map
-        )
-        translation = managed_object.translation
-        reachable = self._is_within_reach(translation)
-        color = COLOR_VALID if reachable else COLOR_INVALID
-        self._gui_drawer._client_message_manager.draw_object_outline(
-            priority=0,
-            color=self._to_color_array(color),
-            line_width=8.0,
-            object_ids=[object_id],
-            destination_mask=Mask.from_index(self._user_index),
-        )
-
     def _draw_pickable_object_highlights(self):
         """Draw a highlight circle around visible pickable objects."""
         if self._is_holding_object():
@@ -717,7 +687,7 @@ class UI:
         for object_id in world._pickable_object_ids:
             if not world.is_any_agent_holding_object(
                 object_id
-            ) and self._is_pickable_object_visible(object_id):
+            ) and self._is_object_visible(object_id):
                 obj = sim_utilities.get_obj_from_id(sim, object_id)
 
                 # Make highlights near the edge of the screen less opaque.
@@ -731,7 +701,10 @@ class UI:
                 radius = diameter * 0.65
 
                 # Calculate color
-                if self._hover_selection.object_id == object_id:
+                if (
+                    self._hover_selection.object_id == object_id
+                    or self._click_selection.object_id == object_id
+                ):
                     reachable = self._is_within_reach(obj.translation)
                     color = COLOR_VALID if reachable else COLOR_INVALID
                     color[3] = (
@@ -749,6 +722,101 @@ class UI:
                     billboard=True,
                     destination_mask=dest_mask,
                 )
+
+    def _draw_hovered_object_highlights(self) -> None:
+        """Highlight the hovered object."""
+        object_id = self._hover_selection.object_id
+        if object_id is None:
+            return
+
+        sim = self._sim
+        obj = sim_utilities.get_obj_from_id(
+            sim, object_id, self._world._link_id_to_ao_map
+        )
+        if obj is None:
+            return
+
+        # Draw the outline of the highlighted interactable link (e.g. drawer in a cabinet).
+        if self._is_object_interactable(object_id):
+            link_index = self._world.get_link_index(object_id)
+            if link_index:
+                link_node = obj.get_link_scene_node(link_index)
+                reachable = self._can_open_close_receptacle(
+                    link_node.translation
+                )
+                color = COLOR_VALID if reachable else COLOR_INVALID
+                color = self._to_color_array(color)
+                color[3] = 0.3  # Make hover color dimmer than selection.
+                self._gui_drawer._client_message_manager.draw_object_outline(
+                    priority=1,
+                    color=color,
+                    line_width=8.0,
+                    object_ids=[object_id],
+                    destination_mask=Mask.from_index(self._user_index),
+                )
+
+        # Skip highlight if select object is the same as hovered object.
+        selected_obj_id = self._click_selection.object_id
+        if selected_obj_id is not None:
+            selected_obj = sim_utilities.get_obj_from_id(
+                sim, selected_obj_id, self._world._link_id_to_ao_map
+            )
+            if selected_obj is not None and obj.handle == selected_obj.handle:
+                return
+
+    def _draw_selected_object_highlights(self) -> None:
+        """Highlight the selected object."""
+        object_id = self._click_selection.object_id
+        if object_id is None:
+            return
+
+        sim = self._sim
+        obj = sim_utilities.get_obj_from_id(
+            sim, object_id, self._world._link_id_to_ao_map
+        )
+        if obj is None:
+            return
+
+        world = self._world
+
+        # Draw the outline of the highlighted interactable link (e.g. drawer in a cabinet).
+        if self._is_object_interactable(object_id):
+            link_index = self._world.get_link_index(object_id)
+            if link_index:
+                link_node = obj.get_link_scene_node(link_index)
+                reachable = self._can_open_close_receptacle(
+                    link_node.translation
+                )
+                color = COLOR_VALID if reachable else COLOR_INVALID
+                color = self._to_color_array(color)
+                self._gui_drawer._client_message_manager.draw_object_outline(
+                    priority=2,
+                    color=color,
+                    line_width=8.0,
+                    object_ids=[object_id],
+                    destination_mask=Mask.from_index(self._user_index),
+                )
+
+        # Draw outline of selected object.
+        # Articulated objects are always fully contoured.
+        object_ids: Set[int] = set()
+        object_ids.add(object_id)
+        if object_id in world._link_id_to_ao_map:
+            ao_id = world._link_id_to_ao_map[object_id]
+            ao = sim_utilities.get_obj_from_id(
+                sim, ao_id, world._link_id_to_ao_map
+            )
+            link_object_ids = ao.link_object_ids
+            for link_id in link_object_ids.keys():
+                object_ids.add(link_id)
+
+        self._gui_drawer._client_message_manager.draw_object_outline(
+            priority=0,
+            color=self._to_color_array(COLOR_SELECTION),
+            line_width=4.0,
+            object_ids=list(object_ids),
+            destination_mask=Mask.from_index(self._user_index),
+        )
 
     @staticmethod
     def _to_color_array(color: mn.Color4) -> List[float]:
