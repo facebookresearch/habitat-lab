@@ -1858,6 +1858,7 @@ class DatasetConfig(HabitatBaseConfig):
     :property scenes_dir: The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it.
     :property data_path: The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.
     :property split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument.
+    :property metadata: Optional. Additional information for interpreting the dataset.
 
     A dataset consists of episodes
     (a start configuration for a task within a scene) and a scene dataset
@@ -1871,6 +1872,8 @@ class DatasetConfig(HabitatBaseConfig):
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
+    # TODO: Make this field a structured dataclass.
+    metadata: Optional[Any] = None
 
 
 @dataclass
