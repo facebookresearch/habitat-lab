@@ -335,9 +335,9 @@ class UserData:
             )
 
         # Show picture-in-picture (PIP) viewport.
-        self.app_service.client_message_manager.show_viewport(
-            viewport_id=PIP_VIEWPORT_ID,
+        self.app_service.client_message_manager.update_camera_transform(
             cam_transform=pip_agent_data.cam_transform,
+            viewport_id=PIP_VIEWPORT_ID,
             destination_mask=Mask.from_index(self.user_index),
         )
 
