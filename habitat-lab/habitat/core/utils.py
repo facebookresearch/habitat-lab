@@ -8,7 +8,7 @@ import cmath
 import dataclasses
 import json
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import attr
 import numpy as np
@@ -30,7 +30,7 @@ except ImportError:
 
 
 def tile_images(images: List[np.ndarray]) -> np.ndarray:
-    r"""Tile multiple images into single image
+    """Tile multiple images into single image
 
     NOTE: “candidate for deprecation”: possible duplicate function at habitat-lab/habitat/utils/visualizations/utils.py
 
@@ -116,7 +116,7 @@ class Singleton(type):
 
 
 class DatasetJSONEncoder(json.JSONEncoder):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Extension of base JSONEncoder to handle common Dataset types: numpy array, numpy quaternion, Omegaconf, and dataclass."""
 
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -136,14 +136,15 @@ class DatasetJSONEncoder(json.JSONEncoder):
 
 
 class DatasetFloatJSONEncoder(DatasetJSONEncoder):
-    r"""JSON Encoder that sets a float precision for a space saving purpose and
+    """JSON Encoder that sets a float precision for a space saving purpose and
     encodes ndarray and quaternion. The encoder is compatible with JSON
     version 2.0.9.
     """
 
-    # Overriding method to inject own `_repr` function for floats with needed
-    # precision.
     def iterencode(self, o, _one_shot=False):
+        """
+        Overriding method to inject own `_repr` function for floats with needed precision.
+        """
         markers: Optional[Dict] = {} if self.check_circular else None
         if self.ensure_ascii:
             _encoder = encode_basestring_ascii
@@ -153,12 +154,23 @@ class DatasetFloatJSONEncoder(DatasetJSONEncoder):
         default_repr = lambda x: format(x, ".5f")
 
         def floatstr(
-            o,
-            allow_nan=self.allow_nan,
-            _repr=default_repr,
-            _inf=math.inf,
-            _neginf=-math.inf,
+            o: float,
+            allow_nan: bool = self.allow_nan,
+            _repr: Callable = default_repr,
+            _inf: float = math.inf,
+            _neginf: float = -math.inf,
         ):
+            """
+            Converts a float to a JSON string, handling edge cases and non-numbers.
+
+            :param o: the float to convert
+            :param allow_nan: whether or not to allow non-numeric values
+            :param _repr: the function for converting numeric floats to string
+            :param _inf: the value of infinite for equality check
+            :param _neginf: the value of negative infinite for equality check
+
+            :return: The string rep of the float
+            """
             if cmath.isnan(o):
                 text = "NaN"
             elif o == _inf:
