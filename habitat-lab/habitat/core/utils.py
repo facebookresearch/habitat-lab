@@ -119,6 +119,7 @@ class DatasetJSONEncoder(json.JSONEncoder):
     """Extension of base JSONEncoder to handle common Dataset types: numpy array, numpy quaternion, Omegaconf, and dataclass."""
 
     def default(self, obj):
+        # TODO: NEED DESCRIPTION
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         if isinstance(obj, quaternion.quaternion):
