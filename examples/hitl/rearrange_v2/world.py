@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 
 from habitat.sims.habitat_simulator import sim_utilities
 from habitat.tasks.rearrange.articulated_agent_manager import (
@@ -15,11 +15,13 @@ from habitat_sim.physics import (
     ManagedBulletArticulatedObject,
     ManagedBulletRigidObject,
 )
+from habitat_sim.scene import SemanticRegion
 
 
 class World:
     """
     Global world state shared by each user.
+    Encapsulates all information available in a scene.
     """
 
     def __init__(
@@ -42,6 +44,8 @@ class World:
         self._interactable_object_ids: Set[int] = set()
         # Cache of agent articulated object IDs.
         self._agent_object_ids: Set[int] = set()
+        # Cache of region names.
+        self._regions: Dict[int, SemanticRegion] = {}
 
     def reset(self) -> None:
         """
@@ -58,6 +62,11 @@ class World:
             rigid_obj = self.get_rigid_object(pickable_obj_id)
             # Ensure that rigid objects are collidable.
             rigid_obj.collidable = True
+
+        # Find regions.
+        regions = sim.semantic_scene.regions
+        for region_index in range(len(regions)):
+            self._regions[region_index] = regions[region_index]
 
         # Get set of interactable articulated object links.
         # Exclude all agents.
@@ -127,6 +136,20 @@ class World:
             agent_object_ids.add(link_object_id)
 
         return agent_object_ids
+
+    def get_primary_object_region(
+        self,
+        obj: Union[ManagedBulletArticulatedObject, ManagedBulletRigidObject],
+    ) -> Optional[SemanticRegion]:
+        """Get the name of the region that contains most of an object."""
+        object_regions = sim_utilities.get_object_regions(
+            sim=self._sim, object_a=obj, ao_link_map=self._link_id_to_ao_map
+        )
+        if len(object_regions) > 0:
+            primary_region = object_regions[0]
+            region_name = primary_region[0]
+            return self._regions[region_name]
+        return None
 
     def is_any_agent_holding_object(self, object_id: int) -> bool:
         """
