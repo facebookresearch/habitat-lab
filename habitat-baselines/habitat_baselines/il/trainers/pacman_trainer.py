@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from typing import List
 
+import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -17,7 +18,6 @@ from torch.utils.data import DataLoader
 
 import habitat
 from habitat import logger
-from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -29,8 +29,6 @@ from habitat_baselines.il.models.models import (
     NavPlannerControllerModel,
 )
 from habitat_baselines.utils.common import generate_video
-
-cv2 = try_cv2_import()
 
 
 @baseline_registry.register_trainer(name="pacman")
@@ -85,7 +83,7 @@ class PACMANTrainer(BaseILTrainer):
         ckpt_no = int(ckpt_epoch[6:])
 
         q_string = q_vocab_dict.token_idx_2_string(question)
-        frames_with_text = []
+        frames_with_text: List[np.ndarray] = []
         for frame in imgs:
             border_width = 32
             font = cv2.FONT_HERSHEY_SIMPLEX
@@ -113,7 +111,7 @@ class PACMANTrainer(BaseILTrainer):
                 thickness,
             )
 
-            frames_with_text.append(frame)
+            frames_with_text.append(np.ndarray(frame))
         generate_video(
             video_option,
             results_dir,

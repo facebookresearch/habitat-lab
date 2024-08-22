@@ -23,7 +23,6 @@ from tqdm import tqdm
 import habitat
 from habitat import logger
 from habitat.core.simulator import ShortestPathPoint
-from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
 from habitat_baselines.il.models.models import MultitaskCNN
 from habitat_baselines.utils.common import (
@@ -39,7 +38,7 @@ if TYPE_CHECKING:
 
     from habitat.task.nav import NavigationEpisode
 
-cv2 = try_cv2_import()
+import cv2
 
 
 class NavDataset(wds.Dataset):
