@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""This module implements a singleton manager class for tracking and applying kinematic relationships between objects in the simulation. It is meant to be instantiated upon Simulator init and then updated and applied as objects are moved, applying relative transformations down a parent->child kinematic tree."""
+
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -11,6 +13,7 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.core.logging import logger
 from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 
 
@@ -19,13 +22,15 @@ class RelationshipGraph:
     Uses two dictionaries to simulate a bi-directional tree relationship between objects.
 
     NOTE: All 'obj' ints are assumed to be object ids so that links can be supported in the tree structure.
+
     NOTE: because links are parented explicitly to their parent AO, we don't allow them to be children in the relationship manager, only parents.
     """
 
     def __init__(self) -> None:
         # bi-directional relationship maps
         self.obj_to_children: Dict[int, List[int]] = {}
-        self.obj_to_parents: Dict[int, List[int]] = {}
+        # any object can only have one parent, otherwise the chain of applied transforms can become self-inconsistent
+        self.obj_to_parents: Dict[int, int] = {}
         # cache the relationship type between two objects (parent,child)
         self.relation_types: Dict[Tuple[int, int], str] = {}
 
@@ -40,16 +45,19 @@ class RelationshipGraph:
 
         assert parent != child
         if (parent, child) in self.relation_types:
-            print(
+            logger.warn(
                 f"Redundant relationship detected. Changing '{parent}' {self.relation_types[(parent, child)]} '{child}' to '{parent}' {rel_type} '{child}'"
             )
         else:
             if parent not in self.obj_to_children:
                 self.obj_to_children[parent] = []
             self.obj_to_children[parent].append(child)
-            if child not in self.obj_to_parents:
-                self.obj_to_parents[child] = []
-            self.obj_to_parents[child].append(parent)
+            if child in self.obj_to_parents:
+                logger.warn(
+                    f"Inconsistent relationship requested: child object '{child}' already parented to '{self.obj_to_parents[child]}'. Changing parent to '{parent}' and removing previous relationship."
+                )
+                self.remove_relation(self.obj_to_parents[child], child)
+            self.obj_to_parents[child] = parent
         self.relation_types[(parent, child)] = rel_type
 
     def remove_relation(self, parent: int, child: int) -> None:
@@ -63,10 +71,8 @@ class RelationshipGraph:
         assert parent != child
         del self.relation_types[(parent, child)]
 
-        if parent in self.obj_to_parents[child]:
-            self.obj_to_parents[child].remove(parent)
-            if len(self.obj_to_parents[child]) == 0:
-                del self.obj_to_parents[child]
+        if child in self.obj_to_parents:
+            del self.obj_to_parents[child]
 
         if child in self.obj_to_children[parent]:
             self.obj_to_children[parent].remove(child)
@@ -79,6 +85,7 @@ class RelationshipGraph:
         """
         Remove all relationships for the object.
         Use this to remove an object from the kinematic manager.
+
         Examples: an object is picked/grasped or object is removed from simulation.
 
         :param parents_only: If set, remove only the upward relationships (parents) of the object. This maintains child relationships. For example, use this to move a container full of items.
@@ -89,9 +96,7 @@ class RelationshipGraph:
             for child in self.obj_to_children[obj]:
                 self.remove_relation(obj, child)
         if obj in self.obj_to_parents:
-            while obj in self.obj_to_parents:
-                self.remove_relation(self.obj_to_parents[obj][0], obj)
-            assert obj not in self.obj_to_parents
+            self.remove_relation(self.obj_to_parents[obj], obj)
 
     def get_root_parents(self) -> List[int]:
         """
@@ -114,7 +119,6 @@ class RelationshipGraph:
 
         :param sim: We need the Simulator instance to fetch the name strings.
         :param do_print: If true, print the relationship forest nicely in addition to returning it.
-
         :return: The relationship forest with strings instead of ints. The tuple contains: (object string, relationship type). Note, the strings include both object handles and link names, don't use them to backtrace the objects.
         """
 
@@ -156,6 +160,10 @@ class KinematicRelationshipManager:
     """
 
     def __init__(self, sim: habitat_sim.Simulator) -> None:
+        """..
+
+        :param sim: The Simulator instance to which this KinematicRelationshipManager is attached.
+        """
         self.relationship_graph = RelationshipGraph()
         self.sim = sim
         # cache the previous relative transforms for parent->child relationships
@@ -252,7 +260,7 @@ class KinematicRelationshipManager:
         Gather the relative transforms for the "work in progress" snapshot relations recursively to all children of the parent_id.
 
         :param parent_id: The parent of the subtree on which to recurse.
-        :param wip_snapshot: The work-in-progress snapshot being constructed by this recursive process. default_dict(lambda: {})
+        :param wip_snapshot: The work-in-progress snapshot being constructed by this recursive process. :py:`default_dict(lambda: {})`
         """
 
         if parent_id not in self.relationship_graph.obj_to_children:
@@ -283,11 +291,10 @@ class KinematicRelationshipManager:
         """
         Get the current parent to child transforms for all registered relationships.
 
-        #NOTE: Some objects may have multiple parents.
-
         :param root_parent_subset: Optionally, only compute the relations snapshot for a subset of root parents. Default is all root parents.
-
         :return: A dictionary mapping parent object_id to dictionaries mapping each child object_id to the relative transformation matrix between parent and child.
+
+        NOTE: Some objects may have multiple parents.
         """
 
         cur_root_parents = self.relationship_graph.get_root_parents()
@@ -316,7 +323,6 @@ class KinematicRelationshipManager:
         Get the global transformations for all root parents: those without any parent.
 
         :param root_parent_subset: Optionally, only compute the snapshot for a subset of root parents. Default is all root parents.
-
         :return: dictionary mapping root parent object_ids to their global transformation matrices.
         """
 
@@ -393,8 +399,7 @@ class KinematicRelationshipManager:
         Apply all transformations cached in the provided snapshot.
 
         :param snapshot: The snapshot with parent to child transformations which should be applied.
-        :param apply_all: If set, apply all transforms without checking for root parent transform deltas. Use "False" to limit application to dirty transforms.
-
+        :param apply_all: If set, apply all transforms without checking for root parent transform deltas. Use :py:`False` to limit application to dirty transforms.
         :return: The list of root parents for which the subtree transforms were updated.
         """
 

@@ -37,7 +37,8 @@ class GuiDrawer:
         # One local transform stack per user.
         self._local_transforms: List[List[mn.Matrix4]] = []
         if self._client_message_manager:
-            for _ in client_message_manager._users.indices(Mask.ALL):
+            users = client_message_manager._users
+            for _ in range(users.max_user_count):
                 self._local_transforms.append([])
 
     def get_sim_debug_line_render(self) -> Optional[DebugLineRender]:

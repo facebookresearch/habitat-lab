@@ -425,28 +425,3 @@ class ForwardOnlyAgent(habitat.Agent):
 # ### Other Examples
 #
 # [Create a new action space](https://github.com/facebookresearch/habitat-lab/blob/main/examples/new_actions.py)
-
-# %%
-# @title Sim2Real with Habitat { display-mode: "form" }
-
-try:
-    from IPython.display import HTML
-
-    HTML(
-        '<iframe width="560" height="315" src="https://www.youtube.com/embed/Hun2rhgnWLU" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
-    )
-except ImportError:
-    pass
-
-# %% [markdown]
-# Deploy habitat-sim trained models on real robots with the [habitat-pyrobot bridge](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/sims/pyrobot/pyrobot.py)
-#
-# ```python
-# # Are we in sim or reality?
-# if args.use_robot: # Use LoCoBot via PyRobot
-#     config.habitat.simulator.type = "PyRobot-Locobot-v0"
-# else: # Use simulation
-#     config.habitat.simulator.type = "Habitat-Sim-v0"
-# ```
-#
-# Paper: [https://arxiv.org/abs/1912.06321](https://arxiv.org/abs/1912.06321)

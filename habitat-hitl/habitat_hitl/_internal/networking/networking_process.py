@@ -147,6 +147,10 @@ class NetworkManager:
         while user_index in self._user_slots:
             user_index += 1
         self._user_slots[user_index] = client
+
+        # Remove user-specific messages.
+        self._consolidated_keyframe_and_messages.messages[user_index].clear()
+
         return user_index
 
     def _free_user_slot(self, user_index: int) -> None:
@@ -157,6 +161,9 @@ class NetworkManager:
         assert len(self._user_slots) > 0
         assert user_index in self._user_slots
         del self._user_slots[user_index]
+
+        # Remove user-specific messages.
+        self._consolidated_keyframe_and_messages.messages[user_index].clear()
 
     def _update_consolidated_keyframes_and_messages(
         self,
@@ -231,18 +238,23 @@ class NetworkManager:
             inc_keyframes_and_messages = (
                 self._interprocess_record.get_queued_keyframes()
             )
-            inc_keyframes = self._interprocess_record.get_queued_keyframes()
 
             if len(inc_keyframes_and_messages) > 0:
-                # consolidate all inc keyframes into one inc_keyframe
                 tmp_con_keyframe = inc_keyframes_and_messages[0]
+
+                # Discard messages for disconnected users.
+                messages = tmp_con_keyframe.messages
+                for user_index in range(len(messages)):
+                    if user_index not in self._user_slots:
+                        messages[user_index].clear()
+
+                # Consolidate all inc keyframes into one inc_keyframe
                 if len(inc_keyframes_and_messages) > 1:
-                    for i in range(1, len(inc_keyframes)):
+                    for i in range(1, len(inc_keyframes_and_messages)):
                         self._update_consolidated_keyframes_and_messages(
                             tmp_con_keyframe, inc_keyframes_and_messages[i]
                         )
-                        inc_keyframes_and_messages = [tmp_con_keyframe]
-                    inc_keyframes = [tmp_con_keyframe]
+                    inc_keyframes_and_messages = [tmp_con_keyframe]
 
                 for user_index in self._user_slots.keys():
                     slot = self._user_slots[user_index]
@@ -508,7 +520,7 @@ async def start_websocket_server(
 async def start_http_availability_server(
     network_mgr: NetworkManager, networking_config
 ) -> aiohttp.web.AppRunner:
-    async def http_handler(request):
+    async def get_status(request):
         # return an HTTP code to indicate available or not
         code = (
             networking_config.http_availability_server.code_available
@@ -518,8 +530,24 @@ async def start_http_availability_server(
         # print(f"Returned availability HTTP code {code}")
         return aiohttp.web.Response(status=code)
 
+    async def get_server_state(request):
+        return aiohttp.web.json_response(
+            {
+                "accepting_users": network_mgr.is_server_available(),
+                "user_count": len(network_mgr._user_slots),
+            },
+            text=None,
+            body=None,
+            status=200,
+            reason=None,
+            headers=None,
+            content_type="application/json",
+            dumps=json.dumps,
+        )
+
     app = aiohttp.web.Application()
-    app.router.add_get("/", http_handler)
+    app.router.add_get("/", get_status)
+    app.router.add_get("/status", get_server_state)
     runner = aiohttp.web.AppRunner(
         app, access_log=None
     )  # access_log=None to silence log spam
@@ -591,7 +619,7 @@ async def networking_main_async(
         # Abort if exception was raised, or if a termination signal was caught.
         if abort or stop.done():
             if stop.done():
-                print(f"Caught termination signal: {stop.result}.")
+                print(f"Caught termination signal: {stop.result()}.")
             break
         # Resume pending tasks.
         tasks = pending

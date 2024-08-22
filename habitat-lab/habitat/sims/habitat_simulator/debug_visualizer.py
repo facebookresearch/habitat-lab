@@ -4,18 +4,45 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""The DebugVisualizer (DBV) module provides a singleton class for quickly generating custom debug RGB images from an already instantiated Simulator instance. DebugObservation provides a wrapper class for accessing, saving, showing, and manipulating numpy image matrices with PIL. The module also provides some helper functions for highlighting objects with DebugLineRender and stitching images together into a matrix of images."""
+
 import math
 import os
 from typing import List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.utils.common import check_make_dir
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
+
+
+def project_point(
+    render_camera: habitat_sim.sensor.CameraSensor, point: mn.Vector3
+) -> mn.Vector2:
+    """
+    Project a 3D point into the render_camera's 2D screen space.
+
+    :param render_camera: The RenderCamera object. E.g. sensor._sensor_object.render_camera
+    :param point: The 3D global point to project.
+
+    :return: The 2D pixel coordinates in the resulting sensor's observation image.
+    """
+
+    # use the camera and projection matrices to transform the point onto the near plane
+    projected_point_3d = render_camera.projection_matrix.transform_point(
+        render_camera.camera_matrix.transform_point(point)
+    )
+
+    # convert the 3D near plane point to integer pixel space
+    point_2d = mn.Vector2(projected_point_3d[0], -projected_point_3d[1])
+    point_2d = point_2d / render_camera.projection_size()[0]
+    point_2d += mn.Vector2(0.5)
+    point_2d *= render_camera.viewport
+    return mn.Vector2i(point_2d)
 
 
 def stitch_image_matrix(images: List[Image.Image], num_col: int = 8):
@@ -59,7 +86,13 @@ class DebugObservation:
     NOTE: PIL.Image.Image.size is (width, height) while VisualSensor.resolution is (height, width)
     """
 
-    def __init__(self, obs_data: np.ndarray):
+    def __init__(self, obs_data: np.ndarray) -> None:
+        """..
+
+        :param obs_data: The visual sensor observation output matrix. E.g. from `sensor.get_observation()`
+
+        """
+
         self.obs_data: np.ndarray = obs_data
         self.image: Image.Image = (
             None  # creation deferred to show or save time
@@ -92,13 +125,35 @@ class DebugObservation:
             self.create_image()
         self.image.show()
 
+    def show_point(self, p_2d: np.ndarray) -> None:
+        """
+        Show the image with a 2D point marked on it as a blue circle.
+
+        :param p_2d: The 2D pixel point in the image.
+        """
+        if self.image is None:
+            self.create_image()
+        point_image = self.image.copy()
+        draw = ImageDraw.Draw(point_image)
+        circle_rad = 5  # pixels
+        draw.ellipse(
+            (
+                p_2d[0] - circle_rad,
+                p_2d[1] - circle_rad,
+                p_2d[0] + circle_rad,
+                p_2d[1] + circle_rad,
+            ),
+            fill="blue",
+            outline="blue",
+        )
+        point_image.show()
+
     def save(self, output_path: str, prefix: str = "") -> str:
         """
         Save the Image as png to a given location.
 
         :param output_path: Directory path for saving the image.
-        :param prefix: Optional prefix for output filename. Filename format: "<prefix>month_day_year_hourminutesecondmicrosecond.png"
-
+        :param prefix: Optional prefix for output filename. Filename format: :py:`<prefix>month_day_year_hourminutesecondmicrosecond.png`
         :return: file path of the saved image.
         """
 
@@ -133,14 +188,7 @@ def draw_object_highlight(
     if color is None:
         color = mn.Color4.magenta()
 
-    obj_bb = None
-    if obj.is_articulated:
-        from habitat.sims.habitat_simulator.sim_utilities import get_ao_root_bb
-
-        obj_bb = get_ao_root_bb(obj)
-    else:
-        obj_bb = obj.root_scene_node.cumulative_bb
-
+    obj_bb = obj.aabb
     obj_center = obj.transformation.transform_point(obj_bb.center())
     obj_size = obj_bb.size().max() / 2
 
@@ -182,12 +230,14 @@ class DebugVisualizer:
     Assumes the default agent (0) is a camera (i.e. there exists an RGB sensor coincident with agent 0 transformation).
 
     Available for visual debugging from PDB!
+
     Example:
-    from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
-    dbv = DebugVisualizer(sim)
-    dbv.get_observation().show()
-    dbv.translate(mn.Vector3(1,0,0), show=True)
-    dbv.peek(my_object, peek_all_axis=True).show()
+
+    >>> from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+    >>> dbv = DebugVisualizer(sim)
+    >>> dbv.get_observation().show()
+    >>> dbv.translate(mn.Vector3(1,0,0), show=True)
+    >>> dbv.peek(my_object, peek_all_axis=True).show()
     """
 
     def __init__(
@@ -292,7 +342,7 @@ class DebugVisualizer:
             self.sensor_uuid
         ]
 
-    def remove_dbv_agent(self):
+    def remove_dbv_agent(self) -> None:
         """
         Clean up a previously initialized DBV agent.
         """
@@ -357,7 +407,6 @@ class DebugVisualizer:
         :param vec: The delta vector to translate by.
         :param local: If True, the delta vector is applied in local space.
         :param show: If True, show the image from the resulting state.
-
         :return: if show is selected, the resulting observation is returned. Otherwise None.
         """
 
@@ -388,7 +437,6 @@ class DebugVisualizer:
         :param axis: The rotation axis. Default Y axis.
         :param local: If True, the delta vector is applied in local space.
         :param show: If True, show the image from the resulting state.
-
         :return: if show is selected, the resulting observation is returned. Otherwise None.
         """
 
@@ -419,7 +467,6 @@ class DebugVisualizer:
 
         :param look_at: 3D global position to point the camera towards.
         :param look_from: 3D global position of the camera.
-
         :return: a DebugObservation wrapping the np.ndarray.
         """
 
@@ -525,7 +572,6 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
-
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
@@ -566,34 +612,8 @@ class DebugVisualizer:
                 subject = subject_obj
 
         if subject_bb is None:
-            # if we have gathered an object instance, process the bounding box and transform
-            if isinstance(
-                subject, habitat_sim.physics.ManagedArticulatedObject
-            ):
-                from habitat.sims.habitat_simulator.sim_utilities import (
-                    get_ao_global_bb,
-                )
-
-                obj_bb = get_ao_global_bb(subject)
-                obj_bb_local = mn.Range3D.from_center(
-                    subject.transformation.inverted().transform_point(
-                        obj_bb.center()
-                    ),
-                    obj_bb.size() / 2.0,
-                )
-                subject_bb = obj_bb_local
-                subject_transform = (
-                    subject.root_scene_node.absolute_transformation()
-                )
-            elif isinstance(subject, habitat_sim.physics.ManagedRigidObject):
-                subject_bb = subject.root_scene_node.cumulative_bb
-                subject_transform = (
-                    subject.root_scene_node.absolute_transformation()
-                )
-            else:
-                raise AssertionError(
-                    f"The subject, '{subject}', is not a supported value. Should be an object, object handle, object_id integer, or one of 'stage' or 'scene'."
-                )
+            subject_bb = subject.aabb
+            subject_transform = subject.transformation
 
         return self._peek_bb(
             bb=subject_bb,
@@ -625,7 +645,6 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
-
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 

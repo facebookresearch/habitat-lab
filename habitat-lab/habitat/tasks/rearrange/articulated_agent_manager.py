@@ -170,6 +170,7 @@ class ArticulatedAgentManager:
             agent_data.articulated_agent.params.arm_init_params = (
                 target_arm_init_params
             )
+            # note this does not reset the base position and rotation
             agent_data.articulated_agent.reset()
 
             # Consume a fixed position from SIMULATOR.agent_0 if configured
