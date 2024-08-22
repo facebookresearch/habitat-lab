@@ -223,6 +223,7 @@ class UI:
         Draw the UI.
         """
         self._update_held_object_placement()
+        self._update_hovered_object_ui()
         self._draw_place_selection()
         self._draw_hovered_interactable()
         self._draw_hovered_pickable()
@@ -471,6 +472,28 @@ class UI:
 
         hit_info = self._raycast(ray, discriminator)
         return hit_info.object_id == object_id
+
+    def _update_hovered_object_ui(self):
+        """Draw a UI when hovering an object with the cursor."""
+        object_id = self._hover_selection.object_id
+
+        primary_region_name: Optional[str] = None
+
+        if object_id is not None:
+            world = self._world
+            sim = self._sim
+            obj = sim_utilities.get_obj_from_id(
+                sim, object_id, world._link_id_to_ao_map
+            )
+            if obj is not None:
+                primary_region = world.get_primary_object_region(obj)
+                if primary_region is not None:
+                    primary_region_name = primary_region.category.name()
+
+        if primary_region_name is not None:
+            # TODO: Draw UI
+            # print(primary_region_name)
+            pass
 
     def _draw_aabb(
         self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3
