@@ -461,7 +461,7 @@ class AppStateRearrangeV2(AppStateBase):
         self._server_input_enabled = False
         self._elapsed_time = 0.0
 
-        self._world = World(app_service.sim)
+        self._world = World(app_service.sim, app_service.config)
         self._metrics = Metrics(app_service)
 
         self._agent_to_user_index: Dict[int, int] = {}
@@ -706,6 +706,9 @@ class AppStateRearrangeV2(AppStateBase):
                 self._server_user_index = (
                     self._server_user_index + 1
                 ) % self._num_users
+
+        # Update world.
+        self._world.update(dt)
 
         # Copy server input to user input when server input is active.
         if self._app_service.hitl_config.networking.enable:
