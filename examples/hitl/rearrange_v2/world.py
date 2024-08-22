@@ -141,7 +141,7 @@ class World:
         self,
         obj: Union[ManagedBulletArticulatedObject, ManagedBulletRigidObject],
     ) -> Optional[SemanticRegion]:
-        """Get the name of the region that contains most of an object."""
+        """Get the semantic region that contains most of an object."""
         object_regions = sim_utilities.get_object_regions(
             sim=self._sim, object_a=obj, ao_link_map=self._link_id_to_ao_map
         )
