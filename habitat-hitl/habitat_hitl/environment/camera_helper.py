@@ -155,6 +155,14 @@ class CameraHelper:
         forward_dir = forward_dir.normalized()
         return forward_dir
 
+    def get_cam_forward_vector(self) -> Optional[mn.Vector3]:
+        assert self._cam_transform
+        forward_dir = self._cam_transform.transform_vector(
+            -mn.Vector3(0, 0, 1)
+        )
+        forward_dir = forward_dir.normalized()
+        return forward_dir
+
     def get_cam_transform(self) -> Optional[mn.Matrix4]:
         assert self._cam_transform
         return self._cam_transform
