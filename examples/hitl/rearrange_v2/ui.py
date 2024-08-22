@@ -408,6 +408,7 @@ class UI:
         return True
 
     def _update_hovered_object_ui(self):
+        """Draw a UI when hovering an object with the cursor."""
         object_id = self._hover_selection.object_id
 
         primary_region_name: Optional[str] = None
