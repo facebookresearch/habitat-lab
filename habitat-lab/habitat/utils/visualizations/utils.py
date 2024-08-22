@@ -8,16 +8,14 @@ import os
 import textwrap
 from typing import Dict, List, Optional, Tuple
 
+import cv2
 import imageio
 import numpy as np
 import tqdm
 
 from habitat.core.logging import logger
-from habitat.core.utils import try_cv2_import
 from habitat.utils.common import flatten_dict
 from habitat.utils.visualizations import maps
-
-cv2 = try_cv2_import()
 
 
 def paste_overlapping_image(
