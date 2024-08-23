@@ -42,6 +42,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         walk_pose_path: str,
         motion_fps: int = 30,
         base_offset: mn.Vector3 = BASE_HUMANOID_OFFSET,
+        limit_humanoid_speed_per_animation_speed: bool = True,
     ):
         """
         :param walk_pose_path: file containing the walking poses we care about.
@@ -83,6 +84,11 @@ class HumanoidRearrangeController(HumanoidBaseController):
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+        # alternate logic where humanoid speed is not throttled by animation speed
+        self.meters_per_step = 0.0
+        self.limit_humanoid_speed_per_animation_speed = (
+            limit_humanoid_speed_per_animation_speed
+        )
 
         self.hand_processed_data = {}
         self._hand_names = ["left_hand", "right_hand"]
@@ -125,8 +131,8 @@ class HumanoidRearrangeController(HumanoidBaseController):
         """
 
         seconds_per_step = 1.0 / ctrl_freq
-        meters_per_step = lin_speed * seconds_per_step
-        frames_per_step = meters_per_step / self.dist_per_step_size
+        self.meters_per_step = lin_speed * seconds_per_step
+        frames_per_step = self.meters_per_step / self.dist_per_step_size
         self.motion_fps = self.walk_motion.fps / frames_per_step
         rotate_amount = ang_speed * seconds_per_step
         rotate_amount = rotate_amount * 180.0 / np.pi
@@ -226,29 +232,10 @@ class HumanoidRearrangeController(HumanoidBaseController):
             self.walk_mocap_frame + step_size
         ) % self.walk_motion.num_poses
 
-        # Compute how much distance we covered in this motion
-        prev_cum_distance_covered = self.walk_motion.displacement[
-            prev_mocap_frame
-        ]
-        new_cum_distance_covered = self.walk_motion.displacement[
-            self.walk_mocap_frame
-        ]
-
-        offset = 0
-        if self.walk_mocap_frame < prev_mocap_frame:
-            # We looped over the motion
-            offset = self.walk_motion.displacement[-1]
-
-        distance_covered = max(
-            0, new_cum_distance_covered + offset - prev_cum_distance_covered
-        )
-        dist_diff = min(distance_to_walk, distance_covered)
-
         new_pose = self.walk_motion.poses[self.walk_mocap_frame]
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
-
         forward_V_norm = mn.Vector3(
             [forward_V[2], forward_V[1], -forward_V[0]]
         )
@@ -270,7 +257,32 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        forward_V_dist = forward_V * dist_diff * distance_multiplier
+
+        # Compute how much distance we covered in this motion
+        if self.limit_humanoid_speed_per_animation_speed:
+            prev_cum_distance_covered = self.walk_motion.displacement[
+                prev_mocap_frame
+            ]
+            new_cum_distance_covered = self.walk_motion.displacement[
+                self.walk_mocap_frame
+            ]
+
+            offset = 0
+            if self.walk_mocap_frame < prev_mocap_frame:
+                # We looped over the motion
+                offset = self.walk_motion.displacement[-1]
+
+            distance_covered = max(
+                0,
+                new_cum_distance_covered + offset - prev_cum_distance_covered,
+            )
+            dist_diff = min(distance_to_walk, distance_covered)
+            forward_V_dist = forward_V * dist_diff * distance_multiplier
+        else:
+            forward_V_dist = (
+                forward_V * self.meters_per_step * distance_multiplier
+            )
+
         obj_transform_base.translation += forward_V_dist
 
         rot_offset = mn.Matrix4.rotation(
@@ -398,24 +410,6 @@ class HumanoidRearrangeController(HumanoidBaseController):
             self.walk_mocap_frame + step_size
         ) % self.walk_motion.num_poses
 
-        # Compute how much distance we covered in this motion
-        prev_cum_distance_covered = self.walk_motion.displacement[
-            prev_mocap_frame
-        ]
-        new_cum_distance_covered = self.walk_motion.displacement[
-            self.walk_mocap_frame
-        ]
-
-        offset = 0
-        if self.walk_mocap_frame < prev_mocap_frame:
-            # We looped over the motion
-            offset = self.walk_motion.displacement[-1]
-
-        distance_covered = max(
-            0, new_cum_distance_covered + offset - prev_cum_distance_covered
-        )
-        dist_diff = min(distance_to_walk, distance_covered)
-
         new_pose = self.walk_motion.poses[self.walk_mocap_frame]
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
@@ -445,7 +439,32 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        forward_V_dist = forward_V * dist_diff * distance_multiplier
+
+        # Compute how much distance we covered in this motion
+        if self.limit_humanoid_speed_per_animation_speed:
+            prev_cum_distance_covered = self.walk_motion.displacement[
+                prev_mocap_frame
+            ]
+            new_cum_distance_covered = self.walk_motion.displacement[
+                self.walk_mocap_frame
+            ]
+
+            offset = 0
+            if self.walk_mocap_frame < prev_mocap_frame:
+                # We looped over the motion
+                offset = self.walk_motion.displacement[-1]
+
+            distance_covered = max(
+                0,
+                new_cum_distance_covered + offset - prev_cum_distance_covered,
+            )
+            dist_diff = min(distance_to_walk, distance_covered)
+            forward_V_dist = forward_V * dist_diff * distance_multiplier
+        else:
+            forward_V_dist = (
+                forward_V * self.meters_per_step * distance_multiplier
+            )
+
         obj_transform_base.translation += forward_V_dist
 
         rot_offset = mn.Matrix4.rotation(
