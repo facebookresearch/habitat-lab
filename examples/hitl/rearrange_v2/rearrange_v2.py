@@ -703,8 +703,6 @@ class AppStateRearrangeV2(AppStateBase):
 
         status_str = ""
         # the multi-agent case
-        status_str = ""
-        # the multi-agent case
         if (
             self._users.max_user_count > 1
             and self._user_data[
@@ -716,6 +714,18 @@ class AppStateRearrangeV2(AppStateBase):
                 status_str += "The other participant signaled that the task is completed.\nPress '0' when you are done.\n"
             elif self._has_any_agent_finished_failure():
                 status_str += "The other participant signaled a problem with the task.\nPress '0' to continue.\n"
+
+        # the single-learn case
+        if (
+            (len(self._user_data) == 1)
+            and len(self._agent_data) == 2
+            and any(
+                self._agent_data[agent_index].episode_completion_status
+                != EpisodeCompletionStatus.PENDING
+                for agent_index in range(self._num_agents)
+            )
+        ):
+            status_str += "\n\nThe other participant finished working on their part of the task.\nPress '0' when you are done."
 
         # the single-learn case
         if (
