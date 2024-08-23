@@ -45,6 +45,20 @@ from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
+LLM_CONTROLLER_FOUND = False
+try:
+    from habitat_hitl.environment.controllers.llm_controller import (
+        AgentTerminationEvent,
+        LLMController,
+        PlannerStatus,
+    )
+
+    LLM_CONTROLLER_FOUND = True
+except ImportError:
+    print(
+        "Could not find LLMController. HitL will only work with GUI controlled agents."
+    )
+
 
 class EpisodeCompletionStatus(Enum):
     PENDING = (0,)
@@ -151,6 +165,7 @@ class AgentData:
         self.agent_index = agent_index
 
         self.task_instruction = ""
+        self._episode_message: Optional[str] = None
 
         self.render_camera = render_camera
         self.cam_transform = mn.Matrix4.identity_init()
@@ -167,6 +182,24 @@ class AgentData:
             self.cam_transform = np.linalg.inv(
                 self.render_camera.camera_matrix
             )
+
+    def _on_termination_cb(self, _e: AgentTerminationEvent = None):
+        if LLM_CONTROLLER_FOUND:
+            if _e.status == PlannerStatus.SUCCESS:
+                self.episode_completion_status = (
+                    EpisodeCompletionStatus.SUCCESS
+                )
+            elif _e.status == PlannerStatus.FAILED:
+                self.episode_completion_status = (
+                    EpisodeCompletionStatus.FAILURE
+                )
+            elif _e.status == PlannerStatus.ERROR:
+                self.episode_completion_status = (
+                    EpisodeCompletionStatus.FAILURE
+                )
+                self._episode_message = _e.message
+        else:
+            self._episode_message = _e
 
 
 class UserData:
@@ -463,6 +496,8 @@ class AppStateRearrangeV2(AppStateBase):
         self._agent_to_user_index: Dict[int, int] = {}
         self._user_to_agent_index: Dict[int, int] = {}
 
+        self._error_message: Optional[str] = None
+
         self._agent_data: List[AgentData] = []
         for agent_index in range(self._num_agents):
             agent = agent_mgr._all_agent_data[agent_index]
@@ -495,6 +530,15 @@ class AppStateRearrangeV2(AppStateBase):
                     render_camera=render_camera,
                 )
             )
+            if LLM_CONTROLLER_FOUND and isinstance(
+                agent_controller, LLMController
+            ):
+                agent_controller._on_termination.registerCallback(
+                    self._agent_data[agent_index]._on_termination_cb
+                )
+                agent_controller._on_termination.registerCallback(
+                    self._on_termination_cb
+                )
 
         self._user_data: List[UserData] = []
         for user_index in range(self._users.max_user_count):
@@ -510,6 +554,22 @@ class AppStateRearrangeV2(AppStateBase):
                     server_sps_tracker=self._sps_tracker,
                 )
             )
+            if LLM_CONTROLLER_FOUND:
+                for agent_controller in app_service.all_agent_controllers:
+                    # register callbacks for LLMController
+                    if isinstance(agent_controller, LLMController):
+                        self._user_data[-1].ui.on_pick.registerCallback(
+                            agent_controller._on_pick
+                        )
+                        self._user_data[-1].ui.on_place.registerCallback(
+                            agent_controller._on_place
+                        )
+                        self._user_data[-1].ui.on_open.registerCallback(
+                            agent_controller._on_open
+                        )
+                        self._user_data[-1].ui.on_close.registerCallback(
+                            agent_controller._on_close
+                        )
 
         self._frame_recorder = FrameRecorder(
             app_service, app_data, self._world
@@ -563,9 +623,11 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._session.session_recorder.end_episode(
             episode_finished=episode_finished,
-            task_percent_complete=task_percent_complete
-            if task_percent_complete is not None
-            else 1.0,
+            task_percent_complete=(
+                task_percent_complete
+                if task_percent_complete is not None
+                else 1.0
+            ),
             task_explanation=feedback,
         )
 
@@ -622,6 +684,7 @@ class AppStateRearrangeV2(AppStateBase):
         ].agent_data.task_instruction
 
         status_str = ""
+        # the multi-agent case
         if (
             self._users.max_user_count > 1
             and self._user_data[
@@ -633,6 +696,18 @@ class AppStateRearrangeV2(AppStateBase):
                 status_str += "The other participant signaled that the task is completed.\nPress '0' when you are done.\n"
             elif self._has_any_agent_finished_failure():
                 status_str += "The other participant signaled a problem with the task.\nPress '0' to continue.\n"
+
+        # the single-learn case
+        if (
+            (len(self._user_data) == 1)
+            and len(self._agent_data) == 2
+            and any(
+                self._agent_data[agent_index].episode_completion_status
+                != EpisodeCompletionStatus.PENDING
+                for agent_index in range(self._num_agents)
+            )
+        ):
+            status_str += "\n\nThe other participant finished working on their part of the task.\nPress '0' when you are done."
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
@@ -798,3 +873,16 @@ class AppStateRearrangeV2(AppStateBase):
         )
 
         return task_successful and all_agents_reported_success
+
+    def _on_termination_cb(self, _e=None):
+        """
+        _e: habitat_llm.hitl.llm_controller.AgentTerminationEvent
+        """
+        if LLM_CONTROLLER_FOUND:
+            # Trigger episode change sequence when an agent error occurs.
+            if _e.status == PlannerStatus.ERROR:
+                self._error_message = f"Other participant encountered an error: {_e.message}. Skipping episode."
+            if _e.status == PlannerStatus.FAILED:
+                self._error_message = "The other participant has encountered an error. Skipping episode."
+        else:
+            self._error_message = _e
