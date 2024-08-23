@@ -120,9 +120,9 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             new_arm_joint_pos.append(target_arm)
 
         # Set the arm
-        self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
-            new_arm_joint_pos
-        )
+        self._sim.get_agent_data(
+            None
+        ).articulated_agent.arm_joint_pos = new_arm_joint_pos
         # Update the initial ee orientation
         _, self.init_ee_orientation = self._sim.get_agent_data(
             None
@@ -155,6 +155,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             np.random.random() > 1.0 - self._config.top_down_grasp_ratio
             and self._config.top_down_grasp
         )
+        top_down_grasp = False
         if top_down_grasp:
             # We do top down grasping here
             sim.grasp_mgr._keep_T = self.get_keep_T(abs_obj_idx)

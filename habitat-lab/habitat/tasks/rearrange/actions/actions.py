@@ -137,9 +137,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[self._action_arg_prefix + "grip_action"] = (
-                self.grip_ctrlr.action_space
-            )
+            action_spaces[
+                self._action_arg_prefix + "grip_action"
+            ] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -781,7 +781,6 @@ class ArmEEAction(ArticulatedAgentAction):
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
-
         des_joint_pos = self._ik_helper.calc_ik(
             self.ee_target, self.ee_rot_target
         )

@@ -417,7 +417,6 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
             .translation
         )
         local_ee_pos = trans.inverted().transform_point(ee_pos)
-
         return np.array(local_ee_pos, dtype=np.float32)
 
 
@@ -488,7 +487,6 @@ class RelativeInitialEEOrientationSensor(
         _, ee_orientation = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.get_ee_local_pose()
-
         return np.array(
             [
                 angle_between_quaternions(
@@ -1344,7 +1342,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             and cur_total_colls > self._max_count_colls
         ):
             reward -= self._config.count_coll_end_pen
-            rearrange_logger.debug(f"Exceeded max collisions, ending episode")
+            rearrange_logger.debug("Exceeded max collisions, ending episode")
             self._task.should_end = True
 
         # update the counter
