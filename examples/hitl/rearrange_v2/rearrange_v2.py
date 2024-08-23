@@ -704,6 +704,7 @@ class AppStateRearrangeV2(AppStateBase):
         status_str = ""
         # the multi-agent case
         status_str = ""
+        # the multi-agent case
         if (
             self._users.max_user_count > 1
             and self._user_data[
