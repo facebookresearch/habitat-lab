@@ -74,7 +74,9 @@ def update_config(
             gui_controlled_agent_config = get_agent_config(
                 sim_config, agent_id=gui_controlled_agent_index
             )
-            gui_controlled_agent_config.sim_sensors.clear()
+            # for compatibility with single-learn case where visual sensors are needed
+            if config.habitat_hitl.remove_gui_sensors:
+                gui_controlled_agent_config.sim_sensors.clear()
 
             lab_sensor_names = ["has_finished_oracle_nav"]
             for lab_sensor_name in lab_sensor_names:
@@ -100,19 +102,21 @@ def update_config(
                     task_config.measurements.pop(measurement_name)
 
             # todo: decide whether to fix up config here versus validate config
-            sim_sensor_names = [
-                "head_depth",
-                "head_rgb",
-                "articulated_agent_arm_depth",
-            ]
-            for sensor_name in sim_sensor_names + lab_sensor_names:
-                sensor_name = (
-                    sensor_name
-                    if len(sim_config.agents) == 1
-                    else (f"{gui_agent_key}_{sensor_name}")
-                )
-                if sensor_name in gym_obs_keys:
-                    gym_obs_keys.remove(sensor_name)
+            # for compatibility with single-learn case where visual sensors are needed
+            if config.habitat_hitl.remove_visual_sensors:
+                sim_sensor_names = [
+                    "head_depth",
+                    "head_rgb",
+                    "articulated_agent_arm_depth",
+                ]
+                for sensor_name in sim_sensor_names + lab_sensor_names:
+                    sensor_name = (
+                        sensor_name
+                        if len(sim_config.agents) == 1
+                        else (f"{gui_agent_key}_{sensor_name}")
+                    )
+                    if sensor_name in gym_obs_keys:
+                        gym_obs_keys.remove(sensor_name)
 
             if agent_type == "KinematicHumanoid":
                 # use humanoidjoint_action for GUI-controlled KinematicHumanoid
