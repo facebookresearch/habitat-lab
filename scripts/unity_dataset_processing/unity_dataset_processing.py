@@ -852,6 +852,8 @@ def main():
     additional_asset_group_size = 50
     objects_in_current_group = 0
     current_group_index = 0
+    error_count = 0
+    invalid_files: Set[str] = set()
     # shared_scene_objects: Set[str] = set()  # Objects that are both in scenes and episodes
     processed_objects: Set[str] = set()
     for episode in episode_set.episodes:
@@ -873,7 +875,12 @@ def main():
             #        for resolved in resolved_rigid_objs:
             #            shared_scene_objects.add(resolved)
             #        continue
-            assert len(resolved_rigid_objs) > 0
+
+            # HACK: Object is wrongly instantiated from scene dataset. Search there.
+            if len(resolved_rigid_objs) == 0:
+                error_count += 1
+                invalid_files.add(rigid_obj[0])
+                continue
             for resolved_rigid_obj in resolved_rigid_objs:
                 jobs.append(
                     Job(
@@ -982,6 +989,8 @@ def main():
 
     # Start processing.
     simplify_models(jobs, config)
+    print(f"{error_count} errors")
+    print(invalid_files)
 
 
 if __name__ == "__main__":
