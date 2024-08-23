@@ -85,6 +85,9 @@ class ControllerHelper:
                 gui_controlled_agent_config = (
                     self._find_gui_controlled_agent_config(agent_index)
                 )
+                llm_controlled_agent_config = (
+                    self._find_llm_controlled_agent_config(agent_index)
+                )
                 if gui_controlled_agent_config:
                     agent_name: str = (
                         self._env.sim.habitat_config.agents_order[agent_index]
@@ -156,7 +159,24 @@ class ControllerHelper:
                         )
 
                     self.controllers.append(gui_agent_controller)
+                elif llm_controlled_agent_config:
+                    try:
+                        from habitat_llm.hitl.llm_controller import (
+                            LLMController,
+                        )
 
+                        self.controllers.append(
+                            LLMController(
+                                agent_index,
+                                is_multi_agent,
+                                config,
+                                self._gym_habitat_env,
+                            )
+                        )
+                    except ImportError:
+                        raise RuntimeError(
+                            "Could not find habitat-llm in your environment. Please install habitat-llm to use LLMController with HitL."
+                        )
                 else:
                     self.controllers.append(
                         SingleAgentBaselinesController(
@@ -173,6 +193,16 @@ class ControllerHelper:
         ) in self._hitl_config.gui_controlled_agents:
             if gui_controlled_agent_config.agent_index == agent_index:
                 return gui_controlled_agent_config
+        return None
+
+    def _find_llm_controlled_agent_config(self, agent_index):
+        if not hasattr(self._hitl_config, "llm_controlled_agents"):
+            return None
+        for (
+            llm_controlled_agent_config
+        ) in self._hitl_config.llm_controlled_agents:
+            if llm_controlled_agent_config.agent_index == agent_index:
+                return llm_controlled_agent_config
         return None
 
     def get_gui_agent_controllers(self) -> List[Controller]:
