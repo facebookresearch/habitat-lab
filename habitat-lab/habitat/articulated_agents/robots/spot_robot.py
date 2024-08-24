@@ -110,7 +110,7 @@ class SpotRobot(MobileManipulator):
             ],
             ee_offset=[mn.Vector3(0.0, 0, -0.1)],
             ee_links=[7],
-            ee_constraint=np.array([[[0.0, 1.2], [-0.7, 0.7], [-0.3, 0.9]]]),
+            ee_constraint=np.array([[[0.16, 1.2], [-0.7, 0.7], [-0.3, 0.9]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
