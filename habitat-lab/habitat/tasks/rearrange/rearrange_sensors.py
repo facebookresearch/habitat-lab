@@ -403,7 +403,7 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
     def _get_observation_space(self, *args, **kwargs):
         add_dim = 0
-        if self._include_ee_rot:
+        if kwargs["config"].include_ee_rot:
             add_dim = 4
         return spaces.Box(
             shape=(3 + add_dim,),
