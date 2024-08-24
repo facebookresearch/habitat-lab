@@ -617,6 +617,7 @@ class EEPositionSensorConfig(LabSensorConfig):
     """
 
     type: str = "EEPositionSensor"
+    include_ee_rot: bool = False
 
 
 @dataclass
@@ -1744,9 +1745,7 @@ class TaskConfig(HabitatBaseConfig):
     # For the open_close_drawer task
     # The format is [x_min, y_min, x_max, y_max]
     rectangle_spawn_region: Optional[List[float]] = None
-    object_target_noise: float = (
-        0.0  # target place/pick object location noise, only for the obj_goal_sensor
-    )
+    object_target_noise: float = 0.0  # target place/pick object location noise, only for the obj_goal_sensor
     # For semantic pick skills
     semantic_pick_training: bool = False
     topdown_side_training: bool = False

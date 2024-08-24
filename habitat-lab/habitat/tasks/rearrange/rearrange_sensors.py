@@ -9,6 +9,7 @@ from collections import defaultdict, deque
 
 import magnum as mn
 import numpy as np
+import quaternion
 import torch
 from gym import spaces
 
@@ -391,6 +392,7 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        self._include_ee_rot = config.include_ee_rot
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -417,7 +419,18 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
             .translation
         )
         local_ee_pos = trans.inverted().transform_point(ee_pos)
-        return np.array(local_ee_pos, dtype=np.float32)
+        local_ee_pos = np.array(local_ee_pos, dtype=np.float32)
+
+        if self._include_ee_rot:
+            # Get ee orientation
+            _, ee_orientation = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.get_ee_local_pose()
+            ee_orientation = quaternion.as_float_array(ee_orientation)
+
+            return np.concatenate([local_ee_pos, ee_orientation], axis=0)
+        else:
+            return local_ee_pos
 
 
 @registry.register_sensor
