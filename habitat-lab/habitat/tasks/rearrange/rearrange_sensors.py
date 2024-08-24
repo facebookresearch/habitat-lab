@@ -402,8 +402,11 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args, **kwargs):
+        add_dim = 0
+        if self._include_ee_rot:
+            add_dim = 4
         return spaces.Box(
-            shape=(3,),
+            shape=(3 + add_dim,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
