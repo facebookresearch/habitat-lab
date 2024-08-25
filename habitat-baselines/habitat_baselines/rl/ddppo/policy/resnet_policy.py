@@ -47,12 +47,8 @@ except ImportError:
     clip = None
 
 try:
-    from transformers import (
-        AutoModel,
-        AutoProcessor,
-        SiglipVisionConfig,
-    )
-except:
+    from transformers import AutoModel, AutoProcessor, SiglipVisionConfig
+except Exception:
     AutoModel = None
 
 
@@ -468,7 +464,9 @@ class ResNetSIGLIPEncoder(nn.Module):
             # Load the model based on HuggingFace's transformers
             configuration = SiglipVisionConfig()
             if self.rgb and self.depth:
-                self.output_shape = (int(configuration.hidden_size*2),)  # 768 * 2
+                self.output_shape = (
+                    int(configuration.hidden_size * 2),
+                )  # 768 * 2
             else:
                 self.output_shape = (int(configuration.hidden_size),)  # 768
 
@@ -476,7 +474,7 @@ class ResNetSIGLIPEncoder(nn.Module):
             self.backbone = AutoModel.from_pretrained(
                 self._model_name, torch_dtype=torch.bfloat16
             ).to(self._device)
-            self.preprocess = AutoProcessor.from_pretrained(self._model_name)  
+            self.preprocess = AutoProcessor.from_pretrained(self._model_name)
 
             # Disable grad
             for param in self.backbone.parameters():
@@ -497,51 +495,51 @@ class ResNetSIGLIPEncoder(nn.Module):
             return None
 
         cnn_input = []
-        if self.rgb:
-            # We only select the first one
-            name = self.rgb_obs_space_name[0]
-            rgb_observations = observations[name]
-            rgb_observations = rgb_observations.permute(
-                0, 3, 1, 2
-            )  # BATCH x CHANNEL x HEIGHT X WIDTH
-            rgb_observations = torch.stack(
-                [self.preprocess(images=rgb_image, return_tensors="pt")["pixel_values"][0].bfloat16() for rgb_image in rgb_observations]
-            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
-            rgb_observations = rgb_observations.to(self._device)
-            rgb_observations_input = {}
-            rgb_observations_input["pixel_values"] = rgb_observations
-            rgb_x = self.backbone.get_image_features(**rgb_observations_input)
-            rgb_x = rgb_x.float() # Make it back to torch.float32
-            cnn_input.append(rgb_x)
+        batch_size = 0
+        first_observation_type = None
+        for k in self.visual_keys:
+            obs_k = observations[k]
+            batch_size = obs_k.shape[0]  # Get the batch size
+            if "depth" in k:
+                obs_k = (
+                    obs_k[..., 0] * 255.0
+                ).int()  # [BATCH x HEIGHT X WIDTH]
+                obs_k = torch.stack(
+                    [obs_k] * 3, dim=1
+                )  # [BATCH x CHANNEL x HEIGHT X WIDTH]
+                if first_observation_type is None:
+                    first_observation_type = "depth"
+            else:
+                # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+                obs_k = obs_k.permute(0, 3, 1, 2)
+                if first_observation_type is None:
+                    first_observation_type = "rgb"
+            cnn_input.append(obs_k)
 
-        if self.depth:
-            # We only select the first one
-            name = self.depth_obs_space_name[0]
-            depth_observations = observations[name][
-                ..., 0
-            ]  # [BATCH x HEIGHT X WIDTH]
-            ddd = torch.stack(
-                [depth_observations] * 3, dim=1
-            )  # [BATCH x 3 x HEIGHT X WIDTH]
-            ddd = torch.stack(
-                [
-                    self.preprocess(images=depth_map, return_tensors="pt")["pixel_values"][0].bfloat16()
-                    for depth_map in ddd
-                ]
-            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
-            ddd = ddd.to(self._device)
-            ddd_input = {}
-            ddd_input["pixel_values"] = ddd
-            depth_x = self.backbone.get_image_features(**ddd_input)
-            depth_x = depth_x.float() # Make it back to torch.float32
-            cnn_input.append(depth_x)
+        x = torch.cat(cnn_input, dim=0)  # [BATCH x 3 x HEIGHT X WIDTH]
+        x = self.preprocess(images=x, return_tensors="pt")[
+            "pixel_values"
+        ].bfloat16()
+        x = x.to(self._device)
+        x_input = {"pixel_values": x}
+        x_feat = self.backbone.get_image_features(
+            **x_input
+        ).float()  # [BATCH, FEATURE_SIZE]
 
-        if self.rgb and self.depth:
-            x = torch.cat((cnn_input[0],  cnn_input[1]), dim=1)
-        else:
-            x = torch.cat(cnn_input, dim=1)
+        if self.rgb and self.depth:  # enable both RGB and DEPTH observations
+            # Only support 1 RGB and 1 depth cases
+            assert x_feat.shape[0] / batch_size == 2
+            # Split the tensor
+            if first_observation_type == "depth":  # first portion is depth
+                x_depth = x_feat[0:batch_size, ...]
+                x_rgb = x_feat[batch_size:, ...]
+                x_feat = torch.cat((x_depth, x_rgb), dim=1)
+            else:
+                x_rgb = x_feat[0:batch_size, ...]
+                x_depth = x_feat[batch_size:, ...]
+                x_feat = torch.cat((x_depth, x_rgb), dim=1)
 
-        return x
+        return x_feat
 
 
 class PointNavResNetNet(Net):
