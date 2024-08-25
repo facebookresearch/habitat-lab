@@ -710,7 +710,6 @@ class ArtObjReward(RearrangeReward):
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
         self._any_at_desired_state = False
-        self._prev_ee_orientation_delta = 0
         super().reset_metric(
             *args,
             episode=episode,
@@ -744,6 +743,7 @@ class ArtObjReward(RearrangeReward):
             cur_dist = 0
             prev_dist = 0
         else:
+            # Compute the distance to the target state
             cur_dist = abs(link_state - task.success_js_state)
             prev_dist = abs(self._prev_art_state - task.success_js_state)
 
@@ -778,19 +778,12 @@ class ArtObjReward(RearrangeReward):
         # Check if the robot calls grasping early
         if (
             task.actions["arm_action"].grip_ctrlr.does_call_grasp
-            and self._config.gaze_method
             and not cur_has_grasped
             and not self._config.do_not_check_grasp
         ):
             # early call to close the gripper
             reward -= self._config.early_grasp_pen
             task.should_end = True
-
-        # Get the current angle between the initial pose and the current pose
-        _, ee_ang = get_gripper_state(self._sim.articulated_agent)
-        cur_angle = abs(
-            angle_between_quaternions(task.init_pose, ee_ang)
-        ) - offset_in_yaw(self._sim.articulated_agent)
 
         if is_art_obj_state_succ:
             if not self._config.gaze_method:
@@ -804,13 +797,9 @@ class ArtObjReward(RearrangeReward):
             # Give the reward based on distance to the handle
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
             reward += self._config.marker_dist_reward * dist_diff
-            # Give the reward based on orientation change
-            ori_diff = self._prev_ee_orientation_delta - cur_angle
-            reward += self._config.ee_orientation_reward * ori_diff
 
         self._prev_ee_to_rest = ee_to_rest_distance
 
         self._prev_ee_dist_to_marker = cur_ee_dist_to_marker
-        self._prev_ee_orientation_delta = cur_angle
         self._prev_art_state = link_state
         self._metric = reward

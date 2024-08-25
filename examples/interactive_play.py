@@ -80,7 +80,8 @@ except ImportError:
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/skills/place_spot_hssd_ee.yaml"
+# DEFAULT_CFG = "benchmark/rearrange/skills/place_spot_hssd_ee.yaml"
+DEFAULT_CFG = "benchmark/rearrange/skills/open_cab_spot_ee.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -792,9 +793,7 @@ if __name__ == "__main__":
                 raise ValueError(
                     "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
                 )
-            sim_config.agents.main_agent.ik_arm_urdf = (
-                "./data/robots/hab_spot_arm/urdf/hab_spot_only_arm_refine_v2.urdf"
-            )
+            sim_config.agents.main_agent.ik_arm_urdf = "./data/robots/hab_spot_arm/urdf/hab_spot_only_arm_refine_v2.urdf"
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
