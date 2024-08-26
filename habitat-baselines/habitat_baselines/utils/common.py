@@ -34,7 +34,7 @@ from torch import nn as nn
 from habitat import logger
 from habitat.core.dataset import Episode
 from habitat.core.spaces import EmptySpace
-from habitat.core.utils import Singleton, try_cv2_import
+from habitat.core.utils import Singleton
 from habitat.utils import profiling_wrapper
 from habitat.utils.visualizations.utils import images_to_video
 from habitat_baselines.common.tensor_dict import (
@@ -47,9 +47,7 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
-
-cv2 = try_cv2_import()
-
+import cv2
 
 if hasattr(torch, "inference_mode"):
     inference_mode = torch.inference_mode

@@ -14,6 +14,7 @@ from habitat_hitl.core.user_mask import Mask, Users
 
 DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
+MAIN_VIEWPORT: Final[int] = -1
 
 
 # TODO: Move to another file.
@@ -225,6 +226,35 @@ class ClientMessageManager:
             message = self._messages[user_index]
             message["sceneChanged"] = True
 
+    def draw_object_outline(
+        self,
+        priority: int,
+        color: List[float],
+        line_width: float,
+        object_ids: List[int],
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Draw an outline around the specified objects.
+
+        priority: Higher values are drawn in front of other outlines.
+        color: Color of the outline.
+        line_width: Width of the outline.
+        object_ids: List of objects to outline.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "outlines" not in message:
+                message["outlines"] = []
+            message["outlines"].append(
+                {
+                    "priority": priority,
+                    "color": color,
+                    "width": line_width,
+                    "objectIds": object_ids,
+                }
+            )
+
     def signal_app_ready(self, destination_mask: Mask = Mask.ALL):
         r"""
         See hitl_defaults.yaml wait_for_app_ready_signal documentation. Sloppy: this is a message to NetworkManager, not the client.
@@ -269,7 +299,7 @@ class ClientMessageManager:
         destination_mask: Mask = Mask.ALL,
     ):
         r"""
-        Set the properties of a viewport. Unlike show_viewport(), this does not have to be called every frame.
+        Set the properties of a viewport.
         Use viewport_id '-1' to edit the default viewport.
 
         viewport_id: Unique identifier of the viewport.
@@ -288,29 +318,6 @@ class ClientMessageManager:
             for layer in layers.indices(visible_layer_ids):
                 viewport_properties["layers"].append(layer)
             viewport_properties["rect"] = viewport_rect_xywh
-
-    def show_viewport(
-        self,
-        viewport_id: int,
-        cam_transform: mn.Matrix4,
-        destination_mask: Mask = Mask.ALL,
-    ):
-        """
-        Show a picture-in-picture viewport rendering the specified camera matrix.
-        This must be repeatedly called for the viewport to stay visible.
-        The viewport_id '-1' is reserved for the main viewport. It is always visible.
-        Use set_viewport_properties() to configure the viewport.
-        """
-        assert viewport_id != -1
-        for user_index in self._users.indices(destination_mask):
-            message = self._messages[user_index]
-            viewport_properties = _obtain_viewport_properties(
-                message, viewport_id
-            )
-            viewport_properties["enabled"] = True
-            viewport_properties["camera"] = _create_transform_dict(
-                cam_transform
-            )
 
     def update_navmesh_triangles(
         self,
@@ -335,10 +342,15 @@ class ClientMessageManager:
             ]
 
     def update_camera_transform(
-        self, cam_transform: mn.Matrix4, destination_mask: Mask = Mask.ALL
+        self,
+        cam_transform: mn.Matrix4,
+        viewport_id: int = MAIN_VIEWPORT,
+        destination_mask: Mask = Mask.ALL,
     ) -> None:
         r"""
-        Update the main camera transform.
+        Update the camera transform of a viewport.
+        Use the default 'viewport_id' 'MAIN_VIEWPORT' to update the main camera.
+        Use 'set_viewport_properties' to create or update a viewport.
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
@@ -352,9 +364,9 @@ class ClientMessageManager:
                 rot_vec[2],
             ]
 
-            message["camera"] = {}
-            message["camera"]["translation"] = [pos[0], pos[1], pos[2]]
-            message["camera"]["rotation"] = [
+            camera = _obtain_camera(message, viewport_id)
+            camera["translation"] = [pos[0], pos[1], pos[2]]
+            camera["rotation"] = [
                 rot[0],
                 rot[1],
                 rot[2],
@@ -387,9 +399,18 @@ def _obtain_object_properties(
 def _obtain_viewport_properties(
     message: Message, viewport_id: int
 ) -> Dict[str, Any]:
-    """Get or create the properties dict of an object_id."""
+    """Get or create the properties dict of a viewport."""
     if "viewports" not in message:
         message["viewports"] = {}
     if viewport_id not in message["viewports"]:
         message["viewports"][viewport_id] = {}
     return message["viewports"][viewport_id]
+
+
+def _obtain_camera(message: Message, viewport_id: int) -> Dict[str, Any]:
+    """Get or create the camera dict of a camera."""
+    if "cameras" not in message:
+        message["cameras"] = {}
+    if viewport_id not in message["cameras"]:
+        message["cameras"][viewport_id] = {}
+    return message["cameras"][viewport_id]

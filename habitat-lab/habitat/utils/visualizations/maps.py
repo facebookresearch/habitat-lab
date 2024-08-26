@@ -11,7 +11,6 @@ import imageio
 import numpy as np
 import scipy.ndimage
 
-from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations import utils
 
 try:
@@ -19,8 +18,7 @@ try:
 except ImportError:
     pass
 
-cv2 = try_cv2_import()
-
+import cv2
 
 AGENT_SPRITE = imageio.imread(
     os.path.join(
@@ -398,7 +396,7 @@ def draw_path(
             next_pt[::-1],
             color,
             thickness=thickness,
-        )
+        )  # type: ignore
 
 
 def colorize_draw_agent_and_fit_to_height(

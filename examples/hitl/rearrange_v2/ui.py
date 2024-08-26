@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 import magnum as mn
 from world import World
@@ -24,6 +24,8 @@ from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim.geo import Ray
+from habitat_sim.physics import RayHitInfo
 
 if TYPE_CHECKING:
     from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -43,7 +45,7 @@ COLOR_VALID = mn.Color4(_LO, _HI, _LO, 1.0)  # Green
 # Color for an invalid action.
 COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 # Color for goal object-receptacle pairs.
-COLOR_GOALS = mn.Color4(_HI, _HI, _LO, 1.0)  # Yellow
+COLOR_HIGHLIGHT = mn.Color4(_HI, _HI, _LO, _HI)  # Yellow
 
 SHOW_GOAL_OBJECTS_HINTS = False
 SHOW_GOAL_RECEPTACLE_HINTS = False
@@ -221,10 +223,11 @@ class UI:
         Draw the UI.
         """
         self._update_held_object_placement()
+        self._update_hovered_object_ui()
         self._draw_place_selection()
         self._draw_hovered_interactable()
         self._draw_hovered_pickable()
-        self._draw_goals()
+        self._draw_pickable_object_highlights()
 
     def _get_grasp_manager(self) -> "RearrangeGraspManager":
         agent_mgr = self._sim.agents_mgr
@@ -406,6 +409,92 @@ class UI:
             return False
         return True
 
+    def _raycast(
+        self, ray: Ray, discriminator: Callable[[int], bool]
+    ) -> Optional[RayHitInfo]:
+        """
+        Raycast the scene using the specified ray.
+        Objects rejected by the discriminator function are transparent to selection.
+        """
+        raycast_results = self._sim.cast_ray(ray=ray)
+        if not raycast_results.has_hits():
+            return None
+        # Results are sorted by distance. [0] is the nearest one.
+        hits = raycast_results.hits
+        for hit in hits:
+            object_id: int = hit.object_id
+            if not discriminator(object_id):
+                continue
+            else:
+                return hit
+
+        return None
+
+    def _dot_object(self, object_id: int) -> float:
+        """
+        Dot product between the camera forward vector and the specified object.
+        """
+        sim = self._sim
+        cam_direction = self._camera_helper.get_cam_forward_vector()
+        cam_translation = self._camera_helper.get_eye_pos()
+        obj_translation = sim_utilities.get_obj_from_id(
+            sim, object_id
+        ).translation
+        ray_direction = obj_translation - cam_translation
+        return mn.math.dot(
+            cam_direction.normalized(), ray_direction.normalized()
+        )
+
+    def _is_pickable_object_visible(self, object_id: int) -> bool:
+        """
+        Returns true if the camera can see the object.
+        """
+        world = self._world
+        sim = self._sim
+
+        cam_translation = self._camera_helper.get_eye_pos()
+        obj_translation = sim_utilities.get_obj_from_id(
+            sim, object_id
+        ).translation
+        ray_direction = obj_translation - cam_translation
+
+        # Check if object is in front of camera before raycasting.
+        if self._dot_object(object_id) <= 0:
+            return False
+
+        ray = Ray(origin=cam_translation, direction=ray_direction)
+
+        def discriminator(object_id: int) -> bool:
+            return (
+                object_id not in world._agent_object_ids
+                and object_id not in world._all_held_object_ids
+            )
+
+        hit_info = self._raycast(ray, discriminator)
+        return hit_info.object_id == object_id
+
+    def _update_hovered_object_ui(self):
+        """Draw a UI when hovering an object with the cursor."""
+        object_id = self._hover_selection.object_id
+
+        primary_region_name: Optional[str] = None
+
+        if object_id is not None:
+            world = self._world
+            sim = self._sim
+            obj = sim_utilities.get_obj_from_id(
+                sim, object_id, world._link_id_to_ao_map
+            )
+            if obj is not None:
+                primary_region = world.get_primary_object_region(obj)
+                if primary_region is not None:
+                    primary_region_name = primary_region.category.name()
+
+        if primary_region_name is not None:
+            # TODO: Draw UI
+            # print(primary_region_name)
+            pass
+
     def _draw_aabb(
         self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3
     ) -> None:
@@ -458,10 +547,15 @@ class UI:
                 self._sim, object_id, self._world._link_id_to_ao_map
             )
             link_node = ao.get_link_scene_node(link_index)
-            aabb = link_node.cumulative_bb
             reachable = self._is_within_reach(link_node.translation)
             color = COLOR_VALID if reachable else COLOR_INVALID
-            self._draw_aabb(aabb, link_node.transformation, color)
+            self._gui_drawer._client_message_manager.draw_object_outline(
+                priority=1,
+                color=self._to_color_array(color),
+                line_width=8.0,
+                object_ids=[object_id],
+                destination_mask=Mask.from_index(self._user_index),
+            )
 
     def _draw_hovered_pickable(self) -> None:
         """Highlight the hovered pickable object."""
@@ -480,46 +574,60 @@ class UI:
         translation = managed_object.translation
         reachable = self._is_within_reach(translation)
         color = COLOR_VALID if reachable else COLOR_INVALID
-        aabb = managed_object.collision_shape_aabb
-        self._draw_aabb(aabb, managed_object.transformation, color)
+        self._gui_drawer._client_message_manager.draw_object_outline(
+            priority=0,
+            color=self._to_color_array(color),
+            line_width=8.0,
+            object_ids=[object_id],
+            destination_mask=Mask.from_index(self._user_index),
+        )
 
-    def _draw_goals(self) -> None:
-        """Draw goal object-receptacle pairs."""
-        if not SHOW_GOALS or not self._object_receptacle_pairs:
+    def _draw_pickable_object_highlights(self):
+        """Draw a highlight circle around visible pickable objects."""
+        if self._is_holding_object():
             return
 
-        # TODO: Cache
         sim = self._sim
-        obj_receptacle_pairs = self._object_receptacle_pairs
-        link_id_to_ao_map = self._world._link_id_to_ao_map
-        dest_mask = self._dest_mask
-        get_obj_from_id = sim_utilities.get_obj_from_id
+        world = self._world
         draw_gui_circle = self._gui_drawer.draw_circle
-        draw_gui_aabb = self._draw_aabb
+        dest_mask = self._dest_mask
 
-        for i in range(len(obj_receptacle_pairs)):
-            rigid_ids = obj_receptacle_pairs[i][0]
-            receptacle_ids = obj_receptacle_pairs[i][1]
-            if SHOW_GOAL_OBJECTS_HINTS:
-                for rigid_id in rigid_ids:
-                    managed_object = get_obj_from_id(
-                        sim, rigid_id, link_id_to_ao_map
+        for object_id in world._pickable_object_ids:
+            if not world.is_any_agent_holding_object(
+                object_id
+            ) and self._is_pickable_object_visible(object_id):
+                obj = sim_utilities.get_obj_from_id(sim, object_id)
+
+                # Make highlights near the edge of the screen less opaque.
+                dot_object = self._dot_object(object_id)
+                opacity = max(min(dot_object, 1.0), 0.0)
+                opacity *= opacity
+
+                # Calculate radius
+                aabb = obj.collision_shape_aabb
+                diameter = max(aabb.size_x(), aabb.size_y(), aabb.size_z())
+                radius = diameter * 0.65
+
+                # Calculate color
+                if self._hover_selection.object_id == object_id:
+                    reachable = self._is_within_reach(obj.translation)
+                    color = COLOR_VALID if reachable else COLOR_INVALID
+                    color[3] = (
+                        0.3
+                        if self._click_selection.object_id != object_id
+                        else 1.0
                     )
-                    translation = managed_object.translation
-                    draw_gui_circle(
-                        translation=translation,
-                        radius=0.25,
-                        color=COLOR_GOALS,
-                        billboard=True,
-                        destination_mask=dest_mask,
-                    )
-            if SHOW_GOAL_RECEPTACLE_HINTS:
-                for receptacle_id in receptacle_ids:
-                    managed_object = get_obj_from_id(
-                        sim, receptacle_id, link_id_to_ao_map
-                    )
-                    aabb, matrix = sim_utilities.get_bb_for_object_id(
-                        sim, receptacle_id, link_id_to_ao_map
-                    )
-                    if aabb is not None:
-                        draw_gui_aabb(aabb, matrix, COLOR_GOALS)
+                else:
+                    color = COLOR_HIGHLIGHT
+
+                draw_gui_circle(
+                    translation=obj.translation,
+                    radius=radius,
+                    color=color,
+                    billboard=True,
+                    destination_mask=dest_mask,
+                )
+
+    @staticmethod
+    def _to_color_array(color: mn.Color4) -> List[float]:
+        return [color.r, color.g, color.b, color.a]
