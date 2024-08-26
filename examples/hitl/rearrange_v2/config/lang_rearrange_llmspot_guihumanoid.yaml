@@ -1,0 +1,97 @@
+# @package _global_
+
+defaults:
+  - /training@ : base_train
+  - habitat_conf/task : rearrange_easy_multi_agent
+  - world_model@world_model: gt_graph
+  - /trajectory@trajectory : trajectory_logger
+  # single agent planner setup
+  - /evaluation: decentralized_evaluation_runner_single_agent
+  - /wandb_conf@                : own
+  - language_rearrange_multi_agent_llm_gui
+  - hitl_defaults
+  - override /instruct@evaluation.agents.agent_0.planner.plan_config.instruct: few_shot_decentralized_partial_obs_coordinated_robot_spatial
+  # - override /llm@evaluation.agents.agent_0.planner.plan_config.llm: openai_chat
+  - _self_
+
+evaluation:
+  agents:
+    agent_0:
+      planner:
+        plan_config:
+          replanning_threshold: 30
+habitat_llm:
+  enable: True
+    # agent_1:
+    #   gui_controlled: True
+world_model:
+  partial_obs: True
+habitat:
+  # various config args to ensure the episode never ends
+  environment:
+    max_episode_steps: 0
+    iterator_options:
+      # For the demo, we want to showcase the episodes in the specified order
+      shuffle: False
+  dataset:
+    type: "CollaborationDataset-v0"
+    data_path: "data/episodes/2024_07_29_val_hitl_stacked_v2.json.gz"
+    scenes_dir: "data/fpss"
+    # metadata:
+    #   metadata_folder: "data/fpss/metadata"
+    #   obj_metadata: object_categories_filtered.csv
+      # staticobj_metadata: fpmodels-with-decomposed.csv
+  task:
+    pddl_domain_def: fp
+  simulator:
+    agents:
+      agent_1:
+        radius: 0.3
+        articulated_agent_type: 'KinematicHumanoid'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female_2/female_2.urdf'
+        motion_data_path: "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
+        auto_update_sensor_transform: False
+
+device      : cuda
+instruction : ''
+mode: "dataset" # cli / dataset
+env: habitat
+num_runs_per_episode: 1
+num_proc: 1
+dry_run: False
+paths:
+  results_dir: ${hydra:runtime.output_dir}/results
+  epi_result_file_path: "${paths.results_dir}/episode_result_log.csv"
+  run_result_file_path: "${paths.results_dir}/run_result_log.csv"
+  end_result_file_path: "${paths.results_dir}/end_result_log.csv"
+
+hydra:
+  job:
+    name: 'habitat_llm'
+    chdir: False
+  run:
+    dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}-${file_stem:${habitat.dataset.data_path}}
+
+habitat_hitl:
+  remove_visual_sensors: False
+  remove_gui_sensors: False
+  window:
+    title: "Rearrange"
+    width: 1300
+    height: 1000
+  gui_controlled_agents:
+    - agent_index: 1
+      lin_speed: 10.0
+      ang_speed: 300
+  llm_controlled_agents:
+    - agent_index: 0
+      lin_speed: 10.0
+      ang_speed: 300
+  hide_humanoid_in_gui: False
+  camera:
+    first_person_mode: True
+  networking:
+    client_sync:
+      server_camera: False
+      server_input: False
+    client_max_idle_duration: 180.0
