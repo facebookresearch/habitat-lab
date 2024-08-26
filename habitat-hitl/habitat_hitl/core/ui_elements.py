@@ -300,6 +300,9 @@ class UIContext:
         padding: int = 0,
         background_color: Optional[List[float]] = None,
     ) -> None:
+        """
+        Set the properties of the canvas.
+        """
         self.update_element(
             UICanvas(
                 uid=self._canvas_uid,
@@ -317,6 +320,9 @@ class UIContext:
         horizontal_alignment: HorizontalAlignment = HorizontalAlignment.LEFT,
         color: Optional[List[float]] = None,
     ) -> None:
+        """
+        Create a text label.
+        """
         self.update_element(
             UILabel(
                 uid=uid,
@@ -336,6 +342,9 @@ class UIContext:
         font_size: int = 24,
         color: Optional[List[float]] = None,
     ) -> None:
+        """
+        Create a list item with two labels.
+        """
         self.update_element(
             UIListItem(
                 uid=uid,
@@ -356,6 +365,10 @@ class UIContext:
         color: Optional[List[float]] = None,
         tooltip: Optional[str] = None,
     ) -> None:
+        """
+        Create a toggle with "true" and "false" labels on each side.
+        Use 'UIManager.is_button_pressed()' to check whether the toggle was pressed during the frame.
+        """
         self.update_element(
             UIToggle(
                 uid=uid,
@@ -375,6 +388,10 @@ class UIContext:
         enabled: bool = True,
         color: Optional[List[float]] = None,
     ) -> None:
+        """
+        Create a button with text content.
+        Use 'UIManager.is_button_pressed()' to check whether the button was pressed during the frame.
+        """
         self.update_element(
             UIButton(
                 uid=uid,
@@ -385,6 +402,9 @@ class UIContext:
         )
 
     def separator(self, uid: str = AUTO):
+        """
+        Create a horizontal line separator.
+        """
         self.update_element(UISeparator(uid=uid))
 
     def spacer(
@@ -392,6 +412,9 @@ class UIContext:
         uid: str = AUTO,
         size: float = 24,
     ):
+        """
+        Add an empty space.
+        """
         self.update_element(UISpacer(uid=uid, size=size))
 
     def _generate_uid(self) -> str:
