@@ -78,12 +78,15 @@ def not_none_validator(
 
 class Singleton(type):
     """
-    This metatclass creates Singleton objects by ensuring only one instance is created and any call is directed to that instance.
+    This metatclass creates Singleton objects by ensuring only one instance is created and any call is directed to that instance. TODO: DOUBLE CHECK THE FOLLOWING DESCRIPTION:  The mro() function and following dunders, EXCEPT __call__, are inherited from the the stdlib Python library, which defines the "type" class
     """
 
     _instances: Dict["Singleton", "Singleton"] = {}
 
     def __call__(cls, *args, **kwargs):
+        """
+        TODO:  MISSING DESCRIPTION.  WHY DID WE REDEFINE __call__ FROM THE stdlib LIBRARY?
+        """
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(
                 *args, **kwargs
@@ -94,14 +97,11 @@ class Singleton(type):
 class DatasetJSONEncoder(json.JSONEncoder):
     """Extension of base JSONEncoder to handle common Dataset types: numpy array, numpy quaternion, Omegaconf, and dataclass."""
 
-    def default(self, obj: Any) -> Any:
+    def default(self, obj):
         """
-        Constructs and returns a default serializable JSON object for a particular object or type obj.
-        This override supports types: np.ndarray, numpy quaternion, OmegaConf DictConfig, and DataClasses.
-
-        :param obj: The object to serialize.
-        :return: The serialized JSON object.
-        """
+        TODO: DOUBLE CHECK DESCRIPTION:  Implement this method in a subclass such that it returns
+        a serializable object for ``obj``, or calls the base implementation
+        (to raise a ``TypeError``)."""
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         if isinstance(obj, quaternion.quaternion):
@@ -124,13 +124,13 @@ class DatasetFloatJSONEncoder(DatasetJSONEncoder):
     version 2.0.9.
     """
 
-    def iterencode(self, o, _one_shot=False) -> str:
+    def iterencode(self, o, _one_shot=False):
         """
         Overriding method to inject own `_repr` function for floats with needed precision.
 
-        :param o: The float to convert.
-        :param _one_shot: undocumented base JSONEncoder param. Seems to limit recursion in exchange for cmake operation.
-        :return: The string rep.
+        TODO: DOUBLE CHECK THE FOLLOWING PARAM DESCRIPTIONS
+        :param o:  object that can be serializable???
+        :param _one_shot: MISSING DESCRIPTION
         """
         markers: Optional[Dict] = {} if self.check_circular else None
         if self.ensure_ascii:
