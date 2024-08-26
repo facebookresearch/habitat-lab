@@ -4,10 +4,9 @@ defaults:
   - /habitat/task/measurements:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
-    - arm_receptacle_semantic_sensor
     - spot_head_stereo_depth_sensor
-    - pretrain_textual_feature_goal_sensor
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
+#    - jaw_receptacle_semantic_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - override /habitat/dataset/rearrangement: hssd
@@ -24,10 +23,10 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - pretrain_textual_feature_goal_sensor
-      - arm_receptacle_semantic_sensor
+      - obj_goal_sensor
       - relative_initial_ee_orientation
-      - articulated_agent_arm_depth
+      - relative_target_object_orientation
+      - articulated_agent_jaw_depth
       - joint
       - is_holding
   task:
@@ -45,38 +44,46 @@ habitat:
         # We want to check if the object is placed on the receptacle
         obj_at_receptacle_success: True
         # We want to give the reward for ee orientation to initial orientation
-        use_ee_ori: True
+        use_ee_ori: False
+        use_obj_ori: True
+        object_orientation_to_target_threshold: 0.15
       place_success:
         ee_resting_success_threshold: -1.0
         # We want to check if the object is placed on the receptacle
         obj_at_receptacle_success: True
         # We want to check if the robot maintains the same ee's orientation
-        ee_orientation_to_initial_threshold: 0.15
+        ee_orientation_to_initial_threshold: -1.0
+        # We want to make sure that the robot reaches the target pose
+        object_orientation_to_target_threshold: 0.15
       obj_at_goal:
         # We want this number to be as small as possible
         # since we want the robot to place the object precisely on the receptacle
         succ_thresh: 0.05
       obj_at_receptacle:
-        vertical_diff_threshold: 0.10
-        horizontal_diff_threshold: 0.30
+        vertical_diff_threshold: 0.15
+        horizontal_diff_threshold: 0.50
         surface_vertical_diff_threshold: -1.0
-        snap_down_surface_vertical_diff_threshold: 0.10
+        snap_down_surface_vertical_diff_threshold: 0.15
     lab_sensors:
       # We can only control 4 of the joints of Spot's arm
       joint_sensor:
-        dimensionality: 4
-        arm_joint_mask: [1,1,0,1,0,1,0]
-      arm_receptacle_semantic_sensor:
-        height: 240
-        width: 228
-      pretrain_textual_feature_goal_sensor:
-        use_features: ["obj"]
+        # We may want to use dimension 5 for controlling the rotation
+        dimensionality: 5
+        arm_joint_mask: [1,1,0,1,0,1,1]
+ #     jaw_receptacle_semantic_sensor:
+ #       height: 240
+ #       width: 228
+      goal_sensor:
+        only_one_target: True
+        use_base_transform: True
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
         center_cone_vector: [0.0, 1.0, 0.0]
+        arm_joint_mask: [1,1,0,1,0,1,1]
+        arm_joint_dimensionality: 5
         # We limit the joint angles to ensure that this is feasible in the real world
-        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708], [-1.5708, 1.5708]]
         auto_grasp: False
         should_clip: True
     success_reward: 10.0

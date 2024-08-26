@@ -62,12 +62,12 @@ class ObjectSampler:
         self._translation_up_offset = translation_up_offset
         self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
-        self.receptacle_instances: Optional[
-            List[Receptacle]
-        ] = None  # all receptacles in the scene
-        self.receptacle_candidates: Optional[
-            List[Receptacle]
-        ] = None  # the specific receptacle instances relevant to this sampler
+        self.receptacle_instances: Optional[List[Receptacle]] = (
+            None  # all receptacles in the scene
+        )
+        self.receptacle_candidates: Optional[List[Receptacle]] = (
+            None  # the specific receptacle instances relevant to this sampler
+        )
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
         self.num_objects = num_objects  # tuple of [min,max] objects to sample
@@ -119,7 +119,6 @@ class ObjectSampler:
         match_recep_sets = [
             recep_tracker.recep_sets[k] for k in self._allowed_recep_set_names
         ]
-
         if self._recep_set_sample_probs is not None:
             sample_weights = [
                 self._recep_set_sample_probs[k]
@@ -320,7 +319,7 @@ class ObjectSampler:
                     sim,
                     new_object,
                     support_object_ids,
-                    vdb=vdb,
+                    # vdb=vdb,
                 )
                 if snap_success:
                     logger.info(
@@ -333,7 +332,7 @@ class ObjectSampler:
                         height=1.3,
                         nav_to_min_distance=self.nav_to_min_distance,
                         nav_island=self.largest_island_id,
-                        target_object_id=new_object.object_id,
+                        target_object_ids=[new_object.object_id],
                     ):
                         logger.info(
                             "   - object is not accessible from navmesh, rejecting placement."

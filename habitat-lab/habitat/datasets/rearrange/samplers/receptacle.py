@@ -519,7 +519,9 @@ def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
     )
 
     # reformat the mesh data after filtering
-    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
+    mesh = mn.meshtools.interleave(
+        mesh, flags=mn.meshtools.InterleaveFlags.NONE
+    )
 
     return mesh
 
@@ -557,10 +559,10 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
             mn.trade.SceneField.MESH
         )
-        mesh_transformations: List[
-            mn.Matrix4
-        ] = mn.scenetools.absolute_field_transformations3d(
-            scene, mn.trade.SceneField.MESH
+        mesh_transformations: List[mn.Matrix4] = (
+            mn.scenetools.absolute_field_transformations3d(
+                scene, mn.trade.SceneField.MESH
+            )
         )
         assert len(mesh_assignments) == len(mesh_transformations)
 
@@ -704,12 +706,16 @@ def parse_receptacles_from_user_config(
 
 
 def find_receptacles(
-    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
+    sim: habitat_sim.Simulator,
+    ignore_handles: Optional[List[str]] = None,
+    exclude_filter_strings: Optional[List[str]] = None,
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
 
     :param sim: Simulator must be provided.
+    :param ignore_handles: An optional list of handles for ManagedObjects which should be skipped. No Receptacles for matching objects will be returned.
+    :param exclude_filter_strings: An optional list of excluded Receptacle substrings. Any Receptacle which contains any excluded filter substring in its unique_name will not be included in the returned set.
     """
 
     obj_mgr = sim.get_rigid_object_manager()
@@ -723,6 +729,7 @@ def find_receptacles(
 
     # search for global receptacles included with the stage
     stage_config = sim.get_stage_initialization_template()
+
     if stage_config is not None:
         stage_user_attr = stage_config.get_user_config()
         receptacles.extend(
@@ -771,6 +778,12 @@ def find_receptacles(
             )
         )
 
+    # filter out individual Receptacles with excluded substrings
+    if exclude_filter_strings is not None:
+        receptacles = cull_filtered_receptacles(
+            receptacles, exclude_filter_strings
+        )
+
     # check for non-unique naming mistakes in user dataset
     for rec_ix in range(len(receptacles)):
         rec1_unique_name = receptacles[rec_ix].unique_name
@@ -791,6 +804,92 @@ class ReceptacleSet:
     excluded_receptacle_substrings: List[str]
     is_on_top_of_sampler: bool = False
     comment: str = ""
+
+
+def get_scene_rec_filter_filepath(
+    mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
+) -> str:
+    """
+    Look in the user_defined metadata for a scene to find the configured filepath for the scene's Receptacle filter file.
+
+    :return: Filter filepath or None if not found.
+    """
+    scene_user_defined = mm.get_scene_user_defined(scene_handle)
+    if scene_user_defined is not None and scene_user_defined.has_value(
+        "scene_filter_file"
+    ):
+        scene_filter_file = scene_user_defined.get("scene_filter_file")
+        scene_filter_file = os.path.join(
+            os.path.dirname(mm.active_dataset), scene_filter_file
+        )
+        return scene_filter_file
+    return None
+
+
+def get_excluded_recs_from_filter_file(
+    rec_filter_filepath: str, filter_types: Optional[List[str]] = None
+) -> List[str]:
+    """
+    Load and digest a Receptacle filter file to generate a list of Receptacle.unique_names strings which should be excluded from the active ReceptacleSet.
+
+    :param filter_types: Optionally specify a particular set of filter types to scrape. Default is all exclusion filters.
+    """
+
+    possible_exclude_filter_types = [
+        "manually_filtered",
+        "access_filtered",
+        "stability_filtered",
+        "height_filtered",
+    ]
+
+    if filter_types is None:
+        filter_types = possible_exclude_filter_types
+    else:
+        for filter_type in filter_types:
+            assert (
+                filter_type in possible_exclude_filter_types
+            ), f"Specified filter type '{filter_type}' is not in supported set: {possible_exclude_filter_types}"
+
+    return get_recs_from_filter_file(rec_filter_filepath, filter_types)
+
+
+def get_recs_from_filter_file(
+    rec_filter_filepath: str, filter_types: List[str]
+) -> List[str]:
+    """
+    Load and digest a Receptacle filter file to generate a list of Receptacle.unique_names which belong to a particular filter subset.
+
+    :param filter_types: Specify a particular subset of filter types to include.
+    """
+
+    # all allowed filter set types include:
+    all_possible_filter_types = [
+        "active",
+        "manually_filtered",
+        "access_filtered",
+        "stability_filtered",
+        "height_filtered",
+        "within_set",
+    ]
+
+    # check that specified query filter types are valid
+    for filter_type in filter_types:
+        assert (
+            filter_type in all_possible_filter_types
+        ), f"Specified filter type '{filter_type}' is not in supported set: {all_possible_filter_types}"
+
+    filtered_unique_names = []
+    with open(rec_filter_filepath, "r") as f:
+        filter_json = json.load(f)
+        for filter_type in filter_types:
+            if filter_type in filter_json:
+                for filtered_unique_name in filter_json[filter_type]:
+                    filtered_unique_names.append(filtered_unique_name)
+            else:
+                logger.warning(
+                    f"The filter file '{rec_filter_filepath}' does not contain the requested filter type '{filter_type}'."
+                )
+    return list(set(filtered_unique_names))
 
 
 class ReceptacleTracker:
@@ -980,7 +1079,7 @@ def get_navigable_receptacles(
                     height=max_access_height,
                     nav_to_min_distance=nav_to_min_distance,
                     nav_island=nav_island,
-                    target_object_id=receptacle_obj.object_id,
+                    target_object_ids=[receptacle_obj.object_id],
                 )
                 for point in recep_points
             )
