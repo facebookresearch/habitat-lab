@@ -226,6 +226,10 @@ class UI:
             self._place_object()
             self._place_selection.deselect()
 
+        # Toggle help text.
+        if self._gui_input.get_key_down(KeyCode.H):
+            self._is_help_shown = not self._is_help_shown
+        
         self._ui_overlay.update()
 
     def draw_ui(self) -> None:
