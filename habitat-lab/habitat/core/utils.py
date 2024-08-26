@@ -94,8 +94,14 @@ class Singleton(type):
 class DatasetJSONEncoder(json.JSONEncoder):
     """Extension of base JSONEncoder to handle common Dataset types: numpy array, numpy quaternion, Omegaconf, and dataclass."""
 
-    def default(self, obj):
-        # TODO: NEED DESCRIPTION
+    def default(self, obj: Any) -> Any:
+        """
+        Constructs and returns a default serializable JSON object for a particular object or type obj.
+        This override supports types: np.ndarray, numpy quaternion, OmegaConf DictConfig, and DataClasses.
+
+        :param obj: The object to serialize.
+        :return: The serialized JSON object.
+        """
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         if isinstance(obj, quaternion.quaternion):
@@ -118,9 +124,13 @@ class DatasetFloatJSONEncoder(DatasetJSONEncoder):
     version 2.0.9.
     """
 
-    def iterencode(self, o, _one_shot=False):
+    def iterencode(self, o, _one_shot=False) -> str:
         """
         Overriding method to inject own `_repr` function for floats with needed precision.
+
+        :param o: The float to convert.
+        :param _one_shot: undocumented base JSONEncoder param. Seems to limit recursion in exchange for cmake operation.
+        :return: The string rep.
         """
         markers: Optional[Dict] = {} if self.check_circular else None
         if self.ensure_ascii:
