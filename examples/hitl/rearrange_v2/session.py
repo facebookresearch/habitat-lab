@@ -20,16 +20,16 @@ class Session:
     def __init__(
         self,
         config: Any,
-        episode_ids: List[str],
+        episode_indices: List[int],
         connection_records: Dict[int, ConnectionRecord],
     ):
         self.success = False
-        self.episode_ids = episode_ids
+        self.episode_indices = episode_indices
         self.current_episode_index = 0
         self.connection_records = connection_records
 
         self.session_recorder = SessionRecorder(
-            config, connection_records, episode_ids
+            config, connection_records, episode_indices
         )
 
         self.error = ""  # Use this to display error that causes termination

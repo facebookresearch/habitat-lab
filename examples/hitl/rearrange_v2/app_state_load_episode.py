@@ -89,8 +89,8 @@ class AppStateLoadEpisode(AppStateBase):
 
     def _increment_episode(self):
         session = self._session
-        assert session.episode_ids is not None
-        if session.current_episode_index < len(session.episode_ids):
+        assert session.episode_indices is not None
+        if session.current_episode_index < len(session.episode_indices):
             self._set_episode(session.current_episode_index)
             session.current_episode_index += 1
         else:
@@ -98,28 +98,28 @@ class AppStateLoadEpisode(AppStateBase):
 
     def _set_episode(self, episode_index: int):
         session = self._session
+        app_service = self._app_service
 
         # Set the ID of the next episode to play in lab.
-        next_episode_id = session.episode_ids[episode_index]
-        print(f"Next episode index: {next_episode_id}.")
+        next_episode_index = session.episode_indices[episode_index]
+        print(f"Next episode index: {next_episode_index}.")
         try:
-            next_episode_index = int(next_episode_id)
-            self._app_service.episode_helper.set_next_episode_by_index(
+            app_service.episode_helper.set_next_episode_by_index(
                 next_episode_index
             )
         except Exception as e:
-            print(f"ERROR: Invalid episode index {next_episode_id}. {e}")
+            print(f"ERROR: Invalid episode index {next_episode_index}. {e}")
             print("Loading episode index 0.")
-            self._app_service.episode_helper.set_next_episode_by_index(0)
+            app_service.episode_helper.set_next_episode_by_index(0)
 
         # Once an episode ID has been set, lab needs to be reset to load the episode.
-        self._app_service.end_episode(do_reset=True)
+        app_service.end_episode(do_reset=True)
 
         # Signal the clients that the scene has changed.
-        client_message_manager = self._app_service.client_message_manager
+        client_message_manager = app_service.client_message_manager
         if client_message_manager:
             client_message_manager.signal_scene_change(Mask.ALL)
 
         # Save a keyframe. This propagates the new content to the clients, initiating client-side loading.
         # Beware that the client "loading" state won't immediately be visible to the server.
-        self._app_service.sim.gfx_replay_manager.save_keyframe()
+        app_service.sim.gfx_replay_manager.save_keyframe()

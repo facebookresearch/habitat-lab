@@ -9,7 +9,6 @@ import magnum as mn
 import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
-from habitat.tasks.rearrange.utils import get_aabb
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_sim.physics import (
@@ -332,7 +331,8 @@ class GuiHumanoidController(GuiController):
                 self._thrown_object_collision_group
             )
             rigid_obj.linear_velocity = speed
-            obj_bb = get_aabb(grasp_object_id, self._env.task._sim)
+
+            obj_bb = rigid_obj.aabb
             self._last_object_thrown_info = (
                 rigid_obj,
                 max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),

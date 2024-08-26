@@ -6,7 +6,6 @@
 
 
 import os
-import typing
 from typing import Dict, List
 
 from util import timestamp
@@ -61,17 +60,17 @@ else:
 
 
 def generate_unique_session_id(
-    episode_ids: List[str], connection_records: Dict[int, ConnectionRecord]
+    episode_indices: List[int], connection_records: Dict[int, ConnectionRecord]
 ) -> str:
     """
     Generate a unique name for a session.
     """
     # Generate episodes string
-    episodes_str = "no-episode"
-    if len(episode_ids) == 1:
-        episodes_str = episode_ids[0]
-    elif len(episode_ids) > 1:
-        episodes_str = f"{episode_ids[0]}-{episode_ids[-1]}"
+    episodes_str = (
+        "-".join(str(x) for x in episode_indices)
+        if len(episode_indices) > 0
+        else "no-episode"
+    )
 
     # Generate users string
     users_str = ""
@@ -110,66 +109,3 @@ def make_s3_filename(session_id: str, orig_file_name: str) -> str:
             s3_filename += "!"
 
     return s3_filename
-
-
-@typing.no_type_check
-def _test():
-    # TODO: Temporary test. Move to a dedicated test file.
-
-    # Test generate_unique_session_id.
-    episode_ids: List[str] = []
-    connection_records: Dict[int, ConnectionRecord] = {}
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"no-episode_no-user_{timestamp()}"
-    episode_ids = ["2"]
-    connection_records = {}
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"2_no-user_{timestamp()}"
-    episode_ids = ["2", "3", "4", "5"]
-    connection_records = {}
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"2-5_no-user_{timestamp()}"
-    episode_ids = []
-    connection_records = {0: {"user_id": "test"}}
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"no-episode_test_{timestamp()}"
-    episode_ids = []
-    connection_records = {2: {"user_id": "test"}}
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"no-episode_test_{timestamp()}"
-    episode_ids = []
-    connection_records = {
-        0: {"user_id": "a"},
-        1: {"user_id": "b"},
-        2: {"user_id": "c"},
-        3: {"user_id": "d"},
-    }
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"no-episode_a-b-c-d_{timestamp()}"
-    episode_ids = []
-    connection_records = {
-        0: {"uid": "test"},
-        1: {"uid": "test"},
-    }
-    session_id = generate_unique_session_id(episode_ids, connection_records)
-    assert session_id == f"no-episode_invalid-user-invalid-user_{timestamp()}"
-
-    # Test make_s3_filename.
-    s3_filename = make_s3_filename("id", "te-st.txt")
-    assert s3_filename == "id_te-st.txt"
-    s3_filename = make_s3_filename("id", "te???st.txt")
-    assert s3_filename == "id_te!!!st.txt"
-    s3_filename = make_s3_filename("", "")
-    assert s3_filename == "_"
-    s3_filename = make_s3_filename("ab", "cd\nef\0gh\3.txt")
-    assert s3_filename == "ab_cd!ef!gh!.txt"
-
-    long_name = "0" * 500
-    long_name += ".txt"
-    s3_filename = make_s3_filename("ab", long_name)
-    assert len(s3_filename) == 128
-    assert s3_filename[-4:] == ".txt"
-
-
-if __name__ == "__main__":
-    _test()

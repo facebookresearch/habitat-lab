@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import logging
 import os
 import os.path as osp
@@ -94,7 +95,9 @@ class CollisionDetails:
 
 
 def general_sim_collision(
-    sim: habitat_sim.Simulator, agent_embodiment: MobileManipulator
+    sim: habitat_sim.Simulator,
+    agent_embodiment: MobileManipulator,
+    ignore_object_ids: Optional[List[int]] = None,
 ) -> Tuple[bool, CollisionDetails]:
     """
     Proxy for "rearrange_collision()" which does not require a RearrangeSim.
@@ -109,7 +112,15 @@ def general_sim_collision(
 
     robot_scene_colls = 0
     for col in colls:
-        if coll_name_matches(col, agent_embodiment_object_id):
+        if coll_name_matches(col, agent_embodiment_object_id) and (
+            ignore_object_ids is None
+            or not any(
+                [
+                    coll_name_matches(col, ignore_object_id)
+                    for ignore_object_id in ignore_object_ids
+                ]
+            )
+        ):
             robot_scene_colls += 1
 
     return (robot_scene_colls > 0), CollisionDetails(
@@ -121,7 +132,7 @@ def rearrange_collision(
     sim: "RearrangeSim",
     count_obj_colls: bool,
     verbose: bool = False,
-    ignore_names: Optional[List[str]] = None,
+    ignore_object_ids: Optional[List[int]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
     agent_idx: Optional[int] = None,
@@ -142,10 +153,10 @@ def rearrange_collision(
             if match_link is not None and agent_model.is_base_link(match_link):
                 return False
 
-        if ignore_names is not None:
+        if ignore_object_ids is not None:
             should_ignore = any(
-                coll_name_matches(x, ignore_name)
-                for ignore_name in ignore_names
+                coll_name_matches(x, ignore_object_id)
+                for ignore_object_id in ignore_object_ids
             )
             if should_ignore:
                 return False
@@ -230,79 +241,10 @@ def convert_legacy_cfg(obj_list):
     return list(map(convert_fn, obj_list))
 
 
-def get_rigid_aabb(
-    obj_id: int, sim: habitat_sim.Simulator, transformed: bool = False
-) -> Optional[mn.Range3D]:
-    """
-    Get the AABB for a RigidObject. Returns None if object is not found.
-
-    :param obj_id: The unique id of the object instance.
-    :param sim: The Simulator instance owning the object instance.
-    :param transformed: If True, transform the AABB into global space.
-    """
-    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
-    if obj is None:
-        return None
-    obj_node = obj.root_scene_node
-    obj_bb = obj_node.cumulative_bb
-    if transformed:
-        obj_bb = habitat_sim.geo.get_transformed_bb(
-            obj_node.cumulative_bb, obj_node.transformation
-        )
-    return obj_bb
-
-
-def get_ao_link_aabb(
-    ao_obj_id: int,
-    link_id: int,
-    sim: habitat_sim.Simulator,
-    transformed: bool = False,
-) -> Optional[mn.Range3D]:
-    """
-    Get the AABB for a link of an ArticulatedObject. Returns None if object or link are not found.
-
-    :param ao_obj_id: The unique id of the ArticulatedObject instance.
-    :param link_id: The index of the link within the ArticulatedObject instance. -1 for base link. Note this is not unique object_id of the link.
-    :param sim: The Simulator instance owning the object instance.
-    :param transformed: If True, transform the AABB into global space.
-    """
-
-    ao = sim.get_articulated_object_manager().get_object_by_id(ao_obj_id)
-    if ao is None:
-        return None
-    assert link_id < ao.num_links, "Link index out of range."
-    link_node = ao.get_link_scene_node(link_id)
-    link_bb = link_node.cumulative_bb
-    if transformed:
-        link_bb = habitat_sim.geo.get_transformed_bb(
-            link_bb, link_node.absolute_transformation()
-        )
-    return link_bb
-
-
-def get_aabb(obj_id, sim, transformed=False):
-    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
-    if obj is None:
-        return None
-    obj_node = obj.root_scene_node
-    obj_bb = obj_node.cumulative_bb
-    if transformed:
-        obj_bb = habitat_sim.geo.get_transformed_bb(
-            obj_node.cumulative_bb, obj_node.transformation
-        )
-    return obj_bb
-
-
 def euler_to_quat(rpy):
     rot = quaternion.from_euler_angles(rpy)
     rot = mn.Quaternion(mn.Vector3(rot.vec), rot.w)
     return rot
-
-
-def allowed_region_to_bb(allowed_region):
-    if len(allowed_region) == 0:
-        return allowed_region
-    return mn.Range2D(allowed_region[0], allowed_region[1])
 
 
 class CacheHelper:

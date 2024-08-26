@@ -50,7 +50,6 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 from habitat.tasks.rearrange.utils import (
     add_perf_timing_func,
-    get_rigid_aabb,
     make_render_only,
     rearrange_collision,
     rearrange_logger,
@@ -281,6 +280,17 @@ class RearrangeSim(HabitatSim):
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
+        # Load specified articulated object states from episode config
+        self._set_ao_states_from_ep(self.ep_info)
+        # reset objects to episode initial state
+        self._add_objs(
+            self.ep_info,
+            should_add_objects=False,  # objects should already by loaded
+            new_scene=False,
+        )  # the scene shouldn't change between resets
+        # auto-sleep rigid objects as optimization
+        if self._auto_sleep:
+            self._sleep_all_objects()
         return None
 
     @add_perf_timing_func()
@@ -739,15 +749,21 @@ class RearrangeSim(HabitatSim):
                 self.set_object_bb_draw(True, ro.object_id)
                 ro.transformation = transform
                 make_render_only(ro, self)
-                bb = get_rigid_aabb(ro.object_id, self, True)
+                ro_global_bb = habitat_sim.geo.get_transformed_bb(
+                    ro.aabb, ro.transformation
+                )
                 bb_viz_name1 = target_handle + "_bb1"
                 bb_viz_name2 = target_handle + "_bb2"
                 viz_r = 0.01
                 self.viz_ids[bb_viz_name1] = self.visualize_position(
-                    bb.front_bottom_right, self.viz_ids[bb_viz_name1], viz_r
+                    ro_global_bb.front_bottom_right,
+                    self.viz_ids[bb_viz_name1],
+                    viz_r,
                 )
                 self.viz_ids[bb_viz_name2] = self.visualize_position(
-                    bb.back_top_left, self.viz_ids[bb_viz_name2], viz_r
+                    ro_global_bb.back_top_left,
+                    self.viz_ids[bb_viz_name2],
+                    viz_r,
                 )
 
                 self._viz_objs[target_handle] = ro

@@ -77,7 +77,6 @@ habitat.datasets.pointnav.__all__ = [
 ]
 
 habitat.sims.__all__ = [
-    "pyrobot",
     "habitat_simulator",
     "registration",
 ]

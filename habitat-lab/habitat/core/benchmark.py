@@ -3,10 +3,11 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-r"""Implements evaluation of ``habitat.Agent`` inside ``habitat.Env``.
+"""Habitat Challenge Benchmark class: a generic benchmarking framework for locally or remotely evaluating performance of an Agent.
+Implements evaluation of ``habitat.Agent`` inside ``habitat.Env``.
 ``habitat.Benchmark`` creates a ``habitat.Env`` which is specified through
 the ``config_env`` parameter in constructor. The evaluation is task agnostic
-and is implemented through metrics defined for ``habitat.EmbodiedTask``.
+and implemented through metrics defined for ``habitat.EmbodiedTask``.
 """
 
 import os
@@ -21,12 +22,13 @@ from habitat.core.env import Env
 
 
 class Benchmark:
-    r"""Benchmark for evaluating agents in environments."""
+    """Generic benchmark class for evaluating agents in environments from config."""
 
     def __init__(
         self, config_paths: Optional[str] = None, eval_remote: bool = False
     ) -> None:
-        r"""..
+        """
+        Initialize the Env from the provided config.
 
         :param config_paths: file to be used for creating the environment
         :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
@@ -39,9 +41,13 @@ class Benchmark:
         else:
             self._env = Env(config=config_env)
 
-    def remote_evaluate(
-        self, agent: "Agent", num_episodes: Optional[int] = None
-    ):
+    def remote_evaluate(self, agent: "Agent") -> Dict[str, float]:
+        """
+        Run remote evaluation with evalai for the instantiated Agent and Env. Runs remotely through a challenge evaluation server to prevent any potential for biased results. Imports come challenge-specific dependencies.
+
+        :param agent: The Agent to evaluate.
+        :return: The results dictionary containing metrics.
+        """
         # The modules imported below are specific to habitat-challenge remote evaluation.
         # These modules are not part of the habitat-lab repository.
         import pickle
@@ -118,6 +124,13 @@ class Benchmark:
     def local_evaluate(
         self, agent: "Agent", num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
+        """
+        Run evaluation of an Agent in the Env locally.
+
+        :param agent: The Agent to evaluate.
+        :param num_episodes: The number of episodes to evaluate.
+        :return: The results dictionary containing metrics.
+        """
         if num_episodes is None:
             num_episodes = len(self._env.episodes)
         else:
@@ -160,7 +173,7 @@ class Benchmark:
     def evaluate(
         self, agent: "Agent", num_episodes: Optional[int] = None
     ) -> Dict[str, float]:
-        r"""..
+        r"""Evaluates the provide agent in the configured environment either locally or remotely and returns the results dictionary with metrics.
 
         :param agent: agent to be evaluated in environment.
         :param num_episodes: count of number of episodes for which the
@@ -169,6 +182,6 @@ class Benchmark:
         """
 
         if self._eval_remote is True:
-            return self.remote_evaluate(agent, num_episodes)
+            return self.remote_evaluate(agent)
         else:
             return self.local_evaluate(agent, num_episodes)

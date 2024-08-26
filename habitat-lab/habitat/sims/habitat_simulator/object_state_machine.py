@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+"""This module implements a singleton state-machine architecture for representing and managing non-geometric object states via metadata manipulation. For example, tracking and manipulating state such as "powered on" or "clean vs dirty". This interface is intended to provide a foundation which can be extended for downstream applications."""
+
 from collections import defaultdict
 from typing import Any, Dict, List, Union
 
@@ -11,10 +13,10 @@ import magnum as mn
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
-from habitat import logger
 from habitat.sims.habitat_simulator.debug_visualizer import (
     draw_object_highlight,
 )
+from habitat_sim.logging import logger
 from habitat_sim.physics import ManagedArticulatedObject, ManagedRigidObject
 
 ##################################################
@@ -31,7 +33,6 @@ def get_state_of_obj(
 
     :param obj: The ManagedObject.
     :param state_name: The name/key of the object state property to query.
-
     :return: The state value (variable type) or None if not found.
     """
 
@@ -80,6 +81,8 @@ class ObjectStateSpec:
         self.name = "AbstractState"
         # What type of data describes this state
         self.type = None
+        # Human-readable name for display
+        self.display_name = "Abstract State"
         # S list of semantic classes labels with pre-define membership in the state set. All objects in these classes are assumed to have this state, whether or not a value is defined in metadata.
         self.accepted_semantic_classes = []
 
@@ -90,7 +93,6 @@ class ObjectStateSpec:
         Determine whether or not an object instance can have this ObjectStateSpec by checking semantic class against the configured set.
 
         :param obj: The ManagedObject instance.
-
         :return: Whether or not the object has this state affordance.
         """
 
@@ -167,6 +169,9 @@ class BooleanObjectState(ObjectStateSpec):
     def __init__(self):
         self.name = "BooleanState"
         self.type = bool
+        self.display_name = "Boolean State"
+        self.display_name_true = "True"
+        self.display_name_false = "False"
 
     def default_value(self) -> Any:
         """
@@ -206,7 +211,6 @@ class BooleanObjectState(ObjectStateSpec):
         Toggles a boolean state, returning the newly set value.
 
         :param obj: The ManagedObject instance.
-
         :return: The new value of the state.
         """
 
@@ -224,6 +228,9 @@ class ObjectIsClean(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_clean"
+        self.display_name = "Clean"
+        self.display_name_true = "Clean"
+        self.display_name_false = "Dirty"
         # TODO: set the semantic class membership list
         self.accepted_semantic_classes = []
 
@@ -236,6 +243,9 @@ class ObjectIsPoweredOn(BooleanObjectState):
     def __init__(self):
         super().__init__()
         self.name = "is_powered_on"
+        self.display_name = "Powered On"
+        self.display_name_true = "On"
+        self.display_name_false = "Off"
         # TODO: set the semantic class membership list
         self.accepted_semantic_classes = []
 
@@ -255,7 +265,7 @@ class ObjectStateMachine:
     def __init__(self, active_states: List[ObjectStateSpec] = None) -> None:
         # a list of ObjectStateSpec singleton instances which are active in the current scene
         self.active_states = active_states if active_states is not None else []
-        # map tracked objects to their set of state properies
+        # map tracked objects to their set of state properties
         self.objects_with_states: Dict[
             str, List[ObjectStateSpec]
         ] = defaultdict(lambda: [])
@@ -294,6 +304,7 @@ class ObjectStateMachine:
         Update all tracked object states for a simulation step.
 
         :param sim: The Simulator instance.
+        :param dt: The timestep over which to update continuous states. Typically the time between calls to this function.
         """
 
         # first update any state context
@@ -312,21 +323,22 @@ class ObjectStateMachine:
         """
         Scrape all active ObjectStateSpecs to collect a snapshot of the current state of all objects.
 
+        :param sim: The Simulator instance for which to collect and return current object states.
         :return: The state snapshot as a Dict keyed by object state unique name, value is another dict mapping object instance handles to state values.
 
         Example:
-        {
-            "is_powered_on": {
-                "my_lamp.0001": True,
-                "my_oven": False,
-                ...
-            },
-            "is_clean": {
-                "my_dish.0002:" False,
-                ...
-            },
-            ...
-        }
+            >>> {
+            >>>     "is_powered_on": {
+            >>>         "my_lamp.0001": True,
+            >>>         "my_oven": False,
+            >>>         ...
+            >>>     },
+            >>>     "is_clean": {
+            >>>         "my_dish.0002:" False,
+            >>>         ...
+            >>>     },
+            >>>     ...
+            >>> }
         """
         snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
         for object_handle, states in self.objects_with_states.items():
