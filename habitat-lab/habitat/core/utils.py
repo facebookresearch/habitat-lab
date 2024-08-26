@@ -78,12 +78,15 @@ def not_none_validator(
 
 class Singleton(type):
     """
-    This metatclass creates Singleton objects by ensuring only one instance is created and any call is directed to that instance.
+    This metatclass creates Singleton objects by ensuring only one instance is created and any call is directed to that instance. TODO: DOUBLE CHECK THE FOLLOWING DESCRIPTION:  The mro() function and following dunders, EXCEPT __call__, are inherited from the the stdlib Python library, which defines the "type" class.
     """
 
     _instances: Dict["Singleton", "Singleton"] = {}
 
     def __call__(cls, *args, **kwargs):
+        """
+        TODO:  MISSING DESCRIPTION.  WHY DID WE REDEFINE __call__ FROM THE stdlib LIBRARY?
+        """
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(
                 *args, **kwargs
