@@ -310,7 +310,7 @@ class World:
             )
             metadata_interface = MetadataInterface(metadata_dict)
             metadata_interface.refresh_scene_caches(
-                sim, filter_receptacles=False
+                sim, filter_receptacles=True
             )
             self._metadata_interface = metadata_interface
             osm = initialize_object_state_machine(sim, metadata_interface)
