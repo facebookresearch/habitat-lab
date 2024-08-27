@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Callable, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, cast
 
 import magnum as mn
 from ui_overlay import UIOverlay
