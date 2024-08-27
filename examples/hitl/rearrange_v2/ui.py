@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, cast
 
 import magnum as mn
 from world import World
 
 from habitat.sims.habitat_simulator import sim_utilities
+from habitat.sims.habitat_simulator.object_state_machine import (
+    BooleanObjectState,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
@@ -477,6 +480,8 @@ class UI:
         """Draw a UI when hovering an object with the cursor."""
         object_id = self._hover_selection.object_id
 
+        object_category: Optional[str] = None
+        object_states: List[Tuple[str, str]] = []
         primary_region_name: Optional[str] = None
 
         if object_id is not None:
@@ -486,13 +491,32 @@ class UI:
                 sim, object_id, world._link_id_to_ao_map
             )
             if obj is not None:
+                object_category = world.get_category_from_handle(obj.handle)
+
+                obj_states = world.get_states_for_object_handle(obj.handle)
+                for state in obj_states:
+                    spec = state.state_spec
+                    if isinstance(spec, BooleanObjectState):
+                        val = cast(bool, state.value)
+                        object_states.append(
+                            (
+                                spec.display_name,
+                                "True" if val else "False",
+                            )
+                        )
+                    else:
+                        # Unsupported type.
+                        pass
+
                 primary_region = world.get_primary_object_region(obj)
                 if primary_region is not None:
                     primary_region_name = primary_region.category.name()
 
-        if primary_region_name is not None:
+        if primary_region_name is not None and object_category is not None:
             # TODO: Draw UI
-            # print(primary_region_name)
+            # print(f"Region: {primary_region_name}")
+            # print(f"Category: {object_category}")
+            # print(f"States: {object_states}")
             pass
 
     def _draw_aabb(
