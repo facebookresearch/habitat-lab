@@ -16,6 +16,11 @@ from habitat_hitl.core.types import ConnectionRecord
 
 @dataclass
 class SessionRecord:
+    """
+    Data entry for a session.
+    The session spans from the time the first user is connected to the time the last episode is completed.
+    """
+
     episode_indices: List[int]
     session_error: str
     start_timestamp: int
@@ -27,12 +32,20 @@ class SessionRecord:
 
 @dataclass
 class UserRecord:
+    """
+    Data entry for a user.
+    """
+
     user_index: int
     connection_record: ConnectionRecord
 
 
 @dataclass
 class EpisodeRecord:
+    """
+    Data entry for an episode.
+    """
+
     episode_index: int
     episode_id: str
     scene_id: str
@@ -49,6 +62,10 @@ class EpisodeRecord:
 
 @dataclass
 class SessionOutput:
+    """
+    Content of the `session.json.gz` file.
+    """
+
     session: SessionRecord
     users: List[UserRecord]
     episodes: List[EpisodeRecord]
@@ -56,6 +73,10 @@ class SessionOutput:
 
 @dataclass
 class EpisodeOutput:
+    """
+    Content of the `{episode_id}.json.gz` file.
+    """
+
     session: SessionRecord
     users: List[UserRecord]
     episode: EpisodeRecord
@@ -63,6 +84,10 @@ class EpisodeOutput:
 
 
 class SessionRecorder:
+    """
+    Utility class for recording HITL data.
+    """
+
     def __init__(
         self,
         config: Dict[str, Any],
@@ -90,6 +115,10 @@ class SessionRecorder:
             )
 
     def end_session(self, error: str):
+        """
+        Signal that the session has ended.
+        Call 'get_session_output' and 'get_episode_outputs' to get the collected resulting data.
+        """
         self.session_record.end_timestamp = timestamp()
         self.session_record.session_error = error
 
@@ -102,6 +131,9 @@ class SessionRecorder:
         user_index_to_agent_index_map: Dict[int, int],
         episode_info: Dict[str, Any],
     ):
+        """
+        Signal that an episode has started.
+        """
         time = timestamp()
         self.episode_records.append(
             EpisodeRecord(
@@ -127,6 +159,9 @@ class SessionRecorder:
         task_percent_complete: float,
         task_explanation: Optional[str],
     ):
+        """
+        Signal that an episode has ended.
+        """
         assert len(self.episode_records) > 0
         episode = self.episode_records[-1]
 
@@ -141,6 +176,9 @@ class SessionRecorder:
         self,
         frame_data: Dict[str, Any],
     ):
+        """
+        Signal that a frame has occurred.
+        """
         assert len(self.episode_records) > 0
         episode_index = len(self.episode_records) - 1
         episode = self.episode_records[episode_index]
@@ -154,6 +192,9 @@ class SessionRecorder:
         self.frames[episode_index].append(frame_data)
 
     def get_session_output(self) -> SessionOutput:
+        """
+        Get the metadata of the session.
+        """
         return SessionOutput(
             self.session_record,
             self.user_records,
@@ -161,6 +202,9 @@ class SessionRecorder:
         )
 
     def get_episode_outputs(self) -> List[EpisodeOutput]:
+        """
+        Get the recorded HITL data.
+        """
         output: List[EpisodeOutput] = []
         for i in range(len(self.episode_records)):
             output.append(

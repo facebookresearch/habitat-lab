@@ -112,6 +112,9 @@ def make_s3_filename(session_id: str, orig_file_name: str) -> str:
 
 
 def validate_experiment_name(experiment_name: Optional[str]) -> bool:
+    """
+    Check whether the given experiment name is valid.
+    """
     if experiment_name is None:
         return False
 
