@@ -40,6 +40,9 @@ from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.sims.habitat_simulator.kinematic_relationship_manager import (
     KinematicRelationshipManager,
 )
+from habitat.sims.habitat_simulator.sim_utilities import (
+    object_shortname_from_handle,
+)
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentData,
     ArticulatedAgentManager,
@@ -624,18 +627,32 @@ class RearrangeSim(HabitatSim):
             t_start = time.time()
             if should_add_objects:
                 # Get object path
-                object_template = otm.get_templates_by_handle_substring(
-                    obj_handle
-                )
+                object_template_handles = otm.get_template_handles(obj_handle)
 
                 # Exit if template is invalid
-                if not object_template:
+                if not object_template_handles:
                     raise ValueError(
                         f"Template not found for object with handle {obj_handle}"
                     )
-
-                # Get object path
-                object_path = list(object_template.keys())[0]
+                elif len(object_template_handles) > 1:
+                    # handle duplicates which exact string matching
+                    obj_handle_shortname = object_shortname_from_handle(
+                        obj_handle
+                    )
+                    object_path = None
+                    for template_handle in object_template_handles:
+                        template_shortname = object_shortname_from_handle(
+                            template_handle
+                        )
+                        if template_shortname == obj_handle_shortname:
+                            object_path = template_handle
+                    if object_path is None:
+                        raise ValueError(
+                            f"Template not found for object with handle {obj_handle} despite multiple potential matches: {object_template_handles}"
+                        )
+                else:
+                    # Get object path if only one match is found
+                    object_path = object_template_handles[0]
 
                 # Get rigid object from the path
                 ro = rom.add_object_by_template_handle(object_path)
