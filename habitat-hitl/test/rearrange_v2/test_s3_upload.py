@@ -9,6 +9,7 @@ from typing import Dict, List
 from examples.hitl.rearrange_v2.s3_upload import (
     generate_unique_session_id,
     make_s3_filename,
+    validate_experiment_name,
 )
 from examples.hitl.rearrange_v2.util import timestamp
 from habitat_hitl.core.types import ConnectionRecord
@@ -68,3 +69,22 @@ def test_make_s3_filename():
     s3_filename = make_s3_filename("ab", long_name)
     assert len(s3_filename) == 128
     assert s3_filename[-4:] == ".txt"
+
+
+def test_validate_experiment_name():
+    assert validate_experiment_name(None) == False
+    assert validate_experiment_name("test") == True
+    assert validate_experiment_name("test_test-test.123") == True
+    assert validate_experiment_name("test?") == False
+    assert (
+        validate_experiment_name(
+            "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest"
+        )
+        == True
+    )
+    assert (
+        validate_experiment_name(
+            "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttest"
+        )
+        == False
+    )

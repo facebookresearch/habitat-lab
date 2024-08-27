@@ -547,11 +547,14 @@ class AppStateRearrangeV2(AppStateBase):
             ].gui_agent_controller._agent_idx
 
         episode = self._app_service.episode_helper.current_episode
+
         self._session.session_recorder.start_episode(
-            episode.episode_id,
-            episode.scene_id,
-            episode.scene_dataset_config,
-            user_index_to_agent_index_map,
+            episode_index=self._session.current_episode_index,
+            episode_id=episode.episode_id,
+            scene_id=episode.scene_id,
+            dataset=episode.scene_dataset_config,
+            user_index_to_agent_index_map=user_index_to_agent_index_map,
+            episode_info=episode.info,
         )
 
     def on_exit(self):
@@ -759,6 +762,8 @@ class AppStateRearrangeV2(AppStateBase):
                 self._metrics.get_task_percent_complete(),
             )
             self._session.session_recorder.record_frame(frame_data)
+        else:
+            self._session.session_recorder.record_frame({})
 
     def _is_any_agent_policy_driven(self) -> bool:
         """

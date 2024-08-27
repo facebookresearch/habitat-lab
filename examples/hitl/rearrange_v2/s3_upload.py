@@ -6,7 +6,7 @@
 
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from util import timestamp
 
@@ -109,3 +109,17 @@ def make_s3_filename(session_id: str, orig_file_name: str) -> str:
             s3_filename += "!"
 
     return s3_filename
+
+
+def validate_experiment_name(experiment_name: Optional[str]) -> bool:
+    if experiment_name is None:
+        return False
+
+    if len(experiment_name) > 128:
+        return False
+
+    authorized_chars = ["_", "-", "."]
+    return all(
+        not (not c.isalnum() and c not in authorized_chars)
+        for c in experiment_name
+    )
