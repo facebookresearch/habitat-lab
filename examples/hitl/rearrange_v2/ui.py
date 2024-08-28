@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, cast
 
 import magnum as mn
+from ui_overlay import UIOverlay
 from world import World
 
 from habitat.sims.habitat_simulator import sim_utilities
@@ -18,6 +19,7 @@ from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.event import Event
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -65,6 +67,7 @@ class UI:
         self,
         hitl_config,
         user_index: int,
+        app_service: AppService,
         world: World,
         gui_controller: GuiController,
         sim: RearrangeSim,
@@ -127,6 +130,10 @@ class UI:
         )
         self._selections.append(self._place_selection)
 
+        # Set up UI overlay
+        self._ui_overlay = UIOverlay(app_service, user_index)
+        self._is_help_shown = True
+
         # Set up user events
         self._on_pick = Event()
         self._on_place = Event()
@@ -185,6 +192,7 @@ class UI:
         self._last_click_time = datetime.now()
         for selection in self._selections:
             selection.deselect()
+        self._ui_overlay.reset()
 
     def update(self) -> None:
         """
@@ -221,10 +229,18 @@ class UI:
             self._place_object()
             self._place_selection.deselect()
 
+        # Toggle help text.
+        if self._gui_input.get_key_down(KeyCode.H):
+            self._is_help_shown = not self._is_help_shown
+
+        self._ui_overlay.update()
+
     def draw_ui(self) -> None:
         """
         Draw the UI.
         """
+        self._update_overlay_help_text()
+
         self._update_held_object_placement()
         self._update_hovered_object_ui()
         self._draw_place_selection()
@@ -318,6 +334,38 @@ class UI:
                     receptacle_id=receptacle_object_id,
                 )
             )
+
+    def update_overlay_instructions(
+        self, instructions: Optional[str], warning_text: Optional[str]
+    ):
+        overlay = self._ui_overlay
+        overlay.update_instructions_panel(
+            instructions, warning_text, self._is_help_shown
+        )
+
+    def _update_overlay_help_text(self):
+        """
+        Update the UI overlay.
+        """
+        overlay = self._ui_overlay
+
+        controls: Optional[List[Tuple[str, str]]] = (
+            [
+                ("H", "Hide Help"),
+                ("WASD", "Move"),
+                ("R/Middle-Click", "Look Around"),
+                ("I/K", "Look Up/Down"),
+                ("Left-Click", "Select"),
+                ("Double-Click", "Pick-up"),
+                ("Double-Click", "Open/Close"),
+                ("Right-Click", "Drop"),
+                ("0", "Finish Task"),
+            ]
+            if self._is_help_shown
+            else None
+        )
+
+        overlay.update_controls_panel(controls)
 
     def _interact_with_object(self, object_id: int) -> None:
         """Open/close the selected object. Must be interactable."""

@@ -13,6 +13,7 @@ from app_data import AppData
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.core.ui_elements import HorizontalAlignment
 from habitat_hitl.core.user_mask import Mask
 
 
@@ -51,13 +52,23 @@ class AppStateBase(AppState):
 
     def _status_message(self, message: str) -> None:
         """Send a message to all users."""
+        ui_manager = self._app_service.ui_manager
+        with ui_manager.update_canvas("top_left", Mask.ALL) as ctx:
+            ctx.label(
+                uid="status",
+                text=message,
+                font_size=24,
+                horizontal_alignment=HorizontalAlignment.LEFT,
+            )
+        # Server-side message.
+        # TODO: Handle from UI manager.
         if len(message) > 0:
             self._app_service.text_drawer.add_text(
                 message,
                 TextOnScreenAlignment.TOP_CENTER,
                 text_delta_x=-280,
                 text_delta_y=-50,
-                destination_mask=Mask.ALL,
+                destination_mask=Mask.NONE,
             )
 
     def _kick_all_users(self) -> None:

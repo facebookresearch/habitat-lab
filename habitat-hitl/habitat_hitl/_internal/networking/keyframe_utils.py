@@ -136,7 +136,20 @@ def update_consolidated_message(
 ) -> None:
     """Consolidate single user message."""
     for message_item_key in inc_message:
-        consolidated_message[message_item_key] = inc_message[message_item_key]
+        # Consolidate UI updates per-canvas.
+        if message_item_key == "uiUpdates":
+            if "uiUpdates" not in consolidated_message:
+                consolidated_message["uiUpdates"] = {}
+            for canvas_uid in inc_message[message_item_key]:
+                consolidated_message["uiUpdates"][canvas_uid] = inc_message[
+                    "uiUpdates"
+                ][canvas_uid]
+
+        # Consolidate other fields.
+        else:
+            consolidated_message[message_item_key] = inc_message[
+                message_item_key
+            ]
 
 
 def update_consolidated_messages(

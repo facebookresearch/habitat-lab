@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, Final, List, Optional, Union
 
 import magnum as mn
@@ -16,8 +16,11 @@ DEFAULT_NORMAL: Final[List[float]] = [0.0, 1.0, 0.0]
 DEFAULT_VIEWPORT_SIZE: Final[List[float]] = [0.0, 0.0, 1.0, 1.0]
 MAIN_VIEWPORT: Final[int] = -1
 
+# TODO: Move here.
+from habitat_hitl.core.ui_elements import UICanvasUpdate
 
-# TODO: Move to another file.
+
+# TODO: Deprecated legacy UI system.
 @dataclass
 class UIButton:
     """
@@ -372,6 +375,21 @@ class ClientMessageManager:
                 rot[2],
                 rot[3],
             ]
+
+    def update_ui_canvas(
+        self,
+        canvas_uid: str,
+        canvas_update: UICanvasUpdate,
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Update a UI canvas.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if "uiUpdates" not in message:
+                message["uiUpdates"] = {}
+            message["uiUpdates"][canvas_uid] = asdict(canvas_update)
 
 
 def _create_transform_dict(transform: mn.Matrix4) -> Dict[str, List[float]]:
