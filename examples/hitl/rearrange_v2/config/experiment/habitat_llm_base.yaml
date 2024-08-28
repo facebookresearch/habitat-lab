@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - /agent/@evaluation.agents.agent_0.config: oracle_rearrange_object_states_agent
+
+habitat_llm:
+  enable: False
+
+evaluation:
+  do_print: True
+  save_video: False
+  log_data: False
+  agents:
+    agent_0:
+      uid: 0

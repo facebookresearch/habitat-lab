@@ -1,0 +1,30 @@
+# This config is derived from habitat-lab/habitat/config/benchmark/multi_agent/hssd_spot_human.yaml
+# @package _global_
+
+defaults:
+  - _self_
+
+habitat:
+  dataset:
+    type: "CollaborationDataset-v0"
+    data_path: "placeholder.json.gz"
+    scenes_dir: "data/fpss"
+    metadata:
+      metadata_folder: "data/fpss/metadata"
+      obj_metadata: object_categories_filtered.csv
+      staticobj_metadata: fpmodels-with-decomposed.csv
+  simulator:
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
+      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
+      - "data/objects_ovmm/train_val/google_scanned/configs/"
+      - "data/objects_ovmm/train_val/hssd/configs/objects/"
+  environment:
+    max_episode_steps: 0
+    # Ensure that the episode iterator can be controlled by specifying episode IDs.
+    iterator_options:
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      shuffle: False
+      group_by_scene: False

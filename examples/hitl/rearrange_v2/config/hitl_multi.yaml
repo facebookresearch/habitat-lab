@@ -1,0 +1,12 @@
+# @package _global_
+
+# Top-level configuration for running a headless HITL server in multi-user mode.
+
+defaults:
+  - lang_rearrange_spot_humanoid.yaml
+  - server.yaml
+  - _self_
+
+habitat_hitl:
+  networking:
+    max_client_count: 2
