@@ -90,9 +90,9 @@ class AppStateLoadEpisode(AppStateBase):
     def _increment_episode(self):
         session = self._session
         assert session.episode_indices is not None
-        if session.current_episode_index < len(session.episode_indices):
-            self._set_episode(session.current_episode_index)
-            session.current_episode_index += 1
+        if session.next_session_episode < len(session.episode_indices):
+            self._set_episode(session.next_session_episode)
+            session.next_session_episode += 1
         else:
             self._session_ended = True
 
@@ -102,6 +102,7 @@ class AppStateLoadEpisode(AppStateBase):
 
         # Set the ID of the next episode to play in lab.
         next_episode_index = session.episode_indices[episode_index]
+        session.current_episode_index = next_episode_index
         print(f"Next episode index: {next_episode_index}.")
         try:
             app_service.episode_helper.set_next_episode_by_index(
