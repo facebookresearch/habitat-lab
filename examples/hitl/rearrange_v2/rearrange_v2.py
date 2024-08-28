@@ -610,10 +610,7 @@ class AppStateRearrangeV2(AppStateBase):
         task_percent_complete = self._metrics.get_task_percent_complete()
         feedback = self._metrics.get_task_explanation()
 
-        episode_finished = (
-            self._is_episode_finished() and
-            not self._cancel
-        )
+        episode_finished = self._is_episode_finished() and not self._cancel
 
         self._session.session_recorder.end_episode(
             episode_finished=episode_finished,
