@@ -39,7 +39,8 @@ VisualObservation = Union[np.ndarray, "Tensor"]
 @attr.s(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
     """Attrs base class wrapper for DictConfig defining the action space for a task.
-    :param config: The action space DictConfig.
+
+    :property config: The action space DictConfig.
     """
 
     config: "DictConfig"
@@ -69,17 +70,12 @@ class SensorTypes(Enum):
 
 
 class Sensor(metaclass=abc.ABCMeta):
-    """Represents a sensor that provides data from the environment to agent.
+    """Represents a sensor that provides data from the environment to agent. The user of this class needs to implement the get_observation method and the user is also required to set attributes.
 
-    :param uuid: universally unique id.
-    :param sensor_type: type of Sensor, use SensorTypes enum if your sensor
-        comes under one of it's categories.
-    :param observation_space: ``gym.Space`` object corresponding to observation
-        of sensor.
-    :param config: The SensorConfig.
-
-    The user of this class needs to implement the get_observation method and
-    the user is also required to set the below attributes:
+    :data uuid: universally unique id.
+    :data sensor_type: type of Sensor, use SensorTypes enum if your sensor comes under one of it's categories.
+    :data observation_space: ``gym.Space`` object corresponding to observation of sensor.
+    :data config: The SensorConfig.
     """
 
     uuid: str
@@ -108,7 +104,7 @@ class Sensor(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        r"""Returns current observation for Sensor."""
+        """Returns current observation for Sensor."""
         raise NotImplementedError
 
 
@@ -124,8 +120,7 @@ class Observations(Dict[str, Any]):
     ) -> None:
         """..
 
-        :param sensors: list of sensors whose observations are fetched and
-            packaged.
+        :param sensors: list of sensors whose observations are fetched and packaged.
         :param should_time: Optionally log performance timing metrics.
         """
         data = []
@@ -140,7 +135,7 @@ class Observations(Dict[str, Any]):
 
 
 class RGBSensor(Sensor, metaclass=abc.ABCMeta):
-    """Wrapper for 3-channel color Camera Sensors."""
+    """Wrapper for 3-channel color Camera Sensors. See :ref:`Sensor` parent class for more details."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -159,7 +154,7 @@ class RGBSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class DepthSensor(Sensor, metaclass=abc.ABCMeta):
-    """Wrapper for depth Camera Sensors."""
+    """Wrapper for depth Camera Sensors. See :ref:`Sensor` parent class for more details."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -178,7 +173,7 @@ class DepthSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class SemanticSensor(Sensor):
-    """Wrapper for integer id Camera Sensors where each integer is mapped to an object instance or semantic class."""
+    """Wrapper for integer id Camera Sensors where each integer is mapped to an object instance or semantic class. See :ref:`Sensor` parent class for more details."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -197,7 +192,7 @@ class SemanticSensor(Sensor):
 
 
 class BumpSensor(Sensor):
-    """Wrapper for non-visual navmesh collision Sensors."""
+    """Wrapper for non-visual navmesh collision Sensors. See :ref:`Sensor` parent class for more details."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -218,6 +213,11 @@ class BumpSensor(Sensor):
 class SensorSuite:
     """Represents a set of sensors, with each sensor being identified
     through a unique id.
+
+    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
+    :data sensors:  MISSING DESCRIPTIONS
+    :data observations_spaces: MISSING DESCRIPTIONS
+
     """
 
     sensors: Dict[str, Sensor]
@@ -251,7 +251,12 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    """Represents the rigid transformation state of an agent as a 3D position and quaternion rotation."""
+    """Represents the rigid transformation state of an agent as a 3D position and quaternion rotation.
+
+    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
+    :data position:  MISSING DESCRIPTIONS
+    :data rotation: MISSING DESCRIPTIONS
+    """
 
     position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
@@ -259,7 +264,13 @@ class AgentState:
 
 @attr.s(auto_attribs=True)
 class ShortestPathPoint:
-    """Wrapper for the information embedded in a single point for a ShortestPath planner object: 3D position, quaternion rotation, and the action which led to the state."""
+    """Wrapper for the information embedded in a single point for a ShortestPath planner object: 3D position, quaternion rotation, and the action which led to the state.
+
+    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
+    :data position:  MISSING DESCRIPTIONS
+    :data rotation: MISSING DESCRIPTIONS
+    :data actions: MISSING DESCRIPTIONS
+    """
 
     position: List[Any]
     rotation: List[Any]
@@ -269,6 +280,9 @@ class ShortestPathPoint:
 class Simulator:
     """Abstract simulator class for habitat. New simulators to be added to habitat
     must derive from this class and implement the abstract methods.
+
+    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
+    :data habitat_config:  MISSING DESCRIPTIONS
     """
 
     habitat_config: "DictConfig"
