@@ -12,6 +12,7 @@ defaults:
 
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_0_humanoidjoint_action: humanoidjoint_action
 
   - /habitat/task/measurements:
     - num_steps
@@ -38,7 +39,7 @@ habitat:
     slack_reward: -0.0005
     end_on_success: True
     constraint_violation_ends_episode: False
-    constraint_violation_drops_object: True
+    constraint_violation_drops_object: False
     task_spec_base_path: benchmark/multi_agent/
     task_spec: pddl/multi_agent_tidy_house
     pddl_domain_def: fp
@@ -53,17 +54,9 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
-  environment:
-    max_episode_steps: 750
   simulator:
-    type: RearrangeSim-v0
+    type: CollaborationSim-v0
     seed: 100
-    additional_object_paths:
-      - "data/objects/ycb/configs/"
-      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
-      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
-      - "data/objects_ovmm/train_val/google_scanned/configs/"
-      - "data/objects_ovmm/train_val/hssd/configs/objects/"
     concur_render: True
     auto_sleep: True
     agents_order:
@@ -76,11 +69,3 @@ habitat:
     habitat_sim_v0:
       allow_sliding: True
       enable_physics: True
-  dataset:
-    type: "CollaborationDataset-v0"
-    data_path: data/datasets/hssd/llm_rearrange/v2/60scenes_dataset_776eps_with_eval.json.gz
-
-rearrange_v2:
-  data_collection:
-    s3_path: "Placeholder/"
-    output_file_name: "session"
