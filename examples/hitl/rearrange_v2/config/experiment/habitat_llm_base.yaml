@@ -1,10 +1,10 @@
 # @package _global_
 
 defaults:
-  - /agent/@evaluation.agents.agent_0.config: oracle_rearrange_object_states_agent
+  - override /agent/@evaluation.agents.agent_0.config: oracle_rearrange_object_states_agent
 
 habitat_llm:
-  enable: False
+  enable: True
 
 evaluation:
   do_print: True

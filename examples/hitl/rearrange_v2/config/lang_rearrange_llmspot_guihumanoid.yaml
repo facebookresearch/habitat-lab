@@ -34,7 +34,7 @@ habitat:
       shuffle: False
   dataset:
     type: "CollaborationDataset-v0"
-    data_path: "data/episodes/2024_07_29_val_hitl_stacked_v2.json.gz"
+    data_path: "data/episodes/2024_07_19_test_hitl_stacked_v3.json.gz"
     scenes_dir: "data/fpss"
     # metadata:
     #   metadata_folder: "data/fpss/metadata"
