@@ -136,8 +136,24 @@ class UIElementUpdate:
     separator: Optional[UISeparator]
     spacer: Optional[UISpacer]
 
+    @staticmethod
+    def create(e: UIElement):
+        UIElementUpdate(
+            canvasProperties=e if isinstance(e, UICanvas) else None,
+            label=e if isinstance(e, UILabel) else None,
+            toggle=e if isinstance(e, UIToggle) else None,
+            button=e if isinstance(e, UIButton) else None,
+            listItem=e if isinstance(e, UIListItem) else None,
+            separator=e if isinstance(e, UISeparator) else None,
+            spacer=e if isinstance(e, UISpacer) else None,
+        )
+
 
 def _create_default_canvases() -> Dict[str, Dict[str, UIElement]]:
+    """
+    Create a map of available canvases to their content.
+    By the default, the canvases are empty.
+    """
     return {
         "top_left": {},
         "top": {},
@@ -155,6 +171,10 @@ def _create_default_canvases() -> Dict[str, Dict[str, UIElement]]:
 def _create_default_user_canvases(
     user_count: int,
 ) -> List[Dict[str, Dict[str, UIElement]]]:
+    """
+    Create a list of canvases per user.
+    By the default, the canvases are empty.
+    """
     user_canvases: List[Dict[str, Dict[str, UIElement]]] = []
     for _ in range(user_count):
         user_canvases.append(_create_default_canvases())
@@ -182,18 +202,36 @@ class UIManager:
     def update_canvas(
         self, canvas_uid: str, destination_mask: Mask
     ) -> UIContext:
+        """
+        Update a canvas.
+
+        Use this function within a `with` block.
+        The canvas update will consolidated and sent to all users in `destination_mask` when the `with` block de-scopes.
+        Updating a canvas more than once will overwrite the previous state.
+
+        Example:
+        ```
+        with ui.update_canvas("center", Mask.ALL) as ctx:
+            ctx.label(text="Text")
+        ```
+        """
         return UIContext(
             canvas_uid=canvas_uid,
             destination_mask=destination_mask,
             manager=self,
         )
 
-    def commit_canvas_content(
+    def _commit_canvas_content(
         self,
         canvas_uid: str,
         ui_elements: Dict[str, UIElement],
         destination_mask: Mask,
     ):
+        """
+        Update a canvas.
+
+        Use `update_canvas()` instead of calling this function directly.
+        """
         for user_index in self._users.indices(destination_mask):
             cached_elements = self._user_canvases[user_index].get(
                 canvas_uid, {}
@@ -214,31 +252,7 @@ class UIManager:
                 dirty_elements: List[UIElementUpdate] = []
 
                 for element in ui_elements.values():
-                    dirty_elements.append(
-                        UIElementUpdate(
-                            canvasProperties=element
-                            if isinstance(element, UICanvas)
-                            else None,
-                            label=element
-                            if isinstance(element, UILabel)
-                            else None,
-                            toggle=element
-                            if isinstance(element, UIToggle)
-                            else None,
-                            button=element
-                            if isinstance(element, UIButton)
-                            else None,
-                            listItem=element
-                            if isinstance(element, UIListItem)
-                            else None,
-                            separator=element
-                            if isinstance(element, UISeparator)
-                            else None,
-                            spacer=element
-                            if isinstance(element, UISpacer)
-                            else None,
-                        )
-                    )
+                    dirty_elements.append(UIElementUpdate.create(element))
 
                 # Submit the canvas update.
                 canvas_update = UICanvasUpdate(
@@ -282,6 +296,18 @@ class UIManager:
 
 
 class UIContext:
+    """
+    Helper class for writing a UI canvas update.
+
+    Create using `UIManager.update_canvas()`.
+
+    Example:
+    ```
+    with ui.update_canvas("center", Mask.ALL) as ctx:
+        ctx.label(text="Text")
+    ```
+    """
+
     def __init__(
         self, canvas_uid: str, destination_mask: Mask, manager: UIManager
     ):
@@ -297,11 +323,15 @@ class UIContext:
 
     def canvas_properties(
         self,
+        *,
         padding: int = 0,
         background_color: Optional[List[float]] = None,
     ) -> None:
         """
         Set the properties of the canvas.
+
+        `padding`: Size of the space around the canvas content.
+        `background_color`: RGBA color of the canvas background. Transparent by default.
         """
         self.update_element(
             UICanvas(
@@ -313,6 +343,7 @@ class UIContext:
 
     def label(
         self,
+        *,
         uid: str = AUTO,
         text: str = "",
         font_size: int = 24,
@@ -322,6 +353,13 @@ class UIContext:
     ) -> None:
         """
         Create a text label.
+
+        `uid`: Unique identifier for the element. Autogenerated by default.
+        `text`: Text content of the label.
+        `font_size`: Size of the font.
+        `bold`: Whether the text is bold.
+        `horizontal_alignment`: Horizontal alignment of the text.
+        `color`: RGBA color of the text. White by default.
         """
         self.update_element(
             UILabel(
@@ -336,6 +374,7 @@ class UIContext:
 
     def list_item(
         self,
+        *,
         uid: str = AUTO,
         text_left: str = "",
         text_right: str = "",
@@ -344,6 +383,12 @@ class UIContext:
     ) -> None:
         """
         Create a list item with two labels.
+
+        `uid`: Unique identifier for the element. Autogenerated by default.
+        `text_left`: Text content of the left label.
+        `text_right`: Text content of the right label.
+        `font_size`: Size of the text.
+        `color`: RGBA color of the text. White by default.
         """
         self.update_element(
             UIListItem(
@@ -357,6 +402,7 @@ class UIContext:
 
     def toggle(
         self,
+        *,
         uid: str = AUTO,
         toggled: bool = False,
         text_false: str = "",
@@ -368,6 +414,14 @@ class UIContext:
         """
         Create a toggle with "true" and "false" labels on each side.
         Use 'UIManager.is_button_pressed()' to check whether the toggle was pressed during the frame.
+
+        `uid`: Unique identifier for the element. Autogenerated by default.
+        `toggled`: Whether the toggle is activated.
+        `text_false`: Text label for the deactivated state.
+        `text_true`: Text label for the activated state.
+        `enabled`: Whether the toggle state can be changed.
+        `color`: RGBA color of the toggle.
+        `tooltip`: Tooltip to show when hovering the toggle.
         """
         self.update_element(
             UIToggle(
@@ -383,6 +437,7 @@ class UIContext:
 
     def button(
         self,
+        *,
         uid: str = AUTO,
         text: str = "",
         enabled: bool = True,
@@ -391,6 +446,11 @@ class UIContext:
         """
         Create a button with text content.
         Use 'UIManager.is_button_pressed()' to check whether the button was pressed during the frame.
+
+        `uid`: Unique identifier for the element. Autogenerated by default.
+        `text`: Text to display on the button.
+        `enabled`: Whether the toggle state can be changed.
+        `color`: RGBA color of the button.
         """
         self.update_element(
             UIButton(
@@ -401,7 +461,7 @@ class UIContext:
             )
         )
 
-    def separator(self, uid: str = AUTO):
+    def separator(self, *, uid: str = AUTO):
         """
         Create a horizontal line separator.
         """
@@ -409,6 +469,7 @@ class UIContext:
 
     def spacer(
         self,
+        *,
         uid: str = AUTO,
         size: float = 24,
     ):
@@ -424,7 +485,7 @@ class UIContext:
         return self
 
     def __exit__(self, exception_type, _exception_val, _trace):
-        self._manager.commit_canvas_content(
+        self._manager._commit_canvas_content(
             self._canvas_uid, self._ui_elements, self._destination_mask
         )
         return exception_type == None
