@@ -1,9 +1,13 @@
 # @package _global_
 
+defaults:
+  - _self_
+
 habitat_hitl:
   window: ~
   networking:
     enable: True
+    max_client_count: 1
     http_availability_server:
       enable: True
     client_max_idle_duration: 180.0
