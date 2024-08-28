@@ -214,10 +214,8 @@ class SensorSuite:
     """Represents a set of sensors, with each sensor being identified
     through a unique id.
 
-    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
-    :data sensors:  MISSING DESCRIPTIONS
-    :data observations_spaces: MISSING DESCRIPTIONS
-
+    :data sensors: dict mapping Sensors' uids to their Sensor objects.
+    :data observations_spaces: dict of observation spaces for each sensor keyed by uid.
     """
 
     sensors: Dict[str, Sensor]
@@ -253,9 +251,8 @@ class SensorSuite:
 class AgentState:
     """Represents the rigid transformation state of an agent as a 3D position and quaternion rotation.
 
-    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
-    :data position:  MISSING DESCRIPTIONS
-    :data rotation: MISSING DESCRIPTIONS
+    :data position: 3D position of the agent's base. Typically on the navmesh.
+    :data rotation: quaternion orientation of the agent's base. Typically a yaw rotation.
     """
 
     position: Union[None, List[float], np.ndarray]
@@ -266,10 +263,9 @@ class AgentState:
 class ShortestPathPoint:
     """Wrapper for the information embedded in a single point for a ShortestPath planner object: 3D position, quaternion rotation, and the action which led to the state.
 
-    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
-    :data position:  MISSING DESCRIPTIONS
-    :data rotation: MISSING DESCRIPTIONS
-    :data actions: MISSING DESCRIPTIONS
+    :data position: 3D global position of the path point. Typically corresponds to an agent's base position on the navmesh.
+    :data rotation: quaternion orientation of the agent at the point.
+    :data action: the action, typically a discrete transformation, which led to the this path point for use in path planning.
     """
 
     position: List[Any]
@@ -281,8 +277,7 @@ class Simulator:
     """Abstract simulator class for habitat. New simulators to be added to habitat
     must derive from this class and implement the abstract methods.
 
-    TODO: MISSING CLASS PARAMETER DESCRIPTIONS
-    :data habitat_config:  MISSING DESCRIPTIONS
+    :data habitat_config: The Dictconfig object containing configuration parameters specifically pertaining to the habitat Simulator.
     """
 
     habitat_config: "DictConfig"
