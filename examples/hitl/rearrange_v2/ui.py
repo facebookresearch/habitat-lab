@@ -280,9 +280,7 @@ class UI:
                         krm.relationship_graph.remove_obj_relations(
                             object_id, parents_only=True
                         )
-                        krm.prev_root_obj_state = (
-                            self._sim.kinematic_relationship_manager.get_root_parents_snapshot()
-                        )
+                        krm.update_snapshots()
 
                     self._on_pick.invoke(
                         UI.PickEventData(
@@ -347,7 +345,7 @@ class UI:
                 krm.relationship_graph.add_relation(
                     receptacle_object_id, object_id, "ontop"
                 )
-                self._sim.kinematic_relationship_manager.update_snapshots()
+                krm.update_snapshots()
 
             self._on_place.invoke(
                 UI.PlaceEventData(
@@ -406,7 +404,12 @@ class UI:
                         sim_utilities.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
                         if self._sim._kinematic_mode:
+                            # first apply the current relative transform
                             self._sim.kinematic_relationship_manager.apply_relations()
+                            # then update the root transform of the closed link (links are always root parents)
+                            self._sim.kinematic_relationship_manager.update_snapshots(
+                                root_parent_subset=[link_id]
+                            )
                         self._on_close.invoke(
                             UI.OpenEventData(
                                 object_id=object_id,
@@ -417,7 +420,12 @@ class UI:
                         sim_utilities.open_link(ao, link_index)
                         self._world._opened_link_set.add(link_id)
                         if self._sim._kinematic_mode:
+                            # first apply the current relative transform
                             self._sim.kinematic_relationship_manager.apply_relations()
+                            # then update the root transform of the opened link (links are always root parents)
+                            self._sim.kinematic_relationship_manager.update_snapshots(
+                                root_parent_subset=[link_id]
+                            )
                         self._on_open.invoke(
                             UI.CloseEventData(
                                 object_id=object_id,
