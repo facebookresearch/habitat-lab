@@ -47,7 +47,7 @@ PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other ag
 
 LLM_CONTROLLER_FOUND = False
 try:
-    from habitat_hitl.environment.controllers.llm_controller import (
+    from habitat_llm.hitl.llm_controller import (
         AgentTerminationEvent,
         LLMController,
         PlannerStatus,
@@ -499,18 +499,36 @@ class AppStateRearrangeV2(AppStateBase):
         self._error_message: Optional[str] = None
 
         self._agent_data: List[AgentData] = []
+        sensor_agent_index = 0
+
+        # get camera renders for head sensors provided via config
         for agent_index in range(self._num_agents):
-            agent = agent_mgr._all_agent_data[agent_index]
-            camera_name: Optional[Any] = (
-                agent.articulated_agent._cameras[0]
-                if len(agent.articulated_agent._cameras) > 0
-                else None
-            )
-            render_camera: Optional[Any] = (
-                sim.agents[agent_index]._sensors[camera_name].render_camera
-                if camera_name is not None
-                else None
-            )
+            # agent = agent_mgr._all_agent_data[agent_index]
+            # camera_name: Optional[Any] = (
+            #     list(agent.articulated_agent._cameras)[0]
+            #     if len(agent.articulated_agent._cameras) > 0
+            #     else None
+            # )
+            agent_name = f"agent_{agent_index}"
+            camera_sensor_substring = app_service._config["rearrange_v2"][
+                "head_sensor_substrings"
+            ][agent_name]
+            camera_name = f"{agent_name}_{camera_sensor_substring}_rgb"
+            print("=====", camera_name, "======")
+            try:
+                render_camera: Optional[Any] = (
+                    sim.agents[sensor_agent_index]
+                    ._sensors[camera_name]
+                    .render_camera
+                    if camera_name is not None
+                    else None
+                )
+            except (TypeError, IndexError):
+                print(
+                    "=== Could not find a render-matrix for camera: ",
+                    camera_name,
+                    " ===",
+                )
             agent_controller = app_service.all_agent_controllers[agent_index]
 
             # Match agent and user indices.
