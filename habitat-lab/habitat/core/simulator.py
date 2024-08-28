@@ -3,7 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-"""TODO: ADD MODULE DESCRIPTION"""
+"""Defines the core Simulator and Sensor class wrapper APIs. The classes here are primarily defining abstract APIs which are implemented further downstream."""
 import abc
 import time
 from collections import OrderedDict
@@ -38,9 +38,10 @@ VisualObservation = Union[np.ndarray, "Tensor"]
 
 @attr.s(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
-    """TODO: ADD CLASS DESCRIPTION
-    :param config: TODO ADD CONFIG DESCRIPTION
+    """Attrs base class wrapper for DictConfig defining the action space for a task.
+    :param config: The action space DictConfig.
     """
+
     config: "DictConfig"
 
     @abc.abstractmethod
@@ -49,7 +50,7 @@ class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
 
 
 class SensorTypes(Enum):
-    r"""Enumeration of types of sensors."""
+    """Enumeration of types of sensors."""
 
     NULL = 0
     COLOR = 1
@@ -68,14 +69,14 @@ class SensorTypes(Enum):
 
 
 class Sensor(metaclass=abc.ABCMeta):
-    r"""Represents a sensor that provides data from the environment to agent.
+    """Represents a sensor that provides data from the environment to agent.
 
     :param uuid: universally unique id.
     :param sensor_type: type of Sensor, use SensorTypes enum if your sensor
         comes under one of it's categories.
     :param observation_space: ``gym.Space`` object corresponding to observation
         of sensor.
-    :param config: TODO ADD DESCRIPTION
+    :param config: The SensorConfig.
 
     The user of this class needs to implement the get_observation method and
     the user is also required to set the below attributes:
@@ -107,13 +108,12 @@ class Sensor(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_observation(self, *args: Any, **kwargs: Any) -> Any:
-        r""" Returns current observation for Sensor.
-        """
+        r"""Returns current observation for Sensor."""
         raise NotImplementedError
 
 
 class Observations(Dict[str, Any]):
-    r"""Dictionary containing sensor observations"""
+    """Dictionary containing sensor observations"""
 
     def __init__(
         self,
@@ -126,7 +126,7 @@ class Observations(Dict[str, Any]):
 
         :param sensors: list of sensors whose observations are fetched and
             packaged.
-        :param should_time: TODO DESCRIPTION
+        :param should_time: Optionally log performance timing metrics.
         """
         data = []
         for uuid, sensor in sensors.items():
@@ -140,7 +140,8 @@ class Observations(Dict[str, Any]):
 
 
 class RGBSensor(Sensor, metaclass=abc.ABCMeta):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Wrapper for 3-channel color Camera Sensors."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -158,7 +159,8 @@ class RGBSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class DepthSensor(Sensor, metaclass=abc.ABCMeta):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Wrapper for depth Camera Sensors."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -176,7 +178,8 @@ class DepthSensor(Sensor, metaclass=abc.ABCMeta):
 
 
 class SemanticSensor(Sensor):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Wrapper for integer id Camera Sensors where each integer is mapped to an object instance or semantic class."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -194,7 +197,8 @@ class SemanticSensor(Sensor):
 
 
 class BumpSensor(Sensor):
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Wrapper for non-visual navmesh collision Sensors."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -212,7 +216,7 @@ class BumpSensor(Sensor):
 
 
 class SensorSuite:
-    r"""Represents a set of sensors, with each sensor being identified
+    """Represents a set of sensors, with each sensor being identified
     through a unique id.
     """
 
@@ -239,7 +243,7 @@ class SensorSuite:
         return self.sensors[uuid]
 
     def get_observations(self, *args: Any, **kwargs: Any) -> Observations:
-        r"""Collects data from all sensors and returns it packaged inside
+        """Collects data from all sensors and returns it packaged inside
         :ref:`Observations`.
         """
         return Observations(self.sensors, *args, **kwargs)
@@ -247,23 +251,26 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Represents the rigid transformation state of an agent as a 3D position and quaternion rotation."""
+
     position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 
 @attr.s(auto_attribs=True)
 class ShortestPathPoint:
-    """TODO: ADD CLASS DESCRIPTION"""
+    """Wrapper for the information embedded in a single point for a ShortestPath planner object: 3D position, quaternion rotation, and the action which led to the state."""
+
     position: List[Any]
     rotation: List[Any]
     action: Union[int, np.ndarray, None] = None
 
 
 class Simulator:
-    r"""Basic simulator class for habitat. New simulators to be added to habtiat
-    must derive from this class and implement the abstarct methods.
+    """Abstract simulator class for habitat. New simulators to be added to habitat
+    must derive from this class and implement the abstract methods.
     """
+
     habitat_config: "DictConfig"
 
     def __init__(self, *args, **kwargs) -> None:
@@ -278,14 +285,14 @@ class Simulator:
         raise NotImplementedError
 
     def reset(self) -> Observations:
-        r"""resets the simulator and returns the initial observations.
+        """resets the simulator and returns the initial observations.
 
         :return: initial observations from simulator.
         """
         raise NotImplementedError
 
     def step(self, action, *args, **kwargs) -> Observations:
-        r"""Perform an action in the simulator and return observations.
+        """Perform an action in the simulator and return observations.
 
         :param action: action to be performed inside the simulator.
         :return: observations after taking action in simulator.
@@ -308,7 +315,7 @@ class Simulator:
         ],
         episode: Optional[Episode] = None,
     ) -> float:
-        r"""Calculates geodesic distance between two points.
+        """Calculates geodesic distance between two points.
 
         :param position_a: coordinates of first point.
         :param position_b: coordinates of second point or list of goal points
@@ -323,7 +330,7 @@ class Simulator:
         raise NotImplementedError
 
     def get_agent_state(self, agent_id: int = 0) -> AgentState:
-        r"""..
+        """..
 
         :param agent_id: id of agent.
         :return: state of agent corresponding to :p:`agent_id`.
@@ -352,7 +359,7 @@ class Simulator:
         raise NotImplementedError
 
     def sample_navigable_point(self) -> List[float]:
-        r"""Samples a navigable point from the simulator. A point is defined as
+        """Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
 
         :return: navigable point.
@@ -360,7 +367,7 @@ class Simulator:
         raise NotImplementedError
 
     def is_navigable(self, point: List[float]) -> bool:
-        r"""Return :py:`True` if the agent can stand at the specified point.
+        """Return :py:`True` if the agent can stand at the specified point.
 
         :param point: the point to check.
         """
@@ -369,7 +376,7 @@ class Simulator:
     def action_space_shortest_path(
         self, source: AgentState, targets: List[AgentState], agent_id: int = 0
     ) -> List[ShortestPathPoint]:
-        r"""Calculates the shortest path between source and target agent
+        """Calculates the shortest path between source and target agent
         states.
 
         :param source: source agent state for shortest path calculation.
@@ -383,7 +390,7 @@ class Simulator:
     def get_straight_shortest_path_points(
         self, position_a: List[float], position_b: List[float]
     ) -> List[List[float]]:
-        r"""Returns points along the geodesic (shortest) path between two
+        """Returns points along the geodesic (shortest) path between two
         points irrespective of the angles between the waypoints.
 
         :param position_a: the start point. This will be the first point in
@@ -398,14 +405,14 @@ class Simulator:
 
     @property
     def up_vector(self) -> "np.ndarray":
-        r"""The vector representing the direction upward (perpendicular to the
+        """The vector representing the direction upward (perpendicular to the
         floor) from the global coordinate frame.
         """
         raise NotImplementedError
 
     @property
     def forward_vector(self) -> "np.ndarray":
-        r"""The forward direction in the global coordinate frame i.e. the
+        """The forward direction in the global coordinate frame i.e. the
         direction of forward movement for an agent with 0 degrees rotation in
         the ground plane.
         """
@@ -418,7 +425,7 @@ class Simulator:
         pass
 
     def previous_step_collided(self) -> bool:
-        r"""Whether or not the previous step resulted in a collision
+        """Whether or not the previous step resulted in a collision
 
         :return: :py:`True` if the previous step resulted in a collision,
             :py:`False` otherwise
