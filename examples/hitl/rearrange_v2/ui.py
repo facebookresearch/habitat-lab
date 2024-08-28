@@ -143,6 +143,22 @@ class UI:
         # Disable the snap manager automatic object positioning so that object placement is controlled here.
         self._get_grasp_manager()._automatically_update_snapped_object = False
 
+        # Set up object state manipulation.
+        self._object_state_manipulator: Optional[
+            "ObjectStateManipulator"
+        ] = None
+        try:
+            from object_state_manipulator import ObjectStateManipulator
+
+            self._object_state_manipulator = ObjectStateManipulator(
+                sim=sim,
+                agent_index=gui_controller._agent_idx,
+                world=world,
+                maximum_distance=self._can_grasp_place_threshold,
+            )
+        except Exception as e:
+            print(f"Cannot load object state manipulator. {e}")
+
     @dataclass
     class PickEventData:
         object_id: int
