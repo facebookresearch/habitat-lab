@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional
+from typing import Optional, Set
 
 from app_data import AppData
 from app_state_base import AppStateBase
@@ -119,6 +119,28 @@ class AppStateLoadEpisode(AppStateBase):
         client_message_manager = app_service.client_message_manager
         if client_message_manager:
             client_message_manager.signal_scene_change(Mask.ALL)
+
+        # Hide agent objects from start view.
+        sim = app_service.sim
+        agent_manager = sim.agents_mgr
+        agent_object_ids: Set[int] = set()
+        for agent_index in range(len(app_service.all_agent_controllers)):
+            agent = agent_manager[agent_index]
+            agent_ao = agent.articulated_agent.sim_obj
+            agent_object_ids.add(agent_ao.object_id)
+            for link_object_id in agent_ao.link_object_ids:
+                agent_object_ids.add(link_object_id)
+        for agent_object_id in agent_object_ids:
+            app_service.client_message_manager.set_object_visibility_layer(
+                object_id=agent_object_id,
+                layer_id=1,
+                destination_mask=Mask.ALL,
+            )
+        app_service.client_message_manager.set_viewport_properties(
+            viewport_id=-1,
+            visible_layer_ids=Mask.all_except_index(1),
+            destination_mask=Mask.ALL,
+        )
 
         # Save a keyframe. This propagates the new content to the clients, initiating client-side loading.
         # Beware that the client "loading" state won't immediately be visible to the server.
