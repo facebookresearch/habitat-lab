@@ -755,15 +755,6 @@ class UI:
                     destination_mask=Mask.from_index(self._user_index),
                 )
 
-        # Skip highlight if select object is the same as hovered object.
-        selected_obj_id = self._click_selection.object_id
-        if selected_obj_id is not None:
-            selected_obj = sim_utilities.get_obj_from_id(
-                sim, selected_obj_id, self._world._link_id_to_ao_map
-            )
-            if selected_obj is not None and obj.handle == selected_obj.handle:
-                return
-
     def _draw_selected_object_highlights(self) -> None:
         """Highlight the selected object."""
         object_id = self._click_selection.object_id
