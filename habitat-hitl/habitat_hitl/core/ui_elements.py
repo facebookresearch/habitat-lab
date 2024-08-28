@@ -137,8 +137,8 @@ class UIElementUpdate:
     spacer: Optional[UISpacer]
 
     @staticmethod
-    def create(e: UIElement):
-        UIElementUpdate(
+    def create(e: UIElement) -> UIElementUpdate:
+        return UIElementUpdate(
             canvasProperties=e if isinstance(e, UICanvas) else None,
             label=e if isinstance(e, UILabel) else None,
             toggle=e if isinstance(e, UIToggle) else None,
