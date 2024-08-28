@@ -157,5 +157,5 @@ rearrange_v2:
     s3_path: "Placeholder/"
     output_file_name: "session"
   head_sensor_substrings:
-    "agent_0": "jaw"
+    "agent_0": "articulated_agent_jaw"
     "agent_1": "head"

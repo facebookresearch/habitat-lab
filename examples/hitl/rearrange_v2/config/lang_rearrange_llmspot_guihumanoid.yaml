@@ -11,7 +11,6 @@ defaults:
   - language_rearrange_multi_agent_llm_gui
   - hitl_defaults
   - override /instruct@evaluation.agents.agent_0.planner.plan_config.instruct: few_shot_decentralized_partial_obs_coordinated_robot_spatial
-  # - override /llm@evaluation.agents.agent_0.planner.plan_config.llm: openai_chat
   - _self_
 
 evaluation:
