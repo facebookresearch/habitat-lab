@@ -96,6 +96,9 @@ data
 /train_dir
 /tb
 
+# HITL outputs
+/hitl_output*
+
 # outputs from other libraries
 /sandbox
 /plots/outputs
