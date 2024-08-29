@@ -11,10 +11,16 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Callable, List, Optional, Set, Tuple, cast
 
 import magnum as mn
+import numpy as np
+from scipy import spatial
 from ui_overlay import UIOverlay
 from world import World
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
+from habitat.datasets.rearrange.samplers.receptacle import (
+    Receptacle,
+    TriangleMeshReceptacle,
+)
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
 )
@@ -337,6 +343,234 @@ class UI:
         )
         rigid_object.translation = eye_position + forward_vector
 
+    def point_to_tri_dist(
+        self, point: np.ndarray, triangles: np.ndarray
+    ) -> Tuple[float, np.ndarray]:
+        """
+        Compute the minimum distance between a 3D point and a set of triangles (e.g. a triangle mesh) and return both the minimum distance and that closest point.
+        Uses vectorized numpy operations for high performance with a large number of triangles.
+        Implementation adapted from https://stackoverflow.com/questions/32342620/closest-point-projection-of-a-3d-point-to-3d-triangles-with-numpy-scipy
+        Algorithm is vectorized form of e.g. https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf
+
+        :param point: A 3D point.
+        :param triangles: An nx3x3 numpy array of triangles. Each entry of the first axis is a triangle with three 3D vectors, the vertices of the triangle.
+        :return: The minimum distance from point to triangle set and the closest point on the surface of any triangle.
+        """
+
+        with np.errstate(all="ignore"):
+            # Unpack triangle points
+            p0, p1, p2 = np.asarray(triangles).swapaxes(0, 1)
+
+            # Calculate triangle edges
+            e0 = p1 - p0
+            e1 = p2 - p0
+            a = np.einsum("...i,...i", e0, e0)
+            b = np.einsum("...i,...i", e0, e1)
+            c = np.einsum("...i,...i", e1, e1)
+
+            # Calculate determinant and denominator
+            det = a * c - b * b
+            invDet = 1.0 / det
+            denom = a - 2 * b + c
+
+            # Project to the edges
+            p = p0 - point
+            d = np.einsum("...i,...i", e0, p)
+            e = np.einsum("...i,...i", e1, p)
+            u = b * e - c * d
+            v = b * d - a * e
+
+            # Calculate numerators
+            bd = b + d
+            ce = c + e
+            numer0 = (ce - bd) / denom
+            numer1 = (c + e - b - d) / denom
+            da = -d / a
+            ec = -e / c
+
+            # Vectorize test conditions
+            m0 = u + v < det
+            m1 = u < 0
+            m2 = v < 0
+            m3 = d < 0
+            m4 = a + d > b + e
+            m5 = ce > bd
+
+            t0 = m0 & m1 & m2 & m3
+            t1 = m0 & m1 & m2 & ~m3
+            t2 = m0 & m1 & ~m2
+            t3 = m0 & ~m1 & m2
+            t4 = m0 & ~m1 & ~m2
+            t5 = ~m0 & m1 & m5
+            t6 = ~m0 & m1 & ~m5
+            t7 = ~m0 & m2 & m4
+            t8 = ~m0 & m2 & ~m4
+            t9 = ~m0 & ~m1 & ~m2
+
+            u = np.where(t0, np.clip(da, 0, 1), u)
+            v = np.where(t0, 0, v)
+            u = np.where(t1, 0, u)
+            v = np.where(t1, 0, v)
+            u = np.where(t2, 0, u)
+            v = np.where(t2, np.clip(ec, 0, 1), v)
+            u = np.where(t3, np.clip(da, 0, 1), u)
+            v = np.where(t3, 0, v)
+            u *= np.where(t4, invDet, 1)
+            v *= np.where(t4, invDet, 1)
+            u = np.where(t5, np.clip(numer0, 0, 1), u)
+            v = np.where(t5, 1 - u, v)
+            u = np.where(t6, 0, u)
+            v = np.where(t6, 1, v)
+            u = np.where(t7, np.clip(numer1, 0, 1), u)
+            v = np.where(t7, 1 - u, v)
+            u = np.where(t8, 1, u)
+            v = np.where(t8, 0, v)
+            u = np.where(t9, np.clip(numer1, 0, 1), u)
+            v = np.where(t9, 1 - u, v)
+            u = u[:, None]
+            v = v[:, None]
+
+            # this array contains a list of points, the closest on each triangle
+            closest_points_each_tri = p0 + u * e0 + v * e1
+
+            # now extract the closest point on the mesh and minimum distance for return
+            closest_point_index = np.argmin(
+                spatial.distance.cdist(
+                    np.array([point]), closest_points_each_tri
+                ),
+                axis=1,
+            )
+            closest_point: np.ndarray = closest_points_each_tri[
+                closest_point_index
+            ]
+            min_dist = float(np.linalg.norm(point - closest_point))
+
+            # Return the minimum distance
+            return min_dist, closest_point
+
+    def compute_dist_to_recs(
+        self, point: np.ndarray, candidate_recs: List[Receptacle]
+    ) -> List[float]:
+        """
+        For each receptacle in the input list, compute a distance from point to receptacle and return the list of distances.
+
+        :param point: A 3D point in global space. Typically the bottom center point of a placed object.
+        :param candidate_recs: A list of candidate Receptacles which could be matched to the point. Typically a subset of all Receptacles.
+        :return: A list of point to Receptacle distances, one for each input in candidate_recs .
+        """
+
+        dist_to_recs = []
+        for rec in candidate_recs:
+            if isinstance(rec, TriangleMeshReceptacle):
+                t_form = rec.get_global_transform(self._sim)
+                # optimization: transform the point into local space instead of transforming the mesh into global space
+                local_point = t_form.inverted().transform_point(point)
+                # iterate over the triangles, getting point to edge distances
+                # NOTE: list of lists, each with 3 numpy arrays, one for each vertex
+                # TODO: these could be cached since it doesn't require local->global transform
+                triangles = []
+                for f_ix in range(int(len(rec.mesh_data.indices) / 3)):
+                    v = rec.get_face_verts(f_ix)
+                    triangles.append(v)
+                np_tri = np.array(triangles)
+                np_point = np.array(local_point)
+                # compute the minimum point to mesh distance
+                p_to_t_dist = self.point_to_tri_dist(np_point, np_tri)[0]
+                dist_to_recs.append(p_to_t_dist)
+            else:
+                raise NotImplementedError(
+                    "TODO: add handling for other Receptacle types."
+                )
+
+        return dist_to_recs
+
+    def get_place_obj_receptacle_and_confidence(
+        self,
+        bottom_point: np.ndarray,
+        support_surface_id: int,
+        max_dist_to_rec: float = 0.25,
+    ) -> Tuple[Optional[str], float, str]:
+        """
+        Heuristic to match a potential placement point with a Receptacle and provide some confidence.
+
+        :param bottom_point: The bottom center point of the object or equivalent (e.g the candidate raycast point for placement)
+        :param support_surface_id: The object_id of the intended support surface (rigid object, articulated link, or stage_id)
+        :param max_dist_to_rec: The threshold point to mesh distance for an object to be matched with a Receptacle.
+        :return: Tuple containing: (1): "floor,region", Receptacle.unique_name, or None (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
+        """
+        info_text = ""
+        try_floor = False
+        if support_surface_id == stage_id:
+            # support_surface on stage could be the floor
+            try_floor = True
+        else:
+            support_object = sutils.get_obj_from_id(
+                self._sim, support_surface_id
+            )
+            matching_recs = [
+                rec
+                for u_name, rec in self._sim.receptacles.items()
+                if support_object.handle in u_name
+            ]
+            if support_object.object_id != support_surface_id:
+                # support object is a link
+                link_index = support_object.link_object_ids[
+                    self._place_selection.object_id
+                ]
+                # further cull the list to this link's recs
+                matching_recs = [
+                    rec
+                    for rec in matching_recs
+                    if rec.parent_link == link_index
+                ]
+            if len(matching_recs) == 0:
+                # there are no Receptacles for this support surface
+                try_floor = True
+            else:
+                # select a Receptacle which most likely contains the point
+                dist_to_recs = self.compute_dist_to_recs(
+                    bottom_point, matching_recs
+                )
+                index_min = min(
+                    range(len(dist_to_recs)), key=dist_to_recs.__getitem__
+                )
+                min_dist = dist_to_recs[index_min]
+                if min_dist < max_dist_to_rec:
+                    # return the closest receptacle within distance threshold
+                    return (
+                        matching_recs[index_min].unique_name,
+                        1.0 - (min_dist / max_dist_to_rec),
+                        "successful match",
+                    )
+                else:
+                    info_text = "Point is too far from a valid Receptacle on the support surface."
+
+        # check if the point is navigable and if so, try matching it to a region
+        if try_floor:
+            if self._sim.pathfinder.is_navigable(bottom_point):
+                # this point is on the floor and should be mapped to a region
+                point_regions = (
+                    self._sim.semantic_scene.get_weighted_regions_for_point(
+                        bottom_point
+                    )
+                )
+                if len(point_regions) > 0:
+                    # found matching regions, pick the primary (most precise) one
+                    region_name = self._sim.semantic_scene.regions[
+                        point_regions[0][0]
+                    ].id
+                else:
+                    # point is not matched to a region
+                    region_name = "unknown_region"
+                return f"floor,{region_name}", 1.0, "successful match"
+            else:
+                info_text = (
+                    "Point does not match any Receptacle and is not navigable."
+                )
+
+        # all receptacles are too far away or there are no matches
+        return None, 1.0, info_text
+
     def _place_object(self) -> None:
         """Place the currently held object."""
         if not self._place_selection.selected:
@@ -346,6 +580,19 @@ class UI:
         point = self._place_selection.point
         normal = self._place_selection.normal
         receptacle_object_id = self._place_selection.object_id
+
+        # check for a valid Receptacle mapping for the place point
+        # TODO: cache this ground truth mapping in the trajectory?
+        (
+            _placement_receptacle,
+            _confidence,
+            _info_text,
+        ) = self.get_place_obj_receptacle_and_confidence(
+            point, receptacle_object_id
+        )
+        print(
+            f"Placed object on Receptacle '{_placement_receptacle}', confidence[0,1]={_confidence}. Info text: {_info_text}"
+        )
         if (
             object_id is not None
             and object_id != self._place_selection.object_id
@@ -525,6 +772,17 @@ class UI:
             return False
         # Cannot place on objects held by agents.
         if self._world.is_any_agent_holding_object(receptacle_object_id):
+            return False
+        # check if the placement matches a Receptacle
+        (
+            recepacle_name,
+            _confidence,
+            _info_text,
+        ) = self.get_place_obj_receptacle_and_confidence(
+            point, receptacle_object_id
+        )
+        if recepacle_name is None:
+            # TODO: display the _info_text with failure message
             return False
         return True
 

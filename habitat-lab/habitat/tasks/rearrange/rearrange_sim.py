@@ -685,6 +685,7 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
         if new_scene:
+            # NOTE: only excluding clutter objects added to the scene, still includes filtered receptacles
             self._receptacles = self._create_recep_info(
                 ep_info.scene_id, list(self._handle_to_object_id.keys())
             )
@@ -720,6 +721,7 @@ class RearrangeSim(HabitatSim):
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, Receptacle]:
         if scene_id not in self._receptacles_cache:
+            # TODO: consume the filter file to limit loaded receptacle to the "active" set?
             all_receps = find_receptacles(
                 self,
                 ignore_handles=ignore_handles,
