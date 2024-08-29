@@ -96,7 +96,7 @@ class AppStateEndSession(AppStateBase):
 
         # Use the port as a discriminator for when there are multiple concurrent servers.
         output_folder_suffix = str(config.habitat_hitl.networking.port)
-        output_folder = f"output_{output_folder_suffix}"
+        output_folder = f"hitl_output_{output_folder_suffix}"
 
         # Delete previous output directory
         if os.path.exists(output_folder):
