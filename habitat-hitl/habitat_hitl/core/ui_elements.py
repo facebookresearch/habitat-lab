@@ -259,24 +259,26 @@ class UIManager:
                     clear=True,
                     elements=dirty_elements,
                 )
-                self._client_message_manager.update_ui_canvas(
-                    canvas_uid=canvas_uid,
-                    canvas_update=canvas_update,
-                    destination_mask=Mask.from_index(user_index),
-                )
+                if self._client_message_manager is not None:
+                    self._client_message_manager.update_ui_canvas(
+                        canvas_uid=canvas_uid,
+                        canvas_update=canvas_update,
+                        destination_mask=Mask.from_index(user_index),
+                    )
 
     def is_button_pressed(self, uid: str, user_index: int) -> bool:
         return self._client_state.ui_button_pressed(user_index, uid)
 
     def clear_canvas(self, canvas_uid: str, destination_mask: Mask):
-        self._client_message_manager.update_ui_canvas(
-            canvas_uid=canvas_uid,
-            canvas_update=UICanvasUpdate(
-                clear=True,
-                elements=None,
-            ),
-            destination_mask=destination_mask,
-        )
+        if self._client_message_manager is not None:
+            self._client_message_manager.update_ui_canvas(
+                canvas_uid=canvas_uid,
+                canvas_update=UICanvasUpdate(
+                    clear=True,
+                    elements=None,
+                ),
+                destination_mask=destination_mask,
+            )
         for user_index in self._users.indices(destination_mask):
             self._user_canvases[user_index][canvas_uid].clear()
 

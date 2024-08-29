@@ -31,17 +31,19 @@ class AppStateLobby(AppStateBase):
         super().on_enter()
         # Enable new connections
         # TODO: Create API in RemoteClientState
-        self._app_service._remote_client_state._interprocess_record.enable_new_connections(
-            True
-        )
+        if self._app_service._remote_client_state is not None:
+            self._app_service._remote_client_state._interprocess_record.enable_new_connections(
+                True
+            )
 
     def on_exit(self):
         super().on_exit()
         # Disable new connections
         # TODO: Create API in RemoteClientState
-        self._app_service._remote_client_state._interprocess_record.enable_new_connections(
-            False
-        )
+        if self._app_service._remote_client_state is not None:
+            self._app_service._remote_client_state._interprocess_record.enable_new_connections(
+                False
+            )
 
     def get_next_state(self) -> Optional[AppStateBase]:
         # If all users are connected, start the session.
