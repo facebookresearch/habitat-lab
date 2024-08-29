@@ -348,7 +348,7 @@ class HitlDriver(AppDriver):
         if self._hitl_config.disable_policies_and_stepping:
             return
 
-        action = self.ctrl_helper.update(self._obs)
+        action = self.ctrl_helper.update(self._obs, info=self._metrics)
         self._env_step(action)
 
         if self._save_episode_record:

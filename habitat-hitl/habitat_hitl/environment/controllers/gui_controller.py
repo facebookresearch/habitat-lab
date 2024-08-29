@@ -102,7 +102,7 @@ class GuiRobotController(GuiController):
         # Adjust the angle based on the direction
         return angle if det >= 0 else -angle
 
-    def act(self, obs, env):
+    def act(self, obs, env, *args, **kwargs):
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
         else:
@@ -361,7 +361,7 @@ class GuiHumanoidController(GuiController):
         self._obj_to_grasp = None
         return hand_pose
 
-    def act(self, obs, env):
+    def act(self, obs, env, *args, **kwargs):
         self._update_grasp(
             self._hint_grasp_obj_idx,
             self._hint_drop_pos,

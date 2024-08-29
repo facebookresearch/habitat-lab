@@ -224,11 +224,11 @@ class ControllerHelper:
         """
         return self.controllers
 
-    def update(self, obs):
+    def update(self, obs, *args, **kwargs):
         actions = []
 
         for controller in self.controllers:
-            controller_action = controller.act(obs, self._env)
+            controller_action = controller.act(obs, self._env, args, kwargs)
             actions.append(controller_action)
 
         if len(self.controllers) == 1:

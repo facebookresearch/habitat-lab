@@ -39,7 +39,7 @@ class Controller(ABC):
         self._is_multi_agent = is_multi_agent
 
     @abstractmethod
-    def act(self, obs, env):
+    def act(self, obs, env, *args, **kwargs):
         pass
 
     def on_environment_reset(self):
@@ -179,7 +179,7 @@ class BaselinesController(Controller):
             dtype=torch.bool,
         )
 
-    def act(self, obs, env):
+    def act(self, obs, env, *args, **kwargs):
         batch = self._batch_and_apply_transforms([obs])
 
         with torch.no_grad():
