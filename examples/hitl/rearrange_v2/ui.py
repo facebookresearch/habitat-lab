@@ -39,6 +39,7 @@ from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim import stage_id
 from habitat_sim.geo import Ray
 from habitat_sim.physics import RayHitInfo
 
@@ -397,7 +398,7 @@ class UI:
 
             # Update the kinematic relationships.
             sim = self._sim
-            if sim._kinematic_mode:
+            if sim._kinematic_mode and receptacle_object_id != stage_id:
                 krm = sim.kinematic_relationship_manager
                 krm.relationship_graph.add_relation(
                     receptacle_object_id, object_id, "ontop"
