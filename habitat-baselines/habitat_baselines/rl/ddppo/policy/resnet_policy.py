@@ -47,7 +47,12 @@ except ImportError:
     clip = None
 
 try:
-    from transformers import AutoModel, AutoProcessor, SiglipVisionConfig
+    from transformers import (
+        AutoModel,
+        AutoProcessor,
+        SiglipModel,
+        SiglipVisionConfig,
+    )
 except Exception:
     AutoModel = None
 
@@ -470,10 +475,13 @@ class ResNetSIGLIPEncoder(nn.Module):
             else:
                 self.output_shape = (int(configuration.hidden_size),)  # 768
 
-            # Use bfloat16 to speed up inference
-            self.backbone = AutoModel.from_pretrained(
-                self._model_name, torch_dtype=torch.bfloat16
-            ).to(self._device)
+            # use flash attention
+            self.backbone = SiglipModel.from_pretrained(
+                self._model_name,
+                attn_implementation="flash_attention_2",
+                torch_dtype=torch.float16,
+                device_map=self._device,
+            )
             self.preprocess = AutoProcessor.from_pretrained(self._model_name)
 
             # Disable grad
@@ -519,7 +527,7 @@ class ResNetSIGLIPEncoder(nn.Module):
         x = torch.cat(cnn_input, dim=0)  # [BATCH x 3 x HEIGHT X WIDTH]
         x = self.preprocess(images=x, return_tensors="pt")[
             "pixel_values"
-        ].bfloat16()
+        ].type(torch.cuda.HalfTensor)
         x = x.to(self._device)
         x_input = {"pixel_values": x}
         x_feat = self.backbone.get_image_features(
