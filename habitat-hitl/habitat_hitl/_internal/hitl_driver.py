@@ -350,6 +350,10 @@ class HitlDriver(AppDriver):
 
         action = self.ctrl_helper.update(self._obs, info=self._metrics)
         self._env_step(action)
+        import imageio
+
+        rgb = self._obs["agent_1_head_rgb"]
+        imageio.imwrite("./human_rgb.png", rgb)
 
         if self._save_episode_record:
             self._record_action(action)
