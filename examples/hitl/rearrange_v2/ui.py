@@ -488,76 +488,88 @@ class UI:
         self,
         bottom_point: np.ndarray,
         support_surface_id: int,
-        max_dist_to_rec: float = 0.5,
-    ) -> Tuple[Optional[str], float]:
+        max_dist_to_rec: float = 0.25,
+    ) -> Tuple[Optional[str], float, str]:
         """
         Heuristic to match a potential placement point with a Receptacle and provide some confidence.
-        #TODO: return a message which can be displayed in a UI tooltip to the user to explain why a potential placement isn't valid
 
         :param bottom_point: The bottom center point of the object or equivalent (e.g the candidate raycast point for placement)
         :param support_surface_id: The object_id of the intended support surface (rigid object, articulated link, or stage_id)
         :param max_dist_to_rec: The threshold point to mesh distance for an object to be matched with a Receptacle.
-        :return: Tuple containing: "floor,region", Receptacle.unique_name, or None and a floating point confidence score [0,1].
+        :return: Tuple containing: (1): "floor,region", Receptacle.unique_name, or None (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
         """
+        info_text = ""
+        try_floor = False
         if support_surface_id == stage_id:
-            # this point is on the floor and should be mapped to a region
-            point_regions = (
-                self._sim.semantic_scene.get_weighted_regions_for_point(
-                    bottom_point
-                )
-            )
-            if len(point_regions) > 0:
-                # found matching regions, pick the primary (most precise) one
-                region_name = self._sim.semantic_scene.regions[
-                    point_regions[0][0]
-                ].id
-            else:
-                # point is not matched to a region
-                region_name = "unknown_region"
-            return f"floor,{region_name}", 1.0
-        support_object = sutils.get_obj_from_id(self._sim, support_surface_id)
-        matching_recs = [
-            rec
-            for u_name, rec in self._sim.receptacles.items()
-            if support_object.handle in u_name
-        ]
-        if support_object.object_id != support_surface_id:
-            # support object is a link
-            link_index = support_object.link_object_ids[
-                self._place_selection.object_id
-            ]
-            # further cull the list to this link's recs
-            matching_recs = [
-                rec for rec in matching_recs if rec.parent_link == link_index
-            ]
-        if len(matching_recs) == 0:
-            # there are no Receptacles for this support surface
-            if self._sim.pathfinder.is_navigable(bottom_point):
-                # this point is navigable, so it must be on the floor but above an object like a rug
-                region = self._sim.get_weighted_regions_for_point(bottom_point)
-                region_name = (
-                    region.id if region is not None else "unknown_region"
-                )
-                return f"floor,{region_name}", 1.0
-            # this support object is not a valid Receptacle
-            return None, 1.0
+            # support_surface on stage could be the floor
+            try_floor = True
         else:
-            # select a Receptacle which most likely contains the point
-            dist_to_recs = self.compute_dist_to_recs(
-                bottom_point, matching_recs
+            support_object = sutils.get_obj_from_id(
+                self._sim, support_surface_id
             )
-            index_min = min(
-                range(len(dist_to_recs)), key=dist_to_recs.__getitem__
-            )
-            min_dist = dist_to_recs[index_min]
-            if min_dist < max_dist_to_rec:
-                # return the closest receptacle within distance threshold
-                return matching_recs[index_min].unique_name, 1.0 - (
-                    min_dist / max_dist_to_rec
+            matching_recs = [
+                rec
+                for u_name, rec in self._sim.receptacles.items()
+                if support_object.handle in u_name
+            ]
+            if support_object.object_id != support_surface_id:
+                # support object is a link
+                link_index = support_object.link_object_ids[
+                    self._place_selection.object_id
+                ]
+                # further cull the list to this link's recs
+                matching_recs = [
+                    rec
+                    for rec in matching_recs
+                    if rec.parent_link == link_index
+                ]
+            if len(matching_recs) == 0:
+                # there are no Receptacles for this support surface
+                try_floor = True
+            else:
+                # select a Receptacle which most likely contains the point
+                dist_to_recs = self.compute_dist_to_recs(
+                    bottom_point, matching_recs
+                )
+                index_min = min(
+                    range(len(dist_to_recs)), key=dist_to_recs.__getitem__
+                )
+                min_dist = dist_to_recs[index_min]
+                if min_dist < max_dist_to_rec:
+                    # return the closest receptacle within distance threshold
+                    return (
+                        matching_recs[index_min].unique_name,
+                        1.0 - (min_dist / max_dist_to_rec),
+                        "successful match",
+                    )
+                else:
+                    info_text = "Point is too far from a valid Receptacle on the support surface."
+
+        # check if the point is navigable and if so, try matching it to a region
+        if try_floor:
+            if self._sim.pathfinder.is_navigable(bottom_point):
+                # this point is on the floor and should be mapped to a region
+                point_regions = (
+                    self._sim.semantic_scene.get_weighted_regions_for_point(
+                        bottom_point
+                    )
+                )
+                if len(point_regions) > 0:
+                    # found matching regions, pick the primary (most precise) one
+                    region_name = self._sim.semantic_scene.regions[
+                        point_regions[0][0]
+                    ].id
+                else:
+                    # point is not matched to a region
+                    region_name = "unknown_region"
+                return f"floor,{region_name}", 1.0, "successful match"
+            else:
+                info_text = (
+                    "Point does not match any Receptacle and is not navigable."
                 )
 
         # all receptacles are too far away or there are no matches
-        return None, 1.0
+        return None, 1.0, info_text
 
     def _place_object(self) -> None:
         """Place the currently held object."""
@@ -574,11 +586,12 @@ class UI:
         (
             _placement_receptacle,
             _confidence,
+            _info_text,
         ) = self.get_place_obj_receptacle_and_confidence(
             point, receptacle_object_id
         )
         print(
-            f"Placed object on Receptacle '{_placement_receptacle}', confidence[0,1]={_confidence}"
+            f"Placed object on Receptacle '{_placement_receptacle}', confidence[0,1]={_confidence}. Info text: {_info_text}"
         )
         if (
             object_id is not None
@@ -761,11 +774,15 @@ class UI:
         if self._world.is_any_agent_holding_object(receptacle_object_id):
             return False
         # check if the placement matches a Receptacle
-        rec, conf = self.get_place_obj_receptacle_and_confidence(
-            point, receptacle_object_id, max_dist_to_rec=0.5
+        (
+            recepacle_name,
+            _confidence,
+            _info_text,
+        ) = self.get_place_obj_receptacle_and_confidence(
+            point, receptacle_object_id
         )
-        # NOTE: confidence is normalized inverse distance, so conf==0.5 is dist==0.25
-        if rec is None or conf < 0.5:
+        if recepacle_name is None:
+            # TODO: display the _info_text with failure message
             return False
         return True
 
