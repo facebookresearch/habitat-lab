@@ -14,7 +14,7 @@ import magnum as mn
 from ui_overlay import UIOverlay
 from world import World
 
-from habitat.sims.habitat_simulator import sim_utilities
+import habitat.sims.habitat_simulator.sim_utilities as sutils
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
 )
@@ -29,6 +29,7 @@ from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim import stage_id
 from habitat_sim.geo import Ray
 from habitat_sim.physics import RayHitInfo
 
@@ -370,7 +371,7 @@ class UI:
 
             # Update the kinematic relationships.
             sim = self._sim
-            if sim._kinematic_mode:
+            if sim._kinematic_mode and receptacle_object_id != stage_id:
                 krm = sim.kinematic_relationship_manager
                 krm.relationship_graph.add_relation(
                     receptacle_object_id, object_id, "ontop"
@@ -434,7 +435,7 @@ class UI:
                 if self._can_open_close_receptacle(link_pos):
                     # Open/close receptacle.
                     if link_id in self._world._opened_link_set:
-                        sim_utilities.close_link(ao, link_index)
+                        sutils.close_link(ao, link_index)
                         self._world._opened_link_set.remove(link_id)
                         if self._sim._kinematic_mode:
                             # first apply the current relative transform
@@ -450,7 +451,7 @@ class UI:
                             )
                         )
                     else:
-                        sim_utilities.open_link(ao, link_index)
+                        sutils.open_link(ao, link_index)
                         self._world._opened_link_set.add(link_id)
                         if self._sim._kinematic_mode:
                             # first apply the current relative transform
@@ -555,9 +556,7 @@ class UI:
         sim = self._sim
         cam_direction = self._camera_helper.get_cam_forward_vector()
         cam_translation = self._camera_helper.get_eye_pos()
-        obj_translation = sim_utilities.get_obj_from_id(
-            sim, object_id
-        ).translation
+        obj_translation = sutils.get_obj_from_id(sim, object_id).translation
         ray_direction = obj_translation - cam_translation
         return mn.math.dot(
             cam_direction.normalized(), ray_direction.normalized()
@@ -571,9 +570,7 @@ class UI:
         sim = self._sim
 
         cam_translation = self._camera_helper.get_eye_pos()
-        obj_translation = sim_utilities.get_obj_from_id(
-            sim, object_id
-        ).translation
+        obj_translation = sutils.get_obj_from_id(sim, object_id).translation
         ray_direction = obj_translation - cam_translation
 
         # Check if object is in front of camera before raycasting.
@@ -602,7 +599,7 @@ class UI:
         if object_id is not None:
             world = self._world
             sim = self._sim
-            obj = sim_utilities.get_obj_from_id(
+            obj = sutils.get_obj_from_id(
                 sim, object_id, world._link_id_to_ao_map
             )
             if obj is not None:
@@ -688,7 +685,7 @@ class UI:
             if not world.is_any_agent_holding_object(
                 object_id
             ) and self._is_object_visible(object_id):
-                obj = sim_utilities.get_obj_from_id(sim, object_id)
+                obj = sutils.get_obj_from_id(sim, object_id)
 
                 # Make highlights near the edge of the screen less opaque.
                 dot_object = self._dot_object(object_id)
@@ -730,7 +727,7 @@ class UI:
             return
 
         sim = self._sim
-        obj = sim_utilities.get_obj_from_id(
+        obj = sutils.get_obj_from_id(
             sim, object_id, self._world._link_id_to_ao_map
         )
         if obj is None:
@@ -762,7 +759,7 @@ class UI:
             return
 
         sim = self._sim
-        obj = sim_utilities.get_obj_from_id(
+        obj = sutils.get_obj_from_id(
             sim, object_id, self._world._link_id_to_ao_map
         )
         if obj is None:
@@ -794,9 +791,7 @@ class UI:
         object_ids.add(object_id)
         if object_id in world._link_id_to_ao_map:
             ao_id = world._link_id_to_ao_map[object_id]
-            ao = sim_utilities.get_obj_from_id(
-                sim, ao_id, world._link_id_to_ao_map
-            )
+            ao = sutils.get_obj_from_id(sim, ao_id, world._link_id_to_ao_map)
             link_object_ids = ao.link_object_ids
             for link_id in link_object_ids.keys():
                 object_ids.add(link_id)
