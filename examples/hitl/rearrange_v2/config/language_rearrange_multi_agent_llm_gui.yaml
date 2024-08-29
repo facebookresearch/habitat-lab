@@ -98,7 +98,7 @@ habitat:
       # - agent_1_articulated_agent_arm_rgb
       # - agent_1_articulated_agent_arm_panoptic
       # - agent_1_head_depth
-      # - agent_1_head_rgb
+      - agent_1_head_rgb
       - agent_1_head_panoptic
       # - agent_1_relative_resting_position
       # - agent_1_joint
