@@ -313,11 +313,6 @@ class RearrangeSim(HabitatSim):
             self.add_perf_timing("super_reconfigure", t_start)
             # The articulated object handles have changed.
             self._start_art_states = {}
-            if self._kinematic_mode:
-                # NOTE: scene must be loaded so articulated objects are available before KRM initialization
-                self.kinematic_relationship_manager = (
-                    KinematicRelationshipManager(self)
-                )
 
         if new_scene:
             self.agents_mgr.on_new_scene()
@@ -343,7 +338,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         if self._load_objs:
-            self._add_objs(ep_info, should_add_objects, new_scene)
+            self._add_objs(ep_info, should_add_objects, is_hard_reset)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
