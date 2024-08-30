@@ -3,6 +3,7 @@ defaults:
   - place
   - /habitat/task/measurements:
     - base_to_object_distance
+    - habitat_perf
   - /habitat/task/lab_sensors:
     - end_effector_pos_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor_rgb
