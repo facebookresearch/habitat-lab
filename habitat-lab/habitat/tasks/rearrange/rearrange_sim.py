@@ -352,7 +352,9 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         if self._load_objs:
-            self._add_objs(ep_info, should_add_objects, new_scene=is_hard_reset)
+            self._add_objs(
+                ep_info, should_add_objects, new_scene=is_hard_reset
+            )
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
