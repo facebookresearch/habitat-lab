@@ -63,6 +63,18 @@ def create_app_state_rearrange(
     return AppStateRearrangeV2(app_service, app_data, session)
 
 
+def create_app_state_feedback(
+    app_service: AppService,
+    app_data: AppData,
+    session: Session,
+    success: float,
+    feedback: str,
+) -> AppStateBase:
+    from app_state_feedback import AppStateFeedback
+
+    return AppStateFeedback(app_service, app_data, session, success, feedback)
+
+
 def create_app_state_end_session(
     app_service: AppService, app_data: AppData, session: Session
 ) -> AppStateBase:
