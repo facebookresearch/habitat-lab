@@ -318,8 +318,6 @@ class RearrangeSim(HabitatSim):
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
-            # delete old KRM when scene is hard reset
-            self.kinematic_relationship_manager = None
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()
@@ -353,7 +351,7 @@ class RearrangeSim(HabitatSim):
         # add episode clutter objects additional to base scene objects
         if self._load_objs:
             self._add_objs(
-                ep_info, should_add_objects, new_scene=is_hard_reset
+                ep_info, should_add_objects, hard_reset=is_hard_reset
             )
         self._setup_targets(ep_info)
 
@@ -607,7 +605,7 @@ class RearrangeSim(HabitatSim):
         self,
         ep_info: RearrangeEpisode,
         should_add_objects: bool,
-        new_scene: bool,
+        hard_reset: bool,
     ) -> None:
         # Load clutter objects:
         rom = self.get_rigid_object_manager()
@@ -681,7 +679,7 @@ class RearrangeSim(HabitatSim):
 
             obj_counts[obj_handle] += 1
 
-        if new_scene:
+        if hard_reset:
             self._receptacles = self._create_recep_info(
                 ep_info.scene_id, list(self._handle_to_object_id.keys())
             )
