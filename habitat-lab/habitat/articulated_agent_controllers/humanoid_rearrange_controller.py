@@ -28,6 +28,7 @@ THRESHOLD_ROTATE_NOT_MOVE: float = 20.0  # The rotation angle above which we sho
 DIST_TO_STOP: float = (
     1e-9  # If the amount to move is this distance, just stop the character
 )
+DEFINE_VELOCITY_FROM_CONFIG: bool = True
 
 from typing import List, Tuple
 
@@ -100,6 +101,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+        self.meters_per_step = 0.0
 
         self.hand_processed_data = {}
         self._hand_names = ["left_hand", "right_hand"]
@@ -142,8 +144,8 @@ class HumanoidRearrangeController(HumanoidBaseController):
         """
 
         seconds_per_step = 1.0 / ctrl_freq
-        meters_per_step = lin_speed * seconds_per_step
-        frames_per_step = meters_per_step / self.dist_per_step_size
+        self.meters_per_step = lin_speed * seconds_per_step
+        frames_per_step = self.meters_per_step / self.dist_per_step_size
         self.motion_fps = self.walk_motion.fps / frames_per_step
         rotate_amount = ang_speed * seconds_per_step
         rotate_amount = rotate_amount * 180.0 / np.pi
@@ -287,7 +289,14 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        forward_V_dist = forward_V * dist_diff * distance_multiplier
+
+        # TODO: Switch between animation-driven speed and config-driven speed.
+        if DEFINE_VELOCITY_FROM_CONFIG:
+            forward_V_dist = (
+                forward_V * self.meters_per_step * distance_multiplier
+            )
+        else:
+            forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
         rot_offset = mn.Matrix4.rotation(
@@ -536,7 +545,14 @@ class HumanoidRearrangeController(HumanoidBaseController):
         # The base_transform here is independent of transforms caused by the current
         # motion pose.
         obj_transform_base = look_at_path_T
-        forward_V_dist = forward_V * dist_diff * distance_multiplier
+
+        # TODO: Switch between animation-driven speed and config-driven speed.
+        if DEFINE_VELOCITY_FROM_CONFIG:
+            forward_V_dist = (
+                forward_V * self.meters_per_step * distance_multiplier
+            )
+        else:
+            forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
         rot_offset = mn.Matrix4.rotation(
