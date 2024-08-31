@@ -92,12 +92,24 @@ class FrameRecorder:
             ro = rom.get_object_by_id(obj_id)
             position = np.array(ro.translation).tolist()
             rotation = quat_to_coeffs(quat_from_magnum(ro.rotation)).tolist()
+
+            states: Dict[str, Any] = {}
+            state_infos = self._world.get_states_for_object_handle(
+                object_handle
+            )
+            for state_info in state_infos:
+                spec = state_info.state_spec
+                state_name = spec.name
+                value = state_info.value
+                states[state_name] = value
+
             object_states.append(
                 {
                     "position": position,
                     "rotation": rotation,
                     "object_handle": object_handle,
                     "object_id": obj_id,
+                    "states": states,
                 }
             )
         return object_states
@@ -124,6 +136,7 @@ class FrameRecorder:
                 "camera_transform": u.agent_data.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
+                "selected_object": u.ui._click_selection.object_id,
                 "events": u.pop_ui_events(),
             }
             data["users"].append(user_data_dict)
