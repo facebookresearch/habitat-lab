@@ -624,12 +624,9 @@ class UI:
                 if primary_region is not None:
                     primary_region_name = primary_region.category.name()
 
-        if primary_region_name is not None and object_category is not None:
-            # TODO: Draw UI
-            # print(f"Region: {primary_region_name}")
-            # print(f"Category: {object_category}")
-            # print(f"States: {object_states}")
-            pass
+        self._ui_overlay.update_hovered_object_info_panel(
+            object_category, object_states, primary_region_name
+        )
 
     def _update_selected_object_ui(self):
         """Draw a UI for the currently selected object."""
