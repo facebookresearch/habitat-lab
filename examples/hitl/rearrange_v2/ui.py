@@ -660,11 +660,14 @@ class UI:
         """Draw a UI for the currently selected object."""
         object_id = self._click_selection.object_id
 
-        object_category: Optional[str] = None
-        object_states: List[ObjectStateControl] = []
+        object_category_name: Optional[str] = None
+        object_state_controls: List[ObjectStateControl] = []
         primary_region_name: Optional[str] = None
         contextual_info: Optional[str] = None
         contextual_color: Optional[List[float]] = None
+
+        if object_id is None:
+            return
 
         if object_id is not None:
             world = self._world
@@ -673,74 +676,24 @@ class UI:
                 sim, object_id, world._link_id_to_ao_map
             )
             if obj is not None:
-                object_category = world.get_category_from_handle(obj.handle)
-                if object_category is None:
-                    object_category = "Object"
+                # Get object category name.
+                object_category_name = world.get_category_from_handle(
+                    obj.handle
+                )
+                if object_category_name is None:
+                    object_category_name = "Object"
 
-                # Requires object state manipulator.
-                osm = self._object_state_manipulator
-                if osm is not None:
-                    # Get all possible actions for this object.
-                    all_possible_actions = (
-                        osm.get_all_available_boolean_actions(obj.handle)
-                    )
-                    for action in all_possible_actions:
-                        spec = action.state_spec
+                # Get object state controls.
+                object_state_controls = self._get_object_state_controls(
+                    obj.handle
+                )
 
-                        recently_changed = False
-                        if self._can_change_object_states:
-                            enabled = action.enabled
-                            available = action.available
-                            tooltip = (
-                                action.error
-                                if action.available
-                                else "Action unavailable."
-                            )
-                            callback = partial(
-                                self._state_change_callback,
-                                spec.name,
-                                action.target_value,
-                                obj.handle,
-                            )
-
-                            if (
-                                self._last_changed_state_timestamp is not None
-                                and self._last_changed_state_timestamp[0]
-                                == spec.name
-                            ):
-                                time_since_last_state_change = (
-                                    datetime.now()
-                                    - self._last_changed_state_timestamp[1]
-                                )
-                                recently_changed = (
-                                    time_since_last_state_change
-                                    < timedelta(seconds=2.0)
-                                )
-                                if recently_changed:
-                                    tooltip = "Action executed."
-
-                        else:
-                            enabled = False
-                            available = False
-                            tooltip = "The robot cannot do this action."
-                            callback = None
-
-                        object_states.append(
-                            ObjectStateControl(
-                                spec=spec,
-                                value=action.current_value,
-                                enabled=enabled,
-                                available=available,
-                                callback=callback,
-                                tooltip=tooltip,
-                                recently_changed=recently_changed,
-                            )
-                        )
-
+                # Get the primary region name.
                 primary_region = world.get_primary_object_region(obj)
                 if primary_region is not None:
                     primary_region_name = primary_region.category.name()
 
+                # Get the contextual information.
                 color_ui_valid = [0.2, 1.0, 0.2, 1.0]
                 color_ui_invalid = [1.0, 0.2, 0.2, 1.0]
                 if self._is_object_pickable(object_id):
@@ -805,14 +758,82 @@ class UI:
                                 contextual_info = f"Too far to {action_name}."
                                 contextual_color = color_ui_invalid
 
-        overlay = self._ui_overlay
-        overlay.update_selected_object_panel(
-            object_category_name=object_category,
-            object_state_controls=object_states,
+        # Update the UI.
+        self._ui_overlay.update_selected_object_panel(
+            object_category_name=object_category_name,
+            object_state_controls=object_state_controls,
             primary_region_name=primary_region_name,
             contextual_info=contextual_info,
             contextual_color=contextual_color,
         )
+
+    def _get_object_state_controls(
+        self, object_handle: str
+    ) -> List[ObjectStateControl]:
+        """
+        Create a list of object state manipulation controls for the specified object.
+        """
+        # Requires the object state
+        osm = self._object_state_manipulator
+        if osm is None:
+            return []
+
+        object_state_controls: List[ObjectStateControl] = []
+
+        # Get all possible actions for this object.
+        all_possible_actions = osm.get_all_available_boolean_actions(
+            object_handle
+        )
+        for action in all_possible_actions:
+            spec = action.state_spec
+            recently_changed = False
+
+            # If this user can manipulate object states...
+            if self._can_change_object_states:
+                enabled = action.enabled
+                available = action.available
+                tooltip = (
+                    action.error if action.available else "Action unavailable."
+                )
+                callback = partial(
+                    self._state_change_callback,
+                    spec.name,
+                    action.target_value,
+                    object_handle,
+                )
+
+                if (
+                    self._last_changed_state_timestamp is not None
+                    and self._last_changed_state_timestamp[0] == spec.name
+                ):
+                    time_since_last_state_change = (
+                        datetime.now() - self._last_changed_state_timestamp[1]
+                    )
+                    recently_changed = (
+                        time_since_last_state_change < timedelta(seconds=2.0)
+                    )
+                    if recently_changed:
+                        tooltip = "Action executed."
+
+            # If this user cannot manipulate object states...
+            else:
+                enabled = False
+                available = False
+                tooltip = "The robot cannot do this action."
+                callback = None
+
+            object_state_controls.append(
+                ObjectStateControl(
+                    spec=spec,
+                    value=action.current_value,
+                    enabled=enabled,
+                    available=available,
+                    callback=callback,
+                    tooltip=tooltip,
+                    recently_changed=recently_changed,
+                )
+            )
+        return object_state_controls
 
     def _state_change_callback(
         self, state_name: str, target_value: Any, object_handle: str
@@ -822,7 +843,7 @@ class UI:
         if osm is None or not self._can_change_object_states:
             return
 
-        success, error = osm.try_execute_action(
+        success, _ = osm.try_execute_action(
             state_name, target_value, object_handle
         )
         if success:
@@ -835,8 +856,6 @@ class UI:
             )
 
             self._last_changed_state_timestamp = (state_name, datetime.now())
-        else:
-            print(error)
 
     def _draw_aabb(
         self, aabb: mn.Range3D, transform: mn.Matrix4, color: mn.Color3

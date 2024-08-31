@@ -22,11 +22,17 @@ FONT_SIZE_LARGE: Final[int] = 32
 FONT_SIZE_SMALL: Final[int] = 24
 FONT_COLOR_WARNING: Final[List[float]] = [1.0, 0.75, 0.5, 1.0]
 PANEL_BACKGROUND_COLOR: Final[List[float]] = [0.7, 0.7, 0.7, 0.3]
+TOGGLE_COLOR_AVAILABLE: Final[List[float]] = [0.1, 0.8, 0.8, 1.0]
+TOGGLE_COLOR_RECENTLY_CHANGED: Final[List[float]] = [0.1, 0.8, 0.1, 1.0]
 SPACE_SIZE = 6
 
 
 @dataclass
 class ObjectStateControl:
+    """
+    Collection of information that allows for displaying and manipulating object states.
+    """
+
     spec: ObjectStateSpec
     value: bool
     enabled: bool
@@ -228,9 +234,6 @@ class UIOverlay:
             if object_category_name is None:
                 return
 
-            color_available = [0.1, 0.8, 0.8, 1.0]
-            color_changed = [0.1, 0.8, 0.1, 1.0]
-
             ctx.canvas_properties(
                 padding=12, background_color=PANEL_BACKGROUND_COLOR
             )
@@ -265,15 +268,13 @@ class UIOverlay:
             )
 
             def create_toggle(osc: ObjectStateControl) -> str:
-                # ctx.spacer(size=SPACE_SIZE)
-
                 spec = cast(BooleanObjectState, osc.spec)
                 item_key = f"select_{spec.name}"
                 color = None
                 if osc.recently_changed:
-                    color = color_changed
+                    color = TOGGLE_COLOR_RECENTLY_CHANGED
                 elif osc.available:
-                    color = color_available
+                    color = TOGGLE_COLOR_AVAILABLE
                 ctx.toggle(
                     uid=item_key,
                     text_false=spec.display_name_false,
