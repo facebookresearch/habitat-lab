@@ -96,11 +96,10 @@ class GuiInput:
         """
         Reset the input states. To be called at the end of a frame.
 
-        reset_continuous_input: controls whether to reset non-discrete input like scrolling or dragging.
-        For local applications, this must be reset at the end of the frame.
-
-        Remote clients are out of sync with the HITL frame cadence and have their own input cycle.
-        Their continuous inputs must be reset before consolidating a new set of input packets.
+        `reset_continuous_input`: controls whether to reset continuous input like scrolling or dragging.
+        Remote clients send their input at a different frequency than the server framerate.
+        To avoid choppiness, their continuous inputs should be reset before consolidating new remote inputs.
+        This differs from discrete input like clicking, which must be reset every frame to avoid extending click events across multiple frames.
         """
         self._key_down.clear()
         self._key_up.clear()
