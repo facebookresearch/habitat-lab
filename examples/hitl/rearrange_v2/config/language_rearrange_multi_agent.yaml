@@ -27,3 +27,6 @@ habitat:
     agents_order:
       - agent_0
       - agent_1
+    agents:
+      agent_1:
+        auto_update_sensor_transform: False

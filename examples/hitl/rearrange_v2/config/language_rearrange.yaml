@@ -62,6 +62,10 @@ habitat:
     agents_order:
       - agent_0
 
+    agents:
+      agent_0:
+        auto_update_sensor_transform: False
+
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
