@@ -21,12 +21,8 @@ from typing import (
 
 import magnum as mn
 import numpy as np
-import numpy.typing as npt
 
 import habitat_sim
-
-# flake8: noqa
-from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
@@ -61,7 +57,6 @@ from habitat.tasks.rearrange.utils import (
 )
 from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
-from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 from habitat_sim.utils.common import quat_from_magnum
 
@@ -196,7 +191,7 @@ class RearrangeSim(HabitatSim):
     def articulated_agent(self):
         if len(self.agents_mgr) > 1:
             raise ValueError(
-                f"Cannot access `sim.articulated_agent` with multiple articulated agents"
+                "Cannot access `sim.articulated_agent` with multiple articulated agents"
             )
         return self.agents_mgr[0].articulated_agent
 
@@ -204,7 +199,7 @@ class RearrangeSim(HabitatSim):
     def grasp_mgr(self) -> RearrangeGraspManager:
         if len(self.agents_mgr) > 1:
             raise ValueError(
-                f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
+                "Cannot access `sim.grasp_mgr` with multiple articulated_agents"
             )
         return self.agents_mgr[0].grasp_mgr
 
@@ -212,7 +207,7 @@ class RearrangeSim(HabitatSim):
     def grasp_mgrs(self) -> List[RearrangeGraspManager]:
         if len(self.agents_mgr) > 1:
             raise ValueError(
-                f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
+                "Cannot access `sim.grasp_mgr` with multiple articulated_agents"
             )
         return self.agents_mgr[0].grasp_mgrs
 
@@ -281,7 +276,11 @@ class RearrangeSim(HabitatSim):
             m.update()
 
     @add_perf_timing_func()
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Reset the Simulator instance.
+        NOTE: this override does not return an observation.
+        """
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
@@ -296,7 +295,6 @@ class RearrangeSim(HabitatSim):
         # auto-sleep rigid objects as optimization
         if self._auto_sleep:
             self._sleep_all_objects()
-        return None
 
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
@@ -411,7 +409,7 @@ class RearrangeSim(HabitatSim):
     def _setup_semantic_ids(self):
         # Add the rigid object id for the semantic map
         rom = self.get_rigid_object_manager()
-        for i, handle in enumerate(rom.get_object_handles()):
+        for _, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
                 node.semantic_id = (
@@ -443,7 +441,7 @@ class RearrangeSim(HabitatSim):
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
-        for attempt_i in range(max_attempts):
+        for _attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point(
                 island_index=self._largest_indoor_island_idx
             )
@@ -464,7 +462,7 @@ class RearrangeSim(HabitatSim):
             )
             if not did_collide:
                 break
-        if attempt_i == max_attempts - 1:
+        if _attempt_i == max_attempts - 1:
             rearrange_logger.warning(
                 f"Could not find a collision free start for {self.ep_info.episode_id}"
             )
@@ -500,7 +498,7 @@ class RearrangeSim(HabitatSim):
             elif hasattr(self.habitat_config.agents, "main_agent"):
                 agent_config = self.habitat_config.agents.main_agent
             else:
-                raise ValueError(f"Cannot find agent parameters.")
+                raise ValueError("Cannot find agent parameters.")
             navmesh_settings.agent_radius = agent_config.radius
             navmesh_settings.agent_height = agent_config.height
             navmesh_settings.agent_max_climb = agent_config.max_climb
@@ -907,10 +905,6 @@ class RearrangeSim(HabitatSim):
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         articulated_agent = self.get_agent_data(agent_id).articulated_agent
-        rotation = mn.Quaternion.rotation(
-            mn.Rad(articulated_agent.base_rot) - mn.Rad(0 * np.pi / 2),
-            mn.Vector3(0, 1, 0),
-        )
         rot_offset = mn.Quaternion.rotation(
             mn.Rad(-np.pi / 2), mn.Vector3(0, 1, 0)
         )
