@@ -35,6 +35,8 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     Receptacle,
     find_receptacles,
+    get_excluded_recs_from_filter_file,
+    get_scene_rec_filter_filepath,
 )
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.sims.habitat_simulator.kinematic_relationship_manager import (
@@ -720,9 +722,23 @@ class RearrangeSim(HabitatSim):
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, Receptacle]:
         if scene_id not in self._receptacles_cache:
+            scene_filter_filepath = get_scene_rec_filter_filepath(
+                self.metadata_mediator, self.curr_scene_name
+            )
+            exclude_filter_strings = None
+            if scene_filter_filepath is not None:
+                # only "active" receptacles from the filter are parsed
+                exclude_filter_strings = get_excluded_recs_from_filter_file(
+                    scene_filter_filepath
+                )
+            else:
+                logger.warn(
+                    f"The current scene {self.curr_scene_name} has no matching receptacle filter file, all annotated Receptacles will be active."
+                )
             all_receps = find_receptacles(
                 self,
                 ignore_handles=ignore_handles,
+                exclude_filter_strings=exclude_filter_strings,
             )
             self._receptacles_cache[scene_id] = {
                 recep.unique_name: recep for recep in all_receps
