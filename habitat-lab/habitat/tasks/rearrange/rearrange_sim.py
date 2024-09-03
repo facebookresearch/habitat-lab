@@ -706,15 +706,15 @@ class RearrangeSim(HabitatSim):
                     for motor_id in ao.existing_joint_motor_ids:
                         ao.remove_joint_motor(motor_id)
                 self.art_objs.append(ao)
-            if self._kinematic_mode:
-                # initialize KRM with parent->child relationships from the RearrangeEpisode
-                self.kinematic_relationship_manager = (
-                    KinematicRelationshipManager(self)
-                )
-                self.kinematic_relationship_manager.initialize_from_obj_to_rec_pairs(
-                    ep_info.name_to_receptacle,
-                    list(self._receptacles.values()),
-                )
+        if self._kinematic_mode and new_scene or should_add_objects:
+            # initialize KRM with parent->child relationships from the RearrangeEpisode
+            self.kinematic_relationship_manager = KinematicRelationshipManager(
+                self
+            )
+            self.kinematic_relationship_manager.initialize_from_obj_to_rec_pairs(
+                ep_info.name_to_receptacle,
+                list(self._receptacles.values()),
+            )
 
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
