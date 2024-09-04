@@ -213,6 +213,12 @@ class UserData:
             self.gui_input,
         )
 
+        # HACK: Available actions are hardcoded by agent type.
+        #       Only humans can change object states.
+        can_change_object_states = isinstance(
+            self.gui_agent_controller, GuiHumanoidController
+        )
+
         self.ui = UI(
             hitl_config=app_service.hitl_config,
             user_index=user_index,
@@ -223,6 +229,7 @@ class UserData:
             gui_input=self.gui_input,
             gui_drawer=app_service.gui_drawer,
             camera_helper=self.camera_helper,
+            can_change_object_states=can_change_object_states,
         )
 
         self.end_episode_form = EndEpisodeForm(user_index, app_service)
@@ -232,6 +239,7 @@ class UserData:
         self.ui.on_place.registerCallback(self._on_place)
         self.ui.on_open.registerCallback(self._on_open)
         self.ui.on_close.registerCallback(self._on_close)
+        self.ui.on_state_change.registerCallback(self._on_state_change)
 
         self.end_episode_form.on_cancel.registerCallback(
             self._on_episode_form_cancelled
@@ -388,6 +396,16 @@ class UserData:
                 "type": "close",
                 "obj_handle": e.object_handle,
                 "obj_id": e.object_id,
+            }
+        )
+
+    def _on_state_change(self, e: UI.StateChangeEventData):
+        self.ui_events.append(
+            {
+                "type": "state_change",
+                "obj_handle": e.object_handle,
+                "state_name": e.state_name,
+                "new_value": e.new_value,
             }
         )
 

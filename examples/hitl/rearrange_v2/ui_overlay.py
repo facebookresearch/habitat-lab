@@ -7,8 +7,13 @@
 from __future__ import annotations
 
 import textwrap
-from typing import Callable, Dict, Final, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple, cast
 
+from habitat.sims.habitat_simulator.object_state_machine import (
+    BooleanObjectState,
+    ObjectStateSpec,
+)
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.core.ui_elements import HorizontalAlignment
 from habitat_hitl.core.user_mask import Mask
@@ -17,7 +22,28 @@ FONT_SIZE_LARGE: Final[int] = 32
 FONT_SIZE_SMALL: Final[int] = 24
 FONT_COLOR_WARNING: Final[List[float]] = [1.0, 0.75, 0.5, 1.0]
 PANEL_BACKGROUND_COLOR: Final[List[float]] = [0.7, 0.7, 0.7, 0.3]
+TOGGLE_COLOR_AVAILABLE: Final[List[float]] = [0.1, 0.8, 0.8, 1.0]
+TOGGLE_COLOR_RECENTLY_CHANGED: Final[List[float]] = [0.1, 0.8, 0.1, 1.0]
 SPACE_SIZE = 6
+
+
+@dataclass
+class ObjectStateControl:
+    """
+    Collection of information that allows for displaying and manipulating object states.
+    """
+
+    spec: ObjectStateSpec
+    value: bool
+    enabled: bool
+    available: bool
+    callback: Optional[
+        Callable[
+            [str, str, Any], None  # object_handle  # state_name  # state_value
+        ]
+    ]
+    tooltip: Optional[str]
+    recently_changed: bool
 
 
 class UIOverlay:
@@ -190,6 +216,80 @@ class UIOverlay:
 
             for state in object_states:
                 create_list_item(state[0], state[1])
+
+    def update_selected_object_panel(
+        self,
+        object_category_name: Optional[str],
+        object_state_controls: List[ObjectStateControl],
+        primary_region_name: Optional[str],
+        contextual_info: Optional[str],
+        contextual_color: Optional[List[float]],
+    ):
+        """
+        Draw a panel that shows information about the selected object.
+        Allow for editing object states.
+        """
+        manager = self._ui_manager
+        with manager.update_canvas("bottom_left", self._dest_mask) as ctx:
+            if object_category_name is None:
+                return
+
+            ctx.canvas_properties(
+                padding=12, background_color=PANEL_BACKGROUND_COLOR
+            )
+
+            title = self._title_str(object_category_name)
+
+            ctx.label(
+                text=title,
+                font_size=FONT_SIZE_LARGE,
+                horizontal_alignment=HorizontalAlignment.CENTER,
+            )
+
+            if contextual_info is not None:
+                ctx.label(
+                    text=contextual_info,
+                    font_size=FONT_SIZE_SMALL,
+                    horizontal_alignment=HorizontalAlignment.CENTER,
+                    color=contextual_color,
+                )
+
+            ctx.spacer(size=SPACE_SIZE)
+
+            region_name = (
+                self._title_str(primary_region_name)
+                if primary_region_name is not None
+                else "None"
+            )
+            ctx.list_item(
+                text_left="Room",
+                text_right=region_name,
+                font_size=FONT_SIZE_SMALL,
+            )
+
+            def create_toggle(osc: ObjectStateControl) -> str:
+                spec = cast(BooleanObjectState, osc.spec)
+                item_key = f"select_{spec.name}"
+                color = None
+                if osc.recently_changed:
+                    color = TOGGLE_COLOR_RECENTLY_CHANGED
+                elif osc.available:
+                    color = TOGGLE_COLOR_AVAILABLE
+                ctx.toggle(
+                    uid=item_key,
+                    text_false=spec.display_name_false,
+                    text_true=spec.display_name_true,
+                    toggled=osc.value,
+                    enabled=osc.enabled and osc.available,
+                    tooltip=osc.tooltip,
+                    color=color,
+                )
+                return item_key
+
+            for osc in object_state_controls:
+                button_key = create_toggle(osc)
+                if osc.callback is not None:
+                    self._buttons[button_key] = osc.callback
 
     @staticmethod
     def _title_str(string: str):
