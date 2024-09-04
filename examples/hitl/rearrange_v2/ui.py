@@ -38,6 +38,10 @@ if TYPE_CHECKING:
         RearrangeGraspManager,
     )
 
+
+# Whether to highlight the default receptacle.
+HIGHLIGHT_DEFAULT_RECEPTACLE: bool = True
+
 # Verticality threshold for successful placement.
 MINIMUM_DROP_VERTICALITY: float = 0.9
 
@@ -54,7 +58,6 @@ COLOR_INVALID = mn.Color4(_HI, _LO, _LO, 1.0)  # Red
 COLOR_HIGHLIGHT = mn.Color4(_HI, _HI, _LO, _HI)  # Yellow
 # Color for selected objects.
 COLOR_SELECTION = mn.Color4(_LO, _HI, _HI, 1.0)  # Cyan
-
 
 class UI:
     """
@@ -684,7 +687,7 @@ class UI:
         for object_id in world._pickable_object_ids:
             if not world.is_any_agent_holding_object(
                 object_id
-            ) and self._is_object_visible(object_id):
+            ):# and self._is_object_visible(object_id):
                 obj = sutils.get_obj_from_id(sim, object_id)
 
                 # Make highlights near the edge of the screen less opaque.
@@ -697,28 +700,47 @@ class UI:
                 diameter = max(aabb.size_x(), aabb.size_y(), aabb.size_z())
                 radius = diameter * 0.65
 
-                # Calculate color
-                if (
-                    self._hover_selection.object_id == object_id
-                    or self._click_selection.object_id == object_id
-                ):
-                    reachable = self._is_within_reach(obj.translation)
-                    color = COLOR_VALID if reachable else COLOR_INVALID
-                    color[3] = (
-                        0.3
-                        if self._click_selection.object_id != object_id
-                        else 1.0
-                    )
-                else:
-                    color = COLOR_HIGHLIGHT
+                if self._is_object_visible(object_id):
 
-                draw_gui_circle(
-                    translation=obj.translation,
-                    radius=radius,
-                    color=color,
-                    billboard=True,
-                    destination_mask=dest_mask,
-                )
+                    # Calculate color
+                    if (
+                        self._hover_selection.object_id == object_id
+                        or self._click_selection.object_id == object_id
+                    ):
+                        reachable = self._is_within_reach(obj.translation)
+                        color = COLOR_VALID if reachable else COLOR_INVALID
+                        color[3] = (
+                            0.3
+                            if self._click_selection.object_id != object_id
+                            else 1.0
+                        )
+                    else:
+                        color = COLOR_HIGHLIGHT
+
+                    draw_gui_circle(
+                        translation=obj.translation,
+                        radius=radius,
+                        color=color,
+                        billboard=True,
+                        destination_mask=dest_mask,
+                    )
+
+                else:
+                    draw_gui_circle(
+                        translation=obj.translation,
+                        radius=radius * 0.15,
+                        color=mn.Color4(0.3, 0.8, 0.8, _HI),
+                        billboard=True,
+                        destination_mask=dest_mask,
+                    )
+                    draw_gui_circle(
+                        translation=obj.translation,
+                        radius=radius * 0.3,
+                        color=mn.Color4(0.2, 0.7, 0.7, 0.7),
+                        billboard=True,
+                        destination_mask=dest_mask,
+                    )
+            
 
     def _draw_hovered_object_highlights(self) -> None:
         """Highlight the hovered object."""
@@ -796,6 +818,22 @@ class UI:
             for link_id in link_object_ids.keys():
                 object_ids.add(link_id)
 
+            if HIGHLIGHT_DEFAULT_RECEPTACLE:
+                link_index = self._world.get_link_index(object_id)
+                default_link_index = sutils.get_ao_default_link(ao, compute_if_not_found=True)
+                if default_link_index is not None and default_link_index != link_index:
+                    default_link_node = obj.get_link_scene_node(default_link_index)
+                    if default_link_node.object_semantic_id not in self._world._opened_link_set:
+                        color_default_link = self._to_color_array(COLOR_HIGHLIGHT)
+                        color_default_link[3] = 0.75
+                        self._gui_drawer._client_message_manager.draw_object_outline(
+                            priority=-10,
+                            color=color_default_link,
+                            line_width=4.0,
+                            object_ids=[default_link_node.object_semantic_id],
+                            destination_mask=Mask.from_index(self._user_index),
+                        )
+
         self._gui_drawer._client_message_manager.draw_object_outline(
             priority=0,
             color=self._to_color_array(COLOR_SELECTION),
@@ -803,6 +841,8 @@ class UI:
             object_ids=list(object_ids),
             destination_mask=Mask.from_index(self._user_index),
         )
+
+        
 
     @staticmethod
     def _to_color_array(color: mn.Color4) -> List[float]:
