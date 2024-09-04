@@ -48,7 +48,7 @@ class AppStateFeedback(AppStateBase):
             False
         ] * self._app_data.max_user_count
         self._elapsed_time: float = 0.0
-        self._timeout = False  # TODO: Error management
+        self._timeout = False
         self._save_keyframes = True
         self._cam_matrix = get_top_down_view(self._app_service.sim)
         self._success = success
