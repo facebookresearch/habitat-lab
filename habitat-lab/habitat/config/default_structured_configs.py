@@ -1680,6 +1680,11 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: Optional[str] = None
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    auto_update_sensor_transform: bool = True
+    """
+    If `True`, the agent's sensor transforms are automatically updated every frame.
+    """
+    # TODO: Remove this flag once sensors are decoupled from agents.
 
 
 @dataclass

@@ -120,6 +120,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
         maintain_link_order: bool = False,
+        auto_update_sensor_transform=True,
         base_type="mobile",
     ):
         r"""Constructor
@@ -142,6 +143,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
             params=params,
             sim=sim,
             limit_robo_joints=limit_robo_joints,
+            auto_update_sensor_transform=auto_update_sensor_transform,
         )
         # instantiate a robotBase
         ArticulatedAgentBase.__init__(
