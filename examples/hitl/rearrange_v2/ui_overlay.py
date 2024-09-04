@@ -141,3 +141,62 @@ class UIOverlay:
                         text_right=control[1],
                         font_size=FONT_SIZE_SMALL,
                     )
+
+    def update_hovered_object_info_panel(
+        self,
+        object_category_name: Optional[str],
+        object_states: List[Tuple[str, str]],
+        primary_region_name: Optional[str],
+    ):
+        """
+        Update the panel that shows information about the hovered object.
+        """
+        manager = self._ui_manager
+        with manager.update_canvas("bottom", self._dest_mask) as ctx:
+            if object_category_name is None:
+                return
+
+            ctx.canvas_properties(
+                padding=12, background_color=PANEL_BACKGROUND_COLOR
+            )
+
+            title = self._title_str(object_category_name)
+
+            ctx.label(
+                text=title,
+                font_size=FONT_SIZE_LARGE,
+                horizontal_alignment=HorizontalAlignment.CENTER,
+            )
+
+            ctx.spacer(size=SPACE_SIZE)
+
+            region_name = (
+                self._title_str(primary_region_name)
+                if primary_region_name is not None
+                else "None"
+            )
+            ctx.list_item(
+                text_left="Room",
+                text_right=region_name,
+                font_size=FONT_SIZE_SMALL,
+            )
+
+            def create_list_item(left: str, right: str):
+                ctx.list_item(
+                    text_left=left,
+                    text_right=right,
+                    font_size=FONT_SIZE_SMALL,
+                )
+
+            for state in object_states:
+                create_list_item(state[0], state[1])
+
+    @staticmethod
+    def _title_str(string: str):
+        """Convert 'snake_case' to 'Title Case'."""
+        return (
+            string.replace("_", " ")
+            .replace("-", " ")
+            .replace(".", " ")
+            .title()
+        )
