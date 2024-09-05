@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, cast
 
 from habitat_llm.sims.collaboration_sim import CollaborationSim
 from habitat_llm.tools.motor_skills.object_states.oracle_clean_skills import (
@@ -33,6 +33,12 @@ from habitat.sims.habitat_simulator.object_state_machine import (
 )
 
 BooleanActionMap = Dict[bool, OracleObjectStateInPlaceSkill]
+
+
+@dataclass
+class ObjectStateChangeResult:
+    success: bool
+    error_message: Optional[str]
 
 
 @dataclass
@@ -122,14 +128,14 @@ class ObjectStateManipulator:
 
     def can_execute_action(
         self, state_name: str, state_value: Any, object_handle: str
-    ) -> Tuple[bool, str]:
+    ) -> ObjectStateChangeResult:
         """
         Test whether an action can be executed on the specified object.
         Returns whether the action can be executed, and an error message if it can't.
         """
         action = self.get_action(state_name, state_value)
         if action is not None:
-            return action.can_modify_state_impl(
+            result = action.can_modify_state_impl(
                 self._sim,
                 self._agent_index,
                 object_handle,
@@ -137,21 +143,26 @@ class ObjectStateManipulator:
                 self._maximum_distance,
                 self._world._metadata_interface,
             )
-        return (False, f"Undefined action: '{state_name} -> {state_value}'.")
+            return ObjectStateChangeResult(
+                result.succeeded, result.error_message_user
+            )
+        return ObjectStateChangeResult(
+            False, f"Undefined action: '{state_name} -> {state_value}'."
+        )
 
     def try_execute_action(
         self, state_name: str, state_value: Any, object_handle: str
-    ) -> Tuple[bool, str]:
+    ) -> ObjectStateChangeResult:
         """
         Try executing an action on the specified object.
         Returns whether the action was successful, and an error message if it wasn't.
         """
-        success, error_message = self.can_execute_action(
+        result = self.can_execute_action(
             state_name, state_value, object_handle
         )
-        if success:
+        if result.success:
             self.set_object_state(object_handle, state_name, state_value)
-        return (success, error_message)
+        return ObjectStateChangeResult(result.success, result.error_message)
 
     def get_all_available_boolean_actions(
         self, object_handle: str
@@ -173,9 +184,11 @@ class ObjectStateManipulator:
                 action_enabled = False
                 error = None
                 if action_available:
-                    action_enabled, error = self.can_execute_action(
+                    result = self.can_execute_action(
                         name, target_value, object_handle
                     )
+                    action_enabled = result.success
+                    error = result.error_message
                 actions.append(
                     BooleanAction(
                         state_spec=spec,
