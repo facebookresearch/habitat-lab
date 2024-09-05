@@ -6,3 +6,10 @@ defaults:
   - lang_rearrange_humanoid_only.yaml
   - server.yaml
   - _self_
+
+
+rearrange_v2:
+  agents:
+    agent_0:
+      head_sensor_substring: "head"
+      can_change_object_states: True
