@@ -44,7 +44,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
 )
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
 from habitat_sim.gfx import Camera
-from habitat_sim.sensor import Sensor, VisualSensor
+from habitat_sim.sensor import VisualSensor
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
 
 if TYPE_CHECKING:
