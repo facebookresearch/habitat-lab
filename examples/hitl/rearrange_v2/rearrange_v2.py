@@ -7,8 +7,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 import magnum as mn
 import numpy as np
@@ -16,6 +17,7 @@ from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import (
     create_app_state_cancel_session,
+    create_app_state_feedback,
     create_app_state_load_episode,
 )
 from end_episode_form import EndEpisodeForm, ErrorReport
@@ -41,7 +43,12 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiRobotController,
 )
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
+from habitat_sim.gfx import Camera
+from habitat_sim.sensor import VisualSensor
 from habitat_sim.utils.common import quat_from_magnum, quat_to_coeffs
+
+if TYPE_CHECKING:
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 PIP_VIEWPORT_ID = 0  # ID of the picture-in-picture viewport that shows other agent's perspective.
 
@@ -106,12 +113,24 @@ class FrameRecorder:
             ro = rom.get_object_by_id(obj_id)
             position = np.array(ro.translation).tolist()
             rotation = quat_to_coeffs(quat_from_magnum(ro.rotation)).tolist()
+
+            states: Dict[str, Any] = {}
+            state_infos = self._world.get_states_for_object_handle(
+                object_handle
+            )
+            for state_info in state_infos:
+                spec = state_info.state_spec
+                state_name = spec.name
+                value = state_info.value
+                states[state_name] = value
+
             object_states.append(
                 {
                     "position": position,
                     "rotation": rotation,
                     "object_handle": object_handle,
                     "object_id": obj_id,
+                    "states": states,
                 }
             )
         return object_states
@@ -138,6 +157,7 @@ class FrameRecorder:
                 "camera_transform": u.agent_data.cam_transform,
                 "held_object": u.ui._held_object_id,
                 "hovered_object": u.ui._hover_selection.object_id,
+                "selected_object": u.ui._click_selection.object_id,
                 "events": u.pop_ui_events(),
             }
             data["users"].append(user_data_dict)
@@ -157,17 +177,19 @@ class AgentData:
         world: World,
         agent_controller: Controller,
         agent_index: int,
-        render_camera: Optional[Any],
+        render_cameras: List[Camera],
+        can_change_object_states: bool,
     ):
         self.app_service = app_service
         self.world = world
         self.agent_controller = agent_controller
         self.agent_index = agent_index
+        self.can_change_object_states = can_change_object_states
 
         self.task_instruction = ""
         self._episode_message: Optional[str] = None
 
-        self.render_camera = render_camera
+        self.render_cameras = render_cameras
         self.cam_transform = mn.Matrix4.identity_init()
 
         self.episode_completion_status = EpisodeCompletionStatus.PENDING
@@ -175,13 +197,37 @@ class AgentData:
     def update_camera_from_sensor(self) -> None:
         """
         Update the camera transform from the agent's sensor.
-        Agents controlled by users have their camera updated using CameraHelper.
         For AI-controlled agents, the camera transform can be inferred from this function.
         """
-        if self.render_camera is not None:
-            self.cam_transform = np.linalg.inv(
-                self.render_camera.camera_matrix
-            )
+        if len(self.render_cameras) > 0:
+            # NOTE: `camera_matrix` is a Magnum binding. Typing is not yet available.
+            self.cam_transform = self.render_cameras[
+                0
+            ].camera_matrix.inverted()
+
+    def update_camera_transform(
+        self, global_cam_transform: mn.Matrix4
+    ) -> None:
+        """
+        Updates the camera transform of the agent.
+        If the agent has 'head sensors', this will also update their transform.
+        """
+        self.cam_transform = global_cam_transform
+
+        for render_camera in self.render_cameras:
+            # TODO: There is currently no utility to set a global transform.
+            cumulative_transform = mn.Matrix4.identity_init()
+            # Note: `parent` is a Magnum binding. Typing is not yet available.
+            node = render_camera.node.parent
+            while node is not None and hasattr(node, "transformation"):
+                cumulative_transform @= node.transformation
+                node = node.parent
+            inv_cumulative_transform = cumulative_transform.inverted()
+
+            if render_camera is not None:
+                render_camera.node.transformation = (
+                    inv_cumulative_transform @ global_cam_transform
+                )
 
     def _on_termination_cb(self, _e: AgentTerminationEvent = None):
         if LLM_CONTROLLER_FOUND:
@@ -200,6 +246,17 @@ class AgentData:
                 self._episode_message = _e.message
         else:
             self._episode_message = _e
+
+
+def _get_rearrange_v2_agent_config(
+    root_config: Any, agent_key: str
+) -> Optional[Any]:
+    if not hasattr(root_config, "rearrange_v2"):
+        return None
+    agent_configs = vars(root_config.rearrange_v2.agents)
+    if agent_key in agent_configs:
+        return agent_configs[agent_key]
+    return None
 
 
 class UserData:
@@ -256,6 +313,7 @@ class UserData:
             gui_input=self.gui_input,
             gui_drawer=app_service.gui_drawer,
             camera_helper=self.camera_helper,
+            can_change_object_states=agent_data.can_change_object_states,
         )
 
         self.end_episode_form = EndEpisodeForm(user_index, app_service)
@@ -265,6 +323,7 @@ class UserData:
         self.ui.on_place.registerCallback(self._on_place)
         self.ui.on_open.registerCallback(self._on_open)
         self.ui.on_close.registerCallback(self._on_close)
+        self.ui.on_state_change.registerCallback(self._on_state_change)
 
         self.end_episode_form.on_cancel.registerCallback(
             self._on_episode_form_cancelled
@@ -281,6 +340,7 @@ class UserData:
         gui_agent_controller._gui_input = self.gui_input
 
     def reset(self):
+        self._update_camera()
         self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
         self.ui.reset()
 
@@ -322,12 +382,7 @@ class UserData:
         self.camera_helper.update(self._get_camera_lookat_pos(), dt)
         self.agent_data.cam_transform = self.camera_helper.get_cam_transform()
 
-        if self.app_service.hitl_config.networking.enable:
-            self.app_service._client_message_manager.update_camera_transform(
-                self.agent_data.cam_transform,
-                destination_mask=Mask.from_index(self.user_index),
-            )
-
+        self._update_camera()
         self.ui.update()
         self.ui.draw_ui()
 
@@ -384,6 +439,17 @@ class UserData:
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
+    def _update_camera(self) -> None:
+        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        cam_transform = self.camera_helper.get_cam_transform()
+        self.agent_data.update_camera_transform(cam_transform)
+
+        if self.app_service.hitl_config.networking.enable:
+            self.app_service._client_message_manager.update_camera_transform(
+                self.agent_data.cam_transform,
+                destination_mask=Mask.from_index(self.user_index),
+            )
+
     def _is_user_idle_this_frame(self) -> bool:
         return not self.gui_input.get_any_input()
 
@@ -424,6 +490,16 @@ class UserData:
             }
         )
 
+    def _on_state_change(self, e: UI.StateChangeEventData):
+        self.ui_events.append(
+            {
+                "type": "state_change",
+                "obj_handle": e.object_handle,
+                "state_name": e.state_name,
+                "new_value": e.new_value,
+            }
+        )
+
     def _on_episode_form_cancelled(self, _e: Any = None):
         self.ui_events.append(
             {
@@ -458,6 +534,38 @@ class UserData:
         print(
             f"User {self.user_index} has signaled a problem with the episode: '{error_report.user_message}'."
         )
+
+
+@dataclass
+class RearrangeV2AgentConfig:
+    head_sensor_substring: str
+    """Substring used to identify the agent's head sensor."""
+
+    can_change_object_states: bool
+    """Whether the agent can modify object states."""
+
+
+@dataclass
+class RearrangeV2Config:
+    agents: Dict[int, RearrangeV2AgentConfig]
+
+    @staticmethod
+    def load(
+        raw_config: Dict[str, Any], sim: "RearrangeSim"
+    ) -> RearrangeV2Config:
+        output = RearrangeV2Config(agents={})
+        agents: Dict[str, Any] = raw_config.get("agents", {})
+        for agent_name, agent_cfg in agents.items():
+            agent_index = sim.agents_mgr.get_agent_index_from_name(agent_name)
+            output.agents[agent_index] = RearrangeV2AgentConfig(
+                head_sensor_substring=agent_cfg.get(
+                    "head_sensor_substring", "undefined"
+                ),
+                can_change_object_states=agent_cfg.get(
+                    "can_change_object_states", True
+                ),
+            )
+        return output
 
 
 class AppStateRearrangeV2(AppStateBase):
@@ -498,37 +606,34 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._error_message: Optional[str] = None
 
+        rearrange_v2_config_raw: Dict[str, Any] = app_service.config.get(
+            "rearrange_v2", {}
+        )
+        rearrange_v2_config = RearrangeV2Config.load(
+            rearrange_v2_config_raw, app_service.sim
+        )
+
+        # NOTE: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
+        sim_agent = sim.agents[0]
         self._agent_data: List[AgentData] = []
-        sensor_agent_index = 0
+        # sensor_agent_index = 0
 
         # get camera renders for head sensors provided via config
         for agent_index in range(self._num_agents):
-            # agent = agent_mgr._all_agent_data[agent_index]
-            # camera_name: Optional[Any] = (
-            #     list(agent.articulated_agent._cameras)[0]
-            #     if len(agent.articulated_agent._cameras) > 0
-            #     else None
-            # )
-            agent_name = f"agent_{agent_index}"
-            camera_sensor_substring = app_service._config["rearrange_v2"][
-                "head_sensor_substrings"
-            ][agent_name]
-            camera_name = f"{agent_name}_{camera_sensor_substring}_rgb"
-            print("=====", camera_name, "======")
-            try:
-                render_camera: Optional[Any] = (
-                    sim.agents[sensor_agent_index]
-                    ._sensors[camera_name]
-                    .render_camera
-                    if camera_name is not None
-                    else None
-                )
-            except (TypeError, IndexError):
-                print(
-                    "=== Could not find a render-matrix for camera: ",
-                    camera_name,
-                    " ===",
-                )
+            # Find all `render_camera` objects associated with the agent.
+            render_cameras: List[Camera] = []
+            agent_cfg = rearrange_v2_config.agents[agent_index]
+            head_sensor_substring = agent_cfg.head_sensor_substring
+            agent_name = sim.agents_mgr.get_agent_name_from_index(agent_index)
+            for sensor_name, sensor in sim_agent._sensors.items():
+                if (
+                    isinstance(sensor, VisualSensor)
+                    and agent_name in sensor_name
+                    and head_sensor_substring in sensor_name
+                ):
+                    visual_sensor = cast(VisualSensor, sensor)
+                    render_cameras.append(visual_sensor.render_camera)
+
             agent_controller = app_service.all_agent_controllers[agent_index]
 
             # Match agent and user indices.
@@ -545,7 +650,8 @@ class AppStateRearrangeV2(AppStateBase):
                     world=self._world,
                     agent_controller=agent_controller,
                     agent_index=agent_index,
-                    render_camera=render_camera,
+                    render_cameras=render_cameras,
+                    can_change_object_states=agent_cfg.can_change_object_states,
                 )
             )
             if LLM_CONTROLLER_FOUND and isinstance(
@@ -602,12 +708,26 @@ class AppStateRearrangeV2(AppStateBase):
                 self._app_service,
                 self._app_data,
                 self._session,
-                "User disconnected",
+                error="User disconnected",
             )
         elif self._is_episode_finished():
-            return create_app_state_load_episode(
-                self._app_service, self._app_data, self._session
-            )
+            success = self._metrics.get_task_percent_complete()
+            feedback = self._metrics.get_task_explanation()
+
+            # If task metrics are available, show task feedback.
+            if success is not None and feedback is not None:
+                return create_app_state_feedback(
+                    self._app_service,
+                    self._app_data,
+                    self._session,
+                    success,
+                    feedback,
+                )
+            # If task metrics are unavailable, fallback load the next episode.
+            else:
+                return create_app_state_load_episode(
+                    self._app_service, self._app_data, self._session
+                )
         else:
             return None
 

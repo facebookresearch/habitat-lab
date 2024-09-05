@@ -10,3 +10,13 @@ defaults:
 habitat_hitl:
   networking:
     max_client_count: 2
+
+
+rearrange_v2:
+  agents:
+    agent_0:
+      head_sensor_substring: "head"
+      can_change_object_states: True
+    agent_1:
+      head_sensor_substring: "jaw"
+      can_change_object_states: False
