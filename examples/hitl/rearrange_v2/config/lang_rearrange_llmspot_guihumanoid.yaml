@@ -58,6 +58,9 @@ env: habitat
 num_runs_per_episode: 1
 num_proc: 1
 dry_run: False
+robot_agent_uid: 0
+human_agent_uid: 1
+agent_asymmetry: False
 paths:
   results_dir: ${hydra:runtime.output_dir}/results
   epi_result_file_path: "${paths.results_dir}/episode_result_log.csv"

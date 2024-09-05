@@ -228,7 +228,7 @@ class ControllerHelper:
         actions = []
 
         for controller in self.controllers:
-            controller_action = controller.act(obs, self._env, args, kwargs)
+            controller_action = controller.act(obs, self._env, *args, **kwargs)
             actions.append(controller_action)
 
         if len(self.controllers) == 1:
