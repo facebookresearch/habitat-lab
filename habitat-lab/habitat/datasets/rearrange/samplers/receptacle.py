@@ -143,6 +143,35 @@ class Receptacle(ABC):
         """
         raise NotImplementedError
 
+    def get_support_object_ids(self, sim: habitat_sim.Simulator) -> List[int]:
+        """
+        Get a list of object ids representing the set of acceptable support surfaces for this receptacle.
+
+        :param sim: The Simulator instance.
+        :return: A list of object id integers for this Receptacle's set of valid support surfaces.
+        """
+        if self.parent_object_handle is None:
+            # this is the stage
+            return [habitat_sim.stage_id]
+
+        parent_object = sutils.get_obj_from_handle(
+            sim, self.parent_object_handle
+        )
+        if parent_object.is_articulated:
+            if self.parent_link <= 0:
+                # Receptacle is attached to the body link, so only allow placements there
+                # NOTE: If collision objects are marked STATIC in the URDF (via collision_group==2) then they will be attached to the -1 link as STATIC rigids, even if defined at the 0 link
+                return [
+                    parent_object.object_id,
+                    parent_object.link_ids_to_object_ids[0],
+                ]
+            else:
+                # Receptacle is attached to a moveable link, only allow samples on that link
+                return [parent_object.link_ids_to_object_ids[self.parent_link]]
+
+        # for rigid objects support surface is the object_id
+        return [parent_object.object_id]
+
 
 class OnTopOfReceptacle(Receptacle):
     def __init__(self, name: str, places: List[str]):

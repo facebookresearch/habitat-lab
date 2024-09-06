@@ -300,35 +300,7 @@ class ObjectSampler:
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
             if snap_down:
-                support_object_ids = [habitat_sim.stage_id]
-                # add support object ids for non-stage receptacles
-                if receptacle.is_parent_object_articulated:
-                    ao_instance = sim.get_articulated_object_manager().get_object_by_handle(
-                        receptacle.parent_object_handle
-                    )
-                    link_ids_to_obj_ids = {
-                        v: k for k, v in ao_instance.link_object_ids.items()
-                    }
-                    if receptacle.parent_link <= 0:
-                        # Receptacle is attached to the body link, so only allow placements there
-                        # NOTE: If collision objects are marked STATIC in the URDF (via collision_group==2) then they will be attached to the -1 link as STATIC rigids, even if defined at the 0 link
-                        support_object_ids = [
-                            ao_instance.object_id,
-                            link_ids_to_obj_ids[0],
-                        ]
-                    else:
-                        # Receptacle is attached to a moveable link, only allow samples on that link
-                        support_object_ids = [
-                            link_ids_to_obj_ids[receptacle.parent_link]
-                        ]
-
-                elif receptacle.parent_object_handle is not None:
-                    # rigid object receptacle
-                    support_object_ids = [
-                        sim.get_rigid_object_manager()
-                        .get_object_by_handle(receptacle.parent_object_handle)
-                        .object_id
-                    ]
+                support_object_ids = receptacle.get_support_object_ids(sim)
                 snap_success = sutils.snap_down(
                     sim,
                     new_object,
