@@ -694,6 +694,11 @@ class AppStateRearrangeV2(AppStateBase):
                         self._user_data[-1].ui.on_close.registerCallback(
                             agent_controller._on_close
                         )
+                        self._user_data[
+                            -1
+                        ].ui.on_state_change.registerCallback(
+                            agent_controller._on_object_state_change
+                        )
 
         self._frame_recorder = FrameRecorder(
             app_service, app_data, self._world
