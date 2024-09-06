@@ -17,6 +17,7 @@ from session import Session
 from util import get_top_down_view
 
 from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.client_message_manager import MAIN_VIEWPORT
 from habitat_hitl.core.user_mask import Mask
 
 
@@ -138,7 +139,7 @@ class AppStateLoadEpisode(AppStateBase):
                 destination_mask=Mask.ALL,
             )
         app_service.client_message_manager.set_viewport_properties(
-            viewport_id=-1,
+            viewport_id=MAIN_VIEWPORT,
             visible_layer_ids=Mask.all_except_index(1),
             destination_mask=Mask.ALL,
         )
