@@ -16,6 +16,8 @@ from habitat.articulated_agents.mobile_manipulator import (
 )
 from habitat_sim.utils.common import orthonormalize_rotation_shear
 
+HUMANOID_CAMERA_HEIGHT_OFFSET = 0.5
+
 
 class KinematicHumanoid(MobileManipulator):
     def _get_humanoid_params(self):
@@ -36,8 +38,12 @@ class KinematicHumanoid(MobileManipulator):
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.0, 0.5, 0.25),
-                    cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
+                    cam_offset_pos=mn.Vector3(
+                        0.0, HUMANOID_CAMERA_HEIGHT_OFFSET, 0.25
+                    ),
+                    cam_look_at_pos=mn.Vector3(
+                        0.0, HUMANOID_CAMERA_HEIGHT_OFFSET, 0.75
+                    ),
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
