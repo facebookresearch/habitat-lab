@@ -156,6 +156,11 @@ rearrange_v2:
   data_collection:
     s3_path: "Placeholder/"
     output_file_name: "session"
-  head_sensor_substrings:
-    "agent_0": "articulated_agent_jaw"
-    "agent_1": "head"
+  agents:
+    agent_1:
+      head_sensor_substring: "head"
+      can_change_object_states: True
+      camera_height: 0.2
+    agent_0:
+      head_sensor_substring: "jaw"
+      can_change_object_states: False
