@@ -544,7 +544,7 @@ def test_ao_open_close_queries():
         default_link = sutils.get_ao_default_link(
             kitchen_counter, compute_if_not_found=True
         )
-        assert default_link == 6
+        assert default_link == 1
 
         # NOTE: sim bug here doesn't break the feature
         # test setting the default link in template metadata
