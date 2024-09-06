@@ -310,7 +310,7 @@ class ClientMessageManager:
                             In window normalized coordinates, i.e. all values in range [0,1] relative to window size.
         visible_layer_ids: Visibility layers. Only objects assigned to these layers will be visible to this viewport.
         """
-        layers = Users(8)  # Maximum of 8 layers.
+        layers = Users(8, activate_users=True)  # Maximum of 8 layers.
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
             viewport_properties = _obtain_viewport_properties(

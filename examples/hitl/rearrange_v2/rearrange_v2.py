@@ -30,6 +30,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.client_message_manager import MAIN_VIEWPORT
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -288,7 +289,7 @@ class UserData:
             # Show all layers except "user_index" in the default viewport.
             # This hides the user's own agent in the first person view.
             self.app_service.client_message_manager.set_viewport_properties(
-                viewport_id=-1,
+                viewport_id=MAIN_VIEWPORT,
                 visible_layer_ids=Mask.all_except_index(agent_index),
                 destination_mask=Mask.from_index(self.user_index),
             )
