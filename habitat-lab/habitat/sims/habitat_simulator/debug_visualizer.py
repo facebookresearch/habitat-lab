@@ -8,7 +8,7 @@
 
 import math
 import os
-from typing import List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -267,6 +267,11 @@ class DebugVisualizer:
         self.debug_line_render = sim.get_debug_line_render()
         self.sensor: habitat_sim.simulator.Sensor = None
         self.agent: habitat_sim.simulator.Agent = None
+
+        # optionally set a debug_draw callback function to be run every time a frame is rendered
+        self.dblr_callback: Callable = None
+        self.dblr_callback_params: Dict[str, Any] = None  # kwargs
+
         self.agent_id = 0
         # default black background
         self.clear_color = (
@@ -475,6 +480,8 @@ class DebugVisualizer:
 
         if look_at is not None:
             self.look_at(look_at, look_from)
+        if self.dblr_callback is not None:
+            self.dblr_callback(**self.dblr_callback_params)
         self.sensor.draw_observation()
         return DebugObservation(self.sensor.get_observation())
 

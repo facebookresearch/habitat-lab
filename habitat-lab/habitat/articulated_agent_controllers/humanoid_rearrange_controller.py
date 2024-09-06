@@ -32,6 +32,23 @@ DIST_TO_STOP: float = (
 from typing import List, Tuple
 
 
+def bin_search(v, a, b, target_value):
+    left = a
+    right = b
+
+    while left <= right:
+        mid = (left + right) // 2
+
+        if v[mid] == target_value:
+            return mid
+        elif v[mid] < target_value:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return min(left, len(v) - 1)
+
+
 class HumanoidRearrangeController(HumanoidBaseController):
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints positions
@@ -290,6 +307,80 @@ class HumanoidRearrangeController(HumanoidBaseController):
         )
         self.obj_transform_base = obj_transform_base @ rot_offset
         self.joint_pose = joint_pose
+
+    def translate_and_rotate_with_gait(
+        self, forward_delta: float, rot_delta: float
+    ):
+        """
+        Translates the character in the forward direction and rotates the character
+
+        :param forward_delta: how much to move forward or backward
+        :param rot_delta: how much to rotate (in radians)
+        """
+        forward_vec = self.obj_transform_base.transform_vector(
+            mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base.translation += forward_delta * forward_vec
+        prev_angle = np.arctan2(forward_vec[0], forward_vec[2])
+        new_angle = prev_angle + rot_delta
+        new_forward_vec = mn.Vector3(np.cos(new_angle), 0, -np.sin(new_angle))
+        look_at_path_T = mn.Matrix4.look_at(
+            self.obj_transform_base.translation,
+            self.obj_transform_base.translation + new_forward_vec.normalized(),
+            mn.Vector3.y_axis(),
+        )
+        rot_offset = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1, 0, 0)
+        )
+        self.obj_transform_base = look_at_path_T @ rot_offset
+
+        # Set a new position frame
+        if forward_delta != 0:
+            # Figure out which frame in the motion we should select
+            current_frame = self.walk_mocap_frame
+            target_displ = forward_delta
+            total_displ = self.walk_motion.displacement[-1]
+            abs_target_displ = np.abs(target_displ)
+
+            # If the motion covers multiple cycles, take remainder
+            if abs_target_displ > total_displ:
+                num_cycles = int(target_displ / total_displ)
+                abs_target_displ = abs_target_displ - total_displ * num_cycles
+                target_displ = np.sign(target_displ) * abs_target_displ
+
+            dist_to_end = (
+                self.walk_motion.displacement[-1]
+                - self.walk_motion.displacement[current_frame]
+            )
+            dist_to_beginning = self.walk_motion.displacement[current_frame]
+            # Moving X backward is the same as moving Total_displ - X forward
+            if np.sign(target_displ) < 0:
+                target_displ += total_displ
+
+            if dist_to_end < target_displ:
+                target_displ -= dist_to_end
+                a = 0
+                b = current_frame
+            else:
+                a = current_frame
+                b = len(self.walk_motion.displacement) - 1
+                target_displ += dist_to_beginning
+            # Bin search over which frame we should cover
+            index = bin_search(
+                self.walk_motion.displacement, a, b, target_displ
+            )
+            self.walk_mocap_frame = index
+
+        new_pose = self.walk_motion.poses[self.walk_mocap_frame]
+        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
+        # Remove the forward component, and orient according to forward_V
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
+
+        obj_transform = add_rot @ obj_transform
+        obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+
+        self.joint_pose = joint_pose
+        self.obj_transform_offset = obj_transform
 
     def calculate_walk_pose_directional(
         self,

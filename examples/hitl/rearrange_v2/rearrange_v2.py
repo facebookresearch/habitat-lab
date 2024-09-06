@@ -27,10 +27,14 @@ from ui import UI
 from util import UP
 from world import World
 
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    HUMANOID_CAMERA_HEIGHT_OFFSET,
+)
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
+from habitat_hitl.core.client_message_manager import MAIN_VIEWPORT
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.user_mask import Mask, Users
 from habitat_hitl.environment.camera_helper import CameraHelper
@@ -339,11 +343,6 @@ class UserData:
         # TODO: Communicate to the controller via action hints.
         gui_agent_controller._gui_input = self.gui_input
 
-    def reset(self):
-        self._update_camera()
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
-        self.ui.reset()
-
         # If networking is enabled...
         if self.app_service.client_message_manager:
             # Assign user agent objects to their own layer.
@@ -359,10 +358,13 @@ class UserData:
             # Show all layers except "user_index" in the default viewport.
             # This hides the user's own agent in the first person view.
             self.app_service.client_message_manager.set_viewport_properties(
-                viewport_id=-1,
+                viewport_id=MAIN_VIEWPORT,
                 visible_layer_ids=Mask.all_except_index(agent_index),
                 destination_mask=Mask.from_index(self.user_index),
             )
+
+        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self.ui.reset()
 
     def update(self, dt: float):
         if self.end_episode_form.is_form_shown():
@@ -431,11 +433,32 @@ class UserData:
         return events
 
     def _get_camera_lookat_pos(self) -> mn.Vector3:
+        # HACK: Estimate camera height.
+        # TODO: GuiController should have knowledge on the agent type it controls, and should provide an API to get the camera height.
+        gui_agent_controller = self.gui_agent_controller
+        sim = self.app_service.sim
+        agent_data = self.agent_data
+        camera_height_offset = 1.0
+        if isinstance(gui_agent_controller, GuiRobotController):
+            # The robot camera height is defined in `spot_robot.py`.
+            # It's directly attached to the 6th articulated object link, without a height offset.
+            agent = sim.agents_mgr[agent_data.agent_index].articulated_agent
+            root = agent.sim_obj
+            head_link = root.get_link_scene_node(6)
+            head_link_height = head_link.absolute_translation.y
+            base_link = root.get_link_scene_node(-1)
+            base_link_height = base_link.absolute_translation.y
+            camera_height_offset = head_link_height - base_link_height
+        elif isinstance(gui_agent_controller, GuiHumanoidController):
+            # The humanoid camera height is defined in `kinematic_humanoid.py`.
+            # It is an offset relative to the agent base position.
+            camera_height_offset = HUMANOID_CAMERA_HEIGHT_OFFSET
+
         agent_root = get_agent_art_obj_transform(
             self.app_service.sim,
             self.gui_agent_controller._agent_idx,
         )
-        lookat_y_offset = UP
+        lookat_y_offset = UP * camera_height_offset
         lookat = agent_root.translation + lookat_y_offset
         return lookat
 
@@ -793,9 +816,6 @@ class AppStateRearrangeV2(AppStateBase):
                 self._agent_data[
                     agent_index
                 ].task_instruction = task_instruction
-
-        for user_index in self._users.indices(Mask.ALL):
-            self._user_data[user_index].reset()
 
         # Insert a keyframe immediately.
         self._app_service.sim.gfx_replay_manager.save_keyframe()
