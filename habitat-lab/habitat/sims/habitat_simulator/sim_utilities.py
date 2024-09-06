@@ -1439,9 +1439,9 @@ def point_to_tri_dist(
 def get_obj_receptacle_and_confidence(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
+    candidate_receptacles: Dict[str, "Receptacle"],
     support_surface_id: Optional[int] = None,
     max_dist_to_rec: float = 0.25,
-    candidate_receptacles: Optional[Dict[str, "Receptacle"]] = None,
     island_index: int = -1,
 ) -> Tuple[List[str], float, str]:
     """
@@ -1462,9 +1462,6 @@ def get_obj_receptacle_and_confidence(
     grav_vector = mn.Vector3(0, -1, 0)
     dist, center = get_obj_size_along(sim, obj.object_id, grav_vector)
     obj_bottom_point = center + grav_vector * dist
-
-    if candidate_receptacles is None:
-        candidate_receptacles = sim.receptacles
 
     # find a support surface if one was not provided
     if support_surface_id is None:
