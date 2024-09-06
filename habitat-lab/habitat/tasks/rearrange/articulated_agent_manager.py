@@ -74,8 +74,14 @@ class ArticulatedAgentManager:
         self._all_agent_data: List[ArticulatedAgentData] = []
         self._is_pb_installed = is_pb_installed()
         self.agent_names: Dict[str, Any] = cfg.agents
+        self._agent_index_to_name: Dict[int, str] = {}
+        self._agent_name_to_index: Dict[str, int] = {}
 
-        for agent_name in cfg.agents_order:
+        for agent_index in range(len(cfg.agents_order)):
+            agent_name = cfg.agents_order[agent_index]
+            self._agent_index_to_name[agent_index] = agent_name
+            self._agent_name_to_index[agent_name] = agent_index
+
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.articulated_agent_type)
             assert issubclass(agent_cls, MobileManipulator)
@@ -111,6 +117,20 @@ class ArticulatedAgentManager:
                     is_pb_installed=self._is_pb_installed,
                 )
             )
+
+    def get_agent_name_from_index(self, agent_index: int) -> Optional[str]:
+        """
+        Get the name of the agent from its index.
+        Returns `None` if the index does not exist.
+        """
+        return self._agent_index_to_name.get(agent_index, None)
+
+    def get_agent_index_from_name(self, agent_name: str) -> Optional[int]:
+        """
+        Get the index of an agent from its name.
+        Returns `None` if the name does not exist.
+        """
+        return self._agent_name_to_index.get(agent_name, None)
 
     @add_perf_timing_func()
     def on_new_scene(self) -> None:
