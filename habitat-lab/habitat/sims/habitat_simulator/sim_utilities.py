@@ -5,13 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 """This module provides a diverse set of functional utilities for common operations involving the Simulator and ManagedObjects including: object getters from id and handle, geometric utilities, prepositional logic, region queries, articulated object interactions, and more."""
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
+from scipy import spatial
 
 import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+
+if TYPE_CHECKING:
+    from habitat.datasets.rearrange.samplers.receptacle import Receptacle
 
 
 def object_shortname_from_handle(object_handle: str) -> str:
@@ -1326,3 +1330,235 @@ def obj_next_to(
         hor_l2_threshold,
         vertical_padding,
     )
+
+
+def point_to_tri_dist(
+    point: np.ndarray, triangles: np.ndarray
+) -> Tuple[float, np.ndarray]:
+    """
+    Compute the minimum distance between a 3D point and a set of triangles (e.g. a triangle mesh) and return both the minimum distance and that closest point.
+    Uses vectorized numpy operations for high performance with a large number of triangles.
+    Implementation adapted from https://stackoverflow.com/questions/32342620/closest-point-projection-of-a-3d-point-to-3d-triangles-with-numpy-scipy
+    Algorithm is vectorized form of e.g. https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf
+
+    :param point: A 3D point.
+    :param triangles: An nx3x3 numpy array of triangles. Each entry of the first axis is a triangle with three 3D vectors, the vertices of the triangle.
+    :return: The minimum distance from point to triangle set and the closest point on the surface of any triangle.
+    """
+
+    with np.errstate(all="ignore"):
+        # Unpack triangle points
+        p0, p1, p2 = np.asarray(triangles).swapaxes(0, 1)
+
+        # Calculate triangle edges
+        e0 = p1 - p0
+        e1 = p2 - p0
+        a = np.einsum("...i,...i", e0, e0)
+        b = np.einsum("...i,...i", e0, e1)
+        c = np.einsum("...i,...i", e1, e1)
+
+        # Calculate determinant and denominator
+        det = a * c - b * b
+        invDet = 1.0 / det
+        denom = a - 2 * b + c
+
+        # Project to the edges
+        p = p0 - point
+        d = np.einsum("...i,...i", e0, p)
+        e = np.einsum("...i,...i", e1, p)
+        u = b * e - c * d
+        v = b * d - a * e
+
+        # Calculate numerators
+        bd = b + d
+        ce = c + e
+        numer0 = (ce - bd) / denom
+        numer1 = (c + e - b - d) / denom
+        da = -d / a
+        ec = -e / c
+
+        # Vectorize test conditions
+        m0 = u + v < det
+        m1 = u < 0
+        m2 = v < 0
+        m3 = d < 0
+        m4 = a + d > b + e
+        m5 = ce > bd
+
+        t0 = m0 & m1 & m2 & m3
+        t1 = m0 & m1 & m2 & ~m3
+        t2 = m0 & m1 & ~m2
+        t3 = m0 & ~m1 & m2
+        t4 = m0 & ~m1 & ~m2
+        t5 = ~m0 & m1 & m5
+        t6 = ~m0 & m1 & ~m5
+        t7 = ~m0 & m2 & m4
+        t8 = ~m0 & m2 & ~m4
+        t9 = ~m0 & ~m1 & ~m2
+
+        u = np.where(t0, np.clip(da, 0, 1), u)
+        v = np.where(t0, 0, v)
+        u = np.where(t1, 0, u)
+        v = np.where(t1, 0, v)
+        u = np.where(t2, 0, u)
+        v = np.where(t2, np.clip(ec, 0, 1), v)
+        u = np.where(t3, np.clip(da, 0, 1), u)
+        v = np.where(t3, 0, v)
+        u *= np.where(t4, invDet, 1)
+        v *= np.where(t4, invDet, 1)
+        u = np.where(t5, np.clip(numer0, 0, 1), u)
+        v = np.where(t5, 1 - u, v)
+        u = np.where(t6, 0, u)
+        v = np.where(t6, 1, v)
+        u = np.where(t7, np.clip(numer1, 0, 1), u)
+        v = np.where(t7, 1 - u, v)
+        u = np.where(t8, 1, u)
+        v = np.where(t8, 0, v)
+        u = np.where(t9, np.clip(numer1, 0, 1), u)
+        v = np.where(t9, 1 - u, v)
+        u = u[:, None]
+        v = v[:, None]
+
+        # this array contains a list of points, the closest on each triangle
+        closest_points_each_tri = p0 + u * e0 + v * e1
+
+        # now extract the closest point on the mesh and minimum distance for return
+        closest_point_index = np.argmin(
+            spatial.distance.cdist(np.array([point]), closest_points_each_tri),
+            axis=1,
+        )
+        closest_point: np.ndarray = closest_points_each_tri[
+            closest_point_index
+        ]
+        min_dist = float(np.linalg.norm(point - closest_point))
+
+        # Return the minimum distance
+        return min_dist, closest_point
+
+
+def get_obj_receptacle_and_confidence(
+    sim: habitat_sim.Simulator,
+    obj: habitat_sim.physics.ManagedRigidObject,
+    support_surface_id: Optional[int] = None,
+    max_dist_to_rec: float = 0.25,
+    candidate_receptacles: Optional[Dict[str, "Receptacle"]] = None,
+    island_index: int = -1,
+) -> Tuple[List[str], float, str]:
+    """
+    Heuristic to match a potential placement point with a Receptacle and provide some confidence.
+
+    :param bottom_point: The bottom center point of the object or equivalent (e.g the candidate raycast point for placement)
+    :param obj: The ManagedRigidObject for which to find a Receptacle match.
+    :param support_surface_id: The object_id of the intended support surface (rigid object, articulated link, or stage_id). If not provided, a downward raycast from object center will determine the first hit as the support surface.
+    :param max_dist_to_rec: The threshold point to mesh distance for an object to be matched with a Receptacle.
+    :param candidate_receptacles: Optionally provide a dict (unique_name to Receptacle) of candidate Receptacles for matching. If not provided, uses sim.receptacles.
+    :param island_index: Optionally provide an island_index for identifying navigable floor points. Default is full navmesh.
+    :return: Tuple containing: (1): list of receptacle strings: "floor,region", Receptacle.unique_name, or None (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
+    """
+    # collect information about failure of the function
+    info_text = ""
+
+    # get the center point of the object projected on the local bounding box size in the gravity direction
+    grav_vector = mn.Vector3(0, -1, 0)
+    dist, center = get_obj_size_along(sim, obj.object_id, grav_vector)
+    obj_bottom_point = center + grav_vector * dist
+
+    if candidate_receptacles is None:
+        candidate_receptacles = sim.receptacles
+
+    # find a support surface if one was not provided
+    if support_surface_id is None:
+        # TODO: This hack is the solution to the Bullet physics raycast margin bug. It should be migrated into every raycast from habitat-sim and then removed here.
+        y_buffer = 0.08
+        raycast_results = sim.cast_ray(
+            habitat_sim.geo.Ray(
+                center + mn.Vector3(0, y_buffer, 0), grav_vector
+            )
+        )
+        if raycast_results.has_hits():
+            for hit in raycast_results.hits:
+                if hit.object_id != obj.object_id:
+                    support_surface_id = hit.object_id
+                    # print(f"first_hit true dist = {hit.ray_distance - y_buffer}")
+                    if hit.ray_distance >= y_buffer:
+                        break
+        if support_surface_id is None:
+            info_text = "No support surface found for object."
+            return [], 1.0, info_text
+        # sup_obj = get_obj_from_id(sim,support_surface_id)
+        # print(f"computed support surface {support_surface_id}:{sup_obj.handle if sup_obj is not None else 'stage'}")
+
+    try_floor = False
+    if support_surface_id == habitat_sim.stage_id:
+        # support_surface on stage could be the floor
+        try_floor = True
+    else:
+        support_object = get_obj_from_id(sim, support_surface_id)
+        matching_recs = [
+            rec
+            for u_name, rec in candidate_receptacles.items()
+            if support_object.handle in u_name
+        ]
+        if support_object.object_id != support_surface_id:
+            # support object is a link
+            link_index = support_object.link_object_ids[support_surface_id]
+            # further cull the list to this link's recs
+            matching_recs = [
+                rec for rec in matching_recs if rec.parent_link == link_index
+            ]
+        if len(matching_recs) == 0:
+            # there are no Receptacles for this support surface
+            try_floor = True
+        else:
+            # select a Receptacle which most likely contains the point
+            dist_to_recs = [
+                rec.dist_to_rec(sim, obj_bottom_point) for rec in matching_recs
+            ]
+
+            # define an epsilon distance similarity threshold for determining two receptacles are equi-distant (e.g. overlapping)
+            same_dist_eps = 0.01
+            min_indices = []
+            min_dist: float = None
+            for ix, dist in enumerate(dist_to_recs):
+                if dist < max_dist_to_rec:
+                    if min_dist is None or dist < (min_dist - same_dist_eps):
+                        min_dist = dist
+                        min_indices = [ix]
+                    elif abs(dist - min_dist) < same_dist_eps:
+                        # this rec is nearly equidistant to the current best match
+                        min_indices.append(ix)
+
+            if len(min_indices) > 0:
+                return (
+                    [matching_recs[ix].unique_name for ix in min_indices],
+                    1.0 - (min_dist / max_dist_to_rec),
+                    "successful match",
+                )
+            else:
+                info_text = "Point is too far from a valid Receptacle on the support surface."
+
+    # check if the point is navigable and if so, try matching it to a region
+    if try_floor:
+        snap_point = sim.pathfinder.snap_point(obj_bottom_point, island_index)
+        snap_point[1] = obj_bottom_point[1]
+        if (obj_bottom_point - snap_point).length() < 0.1:
+            # this point is on the floor and should be mapped to a region
+            point_regions = sim.semantic_scene.get_weighted_regions_for_point(
+                obj_bottom_point
+            )
+            if len(point_regions) > 0:
+                # found matching regions, pick the primary (most precise) one
+                region_name = sim.semantic_scene.regions[
+                    point_regions[0][0]
+                ].id
+            else:
+                # point is not matched to a region
+                region_name = "unknown_region"
+            return [f"floor,{region_name}"], 1.0, "successful match"
+        else:
+            info_text = (
+                "Point does not match any Receptacle and is not navigable."
+            )
+
+    # all receptacles are too far away or there are no matches
+    return [], 1.0, info_text
