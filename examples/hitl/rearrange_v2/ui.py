@@ -843,10 +843,10 @@ class UI:
         if osm is None or not self._can_change_object_states:
             return
 
-        success, _ = osm.try_execute_action(
+        result = osm.try_execute_action(
             state_name, target_value, object_handle
         )
-        if success:
+        if result.success:
             self._on_object_state_change.invoke(
                 UI.StateChangeEventData(
                     object_handle=object_handle,
