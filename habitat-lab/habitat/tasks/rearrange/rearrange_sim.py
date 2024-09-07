@@ -507,7 +507,7 @@ class RearrangeSim(HabitatSim):
         navmesh_settings.include_static_objects = True
 
         agent_object_ids = []
-        for articulated_agent in self.agent_mgr.articulated_agents_iter:
+        for articulated_agent in self.agents_mgr.articulated_agents_iter:
             agent_object_ids.extend(
                 [articulated_agent.sim_obj.object_id]
                 + [*articulated_agent.sim_obj.link_object_ids.keys()]
