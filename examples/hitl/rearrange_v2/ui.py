@@ -798,7 +798,7 @@ class UI:
                     if self._ui_settings.highlight_default_receptacles:
                         contextual_info.append(
                             (
-                                "Highlighted receptacle\nmay contain objects.",
+                                "Yellow container\nmay have objects.",
                                 color_ui_object_info,
                             )
                         )
