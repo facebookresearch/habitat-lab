@@ -222,8 +222,7 @@ class UIOverlay:
         object_category_name: Optional[str],
         object_state_controls: List[ObjectStateControl],
         primary_region_name: Optional[str],
-        contextual_info: Optional[str],
-        contextual_color: Optional[List[float]],
+        contextual_info: List[Tuple[str, Optional[List[float]]]],
     ):
         """
         Draw a panel that shows information about the selected object.
@@ -246,12 +245,12 @@ class UIOverlay:
                 horizontal_alignment=HorizontalAlignment.CENTER,
             )
 
-            if contextual_info is not None:
+            for info_label in contextual_info:
                 ctx.label(
-                    text=contextual_info,
+                    text=info_label[0],
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.CENTER,
-                    color=contextual_color,
+                    color=info_label[1],
                 )
 
             ctx.spacer(size=SPACE_SIZE)
