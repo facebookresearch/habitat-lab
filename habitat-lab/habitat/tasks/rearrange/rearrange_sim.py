@@ -482,31 +482,56 @@ class RearrangeSim(HabitatSim):
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
 
-        if osp.exists(navmesh_path):
-            self.pathfinder.load_nav_mesh(navmesh_path)
-            logger.info(f"Loaded navmesh from {navmesh_path}")
-        else:
-            logger.warning(
-                f"Requested navmesh to load from {navmesh_path} does not exist. Recomputing from configured values and caching."
-            )
-            navmesh_settings = NavMeshSettings()
-            navmesh_settings.set_defaults()
+        # if osp.exists(navmesh_path):
+        #     self.pathfinder.load_nav_mesh(navmesh_path)
+        #     logger.info(f"Loaded navmesh from {navmesh_path}")
+        # else:
+        #     logger.warning(
+        #         f"Requested navmesh to load from {navmesh_path} does not exist. Recomputing from configured values and caching."
+        #     )
 
-            agent_config = None
-            if hasattr(self.habitat_config.agents, "agent_0"):
-                agent_config = self.habitat_config.agents.agent_0
-            elif hasattr(self.habitat_config.agents, "main_agent"):
-                agent_config = self.habitat_config.agents.main_agent
-            else:
-                raise ValueError("Cannot find agent parameters.")
-            navmesh_settings.agent_radius = agent_config.radius
-            navmesh_settings.agent_height = agent_config.height
-            navmesh_settings.agent_max_climb = agent_config.max_climb
-            navmesh_settings.agent_max_slope = agent_config.max_slope
-            navmesh_settings.include_static_objects = True
-            self.recompute_navmesh(self.pathfinder, navmesh_settings)
-            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
-            self.pathfinder.save_nav_mesh(navmesh_path)
+        navmesh_settings = NavMeshSettings()
+        navmesh_settings.set_defaults()
+
+        agent_config = None
+        if hasattr(self.habitat_config.agents, "agent_0"):
+            agent_config = self.habitat_config.agents.agent_0
+        elif hasattr(self.habitat_config.agents, "main_agent"):
+            agent_config = self.habitat_config.agents.main_agent
+        else:
+            raise ValueError("Cannot find agent parameters.")
+        navmesh_settings.agent_radius = agent_config.radius
+        navmesh_settings.agent_height = agent_config.height
+        navmesh_settings.agent_max_climb = agent_config.max_climb
+        navmesh_settings.agent_max_slope = agent_config.max_slope
+        navmesh_settings.include_static_objects = True
+
+        agent_object_ids = []
+        for articulated_agent in self.agent_mgr.articulated_agents_iter:
+            agent_object_ids.extend(
+                [articulated_agent.sim_obj.object_id]
+                + [*articulated_agent.sim_obj.link_object_ids.keys()]
+            )
+
+        # first cache AO motion types and set to STATIC for navmesh
+        ao_motion_types = []
+        self.agents_mgr
+        for ao in (
+            self.get_articulated_object_manager()
+            .get_objects_by_handle_substring()
+            .values()
+        ):
+            # ignore the robot
+            if ao.object_id not in agent_object_ids:
+                ao_motion_types.append((ao, ao.motion_type))
+                ao.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        self.recompute_navmesh(self.pathfinder, navmesh_settings)
+        # reset AO motion types from cache
+        for ao, ao_orig_motion_type in ao_motion_types:
+            ao.motion_type = ao_orig_motion_type
+        os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+        self.pathfinder.save_nav_mesh(navmesh_path)
 
         # NOTE: allowing indoor islands only
         self._largest_indoor_island_idx = get_largest_island_index(
