@@ -66,6 +66,16 @@ COLOR_HIGHLIGHT = mn.Color4(_HI, _HI, _LO, _HI)  # Yellow
 COLOR_SELECTION = mn.Color4(_LO, _HI, _HI, 1.0)  # Cyan
 
 
+@dataclass
+class UISettings:
+    """
+    Configuration of the UI.
+    """
+
+    can_change_object_states: bool
+    highlight_default_receptacles: bool
+
+
 class UI:
     """
     User interface for the rearrange_v2 app.
@@ -83,7 +93,7 @@ class UI:
         gui_input: GuiInput,
         gui_drawer: GuiDrawer,
         camera_helper: CameraHelper,
-        can_change_object_states: bool,
+        ui_settings: UISettings,
     ):
         self._user_index = user_index
         self._dest_mask = Mask.from_index(self._user_index)
@@ -93,7 +103,7 @@ class UI:
         self._gui_input = gui_input
         self._gui_drawer = gui_drawer
         self._camera_helper = camera_helper
-        self._can_change_object_states = can_change_object_states
+        self._ui_settings = ui_settings
 
         self._can_grasp_place_threshold = hitl_config.can_grasp_place_threshold
 
@@ -789,7 +799,7 @@ class UI:
             recently_changed = False
 
             # If this user can manipulate object states...
-            if self._can_change_object_states:
+            if self._ui_settings.can_change_object_states:
                 enabled = action.enabled
                 available = action.available
                 tooltip = (
@@ -840,7 +850,7 @@ class UI:
     ):
         # Requires object state manipulator.
         osm = self._object_state_manipulator
-        if osm is None or not self._can_change_object_states:
+        if osm is None or not self._ui_settings.can_change_object_states:
             return
 
         result = osm.try_execute_action(
@@ -1018,6 +1028,36 @@ class UI:
             link_object_ids = ao.link_object_ids
             for link_id in link_object_ids.keys():
                 object_ids.add(link_id)
+
+            # Draw an outline around the default receptacle.
+            # TODO: Cache the default receptacle.
+            if self._ui_settings.highlight_default_receptacles:
+                link_index = self._world.get_link_index(object_id)
+                default_link_index = sutils.get_ao_default_link(
+                    ao, compute_if_not_found=True
+                )
+                if (
+                    default_link_index is not None
+                    and default_link_index != link_index
+                ):
+                    default_link_node = obj.get_link_scene_node(
+                        default_link_index
+                    )
+                    if (
+                        default_link_node.object_semantic_id
+                        not in self._world._opened_link_set
+                    ):
+                        color_default_link = self._to_color_array(
+                            COLOR_HIGHLIGHT
+                        )
+                        color_default_link[3] = 0.75
+                        self._gui_drawer._client_message_manager.draw_object_outline(
+                            priority=-10,
+                            color=color_default_link,
+                            line_width=4.0,
+                            object_ids=[default_link_node.object_semantic_id],
+                            destination_mask=Mask.from_index(self._user_index),
+                        )
 
         self._gui_drawer._client_message_manager.draw_object_outline(
             priority=0,
