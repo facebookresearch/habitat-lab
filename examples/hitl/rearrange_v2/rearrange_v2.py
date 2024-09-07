@@ -459,7 +459,10 @@ class UserData:
             self.gui_agent_controller._agent_idx,
         )
         lookat_y_offset = UP * camera_height_offset
-        lookat = agent_root.translation + lookat_y_offset
+
+        # HACK: to set sensor camera in front of the agent's cylinder
+        zoffset = self.camera_helper.get_cam_forward_vector() * 0.25
+        lookat = agent_root.translation + lookat_y_offset + zoffset
         return lookat
 
     def _update_camera(self) -> None:
