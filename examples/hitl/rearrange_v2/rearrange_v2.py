@@ -352,9 +352,6 @@ class UserData:
                 self.server_sps_tracker.get_smoothed_rate(),
             )
 
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt)
-        self.agent_data.cam_transform = self.camera_helper.get_cam_transform()
-
         self._update_camera()
         self.ui.update()
         self.ui.draw_ui()
