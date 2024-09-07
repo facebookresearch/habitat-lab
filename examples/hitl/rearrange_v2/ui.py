@@ -795,23 +795,13 @@ class UI:
                                     )
                                 )
 
-                        if self._ui_settings.highlight_default_receptacles:
-                            if link_index == sutils.get_ao_default_link(
-                                ao, True
-                            ):
-                                contextual_info.append(
-                                    (
-                                        "May contain objects.",
-                                        color_ui_object_info,
-                                    )
-                                )
-                            else:
-                                contextual_info.append(
-                                    (
-                                        "May not contain objects.",
-                                        color_ui_invalid,
-                                    )
-                                )
+                    if self._ui_settings.highlight_default_receptacles:
+                        contextual_info.append(
+                            (
+                                "Highlighted receptacle\nmay contain objects.",
+                                color_ui_object_info,
+                            )
+                        )
 
         # Update the UI.
         self._ui_overlay.update_selected_object_panel(
