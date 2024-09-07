@@ -528,7 +528,7 @@ class RemoteGuiInput:
 
     def on_frame_end(self) -> None:
         for user_index in self._users.indices(Mask.ALL):
-            self._gui_inputs[user_index].on_frame_end()
+            self._gui_inputs[user_index].reset(reset_continuous_input=False)
             self._pressed_ui_buttons[user_index].clear()
             self._textboxes[user_index].clear()
         self._new_connection_records = None
