@@ -673,8 +673,7 @@ class UI:
         object_category_name: Optional[str] = None
         object_state_controls: List[ObjectStateControl] = []
         primary_region_name: Optional[str] = None
-        contextual_info: Optional[str] = None
-        contextual_color: Optional[List[float]] = None
+        contextual_info: List[Tuple[str, Optional[List[float]]]] = []
 
         if object_id is None:
             return
@@ -706,20 +705,29 @@ class UI:
                 # Get the contextual information.
                 color_ui_valid = [0.2, 1.0, 0.2, 1.0]
                 color_ui_invalid = [1.0, 0.2, 0.2, 1.0]
+                color_ui_info = None
+                color_ui_object_info = [0.8, 0.8, 0.2, 1.0]
                 if self._is_object_pickable(object_id):
                     if self._held_object_id == None:
                         if self._world.is_any_agent_holding_object(object_id):
-                            contextual_info = (
-                                "The object is held by another agent."
+                            contextual_info.append(
+                                (
+                                    "The object is held by another agent.",
+                                    color_ui_invalid,
+                                )
                             )
-                            contextual_color = color_ui_invalid
                         else:
                             if self._is_within_reach(obj.translation):
-                                contextual_info = "Double-click to pick up."
-                                contextual_color = color_ui_valid
+                                contextual_info.append(
+                                    (
+                                        "Double-click to pick up.",
+                                        color_ui_valid,
+                                    )
+                                )
                             else:
-                                contextual_info = "Too far to pick up."
-                                contextual_color = color_ui_invalid
+                                contextual_info.append(
+                                    ("Too far to pick up.", color_ui_invalid)
+                                )
                     elif self._held_object_id == object_id:
                         if self._place_selection.point is not None:
                             point = self._place_selection.point
@@ -733,13 +741,20 @@ class UI:
                                 )
                             )
                             if placement_valid:
-                                contextual_info = "Release to place."
-                                contextual_color = color_ui_valid
+                                contextual_info.append(
+                                    ("Release to place.", color_ui_valid)
+                                )
                             else:
-                                contextual_info = "Cannot place object here."
-                                contextual_color = color_ui_invalid
+                                contextual_info.append(
+                                    (
+                                        "Cannot place object here.",
+                                        color_ui_invalid,
+                                    )
+                                )
                         else:
-                            contextual_info = "Hold right-click to place."
+                            contextual_info.append(
+                                ("Hold right-click to place.", color_ui_info)
+                            )
                 elif self._is_object_interactable(object_id):
                     link_id = object_id
                     link_index = self._world.get_link_index(link_id)
@@ -750,23 +765,53 @@ class UI:
                             else "open"
                         )
 
+                        # Get parent articulated object.
+                        ao_id = self._world._link_id_to_ao_map[link_id]
+                        ao = self._world.get_articulated_object(ao_id)
+
                         if self._held_object_id is not None:
-                            contextual_info = f"Cannot {action_name} while holding an object."
-                            contextual_color = color_ui_invalid
+                            contextual_info.append(
+                                (
+                                    f"Cannot {action_name} while holding an object.",
+                                    color_ui_invalid,
+                                )
+                            )
                         else:
-                            ao_id = self._world._link_id_to_ao_map[link_id]
-                            ao = self._world.get_articulated_object(ao_id)
                             link_node = ao.get_link_scene_node(link_index)
                             link_pos = link_node.translation
 
                             if self._is_within_reach(link_pos):
-                                contextual_info = (
-                                    f"Double-click to {action_name}."
+                                contextual_info.append(
+                                    (
+                                        f"Double-click to {action_name}.",
+                                        color_ui_valid,
+                                    )
                                 )
-                                contextual_color = color_ui_valid
                             else:
-                                contextual_info = f"Too far to {action_name}."
-                                contextual_color = color_ui_invalid
+                                contextual_info.append(
+                                    (
+                                        f"Too far to {action_name}.",
+                                        color_ui_invalid,
+                                    )
+                                )
+
+                        if self._ui_settings.highlight_default_receptacles:
+                            if link_index == sutils.get_ao_default_link(
+                                ao, True
+                            ):
+                                contextual_info.append(
+                                    (
+                                        "May contain objects.",
+                                        color_ui_object_info,
+                                    )
+                                )
+                            else:
+                                contextual_info.append(
+                                    (
+                                        "May not contain objects.",
+                                        color_ui_invalid,
+                                    )
+                                )
 
         # Update the UI.
         self._ui_overlay.update_selected_object_panel(
@@ -774,7 +819,6 @@ class UI:
             object_state_controls=object_state_controls,
             primary_region_name=primary_region_name,
             contextual_info=contextual_info,
-            contextual_color=contextual_color,
         )
 
     def _get_object_state_controls(
