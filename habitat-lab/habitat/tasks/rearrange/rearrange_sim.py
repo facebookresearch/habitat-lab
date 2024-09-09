@@ -371,7 +371,7 @@ class RearrangeSim(HabitatSim):
         }
 
         if new_scene:
-            self._recompute_navmesh(ep_info)
+            self._recompute_navmesh()
 
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
