@@ -4,8 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
-import os.path as osp
 import time
 from collections import defaultdict
 from typing import (
@@ -373,7 +371,7 @@ class RearrangeSim(HabitatSim):
         }
 
         if new_scene:
-            self._load_navmesh(ep_info)
+            self._recompute_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
@@ -476,19 +474,10 @@ class RearrangeSim(HabitatSim):
             )
 
     @add_perf_timing_func()
-    def _load_navmesh(self, ep_info: RearrangeEpisode):
-        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
-
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-
-        # if osp.exists(navmesh_path):
-        #     self.pathfinder.load_nav_mesh(navmesh_path)
-        #     logger.info(f"Loaded navmesh from {navmesh_path}")
-        # else:
-        #     logger.warning(
-        #         f"Requested navmesh to load from {navmesh_path} does not exist. Recomputing from configured values and caching."
-        #     )
+    def _recompute_navmesh(self) -> None:
+        """
+        Recompute the navmesh including all non-agent ArticulatedObjects as static components (assuming they are furniture).
+        """
 
         navmesh_settings = NavMeshSettings()
         navmesh_settings.set_defaults()
@@ -506,13 +495,11 @@ class RearrangeSim(HabitatSim):
         navmesh_settings.agent_max_slope = agent_config.max_slope
         navmesh_settings.include_static_objects = True
 
-        agent_object_ids = []
-        for articulated_agent in self.agents_mgr.articulated_agents_iter:
-            agent_object_ids.extend(
-                [articulated_agent.sim_obj.object_id]
-                + [*articulated_agent.sim_obj.link_object_ids.keys()]
-            )
-
+        # exclude any articulated agents from the navmesh
+        agent_object_ids = [
+            articulated_agent.sim_obj.object_id
+            for articulated_agent in self.agents_mgr.articulated_agents_iter
+        ]
         # first cache AO motion types and set to STATIC for navmesh
         ao_motion_types = []
         self.agents_mgr
@@ -521,17 +508,17 @@ class RearrangeSim(HabitatSim):
             .get_objects_by_handle_substring()
             .values()
         ):
-            # ignore the robot
+            # ignore the articulated agents
             if ao.object_id not in agent_object_ids:
                 ao_motion_types.append((ao, ao.motion_type))
                 ao.motion_type = habitat_sim.physics.MotionType.STATIC
 
+        # recompute the navmesh
         self.recompute_navmesh(self.pathfinder, navmesh_settings)
+
         # reset AO motion types from cache
         for ao, ao_orig_motion_type in ao_motion_types:
             ao.motion_type = ao_orig_motion_type
-        os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
-        self.pathfinder.save_nav_mesh(navmesh_path)
 
         # NOTE: allowing indoor islands only
         self._largest_indoor_island_idx = get_largest_island_index(
