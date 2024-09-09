@@ -1492,13 +1492,13 @@ def get_obj_receptacle_and_confidence(
         if support_surface_id is None:
             info_text = "No support surface found for object."
             return [], 1.0, info_text
-        # sup_obj = get_obj_from_id(sim,support_surface_id)
-        # print(f"computed support surface {support_surface_id}:{sup_obj.handle if sup_obj is not None else 'stage'}")
 
-    try_floor = False
+    # in case we cannot match the object|point to a Receptacle object, we'll try to validate that it could be "on the floor"
+    fallback_to_floor_matching: bool = False
+
     if support_surface_id == habitat_sim.stage_id:
         # support_surface on stage could be the floor
-        try_floor = True
+        fallback_to_floor_matching = True
     else:
         support_object = get_obj_from_id(sim, support_surface_id)
         matching_recs = [
@@ -1515,14 +1515,14 @@ def get_obj_receptacle_and_confidence(
             ]
         if len(matching_recs) == 0:
             # there are no Receptacles for this support surface
-            try_floor = True
+            fallback_to_floor_matching = True
         else:
             # select a Receptacle which most likely contains the point
             dist_to_recs = [
                 rec.dist_to_rec(sim, obj_bottom_point) for rec in matching_recs
             ]
 
-            # define an epsilon distance similarity threshold for determining two receptacles are equi-distant (e.g. overlapping)
+            # define an epsilon distance similarity threshold for determining two receptacles are equidistant (e.g. overlapping)
             same_dist_eps = 0.01
             min_indices = []
             min_dist: float = None
@@ -1544,8 +1544,10 @@ def get_obj_receptacle_and_confidence(
             else:
                 info_text = "Point is too far from a valid Receptacle on the support surface."
 
-    # check if the point is navigable and if so, try matching it to a region
-    if try_floor:
+    # If we made it this far, matching to a Receptacle object failed.
+    # Now for some cases, check if the point is navigable and if so, try matching it to a region
+    if fallback_to_floor_matching:
+        # NOTE: using navmesh snapping to a point within 10cm horizontally as a heuristic for "on the floor"
         snap_point = sim.pathfinder.snap_point(obj_bottom_point, island_index)
         snap_point[1] = obj_bottom_point[1]
         if (obj_bottom_point - snap_point).length() < 0.1:
