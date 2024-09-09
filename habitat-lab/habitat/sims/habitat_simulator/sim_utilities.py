@@ -1441,6 +1441,7 @@ def get_obj_receptacle_and_confidence(
     obj: habitat_sim.physics.ManagedRigidObject,
     candidate_receptacles: Dict[str, "Receptacle"],
     support_surface_id: Optional[int] = None,
+    obj_bottom_location: Optional[mn.Vector3] = None,
     max_dist_to_rec: float = 0.25,
     island_index: int = -1,
 ) -> Tuple[List[str], float, str]:
@@ -1450,10 +1451,14 @@ def get_obj_receptacle_and_confidence(
     :param bottom_point: The bottom center point of the object or equivalent (e.g the candidate raycast point for placement)
     :param obj: The ManagedRigidObject for which to find a Receptacle match.
     :param support_surface_id: The object_id of the intended support surface (rigid object, articulated link, or stage_id). If not provided, a downward raycast from object center will determine the first hit as the support surface.
+    :param obj_bottom_location: The optional location of the candidate bottom point of the object. If not provided, project the object center to the lowest extent.
     :param max_dist_to_rec: The threshold point to mesh distance for an object to be matched with a Receptacle.
     :param candidate_receptacles: Optionally provide a dict (unique_name to Receptacle) of candidate Receptacles for matching. If not provided, uses sim.receptacles.
     :param island_index: Optionally provide an island_index for identifying navigable floor points. Default is full navmesh.
     :return: Tuple containing: (1): list of receptacle strings: "floor,region", Receptacle.unique_name, or None (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
+
+    When using this util for candidate placement with raycasting (e.g. HitL): provide 'support_surface_id' and 'obj_bottom_location' overrides from the raycast.
+    When using this util for assessing current object state (e.g. episode evaluation): leave 'support_surface_id' and 'obj_bottom_location' as default.
     """
     # collect information about failure of the function
     info_text = ""
@@ -1461,7 +1466,12 @@ def get_obj_receptacle_and_confidence(
     # get the center point of the object projected on the local bounding box size in the gravity direction
     grav_vector = mn.Vector3(0, -1, 0)
     dist, center = get_obj_size_along(sim, obj.object_id, grav_vector)
-    obj_bottom_point = center + grav_vector * dist
+    # either compute or use the provided object location
+    obj_bottom_point = (
+        center + grav_vector * dist
+        if obj_bottom_location is None
+        else obj_bottom_location
+    )
 
     # find a support surface if one was not provided
     if support_surface_id is None:
