@@ -246,6 +246,9 @@ class RemoteClientState:
             if len(client_states) == 0:
                 continue
             gui_input = self._gui_inputs[user_index]
+            mouse_scroll_offset: float = 0.0
+            relative_mouse_position: List[int] = [0, 0]
+
             for client_state in client_states:
                 # UI element events.
                 for ui_dict in ["ui", "legacyUi"]:
@@ -289,7 +292,7 @@ class RemoteClientState:
                     if "scrollDelta" in mouse_json:
                         delta: List[Any] = mouse_json["scrollDelta"]
                         if len(delta) == 2:
-                            gui_input._mouse_scroll_offset += (
+                            mouse_scroll_offset += (
                                 delta[0]
                                 if abs(delta[0]) > abs(delta[1])
                                 else delta[1]
@@ -298,10 +301,8 @@ class RemoteClientState:
                     if "mousePositionDelta" in mouse_json:
                         pos_delta: List[Any] = mouse_json["mousePositionDelta"]
                         if len(pos_delta) == 2:
-                            gui_input._relative_mouse_position = [
-                                pos_delta[0],
-                                pos_delta[1],
-                            ]
+                            relative_mouse_position[0] += pos_delta[0]
+                            relative_mouse_position[1] += pos_delta[1]
 
                     if "rayOrigin" in mouse_json:
                         ray_origin: List[float] = mouse_json["rayOrigin"]
@@ -317,6 +318,9 @@ class RemoteClientState:
                                 ray_direction[2],
                             ).normalized()
                             gui_input._mouse_ray = ray
+
+            gui_input._mouse_scroll_offset = mouse_scroll_offset
+            gui_input._relative_mouse_position = relative_mouse_position
 
             # todo: think about ambiguous GuiInput states (key-down and key-up events in the same
             # frame and other ways that keyHeld, keyDown, and keyUp can be inconsistent.
@@ -491,7 +495,7 @@ class RemoteClientState:
 
     def on_frame_end(self) -> None:
         for user_index in self._users.indices(Mask.ALL):
-            self._gui_inputs[user_index].on_frame_end()
+            self._gui_inputs[user_index].reset(reset_continuous_input=False)
             self._pressed_ui_buttons[user_index].clear()
             self._textboxes[user_index].clear()
         self._new_connection_records = None

@@ -23,7 +23,7 @@ from app_states import (
 from end_episode_form import EndEpisodeForm, ErrorReport
 from metrics import Metrics
 from session import Session
-from ui import UI
+from ui import UI, UISettings
 from util import UP
 from world import World
 
@@ -275,6 +275,7 @@ class UserData:
         world: World,
         agent_data: AgentData,
         server_sps_tracker: AverageRateTracker,
+        rearrange_v2_config: RearrangeV2Config,
     ):
         self.app_service = app_service
         self.user_index = user_index
@@ -317,7 +318,10 @@ class UserData:
             gui_input=self.gui_input,
             gui_drawer=app_service.gui_drawer,
             camera_helper=self.camera_helper,
-            can_change_object_states=agent_data.can_change_object_states,
+            ui_settings=UISettings(
+                can_change_object_states=agent_data.can_change_object_states,
+                highlight_default_receptacles=rearrange_v2_config.highlight_default_receptacles,
+            ),
         )
 
         self.end_episode_form = EndEpisodeForm(user_index, app_service)
@@ -380,9 +384,6 @@ class UserData:
                 self._is_user_idle_this_frame(),
                 self.server_sps_tracker.get_smoothed_rate(),
             )
-
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt)
-        self.agent_data.cam_transform = self.camera_helper.get_cam_transform()
 
         self._update_camera()
         self.ui.update()
@@ -577,13 +578,24 @@ class RearrangeV2AgentConfig:
 
 @dataclass
 class RearrangeV2Config:
+    """
+    Parameters of the RearrangeV2 application.
+    """
+
     agents: Dict[int, RearrangeV2AgentConfig]
+
+    highlight_default_receptacles: bool
 
     @staticmethod
     def load(
         raw_config: Dict[str, Any], sim: "RearrangeSim"
     ) -> RearrangeV2Config:
-        output = RearrangeV2Config(agents={})
+        output = RearrangeV2Config(
+            agents={},
+            highlight_default_receptacles=raw_config.get(
+                "highlight_default_receptacles", False
+            ),
+        )
         agents: Dict[str, Any] = raw_config.get("agents", {})
         for agent_name, agent_cfg in agents.items():
             agent_index = sim.agents_mgr.get_agent_index_from_name(agent_name)
@@ -706,6 +718,7 @@ class AppStateRearrangeV2(AppStateBase):
                     world=self._world,
                     agent_data=agent_data,
                     server_sps_tracker=self._sps_tracker,
+                    rearrange_v2_config=rearrange_v2_config,
                 )
             )
             if LLM_CONTROLLER_FOUND:
