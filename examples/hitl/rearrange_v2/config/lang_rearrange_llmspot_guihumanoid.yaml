@@ -18,7 +18,7 @@ evaluation:
     agent_0:
       planner:
         plan_config:
-          replanning_threshold: 30
+          replanning_threshold: 25
 habitat_llm:
   enable: True
     # agent_1:
