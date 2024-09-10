@@ -1475,20 +1475,13 @@ def get_obj_receptacle_and_confidence(
 
     # find a support surface if one was not provided
     if support_surface_id is None:
-        # TODO: This hack is the solution to the Bullet physics raycast margin bug. It should be migrated into every raycast from habitat-sim and then removed here.
-        y_buffer = 0.08
         raycast_results = sim.cast_ray(
-            habitat_sim.geo.Ray(
-                center + mn.Vector3(0, y_buffer, 0), grav_vector
-            )
+            habitat_sim.geo.Ray(center, grav_vector)
         )
         if raycast_results.has_hits():
             for hit in raycast_results.hits:
                 if hit.object_id != obj.object_id:
                     support_surface_id = hit.object_id
-                    # print(f"first_hit true dist = {hit.ray_distance - y_buffer}")
-                    if hit.ray_distance >= y_buffer:
-                        break
         if support_surface_id is None:
             info_text = "No support surface found for object."
             return [], 1.0, info_text
