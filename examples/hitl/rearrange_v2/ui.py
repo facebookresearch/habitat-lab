@@ -564,6 +564,21 @@ class UI:
         # Cannot place on objects held by agents.
         if self._world.is_any_agent_holding_object(receptacle_object_id):
             return False
+        (
+            matching_rec_names,
+            _conf,
+            _info_text,
+        ) = sutils.get_obj_receptacle_and_confidence(
+            sim=self._sim,
+            obj=sutils.get_obj_from_id(self._sim, self._held_object_id),
+            obj_bottom_location=point,
+            support_surface_id=receptacle_object_id,
+            candidate_receptacles=self._sim.receptacles,
+            island_index=self._sim._largest_indoor_island_idx,
+        )
+        if len(matching_rec_names) == 0:
+            # TODO: _info_text contains the reason for the failure
+            return False
         return True
 
     def _raycast(
