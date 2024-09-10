@@ -367,7 +367,7 @@ class UserData:
                 destination_mask=Mask.from_index(self.user_index),
             )
 
-        self.camera_helper.update(self._get_camera_lookat_pos(), dt=0)
+        self.camera_helper.update(mn.Vector3(0.0, 0.0, 0.0), dt=0)
         self.ui.reset()
 
     def update(self, dt: float):
