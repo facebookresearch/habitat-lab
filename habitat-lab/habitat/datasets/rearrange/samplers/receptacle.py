@@ -143,6 +143,18 @@ class Receptacle(ABC):
         """
         raise NotImplementedError
 
+    def dist_to_rec(
+        self, sim: habitat_sim.Simulator, point: np.ndarray
+    ) -> float:
+        """
+        Compute and return the distance from a 3D global point to the Receptacle.
+
+        :param sim: The Simulator instance for querying global transforms.
+        :param point: A 3D point in global space. E.g. the bottom center point of a placed object.
+        :return: Point to Receptacle distance.
+        """
+        raise NotImplementedError
+
 
 class OnTopOfReceptacle(Receptacle):
     def __init__(self, name: str, places: List[str]):
@@ -334,12 +346,12 @@ class TriangleMeshReceptacle(Receptacle):
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0.0
-        triangles = []
+        self.triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
-            triangles.append(v)
+            self.triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
@@ -444,13 +456,33 @@ class TriangleMeshReceptacle(Receptacle):
         dblr = sim.get_debug_line_render()
         dblr.push_transform(self.get_global_transform(sim))
         assert_triangles(self.mesh_data.indices)
-        for face in range(int(len(self.mesh_data.indices) / 3)):
-            verts = self.get_face_verts(f_ix=face)
+        for verts in self.triangles:
             for edge in range(3):
                 dblr.draw_transformed_line(
                     verts[edge], verts[(edge + 1) % 3], color
                 )
         dblr.pop_transform()
+
+    def dist_to_rec(
+        self, sim: habitat_sim.Simulator, point: np.ndarray
+    ) -> float:
+        """
+        Compute and return the distance from a 3D global point to the Receptacle. Uses point to mesh distance check.
+
+        :param sim: The Simulator instance.
+        :param point: A 3D point in global space. E.g. the bottom center point of a placed object.
+        :return: Point to Receptacle distance.
+        """
+        t_form = self.get_global_transform(sim)
+        # optimization: transform the point into local space instead of transforming the mesh into global space
+        local_point = t_form.inverted().transform_point(point)
+        # iterate over the triangles, getting point to edge distances
+        # NOTE: list of lists, each with 3 numpy arrays, one for each vertex
+        np_tri = np.array(self.triangles)
+        np_point = np.array(local_point)
+        # compute the minimum point to mesh distance
+        p_to_t_dist = sutils.point_to_tri_dist(np_point, np_tri)[0]
+        return p_to_t_dist
 
 
 class AnyObjectReceptacle(Receptacle):
