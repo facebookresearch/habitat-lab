@@ -962,6 +962,9 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._sps_tracker.increment()
 
+        for agent_index in self._agents.indices(Mask.ALL):
+            self._agent_data[agent_index].update_camera_from_sensor()
+
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].update(dt)
             self._update_grasping_and_set_act_hints(user_index)
@@ -973,11 +976,6 @@ class AppStateRearrangeV2(AppStateBase):
                 user_agent_idx = self._user_to_agent_index[user_index]
                 other_agent_idx = user_agent_idx ^ 1
                 other_agent_data = self._agent_data[other_agent_idx]
-
-                # If the other agent is AI-controlled, update its camera.
-                if other_agent_idx not in self._user_to_agent_index:
-                    other_agent_data.update_camera_from_sensor()
-
                 self._user_data[user_index].draw_pip_viewport(other_agent_data)
 
         self._app_service.compute_action_and_step_env()
