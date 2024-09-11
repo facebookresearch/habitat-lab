@@ -8,6 +8,8 @@
 Boilerplate code for creating states without circular dependencies.
 """
 
+from typing import Optional
+
 from app_data import AppData
 from app_state_base import AppStateBase
 from session import Session
@@ -69,10 +71,13 @@ def create_app_state_feedback(
     session: Session,
     success: float,
     feedback: str,
+    error: Optional[str],
 ) -> AppStateBase:
     from app_state_feedback import AppStateFeedback
 
-    return AppStateFeedback(app_service, app_data, session, success, feedback)
+    return AppStateFeedback(
+        app_service, app_data, session, success, feedback, error
+    )
 
 
 def create_app_state_end_session(
