@@ -41,6 +41,7 @@ class AppStateFeedback(AppStateBase):
         session: Session,
         success: float,
         feedback: str,
+        error: Optional[str],
     ):
         super().__init__(app_service, app_data)
         self._session = session
@@ -53,6 +54,7 @@ class AppStateFeedback(AppStateBase):
         self._cam_matrix = get_top_down_view(self._app_service.sim)
         self._success = success
         self._feedback = feedback
+        self._error = error
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
@@ -88,13 +90,18 @@ class AppStateFeedback(AppStateBase):
             self._timeout = True
             return
 
-        success = self._success
-        if success > 0.99:
-            title = "Task Success"
-            content = "The task was completed successfully."
+        error = self._error
+        if error is None:
+            success = self._success
+            if success > 0.99:
+                title = "Task Success"
+                content = "The task was completed successfully."
+            else:
+                title = f"Task Failure ({success:.0%} Success)"
+                content = self._feedback
         else:
-            title = f"Task Failure ({success:.0%} Success)"
-            content = self._feedback
+            title = "Error"
+            content = error
 
         for user_index in range(self._app_data.max_user_count):
             with self._app_service.ui_manager.update_canvas(

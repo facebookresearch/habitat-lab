@@ -646,7 +646,7 @@ class AppStateRearrangeV2(AppStateBase):
         self._agent_to_user_index: Dict[int, int] = {}
         self._user_to_agent_index: Dict[int, int] = {}
 
-        self._error_message: Optional[str] = None
+        self._llm_error_message: Optional[str] = None
 
         rearrange_v2_config_raw: Dict[str, Any] = app_service.config.get(
             "rearrange_v2", {}
@@ -759,17 +759,21 @@ class AppStateRearrangeV2(AppStateBase):
                 error="User disconnected",
             )
         elif self._is_episode_finished():
+            error = self._llm_error_message
             success = self._metrics.get_task_percent_complete()
             feedback = self._metrics.get_task_explanation()
 
             # If task metrics are available, show task feedback.
-            if success is not None and feedback is not None:
+            if error is not None or (
+                success is not None and feedback is not None
+            ):
                 return create_app_state_feedback(
-                    self._app_service,
-                    self._app_data,
-                    self._session,
-                    success,
-                    feedback,
+                    app_service=self._app_service,
+                    app_data=self._app_data,
+                    session=self._session,
+                    success=success,
+                    feedback=feedback,
+                    error=self._llm_error_message,
                 )
             # If task metrics are unavailable, fallback load the next episode.
             else:
@@ -805,7 +809,11 @@ class AppStateRearrangeV2(AppStateBase):
         task_percent_complete = self._metrics.get_task_percent_complete()
         feedback = self._metrics.get_task_explanation()
 
-        episode_finished = self._is_episode_finished() and not self._cancel
+        episode_finished = (
+            self._is_episode_finished()
+            and not self._cancel
+            and self._llm_error_message is None
+        )
 
         self._session.session_recorder.end_episode(
             episode_finished=episode_finished,
@@ -868,8 +876,6 @@ class AppStateRearrangeV2(AppStateBase):
 
         status_str = ""
         # the multi-agent case
-        status_str = ""
-        # the multi-agent case
         if (
             self._users.max_user_count > 1
             and self._user_data[
@@ -892,19 +898,7 @@ class AppStateRearrangeV2(AppStateBase):
                 for agent_index in range(self._num_agents)
             )
         ):
-            status_str += "\n\nThe other participant finished working on their part of the task.\nPress '0' when you are done."
-
-        # the single-learn case
-        if (
-            (len(self._user_data) == 1)
-            and len(self._agent_data) == 2
-            and any(
-                self._agent_data[agent_index].episode_completion_status
-                != EpisodeCompletionStatus.PENDING
-                for agent_index in range(self._num_agents)
-            )
-        ):
-            status_str += "\n\nThe other participant finished working on their part of the task.\nPress '0' when you are done."
+            status_str += "The other participant signaled that the task is completed.\nPress '0' when you are done.\n"
 
         client_helper = self._app_service.remote_client_state._client_helper
         if client_helper.do_show_idle_kick_warning(user_index):
@@ -962,6 +956,9 @@ class AppStateRearrangeV2(AppStateBase):
 
         self._sps_tracker.increment()
 
+        for agent_index in self._agents.indices(Mask.ALL):
+            self._agent_data[agent_index].update_camera_from_sensor()
+
         for user_index in self._users.indices(Mask.ALL):
             self._user_data[user_index].update(dt)
             self._update_grasping_and_set_act_hints(user_index)
@@ -973,11 +970,6 @@ class AppStateRearrangeV2(AppStateBase):
                 user_agent_idx = self._user_to_agent_index[user_index]
                 other_agent_idx = user_agent_idx ^ 1
                 other_agent_data = self._agent_data[other_agent_idx]
-
-                # If the other agent is AI-controlled, update its camera.
-                if other_agent_idx not in self._user_to_agent_index:
-                    other_agent_data.update_camera_from_sensor()
-
                 self._user_data[user_index].draw_pip_viewport(other_agent_data)
 
         self._app_service.compute_action_and_step_env()
@@ -1041,10 +1033,13 @@ class AppStateRearrangeV2(AppStateBase):
         """
         Returns true if all agents finished the episode, regardless of success.
         """
-        return all(
-            self._agent_data[agent_index].episode_completion_status
-            != EpisodeCompletionStatus.PENDING
-            for agent_index in range(self._num_agents)
+        return (
+            all(
+                self._agent_data[agent_index].episode_completion_status
+                != EpisodeCompletionStatus.PENDING
+                for agent_index in range(self._num_agents)
+            )
+            or self._llm_error_message is not None
         )
 
     def _is_episode_successful(self) -> bool:
@@ -1075,11 +1070,21 @@ class AppStateRearrangeV2(AppStateBase):
         """
         _e: habitat_llm.hitl.llm_controller.AgentTerminationEvent
         """
+        error_message = "Generic error."
+        if hasattr(_e, "message"):
+            error_message = _e.message
+
+        # Trigger episode change sequence when an agent error occurs.
         if LLM_CONTROLLER_FOUND:
-            # Trigger episode change sequence when an agent error occurs.
-            if _e.status == PlannerStatus.ERROR:
-                self._error_message = f"Other participant encountered an error: {_e.message}. Skipping episode."
-            if _e.status == PlannerStatus.FAILED:
-                self._error_message = "The other participant has encountered an error. Skipping episode."
+            if _e.status != PlannerStatus.SUCCESS:
+                self._llm_error_message = "The other participant has encountered an error.\nSkipping episode."
+                print(
+                    f"_on_termination_cb: Skipping episode. LLM error: {error_message}"
+                )
         else:
-            self._error_message = _e
+            self._llm_error_message = (
+                "An error has occurred.\nSkipping episode."
+            )
+            print(
+                f"_on_termination_cb: Skipping episode. Error: {error_message}"
+            )
