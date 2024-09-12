@@ -2,6 +2,11 @@
 
 # defaults:
 #   - /agent/@evaluation.agents.agent_1.config: oracle_rearrange_object_states_agent
+defaults:
+  - override /planner@evaluation.agents.agent_0.planner: llm_zero_shot_react_planner
+  - override /instruct@evaluation.agents.agent_0.planner.plan_config.instruct: zero_shot_prompt
+  - override /agent@evaluation.agents.agent_0.config: oracle_rearrange_agent_motortoolsonly
+  - _self_
 
 habitat_llm:
   enable: True
