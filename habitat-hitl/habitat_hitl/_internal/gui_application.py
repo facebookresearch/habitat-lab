@@ -179,7 +179,7 @@ class GuiApplication(InputHandlerApplication):
 
         for _ in range(num_sim_updates):
             post_sim_update_dict = self._driver.sim_update(sim_dt)
-            self._gui_input.on_frame_end()
+            self._gui_input.reset()
             self._post_sim_update(post_sim_update_dict)
             if "application_exit" in post_sim_update_dict:
                 return

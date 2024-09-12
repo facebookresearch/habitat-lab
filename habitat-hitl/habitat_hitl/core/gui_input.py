@@ -92,15 +92,23 @@ class GuiInput:
     def mouse_ray(self):
         return self._mouse_ray
 
-    # Key/button up/down is only True on the frame it occurred. Mouse relative position is
-    # relative to its position at the start of frame.
-    def on_frame_end(self):
+    def reset(self, reset_continuous_input: bool = True):
+        """
+        Reset the input states. To be called at the end of a frame.
+
+        `reset_continuous_input`: controls whether to reset continuous input like scrolling or dragging.
+        Remote clients send their input at a different frequency than the server framerate.
+        To avoid choppiness, their continuous inputs should be reset before consolidating new remote inputs.
+        This differs from discrete input like clicking, which must be reset every frame to avoid extending click events across multiple frames.
+        """
         self._key_down.clear()
         self._key_up.clear()
         self._mouse_button_down.clear()
         self._mouse_button_up.clear()
-        self._relative_mouse_position = [0, 0]
-        self._mouse_scroll_offset = 0.0
+
+        if reset_continuous_input:
+            self._relative_mouse_position = [0, 0]
+            self._mouse_scroll_offset = 0.0
 
     def copy_from(self, other: GuiInput):
         self._key_down = set(other._key_down)
