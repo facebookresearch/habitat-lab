@@ -5,11 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+from typing import Any
 
 import magnum as mn
 
 from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
+from habitat_hitl._internal.hitl_bare_sim_driver import HitlBareSimDriver
 from habitat_hitl._internal.hitl_driver import HitlDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
@@ -52,8 +54,6 @@ def hitl_main(app_config, create_app_state_lambda=None):
             "HITL apps expect 'data/' directory to exist. "
             "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
         )
-
-    app_config = patch_config(app_config)
 
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 
@@ -117,16 +117,28 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         text_drawer_kwargs=text_drawer_kwargs,
     )
 
-    update_config(
-        app_config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
+    # todo: move to HitlDriver
+    if hitl_config.driver == "HitlDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
 
     debug_line_drawer = app_renderer._replay_renderer.debug_line_render(0)
 
-    driver = HitlDriver(
+    drivers = {
+        "HitlDriver": HitlDriver,
+        "HitlBareSimDriver": HitlBareSimDriver,
+    }
+
+    # driver_class = drivers[hitl_config.driver]
+    driver_class: Any = drivers[hitl_config.driver]
+
+    # driver: Union[HitlDriver, HitlBareSimDriver] = driver_class(
+    driver = driver_class(
         config=app_config,
         gui_input=gui_app_wrapper.get_sim_input(),
         debug_line_drawer=debug_line_drawer,
@@ -195,7 +207,7 @@ def _headless_app_loop(hitl_config, driver):
     driver.close()
 
 
-def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
+def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
     from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
@@ -209,15 +221,17 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height,
     ) = _parse_debug_third_person(hitl_config)
 
-    update_config(
-        config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
+    if hitl_config.driver == "HitlDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
 
     driver = HitlDriver(
-        config=config,
+        config=app_config,
         gui_input=GuiInput(),
         debug_line_drawer=None,
         text_drawer=HeadlessTextDrawer(),
