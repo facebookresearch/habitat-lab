@@ -117,7 +117,10 @@ class Env:
         with read_write(agent_configs):
             for agent_name, agent_config in agent_configs.items():
                 active_sim_sensors = {}
-                for sensor_key, sensor_config in agent_config.sim_sensors.items():
+                for (
+                    sensor_key,
+                    sensor_config,
+                ) in agent_config.sim_sensors.items():
                     sensor_uuid = f"{agent_name}_{sensor_config.uuid}"
                     if sensor_uuid in active_sensors:
                         active_sim_sensors[sensor_key] = sensor_config
