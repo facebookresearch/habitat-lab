@@ -745,7 +745,7 @@ class AppStateRearrangeV2(AppStateBase):
                         self._user_data[
                             -1
                         ].end_episode_form.on_episode_success.registerCallback(
-                            agent_controller._on_reported_episode_success
+                            agent_controller._on_reported_episode_success_or_error
                         )
                         self._user_data[
                             -1
@@ -755,7 +755,7 @@ class AppStateRearrangeV2(AppStateBase):
                         self._user_data[
                             -1
                         ].end_episode_form.on_episode_error.registerCallback(
-                            agent_controller._on_reported_episode_error
+                            agent_controller._on_reported_episode_success_or_error
                         )
 
         self._frame_recorder = FrameRecorder(
