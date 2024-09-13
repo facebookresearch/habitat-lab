@@ -754,7 +754,7 @@ class AppStateRearrangeV2(AppStateBase):
                         )
                         self._user_data[
                             -1
-                        ].end_episode_form.on_episode_error.registerCallback(
+                        ].end_episode_form.on_error_reported.registerCallback(
                             agent_controller._on_reported_episode_success_or_error
                         )
 
