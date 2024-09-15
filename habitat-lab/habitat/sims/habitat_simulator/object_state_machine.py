@@ -269,6 +269,10 @@ class ObjectStateMachine:
         self.objects_with_states: Dict[
             str, List[ObjectStateSpec]
         ] = defaultdict(lambda: [])
+        # Whether the snapshot cache is dirty.
+        self._dirty = False
+        # Snapshot cache.
+        self._snapshot_cache: Dict[str, Dict[str, Any]] = {}
 
     def initialize_object_state_map(self, sim: habitat_sim.Simulator) -> None:
         """
@@ -299,6 +303,8 @@ class ObjectStateMachine:
                     f"registered state {state} for object {obj.handle}"
                 )
 
+        self._dirty = True
+
     def update_states(self, sim: habitat_sim.Simulator, dt: float) -> None:
         """
         Update all tracked object states for a simulation step.
@@ -316,6 +322,8 @@ class ObjectStateMachine:
                 obj = sutils.get_obj_from_handle(sim, obj_handle)
                 for state in states:
                     state.update_state(sim, obj, dt)
+
+        self._dirty = True
 
     def get_snapshot_dict(
         self, sim: habitat_sim.Simulator
@@ -340,6 +348,9 @@ class ObjectStateMachine:
             >>>     ...
             >>> }
         """
+        if not self._dirty:
+            return self._snapshot_cache
+
         snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
         for object_handle, states in self.objects_with_states.items():
             obj = sutils.get_obj_from_handle(sim, object_handle)
@@ -350,4 +361,7 @@ class ObjectStateMachine:
                     if obj_state is not None
                     else state.default_value()
                 )
-        return dict(snapshot)
+
+        self._snapshot_cache = dict(snapshot)
+        self._dirty = False
+        return dict(self._snapshot_cache)
