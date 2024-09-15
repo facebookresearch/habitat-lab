@@ -44,6 +44,7 @@ from habitat.core.simulator import (
     VisualObservation,
 )
 from habitat.core.spaces import Space
+from habitat_sim.physics import ContactPointData
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -305,6 +306,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             )
         )
         self._prev_sim_obs: Optional[Observations] = None
+
+        self._contact_point_cache_time = 0.0
+        self._contact_point_cache: List[ContactPointData] = []
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -695,6 +699,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             return observations
         else:
             return None
+
+    def get_physics_contact_points(self) -> List[ContactPointData]:
+        sim_time = self.get_world_time()
+        contact_points_dirty = sim_time != self._contact_point_cache_time
+        if not contact_points_dirty:
+            return self._contact_point_cache
+        else:
+            self._contact_point_cache = super().get_physics_contact_points()
+            self._contact_point_cache_time = sim_time
+            return self._contact_point_cache
 
     def distance_to_closest_obstacle(
         self, position: np.ndarray, max_search_radius: float = 2.0
