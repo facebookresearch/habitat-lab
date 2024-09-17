@@ -28,22 +28,31 @@ world_model:
 habitat:
   # various config args to ensure the episode never ends
   environment:
-    max_episode_steps: 0
+    max_episode_steps: 0  # this is 20000 in habitat-llm
+    # Ensure that the episode iterator can be controlled by specifying episode IDs.
     iterator_options:
-      # For the demo, we want to showcase the episodes in the specified order
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
       shuffle: False
+      group_by_scene: False
   dataset:
     type: "CollaborationDataset-v0"
-    data_path: "data/episodes/2024_07_19_test_hitl_stacked_v3.json.gz"
+    data_path: "placeholder.json.gz"
     scenes_dir: "data/fpss"
-    # metadata:
-    #   metadata_folder: "data/fpss/metadata"
-    #   obj_metadata: object_categories_filtered.csv
-      # staticobj_metadata: fpmodels-with-decomposed.csv
+    metadata:
+      metadata_folder: "data/fpss/metadata"
+      obj_metadata: object_categories_filtered.csv
+      staticobj_metadata: fpmodels-with-decomposed.csv
   task:
     pddl_domain_def: fp
   simulator:
     agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: SpotRobot
+        joint_start_noise: 0.0
+        auto_update_sensor_transform: False
       agent_1:
         radius: 0.3
         articulated_agent_type: 'KinematicHumanoid'

@@ -24,7 +24,6 @@ defaults:
   # - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   # - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
 
-  - /habitat/dataset/rearrangement: hssd
   - /habitat/task/measurements:
     - num_steps
   - /habitat/task/lab_sensors:
@@ -108,25 +107,9 @@ habitat:
       # - agent_1_dynamic_goal_to_agent_gps_compass
       # - agent_1_dynamic_obj_start_sensor
 # --- habitat-llm block
-  environment:
-    max_episode_steps: 750  # this is 20000 in habitat-llm
   simulator:
     type: CollaborationSim-v0
     seed: 100
-
-    # --- habitat-llm block
-    agents:
-      agent_0:
-        radius: 0.3
-        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
-        articulated_agent_type: SpotRobot
-        joint_start_noise: 0.0
-      agent_1:
-        radius: 0.3
-        articulated_agent_urdf: ./data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
-        articulated_agent_type: SpotRobot
-        joint_start_noise: 0.0
-    # --- habitat-llm block
 
     additional_object_paths:
       - "data/objects/ycb/configs/"
@@ -149,8 +132,20 @@ habitat:
 
   dataset:
     type: "CollaborationDataset-v0"
-    split: train
-    scenes_dir: data/fpss
+    data_path: "placeholder.json.gz"
+    scenes_dir: "data/fpss"
+    metadata:
+      metadata_folder: "data/fpss/metadata"
+      obj_metadata: object_categories_filtered.csv
+      staticobj_metadata: fpmodels-with-decomposed.csv
+  environment:
+    max_episode_steps: 0  # this is 20000 in habitat-llm
+    # Ensure that the episode iterator can be controlled by specifying episode IDs.
+    iterator_options:
+      max_scene_repeat_steps: -1
+      max_scene_repeat_episodes: -1
+      shuffle: False
+      group_by_scene: False
 
 rearrange_v2:
   highlight_default_receptacles: True
