@@ -153,9 +153,7 @@ habitat:
     scenes_dir: data/fpss
 
 rearrange_v2:
-  data_collection:
-    s3_path: "Placeholder/"
-    output_file_name: "session"
+  highlight_default_receptacles: True
   agents:
     agent_1:
       head_sensor_substring: "head"
