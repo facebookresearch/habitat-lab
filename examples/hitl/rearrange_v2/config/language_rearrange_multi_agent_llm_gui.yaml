@@ -127,13 +127,6 @@ habitat:
         articulated_agent_type: SpotRobot
         joint_start_noise: 0.0
     # --- habitat-llm block
-
-    additional_object_paths:
-      - "data/objects/ycb/configs/"
-      - "data/objects_ovmm/train_val/ai2thorhab/configs/objects/"
-      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
-      - "data/objects_ovmm/train_val/google_scanned/configs/"
-      - "data/objects_ovmm/train_val/hssd/configs/objects/"
     concur_render: True
     auto_sleep: True
     kinematic_mode: True
@@ -146,11 +139,6 @@ habitat:
     agents_order:
       - agent_0
       - agent_1
-
-  dataset:
-    type: "CollaborationDataset-v0"
-    split: train
-    scenes_dir: data/fpss
 
 rearrange_v2:
   highlight_default_receptacles: True
