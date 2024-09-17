@@ -99,7 +99,8 @@ class ObjectStateManipulator:
         Set an object state, regardless of constraints.
         """
         obj = sim_utilities.get_obj_from_handle(self._sim, object_handle)
-        set_state_of_obj(obj, state_name, state_value)
+        osm = self._sim.object_state_machine
+        set_state_of_obj(obj, state_name, state_value, osm)
 
     def get_boolean_action(
         self, state_name: str, target_value: bool
