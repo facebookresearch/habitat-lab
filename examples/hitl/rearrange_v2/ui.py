@@ -389,7 +389,7 @@ class UI:
             and object_id != self._place_selection.object_id
             and self._is_location_suitable_for_placement(
                 point, normal, receptacle_object_id
-            )
+            )[0]
         ):
             # Drop the object.
             rigid_object = self._world.get_rigid_object(object_id)
@@ -549,37 +549,46 @@ class UI:
         point: mn.Vector3,
         normal: mn.Vector3,
         receptacle_object_id: int,
-    ) -> bool:
+    ) -> Tuple[bool, str]:
         """Returns true if the target location is suitable for placement."""
         # Cannot place on agents.
         if receptacle_object_id in self._world._agent_object_ids:
-            return False
+            return False, "Cannot place object here."
         # Cannot place on non-horizontal surfaces.
         placement_verticality = mn.math.dot(normal, mn.Vector3(0, 1, 0))
         if placement_verticality < MINIMUM_DROP_VERTICALITY:
-            return False
+            return False, "Cannot place object here."
         # Cannot place further than reach.
         if not self._is_within_reach(point):
-            return False
+            return False, "Placement out of reach."
         # Cannot place on objects held by agents.
         if self._world.is_any_agent_holding_object(receptacle_object_id):
-            return False
-        (
-            matching_rec_names,
-            _conf,
-            _info_text,
-        ) = sutils.get_obj_receptacle_and_confidence(
-            sim=self._sim,
-            obj=sutils.get_obj_from_id(self._sim, self._held_object_id),
-            obj_bottom_location=point,
-            support_surface_id=receptacle_object_id,
-            candidate_receptacles=self._sim.receptacles,
-            island_index=self._sim._largest_indoor_island_idx,
-        )
-        if len(matching_rec_names) == 0:
-            # TODO: _info_text contains the reason for the failure
-            return False
-        return True
+            return False, "Cannot place object here."
+
+        # If default receptacles are enabled, check if the placement is on a valid receptacle.
+        if self._ui_settings.highlight_default_receptacles:
+            (
+                matching_rec_names,
+                _conf,
+                _info_text,
+            ) = sutils.get_obj_receptacle_and_confidence(
+                sim=self._sim,
+                obj=sutils.get_obj_from_id(self._sim, self._held_object_id),
+                obj_bottom_location=point,
+                support_surface_id=receptacle_object_id,
+                candidate_receptacles=self._sim.receptacles,
+                island_index=self._sim._largest_indoor_island_idx,
+            )
+            if len(matching_rec_names) == 0:
+                if self._is_object_interactable(receptacle_object_id):
+                    self._highlight_default_receptacle(receptacle_object_id)
+                    return (
+                        False,
+                        "Objects can only be\nplaced in yellow containers.",
+                    )
+                else:
+                    return False, "Cannot place object here."
+        return True, ""
 
     def _raycast(
         self, ray: Ray, discriminator: Callable[[int], bool]
@@ -750,10 +759,11 @@ class UI:
                             receptacle_object_id = (
                                 self._place_selection.object_id
                             )
-                            placement_valid = (
-                                self._is_location_suitable_for_placement(
-                                    point, normal, receptacle_object_id
-                                )
+                            (
+                                placement_valid,
+                                error,
+                            ) = self._is_location_suitable_for_placement(
+                                point, normal, receptacle_object_id
                             )
                             if placement_valid:
                                 contextual_info.append(
@@ -762,7 +772,7 @@ class UI:
                             else:
                                 contextual_info.append(
                                     (
-                                        "Cannot place object here.",
+                                        error,
                                         color_ui_invalid,
                                     )
                                 )
@@ -939,7 +949,7 @@ class UI:
         point = self._place_selection.point
         normal = self._place_selection.normal
         receptacle_object_id = self._place_selection.object_id
-        placement_valid = self._is_location_suitable_for_placement(
+        placement_valid, _ = self._is_location_suitable_for_placement(
             point, normal, receptacle_object_id
         )
         color = COLOR_VALID if placement_valid else COLOR_INVALID
@@ -1079,34 +1089,8 @@ class UI:
                 object_ids.add(link_id)
 
             # Draw an outline around the default receptacle.
-            # TODO: Cache the default receptacle.
             if self._ui_settings.highlight_default_receptacles:
-                link_index = self._world.get_link_index(object_id)
-                default_link_index = sutils.get_ao_default_link(
-                    ao, compute_if_not_found=True
-                )
-                if (
-                    default_link_index is not None
-                    and default_link_index != link_index
-                ):
-                    default_link_node = obj.get_link_scene_node(
-                        default_link_index
-                    )
-                    if (
-                        default_link_node.object_semantic_id
-                        not in self._world._opened_link_set
-                    ):
-                        color_default_link = self._to_color_array(
-                            COLOR_HIGHLIGHT
-                        )
-                        color_default_link[3] = 0.75
-                        self._gui_drawer._client_message_manager.draw_object_outline(
-                            priority=-10,
-                            color=color_default_link,
-                            line_width=4.0,
-                            object_ids=[default_link_node.object_semantic_id],
-                            destination_mask=Mask.from_index(self._user_index),
-                        )
+                self._highlight_default_receptacle(object_id)
 
         self._gui_drawer._client_message_manager.draw_object_outline(
             priority=0,
@@ -1115,6 +1099,35 @@ class UI:
             object_ids=list(object_ids),
             destination_mask=Mask.from_index(self._user_index),
         )
+
+    def _highlight_default_receptacle(self, object_id: int):
+        """Draw an outline around the default receptacle."""
+        # TODO: Cache the default receptacle.
+        sim = self._sim
+        world = self._world
+        if object_id not in world._link_id_to_ao_map:
+            return
+        ao_id = world._link_id_to_ao_map[object_id]
+        ao = sutils.get_obj_from_id(sim, ao_id, world._link_id_to_ao_map)
+        link_index = self._world.get_link_index(object_id)
+        default_link_index = sutils.get_ao_default_link(
+            ao, compute_if_not_found=True
+        )
+        if default_link_index is not None and default_link_index != link_index:
+            default_link_node = ao.get_link_scene_node(default_link_index)
+            # if (
+            #    default_link_node.object_semantic_id
+            #    not in self._world._opened_link_set
+            # ):
+            color_default_link = self._to_color_array(COLOR_HIGHLIGHT)
+            color_default_link[3] = 0.75
+            self._gui_drawer._client_message_manager.draw_object_outline(
+                priority=-10,
+                color=color_default_link,
+                line_width=4.0,
+                object_ids=[default_link_node.object_semantic_id],
+                destination_mask=Mask.from_index(self._user_index),
+            )
 
     @staticmethod
     def _to_color_array(color: mn.Color4) -> List[float]:
