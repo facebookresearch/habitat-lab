@@ -65,8 +65,6 @@ class World:
         self._regions: Dict[int, SemanticRegion] = {}
         # Cache of all active states.
         self._all_states: Optional[Dict[str, ObjectStateSpec]] = None
-        # Cache of object states.
-        self._state_snapshot_dict: Dict[str, Dict[str, Any]] = {}
         # Object state container.
         self._object_state_machine: Optional[ObjectStateMachine] = None
         # Cache of categories for each object handles.
@@ -144,27 +142,18 @@ class World:
 
         if osm is not None:
             osm.update_states(sim, dt)
-            self._state_snapshot_dict = osm.get_snapshot_dict(sim)
 
     def get_state_snapshot_dict(self) -> Dict[str, Dict[str, Any]]:
         """
         Get a snapshot of the current state of all objects.
-
-        Example:
-        {
-            "is_powered_on": {
-                "my_lamp.0001": True,
-                "my_oven": False,
-                ...
-            },
-            "is_clean": {
-                "my_dish.0002:" False,
-                ...
-            },
-            ...
-        }
         """
-        return self._state_snapshot_dict
+        sim = self._sim
+        osm = self._object_state_machine
+
+        if osm is not None:
+            return osm.get_snapshot_dict(sim)
+        else:
+            return {}
 
     def get_all_states(self) -> Dict[str, ObjectStateSpec]:
         """
