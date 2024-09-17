@@ -461,6 +461,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return is_updated
 
     def reset(self) -> Observations:
+        self._contact_point_cache_time = 0.0
+
         sim_obs = super().reset()
         if self._update_agents_state():
             sim_obs = self.get_sensor_observations()
@@ -515,7 +517,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
-        # TODO(maksymets): Switch to Habitat-Sim more efficient caching
+        self._contact_point_cache_time = 0.0
         is_same_scene = habitat_config.scene == self._current_scene
         self.habitat_config = habitat_config
         self.sim_config = self.create_sim_config(self._sensor_suite)
@@ -699,6 +701,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             return observations
         else:
             return None
+
+    def perform_discrete_collision_detection(self) -> None:
+        self._contact_point_cache_time = 0.0
+        super().perform_discrete_collision_detection()
 
     def get_physics_contact_points(self) -> List[ContactPointData]:
         sim_time = self.get_world_time()
