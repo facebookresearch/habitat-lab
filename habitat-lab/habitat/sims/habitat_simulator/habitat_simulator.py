@@ -704,6 +704,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def perform_discrete_collision_detection(self) -> None:
         self._contact_point_cache_time = 0.0
+        super().perform_discrete_collision_detection()
 
     def get_physics_contact_points(self) -> List[ContactPointData]:
         sim_time = self.get_world_time()
