@@ -18,8 +18,16 @@ evaluation:
   agents:
     agent_0:
       uid: 0
+      planner:
+        plan_config:
+          constrained_generation: True
+          objects_response: True
+          replanning_threshold: 50
+          llm:
+            inference_mode: "rlm"
     agent_1:
       uid: 1
+
 
 habitat_hitl:
   window: ~
