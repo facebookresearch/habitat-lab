@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from habitat_hitl.app_states.app_service import AppService
@@ -27,3 +27,9 @@ class Metrics:
         """
         metrics = self._get_metrics()
         return metrics.get("task_explanation", None)
+
+    def get_all_metrics(self) -> Dict[str, Any]:
+        """
+        Get a dictionary containing all registered metrics.
+        """
+        return self._get_metrics()
