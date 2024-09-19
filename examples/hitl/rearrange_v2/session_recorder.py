@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from util import timestamp
 
@@ -56,7 +56,6 @@ class EpisodeRecord:
     end_timestamp: int
     finished: bool
     task_percent_complete: float
-    task_explanation: Optional[str]
     frame_count: int
 
 
@@ -81,6 +80,7 @@ class EpisodeOutput:
     users: List[UserRecord]
     episode: EpisodeRecord
     frames: List[Dict[str, Any]]
+    metrics: Dict[str, Any]
 
 
 class SessionRecorder:
@@ -106,6 +106,7 @@ class SessionRecorder:
         )
         self.episode_records: List[EpisodeRecord] = []
         self.frames: List[List[Dict[str, Any]]] = []
+        self.metrics: List[Dict[str, Any]] = []
         self.user_records: List[UserRecord] = []
         for user_index, connection_record in connection_records.items():
             self.user_records.append(
@@ -148,16 +149,16 @@ class SessionRecorder:
                 finished=False,
                 task_percent_complete=0.0,
                 frame_count=0,
-                task_explanation=None,
             )
         )
         self.frames.append([])
+        self.metrics.append({})
 
     def end_episode(
         self,
         episode_finished: bool,
         task_percent_complete: float,
-        task_explanation: Optional[str],
+        metrics: Dict[str, Any],
     ):
         """
         Signal that an episode has ended.
@@ -170,7 +171,7 @@ class SessionRecorder:
         episode.end_timestamp = time
         episode.finished = episode_finished
         episode.task_percent_complete = task_percent_complete
-        episode.task_explanation = task_explanation
+        self.metrics[-1] = metrics
 
     def record_frame(
         self,
@@ -195,11 +196,12 @@ class SessionRecorder:
         """
         Get the metadata of the session.
         """
-        return SessionOutput(
+        output = SessionOutput(
             self.session_record,
             self.user_records,
             self.episode_records,
         )
+        return output
 
     def get_episode_outputs(self) -> List[EpisodeOutput]:
         """
@@ -213,6 +215,7 @@ class SessionRecorder:
                     self.user_records,
                     self.episode_records[i],
                     self.frames[i],
+                    self.metrics[i],
                 )
             )
         return output
