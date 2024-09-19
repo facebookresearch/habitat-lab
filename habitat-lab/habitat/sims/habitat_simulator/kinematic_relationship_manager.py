@@ -199,8 +199,8 @@ class KinematicRelationshipManager:
                 obj is not None
             ), f"Object with handle '{obj_handle}' could not be found in the scene. Has the Episode been initialized?"
             if rec_unique_name not in unique_name_to_rec:
-                print(
-                    f"Cannot find active receptacle {rec_unique_name}, so cannot create a parent relationship. Skipping."
+                logger.error(
+                    f"Cannot find active receptacle {rec_unique_name}, so cannot create a parent relationship. Skipping. Note that episode is likely invalid."
                 )
                 continue
             rec = unique_name_to_rec[rec_unique_name]
