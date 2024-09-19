@@ -1481,7 +1481,9 @@ def get_obj_receptacle_and_confidence(
         if raycast_results.has_hits():
             for hit in raycast_results.hits:
                 if hit.object_id != obj.object_id:
+                    # get the first ray hit against a different object
                     support_surface_id = hit.object_id
+                    break
         if support_surface_id is None:
             info_text = "No support surface found for object."
             return [], 1.0, info_text
