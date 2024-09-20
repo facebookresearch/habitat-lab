@@ -100,6 +100,10 @@ class Env:
                 len(self._dataset.episodes) > 0
             ), "dataset should have non-empty episodes list"
             self._setup_episode_iterator()
+            if "first_episode_id" in config.dataset.metadata:
+                first_episode_id = f"{config.dataset.metadata['first_episode_id']}"
+                print(f"\nmanually setting first episode to {first_episode_id}!\n")
+                self.episode_iterator.set_next_episode_by_id(first_episode_id)
             self.current_episode = next(self.episode_iterator)
             with read_write(self._config):
                 self._config.simulator.scene_dataset = (
