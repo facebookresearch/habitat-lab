@@ -281,6 +281,11 @@ class DebugVisualizer:
         )
         self._equirect = equirect
 
+        try: 
+            self.sim.gfx_replay_manager.set_max_decimal_places(3)
+        except RuntimeError as e:
+            pass
+
     def __del__(self) -> None:
         """
         When a DBV is removed, it should clean up its agent/sensor.
@@ -655,6 +660,8 @@ class DebugVisualizer:
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
+        self.sim.gfx_replay_manager.save_keyframe()
+
         if self.agent is None:
             self.create_dbv_agent(self.sensor_resolution)
 
@@ -717,6 +724,7 @@ class DebugVisualizer:
             stitched_image.paste(obs.image, location)
         all_axis_obs = DebugObservation(None)
         all_axis_obs.image = stitched_image
+
         return all_axis_obs
 
     def make_debug_video(
@@ -763,3 +771,7 @@ class DebugVisualizer:
             file_path,
             fps=fps,
         )
+
+        gfx_replay_filepath = file_path + ".gfx_replay.json"
+        self.sim.gfx_replay_manager.write_saved_keyframes_to_file(gfx_replay_filepath)
+        print(f"wrote gfx-replay file:\n{gfx_replay_filepath}")
