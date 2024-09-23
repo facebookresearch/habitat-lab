@@ -145,10 +145,28 @@ class KinematicHumanoid(MobileManipulator):
 
     @property
     def base_rot(self) -> float:
-        return float(self.sim_obj.rotation.angle() + mn.Rad(self.offset_rot))
+        """
+        Returns scalar rotation angle of the humanoid around the Y axis.
+        Within range (-pi,pi) consistency with setter is tested. Outside that range, an equivalent but distinct rotation angle may be returned (e.g. 2pi == -2pi == 0).
+        NOTE: for humanoid, an additional offset_rot is considered between the model and this wrapper class.
+        """
+        angle = float(self.sim_obj.rotation.angle())
+        # NOTE: if the quaternion axis is inverted (-Y) then the angle will be negated
+        if self.sim_obj.rotation.axis()[1] < 0:
+            angle = -1 * angle
+        angle += float(mn.Rad(self.offset_rot))
+        while angle > mn.math.pi:
+            angle -= mn.math.pi * 2
+        while angle < -mn.math.pi:
+            angle += mn.math.pi * 2
+        return angle
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
+        """
+        Set the scalar rotation angle of the humanoid around the Y axis.
+        NOTE: for humanoid, an additional offset_rot is considered between the model and this wrapper class.
+        """
         if self._base_type == "mobile" or self._base_type == "leg":
             angle_rot = -self.offset_rot
             self.sim_obj.rotation = mn.Quaternion.rotation(
