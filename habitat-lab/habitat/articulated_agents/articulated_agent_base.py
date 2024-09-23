@@ -184,10 +184,13 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         # NOTE: if the quaternion axis is inverted (-Y) then the angle will be negated
         if self.sim_obj.rotation.axis()[1] < 0:
             angle = -1 * angle
-        while angle > mn.math.pi:
+        # NOTE: This offsetting gives us guarantees of consistency in the (-pi, pi) range.
+        if angle > mn.math.pi:
             angle -= mn.math.pi * 2
-        while angle < -mn.math.pi:
+        elif angle < -mn.math.pi:
             angle += mn.math.pi * 2
+        # NOTE: This final fmod ensures that large angles are mapped back into the -2pi, 2pi range.
+        angle = mn.math.fmod(angle, 2 * mn.math.pi)
         return angle
 
     @base_rot.setter
