@@ -354,7 +354,8 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # set base ground position using object transformation approach
         target_base_pos = sim.pathfinder.snap_point(fetch.sim_obj.translation)
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, fetch
@@ -615,7 +616,8 @@ def test_spot_robot_wrapper(fixed_base):
 
         # set base ground position using object transformation approach
         target_base_pos = sim.pathfinder.snap_point(spot.sim_obj.translation)
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, spot
@@ -835,7 +837,8 @@ def test_stretch_robot_wrapper(fixed_base):
         target_base_pos = sim.pathfinder.snap_point(
             stretch.sim_obj.translation
         )
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, stretch

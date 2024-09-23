@@ -187,7 +187,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         # NOTE: This offsetting gives us guarantees of consistency in the (-pi, pi) range.
         if angle > mn.math.pi:
             angle -= mn.math.pi * 2
-        elif angle < -mn.math.pi:
+        elif angle <= -mn.math.pi:
             angle += mn.math.pi * 2
         # NOTE: This final fmod ensures that large angles are mapped back into the -2pi, 2pi range.
         angle = mn.math.fmod(angle, 2 * mn.math.pi)
