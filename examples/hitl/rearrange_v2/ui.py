@@ -578,7 +578,7 @@ class UI:
         )
         if len(matching_rec_names) == 0:
             # TODO: _info_text contains the reason for the failure
-            return False
+            return True
         return True
 
     def _raycast(
