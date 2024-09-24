@@ -978,6 +978,17 @@ class RearrangeSim(HabitatSim):
             )
             self.add_perf_timing("get_sensor_observations", t_start)
 
+        for agent_index in range(len(self.agents_mgr.agent_names)):
+            agent = self.agents_mgr[agent_index]
+            self.gfx_replay_manager.add_user_transform_to_keyframe(
+                f"agent{agent_index}",
+                agent.articulated_agent.base_pos,
+                mn.Quaternion.rotation(
+                    mn.Rad(agent.articulated_agent.base_rot), 
+                    mn.Vector3(0, 1, 0)
+                )
+            )
+
         # TODO: Support recording while batch rendering
         if self._enable_gfx_replay_save and not self._batch_render:
             self.gfx_replay_manager.save_keyframe()
