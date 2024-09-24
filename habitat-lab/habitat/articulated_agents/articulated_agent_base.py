@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -57,6 +57,10 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         self._base_type = base_type
         self.sim_obj = sim_obj
         self._maintain_link_order = maintain_link_order
+
+        self._events: List[
+            Dict[str, Any]
+        ] = []  # HACK: Used for collecting pick/place events.
 
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience

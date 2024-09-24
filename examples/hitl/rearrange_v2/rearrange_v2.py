@@ -92,10 +92,14 @@ class FrameRecorder:
     def get_agents_state(self):
         agent_states = []
         for agent_idx in range(self.get_num_agents()):
+            agent = self._sim.agents_mgr[agent_idx].articulated_agent
             agent_root = get_agent_art_obj_transform(self._sim, agent_idx)
             position = np.array(agent_root.translation).tolist()
             rotation = mn.Quaternion.from_matrix(agent_root.rotation())
             rotation = quat_to_coeffs(quat_from_magnum(rotation)).tolist()
+
+            events = list(agent._events)
+            agent._events.clear()
 
             snap_idx = self._sim.agents_mgr._all_agent_data[
                 agent_idx
@@ -105,6 +109,7 @@ class FrameRecorder:
                     "position": position,
                     "rotation": rotation,
                     "grasp_mgr_snap_idx": snap_idx,
+                    "events": events,
                 }
             )
         return agent_states
@@ -927,6 +932,12 @@ class AppStateRearrangeV2(AppStateBase):
         )
 
     def sim_update(self, dt: float, post_sim_update_dict):
+        if self._app_service.remote_client_state.get_gui_input(0).get_key_down(
+            KeyCode.M
+        ):
+            post_sim_update_dict["application_exit"] = True
+            return
+
         if self._is_server_gui_enabled():
             # Server GUI exit.
             if (
