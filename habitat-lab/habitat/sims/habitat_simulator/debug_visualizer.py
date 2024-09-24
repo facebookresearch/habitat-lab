@@ -660,7 +660,7 @@ class DebugVisualizer:
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
-        self.sim.gfx_replay_manager.save_keyframe()
+        # self.sim.gfx_replay_manager.save_keyframe()
 
         if self.agent is None:
             self.create_dbv_agent(self.sensor_resolution)
