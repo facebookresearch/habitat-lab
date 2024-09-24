@@ -116,7 +116,7 @@ class CameraHelper:
             not self._first_person_mode
             and self._gui_input.mouse_scroll_offset != 0
         ):
-            zoom_sensitivity = 0.07
+            zoom_sensitivity = 0.02  # temp 0.07
             if self._gui_input.mouse_scroll_offset < 0:
                 self.cam_zoom_dist *= (
                     1.0
@@ -144,6 +144,9 @@ class CameraHelper:
             self._eye_pos, self._lookat_pos, mn.Vector3(0, 1, 0)
         )
 
+    def get_cam_zoom_dist(self):
+        return self.cam_zoom_dist
+    
     def get_xz_forward(self):
         assert self._cam_transform
         forward_dir = self._cam_transform.transform_vector(
