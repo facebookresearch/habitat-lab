@@ -23,7 +23,8 @@ from habitat_hitl.environment.controllers.controller_abc import (
     GuiController,
 )
 from habitat_hitl.environment.episode_helper import EpisodeHelper
-
+# todo: move to core
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
 class AppService:
@@ -50,6 +51,7 @@ class AppService:
         client_message_manager: ClientMessageManager,
         gui_agent_controllers: List[GuiController],
         all_agent_controllers: List[Controller],
+        video_recorder: FramebufferVideoRecorder,
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -71,6 +73,7 @@ class AppService:
         self._client_message_manager = client_message_manager
         self._gui_agent_controllers = gui_agent_controllers
         self._all_agent_controllers = all_agent_controllers
+        self._video_recorder = video_recorder
 
     @property
     def config(self):
@@ -151,3 +154,7 @@ class AppService:
     @property
     def all_agent_controllers(self) -> List[Controller]:
         return self._all_agent_controllers
+
+    @property
+    def video_recorder(self) -> FramebufferVideoRecorder:
+        return self._video_recorder

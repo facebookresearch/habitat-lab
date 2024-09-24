@@ -54,6 +54,7 @@ from habitat_hitl.environment.controllers.controller_helper import (
 )
 from habitat_hitl.environment.episode_helper import EpisodeHelper
 from habitat_sim.gfx import DebugLineRender
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 if TYPE_CHECKING:
     from habitat.core.environments import GymHabitatEnv
@@ -87,6 +88,7 @@ class HitlDriver(AppDriver):
         debug_line_drawer: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
+        video_recorder: FramebufferVideoRecorder
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -234,6 +236,7 @@ class HitlDriver(AppDriver):
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=gui_agent_controllers,
             all_agent_controllers=all_agent_controllers,
+            video_recorder=video_recorder
         )
 
         self._app_state: AppState = None

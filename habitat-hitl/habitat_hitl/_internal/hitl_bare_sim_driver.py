@@ -38,7 +38,7 @@ from habitat_hitl.core.types import KeyframeAndMessages
 from habitat_hitl.core.ui_elements import UIManager
 from habitat_hitl.core.user_mask import Users
 from habitat_sim.gfx import DebugLineRender
-
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 # todo: define AppDriver in one place
 class AppDriver:
@@ -57,6 +57,7 @@ class HitlBareSimDriver(AppDriver):
         debug_line_drawer: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
+        video_recorder: FramebufferVideoRecorder
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -176,6 +177,7 @@ class HitlBareSimDriver(AppDriver):
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=None,
             all_agent_controllers=None,
+            video_recorder=video_recorder
         )
 
         self._app_state: AppState = None

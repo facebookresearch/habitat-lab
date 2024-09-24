@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Dict, List
+from datetime import datetime
 
 import magnum as mn
 import numpy as np
@@ -17,7 +18,7 @@ OBSERVATION_TYPE: str = "color"
 FPS: int = 30
 
 
-class VideoRecorder:
+class FramebufferVideoRecorder:
     _output_file_path: str
 
     _recording_images: List[Dict[str, np.ndarray]] = []
@@ -25,28 +26,36 @@ class VideoRecorder:
     _gpu_to_cpu_buffer: np.ndarray = None
     _recording_video: bool = False
 
-    def __init__(self, output_file_path: str = DEFAULT_OUTPUT_FILE_PATH):
-        self._output_file_path = output_file_path
+    def __init__(self, output_file_path_prefix: str = DEFAULT_OUTPUT_FILE_PATH):
+        # get a timestamp tag with current date and time for video name
+        date_time = datetime.now().strftime("%m_%d_%Y_%H%M%S")
 
-    # Start recording the video.
-    def start_video_recording(self):
+        self._output_file_path_full_prefix = f"{output_file_path_prefix}_{date_time}"
+        self._counter = 0
+
+
+    def start_recording(self):
         self._recording_video = True
 
-    # Save video and exit.
-    def save_video(self):
+
+    def stop_recording_and_save_video(self):
         if self._recording_video and len(self._recording_images) > 0:
+            filepath = f"{self._output_file_path_full_prefix}_{self._counter}_{len(self._recording_images)}frames"
             habitat_sim.utils.viz_utils.make_video(
                 observations=self._recording_images,
                 primary_obs=OBSERVATION_PLACEHOLDER_NAME,
                 primary_obs_type=OBSERVATION_TYPE,
-                video_file=self._output_file_path,
+                video_file=filepath,
                 fps=FPS,
             )
-            exit()
+            self._counter += 1
+            print(f"Saved video {filepath}")
+            self._recording_images = []
         else:
             print("No frame recorded. Press '-' to start recording video.")
+        self._recording_video = False
 
-    # Record a frame.
+
     def record_video_frame(self):
         if self._recording_video:
             viewport = mn.gl.default_framebuffer.viewport

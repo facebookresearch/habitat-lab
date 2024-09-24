@@ -11,7 +11,7 @@ from habitat_hitl._internal.gui_application import GuiAppRenderer
 from habitat_hitl._internal.image_framebuffer_drawer import (
     ImageFramebufferDrawer,
 )
-from habitat_hitl._internal.video_recorder import VideoRecorder
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.text_drawer import TextDrawer
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
@@ -24,7 +24,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         use_batch_renderer=False,
         im_framebuffer_drawer_kwargs=None,
         text_drawer_kwargs=None,
-        video_output_path="video",
+        video_recorder: FramebufferVideoRecorder = None,
     ):
         self.window_size = window_size
         # arbitrary uuid
@@ -84,7 +84,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             self.window_size, **text_drawer_kwargs
         )
 
-        self._video_recorder: VideoRecorder = VideoRecorder(video_output_path)
+        self._video_recorder = video_recorder
 
     def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
         self._image_drawer = image_drawer

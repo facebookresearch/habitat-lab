@@ -126,3 +126,7 @@ habitat_hitl:
 
     # Save the gfx-replay keyframes to file. Use save_filepath_base to specify the filepath base. Gfx-replay files can be used elsewhere in Habitat, e.g. https://github.com/facebookresearch/habitat-lab/pull/1041. Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_output/my_session.gfx_replay.json.gz`.
     save_gfx_replay_keyframes: False
+
+  # todo: document
+  video_recorder:
+    output_file_path_prefix: "video"
