@@ -3,7 +3,6 @@
 defaults:
   - override /planner@evaluation.agents.agent_0.planner: llm_decentralized_thoughtless_planner
   - override /agent@evaluation.agents.agent_0.config: oracle_rearrange_agent_motortoolsonly
-  - override /instruct@evaluation.agents.agent_0.planner.plan_config.instruct: zero_shot_prompt
   - _self_
 
 habitat_llm:
