@@ -1,0 +1,41 @@
+# @package _global_
+
+defaults:
+  - override /planner@evaluation.agents.agent_0.planner: llm_decentralized_thoughtless_planner
+  - override /agent@evaluation.agents.agent_0.config: oracle_rearrange_agent_motortoolsonly
+  - override /instruct@evaluation.agents.agent_0.planner.plan_config.instruct: zero_shot_prompt
+  - _self_
+
+habitat_llm:
+  enable: True
+
+evaluation:
+  do_print: True
+  save_video: False
+  log_data: False
+  agents:
+    agent_0:
+      uid: 0
+      planner:
+        plan_config:
+          action_representation: "actions"
+          constrained_generation: True
+          objects_response: False
+          replanning_threshold: 50
+          llm:
+            inference_mode: "rlm"
+    agent_1:
+      uid: 1
+
+
+habitat_hitl:
+  window: ~
+  networking:
+    enable: True
+    http_availability_server:
+      enable: True
+    client_max_idle_duration: 180.0
+    enable_connections_by_default: False
+  experimental:
+    headless:
+      do_headless: True
