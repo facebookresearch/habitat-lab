@@ -183,13 +183,12 @@ jobs:
           name: Build and install habitat-sim
           no_output_timeout: 30m
           command: |
-              if [ ! -d ./habitat-sim ]
-              then
-                git clone https://github.com/facebookresearch/habitat-sim.git --recursive
-              fi
+              git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
+              #install the dev branch for testing
+              git checkout --track origin/dev
               pip install -r requirements.txt --progress-bar off
               pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
