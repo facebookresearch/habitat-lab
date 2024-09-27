@@ -772,6 +772,6 @@ class DebugVisualizer:
             fps=fps,
         )
 
-        gfx_replay_filepath = file_path + ".gfx_replay.json"
+        gfx_replay_filepath = os.path.join(output_path, prefix + "replay.gfx_replay.json")
         self.sim.gfx_replay_manager.write_saved_keyframes_to_file(gfx_replay_filepath)
         print(f"wrote gfx-replay file:\n{gfx_replay_filepath}")
