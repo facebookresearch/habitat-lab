@@ -38,9 +38,13 @@ class FramebufferVideoRecorder:
         self._recording_video = True
 
 
-    def stop_recording_and_save_video(self):
+    def stop_recording_and_save_video(self, override_output_file_path_prefix=None):
+
         if self._recording_video and len(self._recording_images) > 0:
-            filepath = f"{self._output_file_path_full_prefix}_{self._counter}_{len(self._recording_images)}frames"
+
+            prefix = override_output_file_path_prefix if override_output_file_path_prefix else self._output_file_path_full_prefix
+
+            filepath = f"{prefix}_{self._counter}_{len(self._recording_images)}frames"
             habitat_sim.utils.viz_utils.make_video(
                 observations=self._recording_images,
                 primary_obs=OBSERVATION_PLACEHOLDER_NAME,

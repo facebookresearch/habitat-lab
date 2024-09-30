@@ -45,31 +45,15 @@ habitat_hitl:
     title: "Gfx Replay Viewer"
     # width: 1920
     # height: 1080
-    width: 960
+    width: 1920  # 960
     height: 1080
     display_font_size: 24
 
 gfx_replay_viewer:
-  # replay_filepath: "/home/eric/projects/habitat-llm/ep12/09_19_2024_221038.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep951/09_19_2024_224424.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep72/09_19_2024_224347.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep217/09_19_2024_224235.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep539/09_19_2024_224336.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep974/09_20_2024_000603.gfx_replay.json"
-  replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep1/09_23_2024_223827.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep276/09_23_2024_210006.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep438/09_20_2024_010332.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep439/09_20_2024_011617.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep358/09_20_2024_013411.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep360/09_20_2024_015213.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep363/09_20_2024_020949.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep367/09_20_2024_021800.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep865/09_20_2024_023606.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep891/09_20_2024_024547.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep898/09_20_2024_025321.gfx_replay.json"
-  # replay_filepath: "/home/eric/projects/habitat-llm/file_scripted_replays/ep899/09_20_2024_030015.gfx_replay.json"
+  replay_filepath: "./file_scripted_replays/ep363_male_3/replay.gfx_replay.json"
+
     
-  text_overlays_path: "/home/eric/projects/habitat-llm/ep1_text_overlays.json"
+  text_overlays_path: null  # "/home/eric/projects/habitat-llm/ep276_text_overlays.json"
 
   camera_move_speed: 0.02
 

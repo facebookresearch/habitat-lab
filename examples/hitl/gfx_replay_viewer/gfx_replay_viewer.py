@@ -42,6 +42,10 @@ class AppStateGfxReplayViewer(AppState):
         self._keyframe_index = 0
         self._player.set_keyframe_index(self._keyframe_index)
 
+        # "./file_scripted_replays/ep832_female_3/replay.gfx_replay.json"
+        self._video_output_prefix = self._gfx_replay_viewer_cfg.replay_filepath.removeprefix(
+            "./file_scripted_replays/").removesuffix("/replay.gfx_replay.json")
+
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
         )
@@ -57,32 +61,36 @@ class AppStateGfxReplayViewer(AppState):
 
         self._camera_follow_key = "agent0"
 
-        with open(self._gfx_replay_viewer_cfg.text_overlays_path, 'r') as f:
-            text_overlays_obj = json.load(f)
-            self._text_overlays = text_overlays_obj["overlays"]
+        self._replay_user_positions = None
+        if self._gfx_replay_viewer_cfg.text_overlays_path:
+            with open(self._gfx_replay_viewer_cfg.text_overlays_path, 'r') as f:
+                text_overlays_obj = json.load(f)
+                self._text_overlays = text_overlays_obj["overlays"]
 
-        with open(self._gfx_replay_viewer_cfg.replay_filepath, 'r') as f:
-            gfx_replay_obj = json.load(f)
-            gfx_replay_keyframes = gfx_replay_obj["keyframes"]
+            with open(self._gfx_replay_viewer_cfg.replay_filepath, 'r') as f:
+                gfx_replay_obj = json.load(f)
+                gfx_replay_keyframes = gfx_replay_obj["keyframes"]
 
-        self._num_keyframes = len(gfx_replay_keyframes)
-        self._replay_user_positions = {}
-        for keyframe_idx in range(self._num_keyframes):
-            keyframe_user_transforms = gfx_replay_keyframes[keyframe_idx]["userTransforms"]
-            for user_transform in keyframe_user_transforms:
-                key = user_transform["name"]
-                position = user_transform["transform"]["translation"]
-                if key not in self._replay_user_positions:
-                    assert keyframe_idx == 0
-                    self._replay_user_positions[key] = []
-                self._replay_user_positions[key].append(position)
+            self._num_keyframes = len(gfx_replay_keyframes)
+            self._replay_user_positions = {}
+            for keyframe_idx in range(self._num_keyframes):
+                keyframe_user_transforms = gfx_replay_keyframes[keyframe_idx]["userTransforms"]
+                for user_transform in keyframe_user_transforms:
+                    key = user_transform["name"]
+                    position = user_transform["transform"]["translation"]
+                    if key not in self._replay_user_positions:
+                        assert keyframe_idx == 0
+                        self._replay_user_positions[key] = []
+                    self._replay_user_positions[key].append(position)
 
-        for key in self._replay_user_positions:
-            assert len(self._replay_user_positions[key]) == self._num_keyframes
-        
+            for key in self._replay_user_positions:
+                assert len(self._replay_user_positions[key]) == self._num_keyframes
 
 
     def draw_debug_nav_lines(self):
+
+        if not self._replay_user_positions:
+            return
 
         agent_colors = [
             mn.Color3(1, 0.75, 0),
@@ -119,6 +127,7 @@ class AppStateGfxReplayViewer(AppState):
         controls_str: str = ""
         controls_str += "T: toggle camera lookat\n"
         controls_str += "Y: play and record\n"
+        controls_str += "H: hide GUI\n"
         controls_str += "7: rewind to start\n"
         controls_str += "8: jump back\n"
         controls_str += "9: hold to play\n"
@@ -204,8 +213,6 @@ class AppStateGfxReplayViewer(AppState):
         #         self._keyframe_index = min(self._keyframe_index + step_size, self._player.get_num_keyframes() - 1)
         #         self._player.set_keyframe_index(self._keyframe_index)
 
-        self._update_camera_lookat_base_pos()
-
         if gui_input.get_key_down(KeyCode.T):
             if self._camera_follow_key == "agent0":
                 self._camera_follow_key = "agent1"
@@ -222,7 +229,7 @@ class AppStateGfxReplayViewer(AppState):
                 reached_end = True
             self._player.set_keyframe_index(self._keyframe_index)
             if gui_input.get_key_down(KeyCode.Y) or reached_end:
-                self._app_service.video_recorder.stop_recording_and_save_video()
+                self._app_service.video_recorder.stop_recording_and_save_video(self._video_output_prefix)
                 self._is_recording = False
                 self._hide_gui = False
         else:
@@ -231,6 +238,8 @@ class AppStateGfxReplayViewer(AppState):
                 self._is_recording = True
                 self._hide_gui = True
             else:
+                if gui_input.get_key_down(KeyCode.H):
+                    self._hide_gui = not self._hide_gui
                 # seek controls only active when not recording
                 if gui_input.get_key_down(KeyCode.SEVEN):
                     self._keyframe_index = 0
@@ -241,6 +250,8 @@ class AppStateGfxReplayViewer(AppState):
                 elif gui_input.get_key(KeyCode.ZERO):
                     self._keyframe_index = min(self._keyframe_index + 8, self._player.get_num_keyframes() - 1)
                 self._player.set_keyframe_index(self._keyframe_index)
+
+        self._update_camera_lookat_base_pos()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
         self._cam_transform = self._camera_helper.get_cam_transform()
