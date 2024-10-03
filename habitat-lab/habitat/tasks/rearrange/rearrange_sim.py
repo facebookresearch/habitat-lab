@@ -476,7 +476,7 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def _recompute_navmesh(self) -> None:
         """
-        Recompute the navmesh including all non-agent ArticulatedObjects as static components (assuming they are furniture).
+        Recompute the navmesh including STATIC objects and using agent parameters.
         """
 
         navmesh_settings = NavMeshSettings()
