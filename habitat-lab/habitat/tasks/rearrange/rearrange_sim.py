@@ -495,30 +495,8 @@ class RearrangeSim(HabitatSim):
         navmesh_settings.agent_max_slope = agent_config.max_slope
         navmesh_settings.include_static_objects = True
 
-        # exclude any articulated agents from the navmesh
-        agent_object_ids = [
-            articulated_agent.sim_obj.object_id
-            for articulated_agent in self.agents_mgr.articulated_agents_iter
-        ]
-        # first cache AO motion types and set to STATIC for navmesh
-        ao_motion_types = []
-        self.agents_mgr
-        for ao in (
-            self.get_articulated_object_manager()
-            .get_objects_by_handle_substring()
-            .values()
-        ):
-            # ignore the articulated agents
-            if ao.object_id not in agent_object_ids:
-                ao_motion_types.append((ao, ao.motion_type))
-                ao.motion_type = habitat_sim.physics.MotionType.STATIC
-
         # recompute the navmesh
         self.recompute_navmesh(self.pathfinder, navmesh_settings)
-
-        # reset AO motion types from cache
-        for ao, ao_orig_motion_type in ao_motion_types:
-            ao.motion_type = ao_orig_motion_type
 
         # NOTE: allowing indoor islands only
         self._largest_indoor_island_idx = get_largest_island_index(
