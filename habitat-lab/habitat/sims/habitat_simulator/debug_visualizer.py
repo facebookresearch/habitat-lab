@@ -660,8 +660,6 @@ class DebugVisualizer:
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
-        # self.sim.gfx_replay_manager.save_keyframe()
-
         if self.agent is None:
             self.create_dbv_agent(self.sensor_resolution)
 
@@ -771,6 +769,9 @@ class DebugVisualizer:
             file_path,
             fps=fps,
         )
+
+        # hack force add a single keyframe in case we never stepped the sim
+        self.sim.gfx_replay_manager.save_keyframe()
 
         gfx_replay_filepath = os.path.join(output_path, prefix + "replay.gfx_replay.json")
         self.sim.gfx_replay_manager.write_saved_keyframes_to_file(gfx_replay_filepath)
