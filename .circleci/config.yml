@@ -329,15 +329,16 @@ jobs:
               ./build-public.sh
       - run:
           name: Ensure non-editable mode works
+          no_output_timeout: 30m
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               conda create -y -n non-editable-install python=3.9
               . activate non-editable-install
-              conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
-              pip install habitat-lab/
+              conda install -y -q -c conda-forge -c aihabitat-nightly habitat-sim
+              pip install habitat-lab/ --quiet
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
-              pip install habitat-baselines/
+              pip install habitat-baselines/ --quiet
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
               pip install habitat-hitl/
               python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
