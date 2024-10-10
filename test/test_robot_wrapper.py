@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 from os import path as osp
 
 import numpy as np
@@ -353,7 +354,8 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # set base ground position using object transformation approach
         target_base_pos = sim.pathfinder.snap_point(fetch.sim_obj.translation)
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, fetch
@@ -614,7 +616,8 @@ def test_spot_robot_wrapper(fixed_base):
 
         # set base ground position using object transformation approach
         target_base_pos = sim.pathfinder.snap_point(spot.sim_obj.translation)
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, spot
@@ -706,6 +709,77 @@ def test_spot_robot_wrapper(fixed_base):
 
 
 @pytest.mark.skipif(
+    not osp.exists("data/robots/hab_spot_arm"),
+    reason="Test requires Spot w/ arm robot URDF and assets.",
+)
+@pytest.mark.skipif(
+    not habitat_sim.built_with_bullet,
+    reason="Robot wrapper API requires Bullet physics.",
+)
+def test_base_rot():
+    # set this to output test results as video for easy investigation
+    produce_debug_video = False
+    observations = []
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["enable_physics"] = True
+
+    # loading the physical scene
+    hab_cfg = make_cfg(cfg_settings)
+
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        # setup the camera for debug video (looking at 0,0,0)
+        sim.agents[0].scene_node.translation = [0.0, -1.0, 2.0]
+
+        # add the robot to the world via the wrapper
+        robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
+        agent_config = DictConfig({"articulated_agent_urdf": robot_path})
+        spot = spot_robot.SpotRobot(agent_config, sim)
+        spot.reconfigure()
+        spot.update()
+
+        # check that for range (-pi, pi) getter and setter are consistent
+        num_samples = 100
+        for i in range(1, num_samples):
+            angle = -math.pi + (math.pi * 2 * i) / num_samples
+            spot.base_rot = angle
+            assert np.allclose(angle, spot.base_rot, atol=1e-5)
+            if produce_debug_video:
+                observations.append(sim.get_sensor_observations())
+
+        # check that for range [-2pi, 2pi] increment is accurate
+        spot.base_rot = -math.pi * 2
+        inc = (math.pi * 4) / num_samples
+        rot_check = -math.pi * 2
+        for _ in range(0, num_samples):
+            spot.base_rot = spot.base_rot + inc
+            rot_check += inc
+            # NOTE: here we check that the angle is accurate (allow an offset of one full rotation to cover redundant options)
+            accurate_angle = False
+            for offset in [0, math.pi * 2, math.pi * -2]:
+                if np.allclose(rot_check, spot.base_rot + offset, atol=1e-5):
+                    accurate_angle = True
+                    break
+            assert (
+                accurate_angle
+            ), f"should be {rot_check}, but was {spot.base_rot}."
+            if produce_debug_video:
+                observations.append(sim.get_sensor_observations())
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_base_rot",
+                open_vid=True,
+            )
+
+
+@pytest.mark.skipif(
     not osp.exists("data/robots/hab_stretch"),
     reason="Test requires Stretch w/ robot URDF and assets.",
 )
@@ -763,7 +837,8 @@ def test_stretch_robot_wrapper(fixed_base):
         target_base_pos = sim.pathfinder.snap_point(
             stretch.sim_obj.translation
         )
-        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi]
+        # Note, don't test equivalency of pi, because that is the wrap point and is often negated.
+        target_base_rots = [0.0, np.pi * 0.25, np.pi * 0.50, np.pi * 0.99]
         for target_base_rot in target_base_rots:
             set_agent_base_via_obj_trans(
                 target_base_pos, target_base_rot, stretch

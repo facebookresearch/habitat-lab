@@ -176,10 +176,28 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
 
     @property
     def base_rot(self) -> float:
-        return float(self.sim_obj.rotation.angle())
+        """
+        Returns scalar rotation angle of the agent around the Y axis.
+        Within range (-pi,pi) consistency with setter is tested. Outside that range, an equivalent but distinct rotation angle may be returned (e.g. 2pi == -2pi == 0).
+        """
+        angle = float(self.sim_obj.rotation.angle())
+        # NOTE: if the quaternion axis is inverted (-Y) then the angle will be negated
+        if self.sim_obj.rotation.axis()[1] < 0:
+            angle = -1 * angle
+        # NOTE: This offsetting gives us guarantees of consistency in the (-pi, pi) range.
+        if angle > mn.math.pi:
+            angle -= mn.math.pi * 2
+        elif angle <= -mn.math.pi:
+            angle += mn.math.pi * 2
+        # NOTE: This final fmod ensures that large angles are mapped back into the -2pi, 2pi range.
+        angle = mn.math.fmod(angle, 2 * mn.math.pi)
+        return angle
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
+        """
+        Set the scalar rotation angle of the agent around the Y axis.
+        """
         if self._base_type == "mobile" or self._base_type == "leg":
             self.sim_obj.rotation = mn.Quaternion.rotation(
                 mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)

@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 from os import path as osp
 
 import gym
@@ -202,6 +203,7 @@ def test_humanoid_controller(humanoid_name):
             {
                 "articulated_agent_urdf": humanoid_path,
                 "motion_data_path": walk_pose_path,
+                "auto_update_sensor_transform": True,
             }
         )
         if not osp.exists(humanoid_path):
@@ -209,7 +211,9 @@ def test_humanoid_controller(humanoid_name):
         kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
         kin_humanoid.reconfigure()
         kin_humanoid.update()
-        assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert (
+            kin_humanoid.get_robot_sim_id() == 2
+        )  # 0 is the stage and 1 is the ground plane
         print(kin_humanoid.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
 
@@ -268,6 +272,89 @@ def test_humanoid_controller(humanoid_name):
                 "color_sensor",
                 "color",
                 "test_humanoid_wrapper",
+                open_vid=True,
+            )
+
+
+@pytest.mark.skipif(
+    not osp.exists("data/humanoids/humanoid_data/female_2/female_2.urdf"),
+    reason="Test requires female 2 humanoid URDF and assets.",
+)
+@pytest.mark.skipif(
+    not habitat_sim.built_with_bullet,
+    reason="Robot wrapper API requires Bullet physics.",
+)
+def test_base_rot():
+    # set this to output test results as video for easy investigation
+    produce_debug_video = False
+    observations = []
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["enable_physics"] = True
+
+    # loading the physical scene
+    hab_cfg = make_cfg(cfg_settings)
+
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        # setup the camera for debug video (looking at 0,0,0)
+        sim.agents[0].scene_node.translation = [0.0, -1.0, 2.0]
+
+        # add the humanoid to the world via the wrapper
+        humanoid_path = "data/humanoids/humanoid_data/female_2/female_2.urdf"
+        walk_pose_path = "data/humanoids/humanoid_data/female_2/female_2_motion_data_smplx.pkl"
+
+        agent_config = DictConfig(
+            {
+                "articulated_agent_urdf": humanoid_path,
+                "motion_data_path": walk_pose_path,
+                "auto_update_sensor_transform": True,
+            }
+        )
+        if not osp.exists(humanoid_path):
+            pytest.skip(f"No humanoid file {humanoid_path}")
+        kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
+        kin_humanoid.reconfigure()
+        kin_humanoid.update()
+
+        # check that for range (-pi, pi) getter and setter are consistent
+        num_samples = 100
+        for i in range(1, num_samples):
+            angle = -math.pi + (math.pi * 2 * i) / num_samples
+            kin_humanoid.base_rot = angle
+            assert np.allclose(angle, kin_humanoid.base_rot, atol=1e-5)
+            if produce_debug_video:
+                observations.append(sim.get_sensor_observations())
+
+        # check that for range [-2pi, 2pi] increment is accurate
+        kin_humanoid.base_rot = -math.pi * 2
+        inc = (math.pi * 4) / num_samples
+        rot_check = -math.pi * 2
+        for _ in range(0, num_samples):
+            kin_humanoid.base_rot = kin_humanoid.base_rot + inc
+            rot_check += inc
+            # NOTE: here we check that the angle is accurate (allow an offset of one full rotation to cover redundant options)
+            accurate_angle = False
+            for offset in [0, math.pi * 2, math.pi * -2]:
+                if np.allclose(
+                    rot_check, kin_humanoid.base_rot + offset, atol=1e-5
+                ):
+                    accurate_angle = True
+                    break
+            assert (
+                accurate_angle
+            ), f"should be {rot_check}, but was {kin_humanoid.base_rot}."
+            if produce_debug_video:
+                observations.append(sim.get_sensor_observations())
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_base_rot",
                 open_vid=True,
             )
 
@@ -369,6 +456,7 @@ def test_humanoid_seqpose_controller(humanoid_name):
             {
                 "articulated_agent_urdf": humanoid_path,
                 "motion_data_path": walk_pose_path,
+                "auto_update_sensor_transform": True,
             }
         )
         if not osp.exists(humanoid_path):
@@ -376,7 +464,9 @@ def test_humanoid_seqpose_controller(humanoid_name):
         kin_humanoid = kinematic_humanoid.KinematicHumanoid(agent_config, sim)
         kin_humanoid.reconfigure()
         kin_humanoid.update()
-        assert kin_humanoid.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert (
+            kin_humanoid.get_robot_sim_id() == 2
+        )  # 0 is the stage and 1 is the ground plane
 
         # set base ground position from navmesh
         # NOTE: because the navmesh floats above the collision geometry we should see a pop/settle with dynamics and no fixed base
