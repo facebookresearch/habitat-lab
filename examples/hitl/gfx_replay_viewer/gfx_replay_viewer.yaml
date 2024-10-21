@@ -50,7 +50,7 @@ habitat_hitl:
     display_font_size: 24
 
 gfx_replay_viewer:
-  replay_filepath: "./file_scripted_replays/ep363_male_3/replay.gfx_replay.json"
+  replay_filepath: "./file_scripted_replays/ep1_female_2/replay.gfx_replay.json"
 
     
   text_overlays_path: null  # "/home/eric/projects/habitat-llm/ep276_text_overlays.json"

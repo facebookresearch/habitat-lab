@@ -2,9 +2,8 @@ import json
 import numpy as np
 import argparse
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Any
 
-ENABLE_FRAME_NUMBER = False
 FRAME_NUMBER_FONT_SCALE = 0.7
 
 import cv2
@@ -22,9 +21,11 @@ class VideoProcessor:
     class TextLine:
         text: str
         typing_delay: int
+        font: Any
         font_scale: float
         color: Tuple[int, int, int]
         position_y: int
+        hold_frames: int
         
     def __init__(self):
 
@@ -35,12 +36,12 @@ class VideoProcessor:
         self._config = None
         self._copying_frames_printed = None
         self._show_frame_numbers = None
-        self._font = cv2.FONT_HERSHEY_SIMPLEX
         self._font_thickness = 2
         self._frame_number_font_scale = 0.7
+        self._do_pause_source = None
 
 
-    def wrap_text(self, text, box_width, font_scale):
+    def wrap_text(self, text, box_width, font, font_scale):
         """
         Wrap text to fit within the text box width and handle newlines.
 
@@ -55,7 +56,7 @@ class VideoProcessor:
 
             for word in words[1:]:
                 # Measure the current line with the next word added
-                line_size = cv2.getTextSize(current_line + ' ' + word, self._font, font_scale, self._font_thickness)[0]
+                line_size = cv2.getTextSize(current_line + ' ' + word, font, font_scale, self._font_thickness)[0]
                 if line_size[0] <= box_width - 2 * X_PADDING:
                     current_line += ' ' + word
                 else:
@@ -108,14 +109,15 @@ class VideoProcessor:
         - The frame with the frame number added.
         """
 
-        if not ENABLE_FRAME_NUMBER:
+        if not self._show_frame_numbers:
             return frame
 
-        text = f"{self._frame_number}"  # Just print the frame number
-        text_color = (255, 255, 255)
+        text = f"{self._current_source_frame_idx}"  # Just print the frame number
+        text_color = (0, 255, 0)
 
         # Get the size of the text
-        text_size = cv2.getTextSize(text, self._font, self._frame_number_font_scale, self._font_thickness)[0]
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text_size = cv2.getTextSize(text, font, self._frame_number_font_scale, self._font_thickness)[0]
         text_width, text_height = text_size
 
         # Calculate the bottom-right position
@@ -123,7 +125,7 @@ class VideoProcessor:
         y = self._frame_height - 10  # 10 px padding from the bottom edge
 
         # Add the text to the frame
-        cv2.putText(frame, text, (x, y), self._font, self._frame_number_font_scale, text_color, self._font_thickness, cv2.LINE_AA)
+        cv2.putText(frame, text, (x, y), font, self._frame_number_font_scale, text_color, self._font_thickness, cv2.LINE_AA)
         return frame
 
 
@@ -135,57 +137,62 @@ class VideoProcessor:
         self._out.write(frame)
 
 
-    def process_video_frames(self, frames_to_skip=0, show_frame_numbers=False):
+    def process_video_frames(self, trim_start=0, show_frame_numbers=False):
         self._overlay_idx = 0
         self._total_overlays = len(self._config['overlays'])
+        assert self._total_overlays > 0
         self._show_frame_numbers = show_frame_numbers
+        self._do_pause_source = False
 
         # Skip initial frames if needed
-        self._current_frame_idx = self.skip_initial_frames(frames_to_skip)
+        self._current_source_frame_idx = self.skip_initial_frames(trim_start)
+        assert self._current_source_frame_idx <= self._config['overlays'][0]['frame']
 
         # Main frame processing loop
-        while self._cap.isOpened():
-            ret, self._current_source_frame = self._cap.read()
-            if not ret:
-                break
+        while self._current_source_frame_idx < self._num_source_frames:
 
-            # Process the current frame and overlay text if needed
-            if self._overlay_idx < self._total_overlays and self._current_frame_idx == self._config['overlays'][self._overlay_idx]['frame']:
-                self.process_overlay_frame()
+            if self._overlay_idx < self._total_overlays and self._current_source_frame_idx == self._config['overlays'][self._overlay_idx]['frame']:
+                self.process_overlay_frames()
                 self._overlay_idx += 1
                 self._copying_frames_printed = False
+                self._do_pause_source = False
             else:
-                self.handle_copying_frames()
-
-            self._current_frame_idx += 1
-
+                assert not self._do_pause_source
+                self.write_frame(self.get_current_source_frame())
 
 
-    def skip_initial_frames(self, frames_to_skip):
+
+
+    def skip_initial_frames(self, trim_start):
         """
         Skip a specified number of frames in the video.
         Returns:
         - The updated current frame number.
         """
         current_frame = 0
-        while frames_to_skip > 0 and self._cap.isOpened():
+        while trim_start > 0 and self._cap.isOpened():
             ret, _ = self._cap.read()
             if not ret:
                 break
-            frames_to_skip -= 1
+            trim_start -= 1
             current_frame += 1
         return current_frame
 
 
     def get_current_source_frame(self):
+        if not self._do_pause_source or self._current_source_frame is None:
+            if self._current_source_frame_idx < self._num_source_frames:
+                ret, frame = self._cap.read()
+                self._current_source_frame_idx += 1
+                if self._current_source_frame_idx == self._num_source_frames:
+                    assert self._current_source_frame is not None
+                else:
+                    self._current_source_frame = frame
+
         return self._current_source_frame
     
 
-    def process_overlay_frame(self):
-        """
-        Add text overlays to the frame with ramp-in and ramp-out effects, handling dynamic tokens.
-        """
-
+    def process_overlay_frames(self):
         overlay_info = self._config['overlays'][self._overlay_idx]
 
         self._side = overlay_info['side']
@@ -193,10 +200,13 @@ class VideoProcessor:
 
         sections = overlay_info['sections']
 
+        self._do_pause_source = overlay_info.get('do_pause_source', True)
+
         # Print the overlay progress (1-based index for display)
         print(f"Adding overlay {self._overlay_idx + 1}/{self._total_overlays}...")
 
-        self.add_fade_in_out_frames(RAMP_FRAMES, fade_in=True)
+        if overlay_info.get('do_fade_in', True):
+            self.add_fade_in_out_frames(RAMP_FRAMES, fade_in=True)
 
         typed_lines = []  # Track lines that have been fully typed
 
@@ -207,26 +217,39 @@ class VideoProcessor:
 
         self.handle_typing_effect(lines)
 
-        # Pause on the frame after all text is rendered
-        pause_frames = section.get('pause_frames', 0)
-        self.pause_on_frame(lines, pause_frames)
+        do_fade_out = overlay_info.get('do_fade_out', True)
+        if overlay_info.get('do_hold_until_next_overlay', False):
+            assert not do_fade_out
+            if self._overlay_idx + 1 < len(self._config['overlays']):
+                next_overlay = self._config['overlays'][self._overlay_idx + 1]
+                next_overlay_frame = next_overlay['frame']
+            else:
+                next_overlay_frame = self._num_source_frames
+            hold_frames = next_overlay_frame - self._current_source_frame_idx
+            self.hold_on_frame(lines, hold_frames)
 
-        self.add_fade_in_out_frames(RAMP_FRAMES, fade_in=False)
+        if do_fade_out:
+            self.add_fade_in_out_frames(RAMP_FRAMES, fade_in=False)
 
     def add_lines(self, section, lines):
 
         font_scale = section.get('font_scale', 1.3)
-        line_height = cv2.getTextSize("Test", cv2.FONT_HERSHEY_SIMPLEX, font_scale, self._font_thickness)[0][1] + 10
-        color = (255, 255, 255)  # Default color white
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        line_height = cv2.getTextSize("Test", font, font_scale, self._font_thickness)[0][1] + 10
+        color = tuple(section.get('color', [255, 255, 255]))   # Default color white
         typing_delay = section.get('typing_delay', 0)
+        hold_frames = section.get('hold_frames', 0)
 
         # todo: handle margins
-        wrapped_lines = self.wrap_text(section['text'], self._frame_width // 2, font_scale)
-        for (_, wrapped_line) in enumerate(wrapped_lines):
+        wrapped_lines = self.wrap_text(section['text'], self._frame_width // 2, font, font_scale)
+        for (i, wrapped_line) in enumerate(wrapped_lines):
             self._next_line_position_y += line_height
             lines.append(VideoProcessor.TextLine(
                 text=wrapped_line, 
                 typing_delay=typing_delay,
+                # only hold after last line of section
+                hold_frames=hold_frames if i == len(wrapped_lines) - 1 else 0,
+                font=font,
                 font_scale=font_scale,
                 color=color,
                 position_y=self._next_line_position_y))
@@ -234,15 +257,22 @@ class VideoProcessor:
 
     def handle_typing_effect(self, lines):
         for (i, line) in enumerate(lines):
-            prev_lines = lines[:-1]
+            prev_lines = lines[:i]
             if line.typing_delay > 0:
                 for i in range(len(line.text)):
-                    temp_frame = self.ramp_darkness_full(self.get_current_source_frame())
-                    self.render_lines_on_frame(temp_frame, prev_lines)
-                    self.render_partial_line(temp_frame, line, i)
                     for j in range(line.typing_delay):
+                        temp_frame = self.ramp_darkness_full(self.get_current_source_frame())
+                        self.render_lines_on_frame(temp_frame, prev_lines)
+                        self.render_partial_line(temp_frame, line, i)
                         self.write_frame(temp_frame)
 
+            for _ in range(line.hold_frames):
+                temp_frame = self.ramp_darkness_full(self.get_current_source_frame())
+                self.render_lines_on_frame(temp_frame, prev_lines)
+                self.render_partial_line(temp_frame, line, len(line.text))
+                self.write_frame(temp_frame)
+
+            
 
     def render_lines_on_frame(self, frame, lines):
         """
@@ -251,7 +281,7 @@ class VideoProcessor:
 
         start_x = X_PADDING if self._side == 'left' else self._frame_width // 2 + X_PADDING
         for i, line in enumerate(lines):
-            cv2.putText(frame, line.text, (start_x, line.position_y), self._font, line.font_scale, line.color, self._font_thickness, cv2.LINE_AA)
+            cv2.putText(frame, line.text, (start_x, line.position_y), line.font, line.font_scale, line.color, self._font_thickness, cv2.LINE_AA)
 
 
     def render_partial_line(self, frame, line, letter_idx):
@@ -261,7 +291,7 @@ class VideoProcessor:
         start_x = X_PADDING if self._side == 'left' else self._frame_width // 2 + X_PADDING
         y_position = line.position_y
         partial_text = line.text[:letter_idx + 1]
-        cv2.putText(frame, partial_text, (start_x, y_position), self._font, line.font_scale, line.color, self._font_thickness, cv2.LINE_AA)
+        cv2.putText(frame, partial_text, (start_x, y_position), line.font, line.font_scale, line.color, self._font_thickness, cv2.LINE_AA)
 
 
     def add_fade_in_out_frames(self, frame_count, fade_in=True):
@@ -269,34 +299,14 @@ class VideoProcessor:
             adjusted_frame = self.ramp_darkness(self.get_current_source_frame(), frame_idx, frame_count, ramp_in=fade_in)
             self.write_frame(adjusted_frame)
 
-    def pause_on_frame(self, lines, pause_frames):
-        """
-        Pause on the frame for the specified number of pause_frames after typing is done.
-        """
-        for pause_frame in range(pause_frames):
-            temp_frame = self.ramp_darkness_full(self.get_current_source_frame())
+    def hold_on_frame(self, lines, hold_frames):
+        for _ in range(hold_frames):
             temp_frame = self.ramp_darkness_full(self.get_current_source_frame())
             self.render_lines_on_frame(temp_frame, lines)
             self.write_frame(temp_frame)
 
 
-    def handle_copying_frames(self):
-        """
-        Handle copying frames when there is no overlay to apply.
-        """
-        # Calculate the next overlay frame and print the copying progress once per block
-        next_overlay_frame = self._config['overlays'][self._overlay_idx]['frame'] if self._overlay_idx < len(self._config['overlays']) else None
-        # todo: rename self._current_frame_idx to self._current_frame_idx_idx
-        copied_frames = next_overlay_frame - self._current_frame_idx if next_overlay_frame is not None else None
-        
-        if copied_frames and not self._copying_frames_printed:
-            print(f"Copying {copied_frames} frames...")  # Print this message once per block of copying
-            self._copying_frames_printed = True
-
-        self.write_frame(self.get_current_source_frame())
-
-
-    def add_text_overlays_to_video(self, input_video_path, json_config_path, output_video_path, frames_to_skip=0, show_frame_numbers=False):
+    def add_text_overlays_to_video(self, input_video_path, json_config_path, output_video_path, trim_start=0, trim_end=0, show_frame_numbers=False):
         # Load video and JSON configuration
         self._cap = cv2.VideoCapture(input_video_path)
         with open(json_config_path, 'r') as f:
@@ -306,13 +316,16 @@ class VideoProcessor:
         self._frame_width = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self._frame_height = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = self._cap.get(cv2.CAP_PROP_FPS)
+        self._num_source_frames = int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        self._num_source_frames -= trim_end
 
         # Define codec and create VideoWriter object
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self._out = cv2.VideoWriter(output_video_path, fourcc, fps, (self._frame_width, self._frame_height))
 
         # Process the video frames with the new options
-        self.process_video_frames(frames_to_skip=frames_to_skip, show_frame_numbers=show_frame_numbers)
+        self.process_video_frames(trim_start=trim_start, show_frame_numbers=show_frame_numbers)
 
         self._cap.release()
         self._out.release()
@@ -337,15 +350,16 @@ def main():
     parser.add_argument("config_json", help="Path to the JSON configuration file for text overlays")
     parser.add_argument("output_video", help="Path to save the output video file")
     
-    parser.add_argument("--skip-frames", type=int, default=0, help="Number of frames to skip at the start of the video (default: 0)")
+    parser.add_argument("--trim-start", type=int, default=0)
+    parser.add_argument("--trim-end", type=int, default=0)
     parser.add_argument("--show-frame-numbers", action="store_true", help="Display frame numbers in the output video (default: False)")
 
     args = parser.parse_args()
 
     video_processor = VideoProcessor()
 
-    # Call the function to add text overlays to the video, with frames_to_skip and show_frame_numbers
-    video_processor.add_text_overlays_to_video(args.input_video, args.config_json, args.output_video, frames_to_skip=args.skip_frames, show_frame_numbers=args.show_frame_numbers)
+    # Call the function to add text overlays to the video, with trim_start and show_frame_numbers
+    video_processor.add_text_overlays_to_video(args.input_video, args.config_json, args.output_video, trim_start=args.trim_start, trim_end=args.trim_end, show_frame_numbers=args.show_frame_numbers)
 
     play_video(args.output_video)
 
