@@ -46,6 +46,7 @@ class EnvBatchRenderer:
     When batch rendering, simulators produce keyframes and add them to observations as KEYFRAME_OBSERVATION_KEY.
     In "post_step", the renderer aggregates these observations, reconstitutes each state then renders them simultaneously.
     """
+
     _num_envs: int = 1
     _gpu_gpu: bool = False
 

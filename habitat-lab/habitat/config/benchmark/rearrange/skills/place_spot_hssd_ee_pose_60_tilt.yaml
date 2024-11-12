@@ -5,7 +5,7 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - end_effector_pose_sensor
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor_60_tilt
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - override /habitat/dataset/rearrangement: hssd
@@ -25,7 +25,7 @@ habitat:
       - obj_goal_sensor
       - relative_initial_ee_orientation
       - relative_target_object_orientation
-      - articulated_agent_jaw_depth
+      - articulated_agent_jaw_depth_60_tilt
       - ee_pose
       - is_holding
   task:

@@ -17,6 +17,7 @@ from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -204,43 +205,186 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             dtype=np.float32,
         )
 
+    def xyz_T_hab(self, tf, reverse=False):
+        """
+        Convert from habitat -> real-world xyz coordinates
+        If reverse = True, converts from real-world xyz -> habitat coordinates
+        """
+        xyz_T_hab_rot = mn.Matrix4(
+            [
+                [0.0, 0.0, -1.0, 0.0],
+                [-1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        # xyz_T_hab_rot = mn.Matrix4(
+        #     [
+        #         [1.0, 0.0, 0.0, 0.0],
+        #         [0.0, 0.0, 1.0, 0.0],
+        #         [0.0, -1.0, 0.0, 0.0],
+        #         [0.0, 0.0, 0.0, 1.0],
+        #     ]
+        # ).transposed()
+        xyz_T_hab_rot = mn.Matrix4(
+            [
+                [-1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        tf_untranslate = mn.Matrix4.translation(-tf.translation)
+        if not reverse:
+            rot = xyz_T_hab_rot
+        else:
+            rot = xyz_T_hab_rot.inverted()
+        tf_retranslate = mn.Matrix4.translation(
+            rot.transform_point(tf.translation)
+        )
+
+        tf_new = tf_untranslate @ tf
+        tf_new = xyz_T_hab_rot.inverted() @ tf_new
+        tf_new = tf_retranslate @ tf_new
+        return tf_new
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        global_T = self._sim.get_agent_data(
+        global_T_ee = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.ee_transform()
 
-        if self.config.use_base_transform:
-            base_T = self._sim.get_agent_data(
-                self.agent_id
-            ).articulated_agent.base_transformation
-            # Make the ee location as the base location
-            base_T.translation = global_T.translation
-            global_T = mn.Matrix4(base_T)
+        if self.config.use_ee_T_target:
+            # xyz_global_T_ee = self.xyz_T_hab(global_T_ee)
+            # xyz_ee_T_global = xyz_global_T_ee.inverted()
 
-        # Inversion
-        T_inv = global_T.inverted()
+            # _, global_T_target_pos = self._sim.get_targets()
+            # global_T_target = mn.Matrix4.translation(
+            #     mn.Vector3(global_T_target_pos[task.targ_idx])
+            # )
+            # xyz_global_T_target = self.xyz_T_hab(global_T_target)
+            # xyz_global_T_target_pos = xyz_global_T_target.translation
 
-        # Get the target position
-        _, pos = self._sim.get_targets()
+            # xyz_ee_T_target_pos = xyz_ee_T_global.transform_point(
+            #     xyz_global_T_target_pos
+            # )
 
-        # [x,y,z]
-        # x: ee as origin, front is +; back is -
-        # y: ee as origin, left is +; right is -
-        # z: ee as origin, up is +; down is -
-        if self.config.use_noise_target:
-            pos_array = batch_transform_point(
-                np.array([task.noise_target_location]), T_inv, np.float32
-            )[0].reshape(-1)
+            # return np.array(xyz_ee_T_target_pos, dtype=np.float32)
+
+            xyz_T_hab_rot = mn.Matrix4(
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ).transposed()
+
+            global_T = global_T_ee
+            # print("global_T_ee: ", global_T_ee)
+
+            if self.config.use_base_transform:
+                base_T = self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_transformation
+                global_T_base = mn.Matrix4(base_T)
+                # print("global_T_base: ", base_T)
+
+                # Make the ee location as the base location
+                base_T.translation = global_T.translation
+                global_T = mn.Matrix4(base_T)
+
+                base_T_xyz = xyz_T_hab_rot @ global_T
+
+            # Inversion
+            T_inv = global_T.inverted()
+            T_inv_xyz = base_T_xyz.inverted()
+
+            # Get the target position
+            _, pos = self._sim.get_targets()
+            base_T_target_pos = mn.Vector3([1.0, 0.0, 0.5])
+
+            global_T_base_xyz = xyz_T_hab_rot @ global_T_base
+            pos_xyz = xyz_T_hab_rot.transform_point(
+                mn.Vector3(pos[task.targ_idx])
+            )
+            pos_xyz = np.array([[pos_xyz.x, pos_xyz.y, pos_xyz.z]])
+            # print("pos_xyz: ", pos_xyz)
+            # print("global_T_base: ", global_T_base)
+            # print("global_T_base_xyz: ", global_T_base_xyz)
+            # print("base_T_target_pos: ", base_T_target_pos)
+
+            global_T_target_base = mn.Matrix4()
+            global_T_target_base.translation = global_T_base.translation
+
+            global_T_target = global_T_base_xyz.transform_point(
+                base_T_target_pos
+            )
+            # print("global_T_target: ", global_T_target)
+            # print("pos: ", pos)
+            self._sim.viz_ids["place_tar"] = self._sim.visualize_position(
+                global_T_target,
+                self._sim.viz_ids["place_tar"],
+            )
+
+            # print("global_T_target: ", pos)
+            bullet_ee_xyz, _ = task.actions["arm_action"].get_ee_pose()
+            print("ee_pose: ", bullet_ee_xyz)
+
+            # [x,y,z]
+            # x: ee as origin, front is +; back is -
+            # y: ee as origin, left is +; right is -
+            # z: ee as origin, up is +; down is -
+            pos_array = batch_transform_point(pos, T_inv, np.float32)[
+                [task.targ_idx]
+            ].reshape(-1)
+            pos_array_xyz = batch_transform_point(
+                pos_xyz, T_inv_xyz, np.float32
+            )[[task.targ_idx]].reshape(-1)
+            print("obj_goal_sensor: ", pos_array)
+            print("obj_goal_sensor_xyz: ", pos_array_xyz)
+            return np.array(pos_array, dtype=np.float32)
         else:
-            if self.config.only_one_target:
-                pos_array = batch_transform_point(pos, T_inv, np.float32)[
-                    [task.targ_idx]
-                ].reshape(-1)
-            else:
+            global_T = global_T_ee
+            # print("global_T_ee: ", global_T_ee)
+
+            if self.config.use_base_transform:
+                base_T = self._sim.get_agent_data(
+                    self.agent_id
+                ).articulated_agent.base_transformation
+                # print("global_T_base: ", base_T)
+
+                # Make the ee location as the base location
+                base_T.translation = global_T.translation
+                global_T = mn.Matrix4(base_T)
+
+            # Inversion
+            T_inv = global_T.inverted()
+
+            # Get the target position
+            _, pos = self._sim.get_targets()
+            # print("global_T_target: ", pos)
+            # bullet_ee_xyz, _ = task.actions["arm_action"].get_ee_pose()
+            # print("ee_pose: ", bullet_ee_xyz)
+
+            # [x,y,z]
+            # x: ee as origin, front is +; back is -
+            # y: ee as origin, left is +; right is -
+            # z: ee as origin, up is +; down is -
+            if self.config.use_noise_target:
                 pos_array = batch_transform_point(
-                    pos, T_inv, np.float32
-                ).reshape(-1)
-        return np.array(pos_array, dtype=np.float32)
+                    np.array([task.noise_target_location]), T_inv, np.float32
+                )[0].reshape(-1)
+            else:
+                if self.config.only_one_target:
+                    pos_array = batch_transform_point(pos, T_inv, np.float32)[
+                        [task.targ_idx]
+                    ].reshape(-1)
+                else:
+                    pos_array = batch_transform_point(
+                        pos, T_inv, np.float32
+                    ).reshape(-1)
+            # print("obj_goal_sensor: ", pos_array)
+            return np.array(pos_array, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -449,9 +593,51 @@ class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
+        # returns base_T_ee
         bullet_ee_xyz, bullet_ee_rpy = task.actions["arm_action"].get_ee_pose()
 
         return np.array([*bullet_ee_xyz, *bullet_ee_rpy], dtype=np.float32)
+
+
+@registry.register_sensor
+class ReceptacleBBoxSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "receptacle_bbox"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ReceptacleBBoxSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(6,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, task, *argsr, **kwargs):
+        receptacles = find_receptacles(self._sim)
+        for receptacle in receptacles:
+            print(
+                "receptacle q4eqasd: ",
+                receptacle.name,
+                receptacle.bounds,
+            )
+            self._sim.viz_ids["bounds_min"] = self._sim.visualize_position(
+                receptacle.bounds.bounds.min,
+            )
+            self._sim.viz_ids["bounds_max"] = self._sim.visualize_position(
+                receptacle.bounds.bounds.max,
+            )
+            print("vis ids: ", self._sim.viz_ids)
+        return np.zeros(6)
 
 
 @registry.register_sensor
@@ -1318,7 +1504,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
 
         # For count-based collision reward and termination (userful for kinematic simulation)
         if self._want_count_coll():
-            reward += self._get_count_coll_reward()
+            reward += self._get_count_coll_reward(observations)
 
         # For hold constraint violation
         if self._sim.get_agent_data(
@@ -1354,7 +1540,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         """Check if we want to consider penality from count-based collisions"""
         return self._count_coll_pen != -1 or self._max_count_colls != -1
 
-    def _get_count_coll_reward(self):
+    def _get_count_coll_reward(self, observations):
         """Count-based collision reward"""
         reward = 0
 
@@ -1363,11 +1549,17 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         ]
         cur_total_colls = count_coll_metric.get_metric()["total_collisions"]
 
+        contact_test_collisions = int(observations.get("collided", False))
+
         # Check the step collision
         if (
             self._count_coll_pen != -1.0
             and cur_total_colls - self._prev_count_coll > 0
         ):
+            reward -= self._count_coll_pen
+
+        # add penalty for contact test collisions
+        if self._count_coll_pen != -1.0 and contact_test_collisions > 0:
             reward -= self._count_coll_pen
 
         # Check the max count collision
@@ -1549,6 +1741,7 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         self._sim = sim
         self._height = config.height
         self._width = config.width
+        self._noise = config.get("noise", 0)
 
     def _get_uuid(self, *args, **kwargs):
         return ArmDepthBBoxSensor.cls_uuid
@@ -1607,6 +1800,11 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
 
         # Get the bounding box
         bbox = np.zeros(tgt_mask.shape)
+
+        # Don't show bounding box with some probability
+        if np.random.rand() < self._noise:
+            return np.float32(bbox)
+
         if np.sum(tgt_mask) != 0:
             rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
             bbox[rmin:rmax, cmin:cmax] = 1.0

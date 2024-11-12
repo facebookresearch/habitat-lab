@@ -77,9 +77,9 @@ class RearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[
-                            f"{agent_name}_{sensor_key}"
-                        ] = sensor_config
+                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
+                            sensor_config
+                        )
 
         super().__init__(config)
 
@@ -153,6 +153,7 @@ class RearrangeSim(HabitatSim):
         self._should_setup_semantic_ids = (
             self.habitat_config.should_setup_semantic_ids
         )
+        self.add_clutter_objs = self.habitat_config.add_clutter_objs
 
     def enable_perf_logging(self):
         """
@@ -602,6 +603,24 @@ class RearrangeSim(HabitatSim):
         self._handle_to_object_id = {}
         if should_add_objects:
             self._scene_obj_ids = []
+
+        if self.add_clutter_objs:
+            # repeat the objects in the scene to add more clutter, random amount of clutter
+            for _ in range(np.random.randint(2, 4)):
+                new_rigid_objs = ep_info.rigid_objs[0].copy()
+                new_rigid_objs_T_matrix = mn.Matrix4(
+                    new_rigid_objs[1]
+                ).transposed()
+                # create a new object with the same mesh but different position
+                trans_noise = mn.Vector3(
+                    np.random.uniform(-0.3, 0.3),
+                    0.0,
+                    np.random.uniform(-0.3, 0.3),
+                )
+                new_rigid_objs_T_matrix.translation += trans_noise
+                # convert from Matrix to list
+                new_rigid_objs[1] = np.array(new_rigid_objs_T_matrix).tolist()
+                ep_info.rigid_objs.append(new_rigid_objs)
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             t_start = time.time()

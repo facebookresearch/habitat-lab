@@ -88,9 +88,9 @@ class Manipulator(ArticulatedAgentInterface):
             # automatic joint limit clamping after each call to sim.step_physics()
             self.sim_obj.auto_clamp_joint_limits = True
         for link_id in self.sim_obj.get_link_ids():
-            self.joint_pos_indices[
-                link_id
-            ] = self.sim_obj.get_link_joint_pos_offset(link_id)
+            self.joint_pos_indices[link_id] = (
+                self.sim_obj.get_link_joint_pos_offset(link_id)
+            )
             self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(
                 link_id
             )

@@ -199,6 +199,7 @@ class GazeGraspAction(MagicGraspAction):
         self.consider_detected_portion_threshold = config.get(
             "consider_detected_portion_threshold", 0.5
         )
+        self.object_lockon = 0
 
     @property
     def action_space(self):
@@ -313,16 +314,31 @@ class GazeGraspAction(MagicGraspAction):
 
         # If there is nothing to grasp, then we return
         if center_obj_idx is None:
+            self.object_lockon = 0
             return
+        else:
+            self.object_lockon += 1
 
-        keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+        object_lockon_needed = self._config.get("object_lockon_needed", 1)
+        if self.object_lockon >= object_lockon_needed:
+            keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+            grasp_noise = self._config.get("grasp_noise", 0.0)
+            rand_chance = np.random.rand()
+            grasp_fail = rand_chance < grasp_noise
+            print("grasp_fail: ", grasp_fail, rand_chance, grasp_noise)
+            if grasp_fail:
+                self.cur_articulated_agent.reset()
+                return  # reset arm joints
+            should_grasp = not grasp_fail
 
-        self.cur_grasp_mgr.snap_to_obj(
-            center_obj_idx,
-            force=True,
-            rel_pos=mn.Vector3(0.1, 0.0, 0.0),
-            keep_T=keep_T,
-        )
+            if should_grasp:
+                self.cur_grasp_mgr.snap_to_obj(
+                    center_obj_idx,
+                    force=True,
+                    rel_pos=mn.Vector3(0.1, 0.0, 0.0),
+                    keep_T=keep_T,
+                )
+                return
         return
 
     def _ungrasp(self):

@@ -52,6 +52,8 @@ class RearrangePickTaskV1(RearrangeTask):
             self._config.spawn_max_dist_to_obj_delta
         )
         self._spawn_type = self._config.get("spawn_type", "orig_snap")
+        self.initial_base_pos = None
+        self.initial_base_rot = None
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -101,8 +103,14 @@ class RearrangePickTaskV1(RearrangeTask):
                         else None
                     ),
                 )
+                print(f"UNOCCLUDED NAVMESH SNAP POS: {start_pos}")
+
                 was_fail = not success
-                if start_pos is None:
+                if (
+                    (start_pos is None)
+                    or (angle_to_obj is None)
+                    or (was_fail is None)
+                ):
                     start_pos, angle_to_obj, was_fail = (
                         place_agent_at_dist_from_pos(
                             targ_pos,
@@ -114,6 +122,9 @@ class RearrangePickTaskV1(RearrangeTask):
                             self._num_spawn_attempts,
                             self._filter_colliding_states,
                         )
+                    )
+                    print(
+                        f"UNOCCLUDED NAVMESH SNAP FAILED. GENEARING NEW START_POS WITH OLD METHOD: {start_pos}"
                     )
             else:
                 start_pos, angle_to_obj, was_fail = (
@@ -151,7 +162,6 @@ class RearrangePickTaskV1(RearrangeTask):
             # No releasing the object once it is held.
             action_args["grip_action"] = None
         obs = super().step(action=action, episode=episode)
-
         return obs
 
     def _set_arm_to_target_pose(self):
@@ -190,6 +200,9 @@ class RearrangePickTaskV1(RearrangeTask):
         set_agent_base_via_obj_trans(
             start_pos, start_rot, sim.articulated_agent
         )
+
+        self.initial_base_pos = self._sim.articulated_agent.base_pos
+        self.initial_base_rot = self._sim.articulated_agent.base_rot
 
         self._targ_idx = sel_idx
 

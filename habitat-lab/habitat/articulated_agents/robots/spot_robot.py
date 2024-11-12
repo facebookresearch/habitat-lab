@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Dict, List, Optional, Set, Tuple
 
 import magnum as mn
@@ -39,7 +40,8 @@ class SpotRobot(MobileManipulator):
             ],
             ee_offset=[mn.Vector3(0.0, 0, -0.1)],
             ee_links=[7],
-            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
+            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [-0.35, 1.5]]]),
+            # ee_constraint=np.array([[[0.4, 1.2], [-0.2, 0.2], [-0.35, 1.5]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
@@ -83,16 +85,28 @@ class SpotRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
+                    cam_offset_pos=mn.Vector3(0.166, -0.05, -0.107),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
+                # "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
+                #     cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
+                #     cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                #     attached_link_id=6,
+                #     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                # ),
                 "articulated_agent_jaw_rgb": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.023, -0.095),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "articulated_agent_jaw_depth_60_tilt": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
+                    cam_orientation=mn.Vector3(0, -1.047, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-60)),
                 ),
                 "articulated_agent_jaw_panoptic": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),

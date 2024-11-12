@@ -88,13 +88,11 @@ def resume_state_filename(config: DictConfig, filename_key: str = "") -> str:
 
 
 @overload
-def rank0_only() -> bool:
-    ...
+def rank0_only() -> bool: ...
 
 
 @overload
-def rank0_only(fn: Callable) -> Callable:
-    ...
+def rank0_only(fn: Callable) -> Callable: ...
 
 
 def rank0_only(fn: Optional[Callable] = None) -> Union[Callable, bool]:

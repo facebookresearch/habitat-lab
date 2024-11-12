@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import attr
@@ -33,6 +34,7 @@ class RearrangeEpisode(Episode):
     :property target_receptacles: The names and link indices of the receptacles containing the target objects.
     :property goal_receptacles: The names and link indices of the receptacles containing the goals.
     """
+
     ao_states: Dict[str, Dict[int, float]]
     rigid_objs: List[Tuple[str, np.ndarray]]
     targets: Dict[str, np.ndarray]
@@ -45,6 +47,7 @@ class RearrangeEpisode(Episode):
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
+
     episodes: List[RearrangeEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
@@ -77,11 +80,20 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
-
+        try:
+            whitelist = os.environ.get("HAB_EP_WHITELIST", "")
+            if whitelist:
+                whitelist = [int(i) for i in whitelist.split(",")]
+        except:
+            pass
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
+            try:
+                if whitelist and i not in whitelist:
+                    continue
+            except:
+                pass
             rearrangement_episode.episode_id = str(i)
-
             self.episodes.append(rearrangement_episode)
 
     def to_binary(self) -> Dict[str, Any]:

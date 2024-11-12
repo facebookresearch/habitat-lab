@@ -363,7 +363,6 @@ class IkHelper:
         self._arm_start = arm_start
         self._arm_len = 7
         self.pc_id = p.connect(p.DIRECT)
-
         self.robo_id = p.loadURDF(
             only_arm_urdf,
             basePosition=[0, 0, 0],
@@ -430,7 +429,7 @@ class IkHelper:
                 upper.append(ret[9])
         return np.array(lower), np.array(upper)
 
-    def calc_ik(self, targ_ee: np.ndarray, targ_ee_rot: np.ndarray):
+    def calc_ik(self, targ_ee: np.ndarray, targ_ee_rot: np.ndarray = None):
         """
         :param targ_ee: 3D target position in the robot BASE coordinate frame
         """
@@ -445,6 +444,8 @@ class IkHelper:
             targetPosition=targ_ee,
             targetOrientation=target_ori,
             physicsClientId=self.pc_id,
+            maxNumIterations=100,
+            residualThreshold=0.00001,
         )
         return js[: self._arm_len]
 

@@ -47,11 +47,7 @@ except ImportError:
     clip = None
 
 try:
-    from transformers import (
-        AutoModel,
-        AutoProcessor,
-        SiglipVisionConfig,
-    )
+    from transformers import AutoModel, AutoProcessor, SiglipVisionConfig
 except:
     AutoModel = None
 
@@ -468,7 +464,9 @@ class ResNetSIGLIPEncoder(nn.Module):
             # Load the model based on HuggingFace's transformers
             configuration = SiglipVisionConfig()
             if self.rgb and self.depth:
-                self.output_shape = (int(configuration.hidden_size*2),)  # 768 * 2
+                self.output_shape = (
+                    int(configuration.hidden_size * 2),
+                )  # 768 * 2
             else:
                 self.output_shape = (int(configuration.hidden_size),)  # 768
 
@@ -476,7 +474,7 @@ class ResNetSIGLIPEncoder(nn.Module):
             self.backbone = AutoModel.from_pretrained(
                 self._model_name, torch_dtype=torch.bfloat16
             ).to(self._device)
-            self.preprocess = AutoProcessor.from_pretrained(self._model_name)  
+            self.preprocess = AutoProcessor.from_pretrained(self._model_name)
 
             # Disable grad
             for param in self.backbone.parameters():
@@ -505,13 +503,18 @@ class ResNetSIGLIPEncoder(nn.Module):
                 0, 3, 1, 2
             )  # BATCH x CHANNEL x HEIGHT X WIDTH
             rgb_observations = torch.stack(
-                [self.preprocess(images=rgb_image, return_tensors="pt")["pixel_values"][0].bfloat16() for rgb_image in rgb_observations]
+                [
+                    self.preprocess(images=rgb_image, return_tensors="pt")[
+                        "pixel_values"
+                    ][0].bfloat16()
+                    for rgb_image in rgb_observations
+                ]
             )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
             rgb_observations = rgb_observations.to(self._device)
             rgb_observations_input = {}
             rgb_observations_input["pixel_values"] = rgb_observations
             rgb_x = self.backbone.get_image_features(**rgb_observations_input)
-            rgb_x = rgb_x.float() # Make it back to torch.float32
+            rgb_x = rgb_x.float()  # Make it back to torch.float32
             cnn_input.append(rgb_x)
 
         if self.depth:
@@ -525,7 +528,9 @@ class ResNetSIGLIPEncoder(nn.Module):
             )  # [BATCH x 3 x HEIGHT X WIDTH]
             ddd = torch.stack(
                 [
-                    self.preprocess(images=depth_map, return_tensors="pt")["pixel_values"][0].bfloat16()
+                    self.preprocess(images=depth_map, return_tensors="pt")[
+                        "pixel_values"
+                    ][0].bfloat16()
                     for depth_map in ddd
                 ]
             )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.bfloat16
@@ -533,11 +538,11 @@ class ResNetSIGLIPEncoder(nn.Module):
             ddd_input = {}
             ddd_input["pixel_values"] = ddd
             depth_x = self.backbone.get_image_features(**ddd_input)
-            depth_x = depth_x.float() # Make it back to torch.float32
+            depth_x = depth_x.float()  # Make it back to torch.float32
             cnn_input.append(depth_x)
 
         if self.rgb and self.depth:
-            x = torch.cat((cnn_input[0],  cnn_input[1]), dim=1)
+            x = torch.cat((cnn_input[0], cnn_input[1]), dim=1)
         else:
             x = torch.cat(cnn_input, dim=1)
 
@@ -716,9 +721,11 @@ class PointNavResNetNet(Net):
 
         if backbone.startswith("resnet50_clip"):
             self.visual_encoder = ResNetCLIPEncoder(
-                observation_space
-                if not force_blind_policy
-                else spaces.Dict({}),
+                (
+                    observation_space
+                    if not force_blind_policy
+                    else spaces.Dict({})
+                ),
                 pooling="avgpool" if "avgpool" in backbone else "attnpool",
             )
             if not self.visual_encoder.is_blind:
@@ -730,9 +737,11 @@ class PointNavResNetNet(Net):
                 )
         elif backbone.startswith("siglip"):
             self.visual_encoder = ResNetSIGLIPEncoder(
-                observation_space
-                if not force_blind_policy
-                else spaces.Dict({}),
+                (
+                    observation_space
+                    if not force_blind_policy
+                    else spaces.Dict({})
+                ),
             )
             if not self.visual_encoder.is_blind:
                 self.visual_fc = nn.Sequential(

@@ -36,6 +36,7 @@ class BaseTrainer:
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
+
     config: "DictConfig"
     flush_secs: float
     supported_tasks: ClassVar[List[str]]
@@ -133,6 +134,12 @@ class BaseTrainer:
                 )
             else:
                 # evaluate multiple checkpoints in order
+                if not os.path.exists(
+                    self.config.habitat_baselines.checkpoint_folder
+                ):
+                    os.makedirs(
+                        self.config.habitat_baselines.checkpoint_folder
+                    )
                 while True:
                     current_ckpt = None
                     while current_ckpt is None:
@@ -185,6 +192,7 @@ class BaseRLTrainer(BaseTrainer):
     r"""Base trainer class for RL trainers. Future RL-specific
     methods should be hosted here.
     """
+
     device: torch.device  # type: ignore
     config: "DictConfig"
     video_option: List[str]

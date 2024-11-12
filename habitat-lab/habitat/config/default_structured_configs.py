@@ -75,6 +75,7 @@ __all__ = [
     "TargetStartGpsCompassSensorConfig",
     "InitialGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
+    "ReceptacleBBoxSensorConfig",
     # REARRANGEMENT MEASUREMENTS
     "EndEffectorToRestDistanceMeasurementConfig",
     "EndEffectorToInitialOrientationDistanceMeasurementConfig",
@@ -272,6 +273,7 @@ class ArmActionConfig(ActionConfig):
     ee_ctrl_lim: float = 0.015
     ee_rot_ctrl_lim: float = 0.0125
     use_ee_rot: bool = False
+    use_contact_test: bool = False
     should_clip: bool = False
     render_ee_target: bool = False
     gaze_distance_range: Optional[List[float]] = None
@@ -279,6 +281,8 @@ class ArmActionConfig(ActionConfig):
     center_cone_vector: Optional[List[float]] = None
     auto_grasp: bool = False
     consider_detected_portion_threshold: float = -1.0
+    grasp_noise: float = 0.0
+    object_lockon_needed: int = 1
 
 
 @dataclass
@@ -456,6 +460,7 @@ class ArmDepthBBoxSensorConfig(LabSensorConfig):
     type: str = "ArmDepthBBoxSensor"
     height: int = 480
     width: int = 640
+    noise: float = 0.0
 
 
 @dataclass
@@ -767,6 +772,18 @@ class GoalSensorConfig(LabSensorConfig):
     only_one_target: bool = False
     use_base_transform: bool = False
     use_noise_target: bool = False  # only support for a single object
+    use_ee_T_target: bool = False 
+
+
+@dataclass
+class ReceptacleBBoxSensorConfig(LabSensorConfig):
+    """
+    Rearrangement only. Returns the bbox of the target receptacle.
+    """
+
+    type: str = "ReceptacleBBoxSensor"
+    dimensionality: int = 6
+    use_noise: bool = False  # only support for a single object
 
 
 @dataclass
@@ -1401,6 +1418,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     consider_ee_pose: bool = False
     ee_pose_threshold: float = -1.0
     arm_smooth_reward: float = 0.0
+    ee_base_yaw_thresh: float = -1.0
+    ee_base_yaw_pen: float = 1.0
+    ee_obj_occlusion_pen: float = -1.0
 
 
 @dataclass
@@ -1479,6 +1499,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     ee_orientation_to_initial_threshold: float = -1.0
     object_orientation_to_target_threshold: float = -1.0
     ee_to_target_threshold: float = -1.0
+    ee_obj_occlusion_pen: float = -1.0
 
 
 @dataclass
@@ -1706,12 +1727,13 @@ class TaskConfig(HabitatBaseConfig):
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
-    render_target: bool = True
+    render_target: bool = False
     # Spawn parameters
     filter_colliding_states: bool = True
-    num_spawn_attempts: int = 200
+    num_spawn_attempts: int = 1000
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    spawn_type: str = "orig_snap"
     spawn_max_dist_to_obj_delta: float = 0.02
     # Factor to shrink the receptacle sampling volume when predicates place
     # objects on top of receptacles.
@@ -1751,6 +1773,8 @@ class TaskConfig(HabitatBaseConfig):
     fix_obj_rotation_change_arm_joint: bool = False
     joint_start_noise: float = 0.1
     joint_start_noise_multiplier: Optional[List[float]] = None
+    init_joint_angles: Optional[List[float]] = None
+    randomize_ee_ori: bool = False
     # For the open_close_drawer task
     # The format is [x_min, y_min, x_max, y_max]
     rectangle_spawn_region: Optional[List[float]] = None
@@ -1936,6 +1960,12 @@ class JawDepthSensorConfig(HabitatSimDepthSensorConfig):
     width: int = 256
     height: int = 256
 
+@dataclass
+class JawDepthTiltSensorConfig(JawDepthSensorConfig):
+    uuid: str = "articulated_agent_jaw_depth_60_tilt"
+    width: int = 256
+    height: int = 256
+
 
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
@@ -2078,6 +2108,7 @@ class SimulatorConfig(HabitatBaseConfig):
     object_ids_start: int = 100
     # Configuration for rendering
     renderer: RendererConfig = RendererConfig()
+    add_clutter_objs: bool = False
 
 
 @dataclass
@@ -2403,6 +2434,12 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="jaw_depth_tilt_sensor",
+    node=JawDepthTiltSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="jaw_rgb_sensor",
     node=JawRGBSensorConfig,
 )
@@ -2571,6 +2608,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="goal_sensor",
     node=GoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.receptacle_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="receptacle_bbox_sensor",
+    node=ReceptacleBBoxSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.distance_goal_sensor",

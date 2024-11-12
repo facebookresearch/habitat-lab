@@ -255,6 +255,7 @@ class PlaceReward(RearrangeReward):
 
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
         self._prev_obj_at_receptacle = False
+        self.use_bbox = False
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -440,9 +441,9 @@ class PlaceReward(RearrangeReward):
                 # Filter out the small fluctuations
                 dist_diff = round(dist_diff, 3)
                 reward += self._config.dist_reward * dist_diff
-                rearrange_logger.debug(
-                    f"Adding dist_diff reward: {-self._config.dist_reward * dist_diff}, Total reward: {reward}"
-                )
+                # rearrange_logger.debug(
+                #     f"Adding dist_diff reward: {-self._config.dist_reward * dist_diff}, Total reward: {reward}"
+                # )
             else:
                 reward -= self._config.dist_reward * dist_to_goal
                 rearrange_logger.debug(
@@ -477,9 +478,62 @@ class PlaceReward(RearrangeReward):
             # Filter out the small fluctuations
             ori_obj_diff = round(ori_obj_diff, 3)
             reward += self._config.ori_reward * ori_obj_diff
-            rearrange_logger.debug(
-                f"Adding use_obj_ori ori_reward reward: {self._config.ori_reward * ori_obj_diff}, Total reward: {reward}"
+            # rearrange_logger.debug(
+            #     f"Adding use_obj_ori ori_reward reward: {self._config.ori_reward * ori_obj_diff}, Total reward: {reward}"
+            # )
+
+        # line of sight penalty
+        ee_obj_occlusion_pen = self._config.get("ee_obj_occlusion_pen", -1.0)
+        if ee_obj_occlusion_pen != -1.0:
+
+            idxs, _ = self._sim.get_targets()
+            temp_ids, global_T_targets = self._sim.get_targets()
+            _target_obj_ids = [
+                self._sim._scene_obj_ids[temp_id] for temp_id in temp_ids
+            ]
+            print("_target_obj_ids: ", _target_obj_ids)
+
+            global_T_target = global_T_targets[0]
+            exclude_obj_ids = (
+                [self._sim.articulated_agent.sim_obj.object_id]
+                + [*self._sim.articulated_agent.sim_obj.link_object_ids.keys()]
+                + [*idxs, -1]
             )
+
+            ray = habitat_sim.geo.Ray()
+            ray.origin = mn.Vector3(global_T_target)
+            ray.direction = (
+                ray.origin
+                - self._sim.articulated_agent.ee_transform().translation
+            )
+            print("ray direction: ", ray.direction)
+
+            raycast_results = self._sim.cast_ray(ray)
+            if (
+                raycast_results.has_hits()
+                and raycast_results.hits[0].ray_distance < 1
+            ):
+                print(
+                    "has hits: ",
+                    [hit.object_id for hit in raycast_results.hits],
+                )
+                print("global_T_target: ", global_T_target)
+                print(
+                    "self._sim.articulated_agent.ee_transform().translation: ",
+                    self._sim.articulated_agent.ee_transform().translation,
+                )
+                for hit in raycast_results.hits:
+                    if (
+                        hit.object_id not in exclude_obj_ids
+                        and hit.ray_distance < 2.0
+                    ):
+
+                        print(
+                            "adding occlusion pen: ",
+                            hit.object_id,
+                            hit.ray_distance,
+                        )
+                        self._metric -= ee_obj_occlusion_pen
 
         self._prev_object_ori = obj_to_target
 
@@ -497,6 +551,7 @@ class PlaceSuccess(Measure):
         self._sim = sim
         super().__init__(**kwargs)
         self._prev_obj_at_receptacle = False
+        self.bbox_only = False
 
     @staticmethod
     def _get_uuid(*args, **kwargs):

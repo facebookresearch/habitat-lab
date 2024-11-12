@@ -5,6 +5,7 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - end_effector_pose_sensor
+    - spot_head_stereo_depth_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
@@ -27,6 +28,8 @@ habitat:
       - relative_target_object_orientation
       - articulated_agent_jaw_depth
       - ee_pose
+      - joint
+      - spot_head_stereo_depth_sensor
       - is_holding
   task:
     measurements:
@@ -35,7 +38,7 @@ habitat:
         max_accum_force: -1.0
         max_instant_force: -1.0
       place_reward:
-        wrong_drop_should_end: True
+        wrong_drop_should_end: False
         drop_pen: 5.0
         count_coll_pen: 0.10
         max_count_colls: 5
@@ -51,6 +54,7 @@ habitat:
         ee_orientation_to_initial_threshold: -1.0 
         ee_to_target_threshold: -1.0
         min_dist_to_goal: 0.15
+        use_ee_dist: True
       place_success:
         ee_resting_success_threshold: -1.0
         # We want to check if the object is placed on the receptacle
@@ -79,16 +83,17 @@ habitat:
  #       height: 240
  #       width: 228
       goal_sensor:
-        only_one_target: True
-        use_base_transform: True
+        only_one_target: False
+        use_base_transform: False
+        use_ee_T_target: True
       relative_end_effector_orientation_sensor:
         use_smallest_angle: True 
       relative_target_object_orientation_sensor:
         offset_yaw: True 
     actions:
       base_velocity_non_cylinder: 
-        longitudinal_lin_speed: 0.0 
-        ang_speed: 0.0 
+        longitudinal_lin_speed: 0.1
+        ang_speed: 0.5235987755982988 
         allow_dyn_slide: False 
         navmesh_offset: [[0.0,0.0],[0.20,0.0],[-0.20,0.0]] 
       arm_action:
@@ -102,30 +107,28 @@ habitat:
         # We limit the joint angles to ensure that this is feasible in the real world
         arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708],[-1.5708,1.5708]] 
         ee_ctrl_lim: 0.015
-        use_ee_rot: True
         ee_rot_ctrl_lim: 0.015
+        use_ee_rot: True
         render_ee_target: False
-        use_contact_test: False
     success_reward: 10.0
     slack_reward: -0.03
     # Control Spot robot place location
-    spawn_max_dist_to_obj: 1.0
+    spawn_max_dist_to_obj: 3.0
     base_angle_noise: 0.523599
     top_down_grasp: True
     top_down_grasp_ratio: 1.0
     fix_obj_rotation_change_arm_joint: True 
     joint_start_noise: 1.0 
     joint_start_noise_multiplier: [0.1,0.1,0.1,0.1,0.1,0.1,0.1]
-    init_joint_angles: [0.0, -3.14, 0.0, 3.14, 0.0, 0.0, 1.57]
     enable_rotation_target: False 
     render_target: False
-    spawn_type: "orig_snap"
+    spawn_type: "embodied_unoccluded_navmesh_snap"
   simulator:
     # We use the kinematic mode to train the policy
-    kinematic_mode: False
+    kinematic_mode: True
     ac_freq_ratio: 1
     ctrl_freq: 120
-    step_physics: True
+    step_physics: False
     agents:
       main_agent:
         joint_start_noise: 0.0

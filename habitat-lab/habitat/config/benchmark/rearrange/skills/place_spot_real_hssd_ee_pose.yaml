@@ -6,7 +6,7 @@ defaults:
   - /habitat/task/lab_sensors:
     - end_effector_pose_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
-  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot_real
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - override /habitat/dataset/rearrangement: hssd
   - _self_

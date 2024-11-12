@@ -5,8 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 
+import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -158,6 +160,69 @@ class RearrangePickReward(RearrangeReward):
                 self.cur_dist = -1
                 self.cur_arm_joint_angle = None
                 return
+
+        ee_base_yaw_thresh = self._config.get("ee_base_yaw_thresh", -1.0)
+        ee_base_yaw_pen = self._config.get("ee_base_yaw_pen", 1.0)
+
+        def wrap_heading(heading):
+            return (heading + np.pi) % (2 * np.pi) - np.pi
+
+        if ee_base_yaw_thresh != -1.0:
+            base_init_rot = self._task.initial_base_rot
+            base_rot = wrap_heading(
+                self._sim.articulated_agent.base_rot - base_init_rot
+            )
+            ee_rot = observations["ee_pose"][-1]
+            ee_base_yaw_diff = wrap_heading(base_rot - ee_rot)
+            if not (
+                -np.deg2rad(ee_base_yaw_thresh) <= ee_base_yaw_diff
+                and ee_base_yaw_diff <= np.deg2rad(ee_base_yaw_thresh)
+            ):
+                ee_base_pen = ee_base_yaw_pen * ee_base_yaw_diff
+                rearrange_logger.debug(
+                    f"EE base orientation misaligned-- diff: {np.rad2deg(ee_base_yaw_diff)}, ee_rot: {np.rad2deg(ee_rot)}, base_rot: {np.rad2deg(base_rot)}, thresh: {ee_base_yaw_thresh}, adding penalty: {ee_base_pen}"
+                )
+                self._metric -= ee_base_pen
+            else:
+                rearrange_logger.debug(
+                    f"EE base orientation OK-- diff: {np.rad2deg(ee_base_yaw_diff)}, ee_rot: {np.rad2deg(ee_rot)}, base_rot: {np.rad2deg(base_rot)}, thresh: {ee_base_yaw_thresh}"
+                )
+
+        ee_obj_occlusion_pen = self._config.get("ee_obj_occlusion_pen", -1.0)
+        if ee_obj_occlusion_pen != -1.0:
+            idxs, _ = self._sim.get_targets()
+            scene_pos = self._sim.get_scene_pos()
+            cur_obj_pos = scene_pos[idxs][0]
+
+            exclude_obj_ids = (
+                [self._sim.articulated_agent.sim_obj.object_id]
+                + [*self._sim.articulated_agent.sim_obj.link_object_ids.keys()]
+                + [*idxs, -1]
+            )
+
+            ray = habitat_sim.geo.Ray()
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.ee_transform()
+
+            ray.origin = mn.Vector3(cur_obj_pos)
+            ray.direction = (
+                self._sim.articulated_agent.ee_transform().translation
+                - ray.origin
+            )
+            raycast_results = self._sim.cast_ray(ray)
+            if raycast_results.has_hits():
+                for hit in raycast_results.hits:
+                    if (
+                        hit.object_id not in exclude_obj_ids
+                        and hit.ray_distance < 2.0
+                    ):
+                        print(
+                            "adding occlusion pen: ",
+                            hit.object_id,
+                            hit.ray_distance,
+                        )
+                        self._metric -= ee_obj_occlusion_pen
 
         if self._config.use_diff:
             if self.cur_dist < 0:

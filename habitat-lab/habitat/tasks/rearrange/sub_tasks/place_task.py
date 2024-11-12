@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import random
+
 import magnum as mn
 import numpy as np
 import quaternion
@@ -12,7 +14,10 @@ import quaternion
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
-from habitat.tasks.rearrange.utils import get_angle_to_pos_xyz
+from habitat.tasks.rearrange.utils import (
+    get_angle_to_pos_xyz,
+    get_camera_transform,
+)
 
 
 @registry.register_task(name="RearrangePlaceTask-v0")
@@ -148,13 +153,32 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
                 abs_obj_idx
             )
 
-        # Here, we teleport the target object to the gripper
-        # The place task is to let Spot place the object in the original
-        # object location
         top_down_grasp = (
             np.random.random() > 1.0 - self._config.top_down_grasp_ratio
             and self._config.top_down_grasp
         )
+
+        # We want to change the arm joint after doing top_down_grasp
+        if self._config.fix_obj_rotation_change_arm_joint and top_down_grasp:
+            self.random_arm()
+        else:
+            new_arm_joint_pos = np.array(self._config.init_joint_angles)
+            if self._config.randomize_ee_ori:
+                ee_oris = [0.0, -1.57, 1.57]
+                new_arm_joint_pos[-1] = random.choice(ee_oris)
+
+            # Set the arm
+            self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
+                new_arm_joint_pos
+            )
+            # Update the initial ee orientation
+            _, self.init_ee_orientation = self._sim.get_agent_data(
+                None
+            ).articulated_agent.get_ee_local_pose()
+
+        # Here, we teleport the target object to the gripper
+        # The place task is to let Spot place the object in the original
+        # object location
         if top_down_grasp:
             # We do top down grasping here
             sim.grasp_mgr._keep_T = self.get_keep_T(abs_obj_idx)
@@ -179,10 +203,6 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             self.target_obj_orientation = quaternion.quaternion(
                 self.init_ee_orientation
             )
-
-        # We want to change the arm joint after doing top_down_grasp
-        if self._config.fix_obj_rotation_change_arm_joint and top_down_grasp:
-            self.random_arm()
 
         # We want to add the noise to the target place location
         target_location = self._get_targ_pos(self._sim)[self.targ_idx]

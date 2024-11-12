@@ -4,11 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Optional, cast
 
 import magnum as mn
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
@@ -31,7 +33,6 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 from habitat_sim.physics import MotionType
 
 
@@ -127,6 +128,7 @@ class ArmAction(ArticulatedAgentAction):
             self.grip_ctrlr = None
 
         self.disable_grip = config.disable_grip
+        self.observations = {"collided": False}
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
@@ -161,12 +163,15 @@ class ArmAction(ArticulatedAgentAction):
         ):
             return
         else:
-            self.arm_ctrlr.step(arm_action)
+            collided = self.arm_ctrlr.step(arm_action)
             if self.grip_ctrlr is not None and self._config.auto_grasp:
                 self.grip_ctrlr.step(None)
             elif self.grip_ctrlr is not None and not self.disable_grip:
                 grip_action = kwargs[self._action_arg_prefix + "grip_action"]
                 self.grip_ctrlr.step(grip_action)
+        if collided:
+            self.observations["collided"] = True
+        return self.observations
 
 
 @registry.register_task_action
@@ -490,7 +495,6 @@ class BaseVelAction(ArticulatedAgentAction):
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
-
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
@@ -537,6 +541,7 @@ class BaseVelAction(ArticulatedAgentAction):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
@@ -670,6 +675,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
+
         # Integrate to get target rigid state
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
@@ -735,7 +741,6 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             longitudinal_lin_vel, 0, -lateral_lin_vel
         )
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
-
         if (
             longitudinal_lin_vel != 0.0
             or lateral_lin_vel != 0.0
@@ -758,10 +763,11 @@ class ArmEEAction(ArticulatedAgentAction):
         self._ee_rot_ctrl_lim = self._config.get("ee_rot_ctrl_lim", 0.0125)
         self._use_ee_rot = self._config.get("use_ee_rot", False)
         self._ee_ctrl_lim = self._config.ee_ctrl_lim
+        self._use_contact_test = self._config.get("use_contact_test", False)
+        self.collided = False
 
     def reset(self, *args, **kwargs):
         super().reset()
-        # cur_ee = self.get_ee_pose()
 
         cur_ee = self._ik_helper.calc_fk(
             np.array(self._sim.articulated_agent.arm_joint_pos)
@@ -786,17 +792,66 @@ class ArmEEAction(ArticulatedAgentAction):
                 self.ee_index, :, 1
             ],
         )
+        # if self.ee_rot_target is not None:
+        #     # constraints for roll, pitch, yaw
+        #     ee_rot_constraint = np.array(
+        #         [
+        #             [
+        #                 [-np.pi / 2, np.pi / 2],
+        #                 [-np.pi / 2, np.pi / 2],
+        #                 [-np.pi / 2, np.pi / 2],
+        #             ]
+        #         ]
+        #     )
+        #     self.ee_rot_target = np.clip(
+        #         self.ee_rot_target,
+        #         ee_rot_constraint[self.ee_index, :, 0],
+        #         ee_rot_constraint[self.ee_index, :, 1],
+        #     )
+
+    def set_joint_pos_kinematic(self, des_joint_pos):
+        self.collided = False
+        curr_joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
+        self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+        self.cur_articulated_agent.fix_joint_values = des_joint_pos
+        if self._use_contact_test:
+            self.collided = self._sim.articulated_agent.sim_obj.contact_test()
+            if self.collided:
+                self.cur_articulated_agent.arm_joint_pos = curr_joint_pos
+                self.cur_articulated_agent.fix_joint_values = curr_joint_pos
+
+    def get_T_matrix(self, position, rotation=None):
+        T_matrix = np.eye(4)
+        T_matrix[:3, 3] = position
+        if rotation is not None:
+            T_matrix[:3, :3] = R.from_euler("xyz", rotation).as_matrix()
+        return T_matrix
+
+    def get_euler_from_matrix(self, T_matrix):
+        # Extract the rotation matrix (3x3) from the transformation matrix (4x4)
+        rotation_matrix = T_matrix[:3, :3]
+
+        # Create a Rotation object
+        r = R.from_matrix(rotation_matrix)
+
+        # Get Euler angles (in radians)
+        return r.as_euler("xyz", degrees=False)
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
         self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
             np.array(self._sim.articulated_agent.arm_joint_pos)
         )
+        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
+
         if self._use_ee_rot:
-            self.ee_target += np.array(ee_pos[:3])
-            heading = self.ee_rot_target + np.array(ee_pos[3:])
-            self.ee_rot_target = (heading + np.pi) % (2 * np.pi) - np.pi
+            T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
+            T_delta[:3, :3] = R.from_euler("xyz", ee_pos[3:]).as_matrix()
         else:
-            self.ee_target += np.array(ee_pos)
+            T_delta = self.get_T_matrix(ee_pos[:3])
+
+        T_new = np.dot(T_curr, T_delta)
+        self.ee_target = T_new[:3, 3]
+        self.ee_rot_target = self.get_euler_from_matrix(T_new)
         self.apply_ee_constraints()
 
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
@@ -810,7 +865,7 @@ class ArmEEAction(ArticulatedAgentAction):
         des_joint_pos = list(des_joint_pos)
 
         if self._sim.habitat_config.kinematic_mode:
-            # self._sim.articulated_agent.arm_joint_pos = des_joint_pos
+            self.set_joint_pos_kinematic(des_joint_pos)
             self.cur_articulated_agent.arm_joint_pos = des_joint_pos
             self.cur_articulated_agent.fix_joint_values = des_joint_pos
         else:
@@ -829,9 +884,10 @@ class ArmEEAction(ArticulatedAgentAction):
             global_pos = self._sim.articulated_agent.base_transformation.transform_point(
                 self.ee_target
             )
-            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
-                global_pos, self._sim.viz_ids["ee_target"]
-            )
+            # self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
+            #     global_pos, self._sim.viz_ids["ee_target"]
+            # )
+        return self.collided
 
 
 @registry.register_task_action

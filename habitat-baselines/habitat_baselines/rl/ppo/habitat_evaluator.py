@@ -120,9 +120,9 @@ class HabitatEvaluator(Evaluator):
                 dtype=torch.bool,
             )
 
-        stats_episodes: Dict[
-            Any, Any
-        ] = {}  # dict of dicts that stores stats per episode
+        stats_episodes: Dict[Any, Any] = (
+            {}
+        )  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
         if len(config.habitat_baselines.eval.video_option) > 0:
@@ -380,7 +380,125 @@ class HabitatEvaluator(Evaluator):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
+                    aggregated_stats = {}
+                    print_ks = {
+                        "place_success",
+                        "pick_success",
+                        "num_steps",
+                        "robot_collisions.total_collisions",
+                    }
+                    # print("stats_episodes: ", stats_episodes)
+                    failures = {
+                        "exceed_max_steps": 0,
+                        # "wrong_drop_obj": 0,
+                        "exceed_max_colls": 0,
+                        "exceed_force": 0,
+                    }
+                    for stat_key in print_ks:
+                        aggregated_stats[stat_key] = np.mean(
+                            [
+                                v[stat_key]
+                                for v in stats_episodes.values()
+                                if stat_key in v
+                            ]
+                        )
+
+                    for v in stats_episodes.values():
+                        failures["exceed_force"] += v["force_terminate"]
+                        # failures["wrong_drop_obj"] += v["force_terminate"]
+                        place_reward_measure = (
+                            config.habitat.task.measurements.get(
+                                "place_reward", None
+                            )
+                        )
+                        pick_reward_measure = (
+                            config.habitat.task.measurements.get(
+                                "pick_reward", None
+                            )
+                        )
+                        if place_reward_measure is not None:
+                            max_count_colls = place_reward_measure.get(
+                                "max_count_colls", 100.0
+                            )
+                        if pick_reward_measure is not None:
+                            max_count_colls = pick_reward_measure.get(
+                                "max_count_colls", 100.0
+                            )
+                        if (
+                            v["robot_collisions.total_collisions"]
+                            > max_count_colls
+                        ):
+                            failures["exceed_max_colls"] += 1
+                        if (
+                            v["num_steps"]
+                            >= config.habitat.environment.max_episode_steps
+                        ):
+                            failures["exceed_max_steps"] += 1
+
+                    num_evaled = len(stats_episodes.values())
+                    # print("num evaled: ", num_evaled)
+                    avg_failures = {}
+                    failures_count = 0
+                    for k, v in failures.items():
+                        avg_failures[k] = np.round(v / num_evaled, 2)
+
+                    tot_fail = np.sum(v for v in avg_failures.values())
+                    avg_failures["others"] = np.round(
+                        1.0 - aggregated_stats["place_success"] - tot_fail, 2
+                    )
+
+                    print(
+                        f"# Evaled: {num_evaled}, Avg_failures: {avg_failures}"
+                    )
+
+                    for k, v in aggregated_stats.items():
+                        logger.info(f"Average episode {k}: {v:.4f}")
+
+                    if "results_dir" in config.habitat_baselines:
+                        results_dir = config.habitat_baselines.results_dir
+                        # txt_dir = getattr(config, "txt_dir", "")
+                        success_key = next(
+                            (
+                                key
+                                for key in episode_stats.keys()
+                                if "success" in key
+                            ),
+                            None,
+                        )
+                        print("success_key: ", success_key)
+                        if results_dir != "" and success_key is not None:
+                            if not os.path.isdir(results_dir):
+                                os.makedirs(results_dir)
+                            episode_steps_filename = os.path.join(
+                                results_dir, f"ckpt_{checkpoint_index}.csv"
+                            )
+                            if not os.path.isfile(episode_steps_filename):
+                                episode_steps_data = f"#,id,reward,total_collisions,{success_key},num_steps\n"
+                            else:
+                                with open(episode_steps_filename) as f:
+                                    episode_steps_data = f.read()
+                            try:
+                                episode_steps_data += (
+                                    "{},{},{},{},{},{}\n".format(
+                                        num_evaled,
+                                        current_episodes_info[i].episode_id,
+                                        np.round(episode_stats["reward"], 2),
+                                        episode_stats[
+                                            "robot_collisions.total_collisions"
+                                        ],
+                                        episode_stats[success_key],
+                                        episode_stats["num_steps"],
+                                    )
+                                )  # number of steps taken
+                                lines = episode_steps_data.split("\n")
+                                with open(episode_steps_filename, "w") as f:
+                                    f.write(episode_steps_data)
+                            except Exception as e:
+                                print(f"Error saving results: {e}")
+
                     if len(config.habitat_baselines.eval.video_option) > 0:
+                        # if "place_success" in episode_stats.keys() or "pick_success" in episode_stats.keys():
+                        # if episode_stats["place_success"] == 0.0:
                         generate_video(
                             video_option=config.habitat_baselines.eval.video_option,
                             video_dir=config.habitat_baselines.video_dir,

@@ -97,6 +97,7 @@ class _ReadWrapper:
     r"""Convenience wrapper to track if a connection to a worker process
     should have something to read.
     """
+
     read_fn: Callable[[], Any]
     rank: int
     is_waiting: bool = False
@@ -119,6 +120,7 @@ class _WriteWrapper:
     can be written to safely.  In other words, checks to make sure the
     result returned from the last write was read.
     """
+
     write_fn: Callable[[Any], None]
     read_wrapper: _ReadWrapper
 
