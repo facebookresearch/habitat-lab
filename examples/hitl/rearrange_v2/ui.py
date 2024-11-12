@@ -639,7 +639,10 @@ class UI:
             )
 
         hit_info = self._raycast(ray, discriminator)
-        return hit_info.object_id == object_id
+        if hit_info is not None:
+            return hit_info.object_id == object_id
+        else:
+            return False
 
     def _update_hovered_object_ui(self):
         """Draw a UI when hovering an object with the cursor."""
