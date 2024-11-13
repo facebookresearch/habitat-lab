@@ -70,8 +70,8 @@ class SpotRobotReal(SpotRobot):
         )
 
     def set_base_position(self, real_x_pos, real_y_pos, yaw):
-        curr_base_pos = self.get_body_position()
-        real_position = np.array([real_x_pos, real_y_pos, curr_base_pos[-1]])
+        curr_base_pos = np.array(self.get_body_position())
+        real_position = np.array([real_x_pos, real_y_pos, 0.0])
 
         curr_base_rot_rpy = self.get_body_rotation()
         real_rotation = np.array(
@@ -104,13 +104,13 @@ class SpotRobotReal(SpotRobot):
     ):
         return self.arm_joint_pos
 
-    def set_arm_joint_positions(
-        self,
-        positions,
-    ):
-        sim_arm_pos = np.deg2rad(positions)
-        joint_tform = [-1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        self.arm_joint_pos = sim_arm_pos * joint_tform
+    def set_arm_joint_positions(self, positions, format="degrees"):
+        """
+        Joint angles: sh0, sh1, hr1, el0, el1, wr0, wr1
+        """
+        if format == "degrees":
+            positions = np.deg2rad(positions)
+        self.arm_joint_pos = positions
 
     def transform_ee_rot(self, sim_rot):
         correction_R = euler_to_matrix(np.deg2rad([-90.0, 0.0, 90.0])).T
@@ -118,11 +118,7 @@ class SpotRobotReal(SpotRobot):
         real_rot = correction_R @ sim_rot
 
         # # Matrix to swap roll and yaw (90-degree rotations around Y axis)
-        swap_matrix = np.array([
-            [0, 0, 1],
-            [0, 1, 0],
-            [1, 0, 0]
-        ])
+        swap_matrix = np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
 
         # # Combine both transformations
         real_rot = swap_matrix @ real_rot @ swap_matrix.T

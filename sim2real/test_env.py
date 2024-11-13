@@ -6,6 +6,7 @@
 
 import math
 import os
+import pickle as pkl
 import time
 from os import path as osp
 
@@ -19,6 +20,7 @@ import habitat.articulated_agents.robots.spot_robot_real as spot_robot
 import habitat_sim
 import habitat_sim.agent
 from habitat.tasks.rearrange.utils import (
+    batch_transform_point,
     make_render_only,
     set_agent_base_via_obj_trans,
 )
@@ -95,10 +97,10 @@ def make_cfg(settings):
         camera_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.resolution = [settings["height"], settings["width"]]
 
-        camera_sensor_spec.position = [2.0, 2.5, 0.0]
+        camera_sensor_spec.position = [-1.5, 2.5, 1.5]
         camera_sensor_spec.orientation = [
             np.deg2rad(-20.0),
-            np.deg2rad(90.0),
+            np.deg2rad(-20.0),
             0.0,
         ]
 
@@ -274,13 +276,14 @@ def create_video(produce_debug_video, observations):
             observations,
             "color_sensor",
             "color",
-            f"sim2real/test_{int(time.time())*1000}",
+            f"sim2real/output/test_{int(time.time())*1000}",
             open_vid=False,
         )
 
+
 def test_position(sim, spot, produce_debug_video):
     observations = []
-    observations += reset_spot(sim ,spot, produce_debug_video)
+    observations += reset_spot(sim, spot, produce_debug_video)
     ## position test
     real_robot_positions = [
         [0.0, 0.0, 0.0],  # origin
@@ -301,17 +304,18 @@ def test_position(sim, spot, produce_debug_video):
         # set base ground position from navmesh
         observations += simulate(sim, 1.0, produce_debug_video)
 
-        print('obj translation: ', spot.sim_obj.transformation.translation)
+        print("obj translation: ", spot.sim_obj.transformation.translation)
         sim_obj_rot = matrix_to_euler(spot.sim_obj.transformation.rotation())
-        print('obj rotation: ', np.rad2deg(sim_obj_rot))
-        print('base translation: ', spot.base_transformation.translation)
+        print("obj rotation: ", np.rad2deg(sim_obj_rot))
+        print("base translation: ", spot.base_transformation.translation)
         base_rot = matrix_to_euler(spot.base_transformation.rotation())
-        print('base rotation: ', np.rad2deg(base_rot))
+        print("base rotation: ", np.rad2deg(base_rot))
     return observations
+
 
 def test_rotation(sim, spot, produce_debug_video):
     observations = []
-    observations += reset_spot(sim ,spot, produce_debug_video)
+    observations += reset_spot(sim, spot, produce_debug_video)
 
     ## rotation test
     real_robot_rotations = [
@@ -329,26 +333,28 @@ def test_rotation(sim, spot, produce_debug_video):
 
         # set base ground position from navmesh
         observations += simulate(sim, 1.0, produce_debug_video)
-        print('obj translation: ', spot.sim_obj.transformation.translation)
+        print("obj translation: ", spot.sim_obj.transformation.translation)
         sim_obj_rot = matrix_to_euler(spot.sim_obj.transformation.rotation())
-        print('obj rotation: ', np.rad2deg(sim_obj_rot))
-        print('base translation: ', spot.base_transformation.translation)
+        print("obj rotation: ", np.rad2deg(sim_obj_rot))
+        print("base translation: ", spot.base_transformation.translation)
         base_rot = matrix_to_euler(spot.base_transformation.rotation())
-        print('base rotation: ', np.rad2deg(base_rot))
+        print("base rotation: ", np.rad2deg(base_rot))
     return observations
+
 
 def test_gripper(sim, spot, produce_debug_video):
     observations = []
-    observations += reset_spot(sim ,spot, produce_debug_video)
-    spot.open_gripper() 
+    observations += reset_spot(sim, spot, produce_debug_video)
+    spot.open_gripper()
     observations += simulate(sim, 1.0, produce_debug_video)
     spot.close_gripper()
     observations += simulate(sim, 1.0, produce_debug_video)
     return observations
 
-def test_arm_joints(sim ,spot, produce_debug_video):
+
+def test_arm_joints(sim, spot, produce_debug_video):
     observations = []
-    observations += reset_spot(sim ,spot, produce_debug_video)
+    observations += reset_spot(sim, spot, produce_debug_video)
 
     arm_joint_positions = [
         # [0.0, -120.0, 0.0, 60.0, 0.0, 88.0, 0.0],
@@ -415,12 +421,15 @@ def test_arm_joints(sim ,spot, produce_debug_video):
         spot.set_arm_joint_positions(arm_joint_pos)
         observations += simulate(sim, 1.0, produce_debug_video)
         local_ee_pos, local_ee_rpy = spot.get_ee_pos_in_body_frame()
-        print(f'local_ee_pos: {local_ee_pos}, local_ee_rpy: {np.rad2deg(local_ee_rpy)}')
-        print('--------------')
+        print(
+            f"local_ee_pos: {local_ee_pos}, local_ee_rpy: {np.rad2deg(local_ee_rpy)}"
+        )
+        print("--------------")
 
     return observations
 
-def reset_spot(sim ,spot, produce_debug_video):
+
+def reset_spot(sim, spot, produce_debug_video):
     observations = []
     set_robot_pose(spot, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
     spot.set_arm_joint_positions([0.0, -180, 0.0, 180.0, 0.0, 0.0, 0.0])
@@ -429,7 +438,58 @@ def reset_spot(sim ,spot, produce_debug_video):
     observations += simulate(sim, 1.0, produce_debug_video)
     return observations
 
-def test_spot_robot_wrapper(fixed_base, produce_debug_video=False):
+
+def test_obj_to_goal(sim, spot, produce_debug_video):
+    observations = []
+    rom = sim.get_rigid_object_manager()
+    global_T_obj_pos = rom.get_object_by_handle(
+        "ball_new_viz_0_:0000"
+    ).translation
+    print("global_T_obj_pos: ", global_T_obj_pos, type(global_T_obj_pos))
+    global_T_ee = spot.get_ee_global_pose()
+
+    global_T_base = spot.global_T_body()
+    global_T_ee_base_rot = mn.Matrix4.from_(
+        global_T_base.rotation(), global_T_ee.translation
+    )
+    global_T_ee = global_T_ee_base_rot
+    print("global_T_ee: ", global_T_ee, type(global_T_ee.inverted()))
+    obj_T_ee_pos = batch_transform_point(
+        [global_T_obj_pos], global_T_ee.inverted(), np.float32
+    )[[0]].reshape(-1)
+    print("obj_T_ee_pos: ", obj_T_ee_pos)
+
+    observations += simulate(sim, 1.0, produce_debug_video)
+
+    return observations
+
+
+def load_data(filepath):
+    with open(os.path.join(filepath), "rb") as handle:
+        log_packet_list = pkl.load(handle)
+    return log_packet_list
+
+
+def test_real_replay(sim, spot, produce_debug_video, filepath):
+    # dict_keys(['timestamp', 'datetime', 'camera_data',
+    # 'vision_T_base', 'base_pose_xyt', 'arm_pose',
+    # 'is_gripper_holding_item', 'gripper_open_percentage', 'gripper_force_in_hand'])
+    observations = []
+    real_data = load_data(filepath)
+    for step_data in real_data:
+        x, y, t = step_data["base_pose_xyt"]
+        spot.set_base_position(x, y, t)
+        sh0, sh1, el0, el1, wr0, wr1 = step_data["arm_pose"]
+        arm_joints = np.array([sh0, sh1, 0.0, el0, el1, wr0, wr1])
+        spot.set_arm_joint_positions(arm_joints, "radians")
+        # [0.0, -120.0, 0.0, 60.0, 0.0, 88.0, 0.0],
+        observations += simulate(sim, 1.0, produce_debug_video)
+    return observations
+
+
+def test_spot_robot_wrapper(
+    fixed_base, produce_debug_video=False, filepath=""
+):
     # set this to output test results as video for easy investigation
     produce_debug_video = True
     observations = []
@@ -448,20 +508,25 @@ def test_spot_robot_wrapper(fixed_base, produce_debug_video=False):
         spot = create_robot(sim, fixed_base, ground_plane)
         draw_axes(sim, origin)
 
-        real_pos = [0.0, 0.0, 0.0]
-        real_rot = [0.0, 0.0, 0.0]
-        visualize_position_sim(sim, spot, real_pos, real_rot)
+        # real_pos = [1.0, 0.0, 0.0]
+        # real_rot = [0.0, 0.0, 0.0]
+        # visualize_position_sim(sim, spot, real_pos, real_rot)
 
         set_robot_pose(spot, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
         spot.set_arm_joint_positions([0.0, -180, 0.0, 180.0, 0.0, 0.0, 0.0])
+        spot.close_gripper()
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # set the motor angles
         spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
-        observations += test_position(sim, spot, produce_debug_video)
-        observations += test_rotation(sim, spot, produce_debug_video)
-        observations += test_gripper(sim, spot, produce_debug_video)
-        observations += test_arm_joints(sim, spot, produce_debug_video)
+        # observations += test_position(sim, spot, produce_debug_video)
+        # observations += test_rotation(sim, spot, produce_debug_video)
+        # observations += test_gripper(sim, spot, produce_debug_video)
+        # observations += test_arm_joints(sim, spot, produce_debug_video)
+        # observations += test_obj_to_goal(sim, spot, produce_debug_video)
+        observations += test_real_replay(
+            sim, spot, produce_debug_video, filepath
+        )
 
         create_video(produce_debug_video, observations)
 
@@ -477,6 +542,7 @@ if __name__ == "__main__":
         "--no-make-video", dest="make_video", action="store_false"
     )
     parser.add_argument("--fix-base", action="store_false")
+    parser.add_argument("--filepath", default="")
     parser.set_defaults(show_video=True, make_video=True)
     args, _ = parser.parse_known_args()
 
@@ -490,5 +556,5 @@ if __name__ == "__main__":
     if make_video and not os.path.exists(output_path):
         os.mkdir(output_path)
 
-    test_spot_robot_wrapper(True, make_video)
+    test_spot_robot_wrapper(True, make_video, args.filepath)
     # test_spot_robot_wrapper(False, make_video)
