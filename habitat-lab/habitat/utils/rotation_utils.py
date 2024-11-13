@@ -1,8 +1,9 @@
 import math
 
+import magnum as mn
 import numpy as np
 import quaternion
-import magnum as mn
+
 
 def euler_to_quaternion(euler):
     """Convert Euler angles to quaternion."""
@@ -231,7 +232,7 @@ def transform_position(position, direction="sim_to_real"):
     position = np.array(position)
 
     # Create the position transformation matrix
-    transform_matrix = get_transform_matrix(["x", "y", "z"], ["x", "z", "y"])
+    transform_matrix = get_transform_matrix(["x", "y", "z"], ["x", "-z", "y"])
 
     if direction == "sim_to_real":
         # Transform position
@@ -259,7 +260,7 @@ def transform_rotation(rotation, rotation_format="euler"):
     rotation = np.array(rotation)
 
     new_euler = np.array(
-        [rotation[0], -rotation[2], -rotation[1]]
+        [rotation[0], rotation[2], -rotation[1]]
     )  # [roll, yaw, pitch]
 
     # Convert rotation to requested format
