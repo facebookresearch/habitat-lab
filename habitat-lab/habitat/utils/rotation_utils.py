@@ -260,7 +260,7 @@ def transform_rotation(rotation, rotation_format="euler"):
     rotation = np.array(rotation)
 
     new_euler = np.array(
-        [rotation[0], rotation[2], -rotation[1]]
+        [rotation[0], rotation[2], rotation[1]]
     )  # [roll, yaw, pitch]
 
     # Convert rotation to requested format

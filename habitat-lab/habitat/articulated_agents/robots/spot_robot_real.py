@@ -113,15 +113,8 @@ class SpotRobotReal(SpotRobot):
         self.arm_joint_pos = positions
 
     def transform_ee_rot(self, sim_rot):
-        correction_R = euler_to_matrix(np.deg2rad([-90.0, 0.0, 90.0])).T
-
-        real_rot = correction_R @ sim_rot
-
-        # # Matrix to swap roll and yaw (90-degree rotations around Y axis)
-        swap_matrix = np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
-
-        # # Combine both transformations
-        real_rot = swap_matrix @ real_rot @ swap_matrix.T
+        correction_R = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+        real_rot = correction_R @ np.array(sim_rot)
         return real_rot
 
     def get_ee_global_pose(self):
