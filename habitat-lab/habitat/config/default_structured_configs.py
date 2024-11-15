@@ -1887,6 +1887,10 @@ class GymConfig(HabitatBaseConfig):
     action_keys: Optional[List[str]] = None
     achieved_goal_keys: List = field(default_factory=list)
     desired_goal_keys: List[str] = field(default_factory=list)
+    cull_visual_sensors: Optional[bool] = False
+    """
+    When 'True', all visual sensors excluded from 'obs_keys' are removed from the simulation.
+    """
 
 
 @dataclass
