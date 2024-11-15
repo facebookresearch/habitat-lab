@@ -1887,10 +1887,9 @@ class GymConfig(HabitatBaseConfig):
     action_keys: Optional[List[str]] = None
     achieved_goal_keys: List = field(default_factory=list)
     desired_goal_keys: List[str] = field(default_factory=list)
-    cull_visual_sensors: Optional[bool] = False
-    """
-    When 'True', all visual sensors excluded from 'obs_keys' are removed from the simulation.
-    """
+    # When `True`, all visual sensors excluded from `obs_keys` are removed from the simulation.
+    # Beware: Some high-level sensors depend on other sensors, e.g. `humanoid_detector_sensor` depends on a RGB camera. In this case, if the RGB camera is not listed in `obs_keys`, it will be culled, breaking the parent sensor.
+    cull_unused_visual_sensors: Optional[bool] = False
 
 
 @dataclass
