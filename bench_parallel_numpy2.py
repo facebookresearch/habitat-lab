@@ -12,7 +12,7 @@ def numpy_worker(sync_func, array_length, num_iterations):
     x = np.arange(array_length, dtype=np.float64)
     sync_func()  # Synchronize start
     for _ in range(num_iterations):
-        x = x * 1.01  # Element-wise operation
+        x += 0.01  # Element-wise operation
         x[0] += x.mean() * 0.01  # Reduction operation
 
 def list_worker(sync_func, array_length, num_iterations):
@@ -20,7 +20,7 @@ def list_worker(sync_func, array_length, num_iterations):
     x = [float(xi) for xi in range(array_length)]
     sync_func()  # Synchronize start
     for _ in range(num_iterations):
-        x = [xi * 1.01 for xi in x]  # Element-wise operation
+        x = [xi + 0.01 for xi in x]  # Element-wise operation
         x[0] += sum(x) / len(x) * 0.01  # Reduction operation
 
 def launch_workers(worker_func, num_workers, method, array_length, num_iterations):
