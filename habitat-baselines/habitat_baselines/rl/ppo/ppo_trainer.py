@@ -291,6 +291,9 @@ class PPOTrainer(BaseRLTrainer):
 
         self.t_start = time.time()
 
+        self.num_steps_at_recent_log = self.num_steps_done
+        self.t_recent_log = self.t_start
+
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -592,7 +595,13 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in self._single_proc_infos.items():
             writer.add_scalar(k, np.mean(v), self.num_steps_done)
 
-        fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
+        curr_time = time.time()
+        # Compute average fps since last log.
+        fps = (self.num_steps_done - self.num_steps_at_recent_log) / (
+            curr_time - self.t_recent_log
+        )
+        self.num_steps_at_recent_log = self.num_steps_done
+        self.t_recent_log = curr_time
 
         # Log perf metrics.
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
@@ -637,6 +646,12 @@ class PPOTrainer(BaseRLTrainer):
             if self.config.habitat_baselines.should_log_single_proc_infos:
                 for k, v in self._single_proc_infos.items():
                     logger.info(f" - {k}: {np.mean(v):.3f}")
+
+        # Clear timers after each logging. This ensures that each log prints
+        # average/accumulated timings **since the last log** instead of **since the
+        # start of the program run**. This is more useful behavior for troubleshooting
+        # how perf changes over the course of training.
+        g_timer.clear()
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
