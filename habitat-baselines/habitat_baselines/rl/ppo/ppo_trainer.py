@@ -21,6 +21,7 @@ from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
 from habitat.utils import profiling_wrapper
+from habitat.utils.visualizations import video_writer
 from habitat_baselines.common import VectorEnvFactory
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -169,6 +170,12 @@ class PPOTrainer(BaseRLTrainer):
         # `self.window_episode_stats`.
         self._single_proc_infos: Dict[str, List[float]] = {}
 
+        self._video_writers = {}
+        self._video_writer_keys = ["agent_1_head_depth", "agent_0_articulated_agent_arm_depth"]
+        for key in self._video_writer_keys:
+            self._video_writers[key] = [video_writer.VideoWriter(f"env{i}_{key}") for i in range(self.envs.num_envs)]
+
+
     def _init_train(self, resume_state=None):
         if resume_state is None:
             resume_state = load_resume_state(self.config)
@@ -264,6 +271,9 @@ class PPOTrainer(BaseRLTrainer):
         self._ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         observations = self.envs.reset()
+
+        self.rollout_test()
+
         observations = self.envs.post_step(observations)
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
@@ -290,6 +300,9 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         self.t_start = time.time()
+        self._recent_log_time = self.t_start
+        self._recent_log_num_steps = 0
+
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -414,6 +427,12 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+
+            # for key in self._video_writer_keys:
+            #     for i in range(self.envs.num_envs):
+            #         self._video_writers[key][i].add_grayscale_frame(observations[i][key])
+            #         if dones[i]:
+            #             self._video_writers[key][i].write()
 
         with g_timer.avg_time("trainer.update_stats"):
             observations = self.envs.post_step(observations)
@@ -592,10 +611,18 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in self._single_proc_infos.items():
             writer.add_scalar(k, np.mean(v), self.num_steps_done)
 
-        fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
+        curr_time = time.time()
+        fps = self.num_steps_done / ((curr_time - self.t_start) + prev_time)
 
         # Log perf metrics.
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
+
+        if curr_time > self._recent_log_time:
+            recent_fps = (self.num_steps_done - self._recent_log_num_steps) / (curr_time - self._recent_log_time)
+            writer.add_scalar("perf/recent_fps", recent_fps, self.num_steps_done)
+
+        self._recent_log_time = curr_time
+        self._recent_log_num_steps = self.num_steps_done
 
         for timer_name, timer_val in g_timer.items():
             writer.add_scalar(
@@ -638,6 +665,7 @@ class PPOTrainer(BaseRLTrainer):
                 for k, v in self._single_proc_infos.items():
                     logger.info(f" - {k}: {np.mean(v):.3f}")
 
+
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
             return False
@@ -652,7 +680,74 @@ class PPOTrainer(BaseRLTrainer):
             * torch.distributed.get_world_size()
         )
 
-    @profiling_wrapper.RangeContext("train")
+    def rollout_test(self):
+
+        print("Starting rollout_test...")
+        do_profile = False
+        if do_profile:
+            import cProfile
+            import pstats
+            profiler = cProfile.Profile()
+            profiler.enable()
+
+        def get_random_valid_action():
+            # array_length = 25
+            # random_values = (np.random.rand(2) * 4 - 2).astype(np.float32)
+            # result_array = np.zeros(array_length, dtype=np.float32)
+            # result_array[:2] = random_values
+            return np.array([0.51518476, 0.29050353, 0.        , 0.        , 0.        ,
+                0.        , 0.        , 0.        , 0.        , 0.        ,
+                0.        , 0.        , 0.        , 0.        , 0.        ,
+                0.        , 0.        , 0.        , 0.        , 0.        ,
+                0.        , 0.        , 0.        , 0.        , 0.        ],
+                dtype=np.float32)            
+
+        num_envs = self.envs.num_envs
+        print_period = 1 # 32 # max(1, 32 // num_envs)
+        t_recent = time.time()
+        t_start = t_recent
+        num_batch_steps = 4 # print_period * 1
+        for i in range(num_batch_steps):
+            profiling_wrapper.on_start_step()
+            profiling_wrapper.range_push("rollout_test loop body")
+
+            for index_env in range(num_envs):
+                act = get_random_valid_action()
+                self.envs.async_step_at(index_env, act)
+            self.envs.wait_step()            
+            if i % print_period == (print_period - 1):
+                t_curr = time.time()
+                fps = (print_period * num_envs) / (t_curr - t_recent)
+                t_recent = t_curr
+                print(f"fps: {fps:.2f}") 
+            profiling_wrapper.range_pop()
+
+        t_curr = time.time()
+        fps = (num_batch_steps * num_envs) / (t_curr - t_start)
+
+
+        if do_profile:
+            profiler.disable()
+            stats = pstats.Stats(profiler).sort_stats('cumulative')
+            stats.print_stats()
+
+        # from habitat.utils.profiler import print_profiling_events
+        # print_profiling_events()
+
+        print(f"num_envs: {num_envs}")
+        print(f"self.envs._num_substeps: {self.envs._num_substeps}")
+        print(f"enable_batch_renderer: {self.config.habitat.simulator.renderer.enable_batch_renderer}")
+        print(f"self.envs._batch_renderer? {self.envs._batch_renderer is not None}")
+        print(f"HABITAT_ENV_DEBUG: {os.getenv('HABITAT_ENV_DEBUG')}")
+        print(f"PYTHON_GIL: {os.getenv('PYTHON_GIL')}")
+        print(f"overall fps: {fps:.2f}") 
+        print(f"overall fps per env: {fps / num_envs:.2f}") 
+        print(f"overall substeps/s per env: {fps * self.envs._num_substeps / num_envs:.2f}") 
+
+        exit(0)
+
+
+    # @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training DD/PPO.
 
