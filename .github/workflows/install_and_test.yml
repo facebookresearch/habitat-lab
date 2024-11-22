@@ -51,10 +51,6 @@ jobs:
         isort --version
         isort habitat-lab/. habitat-baselines/. examples/. test/.  --diff
         isort habitat-lab/. habitat-baselines/. examples/. test/.  --check-only
-    - name: run flake8
-      run: |-
-        flake8 --version
-        flake8 src_python/habitat_sim/. examples/. tests/. setup.py
     - name: run mypy
       run: |-
         mypy --version
@@ -225,4 +221,3 @@ jobs:
     #NOTE: use the below to debug with ssh: simply move this "job" just before the crashing job to intercept the workflow
     #- name: Debugging with tmate
     #  uses: mxschmitt/action-tmate@v3.18
-    
