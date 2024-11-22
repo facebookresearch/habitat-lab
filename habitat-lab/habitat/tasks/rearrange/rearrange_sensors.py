@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
 from collections import defaultdict, deque
 
 import magnum as mn
@@ -34,6 +35,11 @@ from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quat_to_euler,
+)
+from habitat.utils.rotation_utils import (
+    matrix_to_euler,
+    transform_position,
+    xyz_T_hab,
 )
 
 
@@ -226,14 +232,14 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         #         [0.0, 0.0, 0.0, 1.0],
         #     ]
         # ).transposed()
-        xyz_T_hab_rot = mn.Matrix4(
-            [
-                [-1.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ).transposed()
+        # xyz_T_hab_rot = mn.Matrix4(  # most likely wrong
+        #     [
+        #         [-1.0, 0.0, 0.0, 0.0],
+        #         [0.0, 0.0, 1.0, 0.0],
+        #         [0.0, 1.0, 0.0, 0.0],
+        #         [0.0, 0.0, 0.0, 1.0],
+        #     ]
+        # ).transposed()
         tf_untranslate = mn.Matrix4.translation(-tf.translation)
         if not reverse:
             rot = xyz_T_hab_rot
@@ -248,7 +254,97 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         tf_new = tf_retranslate @ tf_new
         return tf_new
 
+    def get_observation_real(self, task):
+        _, sim_global_T_obj_pos = self._sim.get_targets()
+        global_T_obj_pos_YXZ = sim_global_T_obj_pos[task.targ_idx]
+        global_T_obj_pos_XYZ = transform_position(
+            global_T_obj_pos_YXZ, direction="sim_to_real"
+        )
+        articulated_agent_data = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent
+        global_T_ee_YZX = articulated_agent_data.ee_transform()
+
+        ee_T_obj_YZX = global_T_ee_YZX.inverted().transform_point(
+            global_T_obj_pos_YXZ
+        )
+        ee_T_obj_XYZ = transform_position(ee_T_obj_YZX, "sim_to_real")
+        correction_matrix = mn.Matrix4(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        ee_T_obj_XYZ_c = correction_matrix.transform_point(ee_T_obj_XYZ)
+
+        # distances = [str(i) if abs(i) > 0.02 else str(0) for i in ee_T_obj_YZX]
+
+        # os.environ["arm_action"] = ",".join(distances)
+
+        # def get_point_along_vector(
+        #     curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
+        # ) -> np.ndarray:
+        #     """
+        #     Calculate a point that lies on the vector from curr to goal,
+        #     at a specified distance (step_size) from curr.
+
+        #     Args:
+        #         curr: numpy array [x, y, z] representing current position
+        #         goal: numpy array [x, y, z] representing goal position
+        #         step_size: Distance the returned point should be from curr (default 0.15)
+
+        #     Returns:
+        #         numpy array [x, y, z] representing the calculated point
+        #         If distance between curr and goal is less than step_size, returns goal
+        #     """
+        #     # Calculate vector from curr to goal
+        #     vector = goal - curr
+
+        #     # Calculate distance between points
+        #     distance = np.linalg.norm(vector)
+
+        #     # If distance is less than step_size, return goal
+        #     if distance <= step_size:
+        #         return goal
+
+        #     # Normalize the vector and multiply by step_size
+        #     unit_vector = vector / distance
+        #     new_point = curr + (unit_vector * step_size)
+
+        #     # Round to reduce floating point errors
+        #     return np.round(new_point, 6)
+
+        # end_effector_position_YZX = (
+        #     self._sim.articulated_agent.ee_transform().translation
+        # )
+        # _, sim_global_T_obj_pos = self._sim.get_targets()
+        # target_position_YZX = sim_global_T_obj_pos[0]
+        # position_goal = get_point_along_vector(
+        #     end_effector_position_YZX, target_position_YZX, 0.15
+        # )
+        # global_T_base = self._sim.articulated_agent.base_transformation
+        # position_goal_base_T_ee = global_T_base.inverted().transform_point(
+        #     position_goal
+        # )
+
+        # os.environ["POSITION_GOAL"] = ",".join(
+        #     [str(i) for i in position_goal_base_T_ee]
+        # )
+
+        # ee_T_obj_pos = batch_transform_point(
+        #     np.array([global_T_obj_pos]), global_T_ee.inverted(), np.float32
+        # )[[task.targ_idx]].reshape(-1)
+
+        # obj_T_ee_pos = -ee_T_obj_pos
+
+        return np.array(ee_T_obj_XYZ_c, dtype=np.float32)
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
+        if self.config.use_real_world_conventions:
+            return self.get_observation_real(task)
+
         global_T_ee = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.ee_transform()
@@ -467,10 +563,19 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
                 mask_joints_pos.append(joints_pos[i])
         return mask_joints_pos
 
-    def get_observation(self, observations, episode, *args, **kwargs):
+    def get_observation_real(self):
         joints_pos = self._sim.get_agent_data(
             self.agent_id
-        ).articulated_agent.arm_joint_pos
+        ).articulated_agent.get_arm_joint_positions()
+        return joints_pos
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.config.use_real_world_conventions:
+            joints_pos = self.get_observation_real()
+        else:
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.arm_joint_pos
         if self._arm_joint_mask is not None:
             joints_pos = self._get_mask_joint(joints_pos)
         return np.array(joints_pos, dtype=np.float32)
@@ -592,8 +697,32 @@ class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
             dtype=np.float32,
         )
 
+    def get_observation_real(self):
+        articulated_agent_data = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent
+        global_T_ee_YZX = articulated_agent_data.ee_transform()
+        global_T_base_YZX = articulated_agent_data.base_transformation
+        base_T_ee_XYZ = global_T_base_YZX.inverted() @ global_T_ee_YZX
+        local_ee_pos = np.array(base_T_ee_XYZ.translation)
+
+        rotation_offset = mn.Matrix4(
+            [
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [-1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        base_T_ee_XYZ_c = base_T_ee_XYZ @ rotation_offset
+        local_ee_rpy = matrix_to_euler(base_T_ee_XYZ_c.rotation())
+
+        return np.array([*local_ee_pos, *local_ee_rpy], dtype=np.float32)
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        # returns base_T_ee
+        if self.config.use_real_world_conventions:
+            return self.get_observation_real()
+
         bullet_ee_xyz, bullet_ee_rpy = task.actions["arm_action"].get_ee_pose()
 
         return np.array([*bullet_ee_xyz, *bullet_ee_rpy], dtype=np.float32)
