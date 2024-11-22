@@ -126,10 +126,6 @@ jobs:
           no_output_timeout: 20m
           background: true
           command: nvidia-smi
-      # Restore Conda cache
-      - restore_cache:
-          keys:
-            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
