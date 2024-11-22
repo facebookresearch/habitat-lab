@@ -71,7 +71,7 @@ jobs:
     - name: run mypy
       run: mypy
 
-  install_and_test_sim_ubuntu:
+  install_and_test_lab_ubuntu:
     runs-on: 4-core-ubuntu-gpu-t4
     defaults:
       run:
