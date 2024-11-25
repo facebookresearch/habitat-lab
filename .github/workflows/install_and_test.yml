@@ -210,20 +210,28 @@ jobs:
         pip install --upgrade build
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
+    - name: Setup miniconda
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "bdist-install"
     - name: Ensure sdist and bdist intall work
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
-        conda create -y -n bdist-install python=3.9
-        . activate bdist-install
+        conda activate bdist-install
         conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+        #create the sdist for testing in the next job
         conda create -n sdist-install --clone bdist-install
-        # install from built distribution:
-        . activate bdist-install
         pip install habitat-lab/dist/habitat_lab*.whl
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/dist/habitat_baselines*.whl
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+    - name: Ensure sdist and bdist intall work
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        cd habitat-lab
         # install from source distribution:
         . activate sdist-install
         pip install habitat-lab/dist/habitat_lab*.tar.gz
