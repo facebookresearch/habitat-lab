@@ -176,14 +176,19 @@ jobs:
     #     conda install -y  jinja2 pygments docutils
     #     mkdir -p ../build/docs
     #     ./build-public.sh
-    - name: Debugging with tmate
-      uses: mxschmitt/action-tmate@v3.18
+    #- name: Debugging with tmate
+    #  uses: mxschmitt/action-tmate@v3.18
+    - name: Setup miniconda
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "non-editable-install"
     - name: Ensure non-editable mode works
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
-        conda create -y -n non-editable-install python=3.9
-        . activate non-editable-install
+        conda activate non-editable-install
         conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
         pip install habitat-lab/
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
@@ -191,12 +196,17 @@ jobs:
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
         pip install habitat-hitl/
         python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
+    - name: Setup miniconda
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "build-env"
     - name: build_sdist_and_bdist
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
-        conda create -y -n build-env python=3.9
-        . activate build-env
+        conda activate build-env
         pip install --upgrade build
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
