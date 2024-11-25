@@ -20,7 +20,35 @@ from habitat.utils.rotation_utils import *
 
 
 class SpotRobotReal(SpotRobot):
+    def xyz_T_hab(self, tf, reverse=False):
+        """
+        Convert from habitat -> real-world xyz coordinates
+        If reverse = True, converts from real-world xyz -> habitat coordinates
+        """
+        xyz_T_hab_rot = mn.Matrix4(
+            [
+                [0.0, 0.0, -1.0, 0.0],
+                [-1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        tf_untranslate = mn.Matrix4.translation(-tf.translation)
+        if not reverse:
+            rot = xyz_T_hab_rot
+        else:
+            rot = xyz_T_hab_rot.inverted()
+        tf_retranslate = mn.Matrix4.translation(
+            rot.transform_point(tf.translation)
+        )
+
+        tf_new = tf_untranslate @ tf
+        tf_new = xyz_T_hab_rot.inverted() @ tf_new
+        tf_new = tf_retranslate @ tf_new
+        return tf_new
+
     def transform_to_real(self, sim_tform_matrix):
+        # real_tform_matrix = self.xyz_T_hab(sim_tform_matrix)
         real_translation = transform_position(
             sim_tform_matrix.translation, direction="sim_to_real"
         )
@@ -104,7 +132,7 @@ class SpotRobotReal(SpotRobot):
     ):
         return self.arm_joint_pos
 
-    def set_arm_joint_positions(self, positions, format="degrees"):
+    def set_arm_joint_positions(self, positions, format="radians"):
         """
         Joint angles: sh0, sh1, hr1, el0, el1, wr0, wr1
         """
@@ -117,8 +145,123 @@ class SpotRobotReal(SpotRobot):
         real_rot = correction_R @ np.array(sim_rot)
         return real_rot
 
+    def convert_matrix_habitat_to_standard(
+        self, matrix: mn.Matrix4
+    ) -> mn.Matrix4:
+        """
+        Convert a Matrix4 from Habitat convention (x=right, y=up, z=backwards)
+        to standard convention (x=forward, y=left, z=up).
+
+        Args:
+            matrix: Magnum Matrix4 in Habitat convention
+
+        Returns:
+            Matrix4 in standard convention
+        """
+        # Convert Matrix4 to numpy array in row-major order for easier manipulation
+        mat_np = np.array(
+            [
+                [matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]],
+                [matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1]],
+                [matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2]],
+                [matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3]],
+            ]
+        )
+
+        # Create permutation matrix
+        perm = np.array(
+            [
+                [0, 0, -1, 0],  # New x comes from negated old z
+                [-1, 0, 0, 0],  # New y comes from negated old x
+                [0, 1, 0, 0],  # New z comes from old y
+                [0, 0, 0, 1],
+            ]
+        )
+
+        # Apply the permutation
+        result = mat_np.copy()
+        result[:3, :3] = perm[:3, :3] @ mat_np[:3, :3] @ perm[:3, :3].T
+        result[:3, 3] = perm[:3, :3] @ mat_np[:3, 3]
+
+        return mn.Matrix4(result)
+
+    @property
+    def base_transformation_YZX(self):
+        add_rot = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        )
+        return self.sim_obj.transformation @ add_rot
+
+    @property
+    def base_transformation(self):
+        global_T_base_YZX = self.base_transformation_YZX
+        global_T_base = self.convert_matrix_habitat_to_standard(
+            global_T_base_YZX
+        )
+        print(
+            "SIM global_T_base_YZX = ",
+            global_T_base_YZX.translation,
+            np.rad2deg(matrix_to_euler(global_T_base_YZX.rotation())),
+        )
+        print(
+            "REAL global_T_base = ",
+            global_T_base.translation,
+            np.rad2deg(matrix_to_euler(global_T_base.rotation())),
+        )
+        # global_T_base_trans = transform_position(global_T_base_YZX.translation)
+        # # base_xyz_T_hab_rot = mn.Matrix4(
+        # #     [
+        # #         [0.0, 1.0, 0.0, 0.0],
+        # #         [0.0, 0.0, -1.0, 0.0],
+        # #         [1.0, 0.0, 0.0, 0.0],
+        # #         [0.0, 0.0, 0.0, 1.0],
+        # #     ]
+        # # ).transposed()
+        # base_xyz_T_hab_rot = mn.Matrix4(
+        #     [
+        #         [0.0, -1.0, 0.0, 0.0],
+        #         [-1.0, 0.0, 0.0, 0.0],
+        #         [0.0, 0.0, 1.0, 0.0],
+        #         [0.0, 0.0, 0.0, 1.0],
+        #     ]
+        # ).transposed()
+        # global_T_base_rot = (global_T_base_YZX @ base_xyz_T_hab_rot).rotation()
+        # global_T_base = mn.Matrix4.from_(
+        #     global_T_base_rot, global_T_base_trans
+        # )
+        return global_T_base
+
+    def ee_transform_YZX(self, ee_index: int = 0) -> mn.Matrix4:
+        if ee_index >= len(self.params.ee_links):
+            raise ValueError(
+                "The current manipulator does not have enough end effectors"
+            )
+
+        ef_link_transform = self.sim_obj.get_link_scene_node(
+            self.params.ee_links[ee_index]
+        ).transformation
+        ef_link_transform.translation = ef_link_transform.transform_point(
+            self.ee_local_offset(ee_index)
+        )
+        return ef_link_transform
+
+    def ee_transform(self, ee_index: int = 0) -> mn.Matrix4:
+        global_T_ee_YZX = self.ee_transform_YZX(ee_index)
+        global_T_ee_trans = transform_position(global_T_ee_YZX.translation)
+        ee_xyz_T_hab_rot = mn.Matrix4(
+            [
+                [0.0, 1.0, 1.0, 0.0],
+                [0.0, 0.0, -1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        global_T_ee_rot = (global_T_ee_YZX @ ee_xyz_T_hab_rot).rotation()
+        global_T_ee = mn.Matrix4.from_(global_T_ee_rot, global_T_ee_trans)
+        return global_T_ee
+
     def get_ee_global_pose(self):
-        global_T_ee = self.ee_transform()
+        global_T_ee = self.ee_transform_YZX()
         real_global_pos = transform_position(global_T_ee.translation)
         real_global_rot = self.transform_ee_rot(global_T_ee.rotation())
         real_global_T_ee = create_tform_matrix(
@@ -144,7 +287,10 @@ class SpotRobotReal(SpotRobot):
                 "The current manipulator does not have enough end effectors"
             )
         real_body_T_ee = self.get_ee_local_pose_matrix()
-        real_ee_quat = matrix_to_quaternion(real_body_T_ee.rotation())
+        # real_ee_quat = matrix_to_quaternion(real_body_T_ee.rotation())
+        real_ee_quat = quaternion.from_rotation_matrix(
+            real_body_T_ee.rotation()
+        )
         return np.array(real_body_T_ee.translation), real_ee_quat
 
     def get_ee_pos_in_body_frame(self):
