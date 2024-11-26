@@ -36,9 +36,13 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: "DictConfig") -> bool:
-        return os.path.exists(
-            config.data_path.format(split=config.split)
-        ) and os.path.exists(config.scenes_dir)
+        split_found = os.path.exists(config.data_path.format(split=config.split))
+        scenes_found = os.path.exists(config.scenes_dir)
+        if not split_found:
+            print(f"Could not find {os.path.join(os.getcwd(), config.data_path.format(split=config.split))}")
+        if not scenes_found:
+            print(f"Could not find {os.path.join(os.getcwd(), config.scenes_dir)}")
+        return split_found and scenes_found
 
     @classmethod
     def get_scenes_to_load(cls, config: "DictConfig") -> List[str]:
