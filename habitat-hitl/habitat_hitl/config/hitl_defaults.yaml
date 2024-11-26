@@ -27,7 +27,7 @@ habitat_hitl:
     enable_connections_by_default: True
 
     # We'll listen for incoming client connections at this port.
-    port: 8888
+    port: 8100
 
     # If True, NetworkManager will wait until the application issues ClientMessageManager.signal_app_ready before sending the first gfx-replay keyframe to the client. This gives the application an opportunity to e.g. change scenes when a client connects. If False, NetworkManager will start sending keyframes immediately upon connect.
     wait_for_app_ready_signal: False
