@@ -178,7 +178,7 @@ jobs:
     #     ./build-public.sh
     #- name: Debugging with tmate
     #  uses: mxschmitt/action-tmate@v3.18
-    - name: Setup miniconda
+    - name: Setup non editable install env
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
@@ -196,13 +196,13 @@ jobs:
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
         pip install habitat-hitl/
         python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
-    - name: Setup miniconda
+    - name: Setup build env
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
         python-version: "3.9"
         activate-environment: "build-env"
-    - name: build_sdist_and_bdist
+    - name: Build lab and baselines packages
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
@@ -210,13 +210,13 @@ jobs:
         pip install --upgrade build
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
         python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
-    - name: Setup miniconda
+    - name: Setup bdist conda env
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
         python-version: "3.9"
         activate-environment: "bdist-install"
-    - name: Ensure sdist and bdist intall work
+    - name: Ensure bdist install works and build sdist
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
@@ -228,12 +228,12 @@ jobs:
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/dist/habitat_baselines*.whl
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
-    - name: Ensure sdist and bdist intall work
+    - name: Ensure sdist install works
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
         # install from source distribution:
-        . activate sdist-install
+        conda activate sdist-install
         pip install habitat-lab/dist/habitat_lab*.tar.gz
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/dist/habitat_baselines*.tar.gz
