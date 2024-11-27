@@ -1,0 +1,241 @@
+name: Install and test
+on:
+  pull_request: {}
+  push:
+    branches:
+    - main
+    tags: [ "v*" ]
+  schedule:
+    - cron: "0 5 * * *"
+    #this is 9PM PST
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4.1.1
+    - name: Setup python
+      uses: actions/setup-python@v5.0.0
+      with:
+        python-version: '3.9.16'
+    - name: install dependencies
+      run: |-
+        pip install -U pip setuptools pre-commit
+        # Install the hooks now so that they'll be cached
+        pre-commit install-hooks
+    - name: Check Code Style using pre-commit
+      run: |-
+        SKIP=eslint pre-commit run --show-diff-on-failure --all-files
+
+  python_lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4.1.1
+    - name: Setup python
+      uses: actions/setup-python@v5.0.0
+      with:
+        python-version: '3.9.16'
+    - name: setup
+      run: |-
+        pip install black==23.1.0 --progress-bar off
+        pip install "isort[pyproject]" numpy --progress-bar off
+        pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
+        pip install -r habitat-lab/requirements.txt --progress-bar off
+    - name: run black
+      run: |-
+        black --version
+        black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(notebooks|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
+        black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(notebooks|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
+    - name: run isort
+      run: |-
+        isort --version
+        isort habitat-lab/. habitat-baselines/. examples/. test/.  --diff
+        isort habitat-lab/. habitat-baselines/. examples/. test/.  --check-only
+    - name: run mypy
+      run: |-
+        mypy --version
+        mypy --exclude="^docs/|setup.py$"
+
+  install_and_test_lab_ubuntu:
+    runs-on: 4-core-ubuntu-gpu-t4
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - uses: actions/checkout@v4.1.1
+      with:
+        path: "./habitat-lab"
+    - uses: "./habitat-lab/.github/actions/install_ubuntu_deps"
+    - uses: "./habitat-lab/.github/actions/install_ubuntu_gpu_deps"
+    - name: Build, install habitat-sim
+      run: |-
+        #give cmake ownership to the runner for installation
+        sudo chown runner -R /opt/cmake312/
+        #activate conda env
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        #install habitat-sim
+        if [ ! -d ./habitat-sim ]
+        then
+          git clone https://github.com/facebookresearch/habitat-sim.git --recursive
+        fi
+        cd habitat-sim
+        pip install -r requirements.txt --progress-bar off
+        git submodule update --init --recursive --jobs 8
+        python -u setup.py install --headless --with-cuda --bullet
+    - name: Download test data
+      run: |
+        # Disable clone protection for git lfs
+        export GIT_CLONE_PROTECTION_ACTIVE=false
+
+        git --version
+        git-lfs --version
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda init
+        source ~/.bashrc
+        conda activate habitat
+        conda install -y gitpython git-lfs
+        cd habitat-sim
+        git lfs install
+        python src_python/habitat_sim/utils/datasets_download.py --uids ci_test_assets franka_panda hab_spot_arm hab3_bench_assets hab2_bench_assets habitat_humanoids ycb rearrange_dataset_v2 --no-replace --no-prune
+        ls -la data/scene_datasets/habitat-test-scenes/
+    - name: Run sim benchmark
+      run: |-
+        #give cmake ownership to the runner for installation
+        sudo chown runner -R /opt/cmake312/
+        #activate conda env
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-sim
+        python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent
+    - name: Install lab, baselines, and hitl packages
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        ln -s ../habitat-sim/data data
+        pip install -e habitat-lab
+        pip install -e habitat-baselines
+        pip install -e habitat-hitl
+    - name: Run lab tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
+
+        curl -Os https://uploader.codecov.io/latest/linux/codecov
+        chmod +x codecov
+        #Uploading test coverage for Python code
+        ./codecov -f coverage.xml -cF Python
+    - name: Run hitl tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        export GIT_CLONE_PROTECTION_ACTIVE=false
+        python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
+        python -m pytest habitat-hitl/test
+    - name: Run baselines tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        # This is a flag that enables test_baseline_training to work
+        export TEST_BASELINE_SMALL=1
+        python -m pytest test/test_baseline_training.py -s
+    - name: Run Habitat 2.0 Benchmark
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        #move the episode dataset file into the expected location
+        mkdir -p data/ep_datasets/
+        cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
+        #run the benchmark
+        bash scripts/hab2_bench/bench_runner.sh
+        python scripts/hab2_bench/plot_bench.py
+        # Assert the SPS number are up to standard
+        python scripts/hab2_bench/assert_bench.py
+    - name: Test building API documentation
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        # Download sim inventory for crosslinking (no need to build the whole sim docs for that)
+        mkdir -p ../habitat-sim/build/docs-public/habitat-sim
+        curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
+        cd docs
+        conda install -y -c conda-forge doxygen=1.9.5
+        conda install -y  jinja2 pygments docutils
+        mkdir -p ../build/docs
+        ./build-public.sh
+    - name: Setup non editable install env
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "non-editable-install"
+    - name: Ensure non-editable mode works
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        cd habitat-lab
+        conda activate non-editable-install
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+        pip install habitat-lab/
+        python -c 'import habitat; print("habitat version:", habitat.__version__)'
+        pip install habitat-baselines/
+        python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+        pip install habitat-hitl/
+        python -c 'import habitat_hitl; print("habitat_hitl version:", habitat_hitl.__version__)'
+    - name: Setup build env
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "build-env"
+    - name: Build lab and baselines packages
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        cd habitat-lab
+        conda activate build-env
+        pip install --upgrade build
+        python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
+        python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
+    - name: Setup bdist conda env
+      uses: conda-incubator/setup-miniconda@v3.0.1
+      with:
+        miniconda-version: "latest"
+        python-version: "3.9"
+        activate-environment: "bdist-install"
+    - name: Ensure bdist install works and build sdist
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        cd habitat-lab
+        conda activate bdist-install
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+        #create the sdist for testing in the next job
+        conda create -n sdist-install --clone bdist-install
+        pip install habitat-lab/dist/habitat_lab*.whl
+        python -c 'import habitat; print("habitat version:", habitat.__version__)'
+        pip install habitat-baselines/dist/habitat_baselines*.whl
+        python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+    - name: Ensure sdist install works
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        cd habitat-lab
+        # install from source distribution:
+        conda activate sdist-install
+        pip install habitat-lab/dist/habitat_lab*.tar.gz
+        python -c 'import habitat; print("habitat version:", habitat.__version__)'
+        pip install habitat-baselines/dist/habitat_baselines*.tar.gz
+        python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+    #NOTE: use the below to debug with ssh: simply move this "job" just before the crashing job to intercept the workflow
+    #- name: Debugging with tmate
+    #  uses: mxschmitt/action-tmate@v3.18
