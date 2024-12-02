@@ -238,6 +238,8 @@ jobs:
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/dist/habitat_baselines*.tar.gz
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+    - name: Debugging with tmate
+      uses: mxschmitt/action-tmate@v3.18
     - name: pypi deployment
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
