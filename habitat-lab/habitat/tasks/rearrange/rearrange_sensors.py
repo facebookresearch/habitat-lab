@@ -37,9 +37,8 @@ from habitat.utils.geometry_utils import (
     quat_to_euler,
 )
 from habitat.utils.rotation_utils import (
-    matrix_to_euler,
+    extract_roll_pitch_yaw,
     transform_position,
-    xyz_T_hab,
 )
 
 
@@ -263,8 +262,7 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         articulated_agent_data = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent
-        global_T_ee_YZX = articulated_agent_data.ee_transform()
-
+        global_T_ee_YZX = articulated_agent_data.ee_transform_YZX()
         ee_T_obj_YZX = global_T_ee_YZX.inverted().transform_point(
             global_T_obj_pos_YXZ
         )
@@ -278,6 +276,9 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             ]
         ).transposed()
         ee_T_obj_XYZ_c = correction_matrix.transform_point(ee_T_obj_XYZ)
+        base_position = (
+            articulated_agent_data.base_transformation_YZX.translation
+        )
 
         # distances = [str(i) if abs(i) > 0.02 else str(0) for i in ee_T_obj_YZX]
 
@@ -701,8 +702,8 @@ class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
         articulated_agent_data = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent
-        global_T_ee_YZX = articulated_agent_data.ee_transform()
-        global_T_base_YZX = articulated_agent_data.base_transformation
+        global_T_ee_YZX = articulated_agent_data.ee_transform_YZX()
+        global_T_base_YZX = articulated_agent_data.base_transformation_YZX
         base_T_ee_XYZ = global_T_base_YZX.inverted() @ global_T_ee_YZX
         local_ee_pos = np.array(base_T_ee_XYZ.translation)
 
@@ -715,7 +716,7 @@ class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
             ]
         ).transposed()
         base_T_ee_XYZ_c = base_T_ee_XYZ @ rotation_offset
-        local_ee_rpy = matrix_to_euler(base_T_ee_XYZ_c.rotation())
+        local_ee_rpy = extract_roll_pitch_yaw(base_T_ee_XYZ_c.rotation())
 
         return np.array([*local_ee_pos, *local_ee_rpy], dtype=np.float32)
 

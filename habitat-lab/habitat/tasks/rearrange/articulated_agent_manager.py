@@ -19,6 +19,7 @@ from habitat.articulated_agents.robots import (
     FetchRobot,
     FetchRobotNoWheels,
     SpotRobot,
+    SpotRobotReal,
     StretchRobot,
 )
 from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
