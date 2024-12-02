@@ -76,13 +76,13 @@ class SpotRobotReal(SpotRobot):
         return ef_link_transform
 
     def ee_transform(self, ee_index: int = 0) -> mn.Matrix4:
-        global_T_ee_raw_hab = self.ee_transform_YZX(ee_index)
-        # global_T_ee_raw_hab = self.sim_obj.get_link_scene_node(
-        #     ee_index
-        # ).transformation
-        # global_T_ee_raw_hab.translation = global_T_ee_raw_hab.transform_point(
-        #     mn.Vector3(0.08, 0, 0)
-        # )
+        # global_T_ee_raw_hab = self.ee_transform_YZX(ee_index)
+        global_T_ee_raw_hab = self.sim_obj.get_link_scene_node(
+            ee_index
+        ).transformation
+        global_T_ee_raw_hab.translation = global_T_ee_raw_hab.transform_point(
+            mn.Vector3(0.08, 0, 0)
+        )
         global_T_ee_std = convert_conventions(global_T_ee_raw_hab)
         return global_T_ee_std
 

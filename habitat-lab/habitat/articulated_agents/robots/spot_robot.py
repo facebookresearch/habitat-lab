@@ -19,11 +19,16 @@ from habitat.articulated_agents.mobile_manipulator import (
 class SpotRobot(MobileManipulator):
     def _get_spot_params(self):
         return MobileManipulatorParams(
+            # arm_joints=list(range(0, 6)),
+            # gripper_joints=[6],
+            # leg_joints=list(range(7, 19)),
+            # arm_init_params=np.array([0.0, -3.14, 3.0, 0.0, 0.0, 0.0]),
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            arm_init_params=np.array([0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]),
-            gripper_init_params=np.array([-1.56]),
+            arm_init_params=np.array([0.0, -3.14, 0.0, 3.14, 0.0, 0.0, 0.0]),
+            # gripper_init_params=np.array([-1.56]),
+            gripper_init_params=np.array([0]),
             leg_init_params=[
                 0.0,
                 0.7,

@@ -161,20 +161,20 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         # We want to change the arm joint after doing top_down_grasp
         if self._config.fix_obj_rotation_change_arm_joint and top_down_grasp:
             self.random_arm()
-        else:
-            new_arm_joint_pos = np.array(self._config.init_joint_angles)
-            if self._config.randomize_ee_ori:
-                ee_oris = [0.0, -1.57, 1.57]
-                new_arm_joint_pos[-1] = random.choice(ee_oris)
+        # else:
+        #     new_arm_joint_pos = np.array(self._config.init_joint_angles)
+        #     if self._config.randomize_ee_ori:
+        #         ee_oris = [0.0, -1.57, 1.57]
+        #         new_arm_joint_pos[-1] = random.choice(ee_oris)
 
-            # Set the arm
-            self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
-                new_arm_joint_pos
-            )
-            # Update the initial ee orientation
-            _, self.init_ee_orientation = self._sim.get_agent_data(
-                None
-            ).articulated_agent.get_ee_local_pose()
+        #     # Set the arm
+        #     self._sim.get_agent_data(None).articulated_agent.arm_joint_pos = (
+        #         new_arm_joint_pos
+        #     )
+        #     # Update the initial ee orientation
+        #     _, self.init_ee_orientation = self._sim.get_agent_data(
+        #         None
+        #     ).articulated_agent.get_ee_local_pose()
 
         # Here, we teleport the target object to the gripper
         # The place task is to let Spot place the object in the original
@@ -197,6 +197,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             None
         ).articulated_agent.get_ee_local_pose()  # type: ignore
 
+        print("self.init_ee_orientaiton: ", self.init_ee_orientation)
         # We update the initial object orientation here to be the gripper orientation if
         # it is top down grasping
         if top_down_grasp and not self._config.enable_rotation_target:
@@ -213,12 +214,15 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
                 target_location[i]
                 + np.random.uniform(-1, 1) * self._config.object_target_noise
             )
+            # Visualize the placing target for debugging
+
         self.noise_target_location = np.array(noise_target_location)
 
-        # Visualize the placing target for debugging
         if self._config.render_target:
             self._sim.viz_ids["reach_target"] = self._sim.visualize_position(
-                self.noise_target_location,
+                target_location,
                 self._sim.viz_ids["reach_target"],
             )
+            print("target_location: ", target_location)
+
         return self._get_observations(episode)

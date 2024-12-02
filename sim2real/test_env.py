@@ -14,6 +14,7 @@ import magnum as mn
 import numpy as np
 import pytest
 from omegaconf import DictConfig
+from scipy.spatial.transform import Slerp as slerp
 
 import habitat.articulated_agents.robots.spot_robot as spot_robot
 import habitat.articulated_agents.robots.spot_robot_real as spot_robot
@@ -75,6 +76,7 @@ class TestEnv:
         self.real_filepath = filepath
         self.observations = []
         self.start_js = np.array([0.0, -180, 0.0, 180.0, 0.0, 0.0, 0.0])
+        # self.start_js = np.array([0, -180, 180, 90, 0, -90])
 
         self.init_scene_and_robot()
 
@@ -323,7 +325,7 @@ class TestEnv:
         self.visualize_position_sim(real_pos, real_rot)
         self.simulate(1.0)
 
-        self.set_robot_pose([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+        self.spot.set_base_position(0.0, 0.0, 0.0)
         self.spot.set_arm_joint_positions(self.start_js)
         self.spot.close_gripper()
         self.spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
@@ -345,9 +347,9 @@ class TestEnv:
             [-1.0, -1.0, 0.0],  # back right
         ]
         for real_robot_pos in real_robot_positions:
-            real_robot_rot = [0.0, 0.0, 0.0]
-            self.set_robot_pose(real_robot_pos, np.deg2rad(real_robot_rot))
-
+            self.spot.set_base_position(
+                real_robot_pos[0], real_robot_pos[1], 0
+            )
             # set base ground position from navmesh
             self.simulate(1.0)
 
@@ -355,17 +357,6 @@ class TestEnv:
                 "obj translation: ",
                 self.spot.sim_obj.transformation.translation,
             )
-            sim_obj_rot = matrix_to_euler(
-                self.spot.sim_obj.transformation.rotation()
-            )
-            print("obj rotation: ", np.rad2deg(sim_obj_rot))
-            print(
-                "base translation: ", self.spot.base_transformation.translation
-            )
-            base_rot = matrix_to_euler(
-                self.spot.base_transformation.rotation()
-            )
-            print("base rotation: ", np.rad2deg(base_rot))
 
     def test_rotation(self):
         self.reset_spot()
@@ -488,7 +479,8 @@ class TestEnv:
         return observations
 
     def reset_spot(self):
-        self.set_robot_pose(self.spot, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+        self.spot.set_base_position(0.0, 0.0, 0.0)
+
         self.spot.set_arm_joint_positions(
             [0.0, -180, 0.0, 180.0, 0.0, 0.0, 0.0]
         )
@@ -546,129 +538,53 @@ class TestEnv:
         abs_error_joint_angles = []
         for step_data in real_data:
             x, y, t = step_data["base_pose_xyt"]
-            self.spot.set_base_position(x, y, t)
-            if "ee_pose" in step_data.keys():
-                cur_sim_ee_xyz, curr_sim_ee_rpy = self.ik_helper.calc_fk(
-                    np.array(self.spot.get_arm_joint_positions())
-                )
-                local_ee_pos, local_ee_rpy = (
-                    self.spot.get_ee_pos_in_body_frame()
-                )
-                ee_xyz, ee_rpy = step_data["ee_pose"]
-                ee_xyz, ee_rpy = self.apply_ee_constraints(
-                    np.array([ee_xyz, ee_rpy])
-                )
-                arm_joints = self.ik_helper.calc_ik(ee_xyz, ee_rpy)
-                print("arm_joints: ", arm_joints, len(arm_joints))
-                sh0, sh1, el0, el1, wr0, wr1 = step_data["arm_pose"]
-                real_arm_joints = np.array([sh0, sh1, 0.0, el0, el1, wr0, wr1])
-                abs_error_joint_angles.append(
-                    np.abs(np.array(real_arm_joints) - np.array(arm_joints))
-                )
-                self.spot.set_arm_joint_positions(arm_joints, "radians")
-                self.ik_helper.set_arm_state(arm_joints)
-            else:
-                sh0, sh1, el0, el1, wr0, wr1 = step_data["arm_pose"]
-                arm_joints = np.array([sh0, sh1, 0.0, el0, el1, wr0, wr1])
-                self.spot.set_arm_joint_positions(arm_joints, "radians")
+            print("theta: ", t)
+            # self.spot.set_base_position(x, y, t)
+            # if "ee_pose" in step_data.keys():
+            #     joint_pos = np.array(self.spot.arm_joint_pos)
+            #     joint_vel = np.zeros(joint_pos.shape)
+            #     self.ik_helper.set_arm_state(joint_pos, joint_vel)
+
+            #     cur_sim_ee_xyz, curr_sim_ee_rpy = self.ik_helper.calc_fk(
+            #         np.array(self.spot.get_arm_joint_positions())
+            #     )
+            #     local_ee_pos, local_ee_rpy = (
+            #         self.spot.get_ee_pos_in_body_frame()
+            #     )
+            #     ee_xyz, ee_rpy = step_data["ee_pose"]
+
+            #     # ee_xyz, ee_rpy = self.apply_ee_constraints(
+            #     # np.array([ee_xyz, ee_rpy])
+            #     # )
+            #     # print("CALC IK WITH POSITION")
+            #     arm_joints = self.ik_helper.calc_ik(ee_xyz)
+            #     print("CALC IK WITH POSITION + ROTATION")
+            #     # arm_joints = self.ik_helper.calc_ik(ee_xyz, ee_rpy)
+
+            #     sh0, sh1, el0, el1, wr0, wr1 = step_data["arm_pose"]
+            #     # real_arm_joints = np.array([sh0, sh1, el0, el1, wr0, wr1])
+            #     real_arm_joints = np.array([sh0, sh1, 0.0, el0, el1, wr0, wr1])
+            #     abs_error_joint_angles.append(
+            #         np.abs(np.array(real_arm_joints) - np.array(arm_joints))
+            #     )
+            #     self.spot.set_arm_joint_positions(arm_joints, "radians")
+            #     self.ik_helper.set_arm_state(arm_joints)
+            # else:
+            sh0, sh1, el0, el1, wr0, wr1 = step_data["arm_pose"]
+            arm_joints = np.array([sh0, sh1, 0.0, el0, el1, wr0, wr1])
+            print("arm_joints: ", arm_joints)
+            # arm_joints = np.array([sh0, sh1, el0, el1, wr0, wr1])
+            self.spot.set_arm_joint_positions(arm_joints, "radians")
             self.simulate(1.0)
-            ee_xyz, ee_rpy = step_data["ee_pose"]
-            bullet_xyz, bullet_rpy = self.ik_helper.calc_fk(
-                np.array(self.spot.get_arm_joint_positions())
-            )
-            hab_xyz, hab_rpy = self.spot.get_ee_pos_in_body_frame()
-            abs_error_bullet_xyz_ee_xyz.append(
-                np.abs(np.array(bullet_xyz) - np.array(ee_xyz))
-            )
-            abs_error_bullet_rpy_ee_rpy.append(
-                np.abs(np.array(bullet_rpy) - np.array(ee_rpy))
-            )
-            abs_error_hab_xyz_ee_xyz.append(
-                np.abs(np.array(hab_xyz) - np.array(ee_xyz))
-            )
-            abs_error_hab_rpy_ee_rpy.append(
-                np.abs(np.array(hab_rpy) - np.array(ee_rpy))
-            )
-
-            if debug:
-                print("==== debugging Base ====")
-                print("setting base to: ", x, y, np.rad2deg(t))
-                real_base_xy_yaw = self.spot.get_xy_yaw()
-                print(
-                    "real base position: ",
-                    real_base_xy_yaw[:2],
-                    np.rad2deg(real_base_xy_yaw[-1]),
-                )
-                print("all_close_x: ", np.allclose(x, real_base_xy_yaw[0]))
-                print("all_close_y: ", np.allclose(y, real_base_xy_yaw[1]))
-                print("all_close_t: ", np.allclose(t, real_base_xy_yaw[2]))
-                print("")
-                if "ee_pose" in step_data.keys():
-                    print("==== debugging EE ====")
-                    ee_xyz, ee_rpy = step_data["ee_pose"]
-                    print(
-                        "setting EE xyz to: ",
-                        np.round(ee_xyz, 3),
-                        "rpy to: ",
-                        np.round(np.rad2deg(ee_rpy), 3),
-                    )
-                cur_sim_ee_xyz, curr_sim_ee_rpy = self.ik_helper.calc_fk(
-                    np.array(self.spot.get_arm_joint_positions())
-                )
-                local_ee_pos, local_ee_rpy = (
-                    self.spot.get_ee_pos_in_body_frame()
-                )
-                print(
-                    "BULLET ee_xyz: ",
-                    np.round(cur_sim_ee_xyz, 3),
-                    "BULLET ee_rpy: ",
-                    np.round(np.rad2deg(curr_sim_ee_rpy), 3),
-                )
-                print(
-                    "HAB REAL ee_xyz: ",
-                    np.round(local_ee_pos, 3),
-                    "HAB REALee_rpy: ",
-                    np.round(np.rad2deg(local_ee_rpy), 3),
-                )
-                print(
-                    "all_close_xyz: ",
-                    np.allclose(cur_sim_ee_xyz, local_ee_pos, atol=0.1),
-                )
-                print(
-                    "all_close_rpy: ",
-                    np.allclose(curr_sim_ee_rpy, local_ee_rpy, atol=0.1),
-                )
-                print("")
-
-            ctr += 1
-            # if ctr > 4:
-            # break
-        print(
-            f"Absolute error between bullet_xyz and ee_xyz: {np.mean(np.array(abs_error_bullet_xyz_ee_xyz))}"
-        )
-        print(
-            f"Absolute error between bullet_rpy and ee_rpy: {np.mean(np.array(abs_error_bullet_rpy_ee_rpy))}"
-        )
-        print(
-            f"Absolute error between hab_xyz and ee_xyz: {np.mean(np.array(abs_error_hab_xyz_ee_xyz))}"
-        )
-        print(
-            f"Absolute error between hab_rpy and ee_rpy: {np.mean(np.array(abs_error_hab_rpy_ee_rpy))}"
-        )
-        print(
-            f"Absolute error between IK joints and real joints: {np.mean(np.array(abs_error_joint_angles))}"
-        )
-        print(
-            f"Absolute error between IK joints and real joints: {np.mean(np.array(abs_error_joint_angles), axis=0)}"
-        )
 
     def test_spot_robot_wrapper(self):
-        # self.test_position()
+        self.test_position()
         # self.test_rotation()
         # self.test_gripper()
         # self.test_arm_joints()
         # self.test_obj_to_goal()
-        self.test_real_replay()
+        # self.test_real_replay()
+
         self.create_video()
 
         self.sim.close(destroy=True)

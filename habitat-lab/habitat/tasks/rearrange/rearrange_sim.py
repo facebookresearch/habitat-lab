@@ -92,6 +92,9 @@ class RearrangeSim(HabitatSim):
         self.ac_freq_ratio = self.habitat_config.ac_freq_ratio
         # The physics update time step.
         self.ctrl_freq = self.habitat_config.ctrl_freq
+        self.use_real_world_conventions = (
+            self.habitat_config.use_real_world_conventions
+        )
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
 
         self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []

@@ -604,6 +604,7 @@ class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
     arm_joint_mask: Optional[List[int]] = None
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -632,6 +633,7 @@ class EEPoseSensorConfig(LabSensorConfig):
     """
 
     type: str = "EEPoseSensor"
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -652,6 +654,7 @@ class RelativeRestingPositionSensorConfig(LabSensorConfig):
     """
 
     type: str = "RelativeRestingPositionSensor"
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -664,6 +667,7 @@ class RelativeInitialEEOrientationSensorConfig(LabSensorConfig):
 
     type: str = "RelativeInitialEEOrientationSensor"
     use_smallest_angle: bool = False
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -675,6 +679,7 @@ class RelativeTargetObjectOrientationSensorConfig(LabSensorConfig):
 
     type: str = "RelativeTargetObjectOrientationSensor"
     offset_yaw: bool = False
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -772,7 +777,8 @@ class GoalSensorConfig(LabSensorConfig):
     only_one_target: bool = False
     use_base_transform: bool = False
     use_noise_target: bool = False  # only support for a single object
-    use_ee_T_target: bool = False 
+    use_ee_T_target: bool = False
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -1081,6 +1087,7 @@ class EndEffectorToInitialOrientationDistanceMeasurementConfig(
     """
 
     type: str = "EndEffectorToInitialOrientationDistance"
+    use_real_world_conventions: bool = False
 
 
 @dataclass
@@ -1960,6 +1967,7 @@ class JawDepthSensorConfig(HabitatSimDepthSensorConfig):
     width: int = 256
     height: int = 256
 
+
 @dataclass
 class JawDepthTiltSensorConfig(JawDepthSensorConfig):
     uuid: str = "articulated_agent_jaw_depth_60_tilt"
@@ -2109,6 +2117,7 @@ class SimulatorConfig(HabitatBaseConfig):
     # Configuration for rendering
     renderer: RendererConfig = RendererConfig()
     add_clutter_objs: bool = False
+    use_real_world_conventions: bool = False
 
 
 @dataclass

@@ -118,10 +118,8 @@ def get_robot_base_transform(robot_id) -> mn.Matrix4:
 
 def get_ee_transform(robot_id) -> mn.Matrix4:
     # TODO (START): Use habitat-lab SpotRobot to get global_T_ee_raw_hab
-    global_T_ee_raw_hab = robot_id.get_link_scene_node(0).transformation
-    # global_T_ee_raw_hab = robot_id.sim_obj.get_link_scene_node(
-    #     7
-    # ).transformation
+    # global_T_ee_raw_hab = robot_id.get_link_scene_node(0).transformation
+    global_T_ee_raw_hab = robot_id.get_link_scene_node(7).transformation
     global_T_ee_raw_hab.translation = global_T_ee_raw_hab.transform_point(
         mn.Vector3(0.08, 0, 0)
     )

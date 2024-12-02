@@ -58,6 +58,61 @@ def test_position(sim, robot, iter=10):
         get_obs(sim, save_img=True)
 
 
+def test_rotation(sim, robot, iter=10):
+    print("TEST ROTATION")
+    axes = np.eye(3)
+    names = ["roll pitch yaw".split(), "xyz"]
+    values = [
+        np.linspace(np.radians(-60), np.radians(60), 300),
+        np.linspace(-1.5, 1.5, 150),
+    ]
+    imgs = []
+    ctr = 0
+    for idx in range(2):
+        # for idx in range(0):
+        for axis_idx in range(3):
+            for val in values[idx]:
+                global_T_base_std = (
+                    mn.Matrix4.rotation(
+                        mn.Rad(val), mn.Vector3(axes[axis_idx])
+                    )
+                    if idx == 0
+                    else mn.Matrix4.translation(axes[axis_idx] * val)
+                )
+                global_T_base_std.translation = mn.Vector3(0, 0, 1.0)
+                set_robot_base_transform(robot, global_T_base_std)
+                base_rpy = np.degrees(
+                    extract_roll_pitch_yaw(
+                        get_robot_base_transform(robot).rotation()
+                    )
+                )
+                ee_rpy = np.degrees(
+                    extract_roll_pitch_yaw(get_ee_transform(robot).rotation())
+                )
+                img_bgr = get_obs(sim, save_img=False)
+                img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                img_rgb = add_text_to_image(
+                    img_rgb,
+                    f"base_rpy: {base_rpy[0]:.2f}, {base_rpy[1]:.2f}, {base_rpy[2]:.2f} \n ee_rpy: {ee_rpy[0]:.2f}, {ee_rpy[1]:.2f}, {ee_rpy[2]:.2f}",
+                    top=True,
+                )
+
+                obs = {"color_sensor": img_rgb}
+                imgs.append(obs)
+                ctr += 1
+    from habitat_sim.utils import viz_utils as vut
+
+    print("len: ", len(imgs))
+    vut.make_video(
+        imgs,
+        "color_sensor",
+        "color",
+        f"/fsx-siro/jtruong/repos/habitat-lab/sim2real/output/tmp_vid_{int(time.time())*1000}",
+        open_vid=False,
+    )
+    return
+
+
 def test_spot_rotation(sim, robot, iter=10):
     print("TEST SPOT ROTATION")
     axes = np.eye(3)
@@ -87,7 +142,7 @@ def test_spot_rotation(sim, robot, iter=10):
                     )
                 )
                 ee_rpy = np.degrees(
-                    extract_roll_pitch_yaw(robot.ee_transform().rotation())
+                    extract_roll_pitch_yaw(robot.ee_transform(7).rotation())
                 )
                 img_bgr = get_obs(sim, save_img=False)
                 img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -186,11 +241,18 @@ def main(sim):
 
     # robot = load_robot(sim, ROBOT_FILE)
     robot = load_spot_robot(sim, ROBOT_FILE)
-    # test_rotation(sim, robot)
+    pt = np.array([-7.03365, 0.95533, -7.7762])
+    mn_vec3 = mn.Vector3(*pt)
+    mn_mat4 = mn.Matrix4.translation(mn_vec3)
+
+    print("1: ", convert_conventions(mn_vec3))
+    print("2: ", convert_conventions(mn_mat4).translation)
+
+    # test_rotation(sim, robot.sim_obj)
 
     # reset_robot(robot)
 
-    test_real_replay(sim, robot)
+    # test_real_replay(sim, robot)
     # test_position(sim, robot)
 
     cv2.destroyAllWindows()
