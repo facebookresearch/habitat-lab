@@ -33,6 +33,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import rearrange_collision
 from habitat.utils.rotation_utils import (
     convert_conventions,
     extract_roll_pitch_yaw,
@@ -768,7 +769,6 @@ class ArmEEAction(ArticulatedAgentAction):
         self._use_ee_rot = self._config.get("use_ee_rot", False)
         self._ee_ctrl_lim = self._config.ee_ctrl_lim
         self._use_contact_test = self._config.get("use_contact_test", False)
-        self.collided = False
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -814,13 +814,12 @@ class ArmEEAction(ArticulatedAgentAction):
         #     )
 
     def set_joint_pos_kinematic(self, des_joint_pos):
-        self.collided = False
         curr_joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         self.cur_articulated_agent.arm_joint_pos = des_joint_pos
         self.cur_articulated_agent.fix_joint_values = des_joint_pos
         if self._use_contact_test:
-            self.collided = self._sim.articulated_agent.sim_obj.contact_test()
-            if self.collided:
+            did_coll, _ = rearrange_collision(self._sim, False, False)
+            if did_coll:
                 self.cur_articulated_agent.arm_joint_pos = curr_joint_pos
                 self.cur_articulated_agent.fix_joint_values = curr_joint_pos
 
@@ -1004,7 +1003,6 @@ class ArmEEAction(ArticulatedAgentAction):
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
-        return self.collided
 
 
 @registry.register_task_action

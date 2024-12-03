@@ -153,11 +153,25 @@ class ArticulatedAgentManager:
                 agent_data.start_js = np.array(
                     random.choice(agent_data.cfg.joint_start_override_random)
                 )
-            target_arm_init_params = (
-                agent_data.start_js
-                + agent_data.cfg.joint_start_noise
-                * np.random.randn(len(agent_data.start_js))
-            )
+            target_arm = agent_data.start_js + np.random.uniform(
+                -agent_data.cfg.joint_start_noise,
+                agent_data.cfg.joint_start_noise,
+            ) * np.random.randn(len(agent_data.start_js))
+
+            clipped_start_arm = target_arm.copy()
+
+            for i, (can_control, limit) in enumerate(
+                zip(
+                    agent_data.cfg.joint_that_can_control,
+                    agent_data.cfg.arm_joint_limit,
+                )
+            ):
+                if can_control:
+                    clipped_start_arm[i] = np.clip(
+                        target_arm[i], limit[0], limit[1]
+                    )
+
+            target_arm_init_params = target_arm
             # We only randomly set the location of the particular joint if that joint can be controlled
             # and given joint_that_can_control value.
             if agent_data.cfg.joint_that_can_control is not None:

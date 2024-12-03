@@ -290,9 +290,7 @@ class RearrangeGraspManager:
             rel_T = mn.Matrix4.identity_init()
 
         if self._use_real_world_conventions:
-            global_T_ee = self._managed_articulated_agent.ee_transform_YZX(
-                self.ee_index
-            )
+            global_T_ee = self._managed_articulated_agent.ee_transform_YZX()
         else:
             global_T_ee = self._managed_articulated_agent.ee_transform(
                 self.ee_index

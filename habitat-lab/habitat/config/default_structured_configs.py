@@ -1507,6 +1507,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     object_orientation_to_target_threshold: float = -1.0
     ee_to_target_threshold: float = -1.0
     ee_obj_occlusion_pen: float = -1.0
+    slack_reward: float = -0.03
 
 
 @dataclass
@@ -2010,6 +2011,8 @@ class AgentConfig(HabitatBaseConfig):
     motion_data_path: str = ""
     # Addtional data for joint selection
     joint_start_override_random: Optional[List[float]] = None
+    arm_joint_limit: Optional[List[float]] = None
+
 
 
 @dataclass

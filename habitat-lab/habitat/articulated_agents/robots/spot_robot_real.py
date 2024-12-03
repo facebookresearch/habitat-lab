@@ -65,7 +65,7 @@ class SpotRobotReal(SpotRobot):
                 -1.5,
             ],
             ee_offset=[mn.Vector3(0.0, 0, -0.1)],
-            ee_links=[6],
+            ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [-0.35, 1.5]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
@@ -181,22 +181,22 @@ class SpotRobotReal(SpotRobot):
             raise ValueError(
                 "The current manipulator does not have enough end effectors"
             )
-        ef_link_transform = self.sim_obj.get_link_scene_node(
-            self.params.ee_links[ee_index]
+        ef_link_transform_wr1 = self.sim_obj.get_link_scene_node(
+            6
         ).transformation
-        ef_link_transform.translation = ef_link_transform.transform_point(
-            self.ee_local_offset(ee_index)
+        ef_link_transform_fx1 = self.sim_obj.get_link_scene_node(
+            7
+        ).transformation
+        ee_translation = ef_link_transform_fx1.transform_point(
+            self.ee_local_offset(0)
+        )
+        ef_link_transform = mn.Matrix4().from_(
+            ef_link_transform_wr1.rotation(), ee_translation
         )
         return ef_link_transform
 
     def ee_transform(self, ee_index: int = 0) -> mn.Matrix4:
         global_T_ee_raw_hab = self.ee_transform_YZX(ee_index)
-        # global_T_ee_raw_hab = self.sim_obj.get_link_scene_node(
-        #     ee_index
-        # ).transformation
-        # global_T_ee_raw_hab.translation = global_T_ee_raw_hab.transform_point(
-        #     mn.Vector3(0.08, 0, 0)
-        # )
         global_T_ee_std = convert_conventions(global_T_ee_raw_hab)
         return global_T_ee_std
 

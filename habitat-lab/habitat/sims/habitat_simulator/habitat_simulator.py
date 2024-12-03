@@ -349,6 +349,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "max_slope",
                 "joint_start_override",
                 "joint_start_override_random",
+                "arm_joint_limit",
             },
         )
 
@@ -739,6 +740,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 transform.translation,
                 rotation,
             )
-        observations[
-            KEYFRAME_OBSERVATION_KEY
-        ] = self.gfx_replay_manager.extract_keyframe()
+        observations[KEYFRAME_OBSERVATION_KEY] = (
+            self.gfx_replay_manager.extract_keyframe()
+        )

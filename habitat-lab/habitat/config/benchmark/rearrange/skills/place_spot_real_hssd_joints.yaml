@@ -3,9 +3,7 @@ defaults:
   - place
   - /habitat/task/measurements:
     - base_to_object_distance
-  - /habitat/task/lab_sensors:
-    - end_effector_pose_sensor
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor_irs
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot_real
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
   - override /habitat/dataset/rearrangement: hssd
@@ -26,7 +24,7 @@ habitat:
       - relative_initial_ee_orientation
       - relative_target_object_orientation
       - articulated_agent_jaw_depth
-      - ee_pose
+      - joint
       - is_holding
   task:
     measurements:
@@ -43,15 +41,14 @@ habitat:
         # We want to check if the object is placed on the receptacle
         obj_at_receptacle_success: True
         # We want to give the reward for ee orientation to initial orientation
-        use_ee_ori: True
-        use_obj_ori: False
+        use_ee_ori: False
+        use_obj_ori: True
         object_orientation_to_target_threshold: 0.1
         dist_reward: 20.0 
         ori_reward: 10.0 
         ee_orientation_to_initial_threshold: -1.0 
         ee_to_target_threshold: -1.0
         min_dist_to_goal: 0.15
-        slack_reward: -0.03
       place_success:
         ee_resting_success_threshold: -1.0
         # We want to check if the object is placed on the receptacle
@@ -67,7 +64,7 @@ habitat:
         succ_thresh: 0.05
       obj_at_receptacle:
         vertical_diff_threshold: 0.1
-        horizontal_diff_threshold: 0.15
+        horizontal_diff_threshold: 0.30
         surface_vertical_diff_threshold: -1.0
         snap_down_surface_vertical_diff_threshold: 0.1
     lab_sensors:
@@ -80,8 +77,6 @@ habitat:
       goal_sensor:
         only_one_target: True
         use_base_transform: True
-        use_real_world_conventions: True
-      end_effector_pose_sensor:
         use_real_world_conventions: True
       relative_end_effector_orientation_sensor:
         use_smallest_angle: True 
@@ -98,13 +93,13 @@ habitat:
         allow_dyn_slide: False 
         navmesh_offset: [[0.0,0.0],[0.20,0.0],[-0.20,0.0]] 
       arm_action:
-        arm_controller: "ArmEEAction"
+        arm_controller: "ArmRelPosKinematicAction"
         center_cone_vector: [0.0, 1.0, 0.0]
         arm_joint_mask: [1,1,0,1,0,1,1]
         arm_joint_dimensionality: 5
         auto_grasp: False
         should_clip: True
-        delta_pos_limit: 0.01667 
+        delta_pos_limit: 0.01667 # 10 degrees
         # We limit the joint angles to ensure that this is feasible in the real world
         arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708],[-1.5708,1.5708]] 
         ee_ctrl_lim: 0.015
@@ -128,11 +123,10 @@ habitat:
     spawn_type: "orig_snap"
   simulator:
     # We use the kinematic mode to train the policy
-    kinematic_mode: False
+    kinematic_mode: True
     ac_freq_ratio: 1
     ctrl_freq: 120
-    step_physics: True
-    use_real_world_conventions: True
+    step_physics: False
     agents:
       main_agent:
         joint_start_noise: 0.0
@@ -140,6 +134,5 @@ habitat:
         # The real-world gaze ready location
         joint_start_override: [0.0,-2.09,0.0,1.047,0.0,1.536,0.0]
         # joint_start_override_random: [[0.0,-2.09,0.0,1.047,0.0,1.536,0.0],[0.0,-2.09,0.0,1.047,0.0,1.536,1.57],[0.0,-2.09,0.0,1.047,0.0,1.536,-1.57],[0.0,-2.79,0.0,1.74,0.0,1.31,0.0],[0.0,-2.79,0.0,1.74,0.0,1.31,1.57],[0.0,-2.79,0.0,1.74,0.0,1.31,-1.57]]
-        arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708],[-1.5708,1.5708]] 
   dataset:
     data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

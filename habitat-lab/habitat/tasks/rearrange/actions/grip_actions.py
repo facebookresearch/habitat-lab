@@ -325,7 +325,6 @@ class GazeGraspAction(MagicGraspAction):
             grasp_noise = self._config.get("grasp_noise", 0.0)
             rand_chance = np.random.rand()
             grasp_fail = rand_chance < grasp_noise
-            print("grasp_fail: ", grasp_fail, rand_chance, grasp_noise)
             if grasp_fail:
                 self.cur_articulated_agent.reset()
                 return  # reset arm joints

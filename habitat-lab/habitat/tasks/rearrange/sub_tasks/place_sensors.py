@@ -642,6 +642,7 @@ class PlaceReward(RearrangeReward):
 
         self._prev_obj_at_receptacle = obj_at_receptacle
 
+        reward += self._config.slack_reward
         self._metric = reward
 
 
