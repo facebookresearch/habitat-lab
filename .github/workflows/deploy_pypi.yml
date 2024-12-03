@@ -37,8 +37,8 @@ jobs:
           mkdir -p dist
           cd habitat-lab
           pip install --upgrade build
-          python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date "%Y-%m-%d-%H-%M-%S" habitat-lab/
-          python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date "%Y-%m-%d-%H-%M-%S" habitat-baselines/
+          python -m build -s -w -C--global-option=egg_info -- --tag-date "%Y-%m-%d-%H-%M-%S" habitat-lab/
+          python -m build -s -w -C--global-option=egg_info -- --tag-date "%Y-%m-%d-%H-%M-%S" habitat-baselines/
           #the pypi publish action expects a local directory dist/ with the .whl packages, so move them there
           mv habitat-lab/dist/* ../dist/
           mv habitat-baselines/dist/* ../dist/
