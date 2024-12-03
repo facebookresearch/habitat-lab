@@ -10,6 +10,9 @@ jobs:
   pypi-publish:
     name: build and upload pypi packages
     runs-on: 4-core-ubuntu-gpu-t4
+    defaults:
+      run:
+        shell: bash -el {0}
     # Specifying a GitHub environment is optional, but strongly encouraged
     environment: pypi
     permissions:
@@ -30,8 +33,8 @@ jobs:
       - name: Build lab and baselines packages
         run: |-
           export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-          cd habitat-lab
           conda activate build-env
+          cd habitat-lab
           pip install --upgrade build
           python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
           python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
