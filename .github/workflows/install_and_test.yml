@@ -238,17 +238,6 @@ jobs:
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/dist/habitat_baselines*.tar.gz
         python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
-    - name: Debugging with tmate
-      uses: mxschmitt/action-tmate@v3.18
-    - name: pypi deployment
-      run: |-
-        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-        cd habitat-lab
-        conda activate build-env
-        pip install --upgrade twine
-        twine upload --username __token__ --password ${{ env.PYPI_LAB_UPLOAD_TOKEN }} --repository pypi habitat-lab/dist/*
-        twine upload --username __token__ --password ${{ env.PYPI_LAB_UPLOAD_TOKEN }} --repository pypi habitat-baselines/dist/*
-
     #NOTE: use the below to debug with ssh: simply move this "job" just before the crashing job to intercept the workflow
     #- name: Debugging with tmate
     #  uses: mxschmitt/action-tmate@v3.18
