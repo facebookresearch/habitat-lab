@@ -48,6 +48,9 @@ class RearrangeGraspManager:
         self.ee_index = ee_index
 
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
+        self._use_real_world_conventions = (
+            self._sim.habitat_config.use_real_world_conventions
+        )
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure."""
@@ -286,9 +289,15 @@ class RearrangeGraspManager:
         if rel_T is None:
             rel_T = mn.Matrix4.identity_init()
 
-        self.snap_rigid_obj.transformation = (
-            self._managed_articulated_agent.ee_transform(self.ee_index) @ rel_T
-        )
+        if self._use_real_world_conventions:
+            global_T_ee = self._managed_articulated_agent.ee_transform_YZX(
+                self.ee_index
+            )
+        else:
+            global_T_ee = self._managed_articulated_agent.ee_transform(
+                self.ee_index
+            )
+        self.snap_rigid_obj.transformation = global_T_ee @ rel_T
 
     def snap_to_obj(
         self,
@@ -305,6 +314,7 @@ class RearrangeGraspManager:
         :param force: Will kinematically snap the object to the robot's end-effector, even if
             the object is already in the grasped state.
         """
+
         if snap_obj_id == self._snapped_obj_id:
             # Already grasping this object.
             return

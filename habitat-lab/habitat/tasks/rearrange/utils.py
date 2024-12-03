@@ -361,6 +361,8 @@ def is_pb_installed():
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
         self._arm_start = arm_start
+        # self._arm_len = 6
+        print("IK ARM START: ", arm_start)
         self._arm_len = 7
         self.pc_id = p.connect(p.DIRECT)
         self.robo_id = p.loadURDF(
@@ -373,6 +375,7 @@ class IkHelper:
 
         p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
         JOINT_DAMPING = 0.5
+        # self.pb_link_idx = 6
         self.pb_link_idx = 7
 
         for link_idx in range(15):
@@ -390,10 +393,14 @@ class IkHelper:
                 maxJointVelocity=200,
                 physicsClientId=self.pc_id,
             )
+        joint_pos = np.array(arm_start)
+        joint_vel = np.zeros(joint_pos.shape)
+        self.set_arm_state(joint_pos, joint_vel)
 
     def set_arm_state(self, joint_pos, joint_vel=None):
         if joint_vel is None:
             joint_vel = np.zeros((len(joint_pos),))
+        # for i in range(6):
         for i in range(7):
             p.resetJointState(
                 self.robo_id,
@@ -447,6 +454,28 @@ class IkHelper:
             maxNumIterations=100,
             residualThreshold=0.00001,
         )
+        # lower_limits = np.deg2rad(
+        #     [-150.0, -180.0, 0.0, 0.0, -160.0, -105.0, -165.0, -90.0]
+        # )
+        # upper_limits = np.deg2rad(
+        #     [180.0, 30.0, 0.0, 180.0, 160.0, 105.0, 165.0, 0.0]
+        # )
+        # joint_ranges = np.deg2rad(
+        #     [330.0, 210.0, 0.0, 180.0, 320.0, 210.0, 330.0, 90.0]
+        # )
+        # js = p.calculateInverseKinematics(
+        #     self.robo_id,
+        #     self.pb_link_idx,
+        #     targetPosition=targ_ee,
+        #     targetOrientation=target_ori,
+        #     lowerLimits=lower_limits,
+        #     upperLimits=upper_limits,
+        #     jointRanges=joint_ranges,
+        #     restPoses=rest_poses,
+        #     physicsClientId=self.pc_id,
+        #     maxNumIterations=10000,
+        #     residualThreshold=0.000000001,
+        # )
         return js[: self._arm_len]
 
 

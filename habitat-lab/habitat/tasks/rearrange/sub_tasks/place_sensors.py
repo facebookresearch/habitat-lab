@@ -569,7 +569,6 @@ class PlaceReward(RearrangeReward):
 
         # Object/EE distance reward
         dist_to_goal = ee_to_goal_dist[str(task.targ_idx)]
-        print("dist_to_goal: ", dist_to_goal)
         min_dist = self._config.min_dist_to_goal
 
         # Object/EE orientation reward
@@ -593,9 +592,9 @@ class PlaceReward(RearrangeReward):
                 < self._config.ee_orientation_to_initial_threshold
             ):
                 reward += self._config.place_reward
-                rearrange_logger.debug(
-                    f"Adding place_reward reward: {self._config.place_reward}, Total reward: {reward}"
-                )
+                # rearrange_logger.debug(
+                #     f"Adding place_reward reward: {self._config.place_reward}, Total reward: {reward}"
+                # )
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
@@ -604,9 +603,9 @@ class PlaceReward(RearrangeReward):
             else:
                 # Dropped at wrong location or wrong orientation
                 reward -= self._config.drop_pen
-                rearrange_logger.debug(
-                    f"Adding drop_pen reward: {-self._config.drop_pen}, Total reward: {reward}"
-                )
+                # rearrange_logger.debug(
+                #     f"Adding drop_pen reward: {-self._config.drop_pen}, Total reward: {reward}"
+                # )
                 if self._config.wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
@@ -635,9 +634,9 @@ class PlaceReward(RearrangeReward):
             # Filter out the small fluctuations
             ori_diff = round(ori_diff, 3)
             reward += self._config.ori_reward * ori_diff
-            rearrange_logger.debug(
-                f"Adding use_ee_ori ori_reward reward: {self._config.ori_reward * ori_diff}, Total reward: {reward}"
-            )
+            # rearrange_logger.debug(
+            #     f"Adding use_ee_ori ori_reward reward: {self._config.ori_reward * ori_diff}, Total reward: {reward}"
+            # )
 
         self._prev_ori = ori_to_init
 

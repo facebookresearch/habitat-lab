@@ -262,7 +262,6 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
         global_T_ee = self._sim.articulated_agent.ee_transform()
         ee_T_obj_XYZ = global_T_ee.inverted().transform_point(global_T_obj_std)
-        print("ee_T_obj_XYZ: ", ee_T_obj_XYZ)
         return np.array(ee_T_obj_XYZ, dtype=np.float32)
 
     def get_observation(self, observations, episode, task, *args, **kwargs):

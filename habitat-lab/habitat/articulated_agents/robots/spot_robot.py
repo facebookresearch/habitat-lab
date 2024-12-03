@@ -19,16 +19,11 @@ from habitat.articulated_agents.mobile_manipulator import (
 class SpotRobot(MobileManipulator):
     def _get_spot_params(self):
         return MobileManipulatorParams(
-            # arm_joints=list(range(0, 6)),
-            # gripper_joints=[6],
-            # leg_joints=list(range(7, 19)),
-            # arm_init_params=np.array([0.0, -3.14, 3.0, 0.0, 0.0, 0.0]),
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
             arm_init_params=np.array([0.0, -3.14, 0.0, 3.14, 0.0, 0.0, 0.0]),
-            # gripper_init_params=np.array([-1.56]),
-            gripper_init_params=np.array([0]),
+            gripper_init_params=np.array([-1.56]),
             leg_init_params=[
                 0.0,
                 0.7,
@@ -46,7 +41,6 @@ class SpotRobot(MobileManipulator):
             ee_offset=[mn.Vector3(0.0, 0, -0.1)],
             ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [-0.35, 1.5]]]),
-            # ee_constraint=np.array([[[0.4, 1.2], [-0.2, 0.2], [-0.35, 1.5]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
@@ -95,12 +89,6 @@ class SpotRobot(MobileManipulator):
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
-                # "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
-                #     cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
-                #     cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                #     attached_link_id=6,
-                #     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
-                # ),
                 "articulated_agent_jaw_rgb": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.023, -0.095),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),

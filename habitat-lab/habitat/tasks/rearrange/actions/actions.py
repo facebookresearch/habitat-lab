@@ -33,6 +33,10 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.utils.rotation_utils import (
+    convert_conventions,
+    extract_roll_pitch_yaw,
+)
 from habitat_sim.physics import MotionType
 
 
@@ -837,21 +841,136 @@ class ArmEEAction(ArticulatedAgentAction):
         # Get Euler angles (in radians)
         return r.as_euler("xyz", degrees=False)
 
-    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent.arm_joint_pos)
+    def xyz_T_hab(self, tf, reverse=False):
+        """
+        Convert from habitat -> real-world xyz coordinates
+        If reverse = True, converts from real-world xyz -> habitat coordinates
+        """
+        xyz_T_hab_rot = mn.Matrix4(
+            [
+                [0.0, 0.0, -1.0, 0.0],
+                [-1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ).transposed()
+        tf_untranslate = mn.Matrix4.translation(-tf.translation)
+        if not reverse:
+            rot = xyz_T_hab_rot
+        else:
+            rot = xyz_T_hab_rot.inverted()
+        tf_retranslate = mn.Matrix4.translation(
+            rot.transform_point(tf.translation)
         )
-        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
+
+        tf_new = tf_untranslate @ tf
+        tf_new = xyz_T_hab_rot.inverted() @ tf_new
+        tf_new = tf_retranslate @ tf_new
+        return tf_new
+
+    # def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+    #     articulated_agent_data = self._sim.articulated_agent
+    #     # global_T_ee = articulated_agent_data.ee_transform()
+    #     global_T_base = articulated_agent_data.base_transformation
+    #     # T_curr = global_T_base.inverted() @ global_T_ee
+    #     # print("T_curr_hab: ", base_T_ee_transform)
+
+    #     self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+    #         np.array(self._sim.articulated_agent.arm_joint_pos)
+    #     )
+    #     global_T_ee = global_T_base.transform_point(self.ee_target)
+    #     T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
+
+    #     if self._use_ee_rot:
+    #         T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
+    #     else:
+    #         T_delta = self.get_T_matrix(ee_pos[:3])
+
+    #     T_new = np.dot(T_curr, T_delta)
+    #     self.ee_target = T_new[:3, 3]
+    #     self.ee_rot_target = self.get_euler_from_matrix(T_new)
+    #     self.apply_ee_constraints()
+
+    #     joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
+    #     joint_vel = np.zeros(joint_pos.shape)
+
+    #     self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+    #     # des_joint_pos = self._ik_helper.calc_ik(
+    #     #     self.ee_target, self.ee_rot_target
+    #     # )
+
+    #     # DEBUGGING START
+    #     """
+    #     For now, use os.environ to override what we want the position goal to be
+    #     """
+    #     import os
+
+    #     position_goal = os.environ["POSITION_GOAL"]
+    #     position_goal = [float(x) for x in position_goal.split(",")]
+    #     des_joint_pos = self._ik_helper.calc_ik(
+    #         position_goal, self.ee_rot_target
+    #     )
+
+    #     if "debugging_tfs" not in os.environ:
+    #         os.environ["debugging_tfs"] = "1"
+    #         if os.path.exists("debugging_data.json"):
+    #             os.remove("debugging_data.json")
+
+    #     if not os.path.isfile("debugging_data.json"):
+    #         _, sim_global_T_obj_pos = self._sim.get_targets()
+
+    #         target_position_global_YZX = [
+    #             float(i) for i in sim_global_T_obj_pos[0]
+    #         ]
+    #         print(target_position_global_YZX, 7685467547654)
+    #         with open("debugging_data.json", "w") as f:
+    #             import json
+
+    #             data = {
+    #                 "target_position_global_YZX": target_position_global_YZX,
+    #             }
+    #             json.dump(data, f)
+
+    #     global_T_ee_YZX = np.array(self._sim.articulated_agent.ee_transform())
+    #     global_T_ee_YZX = matrix4_to_list(global_T_ee_YZX)
+
+    #     append_to_json_list(
+    #         "debugging_data.json", "global_T_ee_YZX", global_T_ee_YZX
+    #     )
+
+    #     # DEBUGGING END
+    #     des_joint_pos = list(des_joint_pos)
+
+    #     if self._sim.habitat_config.kinematic_mode:
+    #         self.set_joint_pos_kinematic(des_joint_pos)
+    #         self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+    #         self.cur_articulated_agent.fix_joint_values = des_joint_pos
+    #     else:
+    #         self._sim.articulated_agent.arm_motor_pos = des_joint_pos
+
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+        articulated_agent_data = self._sim.articulated_agent
+        global_T_ee = articulated_agent_data.ee_transform()
+        global_T_base = articulated_agent_data.base_transformation
+        base_T_ee_transform = global_T_base.inverted() @ global_T_ee
+        T_curr = base_T_ee_transform
 
         if self._use_ee_rot:
             T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
-            T_delta[:3, :3] = R.from_euler("xyz", ee_pos[3:]).as_matrix()
         else:
             T_delta = self.get_T_matrix(ee_pos[:3])
 
         T_new = np.dot(T_curr, T_delta)
+
         self.ee_target = T_new[:3, 3]
-        self.ee_rot_target = self.get_euler_from_matrix(T_new)
+
+        if self._use_ee_rot:
+            # self.ee_rot_target = self.get_euler_from_matrix(T_new)
+            self.ee_rot_target = extract_roll_pitch_yaw(T_new)
+        else:
+            self.ee_rot_target = None
+        self.ee_rot_target = None
         self.apply_ee_constraints()
 
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
@@ -866,8 +985,6 @@ class ArmEEAction(ArticulatedAgentAction):
 
         if self._sim.habitat_config.kinematic_mode:
             self.set_joint_pos_kinematic(des_joint_pos)
-            self.cur_articulated_agent.arm_joint_pos = des_joint_pos
-            self.cur_articulated_agent.fix_joint_values = des_joint_pos
         else:
             self._sim.articulated_agent.arm_motor_pos = des_joint_pos
 
@@ -884,9 +1001,9 @@ class ArmEEAction(ArticulatedAgentAction):
             global_pos = self._sim.articulated_agent.base_transformation.transform_point(
                 self.ee_target
             )
-            # self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
-            #     global_pos, self._sim.viz_ids["ee_target"]
-            # )
+            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
+                global_pos, self._sim.viz_ids["ee_target"]
+            )
         return self.collided
 
 
@@ -956,3 +1073,64 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+
+def append_to_json_list(file_path: str, key: str, value: str) -> None:
+    import json
+    import os
+
+    # Assert file exists
+    assert os.path.exists(file_path), f"File not found at {file_path}"
+
+    # Read existing JSON
+    with open(file_path, "r") as f:
+        data = json.load(f)
+
+    # Initialize key with empty list if it doesn't exist
+    if key not in data:
+        data[key] = []
+
+    # Append the new value
+    data[key].append(value)
+
+    # Write back to file
+    with open(file_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def matrix4_to_list(matrix: mn.Matrix4) -> list[list[float]]:
+    """
+    Convert a Magnum Matrix4 object to a list of lists.
+
+    Args:
+        matrix (magnum.Matrix4): Input Magnum Matrix4 object
+
+    Returns:
+        list[list[float]]: 4x4 nested list representation of the matrix
+    """
+    return [
+        [
+            float(matrix[0, 0]),
+            float(matrix[0, 1]),
+            float(matrix[0, 2]),
+            float(matrix[0, 3]),
+        ],
+        [
+            float(matrix[1, 0]),
+            float(matrix[1, 1]),
+            float(matrix[1, 2]),
+            float(matrix[1, 3]),
+        ],
+        [
+            float(matrix[2, 0]),
+            float(matrix[2, 1]),
+            float(matrix[2, 2]),
+            float(matrix[2, 3]),
+        ],
+        [
+            float(matrix[3, 0]),
+            float(matrix[3, 1]),
+            float(matrix[3, 2]),
+            float(matrix[3, 3]),
+        ],
+    ]

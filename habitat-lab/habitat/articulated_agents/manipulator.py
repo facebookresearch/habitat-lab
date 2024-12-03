@@ -322,6 +322,11 @@ class Manipulator(ArticulatedAgentInterface):
                     self.params.gripper_open_state[i] + delta * gripper_state
                 )
                 self._set_motor_pos(jidx, target)
+        elif self.sim_obj.motion_type == MotionType.KINEMATIC:
+            if gripper_state:
+                self.gripper_joint_pos = self.params.gripper_closed_state
+            else:
+                self.gripper_joint_pos = self.params.gripper_open_state
 
     def close_gripper(self) -> None:
         """Set gripper to the close state"""
