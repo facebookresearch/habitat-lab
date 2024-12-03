@@ -34,12 +34,14 @@ jobs:
         run: |-
           export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
           conda activate build-env
+          mkdir -p dist
           cd habitat-lab
           pip install --upgrade build
           python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
           python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
-      - name: Debugging with tmate
-        uses: mxschmitt/action-tmate@v3.18
+          #the pypi publish action expects a local directory dist/ with the .whl packages, so move them there
+          mv habitat-lab/dist/* ../dist/
+          mv habitat-baselines/dist/* ../dist/
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
     #NOTE: use the below to debug with ssh: simply move this "job" just before the crashing job to intercept the workflow
