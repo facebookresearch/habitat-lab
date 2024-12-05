@@ -1,7 +1,5 @@
 name: Deploy PYPI
 on:
-  pull_request: {}
-  #TODO: remove this PR trigger once things are working correctly
   push:
     tags: [ "v*" ]
     #this triggers only when a version release tag (e.g. "v0.1.0") is created
