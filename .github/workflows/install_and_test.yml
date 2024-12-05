@@ -101,15 +101,15 @@ jobs:
         git lfs install
         python src_python/habitat_sim/utils/datasets_download.py --uids ci_test_assets franka_panda hab_spot_arm hab3_bench_assets hab2_bench_assets habitat_humanoids ycb rearrange_dataset_v2 --no-replace --no-prune
         ls -la data/scene_datasets/habitat-test-scenes/
-    # - name: Run sim benchmark
-    #   run: |-
-    #     #give cmake ownership to the runner for installation
-    #     sudo chown runner -R /opt/cmake312/
-    #     #activate conda env
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-sim
-    #     python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent
+    - name: Run sim benchmark
+      run: |-
+        #give cmake ownership to the runner for installation
+        sudo chown runner -R /opt/cmake312/
+        #activate conda env
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-sim
+        python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent
     - name: Install lab, baselines, and hitl packages
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
@@ -119,65 +119,65 @@ jobs:
         pip install -e habitat-lab
         pip install -e habitat-baselines
         pip install -e habitat-hitl
-    # - name: Run lab tests
-    #   run: |-
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-lab
-    #     export PYTHONPATH=.:$PYTHONPATH
-    #     export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-    #     python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
+    - name: Run lab tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        python -m pytest test/ --cov-report=xml --cov-report term  --cov=./
 
-    #     curl -Os https://uploader.codecov.io/latest/linux/codecov
-    #     chmod +x codecov
-    #     #Uploading test coverage for Python code
-    #     ./codecov -f coverage.xml -cF Python
-    # - name: Run hitl tests
-    #   run: |-
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-lab
-    #     export PYTHONPATH=.:$PYTHONPATH
-    #     export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-    #     export GIT_CLONE_PROTECTION_ACTIVE=false
-    #     python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
-    #     python -m pytest habitat-hitl/test
-    # - name: Run baselines tests
-    #   run: |-
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-lab
-    #     export PYTHONPATH=.:$PYTHONPATH
-    #     export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-    #     # This is a flag that enables test_baseline_training to work
-    #     export TEST_BASELINE_SMALL=1
-    #     python -m pytest test/test_baseline_training.py -s
-    # - name: Run Habitat 2.0 Benchmark
-    #   run: |-
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-lab
-    #     #move the episode dataset file into the expected location
-    #     mkdir -p data/ep_datasets/
-    #     cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
-    #     #run the benchmark
-    #     bash scripts/hab2_bench/bench_runner.sh
-    #     python scripts/hab2_bench/plot_bench.py
-    #     # Assert the SPS number are up to standard
-    #     python scripts/hab2_bench/assert_bench.py
-    # - name: Test building API documentation
-    #   run: |-
-    #     export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-    #     conda activate habitat
-    #     cd habitat-lab
-    #     # Download sim inventory for crosslinking (no need to build the whole sim docs for that)
-    #     mkdir -p ../habitat-sim/build/docs-public/habitat-sim
-    #     curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
-    #     cd docs
-    #     conda install -y -c conda-forge doxygen=1.9.5
-    #     conda install -y  jinja2 pygments docutils
-    #     mkdir -p ../build/docs
-    #     ./build-public.sh
+        curl -Os https://uploader.codecov.io/latest/linux/codecov
+        chmod +x codecov
+        #Uploading test coverage for Python code
+        ./codecov -f coverage.xml -cF Python
+    - name: Run hitl tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        export GIT_CLONE_PROTECTION_ACTIVE=false
+        python -m habitat_sim.utils.datasets_download --uids hab3-episodes hab3_bench_assets habitat_humanoids hab_spot_arm ycb --data-path data/ --no-replace --no-prune
+        python -m pytest habitat-hitl/test
+    - name: Run baselines tests
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        export PYTHONPATH=.:$PYTHONPATH
+        export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+        # This is a flag that enables test_baseline_training to work
+        export TEST_BASELINE_SMALL=1
+        python -m pytest test/test_baseline_training.py -s
+    - name: Run Habitat 2.0 Benchmark
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        #move the episode dataset file into the expected location
+        mkdir -p data/ep_datasets/
+        cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
+        #run the benchmark
+        bash scripts/hab2_bench/bench_runner.sh
+        python scripts/hab2_bench/plot_bench.py
+        # Assert the SPS number are up to standard
+        python scripts/hab2_bench/assert_bench.py
+    - name: Test building API documentation
+      run: |-
+        export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+        conda activate habitat
+        cd habitat-lab
+        # Download sim inventory for crosslinking (no need to build the whole sim docs for that)
+        mkdir -p ../habitat-sim/build/docs-public/habitat-sim
+        curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
+        cd docs
+        conda install -y -c conda-forge doxygen=1.9.5
+        conda install -y  jinja2 pygments docutils
+        mkdir -p ../build/docs
+        ./build-public.sh
     - name: Setup non editable install env
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
