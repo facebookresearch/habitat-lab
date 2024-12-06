@@ -58,6 +58,8 @@ jobs:
 
   install_and_test_lab_ubuntu:
     runs-on: 4-core-ubuntu-gpu-t4
+    env:
+      PYPI_LAB_UPLOAD_TOKEN: ${{ secrets.PYPI_LAB_UPLOAD_TOKEN }}
     defaults:
       run:
         shell: bash -el {0}
