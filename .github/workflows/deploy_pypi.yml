@@ -1,0 +1,47 @@
+name: Deploy PYPI
+on:
+  push:
+    tags: [ "v*" ]
+    #this triggers only when a version release tag (e.g. "v0.1.0") is created
+
+jobs:
+  pypi-publish:
+    name: build and upload pypi packages
+    runs-on: 4-core-ubuntu-gpu-t4
+    defaults:
+      run:
+        shell: bash -el {0}
+    # Specifying a GitHub environment is optional, but strongly encouraged
+    environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4.1.1
+        with:
+          path: "./habitat-lab"
+      - uses: "./habitat-lab/.github/actions/install_ubuntu_deps"
+      - uses: "./habitat-lab/.github/actions/install_ubuntu_gpu_deps"
+      - name: Setup build env
+        uses: conda-incubator/setup-miniconda@v3.0.1
+        with:
+          miniconda-version: "latest"
+          python-version: "3.9"
+          activate-environment: "build-env"
+      - name: Build lab and baselines packages
+        run: |-
+          export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+          conda activate build-env
+          mkdir -p dist
+          cd habitat-lab
+          pip install --upgrade build
+          python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
+          python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
+          #the pypi publish action expects a local directory dist/ with the .whl packages, so move them there
+          mv habitat-lab/dist/* ../dist/
+          mv habitat-baselines/dist/* ../dist/
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+    #NOTE: use the below to debug with ssh: simply move this "job" just before the crashing job to intercept the workflow
+    #- name: Debugging with tmate
+    #  uses: mxschmitt/action-tmate@v3.18
