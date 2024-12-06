@@ -101,6 +101,9 @@ class PointNavDatasetV1(Dataset):
             # NOTE: not implemented for pointnav
             with open(fname, "rb") as f:
                 self.from_binary(pickle.load(f), scenes_dir=scenes_dir)
+        elif fname.endswith(".json"):
+            with open(fname, "r") as f:
+                self.from_json(f.read(), scenes_dir=scenes_dir)
         else:
             with gzip.open(fname, "rt") as f:
                 self.from_json(f.read(), scenes_dir=scenes_dir)
