@@ -341,6 +341,11 @@ class RearrangeTask(NavigationTask):
         return not done
 
     def get_coll_forces(self, articulated_agent_id):
+
+        if self._sim._isaac_app_wrapper is not None:
+            # todo
+            return 0.0, 0.0, 0.0
+        
         grasp_mgr = self._sim.get_agent_data(articulated_agent_id).grasp_mgr
         articulated_agent = self._sim.get_agent_data(
             articulated_agent_id

@@ -14,9 +14,10 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulatorParams,
 )
 
+from habitat.articulated_agents.manipulator import Manipulator
 
 class SpotRobot(MobileManipulator):
-    def _get_spot_params(self):
+    def get_spot_params():
         return MobileManipulatorParams(
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
@@ -155,10 +156,23 @@ class SpotRobot(MobileManipulator):
         self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
     ):
         super().__init__(
-            self._get_spot_params(),
+            SpotRobot.get_spot_params(),
             agent_cfg,
             sim,
             limit_robo_joints,
             fixed_base,
             base_type="leg",
         )
+
+        # must do lazy import of Isaac modules
+        from habitat.isaac_sim.isaac_spot_robot import IsaacSpotRobot
+        self._isaac_spot = IsaacSpotRobot(agent_cfg, sim._isaac_app_wrapper.service)
+
+    @property
+    def arm_joint_pos(self):
+        return Manipulator.arm_joint_pos.fget(self)
+
+    @arm_joint_pos.setter
+    def arm_joint_pos(self, ctrl: List[float]):
+        Manipulator.arm_joint_pos.fset(self, ctrl)
+        self._isaac_spot.arm_joint_pos = ctrl

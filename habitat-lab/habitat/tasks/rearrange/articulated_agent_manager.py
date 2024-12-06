@@ -77,7 +77,9 @@ class ArticulatedAgentManager:
         for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.articulated_agent_type)
-            assert issubclass(agent_cls, MobileManipulator)
+            # must do lazy import for Isaac modules
+            from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
+            assert issubclass(agent_cls, (MobileManipulator, IsaacMobileManipulator))
             agent = agent_cls(agent_cfg, sim)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):

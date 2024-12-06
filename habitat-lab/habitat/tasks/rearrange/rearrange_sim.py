@@ -59,6 +59,8 @@ from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 from habitat_sim.utils.common import quat_from_magnum
 
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
+
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -80,6 +82,11 @@ class RearrangeSim(HabitatSim):
                         agent_cfg.sim_sensors[
                             f"{agent_name}_{sensor_key}"
                         ] = sensor_config
+
+        # todo: do this conditionally based on config
+        # todo: think about when/where to do this
+        # todo: only allow headed for a single env
+        self._isaac_app_wrapper = IsaacAppWrapper(headless=False)
 
         super().__init__(config)
 
@@ -123,6 +130,11 @@ class RearrangeSim(HabitatSim):
         self._draw_bb_objs: List[int] = []
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
+
+        if True:
+            self._isaac_app_wrapper.service.world.reset()
+            isaac_spot = self.articulated_agent._isaac_spot
+            isaac_spot._robot_wrapper.post_reset()
 
         # Setup config options.
         self._debug_render_articulated_agent = (
@@ -925,6 +937,8 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
+            self._isaac_app_wrapper.step()
+
             t_start = time.time()
             obs = self._sensor_suite.get_observations(
                 self.get_sensor_observations_async_finish()
@@ -1078,3 +1092,9 @@ class RearrangeSim(HabitatSim):
         self._extra_runtime_perf_stats = defaultdict(float)
 
         return stats_dict
+    
+    def perform_discrete_collision_detection(self):
+        if self._isaac_app_wrapper is not None:
+            return
+        else:
+            super().perform_discrete_collision_detection()
