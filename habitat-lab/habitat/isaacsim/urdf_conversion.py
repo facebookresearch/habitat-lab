@@ -14,19 +14,6 @@ def convert_urdf_to_usd(source_urdf_filepath: str, usd_folder_path: str, usd_fil
     :param usd_folder_path: The absolute directory of the desired directory location of .usd file. The output will generatate a Props-> instanceable_meshes.usd, .asset_hash, config.yaml, and the desired .usd.
 
     """
-
-    # create argparser
-    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
-    # append AppLauncher cli args
-    AppLauncher.add_app_launcher_args(parser)
-    # parse the arguments
-    args_cli = parser.parse_args()
-    # launch omniverse app
-    app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
-
-    #NOTE: Import isaac lab converter extension after launcher runs
-    from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
     
     # Define the configuration for the URDF conversion
     config = UrdfConverterCfg(
@@ -52,10 +39,27 @@ def convert_urdf_to_usd(source_urdf_filepath: str, usd_folder_path: str, usd_fil
     usd_path = converter.usd_path
     print(f"USD file generated at: {usd_path}") 
     
-    simulation_app.close()
+
 
 if __name__ == "__main__":
     urdf_file_path = '/home/guest/dev/robot_arm/hab_spot_arm/urdf/hab_spot_arm.urdf'
     usd_folder_path = '/home/guest/dev/robot_arm/usd_output'
     usd_filename = 'converted_robot' # .usd and .usda both work
+    
+    
+    # create argparser
+    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+    # append AppLauncher cli args
+    AppLauncher.add_app_launcher_args(parser)
+    # parse the arguments
+    args_cli = parser.parse_args()
+    # launch omniverse app
+    app_launcher = AppLauncher(args_cli)
+    simulation_app = app_launcher.app
+
+    #NOTE: Import isaac lab converter extension after launcher runs
+    from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
+    
     convert_urdf_to_usd(urdf_file_path, usd_folder_path, usd_filename)
+
+    simulation_app.close()
