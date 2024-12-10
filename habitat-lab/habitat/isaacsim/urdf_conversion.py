@@ -3,8 +3,9 @@
 
 import argparse
 from omni.isaac.lab.app import AppLauncher
+import os
 
-def convert_urdf_to_usd(source_urdf_filepath: str, usd_folder_path: str) -> None:
+def convert_urdf_to_usd(source_urdf_filepath: str, usd_folder_path: str, usd_filename: str) -> None:
     """
     This function converts a .urdf file into a .usd file. NOTE: Please be aware of 
     pathing issues and references to other .glb files within the urdf file.
@@ -27,22 +28,34 @@ def convert_urdf_to_usd(source_urdf_filepath: str, usd_folder_path: str) -> None
     #NOTE: Import isaac lab converter extension after launcher runs
     from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
     
-    # urdf_filename = 'sink.urdf' 
-    # usd_filepath = f"{source_urdf_filepath.replace('.urdf', '.usd')}"
+    # Define the configuration for the URDF conversion
+    config = UrdfConverterCfg(
+        asset_path=source_urdf_filepath,  # Path to the input URDF file
+        usd_dir=usd_folder_path,         # Directory to save the converted USD file
+        usd_file_name=usd_filename,         # Name of the output USD file
+        force_usd_conversion=True,                   # Force conversion even if USD already exists
+        make_instanceable=True,                      # Make the USD asset instanceable
+        link_density=1000.0,                         # Default density for links
+        import_inertia_tensor=True,                  # Import inertia tensor from URDF
+        convex_decompose_mesh=False,                 # Decompose convex meshes
+        fix_base=False,                              # Fix the base link
+        merge_fixed_joints=False,                    # Merge links connected by fixed joints
+        self_collision=False,                        # Enable self-collision
+        default_drive_type="position",               # Default drive type for joints
+        override_joint_dynamics=False                # Override joint dynamics
+    )
 
-    # Add config information
-    config = UrdfConverterCfg()
-    config.asset_path = source_urdf_filepath # Source file
-    config.usd_dir = usd_folder_path # Output file
-    config.fix_base = True
+    # Create the UrdfConverter with the specified configuration
+    converter = UrdfConverter(config)
 
-    # Convert asset
-    converter = UrdfConverter(cfg=config)
-    converter._convert_asset(cfg=config)
-
+    # Get the path to the generated USD file
+    usd_path = converter.usd_path
+    print(f"USD file generated at: {usd_path}") 
+    
     simulation_app.close()
 
 if __name__ == "__main__":
-    urdf_folder_path = '/home/guest/dev/urdf_converter/object_urdf/sink.urdf'
-    usd_folder_path = '/home/guest/dev/urdf_converter/object_usd/'
-    convert_urdf_to_usd(urdf_folder_path, usd_folder_path)
+    urdf_file_path = '/home/guest/dev/robot_arm/hab_spot_arm/urdf/hab_spot_arm.urdf'
+    usd_folder_path = '/home/guest/dev/robot_arm/usd_output'
+    usd_filename = 'converted_robot' # .usd and .usda both work
+    convert_urdf_to_usd(urdf_file_path, usd_folder_path, usd_filename)
