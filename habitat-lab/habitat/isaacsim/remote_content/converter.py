@@ -7,7 +7,6 @@ is launched. asyncio library is used because the source code for
 MeshConverter._convert_mesh_to_usd is also an async function. 
 
 '''
-import asyncio
 import argparse
 from omni.isaac.lab.app import AppLauncher
 import os
@@ -16,7 +15,8 @@ import timer
 #Run laucher through Isaac Lab
 
 
-async def convert_glb_to_usd(glb_folder_path: str, usd_folder_path: str) -> None:
+#async def convert_glb_to_usd(glb_folder_path: str, usd_folder_path: str) -> None:
+def convert_glb_to_usd(glb_folder_path: str, usd_folder_path: str) -> None:
     """
     This function converts glb files to usd. This function launches an empty Isaac Lab stage,
     Imports the respective Isaac Lab converter functions, then converts with another 
@@ -38,17 +38,24 @@ async def convert_glb_to_usd(glb_folder_path: str, usd_folder_path: str) -> None
 
     glb_folder_list = [glb for glb in os.listdir(glb_folder_path) if os.path.isfile(os.path.join(glb_folder_path, glb))]
 
-    loop = asyncio.get_event_loop()
     for glb_filename in glb_folder_list:
         glb_filepath = glb_folder_path + glb_filename
         usd_filename = f"{glb_filename.replace('.glb', '.usd')}"
         usd_filepath = usd_folder_path + usd_filename
-        loop.run_until_complete(MeshConverter._convert_mesh_to_usd(in_file=glb_filepath, out_file=usd_filepath))
-    loop.close()
-
+        
+        converter_config = MeshConverterCfg(
+            asset_path=clb_filepath,
+            usd_dir=usd_folder_path
+            usd_file_name=usd_filename,
+            force_usd_conversion=False,
+            collision_approximation="convexDecomposition",
+        )
+        converter = MeshConverter(converter_config)
+        print(f"Wrote {converter.usd_path}"
+              
     simulation_app.close()
 
 if __name__ == "__main__":
     glb_folder_path = '/path/object_glb/'
     usd_folder_path = '/path/object_usd/'
-    asyncio.run(convert_glb_to_usd(glb_folder_path, usd_folder_path))
+    convert_glb_to_usd(glb_folder_path, usd_folder_path)
