@@ -29,14 +29,14 @@ def convert_glb_to_usd(glb_folder_path: str, usd_folder_path: str) -> None:
         usd_filepath = usd_folder_path + usd_filename
         
         converter_config = MeshConverterCfg(
-            asset_path=clb_filepath,
-            usd_dir=usd_folder_path
+            asset_path=glb_filepath,
+            usd_dir=usd_folder_path, 
             usd_file_name=usd_filename,
             force_usd_conversion=False,
             collision_approximation="convexDecomposition",
         )
         converter = MeshConverter(converter_config)
-        print(f"Wrote {converter.usd_path}"
+        print(f"Wrote {converter.usd_path}")
             
 
 if __name__ == "__main__":
