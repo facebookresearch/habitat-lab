@@ -65,6 +65,7 @@ import os
 
 import git
 import gym
+import imageio
 import numpy as np
 from hydra.core.config_store import ConfigStore
 
@@ -144,7 +145,7 @@ with habitat.Env(
     count_steps = 0
     # To save the video
     video_file_path = os.path.join(output_path, "example_interact.mp4")
-    video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
+    video_writer = imageio.get_writer(video_file_path, fps=30)
 
     while not env.episode_over:
         observations = env.step(env.action_space.sample())  # noqa: F841
@@ -171,7 +172,7 @@ with habitat.Env(
 env = gym.make("HabitatRenderPick-v0")
 
 video_file_path = os.path.join(output_path, "example_interact.mp4")
-video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
+video_writer = imageio.get_writer(video_file_path, fps=30)
 
 done = False
 env.reset()
@@ -499,7 +500,7 @@ with habitat.Env(
     count_steps = 0
     # To save the video
     video_file_path = os.path.join(output_path, "example_interact.mp4")
-    video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
+    video_writer = imageio.get_writer(video_file_path, fps=30)
 
     while not env.episode_over:
         action = env.action_space.sample()
