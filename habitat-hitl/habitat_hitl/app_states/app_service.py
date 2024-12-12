@@ -42,6 +42,7 @@ class AppService:
         get_anim_fraction: Callable,
         env: Env,
         sim: RearrangeSim,
+        reconfigure_sim: Callable,
         compute_action_and_step_env: Callable,
         step_recorder: BaseRecorder,
         get_metrics: Callable[[], Dict[str, Any]],
@@ -64,6 +65,7 @@ class AppService:
         self._get_anim_fraction = get_anim_fraction
         self._env = env
         self._sim = sim
+        self._reconfigure_sim = reconfigure_sim
         self._compute_action_and_step_env = compute_action_and_step_env
         self._step_recorder = step_recorder
         self._get_metrics = get_metrics
@@ -118,6 +120,10 @@ class AppService:
     @property
     def sim(self) -> RearrangeSim:
         return self._sim
+    
+    @property
+    def reconfigure_sim(self) -> Callable:
+        return self._reconfigure_sim
 
     @property
     def compute_action_and_step_env(self) -> Callable:

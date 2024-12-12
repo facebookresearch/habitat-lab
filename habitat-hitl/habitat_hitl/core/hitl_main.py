@@ -235,7 +235,15 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
             debug_third_person_height=debug_third_person_height,
         )
 
-    driver = HitlDriver(
+    drivers = {
+        "HitlDriver": HitlDriver,
+        "HitlBareSimDriver": HitlBareSimDriver,
+    }
+
+    # driver_class = drivers[hitl_config.driver]
+    driver_class: Any = drivers[hitl_config.driver]
+
+    driver = driver_class(
         config=app_config,
         gui_input=GuiInput(),
         debug_line_drawer=None,

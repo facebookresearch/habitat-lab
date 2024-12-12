@@ -57,7 +57,7 @@ class HitlBareSimDriver(AppDriver):
         debug_line_drawer: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
-        video_recorder: FramebufferVideoRecorder
+        video_recorder: FramebufferVideoRecorder = None
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -73,6 +73,8 @@ class HitlBareSimDriver(AppDriver):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
+        cfg_settings["scene_dataset_config_file"] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
+        cfg_settings["scene"] = "NONE"  # "102344022.scene_instance.json"
         cfg_settings["depth_sensor"] = False
         cfg_settings["color_sensor"] = False
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
@@ -168,6 +170,7 @@ class HitlBareSimDriver(AppDriver):
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
             sim=self.get_sim(),
+            reconfigure_sim=lambda dataset, scene: self._reconfigure_sim(dataset, scene),
             compute_action_and_step_env=None,
             step_recorder=self._step_recorder,
             get_metrics=None,
@@ -201,6 +204,24 @@ class HitlBareSimDriver(AppDriver):
             self._hitl_config.networking.enable
             and self._hitl_config.networking.max_client_count > 0
         )
+
+    def _reconfigure_sim(self, dataset, scene):
+
+        # todo: construct a sim with no renderer
+        # hab_cfg = config.habitat.simulator
+        cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
+        # keyword "NONE" initializes a scene with no scene mesh
+        cfg_settings["scene"] = scene if scene else "NONE"
+        cfg_settings["scene_dataset_config_file"] = dataset if dataset else None
+        cfg_settings["depth_sensor"] = False
+        cfg_settings["color_sensor"] = False
+        hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
+        # required for HITL apps
+        hab_cfg.sim_cfg.enable_gfx_replay_save = True
+        self._bare_sim.reconfigure(hab_cfg)
+
+        assert self.get_sim().renderer is None        
+
 
     def _check_init_server(
         self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
