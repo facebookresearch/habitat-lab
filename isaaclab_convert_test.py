@@ -22,6 +22,28 @@ simulation_app = app_launcher.app
 from omni.isaac.core.utils.extensions import enable_extension
 from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf
 
+
+def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
+    # Open the USD file
+    stage = Usd.Stage.Open(usd_filepath)
+    if not stage:
+        raise ValueError(f"Could not open USD file: {usd_filepath}")
+
+    default_prim = stage.GetDefaultPrim()
+
+    # Add habitatVisual:assetPath
+    asset_path_attr = default_prim.CreateAttribute("habitatVisual:assetPath", Sdf.ValueTypeNames.String)
+    asset_path_attr.Set(render_asset_filepath)
+
+    # Add habitatVisual:assetScale
+    asset_scale_attr = default_prim.CreateAttribute("habitatVisual:assetScale", Sdf.ValueTypeNames.Float3)
+    asset_scale_attr.Set(Gf.Vec3f(*render_asset_scale))
+
+    # Save the updated USD file
+    stage.GetRootLayer().Save()
+    print(f"Added habitat visual metadata to RigidBody prim in: {usd_filepath}")
+
+
 def add_habitat_visual_to_usd_root_rigid_body(usd_filepath, render_asset_filepath, render_asset_scale):
     # Open the USD file
     stage = Usd.Stage.Open(usd_filepath)
@@ -82,7 +104,7 @@ def convert_meshes_to_static_colliders(stage, root_path):
             physicsAPI.CreateKinematicEnabledAttr(True)
 
             # set purpose to "guide" so that this mesh doesn't render in Isaac?
-            if False:
+            if True:
                 mesh_geom = UsdGeom.Imageable(prim)
                 mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
 
@@ -118,7 +140,7 @@ async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials:
     converter_context.ignore_camera = True
     converter_context.ignore_light = True
     # Merge all meshes into one
-    converter_context.merge_all_meshes = True
+    converter_context.merge_all_meshes = False
     # Sets world units to meters, this will also scale asset if it's centimeters model.
     # This does not work right now :(, so we need to scale the mesh manually
     converter_context.use_meter_as_world_unit = True
@@ -210,7 +232,7 @@ def convert_object_to_usd(objects_folder, object_config_filename, out_usd_path, 
 
     render_asset_scale = object_config_json_data.get("scale", (1.0, 1.0, 1.0))
 
-    add_habitat_visual_to_usd_root_rigid_body(out_usd_path, render_asset_filepath_for_usd, render_asset_scale)
+    add_habitat_visual_to_usd_root(out_usd_path, render_asset_filepath_for_usd, render_asset_scale)
 
     print(f"Wrote {out_usd_path}")    
 
@@ -487,3 +509,4 @@ def convert_urdf_test():
 # convert_urdf_test()
 convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
 # convert_hab_scene("data/fpss_ci/scenes-siro/102344049.scene_instance.json")
+# convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
