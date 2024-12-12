@@ -140,58 +140,65 @@ def rearrange_collision(
     """
     Defines what counts as a collision for the Rearrange environment execution.
     """
-    agent_model = sim.get_agent_data(agent_idx).articulated_agent
-    grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
-    colls = sim.get_physics_contact_points()
-    agent_id = agent_model.get_robot_sim_id()
-    added_objs = sim.scene_obj_ids
-    snapped_obj_id = grasp_mgr.snap_idx
 
-    def should_keep(x):
-        if ignore_base:
-            match_link = get_match_link(x, agent_id)
-            if match_link is not None and agent_model.is_base_link(match_link):
-                return False
+    if sim._isaac_app_wrapper is not None:
+        colls = []
+        obj_scene_colls = 0
+        robot_obj_colls = 0
+        robot_scene_colls = 0
+    else:
+        agent_model = sim.get_agent_data(agent_idx).articulated_agent
+        grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
+        colls = sim.get_physics_contact_points()
+        agent_id = agent_model.get_robot_sim_id()
+        added_objs = sim.scene_obj_ids
+        snapped_obj_id = grasp_mgr.snap_idx
 
-        if ignore_object_ids is not None:
-            should_ignore = any(
-                coll_name_matches(x, ignore_object_id)
-                for ignore_object_id in ignore_object_ids
+        def should_keep(x):
+            if ignore_base:
+                match_link = get_match_link(x, agent_id)
+                if match_link is not None and agent_model.is_base_link(match_link):
+                    return False
+
+            if ignore_object_ids is not None:
+                should_ignore = any(
+                    coll_name_matches(x, ignore_object_id)
+                    for ignore_object_id in ignore_object_ids
+                )
+                if should_ignore:
+                    return False
+            return True
+
+        # Filter out any collisions with the ignore objects
+        colls = list(filter(should_keep, colls))
+        robot_coll_ids = []
+
+        # Check for robot collision
+        robot_obj_colls = 0
+        robot_scene_colls = 0
+        robot_scene_matches = [c for c in colls if coll_name_matches(c, agent_id)]
+        for match in robot_scene_matches:
+            reg_obj_coll = any(
+                coll_name_matches(match, obj_id) for obj_id in added_objs
             )
-            if should_ignore:
-                return False
-        return True
+            if reg_obj_coll:
+                robot_obj_colls += 1
+            else:
+                robot_scene_colls += 1
 
-    # Filter out any collisions with the ignore objects
-    colls = list(filter(should_keep, colls))
-    robot_coll_ids = []
+            if match.object_id_a == agent_id:
+                robot_coll_ids.append(match.object_id_b)
+            else:
+                robot_coll_ids.append(match.object_id_a)
 
-    # Check for robot collision
-    robot_obj_colls = 0
-    robot_scene_colls = 0
-    robot_scene_matches = [c for c in colls if coll_name_matches(c, agent_id)]
-    for match in robot_scene_matches:
-        reg_obj_coll = any(
-            coll_name_matches(match, obj_id) for obj_id in added_objs
-        )
-        if reg_obj_coll:
-            robot_obj_colls += 1
-        else:
-            robot_scene_colls += 1
-
-        if match.object_id_a == agent_id:
-            robot_coll_ids.append(match.object_id_b)
-        else:
-            robot_coll_ids.append(match.object_id_a)
-
-    # Checking for holding object collision
-    obj_scene_colls = 0
-    if count_obj_colls and snapped_obj_id is not None:
-        matches = [c for c in colls if coll_name_matches(c, snapped_obj_id)]
-        for match in matches:
-            if coll_name_matches(match, agent_id):
-                continue
-            obj_scene_colls += 1
+        # Checking for holding object collision
+        obj_scene_colls = 0
+        if count_obj_colls and snapped_obj_id is not None:
+            matches = [c for c in colls if coll_name_matches(c, snapped_obj_id)]
+            for match in matches:
+                if coll_name_matches(match, agent_id):
+                    continue
+                obj_scene_colls += 1
 
     if get_extra_coll_data:
         coll_details = CollisionDetails(
