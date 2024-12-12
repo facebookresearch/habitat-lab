@@ -436,7 +436,7 @@ class VERTrainer(PPOTrainer):
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = False
         self.num_steps_done = 0
-        resume_state = None  # temp hack load_resume_state(self.config)
+        resume_state = load_resume_state(self.config)
         if resume_state is not None:
             if not self.config.habitat_baselines.load_resume_state_config:
                 raise FileExistsError(
