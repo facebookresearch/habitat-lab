@@ -227,6 +227,7 @@ class HitlDriver(AppDriver):
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
             sim=self.get_sim(),
+            reconfigure_sim=None,  # only for HitlBareSimDriver
             compute_action_and_step_env=lambda: self._compute_action_and_step_env(),
             step_recorder=self._step_recorder,
             get_metrics=lambda: self._get_recent_metrics(),
