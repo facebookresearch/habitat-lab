@@ -49,6 +49,8 @@ if "COLAB_GPU" in os.environ:
 
     importlib.reload(PIL.TiffTags)  # type: ignore[attr-defined]
 
+import imageio
+
 # Video rendering utility.
 from habitat_sim.utils import viz_utils as vut
 
@@ -81,7 +83,7 @@ import habitat.gym
 env = gym.make("HabitatRenderPick-v0")
 
 video_file_path = os.path.join(output_path, "example_interact.mp4")
-video_writer = vut.get_fast_video_writer(video_file_path, fps=30)
+video_writer = imageio.get_writer(video_file_path, fps=30)
 
 done = False
 env.reset()
