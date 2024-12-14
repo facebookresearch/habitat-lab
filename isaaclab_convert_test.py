@@ -8,21 +8,6 @@ import argparse
 import json
 
 
-from omni.isaac.lab.app import AppLauncher
-
-parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli = parser.parse_args()
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
-
-from omni.isaac.core.utils.extensions import enable_extension
-from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf
-
-
 def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
     # Open the USD file
     stage = Usd.Stage.Open(usd_filepath)
@@ -432,9 +417,7 @@ def convert_urdf(urdf_filepath, out_usd_filepath):
     print(f"USD file generated at: {usd_path}")   
 
 
-from pxr import Usd, Sdf, Gf
-import xml.etree.ElementTree as ET
-import os
+
 
 def add_habitat_visual_metadata_for_articulation(usd_filepath, reference_urdf_filepath, out_usd_filepath, project_root_folder):
     # Parse the URDF file
@@ -506,7 +489,27 @@ def convert_urdf_test():
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
 
-# convert_urdf_test()
-convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
-# convert_hab_scene("data/fpss_ci/scenes-siro/102344049.scene_instance.json")
-# convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
+if __name__ == "__main__":
+    scene_instance_filepath = '/home/guest/repos/hssd-hab/scenes/102343992.scene_instance.json'
+    output_folder = '/home/guest/dev/usd_converter/converted_usd_test1'
+    object_folder = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/objects/"
+    
+    
+    
+    from omni.isaac.lab.app import AppLauncher
+
+    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+    # append AppLauncher cli args
+    AppLauncher.add_app_launcher_args(parser)
+    # parse the arguments
+    args_cli = parser.parse_args()
+    # launch omniverse app
+    args_cli.headless = True # Config to have Isaac Lab UI off
+    app_launcher = AppLauncher(args_cli)
+    simulation_app = app_launcher.app
+
+    from omni.isaac.core.utils.extensions import enable_extension
+    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf
+
+    # convert_urdf_test()
+    # convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
