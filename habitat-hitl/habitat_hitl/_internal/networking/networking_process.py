@@ -380,7 +380,7 @@ class NetworkManager:
         websocket = self._connected_clients[connection_id]
         asyncio.create_task(websocket.close())
 
-        print(f"Closed connection to client  {websocket.remote_address}")
+        print(f"Closed connection to client {connection_id}")
         del self._connected_clients[connection_id]
 
         # TODO: Consolidate these states.
@@ -436,7 +436,7 @@ class NetworkManager:
         )
 
         print(
-            f"Connection from client {websocket.remote_address} assigned to user_index {user_index}."
+            f"Connection from client {connection_id} assigned to user_index {user_index}."
         )
 
         try:
