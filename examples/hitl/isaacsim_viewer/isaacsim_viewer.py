@@ -10,8 +10,10 @@ import hydra
 import magnum as mn
 import os
 
-import habitat.isaacsim.isaacsim_wrapper as isaacsim_wrapper
-from habitat.isaacsim.usd_visualizer import UsdVisualizer
+# import habitat.isaacsim.isaacsim_wrapper as isaacsim_wrapper
+# from habitat.isaacsim.usd_visualizer import UsdVisualizer
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
+from habitat.isaac_sim.usd_visualizer import UsdVisualizer
 
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
@@ -113,16 +115,20 @@ class AppStateIsaacSimViewer(AppState):
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
         do_isaac_headless = not self._app_service.hitl_config.experimental.headless.do_headless
 
-        self._isaacsim_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
-        isaac_world = self._isaacsim_wrapper.get_world()
-        self._usd_visualizer = UsdVisualizer(isaac_world.stage, self._sim)
-        self._isaac_spot_wrapper = isaacsim_wrapper.SpotWrapper(isaac_world, 
-            env_id="env_0", usd_visualizer=self._usd_visualizer, origin=np.array([0.0, 0.0, 0.0]))        
+        # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
+        self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)
+        isaac_world = self._isaac_wrapper.service.world
+        self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        asset_path = "/home/eric/projects/habitat-llm/data/usd/test_scene.usda"  # "/home/eric/projects/habitat-llm/data/usd/objects/simple.usda"  # "/home/eric/projects/habitat-llm/data/usd/objects/e675a19a52fbc87aeddac5797942bd427ff340e8.usda"
+        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
         add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
         self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
+
+        # self._isaac_spot_wrapper = isaacsim_wrapper.SpotWrapper(isaac_world, 
+        #     env_id="env_0", usd_visualizer=self._usd_visualizer, origin=np.array([0.0, 0.0, 0.0]))        
+        from habitat.isaac_sim.isaac_spot_robot import IsaacSpotRobot
+        self._isaac_spot = IsaacSpotRobot(agent_cfg=None, isaac_service=self._isaac_wrapper.service)
 
         if True:
             from pxr import UsdGeom, Gf
@@ -132,7 +138,7 @@ class AppStateIsaacSimViewer(AppState):
             translate_op.Set(Gf.Vec3f([0.0, 0.0, 0.1]))
 
         isaac_world.reset()
-        self._isaac_spot_wrapper.post_reset()
+        self._isaac_spot._robot_wrapper.post_reset()
 
         self._conversion_method_id = 0
 
@@ -235,13 +241,12 @@ class AppStateIsaacSimViewer(AppState):
             self._conversion_method_id = (self._conversion_method_id + 1) % 16
 
     def update_isaac(self, post_sim_update_dict):
-        if self._isaacsim_wrapper:
-            sim_app = self._isaacsim_wrapper.get_simulation_app()
+        if self._isaac_wrapper:
+            sim_app = self._isaac_wrapper.service.simulation_app
             if not sim_app.is_running():
                 post_sim_update_dict["application_exit"] = True
             else:
-                sim_app.update()
-                self._usd_visualizer.flush_to_hab_sim(self._conversion_method_id)
+                self._isaac_wrapper.step()
 
     def sim_update(self, dt, post_sim_update_dict):
         
