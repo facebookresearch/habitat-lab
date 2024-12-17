@@ -230,7 +230,7 @@ class PddlSimInfo:
             abs_obj_id = self.sim.scene_obj_ids[idx]
             cur_pos = rom.get_object_by_id(
                 abs_obj_id
-            ).transformation.translation
+            ).translation  # temp EJU
             return cur_pos
         raise ValueError()
 
