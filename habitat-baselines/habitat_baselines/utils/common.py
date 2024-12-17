@@ -89,6 +89,7 @@ class CategoricalNet(nn.Module):
         self.linear = nn.Linear(num_inputs, num_outputs)
 
         nn.init.orthogonal_(self.linear.weight, gain=0.01)
+        assert not torch.isnan(self.linear.weight).any()
         nn.init.constant_(self.linear.bias, 0)
 
     def forward(self, x: Tensor) -> CustomFixedCategorical:
@@ -149,6 +150,7 @@ class GaussianNet(nn.Module):
 
         self.mu_maybe_std = nn.Linear(num_inputs, num_linear_outputs)
         nn.init.orthogonal_(self.mu_maybe_std.weight, gain=0.01)
+        assert not torch.isnan(self.mu_maybe_std.weight).any()
         nn.init.constant_(self.mu_maybe_std.bias, 0)
 
         if not use_std_param:

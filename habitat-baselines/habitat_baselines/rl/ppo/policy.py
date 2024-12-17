@@ -418,6 +418,7 @@ class CriticHead(nn.Module):
         super().__init__()
         self.fc = nn.Linear(input_size, 1)
         nn.init.orthogonal_(self.fc.weight)
+        assert not torch.isnan(self.fc.weight).any()
         nn.init.constant_(self.fc.bias, 0)
 
     def forward(self, x):

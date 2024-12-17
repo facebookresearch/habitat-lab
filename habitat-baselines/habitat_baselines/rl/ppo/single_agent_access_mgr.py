@@ -229,6 +229,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         if self._config.habitat_baselines.rl.ddppo.reset_critic:
             nn.init.orthogonal_(actor_critic.critic.fc.weight)
+            assert not torch.isnan(actor_critic.critic.fc.weight).any()
             nn.init.constant_(actor_critic.critic.fc.bias, 0)
 
         actor_critic.to(self._device)
