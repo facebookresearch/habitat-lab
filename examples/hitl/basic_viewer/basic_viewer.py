@@ -35,7 +35,7 @@ class AppStateBasicViewer(AppState):
             self._app_service.hitl_config, self._app_service.gui_input
         )
         self._episode_helper = self._app_service.episode_helper
-        self._paused = False
+        self._paused = True  # temp start paused
         self._do_single_step = False
 
     def _init_lookat_pos(self):
@@ -183,9 +183,25 @@ class AppStateBasicViewer(AppState):
             self._app_service.end_episode(do_reset=True)
 
         self._update_lookat_pos()
-        if self._env_episode_active() and not is_paused_this_frame:
-            self._app_service.compute_action_and_step_env()
-            self._do_single_step = False
+
+        # hack only step isaac
+        if self.get_sim()._isaac_app_wrapper:
+            self.get_sim()._isaac_app_wrapper.step()
+            # manually save keyframe
+            self._app_service.sim.gfx_replay_manager.save_keyframe()
+
+        # if self._env_episode_active() and not is_paused_this_frame:
+        #     self._app_service.compute_action_and_step_env()
+        #     self._do_single_step = False
+        # else:
+        #     # todo: only do this when running Isaac GUI, and we should pause simulation
+        #     if self.get_sim()._isaac_app_wrapper:
+        #         self.get_sim()._isaac_app_wrapper.step()
+
+        if self.get_sim()._isaac_app_wrapper:
+            sim_app = self.get_sim()._isaac_app_wrapper.service.simulation_app
+            if not sim_app.is_running():
+                post_sim_update_dict["application_exit"] = True
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
 

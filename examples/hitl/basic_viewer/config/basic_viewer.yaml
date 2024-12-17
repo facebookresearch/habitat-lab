@@ -22,6 +22,6 @@ habitat_baselines:
 habitat_hitl:
   window:
     title: "Basic_viewer"
-  debug_third_person_viewport:
-    width: 256
+  # debug_third_person_viewport:
+  #   width: 256
   debug_images: ["agent_1_head_depth"]
