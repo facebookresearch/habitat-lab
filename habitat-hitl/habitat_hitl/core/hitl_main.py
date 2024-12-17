@@ -249,6 +249,7 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
         debug_line_drawer=None,
         text_drawer=HeadlessTextDrawer(),
         create_app_state_lambda=create_app_state_lambda,
+        video_recorder=None,
     )
 
     _headless_app_loop(hitl_config, driver)
