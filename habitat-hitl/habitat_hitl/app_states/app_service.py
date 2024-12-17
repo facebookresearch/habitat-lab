@@ -101,6 +101,10 @@ class AppService:
     @property
     def sim(self) -> RearrangeSim:
         return self._sim
+    
+    @property
+    def reconfigure_sim(self) -> Callable:
+        return self._reconfigure_sim
 
     @property
     def reconfigure_sim(self) -> Callable:
