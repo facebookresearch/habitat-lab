@@ -91,6 +91,35 @@ class RearrangeSim(HabitatSim):
         # todo: only allow headed for a single env
         self._isaac_app_wrapper = IsaacAppWrapper(self, headless=True)
 
+        if self._isaac_app_wrapper:
+
+            def get_name_and_usd_filepath_for_scene_instance(scene_instance_json_filepath):
+                scene_name = os.path.split(scene_instance_json_filepath)[1].removesuffix(".scene_instance.json")
+                return scene_name, os.path.abspath(f"data/usd/scenes/{scene_name}.usda")
+
+            scene_name, scene_usd_filepath = get_name_and_usd_filepath_for_scene_instance(config.scene)
+
+            from omni.isaac.core.utils.stage import add_reference_to_stage
+            scene_prim_path = f"/World/scene_{scene_name}"
+            add_reference_to_stage(usd_path=scene_usd_filepath, prim_path=scene_prim_path)
+            isaac_service = self._isaac_app_wrapper.service
+            isaac_service.usd_visualizer.on_add_reference_to_stage(usd_path=scene_usd_filepath, prim_path=scene_prim_path)
+
+            if True:
+                from pxr import UsdGeom, Gf
+                test_scene_root_prim = isaac_service.world.stage.GetPrimAtPath(scene_prim_path)
+                test_scene_root_xform = UsdGeom.Xform(test_scene_root_prim)
+                translate_op = next(
+                    (op for op in test_scene_root_xform.GetOrderedXformOps() if op.GetName() == "xformOp:translate"),
+                    None,
+                )
+                if translate_op is None:
+                    translate_op = test_scene_root_xform.AddTranslateOp()
+                translate_op.Set(Gf.Vec3f([0.0, 0.0, 0.1]))
+
+            from habitat.isaac_sim.isaac_rigid_object_manager import IsaacRigidObjectManager
+            self._isaac_rigid_object_manager = IsaacRigidObjectManager(isaac_service)
+
         super().__init__(config)
 
         self.first_setup = True
@@ -129,7 +158,7 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
-        if True:
+        if self._isaac_app_wrapper:
             found_spot = False
             self._isaac_app_wrapper.service.world.reset()
             for agent_data in self.agents_mgr:
@@ -173,6 +202,12 @@ class RearrangeSim(HabitatSim):
         self._should_setup_semantic_ids = (
             self.habitat_config.should_setup_semantic_ids
         )
+
+    def get_rigid_object_manager(self):
+        if self._isaac_app_wrapper:
+            return self._isaac_rigid_object_manager
+        else:
+            return super().get_rigid_object_manager()
 
     def enable_perf_logging(self):
         """
@@ -428,6 +463,11 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
         # Add the rigid object id for the semantic map
+
+        if self._isaac_app_wrapper is not None:
+            # not implemented yet
+            return
+
         rom = self.get_rigid_object_manager()
         for _, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
@@ -599,6 +639,10 @@ class RearrangeSim(HabitatSim):
         When that point returns NaN, computes a navigable point at increasing
         distances to it.
         """
+
+        # temp hack
+        return pos
+    
         new_pos = self.pathfinder.snap_point(
             pos, self._largest_indoor_island_idx
         )
@@ -690,6 +734,9 @@ class RearrangeSim(HabitatSim):
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
+            if hasattr(rom, "set_object_handle"):
+                rom.set_object_handle(ro.object_id, other_obj_handle)
+
             if self._kinematic_mode:
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
 
@@ -983,7 +1030,8 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
-            self._isaac_app_wrapper.step()
+            if self._isaac_app_wrapper:
+                self._isaac_app_wrapper.step()
 
             t_start = time.time()
             obs = self._sensor_suite.get_observations(
