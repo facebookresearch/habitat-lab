@@ -65,7 +65,7 @@ class IsaacAppWrapper:
         #     ))
 
         usd_visualizer = UsdVisualizer(world.stage, hab_sim)
-        self._service = IsaacService(world, usd_visualizer)
+        self._service = IsaacService(self._simulation_app, world, usd_visualizer)
         
 
     @property
@@ -82,8 +82,8 @@ class IsaacAppWrapper:
             # sleep a bit to avoid 100% CPU usage and thus keep the OS windowing environment responsive
             time.sleep(0.01)
 
-        # temp do render here
-        self._service.usd_visualizer.render()
+        self._service.usd_visualizer.flush_to_hab_sim()
+
 
     # probably don't ever need to close simulation_app
     # def close(self):

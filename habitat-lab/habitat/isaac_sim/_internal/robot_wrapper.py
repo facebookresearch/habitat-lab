@@ -193,10 +193,12 @@ class RobotWrapper:
         #     self._lateral_vel += np.array([-self._lateral_vel[1], self._lateral_vel[0]]) * 0.2
         #     self._lateral_vel /= np.linalg.norm(self._lateral_vel)
         #     self._lateral_vel *= 20.0
-        self._lateral_vel = np.array([0.0, 0.0])
+
+        # self._lateral_vel = np.array([0.0, 0.0])
 
         self.fix_base_height_via_linear_vel_z(step_size)
         self.fix_base_orientation_via_angular_vel(step_size)
 
     def physics_callback(self, step_size):
         self.fix_base(step_size)
+        self._step_count += 1

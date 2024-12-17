@@ -11,8 +11,12 @@ import numpy as np
 from habitat.articulated_agents.mobile_manipulator import MobileManipulatorParams
 
 from habitat.isaac_sim._internal.robot_wrapper import RobotWrapper
+from habitat.isaac_sim import isaac_prim_utils
 
 from omni.isaac.core.utils.types import ArticulationAction
+
+
+
 
 class IsaacMobileManipulator:
     """Robot with a controllable base and arm.
@@ -72,3 +76,20 @@ class IsaacMobileManipulator:
             ArticulationAction(joint_positions=np.array(ctrl), 
                                 joint_indices=rw._arm_joint_indices))
         # todo: think about setting joint target vel to zero?
+
+    @property
+    def base_pos(self):
+        rw = self._robot_wrapper
+        pos_usd, _ = rw._robot.get_world_pose()
+        pos_habitat = isaac_prim_utils.usd_to_habitat_position(pos_usd)
+        return mn.Vector3(*pos_habitat)
+
+    @base_pos.setter
+    def base_pos(self, position: mn.Vector3):
+        rw = self._robot_wrapper
+        _, rotation_usd = rw._robot.get_world_pose()
+
+        pos_usd = isaac_prim_utils.habitat_to_usd_position(position)
+        rw._robot.set_world_pose(pos_usd, rotation_usd)
+
+
