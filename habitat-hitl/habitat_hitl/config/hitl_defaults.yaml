@@ -4,6 +4,8 @@ habitat_baselines:
   num_environments: 1
 
 habitat_hitl:
+  # HitlDriver or HitlBareSimDriver. HitlDriver creates a Habitat-lab env. HitlBareSimDriver only creates a Habitat-sim simulator.
+  driver: "HitlDriver"
   window:
     # title displayed in application title bar GUI
     title: "Habitat HITL Application"
@@ -99,7 +101,7 @@ habitat_hitl:
 
   data_collection:
     # Filepath base used for saving various session data files, e.g. `my_output/my_session`. Specify a full path including basename, but not an extension.
-    save_filepath_base: None
+    save_filepath_base: null
 
     # Save recorded episode data to file. Use save_filepath_base (above) to specify the filepath base. The first episode will be saved as `my_output/my_session.0.json.gz` and `my_output/my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. The second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
     save_episode_record: False

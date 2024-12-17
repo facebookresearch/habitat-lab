@@ -5,10 +5,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+from typing import Any
 
 import magnum as mn
 
 from habitat_hitl._internal.config_helper import update_config
+from habitat_hitl._internal.hitl_bare_sim_driver import HitlBareSimDriver
 from habitat_hitl._internal.hitl_driver import HitlDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
@@ -114,28 +116,32 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         text_drawer_kwargs=text_drawer_kwargs,
     )
 
-    update_config(
-        app_config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
+    # todo: move to HitlDriver
+    if hitl_config.driver == "HitlDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
 
-    driver = HitlDriver(
+    drivers = {
+        "HitlDriver": HitlDriver,
+        "HitlBareSimDriver": HitlBareSimDriver,
+    }
+
+    # driver_class = drivers[hitl_config.driver]
+    driver_class: Any = drivers[hitl_config.driver]
+
+    # driver: Union[HitlDriver, HitlBareSimDriver] = driver_class(
+    driver = driver_class(
         app_config,
         gui_app_wrapper.get_sim_input(),
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
         create_app_state_lambda,
     )
-
-    # sanity check if there are no agents with camera sensors
-    if (
-        len(app_config.habitat.simulator.agents) == 1
-        and app_config.habitat_hitl.gui_controlled_agent.agent_index
-        is not None
-    ):
-        assert driver.get_sim().renderer is None
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
@@ -198,7 +204,7 @@ def _headless_app_loop(hitl_config, driver):
     driver.close()
 
 
-def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
+def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
     from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
@@ -212,35 +218,29 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height,
     ) = _parse_debug_third_person(hitl_config)
 
-    update_config(
-        config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
+    if hitl_config.driver == "HitlDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
 
-    class StubLineRender:
-        """
-        Stub version of DebugLineRender that does nothing.
+    drivers = {
+        "HitlDriver": HitlDriver,
+        "HitlBareSimDriver": HitlBareSimDriver,
+    }
 
-        DebugLineRender has a large public interface. Rather than duplicate it, let's just
-        allow any method to be called.
-        """
+    # driver_class = drivers[hitl_config.driver]
+    driver_class: Any = drivers[hitl_config.driver]
 
-        def __getattr__(self, name):
-            # This method is called for any attribute not found on the object
-            def any_method(*args, **kwargs):
-                # This function accepts any arguments and does nothing
-                return None
-
-            return any_method
-
-    driver = HitlDriver(
-        config,
-        GuiInput(),
-        StubLineRender(),
-        HeadlessTextDrawer(),
-        create_app_state_lambda,
+    driver = driver_class(
+        config=app_config,
+        gui_input=GuiInput(),
+        debug_line_drawer=None,
+        text_drawer=HeadlessTextDrawer(),
+        create_app_state_lambda=create_app_state_lambda,
     )
 
     # sanity check if there are no agents with camera sensors
