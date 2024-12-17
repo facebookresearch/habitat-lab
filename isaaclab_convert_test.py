@@ -22,6 +22,7 @@ simulation_app = app_launcher.app
 from omni.isaac.core.utils.extensions import enable_extension
 from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf
 
+import omni.physx.scripts.utils
 
 def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
     # Open the USD file
@@ -41,7 +42,7 @@ def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_a
 
     # Save the updated USD file
     stage.GetRootLayer().Save()
-    print(f"Added habitat visual metadata to RigidBody prim in: {usd_filepath}")
+    # print(f"Added habitat visual metadata to root prim in: {usd_filepath}")
 
 
 def add_habitat_visual_to_usd_root_rigid_body(usd_filepath, render_asset_filepath, render_asset_scale):
@@ -82,6 +83,8 @@ def convert_meshes_to_static_colliders(stage, root_path):
     :param stage: The USD stage.
     :param root_path: The root path of the subtree to process.
     """
+    # todo: instead of this function, use omni.physx.scripts.utils.setRigidBody
+
     # Get the root prim
     root_prim = stage.GetPrimAtPath(root_path)
     if not root_prim.IsValid():
@@ -98,6 +101,7 @@ def convert_meshes_to_static_colliders(stage, root_path):
             collision_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
             collision_api.GetApproximationAttr().Set("convexHull")  # "convexDecomposition")
 
+            # todo: do this on the root prim, not each collider
             physicsAPI = UsdPhysics.RigidBodyAPI.Apply(prim)
             PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
             physicsAPI.CreateRigidBodyEnabledAttr(True)
@@ -115,12 +119,10 @@ def convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True
         async_convert_mesh_to_usd(in_file=in_file, out_file=out_file, load_materials=load_materials)
     )
 
-    from pxr import Usd
-    stage = Usd.Stage.Open(out_file)
-
-    convert_meshes_to_static_colliders(stage, "/World")
-
-    stage.GetRootLayer().Export(out_file)
+    # from pxr import Usd
+    # stage = Usd.Stage.Open(out_file)
+    # convert_meshes_to_static_colliders(stage, "/World")
+    # stage.GetRootLayer().Export(out_file)
 
 
 async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True) -> bool:
@@ -139,7 +141,7 @@ async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials:
     converter_context.ignore_animations = True
     converter_context.ignore_camera = True
     converter_context.ignore_light = True
-    # Merge all meshes into one
+    # We avoid merging meshes. This is specifically for collider GLBs, where each mesh is meant to be a separate convex hull at runtime.
     converter_context.merge_all_meshes = False
     # Sets world units to meters, this will also scale asset if it's centimeters model.
     # This does not work right now :(, so we need to scale the mesh manually
@@ -157,6 +159,13 @@ async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials:
         raise RuntimeError(f"Failed to convert {in_file} to USD. Error: {task.get_error_message()}")
     return success
 
+def find_all_files(root_folder, file_suffix):
+    files = []
+    for dirpath, _, filenames in os.walk(root_folder):
+        for file in filenames:
+            if file.endswith(file_suffix):
+                files.append(os.path.abspath(os.path.join(dirpath, file)))
+    return files
 
 def find_file(folder, filename):
     result = None
@@ -208,17 +217,17 @@ def sanitize_usd_name(name):
     return sanitized_name
 
 
-def convert_object_to_usd(objects_folder, object_config_filename, out_usd_path, project_root_folder):
+def convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder):
 
-    object_config_filepath = find_file(objects_folder, object_config_filename)
-    assert object_config_filepath
+    object_config_folder, _ = os.path.split(object_config_filepath)
 
     object_config_json_data = None
     with open(object_config_filepath, 'r') as file:
         object_config_json_data = json.load(file)
     # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
-    collision_asset_filename = object_config_json_data["collision_asset"] if "collision_asset" in object_config_json_data else object_config_json_data["render_asset"]
-    collision_asset_filepath = find_file(objects_folder, collision_asset_filename)
+    collision_asset_rel_filepath = object_config_json_data["collision_asset"] if "collision_asset" in object_config_json_data else object_config_json_data["render_asset"]
+    # collision_asset_filepath = find_file(objects_root_folder, collision_asset_filename)
+    collision_asset_filepath = os.path.abspath(os.path.join(object_config_folder, collision_asset_rel_filepath))
 
     print(f"Converting {collision_asset_filepath}...")
 
@@ -226,9 +235,7 @@ def convert_object_to_usd(objects_folder, object_config_filename, out_usd_path, 
 
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
 
-    object_config_dir, _ = os.path.split(object_config_filepath)
-    usd_dir, _ = os.path.split(out_usd_path)
-    render_asset_filepath_for_usd = os.path.relpath(os.path.abspath(os.path.join(object_config_dir, render_asset_filepath_from_urdf)), start=project_root_folder)
+    render_asset_filepath_for_usd = os.path.relpath(os.path.abspath(os.path.join(object_config_folder, render_asset_filepath_from_urdf)), start=project_root_folder)
 
     render_asset_scale = object_config_json_data.get("scale", (1.0, 1.0, 1.0))
 
@@ -273,6 +280,8 @@ def habitat_to_usd_rotation(rotation):
     q_y180_inv = [0.0, 0.0, -1.0, 0.0]
     q_z180_inv = [0.0, 0.0, 0.0, 1.0]
 
+    # todo: revise this to get the 180-degree rotation about y from the object_config.json
+
     # Multiply q_y180_inv * q_x90_inv to get the combined quaternion
     def quat_multiply(q1, q2):
         w1, x1, y1, z1 = q1
@@ -298,15 +307,20 @@ def habitat_to_usd_rotation(rotation):
 def convert_hab_scene(scene_filepath, project_root_folder):
 
 
-    scene_usd_filepath = "./data/usd/test_scene.usda"
+    # scene_usd_filepath = "./data/usd/test_scene.usda"
+
+    _, scene_filename = os.path.split(scene_filepath)
+    scene_name = scene_filename.removesuffix(".scene_instance.json")
+    scene_usd_folder = "data/usd/scenes"
+    scene_usd_filepath = os.path.join(scene_usd_folder, f"{scene_name}.usda")
 
     stage = Usd.Stage.CreateNew(scene_usd_filepath)
     xform_prim = UsdGeom.Xform.Define(stage, "/Scene")
     stage.SetDefaultPrim(xform_prim.GetPrim())
 
     scenes_folder = os.path.dirname(scene_filepath)
-    objects_folder = scenes_folder + "/../objects"
-    assert os.path.exists(objects_folder) and os.path.isdir(objects_folder)
+    objects_root_folder = scenes_folder + "/../objects"
+    assert os.path.exists(objects_root_folder) and os.path.isdir(objects_root_folder)
 
     with open(scene_filepath, 'r') as file:
         scene_json_data = json.load(file)    
@@ -340,14 +354,26 @@ def convert_hab_scene(scene_filepath, project_root_folder):
         # todo: gather these up and do them later with multiprocessing
         if not os.path.exists(out_usd_path):
 
-            convert_object_to_usd(objects_folder, object_config_filename, out_usd_path, project_root_folder)
+            object_config_filepath = find_file(objects_root_folder, object_config_filename)
+            assert object_config_filepath
 
-        relative_usd_path = out_usd_path.removeprefix("./data/usd/")
+            convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
+
+        # relative_usd_path = out_usd_path.removeprefix("./data/usd/")
+        relative_usd_path = os.path.relpath(out_usd_path, start=scene_usd_folder)
 
         object_xform = UsdGeom.Xform.Define(
             stage, f"/Scene/{unique_object_name}"
         )  
-        object_xform.GetPrim().GetReferences().AddReference(relative_usd_path)
+        prim = object_xform.GetPrim()
+        prim.GetReferences().AddReference(relative_usd_path)
+
+        omni.physx.scripts.utils.setStaticCollider(prim, "convexHull")
+        # set purpose to "guide" so that this mesh doesn't render in Isaac?
+        if False:
+            mesh_geom = UsdGeom.Imageable(prim)
+            mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
+        
 
         # Collect or create transform ops in the desired order: scale, rotation, translation
         xform_op_order = []
@@ -506,7 +532,28 @@ def convert_urdf_test():
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
 
+def convert_objects_folder_to_usd(objects_root_folder, out_usd_folder, project_root_folder):
+
+    filepaths = find_all_files(objects_root_folder, ".object_config.json")
+    for object_config_filepath in filepaths:
+
+        _, object_config_filename = os.path.split(object_config_filepath)
+
+        # todo: avoid duplication with convert_hab_scene
+        base_object_name = "OBJECT_" + object_config_filename.removesuffix(".object_config.json")
+        base_object_name = sanitize_usd_name(base_object_name)
+        # todo: consider preserving subfolder structure for objects, e.g. "usd/dataset_a/objects/b/my_object.usda" instead of "usd/objects/my_object.usda".
+        out_usd_path = os.path.join(out_usd_folder, f"{base_object_name}.usda")
+
+        # todo: gather these up and do them later with multiprocessing
+        if not os.path.exists(out_usd_path):
+
+            convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
+
+
 # convert_urdf_test()
-convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
-# convert_hab_scene("data/fpss_ci/scenes-siro/102344049.scene_instance.json")
+# convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
+# convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/104862669_172226853.scene_instance.json", project_root_folder="./")
 # convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
+
+convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
