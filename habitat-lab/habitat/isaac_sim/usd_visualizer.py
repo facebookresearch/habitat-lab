@@ -6,6 +6,7 @@
 import os
 import json
 from dataclasses import dataclass
+from enum import Enum
 
 # todo: clean up how RenderInstanceHelper is exposed from habitat_sim extension
 from habitat_sim._ext.habitat_sim_bindings import RenderInstanceHelper
@@ -62,45 +63,76 @@ def isaac_to_habitat(positions, orientations):
 
 
 
+class _InstanceGroup:
+    def __init__(self, hab_sim):
+        self._prim_path_to_render_asset = {}
+        self._xform_prim_view = None
+        isaac_identity_rotation_wxyz = [1.0, 0.0, 0.0, 0.0]
+        self._render_instance_helper = RenderInstanceHelper(hab_sim, isaac_identity_rotation_wxyz)
+
+class _InstanceGroupType(Enum):        
+    STATIC = 0
+    DYNAMIC = 1
+
 class UsdVisualizer:
 
     def __init__(self, isaac_stage, hab_sim):
 
-        self._prim_path_to_render_asset = {}
         self._stage = isaac_stage
-        self._xform_prim_view = None
         self._were_prims_removed = False
-        self._render_instance_helper = RenderInstanceHelper(hab_sim, self._get_isaac_identity_rotation_quaternion())
+
+        self._instance_groups = {}
+        for group_type in _InstanceGroupType:
+            self._instance_groups[group_type] = _InstanceGroup(hab_sim)
+        
         pass
 
+    def set_dirty(self): # todo: add underscore and rename to explain what is dirty
+        self._xform_prim_view = None
 
-    def _get_isaac_identity_rotation_quaternion(self):
+    def check_dirty(self): # todo: add underscore
+        if self._xform_prim_view is not None:
+            return
 
-        from pxr import UsdGeom, Sdf
-        from omni.isaac.core.prims import XFormPrimView
+        # todo: handle case of no prims (empty scene)
+        prim_paths = list(self._prim_path_to_render_asset.keys())
 
-        # Get the current USD stage
-        stage = self._stage
+        # lazy import
+        from omni.isaac.core.prims.xform_prim_view import XFormPrimView
+        self._xform_prim_view = XFormPrimView(prim_paths)
+
+        self._render_instance_helper.clear_all_instances()
+        for prim_path in prim_paths:
+            render_asset = self._prim_path_to_render_asset[prim_path]
+            self._render_instance_helper.add_instance(render_asset.filepath)
+
+    # def _get_isaac_identity_rotation_quaternion(self):
+
+    #     from pxr import UsdGeom, Sdf
+    #     from omni.isaac.core.prims import XFormPrimView
+
+    #     # Get the current USD stage
+    #     stage = self._stage
         
-        # Define a unique path for the dummy Xform
-        dummy_xform_path = "/World/DummyXform"
-        if stage.GetPrimAtPath(dummy_xform_path):
-            raise RuntimeError(f"Prim already exists at {dummy_xform_path}")
+    #     # Define a unique path for the dummy Xform
+    #     dummy_xform_path = "/World/DummyXform"
+    #     if stage.GetPrimAtPath(dummy_xform_path):
+    #         raise RuntimeError(f"Prim already exists at {dummy_xform_path}")
 
-        # Create the dummy Xform
-        UsdGeom.Xform.Define(stage, dummy_xform_path)
+    #     # Create the dummy Xform
+    #     UsdGeom.Xform.Define(stage, dummy_xform_path)
 
-        # Use XFormPrimView to get the world poses of the dummy Xform
-        xform_view = XFormPrimView(prim_paths_expr=dummy_xform_path)
-        positions, rotations = xform_view.get_world_poses()
+    #     # Use XFormPrimView to get the world poses of the dummy Xform
+    #     xform_view = XFormPrimView(prim_paths_expr=dummy_xform_path)
+    #     positions, rotations = xform_view.get_world_poses()
 
-        # Extract the identity rotation (assuming one Xform in the view)
-        identity_rotation = rotations[0]
+    #     # Extract the identity rotation (assuming one Xform in the view)
+    #     identity_rotation = rotations[0]
 
-        # Clean up: Remove the dummy Xform
-        stage.RemovePrim(Sdf.Path(dummy_xform_path))
+    #     # Clean up: Remove the dummy Xform
+    #     stage.RemovePrim(Sdf.Path(dummy_xform_path))
 
-        return identity_rotation
+    #     return identity_rotation
 
 
     def on_add_reference_to_stage(self, usd_path, prim_path, strict=True):
@@ -140,8 +172,14 @@ class UsdVisualizer:
             asset_scale = asset_scale_attr.Get() if asset_scale_attr and asset_scale_attr.HasAuthoredValue() else None
 
             asset_abs_path = asset_path
-            self._prim_path_to_render_asset[prim_path] = RenderAsset(filepath=asset_abs_path)
-            self._set_dirty()
+
+            is_dynamic = prim.HasAPI(UsdPhysics.RigidBodyAPI)
+
+            group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
+            group = self._instance_groups[group_type]
+
+            group._prim_path_to_render_asset[prim_path] = RenderAsset(filepath=asset_abs_path)
+            group.set_dirty()
 
         if not found_count:
             print(f"UsdVisualizer Warning: no Habitat visuals found for {usd_path}.")
@@ -158,50 +196,38 @@ class UsdVisualizer:
         # reset flag    
         self._were_prims_removed = False
 
-        def does_prim_exist(prim_path):
-            return self._stage.GetPrimAtPath(prim_path).IsValid()
+        for group in self._instance_groups:
+            def does_prim_exist(prim_path):
+                return self._stage.GetPrimAtPath(prim_path).IsValid()
 
-        keys_to_delete = [path for path in self._prim_path_to_render_asset if not does_prim_exist(path)]
+            keys_to_delete = [path for path in group._prim_path_to_render_asset if not does_prim_exist(path)]
 
-        if len(keys_to_delete) == 0:
-            return
+            if len(keys_to_delete) == 0:
+                return
 
-        for key in keys_to_delete:
-            del self._prim_path_to_render_asset[key]
+            for key in keys_to_delete:
+                del group._prim_path_to_render_asset[key]
 
-        self._set_dirty()
+            group.set_dirty()
 
-    def _set_dirty(self): # todo: add underscore and rename to explain what is dirty
-        self._xform_prim_view = None
 
-    def _check_dirty(self): # todo: add underscore
-        if self._xform_prim_view is not None:
-            return
-
-        # todo: handle case of no prims (empty scene)
-        prim_paths = list(self._prim_path_to_render_asset.keys())
-
-        # lazy import
-        from omni.isaac.core.prims.xform_prim_view import XFormPrimView
-        self._xform_prim_view = XFormPrimView(prim_paths)
-
-        self._render_instance_helper.clear_all_instances()
-        for prim_path in prim_paths:
-            render_asset = self._prim_path_to_render_asset[prim_path]
-            self._render_instance_helper.add_instance(render_asset.filepath)
-
-    def flush_to_hab_sim(self, method_id):
+    def flush_to_hab_sim(self):
 
         self._check_were_prims_removed()
 
-        self._check_dirty()
+        for group_type, group in enumerate(self._instance_groups):
 
-        positions, orientations = self._xform_prim_view.get_world_poses()
+            was_dirty = group._xform_prim_view is None
 
-        positions, orientations = isaac_to_habitat(positions, orientations)
+            self._check_dirty()
 
-        self._render_instance_helper.set_world_poses(
-            np.ascontiguousarray(positions), 
-            np.ascontiguousarray(orientations))
+            if was_dirty or group_type == _InstanceGroupType.DYNAMIC:
+                positions, orientations = self._xform_prim_view.get_world_poses()
+
+                positions, orientations = isaac_to_habitat(positions, orientations)
+
+                self._render_instance_helper.set_world_poses(
+                    np.ascontiguousarray(positions), 
+                    np.ascontiguousarray(orientations))
 
         
