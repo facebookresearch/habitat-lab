@@ -1,5 +1,4 @@
 
-
 import os
 import asyncio
 import re
@@ -7,6 +6,23 @@ import xml.etree.ElementTree as ET
 import argparse
 import json
 
+
+import argparse
+from omni.isaac.lab.app import AppLauncher
+
+parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+# append AppLauncher cli args
+AppLauncher.add_app_launcher_args(parser)
+# parse the arguments
+## args_cli = parser.parse_args()
+args_cli, _ = parser.parse_known_args()
+# launch omniverse app
+args_cli.headless = True # Config to have Isaac Lab UI off
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
+
+from omni.isaac.core.utils.extensions import enable_extension
+from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
 
 def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
     # Open the USD file
@@ -232,6 +248,15 @@ def habitat_to_usd_position(position):
     x, y, z = position
     return [-x, z, y]
 
+def usd_to_habitat_position(position):
+    """
+    Convert a position from USD (Z-up) to Habitat (Y-up) coordinate system.
+
+    Issac (x, y, z) -> Habitat (-x, z, y)
+    """
+    x, y, z = position
+    return [-x, z, y]
+
 def habitat_to_usd_rotation(rotation):
     """
     Convert a quaternion rotation from Habitat to USD coordinate system.
@@ -277,21 +302,83 @@ def habitat_to_usd_rotation(rotation):
     return rotation_usd
 
 
+def usd_to_habitat_rotation(rotation):
+    """
+    Convert a quaternion rotation from USD to Habitat coordinate system.
+
+    Parameters
+    ----------
+    rotation : list[float]
+        Quaternion in USD coordinates [w, x, y, z] (wxyz).
+
+    Returns
+    -------
+    list[float]
+        Quaternion in Habitat coordinates [w, x, y, z] (wxyz).
+    """
+    HALF_SQRT2 = 0.70710678  # √0.5
+
+    # Combined inverse quaternion transform: (inverse of q_trans)
+    # q_x90_inv = [√0.5, √0.5, 0, 0] (wxyz format)
+    # q_y180_inv = [0, 0, -1, 0] (wxyz format)
+    q_y90_inv = [HALF_SQRT2, 0.0, HALF_SQRT2, 0.0]
+
+    q_x90_inv = [HALF_SQRT2, HALF_SQRT2, 0.0, 0.0]
+    q_z90_inv = [HALF_SQRT2, 0.0, 0.0, HALF_SQRT2]
+    q_y180_inv = [0.0, 0.0, -1.0, 0.0]
+    q_z180_inv = [0.0, 0.0, 0.0, 1.0]
+
+    def quat_multiply(q1, q2):
+        w1, x1, y1, z1 = q1
+        w2, x2, y2, z2 = q2
+        w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+        x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+        y = w1*y2 - x1*z2 + y1*w2 + z1*x2
+        z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+        return [w, x, y, z]
+    
+    def quat_inverse(q):
+        w, x, y, z = q
+        norm = w*w + x*x + y*y + z*z
+        return [w/norm, -x/norm, -y/norm, -z/norm]
+
+    # Calculate the inverse of q_x90_inv and q_y180_inv
+    q_x90 = quat_inverse(q_x90_inv)
+    q_y180 = quat_inverse(q_y180_inv)
+    # Calculate q_trans by multiplying q_y180 and q_x90
+    q_trans = quat_multiply(q_y180, q_x90)
+    # Multiply q_trans with rotation_usd to get the original rotation
+    w, x, y, z = rotation
+    rotation_hab = quat_multiply(q_trans, rotation)
+
+    return rotation_hab
 
 
 
-def convert_hab_scene(scene_filepath, project_root_folder):
-
-
-    scene_usd_filepath = "./data/usd/test_scene.usda"
+def convert_hab_scene(scene_filepath: str, project_root_folder: str, objects_folder: str = '', scene_usd_filepath: str= "./data/usd/test_scene.usda"):
+    
+    # assert os.path.exists(scene_filepath)
+    try: 
+        assert os.path.exists(scene_filepath)
+    except AssertionError:
+        raise FileNotFoundError(f"Scene instance json {scene_filepath} does not exist")
 
     stage = Usd.Stage.CreateNew(scene_usd_filepath)
     xform_prim = UsdGeom.Xform.Define(stage, "/Scene")
     stage.SetDefaultPrim(xform_prim.GetPrim())
 
     scenes_folder = os.path.dirname(scene_filepath)
-    objects_folder = scenes_folder + "/../objects"
+    
+    if not objects_folder:
+        objects_folder = scenes_folder + "/../objects"
+
+
     assert os.path.exists(objects_folder) and os.path.isdir(objects_folder)
+    # try: 
+    #     assert os.path.exists(objects_folder)
+    # except AssertionError:
+    #     raise FileNotFoundError(f"Object glb folder {objects_folder} does not exist")
+    
 
     with open(scene_filepath, 'r') as file:
         scene_json_data = json.load(file)    
@@ -301,7 +388,16 @@ def convert_hab_scene(scene_filepath, project_root_folder):
     max_count = -1 # 50  # temp only convert the first N objects
     count = 0
 
-    assert "object_instances" in scene_json_data
+    # assert "object_instances" in scene_json_data
+    
+    try: 
+        assert "object_instances" in scene_json_data
+    except AssertionError:
+        print(f"'object_instances' key not found in {scene_filepath} ")
+        return
+        # raise KeyError(f"'object_instances' key not found in {scene_filepath} ")
+
+    
     for obj_instance_json in scene_json_data["object_instances"]:
 
         # todo: assert collision_asset_size is (1,1,1) or not present
@@ -310,6 +406,7 @@ def convert_hab_scene(scene_filepath, project_root_folder):
 
         object_config_filename = f"{obj_instance_json['template_name']}.object_config.json"
         # todo: maybe don't prepend OBJECT_. Just use sanitize_usd_name.
+        # NOTE: You cannot start the unique object name with number in teh Xform class environment
         base_object_name = "OBJECT_" + object_config_filename.removesuffix(".object_config.json")
         base_object_name = sanitize_usd_name(base_object_name)
 
@@ -339,6 +436,7 @@ def convert_hab_scene(scene_filepath, project_root_folder):
 
         # Ensure scale op exists
         scale = [1.0, 1.0, 1.0] # obj_instance_json.get("non_uniform_scale", [1.0, 1.0, 1.0])
+        
         scale_op = next(
             (op for op in object_xform.GetOrderedXformOps() if op.GetName() == "xformOp:scale"),
             None,
@@ -418,7 +516,6 @@ def convert_urdf(urdf_filepath, out_usd_filepath):
 
 
 
-
 def add_habitat_visual_metadata_for_articulation(usd_filepath, reference_urdf_filepath, out_usd_filepath, project_root_folder):
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
@@ -489,27 +586,26 @@ def convert_urdf_test():
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
 
-if __name__ == "__main__":
-    scene_instance_filepath = '/home/guest/repos/hssd-hab/scenes/102343992.scene_instance.json'
-    output_folder = '/home/guest/dev/usd_converter/converted_usd_test1'
-    object_folder = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/objects/"
+# if __name__ == "__main__":
+#     scene_instance_filepath = '/home/trandaniel/dev/habitat-sim/data/hssd-hab/scenes/102343992.scene_instance.json'
+#     #output_folder = '/home/guest/dev/usd_converter/converted_usd_test1'
+#     #object_folder = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/objects/"
     
-    
-    
-    from omni.isaac.lab.app import AppLauncher
 
-    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
-    # append AppLauncher cli args
-    AppLauncher.add_app_launcher_args(parser)
-    # parse the arguments
-    args_cli = parser.parse_args()
-    # launch omniverse app
-    args_cli.headless = True # Config to have Isaac Lab UI off
-    app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
+#     from omni.isaac.lab.app import AppLauncher
 
-    from omni.isaac.core.utils.extensions import enable_extension
-    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf
+#     parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+#     # append AppLauncher cli args
+#     AppLauncher.add_app_launcher_args(parser)
+#     # parse the arguments
+#     args_cli = parser.parse_args()
+#     # launch omniverse app
+#     args_cli.headless = True # Config to have Isaac Lab UI off
+#     app_launcher = AppLauncher(args_cli)
+#     simulation_app = app_launcher.app
 
-    # convert_urdf_test()
-    # convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
+#     from omni.isaac.core.utils.extensions import enable_extension
+#     from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+
+#     # convert_urdf_test()
+#     convert_hab_scene(scene_instance_filepath, project_root_folder="/home/trandaniel/dev/habitat-lab/test_project_root")
