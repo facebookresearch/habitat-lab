@@ -79,7 +79,32 @@ def test_example2_scene_instance():
     # TODO: Add Scale
 
 ##########################################################################
-    
-# if __name__ == "__main__":
 
-#     test_example2_scene_instance()
+## URDF TO USD CONVERSION ##
+
+##########################################################################
+
+
+
+def test_convert_urdf():
+    ource_urdf_filepath = "data/hab_spot_arm/urdf/hab_spot_arm.urdf"
+    clean_urdf_filepath = "data/hab_spot_arm/urdf/hab_spot_arm_clean.urdf"
+    # Temp USD must be in same folder as final USD. It's okay to be the exact same file.
+    temp_usd_filepath = "test_convert/hab_spot_arm.usda"
+    out_usd_filepath = "test_convert/hab_spot_arm.usda"
+    
+    convert_urdf(clean_urdf_filepath, temp_usd_filepath)
+
+# def convert_urdf_test():
+#     source_urdf_filepath = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
+#     clean_urdf_filepath = "data/robots/hab_spot_arm/urdf/hab_spot_arm_clean.urdf"
+#     # Temp USD must be in same folder as final USD. It's okay to be the exact same file.
+#     temp_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
+#     out_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
+#     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
+#     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
+
+
+if __name__ == "__main__":
+
+    test_convert_urdf()
