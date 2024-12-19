@@ -44,6 +44,7 @@ from habitat.core.simulator import (
     VisualObservation,
 )
 from habitat.core.spaces import Space
+from habitat_sim.physics import ContactPointData
 
 if TYPE_CHECKING:
     from torch import Tensor
@@ -306,6 +307,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         )
         self._prev_sim_obs: Optional[Observations] = None
 
+        self._contact_point_cache_time = 0.0
+        self._contact_point_cache: List[ContactPointData] = []
+
     def create_sim_config(
         self, _sensor_suite: SensorSuite
     ) -> habitat_sim.Configuration:
@@ -457,6 +461,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return is_updated
 
     def reset(self) -> Observations:
+        self._contact_point_cache_time = 0.0
+
         sim_obs = super().reset()
         if self._update_agents_state():
             sim_obs = self.get_sensor_observations()
@@ -511,7 +517,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
-        # TODO(maksymets): Switch to Habitat-Sim more efficient caching
+        self._contact_point_cache_time = 0.0
         is_same_scene = habitat_config.scene == self._current_scene
         self.habitat_config = habitat_config
         self.sim_config = self.create_sim_config(self._sensor_suite)
@@ -695,6 +701,20 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             return observations
         else:
             return None
+
+    def perform_discrete_collision_detection(self) -> None:
+        self._contact_point_cache_time = 0.0
+        super().perform_discrete_collision_detection()
+
+    def get_physics_contact_points(self) -> List[ContactPointData]:
+        sim_time = self.get_world_time()
+        contact_points_dirty = sim_time != self._contact_point_cache_time
+        if not contact_points_dirty:
+            return self._contact_point_cache
+        else:
+            self._contact_point_cache = super().get_physics_contact_points()
+            self._contact_point_cache_time = sim_time
+            return self._contact_point_cache
 
     def distance_to_closest_obstacle(
         self, position: np.ndarray, max_search_radius: float = 2.0
