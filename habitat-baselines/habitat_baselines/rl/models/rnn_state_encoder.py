@@ -288,7 +288,10 @@ class RNNStateEncoder(nn.Module):
     def layer_init(self):
         for name, param in self.rnn.named_parameters():
             if "weight" in name:
-                nn.init.orthogonal_(param)
+                # nn.init.orthogonal_(param)
+                # temp hack avoid NaNs
+                nn.init.uniform_(param)
+                assert not torch.isnan(param).any()
             elif "bias" in name:
                 nn.init.constant_(param, 0)
 
