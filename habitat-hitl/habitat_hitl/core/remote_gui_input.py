@@ -33,6 +33,8 @@ class RemoteGuiInput:
 
         self._gui_input = GuiInput()
 
+        self._receive_count = 0
+
     def get_gui_input(self):
         return self._gui_input
 
@@ -149,7 +151,7 @@ class RemoteGuiInput:
             positions.append(pos)
 
             rot_quat = mn.Quaternion(
-                mn.Vector3(rot_json[i * 3 + 1], rot_json[i * 3 + 2], rot_json[i * 3 + 3]), rot_json[i * 3 + 0]
+                mn.Vector3(rot_json[i * 4 + 1], rot_json[i * 4 + 2], rot_json[i * 4 + 3]), rot_json[i * 4 + 0]
             )
             rotations.append(rot_quat)
 
@@ -335,6 +337,7 @@ class RemoteGuiInput:
 
         client_states = self._interprocess_record.get_queued_client_states()
         self._receive_rate_tracker.increment(len(client_states))
+        self._receive_count += len(client_states)
 
         # We expect to only process ~1 new client state at a time. If this assert fails, something is going awry with networking.
         # disabling because this happens all the time when debugging the main process
@@ -359,5 +362,9 @@ class RemoteGuiInput:
         self._gui_input.on_frame_end()
         self._new_connection_records = None
 
+    def get_receive_count(self):
+        return self._receive_count
+
     def clear_history(self):
         self._recent_client_states.clear()
+        self._receive_count = 0
