@@ -9,6 +9,8 @@ from typing import Any
 
 import magnum as mn
 
+from habitat.config.default import patch_config
+
 from habitat_hitl._internal.config_helper import update_config
 from habitat_hitl._internal.hitl_bare_sim_driver import HitlBareSimDriver
 from habitat_hitl._internal.hitl_driver import HitlDriver
