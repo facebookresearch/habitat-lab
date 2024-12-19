@@ -165,10 +165,7 @@ class HitlBareSimDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return (
-            self._hitl_config.networking.enable
-            and self._hitl_config.networking.max_client_count > 0
-        )
+        return self._hitl_config.networking.enable
 
     def _reconfigure_sim(self, dataset, scene):
 
@@ -212,7 +209,7 @@ class HitlBareSimDriver(AppDriver):
 
     def _reset_environment(self):
         if self.network_server_enabled:
-            self._remote_client_state.clear_history()
+            self._remote_gui_input.clear_history()
 
         self._app_state.on_environment_reset(self._episode_recorder_dict)
 
@@ -291,49 +288,22 @@ class HitlBareSimDriver(AppDriver):
 
         post_sim_update_dict["keyframes"] = keyframes
 
-        if self.network_server_enabled:
-            if (
-                self._hitl_config.networking.client_sync.server_camera
-                and "cam_transform" in post_sim_update_dict
-            ):
-                cam_transform: Optional[mn.Matrix4] = post_sim_update_dict[
-                    "cam_transform"
-                ]
-                if cam_transform is not None:
-                    self._client_message_manager.update_camera_transform(
-                        cam_transform
-                    )
+        if self._remote_gui_input:
+            self._remote_gui_input.on_frame_end()
 
-            self._remote_client_state.on_frame_end()
-            self._send_keyframes(keyframes)
+        if self.network_server_enabled:
+            for keyframe_json in keyframes:
+                obj = json.loads(keyframe_json)
+                assert "keyframe" in obj
+                keyframe_obj = obj["keyframe"]
+                # Insert server->client message into the keyframe
+                message = self._client_message_manager.get_message_dict()
+                if len(message) > 0:
+                    keyframe_obj["message"] = message
+                    self._client_message_manager.clear_message_dict()
+                # Send the keyframe
+                self._interprocess_record.send_keyframe_to_networking_thread(
+                    keyframe_obj
+                )
 
         return post_sim_update_dict
-
-    def _send_keyframes(self, keyframes_json: List[str]):
-        assert self.network_server_enabled
-
-        keyframes = []
-        for keyframe_json in keyframes_json:
-            obj = json.loads(keyframe_json)
-            assert "keyframe" in obj
-            keyframe_obj = obj["keyframe"]
-            keyframes.append(keyframe_obj)
-
-        # If messages need to be sent, but no keyframe is available, create an empty keyframe.
-        if self._client_message_manager.any_message() and len(keyframes) == 0:
-            keyframes.append(get_empty_keyframe())
-
-        for keyframe in keyframes:
-            # Remove rigs from keyframe if skinning is disabled.
-            if not self._hitl_config.networking.client_sync.skinning:
-                if "rigCreations" in keyframe:
-                    del keyframe["rigCreations"]
-                if "rigUpdates" in keyframe:
-                    del keyframe["rigUpdates"]
-            # Insert server->client message into the keyframe.
-            messages = self._client_message_manager.get_messages()
-            self._client_message_manager.clear_messages()
-            # Send the keyframe.
-            self._interprocess_record.send_keyframe_to_networking_thread(
-                KeyframeAndMessages(keyframe, messages)
-            )
