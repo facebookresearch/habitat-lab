@@ -1,0 +1,67 @@
+# For more info about Hydra in Habitat, see habitat-lab/habitat/config/README.md
+# @package _global_
+
+# habitat:
+#   simulator:
+#     agents:
+#       main_agent:
+#         sensor_specifications:
+#         sim_sensors:
+#     enable_batch_renderer: False
+
+#     habitat_sim_v0:
+
+#       scene_dataset_config_file: "default"
+#       # name of an existing scene in the dataset, a scene, stage, or asset filepath, or NONE for an empty scene
+#       scene: "NONE"
+#       color_sensor: False
+#       semantic_sensor: False
+#       depth_sensor: False
+#       ortho_rgba_sensor: False
+#       ortho_depth_sensor: False
+#       ortho_semantic_sensor: False
+#       fisheye_rgba_sensor: False
+#       fisheye_depth_sensor: False
+#       fisheye_semantic_sensor: False
+#       equirect_rgba_sensor: False
+#       equirect_depth_sensor: False
+#       equirect_semantic_sensor: False
+#       physics_config_file: "data/default.physics_config.json"
+
+#       # todo: think about this one
+#       enable_physics: True
+
+#       # ensure or create compatible navmesh for agent paramters
+#       default_agent_navmesh: False
+#       # Enable horizon-based ambient occlusion, which provides soft shadows in corners and crevices.
+#       enable_hbao: True
+
+#       gpu_device_id: 0
+
+habitat_hitl:
+  driver: "HitlBareSimDriver"
+  disable_policies_and_stepping: True
+
+  # experimental:
+  #   headless:
+  #     do_headless: True
+  # window: ~
+  
+  window:
+    title: "IsaacSim Viewer"
+    # width: 1920
+    # height: 1080
+    width: 900  # 960
+    height: 900
+    display_font_size: 24
+
+
+
+isaacsim_viewer:
+  camera_move_speed: 0.02
+
+defaults:
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_
