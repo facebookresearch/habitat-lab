@@ -506,7 +506,7 @@ async def start_websocket_server(
     network_mgr: NetworkManager, networking_config
 ) -> WebSocketServer:
     global use_ssl
-    network_mgr_lambda = lambda ws, path: network_mgr.handle_connection(ws)
+    network_mgr_lambda = lambda ws: network_mgr.handle_connection(ws)
     ssl_context = create_ssl_context() if use_ssl else None
     websocket_server = await serve(
         network_mgr_lambda, "0.0.0.0", networking_config.port, ssl=ssl_context
