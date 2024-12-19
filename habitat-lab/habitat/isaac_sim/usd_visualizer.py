@@ -186,6 +186,7 @@ class UsdVisualizer:
 
             asset_abs_path = asset_path
 
+            # todo: consider doing this check later
             is_dynamic = prim.HasAPI(UsdPhysics.RigidBodyAPI)
 
             group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC

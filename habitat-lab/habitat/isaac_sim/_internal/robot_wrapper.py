@@ -5,6 +5,8 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+import magnum as mn
+
 # todo: add guard to ensure SimulatorApp is created, or give nice error message, so we don't get weird import errors here
 from omni.isaac.core import World
 from omni.isaac.core.objects import DynamicCuboid
@@ -17,12 +19,14 @@ from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
 from pxr import UsdGeom, Sdf, Usd, UsdPhysics, PhysxSchema
 import omni.physx.scripts.utils as physxUtils
 
+from habitat.isaac_sim import isaac_prim_utils
+
 class RobotWrapper:
     """Isaac-internal wrapper for a robot.
     
     The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
     """
-    def __init__(self, isaac_service, instance_id):
+    def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
         asset_path = "./data/usd/robots/hab_spot_arm.usda"
@@ -119,12 +123,13 @@ class RobotWrapper:
         mass_api.GetDiagonalInertiaAttr().Set(mass_api.GetDiagonalInertiaAttr().Get() * scale)
 
 
-    # todo: move this to a separate helper class
     def fix_base_orientation_via_angular_vel(self, step_size):
+
+        curr_angular_velocity = self._robot.get_angular_velocity()
 
         _, base_orientation = self._robot.get_world_pose()
 
-        # todo: decide where/how to tune this
+        # Constants
         max_angular_velocity = 3.0  # Maximum angular velocity (rad/s)
 
         # wxyz to xyzw
@@ -163,14 +168,19 @@ class RobotWrapper:
 
             desired_angular_velocity = tilt_correction_velocity
 
+        # don't change rotation about z
+        desired_angular_velocity[2] = curr_angular_velocity[2]
+
         self._robot.set_angular_velocity(desired_angular_velocity)
 
 
     def fix_base_height_via_linear_vel_z(self, step_size):
+
+        curr_linear_velocity = self._robot.get_linear_velocity()
+
         z_target = 0.7  # todo: get from navmesh or assume ground_z==0
         max_linear_vel = 3.0
 
-        # Get the current position and velocity of the base
         base_position, _ = self._robot.get_world_pose()
 
         # Extract the vertical position and velocity
@@ -182,7 +192,7 @@ class RobotWrapper:
         desired_linear_vel_z = position_error / step_size
         desired_linear_vel_z = max(-max_linear_vel, min(max_linear_vel, desired_linear_vel_z))
 
-        self._robot.set_linear_velocity([self._lateral_vel[0], self._lateral_vel[1], desired_linear_vel_z])
+        self._robot.set_linear_velocity([curr_linear_velocity[0], curr_linear_velocity[1], desired_linear_vel_z])
 
     def fix_base(self, step_size):
 
@@ -202,3 +212,4 @@ class RobotWrapper:
     def physics_callback(self, step_size):
         self.fix_base(step_size)
         self._step_count += 1
+

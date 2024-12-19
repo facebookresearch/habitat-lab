@@ -52,6 +52,11 @@ class IsaacRigidObjectWrapper:
         pos_habitat = isaac_prim_utils.usd_to_habitat_position(pos_usd)
         return mn.Vector3(*pos_habitat)
 
+    @transformation.setter
+    def translation(self, translation: mn.Vector3):
+        translation_usd = isaac_prim_utils.habitat_to_usd_position([translation.x, translation.y, translation.z])
+        isaac_prim_utils.set_translation(self._prim, translation_usd)
+
     # todo: implement angular_velocity and linear_velocity
     @property
     def angular_velocity(self) -> mn.Vector3:
@@ -137,11 +142,12 @@ class IsaacRigidObjectManager:
         prim_path = f"/World/rigid_objects/obj_{object_id}"
 
         add_reference_to_stage(usd_path=object_usd_filepath, prim_path=prim_path)
-        self._isaac_service.usd_visualizer.on_add_reference_to_stage(usd_path=object_usd_filepath, prim_path=prim_path)
 
         prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
-
         self._configure_as_dynamic_rigid_object(prim)
+
+        # sloppy: must call on_add_reference_to_stage after configuring object as RigidObject via USD
+        self._isaac_service.usd_visualizer.on_add_reference_to_stage(usd_path=object_usd_filepath, prim_path=prim_path)
 
         obj_wrapper = IsaacRigidObjectWrapper(object_id, prim)
         self._obj_wrapper_by_object_id[object_id] = obj_wrapper

@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 
 def usd_to_habitat_rotation(rotation_wxyz):
     """
@@ -127,3 +128,20 @@ def set_rotation(prim, rotation_quat_wxyz):
     if orient_op is None:
         orient_op = xformable.AddOrientOp(precision=UsdGeom.XformOp.PrecisionDouble)
     orient_op.Set(Gf.Quatd(*rotation_quat_wxyz))    
+
+
+def get_pos(isaac_prim: "_SinglePrimWrapper"):
+    pos, _ = isaac_prim.get_world_pose()
+    return mn.Vector3(*usd_to_habitat_position(pos))
+
+def get_forward(isaac_prim: "_SinglePrimWrapper"):
+    _, rotation_wxyz = isaac_prim.get_world_pose()
+
+    rotation_quat = mn.Quaternion(mn.Vector3(rotation_wxyz[1], rotation_wxyz[2], rotation_wxyz[3]), rotation_wxyz[0])
+    # rotation should be primarily about isaac up axis (z)
+    forward_raw = rotation_quat.transform_vector(mn.Vector3([1.0, 0.0, 0.0]))
+
+    forward_normalized = mn.Vector3(forward_raw.x, forward_raw.y, 0.0).normalized()
+    forward_habitat = usd_to_habitat_position(forward_normalized)
+
+    return mn.Vector3(*forward_habitat)
