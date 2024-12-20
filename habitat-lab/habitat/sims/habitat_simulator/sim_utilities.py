@@ -1448,6 +1448,7 @@ def match_point_to_receptacle(
     :param sim: The Simulator instance.
     :param candidate_receptacles: a list of candidate Receptacles for matching.
     :param max_dist_to_rec: The threshold point to mesh distance to be matched with a Receptacle.
+    :return: Tuple containing: (1): list of receptacle strings [Receptacle.unique_name] or an empty list (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
     """
 
     # get point to rec distances for the candidates
