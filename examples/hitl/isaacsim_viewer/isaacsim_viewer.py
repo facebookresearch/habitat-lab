@@ -32,6 +32,64 @@ import traceback
 
 import habitat_sim  # unfortunately we can't import this earlier
 
+
+
+
+class SpotPickHelper:
+
+    APPROACH_DIST = 0.12
+    APPROACH_DURATION = 3.0
+
+    def __init__(self):
+
+        self._is_ik_active = False
+        self._approach_timer = 0.0
+        self._was_ik_active = False
+        pass
+
+    def update(self, dt, target_rel_pos):
+
+        approach_progress = (self._approach_timer / SpotPickHelper.APPROACH_DURATION)
+        # approach_offset drops to zero during approach
+        approach_offset = SpotPickHelper.APPROACH_DIST * (1.0 - approach_progress)
+
+        offset_to_shoulder = mn.Vector3(0.29, 0.0, 0.18)
+        target_rel_pos -= offset_to_shoulder
+
+        # todo: do this offset in the xy plane. Otherwise approaches to high or low
+        # targets don't come in horizontally.
+        target_rel_pos_len = target_rel_pos.length()
+        target_rel_pos_norm = target_rel_pos.normalized()
+        eps = 0.02
+        adjusted_target_rel_pos_len = max(eps, 
+            target_rel_pos_len - approach_offset)
+        adjusted_target_rel_pos = target_rel_pos_norm * adjusted_target_rel_pos_len
+    
+        adjusted_target_rel_pos += offset_to_shoulder
+
+        # Make it less likely to activate ik when we're early in our approach.
+        stickiness_distance_fudge = approach_offset * 1.2
+
+        from habitat.isaac_sim.spot_arm_ik_helper import spot_arm_ik_helper # type: ignore
+        is_ik_active, target_arm_joint_positions = spot_arm_ik_helper(adjusted_target_rel_pos, stickiness_distance_fudge)
+
+        self._was_ik_active = is_ik_active
+
+        if is_ik_active:
+            self._approach_timer = min(self._approach_timer + dt, SpotPickHelper.APPROACH_DURATION)
+        else:
+            self._approach_timer = 0.0
+
+        should_close_grasp = self._approach_timer == 0.0 or self._approach_timer == SpotPickHelper.APPROACH_DURATION
+        target_arm_joint_positions[7] = 0.0 if should_close_grasp else -1.67
+
+        if approach_progress > 0.0:
+            print(f"approach_progress: {approach_progress}")
+
+        return target_arm_joint_positions
+
+
+
 def multiply_transforms(rot_a, pos_a, rot_b, pos_b):
     out_pos = rot_b.transform_vector(pos_a) + pos_b
     out_rot = rot_b * rot_a
@@ -163,7 +221,7 @@ class AppStateIsaacSimViewer(AppState):
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
-        self._camera_lookat_base_pos = mn.Vector3(-10, 1.0, -2.7)
+        self._camera_lookat_base_pos = mn.Vector3(-7, 1.0, -3.0)
         self._camera_lookat_y_offset = 0.0
         self._do_camera_follow_spot = False
         self._camera_helper.update(self._get_camera_lookat_pos(), 0.0)
@@ -209,6 +267,8 @@ class AppStateIsaacSimViewer(AppState):
 
         self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]
         self._did_function_load_fail = False
+
+        self._spot_pick_helper = SpotPickHelper()
         pass
 
 
@@ -237,7 +297,7 @@ class AppStateIsaacSimViewer(AppState):
         lookat_ring_radius = 0.01
         lookat_ring_color = mn.Color3(1, 0.75, 0)
         self._app_service.line_render.draw_circle(
-            self._camera_lookat_base_pos,
+            self._get_camera_lookat_pos(),
             lookat_ring_radius,
             lookat_ring_color,
         )
@@ -298,7 +358,7 @@ class AppStateIsaacSimViewer(AppState):
     def _update_camera_lookat_base_pos(self):
 
         gui_input = self._app_service.gui_input
-        y_speed = 0.05
+        y_speed = 0.02
         if gui_input.get_key_down(GuiInput.KeyNS.Z):
             self._camera_lookat_y_offset -= y_speed
         if gui_input.get_key_down(GuiInput.KeyNS.X):
@@ -332,7 +392,10 @@ class AppStateIsaacSimViewer(AppState):
             else:
                 self._isaac_wrapper.step()
 
-    def update_spot_pre_step(self):
+    def update_spot_base(self):
+
+        if not self._do_camera_follow_spot:
+            return
 
         # robot_pos = isaac_prim_utils.get_pos(self._spot_wrapper._robot)
         robot_forward = isaac_prim_utils.get_forward(self._spot_wrapper._robot)
@@ -361,6 +424,13 @@ class AppStateIsaacSimViewer(AppState):
         else:
             angular_vel_z = 0.0
         self._spot_wrapper._robot.set_angular_velocity([curr_ang_vel[0], curr_ang_vel[1], angular_vel_z])
+
+    def update_spot_pre_step(self, dt):
+
+        self.update_spot_base()
+
+        self.update_spot_arm(dt)
+
 
     def update_record_remote_hands(self):
 
@@ -441,9 +511,12 @@ class AppStateIsaacSimViewer(AppState):
                 hand_record._recent_remote_pos = None
                 print(f"wrote {filepath}")
 
-    def draw_axis(self, length):
+
+    def draw_axis(self, length, transform_mat=None):
 
         line_render = self._app_service.line_render
+        if transform_mat:
+            line_render.push_transform(transform_mat)
         line_render.draw_transformed_line(
             mn.Vector3(0, 0, 0),
             mn.Vector3(length, 0, 0),
@@ -462,6 +535,9 @@ class AppStateIsaacSimViewer(AppState):
             mn.Color4(0, 0, 1, 1),
             mn.Color4(0, 0, 1, 0)
         )
+        if transform_mat:
+            line_render.pop_transform()  
+
 
     def draw_hand(self, art_hand_positions, art_hand_rotations):
 
@@ -471,9 +547,7 @@ class AppStateIsaacSimViewer(AppState):
             bone_pos = art_hand_positions[i]
             bone_rot_quat = art_hand_rotations[i]
             trans = mn.Matrix4.from_(bone_rot_quat.to_matrix(), bone_pos)
-            line_render.push_transform(trans)
-            self.draw_axis(0.04 if i == 0 else 0.02)
-            line_render.pop_transform()            
+            self.draw_axis(0.08 if i == 0 else 0.02, trans)
 
     def get_hand_positions_rotations(self, hand_idx):
 
@@ -508,7 +582,6 @@ class AppStateIsaacSimViewer(AppState):
             old_rot, old_pos = rotations[i], positions[i]
             new_rot, new_pos = multiply_transforms(old_rot, old_pos, composite_rot, composite_pos)
             positions[i], rotations[i] = new_pos, new_rot
-            pass
 
         self.draw_hand(positions, rotations)
 
@@ -522,7 +595,7 @@ class AppStateIsaacSimViewer(AppState):
         do_pause = not gui_input.get_key(GuiInput.KeyNS.M)
 
         # temp display only right hand
-        for hand_record in [self._hand_records[1]]:
+        for hand_record in self._hand_records:
 
             hand_idx = hand_record._idx
             first_filepath = f"hand{hand_idx}_trajectory0_100frames.json"
@@ -551,28 +624,86 @@ class AppStateIsaacSimViewer(AppState):
                         hand_record._playback_frame_idx = 0
 
 
-    def update_metahand_from_remote_hand(self):
+    def update_spot_arm_baked(self, target_rel_pos):
 
+        from habitat.isaac_sim.spot_arm_ik_helper import spot_arm_ik_helper
+        is_ik_active, self._spot_wrapper._target_arm_joint_positions = spot_arm_ik_helper(target_rel_pos)
+
+    def update_spot_arm(self, dt):
+
+        target_pos = self._get_camera_lookat_pos()
+
+        link_positions, link_rotations = self._spot_wrapper.get_link_world_poses()
+
+        for i in range(len(link_positions)):
+            rot, pos = link_rotations[i], link_positions[i]
+            trans = mn.Matrix4.from_(rot.to_matrix(), pos)
+            self.draw_axis(0.1, trans)
+
+            # if i > 0:
+            #     prev_pos = link_positions[i - 1]
+            #     line_render.draw_transformed_line(prev_pos, pos, 
+            #         from_color=mn.Color3(255, 0, 255), to_color=mn.Color3(255, 255, 0))
+
+        def inverse_transform(pos_a, rot_b, pos_b):
+            inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)    
+            return inv_pos
+        target_rel_pos = inverse_transform(target_pos, link_rotations[0], link_positions[0])
+
+        # self.update_spot_arm_hot_reload(target_rel_pos)
+        # self.update_spot_arm_baked(target_rel_pos)
+
+        self._spot_wrapper._target_arm_joint_positions = self._spot_pick_helper.update(dt, target_rel_pos)
+
+        pass
+
+    def update_spot_arm_hot_reload(self, link_positions, link_rotations, target_pos):
+
+        num_dof = len(self._spot_wrapper._arm_joint_indices)
         do_print_errors = not self._did_function_load_fail
         self._did_function_load_fail = False
+
+        filepath = "./habitat-lab/habitat/isaac_sim/spot_arm_ik_helper.py"
+        function_name = "spot_arm_ik_helper"  # The function you want to load
+
+        # Load the function
+        spot_arm_ik_helper = load_function_from_file(filepath, function_name, do_print_errors=do_print_errors)
+
+        if not spot_arm_ik_helper:
+            self._did_function_load_fail = True
+            return
+
+        try:
+            # Call the loaded function with test arguments
+            is_ik_active, result = spot_arm_ik_helper(link_positions, link_rotations, target_pos)
+
+            if not isinstance(result, list) or not isinstance(result[0], float) or len(result) != num_dof:
+                raise ValueError(f"spot_arm_ik_helper invalid return value: {result}")
+            self._spot_wrapper._target_arm_joint_positions = result
+
+        except Exception as e:
+            if do_print_errors:
+                print(f"Error calling the function: {e}")
+                traceback.print_exc()  
+            self._did_function_load_fail = True            
+
+    def update_metahand_bones_from_art_hand_pose(self, art_hand_positions, art_hand_rotations):
 
         num_dof = 16
         self._metahand_wrapper._target_joint_positions = [0.0] * num_dof
 
-        filepath = "./map_articulated_hand.py"
-        function_name = "map_articulated_hand_to_metahand_joint_positions"  # The function you want to load
+        from habitat.isaac_sim.map_articulated_hand import map_articulated_hand_to_metahand_joint_positions
 
-        # Load the function
-        map_articulated_hand_to_metahand_joint_positions = load_function_from_file(filepath, function_name, do_print_errors=do_print_errors)
+        result = map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_hand_rotations)
+        self._metahand_wrapper._target_joint_positions = result
 
-        if not map_articulated_hand_to_metahand_joint_positions:
-            self._did_function_load_fail = True
-            return
-        
-        hand_idx = 1  # right hand
-        art_hand_positions, art_hand_rotations = self.get_hand_positions_rotations(hand_idx=hand_idx)
+    def update_metahand_bones_from_art_hand_pose_hot_reload(self, art_hand_positions, art_hand_rotations):
 
-        if True:
+        num_dof = 16
+        self._metahand_wrapper._target_joint_positions = [0.0] * num_dof
+
+        # remote root transform?
+        if False:
             root_rot_quat = art_hand_rotations[0]
             root_pos = art_hand_positions[0]
 
@@ -583,6 +714,19 @@ class AppStateIsaacSimViewer(AppState):
                 old_rot, old_pos = art_hand_rotations[i], art_hand_positions[i]
                 new_rot, new_pos = multiply_transforms(old_rot, old_pos, composite_rot, composite_pos)
                 art_hand_positions[i], art_hand_rotations[i] = new_pos, new_rot
+
+        do_print_errors = not self._did_function_load_fail
+        self._did_function_load_fail = False
+
+        filepath = "./habitat-lab/habitat/isaac_sim/map_articulated_hand.py"
+        function_name = "map_articulated_hand_to_metahand_joint_positions"  # The function you want to load
+
+        # Load the function
+        map_articulated_hand_to_metahand_joint_positions = load_function_from_file(filepath, function_name, do_print_errors=do_print_errors)
+
+        if not map_articulated_hand_to_metahand_joint_positions:
+            self._did_function_load_fail = True
+            return
 
         try:
             # Call the loaded function with test arguments
@@ -597,6 +741,33 @@ class AppStateIsaacSimViewer(AppState):
                 print(f"Error calling the function: {e}")
                 traceback.print_exc()  
             self._did_function_load_fail = True      
+
+    def update_metahand_from_remote_hand(self, extra_rot, extra_pos):
+
+        hand_idx = 1  # right hand
+        art_hand_positions, art_hand_rotations = self.get_hand_positions_rotations(hand_idx=hand_idx)
+
+        for i in range(len(art_hand_positions)):
+            old_rot, old_pos = art_hand_rotations[i], art_hand_positions[i]
+            new_rot, new_pos = multiply_transforms(old_rot, old_pos, extra_rot, extra_pos)
+            art_hand_positions[i], art_hand_rotations[i] = new_pos, new_rot
+
+        target_base_pos = art_hand_positions[0]
+        target_base_rot = art_hand_rotations[0]
+
+        c = 0.70710678118
+        base_fixup_rot = mn.Quaternion([0.0, 0.0, c], -c)  # mn.Quaternion([0.5, 0.5, 0.5], -0.5)
+        fixed_target_base_rot = target_base_rot * base_fixup_rot
+
+        # trans = mn.Matrix4.from_(fixed_target_base_rot.to_matrix(), target_base_pos)
+        # self.draw_axis(0.25, trans)
+
+        self._metahand_wrapper.set_target_base_position(target_base_pos)
+        self._metahand_wrapper.set_target_base_rotation(fixed_target_base_rot)
+
+        self.update_metahand_bones_from_art_hand_pose(art_hand_positions, art_hand_rotations)
+
+
 
 
 
@@ -619,21 +790,27 @@ class AppStateIsaacSimViewer(AppState):
 
         self.update_play_back_remote_hands()
 
-        self.update_metahand_from_remote_hand()
+        # extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
+        # extra_pos = [-7.0, 1.0, -2.75]
+        # self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
+        #     extra_rot=extra_rot,
+        #     extra_pos=extra_pos)
 
-        extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
-        extra_pos = [-7.0, 1.0, -2.75]
-        self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
-            extra_rot=extra_rot,
-            extra_pos=extra_pos)
+        extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], -0.5)
+        extra_pos = [-7.0, -0.5, -3.25]
+        # self.draw_hand_helper(hand_idx=0, use_identify_root_transform=False,
+        #     extra_rot=extra_rot,
+        #     extra_pos=extra_pos)
 
-        extra_rot = mn.Quaternion([0.5, 0.5, 0.5], -0.5)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
-        extra_pos = [-7.0, 1.0, -3.25]
-        self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
+        self.draw_hand_helper(hand_idx=1, use_identify_root_transform=False,
             extra_rot=extra_rot,
             extra_pos=extra_pos)
         
-        self.update_spot_pre_step()
+        extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
+        extra_pos = [-7.0, -0.5, -3.0]
+        self.update_metahand_from_remote_hand(extra_rot, extra_pos)
+
+        self.update_spot_pre_step(dt)
 
         self.update_isaac(post_sim_update_dict)
 
