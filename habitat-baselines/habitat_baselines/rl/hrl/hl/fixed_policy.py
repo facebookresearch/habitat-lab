@@ -49,6 +49,9 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         """
         solution = self._pddl_prob.solution
 
+        # temp hack just do pick
+        solution = [solution[1]]
+
         solution_actions = []
         for i, hl_action in enumerate(solution):
             sol_action = (

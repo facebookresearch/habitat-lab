@@ -17,7 +17,7 @@ from habitat_baselines.rl.hrl.skills.oracle_nav import (
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
 from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
-from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
+from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill, OraclePickSkill
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.hrl.skills.wait import WaitSkillPolicy
 
@@ -33,6 +33,7 @@ __all__ = [
     "PickSkillPolicy",
     "PlaceSkillPolicy",
     "ResetArmSkill",
+    "OraclePickSkill",
     "SkillPolicy",
     "WaitSkillPolicy",
     "NoopSkillPolicy",
