@@ -42,6 +42,7 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - other_agent_gps
+    - object_sensor
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_agents_within_threshold: agents_within_threshold
   - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_agents_within_threshold: agents_within_threshold
   - _self_
@@ -115,6 +116,8 @@ habitat:
       - agent_0_has_finished_oracle_nav
       - agent_0_other_agent_gps
       - agent_0_agents_within_threshold
+      - agent_0_joint
+      - agent_0_obj_goal_pos_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor

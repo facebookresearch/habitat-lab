@@ -127,6 +127,18 @@ class AppStatePickThrowVr(AppState):
         sim = self.get_sim()
         self._target_obj_ids = sim._scene_obj_ids
 
+        # hack put an object somewhere in the scene, since object spawning is broken
+        rom_obj = self._get_target_rigid_object(0)
+        rom_obj.translation = mn.Vector3(-5.9, 1.0, -5.4)
+
+        rom_obj = self._get_target_rigid_object(1)
+        rom_obj.translation = mn.Vector3(-5.9, 1.0, -4.4)
+
+        # # hack override position of object 0
+        # ep_info.rigid_objs[0][1][0][3] = -5.9
+        # ep_info.rigid_objs[0][1][1][3] = 1.0
+        # ep_info.rigid_objs[0][1][2][3] = 5.4
+
         self._nav_helper.on_environment_reset()
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
@@ -635,7 +647,13 @@ class AppStatePickThrowVr(AppState):
                 )
                 self._app_service.end_episode(do_reset=True)
 
-        if self._app_service.gui_input.get_key_down(KeyCode.P):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SIX):
+            self._app_service.episode_helper.set_next_episode_by_id(
+                self._app_service.episode_helper.current_episode.episode_id
+            )
+            self._app_service.end_episode(do_reset=True)
+
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.P):
             self._paused = not self._paused
 
         if self._app_service.gui_input.get_key_down(KeyCode.H):
