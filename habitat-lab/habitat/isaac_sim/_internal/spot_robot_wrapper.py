@@ -21,7 +21,7 @@ import omni.physx.scripts.utils as physxUtils
 
 from habitat.isaac_sim import isaac_prim_utils
 
-class RobotWrapper:
+class SpotRobotWrapper:
     """Isaac-internal wrapper for a robot.
     
     The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
@@ -80,7 +80,7 @@ class RobotWrapper:
         # todo: resolve off-by-100 scale issue
         self.scale_prim_mass_and_inertia(f"{robot_prim_path}/base", 100.0)
 
-        self._name = f"robot_{instance_id}"
+        self._name = f"spot_{instance_id}"
         self._robot = self._isaac_service.world.scene.add(Robot(prim_path=robot_prim_path, name=self._name))
         self._robot_controller = self._robot.get_articulation_controller()
 
@@ -90,6 +90,9 @@ class RobotWrapper:
 
         self.arm_target_joint_pos = None
 
+        # beware this poses the object
+        self._xform_prim_view = self._create_xform_prim_view()
+
     @property
     def robot(self) -> Robot:
         """Get Isaac Sim Robot"""
@@ -98,13 +101,57 @@ class RobotWrapper:
     def get_prim_path(self):
         return self._robot_prim_path
 
+    def get_link_world_poses(self):
+
+        positions = []
+        positions_usd, rotations_usd = self._xform_prim_view.get_world_poses()
+        for pos_usd in positions_usd:
+            positions.append(mn.Vector3(isaac_prim_utils.usd_to_habitat_position(pos_usd)))
+        rotations = []
+        for rot_usd in rotations_usd:
+            rotations.append(isaac_prim_utils.rotation_wxyz_to_magnum_quat(isaac_prim_utils.usd_to_habitat_rotation(rot_usd)))
+
+        # perf todo: consider RobotView.get_body_coms instead
+
+        return positions, rotations
+
+    def _create_xform_prim_view(self):
+
+        root_prim_path = self._robot_prim_path
+        root_prim = self._isaac_service.world.stage.GetPrimAtPath(root_prim_path)
+
+        prim_paths = []
+
+        # lazy import
+        from pxr import Usd, UsdPhysics
+        prim_range = Usd.PrimRange(root_prim)
+        it = iter(prim_range)
+        for prim in it:
+
+            prim_path = str(prim.GetPath())
+
+            if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                continue
+
+            # we found a rigid body, so let's ignore children
+            it.PruneChildren()
+
+            prim_paths.append(prim_path)
+
+        assert len(prim_paths)
+
+        self._body_prim_paths = prim_paths
+
+        from omni.isaac.core.prims.xform_prim_view import XFormPrimView
+        return XFormPrimView(prim_paths)
+
+
     def post_reset(self):
         # todo: just do a single callback
         self._isaac_service.world.add_physics_callback(f"{self._name}_physics_callback", callback_fn=self.physics_callback)
 
         # todo: specify this in isaac_spot_robot.py
-        arm_joint_names = ["arm0_sh0", "arm0_sh1", "arm0_hr0", "arm0_el0", "arm0_el1", "arm0_wr0", "arm0_wr1"]
-        gripper_joint_names = ["arm0_f1x"]
+        arm_joint_names = ["arm0_sh0", "arm0_sh1", "arm0_hr0", "arm0_el0", "arm0_el1", "arm0_wr0", "arm0_wr1", "arm0_f1x"]
 
         arm_joint_indices = []
         dof_names = self._robot.dof_names
@@ -113,6 +160,8 @@ class RobotWrapper:
             arm_joint_indices.append(dof_names.index(arm_joint_name))
 
         self._arm_joint_indices = np.array(arm_joint_indices)
+        self._target_arm_joint_positions = None
+
 
     def scale_prim_mass_and_inertia(self, path, scale):
 
@@ -194,6 +243,14 @@ class RobotWrapper:
 
         self._robot.set_linear_velocity([curr_linear_velocity[0], curr_linear_velocity[1], desired_linear_vel_z])
 
+    def drive_arm(self, step_size):
+
+        if self._target_arm_joint_positions:
+            assert len(self._target_arm_joint_positions) == len(self._arm_joint_indices)
+            self._robot_controller.apply_action(
+                ArticulationAction(joint_positions=self._target_arm_joint_positions, joint_indices=self._arm_joint_indices)
+            )
+
     def fix_base(self, step_size):
 
         # temp: introduce random xy vel periodically
@@ -211,5 +268,6 @@ class RobotWrapper:
 
     def physics_callback(self, step_size):
         self.fix_base(step_size)
+        self.drive_arm(step_size)
         self._step_count += 1
 

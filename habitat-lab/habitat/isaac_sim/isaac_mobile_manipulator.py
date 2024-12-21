@@ -10,7 +10,7 @@ import numpy as np
 
 from habitat.articulated_agents.mobile_manipulator import MobileManipulatorParams
 
-from habitat.isaac_sim._internal.robot_wrapper import RobotWrapper
+from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
 from habitat.isaac_sim import isaac_prim_utils
 
 from omni.isaac.core.utils.types import ArticulationAction
@@ -21,7 +21,7 @@ from omni.isaac.core.utils.types import ArticulationAction
 class IsaacMobileManipulator:
     """Robot with a controllable base and arm.
     
-    Exposes a minimal public interface to the rest of Habitat-lab. See also RobotWrapper, which has the goal of a convenience wrapper (no encapsulation).    
+    Exposes a minimal public interface to the rest of Habitat-lab. See also SpotRobotWrapper, which has the goal of a convenience wrapper (no encapsulation).    
     """
 
     def __init__(
@@ -34,7 +34,7 @@ class IsaacMobileManipulator:
         # maintain_link_order: bool = False,
         # base_type="mobile",
     ):
-        self._robot_wrapper = RobotWrapper(isaac_service=isaac_service, instance_id=0)
+        self._robot_wrapper = SpotRobotWrapper(isaac_service=isaac_service, instance_id=0)
 
 
     def reconfigure(self) -> None:
@@ -70,11 +70,11 @@ class IsaacMobileManipulator:
 
         rw = self._robot_wrapper
 
-        assert len(ctrl) == len(rw._arm_joint_indices)
+        assert len(ctrl) == len(rw._arm_joint_indices) - 1
 
         rw._robot_controller.apply_action(
             ArticulationAction(joint_positions=np.array(ctrl), 
-                                joint_indices=rw._arm_joint_indices))
+                                joint_indices=rw._arm_joint_indices[:-1]))
         # todo: think about setting joint target vel to zero?
 
     @property

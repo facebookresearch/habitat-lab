@@ -11,6 +11,8 @@ from enum import Enum
 # todo: clean up how RenderInstanceHelper is exposed from habitat_sim extension
 from habitat_sim._ext.habitat_sim_bindings import RenderInstanceHelper
 
+from habitat.isaac_sim import isaac_prim_utils
+
 LOCAL_ROOT_KEY = "[root]"
 
 @dataclass
@@ -21,45 +23,6 @@ class RenderAsset:
 
 
 import numpy as np
-
-
-def apply_isaac_to_habitat_orientation(orientations):
-    """
-    Assume wxyz quaternions. Apply 90-degree rotation about X (from Isaac z-up to Habitat y-up) and 180-degree rotation about Y (from Isaac +z-forward to Habitat -z-forward).
-    """
-    w_o = orientations[:, 0]
-    x_o = orientations[:, 1]
-    y_o = orientations[:, 2]
-    z_o = orientations[:, 3]
-
-    HALF_SQRT2 = 0.70710678  # √0.5
-
-    w_h = -HALF_SQRT2 * (y_o + z_o)
-    x_h =  HALF_SQRT2 * (z_o - y_o)
-    y_h =  HALF_SQRT2 * (w_o + x_o)
-    z_h =  HALF_SQRT2 * (w_o - x_o)
-
-    new_orientations = np.stack([w_h, x_h, y_h, z_h], axis=1)
-
-    return new_orientations
-
-
-def isaac_to_habitat(positions, orientations):
-    """
-    Convert from Isaac (Z-up) to Habitat (Y-up) coordinate system for positions and orientations.
-    """
-
-    # Positions:
-    # From Isaac (Z-up) to Habitat (Y-up): Isaac (x, y, z) → Habitat (-x, z, y)
-    # We can do this in a single step with array slicing:
-    new_positions = positions[:, [0, 2, 1]]  # Rearrange: (x, y, z) -> (x, z, y)
-    new_positions[:, 0] *= -1  # Negate the X-axis
-
-    # Orientations:
-    # Apply the fixed transform derived above
-    new_orientations = apply_isaac_to_habitat_orientation(orientations)
-
-    return new_positions, new_orientations
 
 
 
@@ -92,7 +55,7 @@ class _InstanceGroup:
     def flush_to_hab_sim(self):
         positions, orientations = self._xform_prim_view.get_world_poses()
 
-        positions, orientations = isaac_to_habitat(positions, orientations)
+        positions, orientations = isaac_prim_utils.isaac_to_habitat(positions, orientations)
 
         self._render_instance_helper.set_world_poses(
             np.ascontiguousarray(positions), 
