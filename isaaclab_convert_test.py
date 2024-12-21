@@ -478,6 +478,7 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath, reference_urdf_fi
         link_name = link.get("name")
         visual = link.find("visual")
         if visual is not None:
+            # todo: handle materials (color only, not texture)
             geometry = visual.find("geometry")
             if geometry is not None:
                 mesh = geometry.find("mesh")
@@ -524,11 +525,18 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath, reference_urdf_fi
     print(f"Updated USD file written to: {out_usd_filepath}")
 
 def convert_urdf_test():
-    source_urdf_filepath = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
-    clean_urdf_filepath = "data/robots/hab_spot_arm/urdf/hab_spot_arm_clean.urdf"
+    # base_urdf_name = "hab_spot_arm"
+    # base_urdf_folder = "data/robots/hab_spot_arm/urdf"
+
+    base_urdf_name = "allegro_digit360_right_calib_free"
+    base_urdf_folder = "data/from_gum"
+
+    source_urdf_filepath = f"{base_urdf_folder}/{base_urdf_name}.urdf"
+    clean_urdf_filepath = f"{base_urdf_folder}/{base_urdf_name}_clean.urdf"
+
     # Temp USD must be in same folder as final USD. It's okay to be the exact same file.
-    temp_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
-    out_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
+    temp_usd_filepath = f"data/usd/robots/{base_urdf_name}.usda"
+    out_usd_filepath = f"data/usd/robots/{base_urdf_name}.usda"
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
 
@@ -551,9 +559,9 @@ def convert_objects_folder_to_usd(objects_root_folder, out_usd_folder, project_r
             convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
 
 
-# convert_urdf_test()
+convert_urdf_test()
 # convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
 # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/104862669_172226853.scene_instance.json", project_root_folder="./")
 # convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
 
-convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
+# convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
