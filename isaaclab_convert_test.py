@@ -559,7 +559,8 @@ def convert_objects_folder_to_usd(objects_root_folder, out_usd_folder, project_r
             convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
 
 
-convert_urdf_test()
+# convert_urdf_test()
+convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./")
 # convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
 # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/104862669_172226853.scene_instance.json", project_root_folder="./")
 # convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
