@@ -13,7 +13,7 @@ from habitat_hitl._internal.image_framebuffer_drawer import (
 )
 from habitat_hitl.core.text_drawer import TextDrawer
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
-
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 class ReplayGuiAppRenderer(GuiAppRenderer):
     def __init__(
@@ -23,6 +23,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         use_batch_renderer=False,
         im_framebuffer_drawer_kwargs=None,
         text_drawer_kwargs=None,
+        video_recorder: FramebufferVideoRecorder = None,
     ):
         self.window_size = window_size
         # arbitrary uuid
@@ -82,6 +83,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             self.window_size, **text_drawer_kwargs
         )
 
+        self._video_recorder = video_recorder
+
     def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
         self._image_drawer = image_drawer
 
@@ -132,6 +135,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
         mn.gl.default_framebuffer.bind()
         self._text_drawer.draw_text()
+
+        self._video_recorder.record_video_frame()
 
         self._need_render = False
 
