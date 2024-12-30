@@ -89,7 +89,7 @@ class RearrangeSim(HabitatSim):
         # todo: do this conditionally based on config
         # todo: think about when/where to do this
         # todo: only allow headed for a single env
-        self._isaac_app_wrapper = IsaacAppWrapper(self, headless=True)
+        self._isaac_app_wrapper = None  # IsaacAppWrapper(self, headless=True)
 
         if self._isaac_app_wrapper:
 
