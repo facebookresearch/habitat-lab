@@ -49,10 +49,10 @@ habitat_hitl:
   
   window:
     title: "IsaacSim Viewer"
-    # width: 1920
-    # height: 1080
-    width: 900  # 960
-    height: 900
+    width: 1920
+    height: 1080
+    # width: 900  # 960
+    # height: 900
     display_font_size: 24
 
 
