@@ -10,6 +10,7 @@ import hydra
 import magnum as mn
 import os
 import json
+import random
 
 # import habitat.isaacsim.isaacsim_wrapper as isaacsim_wrapper
 # from habitat.isaacsim.usd_visualizer import UsdVisualizer
@@ -27,51 +28,291 @@ from habitat_hitl.core.hydra_utils import (
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_hitl.core.gui_input import GuiInput
+from habitat_hitl._internal.networking.average_rate_tracker import (
+    AverageRateTracker,
+)
 
 import traceback
 
 import habitat_sim  # unfortunately we can't import this earlier
 
 
+def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_friction, dynamic_friction, restitution):
+    
+    from pxr import UsdShade, UsdPhysics
+    from omni.isaac.core.materials.physics_material import PhysicsMaterial
 
+    # material_path = f"/PhysicsMaterials/{material_name}"
+    # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
+    # material = UsdPhysics.MaterialAPI(material_prim)
+    
+    # material.CreateStaticFrictionAttr().Set(static_friction)
+    # material.CreateDynamicFrictionAttr().Set(dynamic_friction)
+    # material.CreateRestitutionAttr().Set(restitution)
+    
+    physics_material = PhysicsMaterial(
+        prim_path=f"/PhysicsMaterials/{material_name}",
+        name=material_name,
+        static_friction=static_friction,
+        dynamic_friction=dynamic_friction,
+        restitution=restitution)
+
+    binding_api = UsdShade.MaterialBindingAPI.Apply(root_prim)
+    binding_api.Bind(
+        physics_material.material,
+        bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+        materialPurpose="physics",
+    )
+
+    
+
+class SpotStateMachine:
+
+    def __init__(self, spot_wrapper, line_render):
+
+        self._spot_wrapper = spot_wrapper
+        self._spot_pick_helper = None
+        self._raise_timer = None
+        self._pause_timer = None
+        self._get_pick_target_pos = None
+        self._line_render = line_render
+        pass
+
+    def reset(self):
+        self._spot_pick_helper = None
+        self._raise_timer = None
+        self._pause_timer = None
+        self._get_pick_target_pos = None
+
+        self._spot_wrapper._target_arm_joint_positions = [0.0, -2.36, 0.0, 2.25, 0.0, 1.67, 0.0, 0.0]
+
+        pos_usd = isaac_prim_utils.habitat_to_usd_position([random.uniform(-2.0, -4.0), 0.8, -4.8])
+        self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
+
+
+    def set_pick_target(self, get_pick_target_pos):
+
+        self.reset()
+        self._get_pick_target_pos = get_pick_target_pos
+
+
+    def _update_nav(self, robot_pos, target_pos):
+
+        # temp disable because we can't hook this up to _hide_gui easily
+        # self._line_render.draw_transformed_line(robot_pos, target_pos, 
+        #     from_color=mn.Color3(255, 0, 0), to_color=mn.Color3(0, 255, 0))        
+
+        robot_forward = isaac_prim_utils.get_forward(self._spot_wrapper._robot)
+
+        robot_to_target = target_pos - robot_pos
+        robot_to_target_xz_norm = mn.Vector3(robot_to_target.x, 0.0, robot_to_target.z).normalized()
+
+        # assumes both are unit length and in xz plane
+        def get_angle_rads(v1, v2):
+            # assert mn.math.isclose(v1.y, 0.0), "v1 must be in the XZ plane."
+            # assert mn.math.isclose(v2.y, 0.0), "v2 must be in the XZ plane."
+            # assert mn.math.isclose(v1.length(), 1.0), "v1 must be normalized."
+            # assert mn.math.isclose(v2.length(), 1.0), "v2 must be normalized."            
+            dot_product = mn.math.clamp(mn.math.dot(v1, v2), -1.0, 1.0)  # Clamp for safety
+            cross_y = v1.x * v2.z - v1.z * v2.x  # Cross product Y component in XZ plane
+            # Compute the signed angle
+            angle = mn.math.acos(dot_product)
+            return float(angle if cross_y >= 0 else -angle)
+
+        angle = get_angle_rads(robot_to_target_xz_norm, robot_forward)
+
+        curr_ang_vel = self._spot_wrapper._robot.get_angular_velocity()
+        angle_scalar = 10.0
+        max_angular_speed = 2.0
+        self._spot_wrapper._robot.set_angular_velocity([curr_ang_vel[0], curr_ang_vel[1], 
+                                                        min(angle * angle_scalar, max_angular_speed)])
+
+        angle_threshold = 5 * mn.math.pi / 180.0
+        if abs(angle) < angle_threshold:
+            linear_speed = 2.5
+        else:
+            linear_speed = 0.0
+            
+        curr_linear_vel_usd = self._spot_wrapper._robot.get_linear_velocity()
+        linear_vel = robot_forward * linear_speed
+        linear_vel_usd = isaac_prim_utils.habitat_to_usd_position([linear_vel.x, linear_vel.y, linear_vel.z])
+        # only set usd xy vel (vel in ground plane)
+        linear_vel_usd[2] = curr_linear_vel_usd[2]
+        self._spot_wrapper._robot.set_linear_velocity(linear_vel_usd)
+
+    def _update_pick(self, dt, target_pos):
+
+        base_pos, base_rot = self._spot_wrapper.get_root_pose()
+        def inverse_transform(pos_a, rot_b, pos_b):
+            inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)    
+            return inv_pos
+        target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
+
+        self._spot_wrapper._target_arm_joint_positions = self._spot_pick_helper.update(dt, target_rel_pos)
+
+    def _dist_xz(self, robot_pos, target_pos):
+
+        robot_to_target = target_pos - robot_pos
+        robot_to_target_xz = mn.Vector3(robot_to_target.x, 0.0, robot_to_target.z)
+        dist_xz = robot_to_target_xz.length()
+        return dist_xz
+
+
+    def update(self, dt):
+
+        if not self._get_pick_target_pos:
+            return
+
+        target_pos = self._get_pick_target_pos()
+
+        robot_pos = isaac_prim_utils.get_pos(self._spot_wrapper._robot)
+
+        dist_xz = self._dist_xz(robot_pos, target_pos)
+
+        approach_threshold = 0.8
+        if not self._spot_pick_helper and dist_xz > approach_threshold:
+            self._update_nav(robot_pos, target_pos)
+            return
+        
+        if not self._spot_pick_helper:
+            self._spot_pick_helper = SpotPickHelper(len(self._spot_wrapper._arm_joint_indices))
+
+        if not self._spot_pick_helper.is_done():
+            self._update_pick(dt, target_pos)
+            return
+
+        if self._raise_timer is None:
+            # save arm position
+            self._raise_timer = 0.0
+
+        self._raise_timer += dt
+        raise_duration = 2.0
+        if self._raise_timer < raise_duration:
+
+            # rotate elbow up
+            inc1 = -dt / raise_duration * 30 / 180 * mn.math.pi
+            self._spot_wrapper._target_arm_joint_positions[3] += inc1
+
+            # rotate wrist up 
+            inc2 = -dt / raise_duration * 0 / 180 * mn.math.pi
+            self._spot_wrapper._target_arm_joint_positions[5] += inc2
+            return
+
+        # spot_spawn_pos = mn.Vector3(-1.2, 1.0, -5.2)
+        
+        waypoint_pos = mn.Vector3(random.uniform(-2.0, -4.0), 0.8, -4.8)
+        dist_xz = self._dist_xz(robot_pos, waypoint_pos)
+        approach_threshold = 0.5
+        if self._pause_timer is None and dist_xz > approach_threshold:
+            self._update_nav(robot_pos, waypoint_pos)
+            return
+        
+        # if self._pause_timer is None:
+        #     self._pause_timer = 0.0
+        # self._pause_timer += dt
+        # pause_duration = 2.0
+        # if self._pause_timer < pause_duration:
+        #     return
+        
+        # # navigate back to spawn
+        # waypoint_pos = mn.Vector3(-1.2, 1.0, -5.2)
+        # dist_xz = self._dist_xz(robot_pos, waypoint_pos)
+        # approach_threshold = 0.5
+        # if dist_xz > approach_threshold:
+        #     self._update_nav(robot_pos, waypoint_pos)
+        #     return
+
+        pass
 
 class SpotPickHelper:
 
-    APPROACH_DIST = 0.12
-    APPROACH_DURATION = 3.0
+    APPROACH_DIST = 0.14
+    APPROACH_DURATION = 2.0
 
-    def __init__(self):
+    def __init__(self, num_dof):
 
-        self._is_ik_active = False
         self._approach_timer = 0.0
         self._was_ik_active = False
+        assert num_dof > 0
+        self._num_dof = num_dof
+        self._did_function_load_fail = False
+        self.reset()
         pass
 
+    def is_done(self):
+        return self._approach_timer == SpotPickHelper.APPROACH_DURATION
+
+    def spot_arm_ik_helper_wrapper(self, target_rel_pos, approach_offset_len, use_conservative_reach):
+
+        hot_reload = False
+        if hot_reload:
+            return self.spot_arm_ik_helper_wrapper_hot_reload(target_rel_pos, approach_offset_len, use_conservative_reach)
+        else:
+            from habitat.isaac_sim.spot_arm_ik_helper import spot_arm_ik_helper # type: ignore
+            return spot_arm_ik_helper(target_rel_pos, approach_offset_len, use_conservative_reach)
+
+
+    def spot_arm_ik_helper_wrapper_hot_reload(self, target_rel_pos, approach_offset_len, use_conservative_reach):
+
+        num_dof = self._num_dof
+        fallback_ret_val = (False, [0.0] * num_dof)
+
+        do_print_errors = not self._did_function_load_fail
+        self._did_function_load_fail = False
+
+        filepath = "./habitat-lab/habitat/isaac_sim/spot_arm_ik_helper.py"
+        function_name = "spot_arm_ik_helper"  # The function you want to load
+
+        # Load the function
+        spot_arm_ik_helper = load_function_from_file(filepath, function_name, do_print_errors=do_print_errors)
+
+        if not spot_arm_ik_helper:
+            self._did_function_load_fail = True
+            return fallback_ret_val
+
+        try:
+            # Call the loaded function with test arguments
+            is_ik_active, result = spot_arm_ik_helper(target_rel_pos, approach_offset_len, use_conservative_reach)
+
+            if not isinstance(result, list) or not isinstance(result[0], float) or len(result) != num_dof:
+                raise ValueError(f"spot_arm_ik_helper invalid return value: {result}")
+            return is_ik_active, result
+
+        except Exception as e:
+            if do_print_errors:
+                print(f"Error calling the function: {e}")
+                traceback.print_exc()  
+            self._did_function_load_fail = True  
+
+            return fallback_ret_val
+
+    def reset(self):
+        self._approach_timer = 0.0
+        self._was_ik_active = False
+        
     def update(self, dt, target_rel_pos):
 
         approach_progress = (self._approach_timer / SpotPickHelper.APPROACH_DURATION)
         # approach_offset drops to zero during approach
-        approach_offset = SpotPickHelper.APPROACH_DIST * (1.0 - approach_progress)
+        approach_offset_len = SpotPickHelper.APPROACH_DIST * (1.0 - approach_progress)
 
-        offset_to_shoulder = mn.Vector3(0.29, 0.0, 0.18)
-        target_rel_pos -= offset_to_shoulder
+        # offset_to_shoulder = mn.Vector3(0.29, 0.0, 0.18)
+        # target_rel_pos -= offset_to_shoulder
 
-        # todo: do this offset in the xy plane. Otherwise approaches to high or low
-        # targets don't come in horizontally.
-        target_rel_pos_len = target_rel_pos.length()
-        target_rel_pos_norm = target_rel_pos.normalized()
-        eps = 0.02
-        adjusted_target_rel_pos_len = max(eps, 
-            target_rel_pos_len - approach_offset)
-        adjusted_target_rel_pos = target_rel_pos_norm * adjusted_target_rel_pos_len
+        # # todo: do this offset in the xy plane. Otherwise approaches to high or low
+        # # targets don't come in horizontally.
+        # target_rel_pos_len = target_rel_pos.length()
+        # target_rel_pos_norm = target_rel_pos.normalized()
+        # eps = 0.02
+        # adjusted_target_rel_pos_len = max(eps, 
+        #     target_rel_pos_len - approach_offset)
+        # adjusted_target_rel_pos = target_rel_pos_norm * adjusted_target_rel_pos_len
     
-        adjusted_target_rel_pos += offset_to_shoulder
+        # adjusted_target_rel_pos += offset_to_shoulder
 
-        # Make it less likely to activate ik when we're early in our approach.
-        stickiness_distance_fudge = approach_offset * 1.2
+        use_conservative_reach = not self._was_ik_active
 
-        from habitat.isaac_sim.spot_arm_ik_helper import spot_arm_ik_helper # type: ignore
-        is_ik_active, target_arm_joint_positions = spot_arm_ik_helper(adjusted_target_rel_pos, stickiness_distance_fudge)
+        is_ik_active, target_arm_joint_positions = self.spot_arm_ik_helper_wrapper(target_rel_pos, approach_offset_len, use_conservative_reach)
 
         self._was_ik_active = is_ik_active
 
@@ -81,7 +322,10 @@ class SpotPickHelper:
             self._approach_timer = 0.0
 
         should_close_grasp = self._approach_timer == 0.0 or self._approach_timer == SpotPickHelper.APPROACH_DURATION
-        target_arm_joint_positions[7] = 0.0 if should_close_grasp else -1.67
+        target_arm_joint_positions[7] = 0.5 if should_close_grasp else -1.67
+
+        # temp leave grasp open
+        # target_arm_joint_positions[7] = -1.0
 
         if approach_progress > 0.0:
             print(f"approach_progress: {approach_progress}")
@@ -221,24 +465,28 @@ class AppStateIsaacSimViewer(AppState):
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
-        self._camera_lookat_base_pos = mn.Vector3(-7, 1.0, -3.0)
-        self._camera_lookat_y_offset = 0.0
+        self._cursor_pos = mn.Vector3(-7.2, 0.8, -7.7)  # mn.Vector3(-7.0, 1.0, -2.75)
         self._do_camera_follow_spot = False
-        self._camera_helper.update(self._get_camera_lookat_pos(), 0.0)
+        self._camera_helper.update(self._cursor_pos, 0.0)
 
         # self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
 
-        self._spot = SpotWrapper(self._sim)
+        # self._spot = SpotWrapper(self._sim)
 
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        do_isaac_headless = not self._app_service.hitl_config.experimental.headless.do_headless
+        do_isaac_headless = True  # not self._app_service.hitl_config.experimental.headless.do_headless
 
         # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
         self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
+        self._isaac_physics_dt = 1.0 / 180
+        # beware goofy behavior if physics_dt doesn't equal rendering_dt
+        isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
+
+        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
+        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
         add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
         self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
@@ -249,7 +497,9 @@ class AppStateIsaacSimViewer(AppState):
         from habitat.isaac_sim._internal.metahand_robot_wrapper import MetahandRobotWrapper
         self._metahand_wrapper = MetahandRobotWrapper(self._isaac_wrapper.service)
 
-        self.add_rigid_objects()
+        self._rigid_objects = []
+        self.add_or_reset_rigid_objects()
+        self._pick_target_rigid_object_idx = None
 
         if False:
             from pxr import UsdGeom, Gf
@@ -258,29 +508,105 @@ class AppStateIsaacSimViewer(AppState):
             translate_op = test_scene_root_xform.AddTranslateOp()
             translate_op.Set(Gf.Vec3f([0.0, 0.0, 0.1]))
 
+        stage = self._isaac_wrapper.service.world.stage
+        prim = stage.GetPrimAtPath("/World")
+        bind_physics_material_to_hierarchy(stage=stage, root_prim=prim, material_name="my_material", static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
+
         isaac_world.reset()
         self._spot_wrapper.post_reset()
         self._metahand_wrapper.post_reset()
+        self._isaac_rom.post_reset()
 
-        pos_usd = isaac_prim_utils.habitat_to_usd_position([-7.0, 1.0, -2.0])
+        # position spot near table
+        # pos_usd = isaac_prim_utils.habitat_to_usd_position([-7.9, 1.0, -6.4])
+        pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 1.0, -5.2])
         self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
         self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]
         self._did_function_load_fail = False
 
-        self._spot_pick_helper = SpotPickHelper()
+        # self._spot_pick_helper = SpotPickHelper(len(self._spot_wrapper._arm_joint_indices))
+        self._spot_state_machine = SpotStateMachine(self._spot_wrapper, self._app_service.line_render)
+        self._hide_gui = False
+        self._is_recording = False
+
+        # arbitrary spot for VR avatar (near table)
+        human_pos = mn.Vector3(-3.1, 0.0, -7.6)  # mn.Vector3(-7.5, 0.0, -8.0)
+
+        client_message_manager = self._app_service.client_message_manager
+        if client_message_manager:
+            client_message_manager.change_humanoid_position(human_pos)
+            # client_message_manager.signal_scene_change()
+            # client_message_manager.update_navmesh_triangles(
+            #     self._get_navmesh_triangle_vertices()
+            # )        
+
+        # this seems to break set_world_pose for robots
+        # if not do_isaac_headless:
+        #     self.set_physics_paused(True)
+
+        # self.set_physics_paused(True)
+
+        self._sps_tracker = AverageRateTracker(2.0)
+        self._do_pause_physics = False
+
         pass
 
 
-    def add_rigid_objects(self):
+    def add_or_reset_rigid_objects(self):
+
+        drop_pos = mn.Vector3(-3.6, 0.8, -7.22)  # mn.Vector3(-7.4, 0.8, -7.5)
+        offset_vec = mn.Vector3(1.3, 0.0, 0.0)
+        up_vec = mn.Vector3(0.0, 1.0, 0.0)
+        path_to_configs = "data/objects/ycb/configs"
+
+        do_add = len(self._rigid_objects) == 0
+
+        # objects_to_add = [
+        #     (f"{path_to_configs}/002_master_chef_can.object_config.json", drop_pos + offset_vec * 0/7),
+        #     (f"{path_to_configs}/003_cracker_box.object_config.json", drop_pos + offset_vec * 1/7),
+        #     (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 2/7),
+        #     (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 3/7),
+        #     (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 4/7),
+        #     (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 5/7),
+        #     (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 6/7),
+        #     (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 7/7),
+        # ]
 
         objects_to_add = [
-            ("data/objects/ycb/configs/002_master_chef_can.object_config.json", mn.Vector3(-10.0, 1.0, -2.2)),
-            ("data/objects/ycb/configs/003_cracker_box.object_config.json", mn.Vector3(-10.0, 1.1, -2.2)),
-            ("data/objects/ycb/configs/004_sugar_box.object_config.json", mn.Vector3(-10.0, 1.2, -2.2)),
-            ("data/objects/ycb/configs/008_pudding_box.object_config.json", mn.Vector3(-10.0, 1.3, -2.2)),
-            ("data/objects/ycb/configs/010_potted_meat_can.object_config.json", mn.Vector3(-10.0, 1.3, -2.2)),
+            (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0 + up_vec * 0.0),
+#            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
+            (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * -0.01 + up_vec * 0.05),
+#             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
+             (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.1),
+
+            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.3 + up_vec * 0.0),
+
+            (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.1),
+            (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.0),
+
+            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.9),
+
+            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.0),
+            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.1),
+            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.8),
+
+            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.22 + up_vec * 0.0),
+            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.38 + up_vec * 0.0),
         ]
+
+        # objects_to_add = [
+        #     (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0,
+        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
+        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.05,
+        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
+        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.1,
+        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
+        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.15,
+        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
+        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.2,
+        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
+        # ]
 
         # sim = self._sim
         # rigid_obj_mgr = sim.get_rigid_object_manager()
@@ -288,27 +614,43 @@ class AppStateIsaacSimViewer(AppState):
         self._isaac_rom = IsaacRigidObjectManager(self._isaac_wrapper.service)
         rigid_obj_mgr = self._isaac_rom
 
-        for handle, position in objects_to_add:
-            ro = rigid_obj_mgr.add_object_by_template_handle(handle)
-            ro.translation = position
+        for i, (handle, position) in enumerate(objects_to_add):
+            if do_add:
+                ro = rigid_obj_mgr.add_object_by_template_handle(handle)
+                self._rigid_objects.append(ro)
+            else:
+                ro = self._rigid_objects[i]
+
+            rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
+            trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+            ro.transformation = trans
+
+
+
 
     def draw_lookat(self):
+        if self._hide_gui:
+            return
+
         line_render = self._app_service.line_render
         lookat_ring_radius = 0.01
         lookat_ring_color = mn.Color3(1, 0.75, 0)
         self._app_service.line_render.draw_circle(
-            self._get_camera_lookat_pos(),
+            self._cursor_pos,
             lookat_ring_radius,
             lookat_ring_color,
         )
         
-        # trans = mn.Matrix4.translation(self._camera_lookat_base_pos)
+        # trans = mn.Matrix4.translation(self._cursor_pos)
         # line_render.push_transform(trans)
         # self.draw_axis(0.1)
         # line_render.pop_transform()    
 
 
     def draw_world_origin(self):
+
+        if self._hide_gui:
+            return
 
         line_render = self._app_service.line_render
 
@@ -327,16 +669,27 @@ class AppStateIsaacSimViewer(AppState):
         controls_str += "mousewheel: cam zoom\n"
         controls_str += "WASD: move Spot\n"
         controls_str += "N: next hand recording\n"
+        controls_str += "G: toggle Spot control\n"
+        controls_str += "H: toggle GUI\n"
+        controls_str += "P: pause physics\n"
+        controls_str += "J: reset rigid objects\n"
+        controls_str += "K: start recording\n"
+        controls_str += "L: stop recording\n"
+        if self._sps_tracker.get_smoothed_rate() is not None:
+            controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
+
         return controls_str
 
     def _get_status_text(self):
         status_str = ""
-        lookat_pos = self._get_camera_lookat_pos()
-        status_str += f"({lookat_pos.x:.1f}, {lookat_pos.y:.1f}, {lookat_pos.z:.1f})\n"
-        status_str += f"Hand playback: {self._hand_records[0]._playback_file_count}, {self._hand_records[1]._playback_file_count}"
+        cursor_pos = self._cursor_pos
+        status_str += f"({cursor_pos.x:.1f}, {cursor_pos.y:.1f}, {cursor_pos.z:.1f})\n"
+        # status_str += f"Hand playback: {self._hand_records[0]._playback_file_count}, {self._hand_records[1]._playback_file_count}"
         return status_str
 
     def _update_help_text(self):
+        if self._hide_gui:
+            return
 
         controls_str = self._get_controls_text()
         if len(controls_str) > 0:
@@ -352,35 +705,32 @@ class AppStateIsaacSimViewer(AppState):
                 text_delta_x=-120,
             )
 
-    def _get_camera_lookat_pos(self):
-        return self._camera_lookat_base_pos + mn.Vector3(0, self._camera_lookat_y_offset, 0)
-
-    def _update_camera_lookat_base_pos(self):
+    def _update_cursor_pos(self):
 
         gui_input = self._app_service.gui_input
         y_speed = 0.02
         if gui_input.get_key_down(GuiInput.KeyNS.Z):
-            self._camera_lookat_y_offset -= y_speed
+            self._cursor_pos.y -= y_speed
         if gui_input.get_key_down(GuiInput.KeyNS.X):
-            self._camera_lookat_y_offset += y_speed
+            self._cursor_pos.y += y_speed
 
         xz_forward = self._camera_helper.get_xz_forward()
         xz_right = mn.Vector3(-xz_forward.z, 0.0, xz_forward.x)
         speed = self._app_cfg.camera_move_speed * self._camera_helper.cam_zoom_dist
         if gui_input.get_key(GuiInput.KeyNS.W):
-            self._camera_lookat_base_pos += (
+            self._cursor_pos += (
                 xz_forward * speed
             )
         if gui_input.get_key(GuiInput.KeyNS.S):
-            self._camera_lookat_base_pos -= (
+            self._cursor_pos -= (
                 xz_forward * speed
             )
-        if gui_input.get_key(GuiInput.KeyNS.E):
-            self._camera_lookat_base_pos += (
+        if gui_input.get_key(GuiInput.KeyNS.D):
+            self._cursor_pos += (
                 xz_right * speed
             )
-        if gui_input.get_key(GuiInput.KeyNS.Q):
-            self._camera_lookat_base_pos -= (
+        if gui_input.get_key(GuiInput.KeyNS.A):
+            self._cursor_pos -= (
                 xz_right * speed
             )
 
@@ -390,7 +740,9 @@ class AppStateIsaacSimViewer(AppState):
             if not sim_app.is_running():
                 post_sim_update_dict["application_exit"] = True
             else:
-                self._isaac_wrapper.step()
+                approx_app_fps = 30
+                num_steps = int(1.0 / (approx_app_fps * self._isaac_physics_dt))
+                self._isaac_wrapper.step(num_steps=num_steps)
 
     def update_spot_base(self):
 
@@ -427,9 +779,11 @@ class AppStateIsaacSimViewer(AppState):
 
     def update_spot_pre_step(self, dt):
 
-        self.update_spot_base()
+        # self.update_spot_base()
 
-        self.update_spot_arm(dt)
+        # self.update_spot_arm(dt)
+
+        self._spot_state_machine.update(dt)
 
 
     def update_record_remote_hands(self):
@@ -514,6 +868,9 @@ class AppStateIsaacSimViewer(AppState):
 
     def draw_axis(self, length, transform_mat=None):
 
+        if self._hide_gui:
+            return
+
         line_render = self._app_service.line_render
         if transform_mat:
             line_render.push_transform(transform_mat)
@@ -549,7 +906,7 @@ class AppStateIsaacSimViewer(AppState):
             trans = mn.Matrix4.from_(bone_rot_quat.to_matrix(), bone_pos)
             self.draw_axis(0.08 if i == 0 else 0.02, trans)
 
-    def get_hand_positions_rotations(self, hand_idx):
+    def get_art_hand_positions_rotations_from_playback(self, hand_idx):
 
         hand_record = self._hand_records[hand_idx]
         assert hand_record._playback_json
@@ -561,29 +918,33 @@ class AppStateIsaacSimViewer(AppState):
             for i in range(0, len(rotation_floats), 4)]
         return positions, rotations
     
+    def get_art_hand_positions_rotations(self, hand_idx):
 
-    def draw_hand_helper(self, hand_idx, use_identify_root_transform=False, 
-        extra_rot=mn.Quaternion.identity_init(), extra_pos=mn.Vector3(0.0, 0.0, 0.0)):
+        use_recorded = False
 
-        positions, rotations = self.get_hand_positions_rotations(hand_idx)
+        if use_recorded:
+            return self.get_art_hand_positions_rotations_from_playback(hand_idx)
+        else:
+
+            remote_gui_input = self._app_service.remote_gui_input
+            if not remote_gui_input:
+                return None, None
+
+            positions, rotations = remote_gui_input.get_articulated_hand_pose(hand_idx)
+            if not positions:
+                return None, None
+            
+            return positions, rotations
+
+
+
+    # def draw_hand_helper(self, hand_idx):
+
+    #     positions, rotations = self.get_art_hand_positions_rotations(hand_idx)
+    #     if not positions:
+    #         return
         
-        composite_rot = mn.Quaternion.identity_init()
-        composite_pos = mn.Vector3(0, 0, 0)
-        if use_identify_root_transform:
-            root_rot_quat = rotations[0]
-            root_pos = positions[0]
-
-            composite_rot = root_rot_quat.inverted()
-            composite_pos = composite_rot.transform_vector(-root_pos)
-
-        composite_rot, composite_pos = multiply_transforms(composite_rot, composite_pos, extra_rot, extra_pos)
-
-        for i in range(len(positions)):
-            old_rot, old_pos = rotations[i], positions[i]
-            new_rot, new_pos = multiply_transforms(old_rot, old_pos, composite_rot, composite_pos)
-            positions[i], rotations[i] = new_pos, new_rot
-
-        self.draw_hand(positions, rotations)
+    #     self.draw_hand(positions, rotations)
 
     def update_play_back_remote_hands(self):
 
@@ -598,16 +959,16 @@ class AppStateIsaacSimViewer(AppState):
         for hand_record in self._hand_records:
 
             hand_idx = hand_record._idx
-            first_filepath = f"hand{hand_idx}_trajectory0_100frames.json"
-            if not os.path.exists(first_filepath):
-                continue
+            first_filepath = f"hand_trajectories/hand{hand_idx}_trajectory0_100frames.json"
 
             if do_next_file:
                 hand_record._playback_json = None
                 hand_record._playback_file_count += 1
 
             if hand_record._playback_json == None:
-                filepath = f"hand{hand_idx}_trajectory{hand_record._playback_file_count}_100frames.json"
+                if not os.path.exists(first_filepath):
+                    continue
+                filepath = f"hand_trajectories/hand{hand_idx}_trajectory{hand_record._playback_file_count}_100frames.json"
                 if not os.path.exists(filepath):
                     # loop to first file
                     hand_record._playback_file_count = 0
@@ -624,68 +985,33 @@ class AppStateIsaacSimViewer(AppState):
                         hand_record._playback_frame_idx = 0
 
 
-    def update_spot_arm_baked(self, target_rel_pos):
-
-        from habitat.isaac_sim.spot_arm_ik_helper import spot_arm_ik_helper
-        is_ik_active, self._spot_wrapper._target_arm_joint_positions = spot_arm_ik_helper(target_rel_pos)
-
     def update_spot_arm(self, dt):
 
-        target_pos = self._get_camera_lookat_pos()
+        use_cursor = False
+        if use_cursor:
+            target_pos = self._cursor_pos
+        else:
+            resting_arm_joint_positions = [0.0] * self._spot_pick_helper._num_dof
 
-        link_positions, link_rotations = self._spot_wrapper.get_link_world_poses()
+            if not self._pick_target_rigid_object_idx is not None:
+                self._spot_pick_helper.reset()
+                return resting_arm_joint_positions
 
-        for i in range(len(link_positions)):
-            rot, pos = link_rotations[i], link_positions[i]
-            trans = mn.Matrix4.from_(rot.to_matrix(), pos)
-            self.draw_axis(0.1, trans)
+            ro = self._rigid_objects[self._pick_target_rigid_object_idx]
+            target_pos = ro.translation
+            pass
 
-            # if i > 0:
-            #     prev_pos = link_positions[i - 1]
-            #     line_render.draw_transformed_line(prev_pos, pos, 
-            #         from_color=mn.Color3(255, 0, 255), to_color=mn.Color3(255, 255, 0))
+        self.draw_axis(0.1, mn.Matrix4.translation(target_pos))
 
+        base_pos, base_rot = self._spot_wrapper.get_root_pose()
         def inverse_transform(pos_a, rot_b, pos_b):
             inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)    
             return inv_pos
-        target_rel_pos = inverse_transform(target_pos, link_rotations[0], link_positions[0])
-
-        # self.update_spot_arm_hot_reload(target_rel_pos)
-        # self.update_spot_arm_baked(target_rel_pos)
+        target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
 
         self._spot_wrapper._target_arm_joint_positions = self._spot_pick_helper.update(dt, target_rel_pos)
 
-        pass
-
-    def update_spot_arm_hot_reload(self, link_positions, link_rotations, target_pos):
-
-        num_dof = len(self._spot_wrapper._arm_joint_indices)
-        do_print_errors = not self._did_function_load_fail
-        self._did_function_load_fail = False
-
-        filepath = "./habitat-lab/habitat/isaac_sim/spot_arm_ik_helper.py"
-        function_name = "spot_arm_ik_helper"  # The function you want to load
-
-        # Load the function
-        spot_arm_ik_helper = load_function_from_file(filepath, function_name, do_print_errors=do_print_errors)
-
-        if not spot_arm_ik_helper:
-            self._did_function_load_fail = True
-            return
-
-        try:
-            # Call the loaded function with test arguments
-            is_ik_active, result = spot_arm_ik_helper(link_positions, link_rotations, target_pos)
-
-            if not isinstance(result, list) or not isinstance(result[0], float) or len(result) != num_dof:
-                raise ValueError(f"spot_arm_ik_helper invalid return value: {result}")
-            self._spot_wrapper._target_arm_joint_positions = result
-
-        except Exception as e:
-            if do_print_errors:
-                print(f"Error calling the function: {e}")
-                traceback.print_exc()  
-            self._did_function_load_fail = True            
+        pass      
 
     def update_metahand_bones_from_art_hand_pose(self, art_hand_positions, art_hand_rotations):
 
@@ -742,15 +1068,34 @@ class AppStateIsaacSimViewer(AppState):
                 traceback.print_exc()  
             self._did_function_load_fail = True      
 
-    def update_metahand_from_remote_hand(self, extra_rot, extra_pos):
+    def update_metahand_from_art_hand(self, use_identify_root_transform=False, extra_rot=None, extra_pos=None):
 
         hand_idx = 1  # right hand
-        art_hand_positions, art_hand_rotations = self.get_hand_positions_rotations(hand_idx=hand_idx)
+        art_hand_positions, art_hand_rotations = self.get_art_hand_positions_rotations(hand_idx=hand_idx)
+        if not art_hand_positions:
+            return
 
-        for i in range(len(art_hand_positions)):
-            old_rot, old_pos = art_hand_rotations[i], art_hand_positions[i]
-            new_rot, new_pos = multiply_transforms(old_rot, old_pos, extra_rot, extra_pos)
-            art_hand_positions[i], art_hand_rotations[i] = new_pos, new_rot
+        if use_identify_root_transform or extra_rot is not None or extra_pos is not None:
+            composite_rot = mn.Quaternion.identity_init()
+            composite_pos = mn.Vector3(0, 0, 0)
+            if use_identify_root_transform:
+                root_rot_quat = art_hand_rotations[0]
+                root_pos = art_hand_positions[0]
+
+                composite_rot = root_rot_quat.inverted()
+                composite_pos = composite_rot.transform_vector(-root_pos)
+
+            if extra_rot is None:
+                extra_rot = mn.Quaternion.identity_init()
+            if extra_pos is None:
+                extra_pos = mn.Vector3(0, 0, 0)
+
+            composite_rot, composite_pos = multiply_transforms(composite_rot, composite_pos, extra_rot, extra_pos)
+
+            for i in range(len(art_hand_positions)):
+                old_rot, old_pos = art_hand_rotations[i], art_hand_positions[i]
+                new_rot, new_pos = multiply_transforms(old_rot, old_pos, composite_rot, composite_pos)
+                art_hand_positions[i], art_hand_rotations[i] = new_pos, new_rot
 
         target_base_pos = art_hand_positions[0]
         target_base_rot = art_hand_rotations[0]
@@ -759,66 +1104,159 @@ class AppStateIsaacSimViewer(AppState):
         base_fixup_rot = mn.Quaternion([0.0, 0.0, c], -c)  # mn.Quaternion([0.5, 0.5, 0.5], -0.5)
         fixed_target_base_rot = target_base_rot * base_fixup_rot
 
-        # trans = mn.Matrix4.from_(fixed_target_base_rot.to_matrix(), target_base_pos)
-        # self.draw_axis(0.25, trans)
-
         self._metahand_wrapper.set_target_base_position(target_base_pos)
         self._metahand_wrapper.set_target_base_rotation(fixed_target_base_rot)
 
         self.update_metahand_bones_from_art_hand_pose(art_hand_positions, art_hand_rotations)
+        # self.update_metahand_bones_from_art_hand_pose_hot_reload(art_hand_positions, art_hand_rotations)
+
+        visual_offset = mn.Vector3(0.0, 0.0, 0.25)
+        for i in range(len(art_hand_positions)):
+            art_hand_positions[i] += visual_offset
+
+        self.draw_hand(art_hand_positions, art_hand_rotations)
 
 
 
+    def set_physics_paused(self, do_pause_physics):
+        self._do_pause_physics = do_pause_physics
+        world = self._isaac_wrapper.service.world
+        if do_pause_physics:
+            world.pause()
+        else:
+            world.play()
 
+    def get_vr_camera_pose(self):
 
-    def sim_update(self, dt, post_sim_update_dict):
+        remote_gui_input = self._app_service.remote_gui_input
+        if not remote_gui_input:
+            return None
         
+        pos, rot_quat = remote_gui_input.get_head_pose()
+        if not pos:
+            return None
+        
+        extra_rot = mn.Quaternion.rotation(mn.Deg(180), mn.Vector3.y_axis())
+
+        # change from forward=z+ to forward=z-
+        rot_quat = rot_quat * extra_rot
+            
+        return mn.Matrix4.from_(rot_quat.to_matrix(), pos)
+
+
+    def handle_keys(self, dt, post_sim_update_dict):
+
         gui_input = self._app_service.gui_input
         if gui_input.get_key_down(GuiInput.KeyNS.ESC):
             post_sim_update_dict["application_exit"] = True
 
-        new_joint_pos = (self._app_service.get_anim_fraction() - 0.5) * 0.3
-        self._spot.set_all_joints(new_joint_pos)
+        # new_joint_pos = (self._app_service.get_anim_fraction() - 0.5) * 0.3
+        # self._spot.set_all_joints(new_joint_pos)
 
         if gui_input.get_key(GuiInput.KeyNS.SPACE):
             self._sim.step_physics(dt=1.0/60)
 
+        if gui_input.get_key_down(GuiInput.KeyNS.P):
+            self.set_physics_paused(not self._do_pause_physics)
+
+        if gui_input.get_key_down(GuiInput.KeyNS.G):
+            self._do_camera_follow_spot = not self._do_camera_follow_spot
+
+        if gui_input.get_key_down(GuiInput.KeyNS.H):
+            self._hide_gui = not self._hide_gui
+
+        if gui_input.get_key_down(GuiInput.KeyNS.J):
+            self.add_or_reset_rigid_objects()
+
+        pick_target_keys = [
+            GuiInput.KeyNS.ONE,
+            GuiInput.KeyNS.TWO,
+            GuiInput.KeyNS.THREE,
+            GuiInput.KeyNS.FOUR,
+            GuiInput.KeyNS.FIVE,
+            GuiInput.KeyNS.SIX,
+            GuiInput.KeyNS.SEVEN,
+            GuiInput.KeyNS.EIGHT,
+        ]
+        assert len(pick_target_keys) <= len(self._rigid_objects)
+        for i, key in enumerate(pick_target_keys):
+            if gui_input.get_key_down(key):
+                self._pick_target_rigid_object_idx = i
+
+                def get_pick_target_pos():
+                    ro = self._rigid_objects[self._pick_target_rigid_object_idx]
+                    com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
+                    self.draw_axis(0.05, mn.Matrix4.translation(com_world))
+                    return com_world
+
+                self._spot_state_machine.set_pick_target(get_pick_target_pos)
+                break
+
+        if gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+            self._pick_target_rigid_object_idx = None
+            self._spot_state_machine.reset()
+       
+        if gui_input.get_key_down(GuiInput.KeyNS.K):
+            self._app_service.video_recorder.start_recording()
+            self._is_recording = True
+            self._hide_gui = True
+        elif gui_input.get_key_down(GuiInput.KeyNS.L):
+            self._app_service.video_recorder.stop_recording_and_save_video(self._video_output_prefix)
+            self._is_recording = False
+            self._hide_gui = False
+
+
+
+    def debug_draw_rigid_objects(self):
+
+        for ro in self._rigid_objects:
+            com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
+            self.draw_axis(0.05, mn.Matrix4.translation(com_world))
+
+
+    def sim_update(self, dt, post_sim_update_dict):
+        
+        self._sps_tracker.increment()
+
+        self.handle_keys(dt, post_sim_update_dict)
+
         if not self._do_camera_follow_spot:
-            self._update_camera_lookat_base_pos()
+            self._update_cursor_pos()
 
         # self.update_record_remote_hands()
 
         self.update_play_back_remote_hands()
 
         # extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
-        # extra_pos = [-7.0, 1.0, -2.75]
         # self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
         #     extra_rot=extra_rot,
         #     extra_pos=extra_pos)
 
-        extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], -0.5)
-        extra_pos = [-7.0, -0.5, -3.25]
         # self.draw_hand_helper(hand_idx=0, use_identify_root_transform=False,
         #     extra_rot=extra_rot,
         #     extra_pos=extra_pos)
 
-        self.draw_hand_helper(hand_idx=1, use_identify_root_transform=False,
-            extra_rot=extra_rot,
-            extra_pos=extra_pos)
+        # self.draw_hand_helper(hand_idx=1)
         
-        extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
-        extra_pos = [-7.0, -0.5, -3.0]
-        self.update_metahand_from_remote_hand(extra_rot, extra_pos)
+        # extra_pos = [-7.0, 1.0, -2.75]
+        # self.update_metahand_from_art_hand(use_identify_root_transform=True, extra_pos=extra_pos)
+        self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))
 
         self.update_spot_pre_step(dt)
 
         self.update_isaac(post_sim_update_dict)
 
-        if self._do_camera_follow_spot:
-            self._camera_lookat_base_pos = isaac_prim_utils.get_pos(self._spot_wrapper._robot)
+        do_show_vr_cam_pose = False
+        vr_cam_pose = self.get_vr_camera_pose()
 
-        self._camera_helper.update(self._get_camera_lookat_pos(), dt)
-        self._cam_transform = self._camera_helper.get_cam_transform()
+        if do_show_vr_cam_pose and not self._do_camera_follow_spot and vr_cam_pose:
+            self._cam_transform = vr_cam_pose
+        else:
+            lookat = isaac_prim_utils.get_pos(self._spot_wrapper._robot) if self._do_camera_follow_spot else self._cursor_pos
+
+            self._camera_helper.update(lookat, dt)
+            self._cam_transform = self._camera_helper.get_cam_transform()
+
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         # draw lookat ring
@@ -826,14 +1264,16 @@ class AppStateIsaacSimViewer(AppState):
 
         self.draw_world_origin()
 
-        if True:
+        # draw line for Spot forward vec
+        if False:
             robot_pos = isaac_prim_utils.get_pos(self._spot_wrapper._robot)
             robot_forward = isaac_prim_utils.get_forward(self._spot_wrapper._robot)
 
             line_render = self._app_service.line_render
             line_render.draw_transformed_line(robot_pos, robot_pos + robot_forward, 
                 from_color=mn.Color3(255, 255, 0), to_color=mn.Color3(255, 0, 255))
-            
+
+        # self.debug_draw_rigid_objects()
 
         self._update_help_text()
 
