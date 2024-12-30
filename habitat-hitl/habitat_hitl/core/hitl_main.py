@@ -19,6 +19,7 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 
@@ -111,12 +112,17 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         "relative_path_to_font": hitl_config.window.display_font_path,
     }
 
+    video_recorder = FramebufferVideoRecorder(
+        hitl_config.video_recorder.output_file_path_prefix
+    )
+
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size,
         viewport_rect,
         hitl_config.experimental.use_batch_renderer,
         text_drawer_kwargs=text_drawer_kwargs,
+        video_recorder=video_recorder,
     )
 
     # todo: move to HitlDriver
@@ -144,6 +150,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         app_renderer._replay_renderer.debug_line_render(0),
         app_renderer._text_drawer,
         create_app_state_lambda,
+        video_recorder=video_recorder,
     )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
@@ -238,13 +245,29 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
     # driver_class = drivers[hitl_config.driver]
     driver_class: Any = drivers[hitl_config.driver]
 
+    class DoNothingMock:
+        def __getattr__(self, name):
+            def do_nothing(*args, **kwargs):
+                pass
+
+            return do_nothing
+
     driver = driver_class(
         config=app_config,
         gui_input=GuiInput(),
-        debug_line_drawer=None,
+        line_render=DoNothingMock(),
         text_drawer=HeadlessTextDrawer(),
         create_app_state_lambda=create_app_state_lambda,
+        video_recorder=None,
     )
+
+    # sanity check if there are no agents with camera sensors
+    # temp disable (this probably belongs in the driver)
+    # if (
+    #     len(app_config.habitat.simulator.agents) == 1
+    #     and app_config.habitat_hitl.gui_controlled_agent.agent_index is not None
+    # ):
+    #     assert driver.get_sim().renderer is None
 
     _headless_app_loop(hitl_config, driver)
 

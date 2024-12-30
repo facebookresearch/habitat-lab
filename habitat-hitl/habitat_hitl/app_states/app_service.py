@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
@@ -23,6 +24,7 @@ from habitat_hitl.environment.controllers.controller_abc import (
     GuiController,
 )
 from habitat_hitl.environment.episode_helper import EpisodeHelper
+from habitat_sim.gfx import DebugLineRender
 
 
 # Helpers to provide to AppState classes, provided by the underlying SandboxDriver
@@ -49,8 +51,8 @@ class AppService:
         set_cursor_style: Callable,
         episode_helper: EpisodeHelper,
         client_message_manager: ClientMessageManager,
-        gui_agent_controllers: List[GuiController],
-        all_agent_controllers: List[Controller],
+        gui_agent_controller: Optional[GuiController],
+        video_recorder: FramebufferVideoRecorder,
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -71,8 +73,8 @@ class AppService:
         self._set_cursor_style = set_cursor_style
         self._episode_helper = episode_helper
         self._client_message_manager = client_message_manager
-        self._gui_agent_controllers = gui_agent_controllers
-        self._all_agent_controllers = all_agent_controllers
+        self._gui_agent_controller = gui_agent_controller
+        self._video_recorder = video_recorder
 
     @property
     def config(self):
@@ -117,7 +119,7 @@ class AppService:
     @property
     def sim(self) -> RearrangeSim:
         return self._sim
-    
+
     @property
     def reconfigure_sim(self) -> Callable:
         return self._reconfigure_sim
@@ -151,9 +153,9 @@ class AppService:
         return self._client_message_manager
 
     @property
-    def gui_agent_controllers(self) -> List[GuiController]:
-        return self._gui_agent_controllers
+    def gui_agent_controller(self) -> Optional[GuiController]:
+        return self._gui_agent_controller
 
     @property
-    def all_agent_controllers(self) -> List[Controller]:
-        return self._all_agent_controllers
+    def video_recorder(self) -> FramebufferVideoRecorder:
+        return self._video_recorder

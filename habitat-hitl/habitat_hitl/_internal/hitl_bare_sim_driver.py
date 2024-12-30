@@ -34,7 +34,7 @@ from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import BaseRecorder, save_as_gzip
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_sim.gfx import DebugLineRender
-
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 # todo: define AppDriver in one place
 class AppDriver:
@@ -52,6 +52,7 @@ class HitlBareSimDriver(AppDriver):
         line_render: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
+        video_recorder: FramebufferVideoRecorder = None
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -114,7 +115,8 @@ class HitlBareSimDriver(AppDriver):
 
         # gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
         # gui_drawer.set_line_width(self._hitl_config.debug_line_width)
-        line_render.set_line_width(self._hitl_config.debug_line_width)
+        if line_render:
+            line_render.set_line_width(self._hitl_config.debug_line_width)
 
         self._check_init_server(line_render)
 
@@ -145,7 +147,8 @@ class HitlBareSimDriver(AppDriver):
             set_cursor_style=self._set_cursor_style,
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
-            gui_agent_controller=gui_agent_controller
+            gui_agent_controller=gui_agent_controller,
+            video_recorder=video_recorder
         )
 
         self._app_state: AppState = None
