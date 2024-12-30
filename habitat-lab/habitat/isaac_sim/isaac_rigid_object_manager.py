@@ -28,8 +28,7 @@ class IsaacRigidObjectWrapper:
 
     @property
     def transformation(self):
-        assert False
-        pass
+        return isaac_prim_utils.get_transformation(self._rigid_prim)
 
     @transformation.setter
     def transformation(self, transform_mat: mn.Matrix4):
@@ -52,7 +51,7 @@ class IsaacRigidObjectWrapper:
         pos_habitat = isaac_prim_utils.usd_to_habitat_position(pos_usd)
         return mn.Vector3(*pos_habitat)
 
-    @transformation.setter
+    @translation.setter
     def translation(self, translation: mn.Vector3):
         translation_usd = isaac_prim_utils.habitat_to_usd_position([translation.x, translation.y, translation.z])
         isaac_prim_utils.set_translation(self._prim, translation_usd)
@@ -153,6 +152,13 @@ class IsaacRigidObjectManager:
         self._obj_wrapper_by_object_id[object_id] = obj_wrapper
 
         return obj_wrapper
+
+    def post_reset(self):
+
+        physics_sim_view = self._isaac_service.world.physics_sim_view
+        assert physics_sim_view
+        for obj_wrapper in self._obj_wrapper_by_object_id.values():
+            obj_wrapper._rigid_prim.initialize(physics_sim_view)
 
     def add_object_by_template_handle(self, object_path):
 

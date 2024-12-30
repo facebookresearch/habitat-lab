@@ -176,3 +176,22 @@ def get_forward(isaac_prim: "_SinglePrimWrapper"):
     forward_habitat = usd_to_habitat_position(forward_normalized)
 
     return mn.Vector3(*forward_habitat)
+
+
+def get_transformation(isaac_prim):
+    pos_usd, rot_usd = isaac_prim.get_world_pose()
+
+    pos_habitat = mn.Vector3(usd_to_habitat_position(pos_usd))
+    rot_habitat = rotation_wxyz_to_magnum_quat(usd_to_habitat_rotation(rot_usd))
+
+    return mn.Matrix4.from_(rot_habitat.to_matrix(), pos_habitat)
+
+
+def get_com_world(rigid_prim: "RigidPrim"):
+
+    com_local_usd_array, _ = rigid_prim.get_com()
+    com_local_habitat = mn.Vector3(com_local_usd_array[0])
+    # perf todo: directly use quat and position instead of converting to Matrix4
+    transformation = get_transformation(rigid_prim)
+    com_world = transformation.transform_point(com_local_habitat)
+    return com_world

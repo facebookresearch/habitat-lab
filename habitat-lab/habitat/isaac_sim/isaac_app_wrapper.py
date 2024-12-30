@@ -67,20 +67,21 @@ class IsaacAppWrapper:
         usd_visualizer = None
         if hab_sim:
             usd_visualizer = UsdVisualizer(world.stage, hab_sim)
-        self._service = IsaacService(self._simulation_app, world, usd_visualizer)
-        
+        self._service = IsaacService(self._simulation_app, world, usd_visualizer)        
 
     @property
     def service(self):
         return self._service
 
-    def step(self):
+    def step(self, num_steps=1):
         # todo: think about dt here
         if self._headless:
-            self._service.world.step(render=False, step_sim=True)
+            for _ in range(num_steps):
+                self._service.world.step(render=False, step_sim=True)
         else:
             # todo: not sure about this
-            self._simulation_app.update()
+            for _ in range(num_steps):
+                self._simulation_app.update()
             # sleep a bit to avoid 100% CPU usage and thus keep the OS windowing environment responsive
             time.sleep(0.01)
 

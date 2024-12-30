@@ -8,7 +8,7 @@ def compute_signed_angle_from_relative_rotation(q1, q2, local_vec, ref_vec):
     vec1 = q1.transform_vector(local_vec)
     vec2 = q2.transform_vector(local_vec)
 
-    angle = math.acos(mn.math.dot(vec1, vec2))
+    angle = math.acos(mn.math.clamp(mn.math.dot(vec1, vec2), -1.0, 1.0))
 
     cross_result = mn.math.cross(vec1, vec2)
 
@@ -40,24 +40,45 @@ def map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_han
     # 14 ring tip
     # 15 pinky tip
 
-    tmp = art_hand_rotations[2].transform_vector(mn.Vector3(0, 0, 1))
+    # tmp = art_hand_rotations[2].transform_vector(mn.Vector3(0, 0, 1))
     # print(tmp)
-    thumb_rotate = -math.asin(tmp.y)
-    # print(tmp.y, thumb_rotate)
+    # thumb_rotate = -math.asin(tmp.y) + 0.1
+    # thumb_rotate = 1.1
+    # print(thumb_rotate)
 
-    joint_positions[1] = thumb_rotate  # 
+    # joint_positions[1] = thumb_rotate  # 
 
-    joint_positions[5] = 0.7
 
     thumb_angles = []
-    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(0, -1, 0))
+
     local_vec = mn.Vector3(0, 0, 1)
-    for i0, i1 in [(1,2), (2,4)]:
-        thumb_angles.append(compute_signed_angle_from_relative_rotation(
-            art_hand_rotations[i0],
-            art_hand_rotations[i1], 
-            local_vec,
-            ref_vec))
+
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(-1, 0, 0))
+    # thumb_angles.append(compute_signed_angle_from_relative_rotation(
+    #     art_hand_rotations[1],
+    #     art_hand_rotations[4], 
+    #     local_vec,
+    #     ref_vec))
+    
+    tmp = art_hand_rotations[2].transform_vector(mn.Vector3(0, 0, 1))
+    tmp2 = art_hand_rotations[0].transform_vector(mn.Vector3(0, 1, 0))
+    thumb_angles.append(math.asin(mn.math.clamp(mn.math.dot(tmp, tmp2), -1.0, 1.0)))
+
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(-1, 0, 0))
+    thumb_angles.append(compute_signed_angle_from_relative_rotation(
+        art_hand_rotations[1],
+        art_hand_rotations[2], 
+        local_vec,
+        ref_vec))
+
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(0, 0, -1))
+    thumb_angles.append(compute_signed_angle_from_relative_rotation(
+        art_hand_rotations[2],
+        art_hand_rotations[4], 
+        local_vec,
+        ref_vec))
+
+
     # print(thumb_angles)
 
     # tmp = art_hand_rotations[4].transform_vector(mn.Vector3(0, 0, 1))
@@ -65,13 +86,15 @@ def map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_han
     # angle = math.acos(mn.math.dot(tmp, tmp2))
     # print(angle)
 
-
-    joint_positions[9] = thumb_angles[0] + 1.5
-    joint_positions[13] = thumb_angles[1]
+    joint_positions[1] = -thumb_angles[0] + 0.2
+    joint_positions[5] = 0.8
+    joint_positions[9] = thumb_angles[1] + 1.7
+    # print(thumb_angles[0], thumb_angles[1])
+    joint_positions[13] = thumb_angles[2] * 1.0 + 0.2
 
 
     pointer_angles = []
-    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, 0, 0))
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, -1, 0))
     local_vec = mn.Vector3(0, 0, 1)
     for i0, i1 in [(6,7), (7,8), (8,9)]:
         pointer_angles.append(compute_signed_angle_from_relative_rotation(
@@ -80,14 +103,16 @@ def map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_han
             local_vec,
             ref_vec))
         
-    joint_positions[4] = pointer_angles[0]
-    joint_positions[8] = pointer_angles[1]
-    joint_positions[12] = pointer_angles[2]
+    joint_positions[0] = -0.1
+    joint_positions[4] = pointer_angles[0] * 0.75
+    joint_positions[8] = pointer_angles[1] * 1.4
+    joint_positions[12] = pointer_angles[2] * 1.8 + 0.2
+    # print(pointer_angles[2])
     
 
 
     middle_angles = []
-    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, 0, 0))
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, -1, 0))
     local_vec = mn.Vector3(0, 0, 1)
     for i0, i1 in [(11,12), (12,13), (13, 14)]:
         middle_angles.append(compute_signed_angle_from_relative_rotation(
@@ -97,13 +122,13 @@ def map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_han
             ref_vec))
     # print(middle_angles)
         
-    joint_positions[6] = middle_angles[0]
-    joint_positions[10] = middle_angles[1]
-    joint_positions[14] = middle_angles[2]    
+    joint_positions[6] = middle_angles[0] * 0.7
+    joint_positions[10] = middle_angles[1] * 1.4
+    joint_positions[14] = middle_angles[2] * 1.4 + 0.2    
 
 
     ring_angles = []
-    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, 0, 0))
+    ref_vec = art_hand_rotations[0].transform_vector(mn.Vector3(1, -1, 0))
     local_vec = mn.Vector3(0, 0, 1)
     for i0, i1 in [(16,17), (17,18), (18, 19)]:
         ring_angles.append(compute_signed_angle_from_relative_rotation(
@@ -113,8 +138,9 @@ def map_articulated_hand_to_metahand_joint_positions(art_hand_positions, art_han
             ref_vec))
     # print(ring_angles)
         
-    joint_positions[7] = ring_angles[0]
-    joint_positions[11] = ring_angles[1]
-    joint_positions[15] = ring_angles[2]   
+    joint_positions[3] = 0.2
+    joint_positions[7] = ring_angles[0] * 0.7
+    joint_positions[11] = ring_angles[1] * 1.4
+    joint_positions[15] = ring_angles[2] * 1.3 + 0.2  
 
     return joint_positions

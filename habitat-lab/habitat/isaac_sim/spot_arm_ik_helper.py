@@ -9,11 +9,13 @@ def inverse_transform(pos_a, rot_b, pos_b):
 
 
 # def spot_arm_ik_helper(link_positions, link_rotations, target_pos):
-def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
+def spot_arm_ik_helper(target_rel_pos, approach_offset_len, use_conservative_reach):
 
     num_dof = 8
 
     result = [0.0] * num_dof
+
+    stickiness_distance_fudge = 0.03 if use_conservative_reach else 0.0
 
     # bodies
     # 0 '/World/env_0/Spot/base', 
@@ -39,6 +41,7 @@ def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
     min_dist_to_wrist_target = 0.05
 
     is_out_of_range = False
+    out_of_range_pose = [0.0, -2.36, 0.0, 2.25, 0.0, 1.67, 0.0, 0.0]
 
     # When this is > 0, ik is less likely to activate. If ik wasn't already active,
     # we set to > 0 to discourage ik from becoming active. This prevents noise/oscillation.
@@ -50,7 +53,7 @@ def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
     # print(target_rel_pos)
 
     # dist_to_grasp_point = 0.06
-    hand_len = 0.178  # (link_positions[8] - link_positions[7]).length() + dist_to_grasp_point
+    hand_len = 0.178 + approach_offset_len  # (link_positions[8] - link_positions[7]).length() + dist_to_grasp_point
     forearm_len = 0.410  # (link_positions[6] - link_positions[4]).length()
     upper_arm_len = 0.338  # (link_positions[4] - link_positions[1]).length()
     # print(hand_len, forearm_len, upper_arm_len)
@@ -63,9 +66,12 @@ def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
     yaw_angle_to_target = math.atan2(target_rel_pos.y, target_rel_pos.x)
 
     target_rel_pos_xy_norm = target_rel_pos_xy.normalized()
-    # hand_vec is a horizontal offset from the grasp point (in the mouth) to the wrist
-    # joint.
-    hand_vec = target_rel_pos_xy_norm * hand_len
+
+    # hand_vec is an offset from the wrist joint to the grasp point (in the mouth).
+    # horizontal offset?
+    # hand_vec = target_rel_pos_xy_norm * hand_len
+    # vertical offset (
+    hand_vec = mn.Vector3(0.0, 0.0, -hand_len)
 
     # wrist_target_pos is the target position for the wrist, which is offset from the
     # actual ik target pos (by hand_vec).
@@ -78,8 +84,7 @@ def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
 
     if dist_to_wrist_target_xy < min_dist_to_wrist_target + stickiness_distance_fudge:
         is_out_of_range = True
-        pitch_to_wrist_target = 0.0
-        h = (a + b) * 0.75
+        result = out_of_range_pose
     else:
         upper_plus_forearm_length = forearm_len + upper_arm_len
 
@@ -100,33 +105,36 @@ def spot_arm_ik_helper(target_rel_pos, stickiness_distance_fudge):
             return a + b > h + stickiness_distance_fudge
         
         if not is_valid_triangle(a, b, h):
-            h = (a + b) * 0.4
             is_out_of_range = True
+            result = out_of_range_pose
+        else:
 
-    # Two bone ik. Imagine a triangle, with one side (h) the straight line to the target.
-    # The other two sides are the upper arm and forearm.
-    ah_angle = math.acos((a**2 + h**2 - b**2) / (2 * a * h))
-    ab_angle = math.acos((a**2 + b**2 - h**2) / (2 * a * b))
+            # Two bone ik. Imagine a triangle, with one side (h) the straight line to the target.
+            # The other two sides are the upper arm and forearm.
+            ah_angle = math.acos((a**2 + h**2 - b**2) / (2 * a * h))
+            ab_angle = math.acos((a**2 + b**2 - h**2) / (2 * a * b))
 
-    # angle at shoulder is the triangle angle ah plus the angle between h and the horizon.
-    result[1] = -ah_angle - pitch_to_wrist_target
-    # angle at joint is 180 deg - triangle angle
-    result[3] = 3.14159 - ab_angle
+            # angle at shoulder is the triangle angle ah plus the angle between h and the horizon.
+            result[1] = -ah_angle - pitch_to_wrist_target
+            # angle at joint is 180 deg - triangle angle
+            result[3] = 3.14159 - ab_angle
 
-    # let's do this logic outside this function
-    # if not is_out_of_range:
-    #     result[7] = -1.67
+            # let's do this logic outside this function
+            # if not is_out_of_range:
+            #     result[7] = -1.67
 
-    # This fudge is because the forearm effectively has a built-in angle (the "crook" 
-    # in the arm). We could compute this fudge angle explicitly from the forearm 
-    # geometry if desired.
-    fudge = 0.15
-    result[3] += fudge
+            # This fudge is because the forearm effectively has a built-in angle (the "crook" 
+            # in the arm). We could compute this fudge angle explicitly from the forearm 
+            # geometry if desired.
+            fudge = 0.15
+            result[3] += fudge
 
-    # this logic makes the hand level with the ground
-    result[5] = -result[1] - result[3]
+            # this logic makes the hand level with the ground
+            # result[5] = -result[1] - result[3]
+            fudge = 0.2
+            result[5] = -result[1] - result[3] + mn.math.pi_half + fudge
 
-    # turn the arm in the ground plane to face the target (yaw)
+    # always turn the arm in the ground plane to face the target (yaw), even if out of range
     result[0] = yaw_angle_to_target
 
     is_ik_active = not is_out_of_range

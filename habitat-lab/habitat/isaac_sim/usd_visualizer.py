@@ -39,6 +39,9 @@ class _InstanceGroup:
     def check_dirty(self): # todo: add underscore
         if self._xform_prim_view is not None:
             return
+        
+        if len(self._prim_path_to_render_asset) == 0:
+            return
 
         # todo: handle case of no prims (empty scene)
         prim_paths = list(self._prim_path_to_render_asset.keys())
@@ -53,6 +56,9 @@ class _InstanceGroup:
             self._render_instance_helper.add_instance(render_asset.filepath)
 
     def flush_to_hab_sim(self):
+        if len(self._prim_path_to_render_asset) == 0:
+            return
+
         positions, orientations = self._xform_prim_view.get_world_poses()
 
         positions, orientations = isaac_prim_utils.isaac_to_habitat(positions, orientations)
@@ -111,6 +117,7 @@ class UsdVisualizer:
     #     return identity_rotation
 
 
+    # todo: get rid of usd_path or make it optional (only used for error messages)
     def on_add_reference_to_stage(self, usd_path, prim_path, strict=True):
 
         usd_dir = os.path.dirname(os.path.abspath(usd_path))

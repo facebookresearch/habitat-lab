@@ -29,7 +29,7 @@ class SpotRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/hab_spot_arm.usda"
+        asset_path = "./data/usd/robots/hab_spot_arm_convex_decomp_for_ee.usda"
         robot_prim_path = f"/World/env_{instance_id}/Spot"
         self._robot_prim_path = robot_prim_path
 
@@ -46,7 +46,7 @@ class SpotRobotWrapper:
 
             if prim.HasAPI(PhysxSchema.PhysxJointAPI):
                 joint_api = PhysxSchema.PhysxJointAPI(prim)
-                joint_api.GetMaxJointVelocityAttr().Set(1000.0)
+                joint_api.GetMaxJointVelocityAttr().Set(200.0)
 
             if prim.HasAPI(UsdPhysics.DriveAPI):
                 # Access the existing DriveAPI
@@ -56,7 +56,7 @@ class SpotRobotWrapper:
                     # Modify drive parameters
                     drive_api.GetStiffnessAttr().Set(10.0)  # Position gain
                     drive_api.GetDampingAttr().Set(0.1)     # Velocity gain
-                    drive_api.GetMaxForceAttr().Set(1000)  # Maximum force/torque
+                    drive_api.GetMaxForceAttr().Set(50)  # Maximum force/torque
 
                 drive_api = UsdPhysics.DriveAPI(prim, "linear")
                 if drive_api:
@@ -78,7 +78,7 @@ class SpotRobotWrapper:
 
         # todo: investigate if this is needed for kinematic base
         # todo: resolve off-by-100 scale issue
-        self.scale_prim_mass_and_inertia(f"{robot_prim_path}/base", 100.0)
+        # self.scale_prim_mass_and_inertia(f"{robot_prim_path}/base", 100.0)
 
         self._name = f"spot_{instance_id}"
         self._robot = self._isaac_service.world.scene.add(Robot(prim_path=robot_prim_path, name=self._name))
@@ -100,6 +100,13 @@ class SpotRobotWrapper:
 
     def get_prim_path(self):
         return self._robot_prim_path
+
+    def get_root_pose(self):
+
+        pos_usd, rot_usd = self._robot.get_world_pose()
+
+        return mn.Vector3(isaac_prim_utils.usd_to_habitat_position(pos_usd)), \
+            isaac_prim_utils.rotation_wxyz_to_magnum_quat(isaac_prim_utils.usd_to_habitat_rotation(rot_usd))                         
 
     def get_link_world_poses(self):
 
@@ -172,11 +179,9 @@ class SpotRobotWrapper:
         mass_api.GetDiagonalInertiaAttr().Set(mass_api.GetDiagonalInertiaAttr().Get() * scale)
 
 
-    def fix_base_orientation_via_angular_vel(self, step_size):
+    def fix_base_orientation_via_angular_vel(self, step_size, base_position, base_orientation):
 
         curr_angular_velocity = self._robot.get_angular_velocity()
-
-        _, base_orientation = self._robot.get_world_pose()
 
         # Constants
         max_angular_velocity = 3.0  # Maximum angular velocity (rad/s)
@@ -223,14 +228,12 @@ class SpotRobotWrapper:
         self._robot.set_angular_velocity(desired_angular_velocity)
 
 
-    def fix_base_height_via_linear_vel_z(self, step_size):
+    def fix_base_height_via_linear_vel_z(self, step_size, base_position, base_orientation):
 
         curr_linear_velocity = self._robot.get_linear_velocity()
 
         z_target = 0.7  # todo: get from navmesh or assume ground_z==0
         max_linear_vel = 3.0
-
-        base_position, _ = self._robot.get_world_pose()
 
         # Extract the vertical position and velocity
         z_current = base_position[2]
@@ -251,23 +254,14 @@ class SpotRobotWrapper:
                 ArticulationAction(joint_positions=self._target_arm_joint_positions, joint_indices=self._arm_joint_indices)
             )
 
-    def fix_base(self, step_size):
+    def fix_base(self, step_size, base_position, base_orientation):
 
-        # temp: introduce random xy vel periodically
-        # if self._step_count % 120 == 0:
-        #     base_position, _ = self._robot.get_world_pose()
-        #     self._lateral_vel = np.array([-base_position[0], -base_position[1]])
-        #     self._lateral_vel += np.array([-self._lateral_vel[1], self._lateral_vel[0]]) * 0.2
-        #     self._lateral_vel /= np.linalg.norm(self._lateral_vel)
-        #     self._lateral_vel *= 20.0
-
-        # self._lateral_vel = np.array([0.0, 0.0])
-
-        self.fix_base_height_via_linear_vel_z(step_size)
-        self.fix_base_orientation_via_angular_vel(step_size)
+        self.fix_base_height_via_linear_vel_z(step_size, base_position, base_orientation)
+        self.fix_base_orientation_via_angular_vel(step_size, base_position, base_orientation)
 
     def physics_callback(self, step_size):
-        self.fix_base(step_size)
+        base_position, base_orientation = self._robot.get_world_pose()
+        self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self._step_count += 1
 
