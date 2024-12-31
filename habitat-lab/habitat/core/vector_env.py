@@ -58,6 +58,7 @@ except ImportError:
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+g_num_substeps = 1
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -226,6 +227,9 @@ class VectorEnv:
         ]
         self._paused: List[Tuple] = []
 
+        global g_num_substeps
+        self._num_substeps = g_num_substeps
+
     @property
     def num_envs(self):
         r"""number of individual environments."""
@@ -257,10 +261,12 @@ class VectorEnv:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-                    observations, reward, done, info = env.step(data)
 
-                    if auto_reset_done and done:
-                        observations = env.reset()
+                    global g_num_substeps
+                    for _ in range(g_num_substeps):
+                        observations, reward, done, info = env.step(data)
+                        if auto_reset_done and done:
+                            observations = env.reset()
 
                     connection_write_fn((observations, reward, done, info))
 

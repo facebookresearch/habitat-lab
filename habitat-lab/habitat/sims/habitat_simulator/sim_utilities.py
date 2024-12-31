@@ -9,7 +9,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
-from scipy import spatial
+try:
+    from scipy import spatial
+except ImportError:
+    pass
 
 import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer

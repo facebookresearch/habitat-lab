@@ -167,10 +167,13 @@ class Measurements:
 
     def update_measures(self, *args: Any, task, **kwargs: Any) -> None:
         for measure in self.measures.values():
-            t_start = time.time()
-            measure.update_metric(*args, task=task, **kwargs)
-            measure_name = measure._get_uuid(*args, task=task, **kwargs)
-            task.add_perf_timing(f"measures.{measure_name}", t_start)
+
+            from habitat.utils import profiling_wrapper
+            with profiling_wrapper.RangeContext(f"measure {measure.uuid}"):            
+                t_start = time.time()
+                measure.update_metric(*args, task=task, **kwargs)
+                measure_name = measure._get_uuid(*args, task=task, **kwargs)
+                task.add_perf_timing(f"measures.{measure_name}", t_start)
 
     def get_metrics(self) -> Metrics:
         r"""Collects measurement from all :ref:`Measure`\ s and returns it
@@ -327,39 +330,45 @@ class EmbodiedTask:
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
-        action_name = action["action"]
-        if "action_args" not in action or action["action_args"] is None:
-            action["action_args"] = {}
-        observations: Optional[Any] = None
-        if isinstance(action_name, tuple):  # there are multiple actions
-            for a_name in action_name:
-                observations = self._step_single_action(
-                    a_name,
-                    action,
-                    episode,
-                )
-        else:
-            observations = self._step_single_action(
-                action_name, action, episode
-            )
 
-        self._sim.step_physics(1.0 / self._physics_target_sps)  # type:ignore
+
+        from habitat.utils import profiling_wrapper
+        with profiling_wrapper.RangeContext("single action"):
+            action_name = action["action"]
+            if "action_args" not in action or action["action_args"] is None:
+                action["action_args"] = {}
+            observations: Optional[Any] = None
+            if isinstance(action_name, tuple):  # there are multiple actions
+                for a_name in action_name:
+                    observations = self._step_single_action(
+                        a_name,
+                        action,
+                        episode,
+                    )
+            else:
+                observations = self._step_single_action(
+                    action_name, action, episode
+                )
+
+        with profiling_wrapper.RangeContext("_sim.step_physics"):
+            self._sim.step_physics(1.0 / self._physics_target_sps)  # type:ignore
 
         if observations is None:
             observations = self._sim.step(None)
 
-        observations.update(
-            self.sensor_suite.get_observations(
-                observations=observations,
-                episode=episode,
-                action=action,
-                task=self,
-                should_time=True,
+        with profiling_wrapper.RangeContext("observation stuff"):
+            observations.update(
+                self.sensor_suite.get_observations(
+                    observations=observations,
+                    episode=episode,
+                    action=action,
+                    task=self,
+                    should_time=True,
+                )
             )
-        )
-        self._is_episode_active = self._check_episode_is_active(
-            observations=observations, action=action, episode=episode
-        )
+            self._is_episode_active = self._check_episode_is_active(
+                observations=observations, action=action, episode=episode
+            )
         return observations
 
     def get_action_name(self, action_index: Union[int, np.integer]):

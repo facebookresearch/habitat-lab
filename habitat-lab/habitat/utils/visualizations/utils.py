@@ -8,7 +8,10 @@ import os
 import textwrap
 from typing import Dict, List, Optional, Tuple
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 import imageio
 import numpy as np
 import tqdm

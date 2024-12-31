@@ -9,7 +9,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import imageio
 import numpy as np
-import scipy.ndimage
+try:
+    import scipy.ndimage
+except ImportError:
+    pass
 
 from habitat.utils.visualizations import utils
 
@@ -18,7 +21,10 @@ try:
 except ImportError:
     pass
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 
 AGENT_SPRITE = imageio.imread(
     os.path.join(
@@ -39,9 +45,9 @@ MAP_SHORTEST_PATH_COLOR = 7
 MAP_VIEW_POINT_INDICATOR = 8
 MAP_TARGET_BOUNDING_BOX = 9
 TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
-TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
-    np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
-).squeeze(1)[:, ::-1]
+# TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
+#     np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
+# ).squeeze(1)[:, ::-1]
 TOP_DOWN_MAP_COLORS[MAP_INVALID_POINT] = [255, 255, 255]  # White
 TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]  # Light Grey
 TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]  # Grey

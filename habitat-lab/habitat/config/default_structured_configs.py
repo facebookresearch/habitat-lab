@@ -120,7 +120,8 @@ class EnvironmentConfig(HabitatBaseConfig):
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
-    iterator_options: IteratorOptionsConfig = IteratorOptionsConfig()
+    # iterator_options: IteratorOptionsConfig = IteratorOptionsConfig()
+    iterator_options: IteratorOptionsConfig = field(default_factory=IteratorOptionsConfig)
 
 
 # -----------------------------------------------------------------------------
@@ -787,7 +788,10 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
     draw_goal_positions: bool = True
     # axes aligned bounding boxes
     draw_goal_aabbs: bool = True
-    fog_of_war: FogOfWarConfig = FogOfWarConfig()
+    # fog_of_war: FogOfWarConfig = FogOfWarConfig()
+    fog_of_war: FogOfWarConfig = field(default_factory=FogOfWarConfig)
+    
+    
 
 
 @dataclass
@@ -1783,14 +1787,14 @@ class SimulatorConfig(HabitatBaseConfig):
     # if default navmesh is used, should it include static objects
     navmesh_include_static_objects: bool = False
 
-    habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
+    habitat_sim_v0: HabitatSimV0Config = field(default_factory=HabitatSimV0Config)
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
     # The offset id values for the object
     object_ids_start: int = 100
     # Configuration for rendering
-    renderer: RendererConfig = RendererConfig()
+    renderer: RendererConfig = field(default_factory=RendererConfig)
 
 
 @dataclass
@@ -1852,7 +1856,7 @@ class PyrobotConfig(HabitatBaseConfig):
     )
     base_controller: str = "proportional"
     base_planner: str = "none"
-    locobot: LocobotConfig = LocobotConfig()
+    locobot: LocobotConfig = field(default_factory=LocobotConfig)
 
 
 @dataclass
@@ -1910,11 +1914,11 @@ class HabitatConfig(HabitatBaseConfig):
     # The key of the gym environment in the registry to use in GymRegistryEnv
     # for example: `Cartpole-v0`
     env_task_gym_id: str = ""
-    environment: EnvironmentConfig = EnvironmentConfig()
-    simulator: SimulatorConfig = SimulatorConfig()
+    environment: EnvironmentConfig = field(default_factory=EnvironmentConfig)
+    simulator: SimulatorConfig = field(default_factory=SimulatorConfig)
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
-    gym: GymConfig = GymConfig()
+    gym: GymConfig = field(default_factory=GymConfig)
 
 
 # -----------------------------------------------------------------------------

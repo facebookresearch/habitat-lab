@@ -160,8 +160,8 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
-      - "data/objects/amazon_berkeley/configs/"
-      - "data/objects/google_object_dataset/configs/"
+      - "data/objects_ovmm/train_val/amazon_berkeley/configs/"
+      - "data/objects_ovmm/train_val/google_scanned/configs/"
     concur_render: True
     auto_sleep: True
     agents_order:

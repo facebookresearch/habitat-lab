@@ -11,7 +11,7 @@ from functools import partial
 from typing import List, Optional
 
 from hydra import compose, initialize_config_dir
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 
 from habitat.config.default_structured_configs import (
     HabitatConfigPlugin,
@@ -97,6 +97,43 @@ def patch_config(cfg: DictConfig) -> DictConfig:
         f"habitat.simulator.agents_order: {sim_config.agents_order}\n"
         f"habitat.simulator.agents: {list(sim_config.agents.keys())}"
     )
+
+    if True:
+        # _articulated_agent_arm_panoptic 
+        # remove sensors not used by gym
+        sensor_reverse_dependencies = {
+            "articulated_agent_arm_panoptic" : ["humanoid_detector_sensor"]}
+        gym_keys = cfg.habitat.gym.obs_keys
+        for (agent_idx, agent_key) in enumerate(cfg.habitat.simulator.agents):
+            agent = cfg.habitat.simulator.agents[agent_key]
+            keys_to_delete = []
+            for sensor_key in agent.sim_sensors:
+                sensor = agent.sim_sensors[sensor_key]
+                sensor_uuid = sensor.uuid
+                full_key = f"agent_{agent_idx}_{sensor_uuid}"
+                if full_key in gym_keys:
+                    continue
+                if sensor_uuid in sensor_reverse_dependencies:
+                    found = False
+                    alt_keys = sensor_reverse_dependencies[sensor_uuid]
+                    for alt_key in alt_keys:
+                        full_key = f"agent_{agent_idx}_{alt_key}"
+                        if full_key in gym_keys:
+                            found = True
+                            break
+                    if found:
+                        continue
+                keys_to_delete.append(sensor_key)
+
+            if len(keys_to_delete):
+                with open_dict(agent.sim_sensors):                
+                    for sensor_key in keys_to_delete:
+                        sensor = agent.sim_sensors[sensor_key]
+                        sensor_uuid = sensor.uuid
+                        full_key = f"agent_{agent_idx}_{sensor_key}"
+                        del agent.sim_sensors[sensor_key]
+                        print(f"deleted unused sensor {full_key}!")
+
 
     OmegaConf.set_readonly(cfg, True)
 

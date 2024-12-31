@@ -47,7 +47,10 @@ from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 
 if hasattr(torch, "inference_mode"):
     inference_mode = torch.inference_mode

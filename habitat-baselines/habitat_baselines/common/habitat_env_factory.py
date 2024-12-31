@@ -114,7 +114,8 @@ class HabitatVectorEnvFactory(VectorEnvFactory):
             workers_ignore_signals=workers_ignore_signals,
         )
 
-        if config.habitat.simulator.renderer.enable_batch_renderer:
-            envs.initialize_batch_renderer(config)
+        # temp disable
+        # if config.habitat.simulator.renderer.enable_batch_renderer:
+        #     envs.initialize_batch_renderer(config)
 
         return envs

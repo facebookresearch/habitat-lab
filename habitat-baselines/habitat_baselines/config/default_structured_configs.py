@@ -277,7 +277,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     action_distribution_type: str = "categorical"  # or 'gaussian'
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
-    action_dist: ActionDistributionConfig = ActionDistributionConfig()
+    action_dist: ActionDistributionConfig = field(default_factory=ActionDistributionConfig)
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
@@ -389,14 +389,14 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
-    agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
-    preemption: PreemptionConfig = PreemptionConfig()
+    agent: AgentAccessMgrConfig = field(default_factory=AgentAccessMgrConfig)
+    preemption: PreemptionConfig = field(default_factory=PreemptionConfig)
     policy: Dict[str, PolicyConfig] = field(
         default_factory=lambda: {"main_agent": PolicyConfig()}
     )
-    ppo: PPOConfig = PPOConfig()
-    ddppo: DDPPOConfig = DDPPOConfig()
-    ver: VERConfig = VERConfig()
+    ppo: PPOConfig = field(default_factory=PPOConfig)
+    ddppo: DDPPOConfig = field(default_factory=DDPPOConfig)
+    ver: VERConfig = field(default_factory=VERConfig)
     auxiliary_losses: Dict[str, AuxLossConfig] = field(default_factory=dict)
 
 
@@ -469,8 +469,8 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     force_blind_policy: bool = False
     verbose: bool = True
     # Creates the vectorized environment.
-    vector_env_factory: VectorEnvFactoryConfig = VectorEnvFactoryConfig()
-    evaluator: EvaluatorConfig = EvaluatorConfig()
+    vector_env_factory: VectorEnvFactoryConfig = field(default_factory=VectorEnvFactoryConfig)
+    evaluator: EvaluatorConfig = field(default_factory=EvaluatorConfig)
     eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies
     # and nothing of substantive compute. PyTorch has been making
@@ -482,12 +482,12 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # set it to true and yours likely should too
     force_torch_single_threaded: bool = False
     # Weights and Biases config
-    wb: WBConfig = WBConfig()
+    wb: WBConfig = field(default_factory=WBConfig)
     # When resuming training or evaluating, will use the original
     # training config if load_resume_state_config is True
     load_resume_state_config: bool = True
-    eval: EvalConfig = EvalConfig()
-    profiling: ProfilingConfig = ProfilingConfig()
+    eval: EvalConfig = field(default_factory=EvalConfig)
+    profiling: ProfilingConfig = field(default_factory=ProfilingConfig)
     # Whether to log the infos that are only logged to a single process to the
     # CLI along with the other metrics.
     should_log_single_proc_infos: bool = False
@@ -499,7 +499,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
-    rl: RLConfig = RLConfig()
+    rl: RLConfig = field(default_factory=RLConfig)
 
 
 @dataclass

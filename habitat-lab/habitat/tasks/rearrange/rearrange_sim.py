@@ -905,93 +905,97 @@ class RearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
-        rom = self.get_rigid_object_manager()
 
-        if self._debug_render:
-            if self._debug_render_articulated_agent:
-                self.agents_mgr.update_debug()
+        from habitat.utils import profiling_wrapper
+        with profiling_wrapper.RangeContext("RearrangeSim.step"):
+
             rom = self.get_rigid_object_manager()
-            self._try_acquire_context()
 
-            # Disable BB drawing for observation render
-            for obj_id in self._draw_bb_objs:
-                self.set_object_bb_draw(False, obj_id)
+            if self._debug_render:
+                if self._debug_render_articulated_agent:
+                    self.agents_mgr.update_debug()
+                rom = self.get_rigid_object_manager()
+                self._try_acquire_context()
 
-            # Remove viz objects
-            for obj in self._viz_objs.values():
-                if obj is not None and rom.get_library_has_id(obj.object_id):
-                    rom.remove_object_by_id(obj.object_id)
-            self._viz_objs = {}
+                # Disable BB drawing for observation render
+                for obj_id in self._draw_bb_objs:
+                    self.set_object_bb_draw(False, obj_id)
 
-            # Remove all visualized positions
-            add_back_viz_objs = {}
-            for name, viz_id in self.viz_ids.items():
-                if viz_id is None:
-                    continue
-                viz_obj = rom.get_object_by_id(viz_id)
-                before_pos = viz_obj.translation
-                rom.remove_object_by_id(viz_id)
-                r = self._viz_handle_to_template[viz_id]
-                add_back_viz_objs[name] = (before_pos, r)
-            self.viz_ids = defaultdict(lambda: None)
+                # Remove viz objects
+                for obj in self._viz_objs.values():
+                    if obj is not None and rom.get_library_has_id(obj.object_id):
+                        rom.remove_object_by_id(obj.object_id)
+                self._viz_objs = {}
 
-        self.maybe_update_articulated_agent()
+                # Remove all visualized positions
+                add_back_viz_objs = {}
+                for name, viz_id in self.viz_ids.items():
+                    if viz_id is None:
+                        continue
+                    viz_obj = rom.get_object_by_id(viz_id)
+                    before_pos = viz_obj.translation
+                    rom.remove_object_by_id(viz_id)
+                    r = self._viz_handle_to_template[viz_id]
+                    add_back_viz_objs[name] = (before_pos, r)
+                self.viz_ids = defaultdict(lambda: None)
 
-        if self.kinematic_relationship_manager is not None:
-            # update children if the parents were moved
-            self.kinematic_relationship_manager.apply_relations()
+            self.maybe_update_articulated_agent()
 
-        if self._batch_render:
-            for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1, update_articulated_agent=False)
+            if self.kinematic_relationship_manager is not None:
+                # update children if the parents were moved
+                self.kinematic_relationship_manager.apply_relations()
 
-            obs = self.get_sensor_observations()
-            self.add_keyframe_to_observations(obs)
-        elif self._concur_render:
-            self.start_async_render()
+            if self._batch_render:
+                for _ in range(self.ac_freq_ratio):
+                    self.internal_step(-1, update_articulated_agent=False)
 
-            for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1, update_articulated_agent=False)
+                obs = self.get_sensor_observations()
+                self.add_keyframe_to_observations(obs)
+            elif self._concur_render:
+                self.start_async_render()
 
-            t_start = time.time()
-            obs = self._sensor_suite.get_observations(
-                self.get_sensor_observations_async_finish()
-            )
-            self.add_perf_timing("get_sensor_observations", t_start)
-        else:
-            for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1, update_articulated_agent=False)
+                for _ in range(self.ac_freq_ratio):
+                    self.internal_step(-1, update_articulated_agent=False)
 
-            t_start = time.time()
-            obs = self._sensor_suite.get_observations(
-                self.get_sensor_observations()
-            )
-            self.add_perf_timing("get_sensor_observations", t_start)
-
-        # TODO: Support recording while batch rendering
-        if self._enable_gfx_replay_save and not self._batch_render:
-            self.gfx_replay_manager.save_keyframe()
-
-        if self._needs_markers:
-            self._update_markers()
-
-        # TODO: Make debug cameras more flexible
-        if "third_rgb" in obs and self._debug_render:
-            self._try_acquire_context()
-            for k, (pos, r) in add_back_viz_objs.items():
-                viz_id = self.viz_ids[k]
-
-                self.viz_ids[k] = self.visualize_position(
-                    pos, self.viz_ids[k], r=r
+                t_start = time.time()
+                obs = self._sensor_suite.get_observations(
+                    self.get_sensor_observations_async_finish()
                 )
+                self.add_perf_timing("get_sensor_observations", t_start)
+            else:
+                for _ in range(self.ac_freq_ratio):
+                    self.internal_step(-1, update_articulated_agent=False)
 
-            # Also render debug information
-            self._create_obj_viz()
+                t_start = time.time()
+                obs = self._sensor_suite.get_observations(
+                    self.get_sensor_observations()
+                )
+                self.add_perf_timing("get_sensor_observations", t_start)
 
-            debug_obs = self.get_sensor_observations()
-            obs["third_rgb"] = debug_obs["third_rgb"][:, :, :3]
+            # TODO: Support recording while batch rendering
+            if self._enable_gfx_replay_save and not self._batch_render:
+                self.gfx_replay_manager.save_keyframe()
 
-        return obs
+            if self._needs_markers:
+                self._update_markers()
+
+            # TODO: Make debug cameras more flexible
+            if "third_rgb" in obs and self._debug_render:
+                self._try_acquire_context()
+                for k, (pos, r) in add_back_viz_objs.items():
+                    viz_id = self.viz_ids[k]
+
+                    self.viz_ids[k] = self.visualize_position(
+                        pos, self.viz_ids[k], r=r
+                    )
+
+                # Also render debug information
+                self._create_obj_viz()
+
+                debug_obs = self.get_sensor_observations()
+                obs["third_rgb"] = debug_obs["third_rgb"][:, :, :3]
+
+            return obs
 
     def maybe_update_articulated_agent(self):
         """

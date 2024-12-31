@@ -92,9 +92,9 @@ class EnvBatchRenderer:
                 config, self._sensor_suite
             )
         )
-        assert (
-            len(self._sensor_specifications) == 1
-        ), f"Batch renderer only supports one sensor but configuration specifies {len(self._sensor_specifications)} sensors. Either remove sensors or disable batch rendering."
+        # assert (
+        #     len(self._sensor_specifications) == 1
+        # ), f"Batch renderer only supports one sensor but configuration specifies {len(self._sensor_specifications)} sensors. Either remove sensors or disable batch rendering."
 
         self._replay_renderer_cfg = (
             EnvBatchRenderer._create_replay_renderer_cfg(
@@ -206,6 +206,9 @@ class EnvBatchRenderer:
         is_depth_sensor = (
             sensor_spec.sensor_type == habitat_sim.SensorType.DEPTH
         )
+        is_semantic_sensor = (
+            sensor_spec.sensor_type == habitat_sim.SensorType.DEPTH
+        )
 
         if is_color_sensor or is_depth_sensor:
             if self._gpu_to_cpu_images is None:
@@ -233,27 +236,35 @@ class EnvBatchRenderer:
                         ),
                         dtype=np.float32,
                     )
+                elif is_semantic_sensor:
+                    self._gpu_to_cpu_buffer = np.empty(
+                        (
+                            self._num_envs,
+                            sensor_spec.resolution[0],
+                            sensor_spec.resolution[1],
+                        ),
+                        dtype=np.int32,
+                    )
 
                 for env_idx in range(self._num_envs):
                     # Create image view for writing into buffer from Magnum
+                    pixel_format = None
                     if is_color_sensor:
-                        env_img_view = mn.MutableImageView2D(
-                            mn.PixelFormat.RGBA8_UNORM,
-                            [
-                                sensor_spec.resolution[1],
-                                sensor_spec.resolution[0],
-                            ],
-                            self._gpu_to_cpu_buffer[env_idx],
-                        )
+                        pixel_format = mn.PixelFormat.RGBA8_UNORM
                     elif is_depth_sensor:
-                        env_img_view = mn.MutableImageView2D(
-                            mn.PixelFormat.R32F,
-                            [
-                                sensor_spec.resolution[1],
-                                sensor_spec.resolution[0],
-                            ],
-                            self._gpu_to_cpu_buffer[env_idx],
-                        )
+                        pixel_format = mn.PixelFormat.R32F
+                    elif is_semantic_sensor:
+                        pixel_format = mn.PixelFormat.R32UI 
+
+                    env_img_view = mn.MutableImageView2D(
+                        pixel_format,
+                        [
+                            sensor_spec.resolution[1],
+                            sensor_spec.resolution[0],
+                        ],
+                        self._gpu_to_cpu_buffer[env_idx],
+                    )
+
                     self._gpu_to_cpu_images.append(env_img_view)
 
                 # Flip the transfer buffer view vertically for presentation
@@ -319,6 +330,7 @@ class EnvBatchRenderer:
                 if sensor_type.sim_sensor_type in [  # type: ignore
                     habitat_sim.SensorType.COLOR,
                     habitat_sim.SensorType.DEPTH,
+                    habitat_sim.SensorType.SEMANTIC
                 ]:
                     sim_sensors.append(sensor_type(sensor_cfg))
         return CoreSensorSuite(sim_sensors)

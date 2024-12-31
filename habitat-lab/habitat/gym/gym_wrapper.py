@@ -284,6 +284,15 @@ class HabGymWrapper(gym.Wrapper):
         if self._save_orig_obs:
             self.orig_obs = obs
 
+        # warning_threshold_size = 256
+        # found_unused = False
+        # for key in obs:
+        #     if obs[key].size >= warning_threshold_size and key not in self._gym_obs_keys:
+        #         print(f"observation {key} with shape {obs[key].shape} is unused by gym wrapper!")
+        #         found_unused = True
+        # if found_unused:
+        #     raise ValueError("found unused observations!")
+
         observation = {
             "observation": OrderedDict(
                 [(k, obs[k]) for k in self._gym_obs_keys]

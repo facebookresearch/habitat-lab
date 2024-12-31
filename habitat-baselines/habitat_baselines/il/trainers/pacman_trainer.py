@@ -10,7 +10,10 @@ import time
 from datetime import datetime
 from typing import List
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 import numpy as np
 import torch
 import torch.nn.functional as F

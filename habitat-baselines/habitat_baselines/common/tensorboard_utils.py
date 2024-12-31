@@ -10,7 +10,10 @@ from typing import Any, List, Optional
 import numpy as np
 import torch
 from omegaconf import OmegaConf
-from torch.utils.tensorboard import SummaryWriter
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ImportError:
+    pass
 
 try:
     import wandb

@@ -311,12 +311,14 @@ class Env:
             action=action, episode=self.current_episode
         )
 
-        self._task.measurements.update_measures(
-            episode=self.current_episode,
-            action=action,
-            task=self.task,
-            observations=observations,
-        )
+        from habitat.utils import profiling_wrapper
+        with profiling_wrapper.RangeContext("update_measures"):
+            self._task.measurements.update_measures(
+                episode=self.current_episode,
+                action=action,
+                task=self.task,
+                observations=observations,
+            )
 
         self._update_step_stats()
 
@@ -472,9 +474,12 @@ class RLEnv(gym.Env):
         """
 
         observations = self._env.step(*args, **kwargs)
-        reward = self.get_reward(observations)
-        done = self.get_done(observations)
-        info = self.get_info(observations)
+
+        from habitat.utils import profiling_wrapper
+        with profiling_wrapper.RangeContext("reward/done/info"):
+            reward = self.get_reward(observations)
+            done = self.get_done(observations)
+            info = self.get_info(observations)
 
         return observations, reward, done, info
 

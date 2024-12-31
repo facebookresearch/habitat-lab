@@ -13,8 +13,11 @@ import torch
 from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
-from torchvision import transforms as T
-from torchvision.transforms import functional as TF
+try:
+    from torchvision import transforms as T
+    from torchvision.transforms import functional as TF
+except ImportError:
+    pass
 
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (

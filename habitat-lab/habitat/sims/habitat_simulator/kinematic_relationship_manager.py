@@ -195,9 +195,13 @@ class KinematicRelationshipManager:
                 continue
 
             obj = sutils.get_obj_from_handle(self.sim, obj_handle)
-            assert (
-                obj is not None
-            ), f"Object with handle '{obj_handle}' could not be found in the scene. Has the Episode been initialized?"
+            # assert (
+            #     obj is not None
+            # ), f"Object with handle '{obj_handle}' could not be found in the scene. Has the Episode been initialized?"
+            # temp EJU we have extra objects in obj_to_rec (name_to_receptacle) like 008_sugarbox
+            if obj is None:
+                logger.warning(f"invalid object {obj_handle} in obj_to_rec")
+                continue
             if rec_unique_name not in unique_name_to_rec:
                 logger.error(
                     f"Cannot find active receptacle {rec_unique_name}, so cannot create a parent relationship. Skipping. Note that episode is likely invalid."

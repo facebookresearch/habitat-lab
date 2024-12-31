@@ -9,7 +9,10 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 import attr
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 import numpy as np
 import quaternion
 from gym import spaces

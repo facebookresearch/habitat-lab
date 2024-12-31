@@ -215,8 +215,10 @@ def load_resume_state(
     else:
         filename = filename_or_config
 
-    if not osp.exists(filename):
-        return None
+    # if not osp.exists(filename):
+    #     return None
+    # temp EJU disable loading from .habitat-resume-state.pth
+    return None
 
     if rank0_only():
         logger.info(f"Loading resume state: {filename}")
