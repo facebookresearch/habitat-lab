@@ -10,19 +10,19 @@ import json
 import argparse
 from omni.isaac.lab.app import AppLauncher
 
-parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-## args_cli = parser.parse_args()
-args_cli, _ = parser.parse_known_args()
-# launch omniverse app
-args_cli.headless = True # Config to have Isaac Lab UI off
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
+# parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+# # append AppLauncher cli args
+# AppLauncher.add_app_launcher_args(parser)
+# # parse the arguments
+# ## args_cli = parser.parse_args()
+# args_cli, _ = parser.parse_known_args()
+# # launch omniverse app
+# args_cli.headless = True # Config to have Isaac Lab UI off
+# app_launcher = AppLauncher(args_cli)
+# simulation_app = app_launcher.app
 
-from omni.isaac.core.utils.extensions import enable_extension
-from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+# from omni.isaac.core.utils.extensions import enable_extension
+# from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
 
 def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
     # Open the USD file
@@ -355,7 +355,7 @@ def usd_to_habitat_rotation(rotation):
 
 
 
-def convert_hab_scene(scene_filepath: str, project_root_folder: str, objects_folder: str = '', scene_usd_filepath: str= "./data/usd/test_scene.usda"):
+def convert_hab_scene(scene_filepath: str, project_root_folder: str, objects_folder: str = '', scene_usd_filepath: str= "./test_scene_instance.usda"):
     
     # assert os.path.exists(scene_filepath)
     try: 
@@ -480,7 +480,14 @@ def convert_hab_scene(scene_filepath: str, project_root_folder: str, objects_fol
         if count == max_count:
             break
 
-    stage.GetRootLayer().Save()
+    # Set the file format arguments to flatten the stage
+    # file_format_args = pxr.Sdf.FileFormatArguments()
+    # file_format_args.Set("flatten", True)
+    # # Save the stage without references
+    # # stage.Save("output_no_ref.usda", file_format_args)
+    
+    # stage.Flatten()
+    stage.GetRootLayer().Save() # NOTE: OLD WAY
     print(f"wrote scene {scene_usd_filepath}")
 
 
@@ -639,26 +646,111 @@ def convert_urdf_test():
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
 
+def combine_two_usd_files():
+
+    #file1 = 'data/hab_spot_arm/urdf/hab_spot_arm.usda'
+    #file2 = 'data/usd/test_scene.usda'
+    # Open the input files
+    stage1 = Usd.Stage.Open("/home/trandaniel/dev/habitat-lab/data/hab_spot_arm/urdf/hab_spot_arm.usda")
+    stage2 = Usd.Stage.Open("/home/trandaniel/dev/habitat-lab/data/usd/test_scene.usda")
+    
+    
+    # Create a new stage for the combined data
+    combinedStage = Usd.Stage.CreateNew("/home/trandaniel/dev/habitat-lab/data/hab_spot_arm/urdf/robot_scene_combined_output.usda")
+   
+    # # Open first file and copy prims
+    # for prim in stage1.Traverse():
+    #     combinedStage.DefinePrim(prim.GetPath(), prim.GetTypeName())
+        
+    # # Open second file and copy prims
+    # for prim in stage2.Traverse():
+    #     combinedStage.DefinePrim(prim.GetPath(), prim.GetTypeName())
+    
+    ####
+    
+    # def copy_prims(source_file, target_stage):
+    #     source_stage = Usd.Stage.Open(source_file)
+        
+    #     for prim in source_stage.GetPseudoRoot().GetAllChildren():
+    #         target_stage.OverridePrim(prim.GetPath())
+    #         source_layer = source_stage.GetEditTarget().GetLayer()
+    #         target_layer = target_stage.GetRootLayer()
+            
+    #         for spec in source_layer.pseudoRoot.GetAllChildren():
+    #             target_layer.TransferContent(spec)
+                
+    # copy_prims(file1, combinedStage)
+    # copy_prims(file2, combinedStage)
+    
+    
+    ####
+    
+    
+    # for name, value in stage2.GetPrimAtPath('/').GetAllMetadata().items():
+        
+    #     print(name)
+    #     print(value)
+    # Check if the spec is an Xform spec
+        # if spec.GetName().startswith('xform'):
+        #     # Get the value of the Xform spec
+        #     xform_value = spec.Get()
+        #     # Create a new attribute on the target layer with the same name and value
+        #     combinedStage.GetPrimAtPath('/').CreateAttribute(spec.GetName(), Sdf.ValueTypeNames.String)
+    # source_layer = stage.GetRootLayer()
+    # omni.usd.resolve_paths(source_layer.identifier, source_layer.identifier)
+    # stage.Save()
+    # combinedStage.GetRootLayer().Save() 
+    # print()
+    
+    
+    # # Add all objects from stage1 to the combined stage
+    # for prim in stage1.GetPseudoRoot().GetChildren():
+    #     combinedStage.OverridePrim(prim.GetName())
+
+    # Add all objects from stage2 to the combined stage
+    # count = 0
+    # for prim in stage2.GetPseudoRoot().GetChildren():
+    #     if count == 0:
+    #         count += 1
+    #         continue
+        
+    #     references = prim.GetReferences()
+    #     # Iterate over the references
+    #     for reference in references:
+    #         # Check if the reference has the prepend attribute
+    #         if reference.HasAttribute("prepend"):
+    #             # Get the prepend reference
+    #             prepend_reference = reference.GetAttribute("prepend")
+    #             print(prepend_reference)
+        
+        #combinedStage.OverridePrim(prim.GetName())
+
+    # # Save the combined stage
+    # combinedStage.Save()
 # if __name__ == "__main__":
-#     scene_instance_filepath = '/home/trandaniel/dev/habitat-sim/data/hssd-hab/scenes/102343992.scene_instance.json'
-#     #output_folder = '/home/guest/dev/usd_converter/converted_usd_test1'
-#     #object_folder = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/objects/"
+#     combine_two_usd_files()
+
+if __name__ == "__main__":
+    scene_instance_filepath = '/home/trandaniel/dev/habitat-sim/data/hssd-hab/scenes/102343992.scene_instance.json'
+    #output_folder = '/home/guest/dev/usd_converter/converted_usd_test1'
+    # object_folder = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/objects/"
     
 
-#     from omni.isaac.lab.app import AppLauncher
+    from omni.isaac.lab.app import AppLauncher
 
-#     parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
-#     # append AppLauncher cli args
-#     AppLauncher.add_app_launcher_args(parser)
-#     # parse the arguments
-#     args_cli = parser.parse_args()
-#     # launch omniverse app
-#     args_cli.headless = True # Config to have Isaac Lab UI off
-#     app_launcher = AppLauncher(args_cli)
-#     simulation_app = app_launcher.app
+    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+    # append AppLauncher cli args
+    AppLauncher.add_app_launcher_args(parser)
+    # parse the arguments
+    args_cli = parser.parse_args()
+    # launch omniverse app
+    args_cli.headless = True # Config to have Isaac Lab UI off
+    app_launcher = AppLauncher(args_cli)
+    simulation_app = app_launcher.app
 
-#     from omni.isaac.core.utils.extensions import enable_extension
-#     from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+    from omni.isaac.core.utils.extensions import enable_extension
+    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
 
 #     # convert_urdf_test()
-#     convert_hab_scene(scene_instance_filepath, project_root_folder="/home/trandaniel/dev/habitat-lab/test_project_root")
+    convert_hab_scene(scene_instance_filepath, project_root_folder="/home/trandaniel/dev/habitat-lab/test_convert")
+

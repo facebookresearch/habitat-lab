@@ -76,7 +76,9 @@ def test_example2_scene_instance():
     
     assert usda_translate_hab_coord == pytest.approx(scene_instance_translation)
     assert usda_rotation_hab_coord== pytest.approx(scene_instance_rotation)
-    # TODO: Add Scale
+    # TODO: Add Scale to show values are equal, looks like most objects are (1, 1, 1) for the (x, y, z) coordinates in hab space.  
+    # Not sure, but pxr space is has values from 0 to infinity, and 1 is default, but hab space has
+    # -1 values?  Don't know what hab space scaling is.
 
 ##########################################################################
 
@@ -101,9 +103,36 @@ def test_add_habitat_visual_metadata_for_articulation():
     temp_usd_filepath = "data/hab_spot_arm/urdf/hab_spot_arm_no_hab_metadata.usda"
     out_usd_filepath = "data/hab_spot_arm/urdf/hab_spot_arm.usda"
     add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
+    
+
+##########################################################################
+
+## LOADING OBJECTS ##
+
+##########################################################################
+
+def combine_two_usd_files():
+
+    
+    # Open the input files
+    stage1 = Usd.Stage.Open('file1.usda')
+    stage2 = Usd.Stage.Open('file2.usda')
+    # Create a new stage for the combined data
+    combinedStage = Usd.Stage.CreateNew('output.usda')
+    
+    
+    # Add the contents of the first file to the combined stage
+    for prim in stage1.GetPseudoRoot().GetChildren():
+        combinedStage.OverridePrim(prim.GetName())
+    # Add the contents of the second file to the combined stage
+    for prim in stage2.GetPseudoRoot().GetChildren():
+        combinedStage.OverridePrim(prim.GetName())
+    # Save the combined stage
+    combinedStage.Save()
+
 
 ##########################################################################
 
 if __name__ == "__main__":
 
-    test_convert_urdf()
+    test_add_habitat_visual_metadata_for_articulation()
