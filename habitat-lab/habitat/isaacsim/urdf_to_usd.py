@@ -9,7 +9,7 @@ import argparse
 from omni.isaac.lab.app import AppLauncher
 
 
-def clean_urdf(input_file, output_file, remove_visual=False):
+def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
     """
     Cleans a URDF file:
     1. Optionally removes <visual> elements.
@@ -59,7 +59,7 @@ def clean_urdf(input_file, output_file, remove_visual=False):
     print(f"Cleaned URDF written to: {output_file}")
 
 
-def convert_urdf(urdf_filepath, out_usd_filepath):
+def convert_urdf(urdf_filepath: str, out_usd_filepath: str) -> None:
 
     from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
 
@@ -91,7 +91,7 @@ def convert_urdf(urdf_filepath, out_usd_filepath):
     
     
 
-def add_habitat_visual_metadata_for_articulation(usd_filepath, reference_urdf_filepath, out_usd_filepath, project_root_folder):
+def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_urdf_filepath: str, out_usd_filepath: str, project_root_folder: str) -> None:
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
     urdf_root = urdf_tree.getroot()
