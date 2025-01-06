@@ -12,7 +12,6 @@ import xml.etree.ElementTree as ET
 from typing import List, Optional, Union
 
 
-
 def sanitize_usd_name(name: str) -> Optional[str]:
     """Sanitizes a string for use as a USD node name.
 
