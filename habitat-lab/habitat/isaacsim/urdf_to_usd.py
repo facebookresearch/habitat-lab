@@ -26,8 +26,8 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
 
     # Helper function to sanitize names
     def sanitize_name(name):
-        if '.' in name:
-            new_name = name.replace('.', '_')
+        if "." in name:
+            new_name = name.replace(".", "_")
             name_map[name] = new_name
             return new_name
         return name
@@ -55,7 +55,11 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
 
     # Write the cleaned URDF to the output file
     with open(output_file, "wb") as f:
-        f.write(ET.tostring(root, pretty_print=True, xml_declaration=True, encoding="UTF-8"))
+        f.write(
+            ET.tostring(
+                root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
+            )
+        )
     print(f"Cleaned URDF written to: {output_file}")
 
 
@@ -68,18 +72,18 @@ def convert_urdf(urdf_filepath: str, out_usd_filepath: str) -> None:
     # Define the configuration for the URDF conversion
     config = UrdfConverterCfg(
         asset_path=urdf_filepath,  # Path to the input URDF file
-        usd_dir=out_dir,         # Directory to save the converted USD file
-        usd_file_name=out_filename,         # Name of the output USD file
-        force_usd_conversion=True,                   # Force conversion even if USD already exists
-        make_instanceable=False,                      # Make the USD asset instanceable
-        link_density=1000.0,                         # Default density for links
-        import_inertia_tensor=True,                  # Import inertia tensor from URDF
-        convex_decompose_mesh=False,                 # Decompose convex meshes
-        fix_base=False,                              # Fix the base link
-        merge_fixed_joints=False,                    # Merge links connected by fixed joints
-        self_collision=False,                        # Enable self-collision
-        default_drive_type="position",               # Default drive type for joints
-        override_joint_dynamics=False                # Override joint dynamics
+        usd_dir=out_dir,  # Directory to save the converted USD file
+        usd_file_name=out_filename,  # Name of the output USD file
+        force_usd_conversion=True,  # Force conversion even if USD already exists
+        make_instanceable=False,  # Make the USD asset instanceable
+        link_density=1000.0,  # Default density for links
+        import_inertia_tensor=True,  # Import inertia tensor from URDF
+        convex_decompose_mesh=False,  # Decompose convex meshes
+        fix_base=False,  # Fix the base link
+        merge_fixed_joints=False,  # Merge links connected by fixed joints
+        self_collision=False,  # Enable self-collision
+        default_drive_type="position",  # Default drive type for joints
+        override_joint_dynamics=False,  # Override joint dynamics
     )
 
     # Create the UrdfConverter with the specified configuration
@@ -87,11 +91,15 @@ def convert_urdf(urdf_filepath: str, out_usd_filepath: str) -> None:
 
     # Get the path to the generated USD file
     usd_path = converter.usd_path
-    print(f"USD file generated at: {usd_path}")   
-    
-    
+    print(f"USD file generated at: {usd_path}")
 
-def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_urdf_filepath: str, out_usd_filepath: str, project_root_folder: str) -> None:
+
+def add_habitat_visual_metadata_for_articulation(
+    usd_filepath: str,
+    reference_urdf_filepath: str,
+    out_usd_filepath: str,
+    project_root_folder: str,
+) -> None:
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
     urdf_root = urdf_tree.getroot()
@@ -112,7 +120,10 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_ur
                 mesh = geometry.find("mesh")
                 if mesh is not None:
                     filename = mesh.get("filename")
-                    asset_path = os.path.relpath(os.path.abspath(os.path.join(urdf_dir, filename)), start=project_root_folder)
+                    asset_path = os.path.relpath(
+                        os.path.abspath(os.path.join(urdf_dir, filename)),
+                        start=project_root_folder,
+                    )
                     scale = (1.0, 1.0, 1.0)  # Default scale
 
                     # Check for scale in the <mesh> element
@@ -125,7 +136,7 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_ur
                     safe_link_name = link_name.replace(".", "_")
                     visual_metadata[safe_link_name] = {
                         "assetPath": asset_path,
-                        "assetScale": scale
+                        "assetScale": scale,
                     }
 
     # Open the USD file
@@ -139,11 +150,15 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_ur
         prim = stage.GetPrimAtPath(prim_path)
         if prim:
             # Add assetPath
-            asset_path_attr = prim.CreateAttribute("habitatVisual:assetPath", Sdf.ValueTypeNames.String)
+            asset_path_attr = prim.CreateAttribute(
+                "habitatVisual:assetPath", Sdf.ValueTypeNames.String
+            )
             asset_path_attr.Set(metadata["assetPath"])
 
             # Add assetScale
-            asset_scale_attr = prim.CreateAttribute("habitatVisual:assetScale", Sdf.ValueTypeNames.Float3)
+            asset_scale_attr = prim.CreateAttribute(
+                "habitatVisual:assetScale", Sdf.ValueTypeNames.Float3
+            )
             asset_scale_attr.Set(Gf.Vec3f(*metadata["assetScale"]))
         else:
             print(f"Warning: Prim not found for link: {link_name}")
@@ -155,7 +170,7 @@ def add_habitat_visual_metadata_for_articulation(usd_filepath: str, reference_ur
 
 def convert_urdf_test():
     """
-    This is an exmaple use case of going from an unformatted urdf file to usd file. 
+    This is an exmaple use case of going from an unformatted urdf file to usd file.
     Specifically, this is render the habitat spot arm urdf.
     """
     # /home/trandaniel/dev/habitat-lab/data/hab_spot_arm/urdf
@@ -165,22 +180,30 @@ def convert_urdf_test():
     temp_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
     out_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
     convert_urdf(clean_urdf_filepath, temp_usd_filepath)
-    add_habitat_visual_metadata_for_articulation(temp_usd_filepath, source_urdf_filepath, out_usd_filepath, project_root_folder="./")
+    add_habitat_visual_metadata_for_articulation(
+        temp_usd_filepath,
+        source_urdf_filepath,
+        out_usd_filepath,
+        project_root_folder="./",
+    )
+
 
 if __name__ == "__main__":
-    
-    parser = argparse.ArgumentParser(description="Create an empty Issac Sim stage.")
+
+    parser = argparse.ArgumentParser(
+        description="Create an empty Issac Sim stage."
+    )
     # append AppLauncher cli args
     AppLauncher.add_app_launcher_args(parser)
     # parse the arguments
     ## args_cli = parser.parse_args()
     args_cli, _ = parser.parse_known_args()
     # launch omniverse app
-    args_cli.headless = True # Config to have Isaac Lab UI off
+    args_cli.headless = True  # Config to have Isaac Lab UI off
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
 
     from omni.isaac.core.utils.extensions import enable_extension
     from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
-    
+
     convert_urdf_test()
