@@ -32,23 +32,23 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
         return name
 
     # Update <link> and <joint> names
-    for element in root.xpath("//*[@name]"):  # noqa: ALL  # type: ignore
+    for element in root.xpath("//*[@name]"):  # type: ignore # noqa: ALL
         original_name = element.get("name")
         sanitized_name = sanitize_name(original_name)
         element.set("name", sanitized_name)
 
     # Update references to <parent link> and <child link>
-    for parent in root.xpath("//parent[@link]"):  # noqa: ALL  # type: ignore
+    for parent in root.xpath("//parent[@link]"):  # type: ignore # noqa: ALL
         original_link = parent.get("link")
         parent.set("link", name_map.get(original_link, original_link))
 
-    for child in root.xpath("//child[@link]"):  # noqa: ALL  # type: ignore
+    for child in root.xpath("//child[@link]"):  # type: ignore # noqa: ALL
         original_link = child.get("link")
         child.set("link", name_map.get(original_link, original_link))
 
     # Optionally remove <visual> elements
     if remove_visual:
-        for visual in root.xpath("//visual"):  # noqa: ALL  # type: ignore
+        for visual in root.xpath("//visual"):  # type: ignore # noqa: ALL
             visual_parent = visual.getparent()
             visual_parent.remove(visual)
 
@@ -57,7 +57,7 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
         f.write(
             ET.tostring(
                 root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
-            )  # noqa: ALL  # type: ignore
+            )  # type: ignore # noqa: ALL
         )
     print(f"Cleaned URDF written to: {output_file}")
 
@@ -108,7 +108,7 @@ def add_habitat_visual_metadata_for_articulation(
     # Extract visual metadata from the URDF
     visual_metadata = {}
     urdf_dir = os.path.dirname(os.path.abspath(reference_urdf_filepath))
-    usd_dir = os.path.dirname(os.path.abspath(usd_filepath))
+    # usd_dir = os.path.dirname(os.path.abspath(usd_filepath)) # NOTE: Not used in this function
     for link in urdf_root.findall("link"):
         link_name = link.get("name")
         visual = link.find("visual")
@@ -129,7 +129,7 @@ def add_habitat_visual_metadata_for_articulation(
                     if scale_element is not None:
                         scale = tuple(
                             map(float, scale_element.text.split())
-                        )  # noqa: ALL  # type: ignore
+                        )  # type: ignore # noqa: ALL
 
                     # Replace periods with underscores for USD-safe names
                     # todo: use a standard get_sanitized_usd_name function here
