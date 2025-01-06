@@ -1,15 +1,16 @@
 """This module converts a scene instance json to a usda file.
 """
 
-import os
-import asyncio
-import re
-import xml.etree.ElementTree as ET
 import argparse
+import asyncio
 import json
 import math
-from typing import List, Union, Optional
-import argparse
+import os
+import re
+import xml.etree.ElementTree as ET
+
+from typing import List, Optional, Union
+
 
 
 def sanitize_usd_name(name: str) -> Optional[str]:
@@ -557,7 +558,7 @@ if __name__ == "__main__":
     simulation_app = app_launcher.app
 
     from omni.isaac.core.utils.extensions import enable_extension
-    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+    from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
 
     convert_hab_scene(
         scene_instance_filepath,

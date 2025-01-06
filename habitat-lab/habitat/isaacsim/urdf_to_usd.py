@@ -1,11 +1,10 @@
-import os
+import argparse
 import asyncio
+import os
+import json
 import re
 import xml.etree.ElementTree as ET
-import argparse
-import json
 
-import argparse
 from omni.isaac.lab.app import AppLauncher
 
 
@@ -208,6 +207,6 @@ if __name__ == "__main__":
 
     # TODO: DELETE line with extra modules if not needed
     # from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
-    from pxr import Usd, Gf, Sdf
+    from pxr import Gf, Sdf, Usd
 
     convert_urdf_test()
