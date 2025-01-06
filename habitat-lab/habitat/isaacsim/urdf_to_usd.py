@@ -203,7 +203,11 @@ if __name__ == "__main__":
     app_launcher = AppLauncher(args_cli)
     simulation_app = app_launcher.app
 
-    from omni.isaac.core.utils.extensions import enable_extension
-    from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+    # TODO: DELETE library if not used.
+    # from omni.isaac.core.utils.extensions import enable_extension
+    
+    # TODO: DELETE line with extra modules if not needed
+    # from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+    from pxr import Usd, Gf, Sdf
 
     convert_urdf_test()
