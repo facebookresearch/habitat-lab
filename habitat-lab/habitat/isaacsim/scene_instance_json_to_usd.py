@@ -1,4 +1,4 @@
-"""This module converts a scene instance json to a usda file. 
+"""This module converts a scene instance json to a usda file.
 """
 
 import os
@@ -8,12 +8,11 @@ import xml.etree.ElementTree as ET
 import argparse
 import json
 import math
-
+from typing import List, Union
 import argparse
-from omni.isaac.lab.app import AppLauncher
 
 
-def sanitize_usd_name(name: str) -> str:
+def sanitize_usd_name(name: str) -> Union[str, None]:
     """Sanitizes a string for use as a USD node name.
 
     :param name: The input string to sanitize.
@@ -24,7 +23,7 @@ def sanitize_usd_name(name: str) -> str:
     # assert len(name) > 0
     if len(name) == 0:
         print("Input string for USD node is empty")
-        return
+        return None
 
     # Replace spaces, hyphens, colons, and other special characters with underscores
     sanitized_name = re.sub(r"[^\w]", "_", name)
@@ -122,7 +121,9 @@ def convert_object_to_usd(
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
 
     object_config_dir, _ = os.path.split(object_config_filepath)
-    usd_dir, _ = os.path.split(out_usd_path)
+    
+    # TODO: DELETE LINE IF NOT USED
+    # usd_dir, _ = os.path.split(out_usd_path)
 
     render_asset_filepath_for_usd = os.path.relpath(
         os.path.abspath(
@@ -149,7 +150,7 @@ def find_file(folder: str, filename: str) -> str:
     :return: Absoluate path string of filename if it is found, None if none found.
     """
     result = None
-    for root, dirs, files in os.walk(folder):
+    for root, _, files in os.walk(folder):
         if filename in files:
             assert not result
             result = os.path.join(root, filename)
@@ -366,12 +367,12 @@ def habitat_to_usd_rotation(rotation) -> List[float]:
     # Combined inverse quaternion transform: (inverse of q_trans)
     # q_x90_inv = [√0.5, √0.5, 0, 0] (wxyz format)
     # q_y180_inv = [0, 0, -1, 0] (wxyz format)
-    q_y90_inv = [HALF_SQRT2, 0.0, HALF_SQRT2, 0.0]
-
+    # q_y90_inv = [HALF_SQRT2, 0.0, HALF_SQRT2, 0.0]
+    # q_z90_inv = [HALF_SQRT2, 0.0, 0.0, HALF_SQRT2]
+    # q_z180_inv = [0.0, 0.0, 0.0, 1.0]
+    
     q_x90_inv = [HALF_SQRT2, HALF_SQRT2, 0.0, 0.0]
-    q_z90_inv = [HALF_SQRT2, 0.0, 0.0, HALF_SQRT2]
     q_y180_inv = [0.0, 0.0, -1.0, 0.0]
-    q_z180_inv = [0.0, 0.0, 0.0, 1.0]
 
     # Multiply q_y180_inv * q_x90_inv to get the combined quaternion
     def quat_multiply(q1, q2):
