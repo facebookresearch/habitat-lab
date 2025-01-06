@@ -1,8 +1,5 @@
 import argparse
-import asyncio
-import json
 import os
-import re
 import xml.etree.ElementTree as ET
 
 from omni.isaac.lab.app import AppLauncher
