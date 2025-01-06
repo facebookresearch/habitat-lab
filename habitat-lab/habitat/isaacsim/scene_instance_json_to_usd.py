@@ -8,11 +8,11 @@ import xml.etree.ElementTree as ET
 import argparse
 import json
 import math
-from typing import List, Union
+from typing import List, Union, Optional
 import argparse
 
 
-def sanitize_usd_name(name: str) -> Union[str, None]:
+def sanitize_usd_name(name: str) -> Optional[str]:
     """Sanitizes a string for use as a USD node name.
 
     :param name: The input string to sanitize.
@@ -159,7 +159,7 @@ def find_file(folder: str, filename: str) -> str:
 
 def convert_mesh_to_usd(
     in_file: str, out_file: str, load_materials: bool = True
-) -> bool:
+) -> None:
     """Convert mesh to usd
 
     :param in_file: string filepath of input mesh
@@ -470,7 +470,7 @@ def convert_hab_scene(
 
     # A scene may have multiple instances of the same object mesh. Xform usda needs
     # to have one unique name per mesh.
-    object_counts = {}
+    object_counts: Dict[str, int] = {}
     max_count = -1  # 50  #TODO: temp only convert the first N objects
     count = 0
 
