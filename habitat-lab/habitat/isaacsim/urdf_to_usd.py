@@ -130,6 +130,7 @@ def add_habitat_visual_metadata_for_articulation(
                     if scale_element is not None:
                         scale = tuple(  # noqa
                             map(float, scale_element.text.split())
+                            
                         )  
 
                     # Replace periods with underscores for USD-safe names
