@@ -482,7 +482,6 @@ def convert_hab_scene(
         # raise KeyError(f"'object_instances' key not found in {scene_filepath} ")# TODO: may need return instead of raise, incase we need to for loop convert_hab_scene
 
     for obj_instance_json in scene_json_data["object_instances"]:
-
         # TODO: assert collision_asset_size is (1,1,1) or not present
         # TODO: check is_collidable
         # TODO: how to handle scale
