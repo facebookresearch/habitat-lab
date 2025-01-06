@@ -8,7 +8,7 @@ import math
 import os
 import re
 import xml.etree.ElementTree as ET
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 
 def sanitize_usd_name(name: str) -> Optional[str]:

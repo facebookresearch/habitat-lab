@@ -32,32 +32,32 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
         return name
 
     # Update <link> and <joint> names
-    for element in root.xpath("//*[@name]"):  # noqa
+    for element in root.xpath("//*[@name]"):  # noqa: ALL  # mypy: ignore
         original_name = element.get("name")
         sanitized_name = sanitize_name(original_name)
         element.set("name", sanitized_name)
 
     # Update references to <parent link> and <child link>
-    for parent in root.xpath("//parent[@link]"):  # noqa
+    for parent in root.xpath("//parent[@link]"):  # noqa: ALL  # mypy: ignore
         original_link = parent.get("link")
         parent.set("link", name_map.get(original_link, original_link))
 
-    for child in root.xpath("//child[@link]"):  # noqa
+    for child in root.xpath("//child[@link]"):  # noqa: ALL  # mypy: ignore
         original_link = child.get("link")
         child.set("link", name_map.get(original_link, original_link))
 
     # Optionally remove <visual> elements
     if remove_visual:
-        for visual in root.xpath("//visual"):  # noqa
+        for visual in root.xpath("//visual"):  # noqa: ALL  # mypy: ignore
             visual_parent = visual.getparent()
             visual_parent.remove(visual)
 
     # Write the cleaned URDF to the output file
     with open(output_file, "wb") as f:
         f.write(
-            ET.tostring(  # noqa
+            ET.tostring(  
                 root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
-            )
+            )  # noqa: ALL  # mypy: ignore
         )
     print(f"Cleaned URDF written to: {output_file}")
 
@@ -129,7 +129,7 @@ def add_habitat_visual_metadata_for_articulation(
                     if scale_element is not None:
                         scale = tuple(
                             map(float, scale_element.text.split())
-                        )  # noqa
+                        )  # noqa: ALL  # mypy: ignore
 
                     # Replace periods with underscores for USD-safe names
                     # todo: use a standard get_sanitized_usd_name function here
