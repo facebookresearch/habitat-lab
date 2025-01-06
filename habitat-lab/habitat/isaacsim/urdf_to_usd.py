@@ -55,7 +55,7 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
     # Write the cleaned URDF to the output file
     with open(output_file, "wb") as f:
         f.write(
-            ET.tostring(  
+            ET.tostring(
                 root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
             )  # noqa: ALL  # mypy: ignore
         )
