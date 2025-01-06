@@ -128,8 +128,7 @@ def add_habitat_visual_metadata_for_articulation(
                     # Check for scale in the <mesh> element
                     scale_element = mesh.find("scale")
                     if scale_element is not None:
-                        
-                        scale = tuple(  
+                        scale = tuple( 
                             map(float, scale_element.text.split())
                         )  # noqa
 
