@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Final, Optional
+from typing import Any, Final, Optional
 
 from app_data import AppData
 from app_state_base import AppStateBase
@@ -26,9 +26,16 @@ class AppStateLobby(AppStateBase):
     def __init__(self, app_service: AppService, app_data: AppData):
         super().__init__(app_service, app_data)
         self._save_keyframes = False
+        self._inactive_time = 0.0
+
+        rearrange_v2_config: dict[str, Any] = app_service.config.get(
+            "rearrange_v2", {}
+        )
+        self._auto_shutdown_time: Optional[float] = rearrange_v2_config.get("auto_shutdown_time", None)
 
     def on_enter(self):
         super().on_enter()
+        self._inactive_time = 0.0
         # Enable new connections
         # TODO: Create API in RemoteClientState
         self._app_service._remote_client_state._interprocess_record.enable_new_connections(
@@ -57,10 +64,21 @@ class AppStateLobby(AppStateBase):
         return None
 
     def sim_update(self, dt: float, post_sim_update_dict):
+        connected_user_count = len(self._app_data.connected_users)
+
+        # Shutdown the application no connection has occurred for 'auto_shutdown_time' seconds.
+        if self._auto_shutdown_time is not None:
+            if connected_user_count == 0:
+                self._inactive_time += dt
+                if self._inactive_time >= self._auto_shutdown_time:
+                    print(f"The application was inactive for {int(self._inactive_time)} seconds. Initiating shutdown.")
+                    post_sim_update_dict["application_exit"] = True
+                    return
+            else:
+                self._inactive_time = 0.0
+
         # Show lobby status.
-        missing_users = self._app_data.max_user_count - len(
-            self._app_data.connected_users
-        )
+        missing_users = self._app_data.max_user_count - connected_user_count
         if missing_users > 0:
             s = "s" if missing_users > 1 else ""
             message = f"Waiting for {missing_users} participant{s} to join."

@@ -15,3 +15,6 @@ habitat_hitl:
   experimental:
     headless:
       do_headless: True
+
+rearrange_v2:
+  auto_shutdown_time: 3600.0
