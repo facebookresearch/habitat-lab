@@ -121,7 +121,7 @@ def convert_object_to_usd(
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
 
     object_config_dir, _ = os.path.split(object_config_filepath)
-    
+
     # TODO: DELETE LINE IF NOT USED
     # usd_dir, _ = os.path.split(out_usd_path)
 
@@ -370,7 +370,7 @@ def habitat_to_usd_rotation(rotation) -> List[float]:
     # q_y90_inv = [HALF_SQRT2, 0.0, HALF_SQRT2, 0.0]
     # q_z90_inv = [HALF_SQRT2, 0.0, 0.0, HALF_SQRT2]
     # q_z180_inv = [0.0, 0.0, 0.0, 1.0]
-    
+
     q_x90_inv = [HALF_SQRT2, HALF_SQRT2, 0.0, 0.0]
     q_y180_inv = [0.0, 0.0, -1.0, 0.0]
 
