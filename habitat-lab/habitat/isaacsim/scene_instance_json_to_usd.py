@@ -4,11 +4,9 @@
 import argparse
 import asyncio
 import json
-import math
 import os
 import re
-import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 
 def sanitize_usd_name(name: str) -> Optional[str]:
