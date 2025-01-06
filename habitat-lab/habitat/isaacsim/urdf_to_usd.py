@@ -128,9 +128,9 @@ def add_habitat_visual_metadata_for_articulation(
                     # Check for scale in the <mesh> element
                     scale_element = mesh.find("scale")
                     if scale_element is not None:
-                        scale = tuple(  # noqa
+                        scale = tuple(  
                             map(float, scale_element.text.split())
-                        )  
+                        )  # noqa
 
                     # Replace periods with underscores for USD-safe names
                     # todo: use a standard get_sanitized_usd_name function here
