@@ -280,10 +280,10 @@ class AABBReceptacle(Receptacle):
             # TODO: add an API query or other method to avoid reconstructing the stage frame here
             stage_config = sim.get_stage_initialization_template()
             r_frameup_worldup = qf2v(
-                habitat_sim.geo.UP, stage_config.orient_up
+                np.array(habitat_sim.geo.UP), np.array(stage_config.orient_up)
             )
             v_prime = qtm(r_frameup_worldup).transform_vector(
-                mn.Vector3(habitat_sim.geo.FRONT)
+                habitat_sim.geo.FRONT
             )
             world_to_local = (
                 qf2v(np.array(v_prime), np.array(stage_config.orient_front))
