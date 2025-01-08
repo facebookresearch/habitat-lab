@@ -22,8 +22,6 @@ from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.debug_visualizer import dblr_draw_bb
 from habitat.utils.geometry_utils import random_triangle_point
-from habitat_sim.utils.common import quat_from_two_vectors as qf2v
-from habitat_sim.utils.common import quat_to_magnum as qtm
 
 # global module singleton for mesh importing instantiated upon first import
 _manager = mn.trade.ImporterManager()
@@ -279,19 +277,20 @@ class AABBReceptacle(Receptacle):
             # this is a global stage receptacle
             # TODO: add an API query or other method to avoid reconstructing the stage frame here
             stage_config = sim.get_stage_initialization_template()
-            r_frameup_worldup = qf2v(
-                np.array(habitat_sim.geo.UP), np.array(stage_config.orient_up)
+
+            r_frameup_worldup = mn.Quaternion.rotation(
+                habitat_sim.geo.UP, stage_config.orient_up.normalized()
             )
-            v_prime = qtm(r_frameup_worldup).transform_vector(
+            v_prime = r_frameup_worldup.transform_vector_normalized(
                 habitat_sim.geo.FRONT
-            )
+            ).normalized()
             world_to_local = (
-                qf2v(np.array(v_prime), np.array(stage_config.orient_front))
+                mn.Quaternion.rotation(
+                    v_prime, stage_config.orient_front.normalized()
+                )
                 * r_frameup_worldup
-            )
-            world_to_local = habitat_sim.utils.common.quat_to_magnum(
-                world_to_local
-            )
+            ).normalized()
+
             local_to_world = world_to_local.inverted()
             l2w4 = mn.Matrix4.from_(local_to_world.to_matrix(), mn.Vector3())
 
