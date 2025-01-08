@@ -84,6 +84,9 @@ jobs:
         cd habitat-sim
         pip install -r requirements.txt --progress-bar off
         git submodule update --init --recursive --jobs 8
+        #Added to test against Eigen Refactor PR
+        git switch BE_RemoveEigenDeps
+        #end Added to test against Eigen Refactor PR
         python -u setup.py install --headless --with-cuda --bullet
     - name: Download test data
       run: |
