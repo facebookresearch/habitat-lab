@@ -1,0 +1,32 @@
+
+
+# Habitat Isaac Sim Integration
+
+## Isaac Sim Installation
+
+### Ubuntu 22.04
+```
+# install Isaac Sim
+pip install isaacsim==4.2.0.2 isaacsim-extscache-physics==4.2.0.2 isaacsim-extscache-kit==4.2.0.2 isaacsim-extscache-kit-sdk==4.2.0.2 --extra-index-url https://pypi.nvidia.com
+
+# verify install and accept EULA
+python -c "import isaacsim; print(isaacsim)"
+```
+
+### Ubuntu 20.04
+
+1. Ensure your system is headed. If using ssh to a remote machine, use display forwarding.
+2. Follow official [Workstation installation steps](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_workstation.html).
+
+
+### Isaac Lab
+Isaac Lab is only needed for doing asset conversion to USD format. If you've already been provided Isaac Sim USD files, you can skip this.
+
+```
+git clone https://github.com/isaac-sim/IsaacLab
+cd IsaacLab
+./isaaclab.sh --install "none"
+```
+
+If you encounter issues, see [official instructions for installing Isaac Sim and Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-lab).  
+

@@ -1,0 +1,289 @@
+
+
+[package]
+title = "Isaac Sim Python Habitat Headless"
+description = "Modified version of Isaac Sim to run headless for integration with Habitat"
+version = "4.2.0"
+
+# That makes it browsable in UI with "experience" filter
+keywords = ["experience", "app", "usd"]
+
+[dependencies]
+# todo: name versions ("omni.physx" = { version="1.0", "tag"="gpu" })
+# https://docs.omniverse.nvidia.com/kit/docs/kit-manual/105.0/guide/extensions_advanced.html
+"omni.isaac.core" = {}
+"omni.kit.loop-isaac" = {}
+# only needed for asset conversion
+"omni.isaac.cloner" = {}
+
+[settings.app.extensions]
+# disable all file-system watching because we don't need hot-reloading
+fsWatcherEnabled = false
+# don't know what this is
+skipPublishVerification = true
+# disable registry? this will probably cause failure on fresh install; todo: investigate
+registryEnabled = true
+excluded = [
+    "omni.gpu_foundation.shadercache.vulkan",
+    # "omni.gpu_foundation",
+    # "omni.client",
+    # "omni.stats",
+    # "omni.kit.async_engine",
+    # "omni.materialx.libs",
+    # "omni.usd.schema.audio",
+    "carb.audio",
+    "omni.kit.audiodeviceenum",
+    # "omni.kvdb",
+    # "omni.hsscclient",
+    # "omni.isaac.nucleus",
+]
+    
+
+
+# [settings]
+# #renderer.active = "rtx"
+# exts."omni.kit.viewport.menubar.camera".expand = true # Expand the extra-camera settings by default
+# exts."omni.kit.window.file".useNewFilePicker = true
+# exts."omni.kit.tool.asset_importer".useNewFilePicker = true
+# exts."omni.kit.tool.collect".useNewFilePicker = true
+# exts."omni.kit.widget.layers".useNewFilePicker = true
+# exts."omni.kit.renderer.core".imgui.enableMips = true
+# exts."omni.kit.widget.cloud_share".require_access_code = false
+# exts."omni.kit.pipapi".installCheckIgnoreVersion = true
+# exts."omni.kit.viewport.window".startup.windowName="Viewport" # Rename from Viewport Next
+# exts."omni.kit.menu.utils".logDeprecated = false
+
+# # app.content.emptyStageOnStart = false
+# app.file.ignoreUnsavedOnExit = true # prevents save dialog when exiting
+
+# # deprecate support for old kit.ui.menu
+# app.menu.legacy_mode = false
+# # use omni.ui.Menu for the MenuBar
+# app.menu.compatibility_mode = false
+# # Setting the port for the embedded http server
+# exts."omni.services.transport.server.http".port = 8211
+
+# # default viewport is fill
+# app.runLoops.rendering_0.fillResolution = false
+
+# exts."omni.kit.test".includeTests = [ "*isaac*" ]
+
+
+# [settings.app.python]
+# # These disable the kit app from also printing out python output, which gets confusing
+# interceptSysStdOutput = false
+# logSysStdOutput = false
+
+# [settings.app.settings]
+# persistent = false
+# dev_build = false
+# fabricDefaultStageFrameHistoryCount = 3 # needed for omni.syntheticdata TODO105 Still True?
+
+# [settings.app.window]
+# title = "Isaac Sim Python"
+# hideUi = false
+# _iconSize = 256
+# iconPath = "${omni.isaac.kit}/data/omni.isaac.sim.png"
+
+# width = 1700
+# height = 900
+# x = -1
+# y = -1
+
+# # Fonts
+# [setting.app.font]
+# file = "${fonts}/OpenSans-SemiBold.ttf"
+# size = 16
+
+# [setting.app.runLoops]
+# main.rateLimitEnabled = false
+# main.rateLimitFrequency = 60
+# main.rateLimitUseBusyLoop = false
+# rendering_0.rateLimitEnabled = false
+
+[settings.exts.'omni.kit.window.extensions']
+# List extensions here we want to show as featured when extension manager is opened
+featuredExts = []
+
+[settings]
+# # MGPU is always on, you can turn it from the settings, and force this off to save even more resource if you
+# # only want to use a single GPU on your MGPU system
+# renderer.multiGpu.enabled = true
+# renderer.multiGpu.autoEnable = true
+# # This setting forces all GPUs to copy their render results to the main GPU.
+# # This legacy setting should not be needed anymore
+# app.gatherRenderResults = false
+# 'rtx-transient'.resourcemanager.enableTextureStreaming = true
+# # app.hydra.aperture.conform = 4 # in 105.1 pixels are square by default
+# app.hydraEngine.waitIdle = false
+# rtx.newDenoiser.enabled = true
+
+# # Enable Iray and pxr by setting this to "rtx,iray,pxr"
+# renderer.enabled = "rtx"
+
+# physics.autoPopupSimulationOutputWindow=false
+
+# ### async rendering settings
+# omni.replicator.asyncRendering = false
+# app.asyncRendering = false
+# app.asyncRenderingLowLatency = false
+
+# ### Render thread settings
+# app.runLoops.main.rateLimitEnabled = false
+# app.runLoops.main.rateLimitFrequency = 120
+# app.runLoops.main.rateLimitUsePrecisionSleep = true
+# app.runLoops.main.syncToPresent = false
+# app.runLoops.present.rateLimitFrequency = 60
+# app.runLoops.present.rateLimitUsePrecisionSleep = true
+# app.runLoops.rendering_0.rateLimitFrequency = 120
+# app.runLoops.rendering_0.rateLimitUsePrecisionSleep = true
+# app.runLoops.rendering_0.syncToPresent = false
+# app.runLoops.rendering_1.rateLimitFrequency = 120
+# app.runLoops.rendering_1.rateLimitUsePrecisionSleep = true
+# app.runLoops.rendering_1.syncToPresent = false
+# app.runLoopsGlobal.syncToPresent = false
+# app.vsync = false
+# exts."omni.kit.renderer.core".present.enabled = false
+# exts."omni.kit.renderer.core".present.presentAfterRendering = false
+# persistent.app.viewport.defaults.tickRate = 120
+# rtx-transient.dlssg.enabled = false
+
+app.audio.enabled = false
+
+# privacy.externalBuild = true
+
+# # Enable Vulkan
+# app.vulkan = true
+
+# Basic Kit App
+################################
+app.versionFile = "${app}/../VERSION"
+app.name = "Isaac-Sim-Habitat-Headless"
+app.version = "4.2.0"
+
+# # hide NonToggleable Exts
+# exts."omni.kit.window.extensions".hideNonToggleableExts = true
+# exts."omni.kit.window.extensions".showFeatureOnly = false
+
+# Hang Detector
+################################
+# app.hangDetector.enabled = false
+# app.hangDetector.timeout = 120
+
+# # RTX Settings
+# ###############################
+# [settings.rtx]
+# translucency.worldEps = 0.005
+
+# Content Browser
+###############################
+[settings.exts."omni.kit.window.content_browser"]
+enable_thumbnail_generation_images = false # temp fix to avoid leaking python processes
+
+# Extensions
+###############################
+[settings.exts."omni.kit.registry.nucleus"]
+registries = [
+	{ name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/106/shared" },
+	{ name = "kit/sdk", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/sdk/${kit_version_short}/${kit_git_hash}" },
+	{ name = "kit/community", url = "https://dw290v42wisod.cloudfront.net/exts/kit/community" },
+]
+
+# [settings.exts."omni.kit.window.modifier.titlebar"]
+# titleFormatString = "  Isaac Sim  {version:${app}/../SHORT_VERSION,font_color=0x909090,font_size=16} {separator} {file, board=true}"
+# showFileFullPath = true
+# icon.file = "${app}/../exts/omni.isaac.app.setup/data/nvidia-omniverse-isaacsim.ico"
+# icon.size = 256
+# defaultFont.name = "Arial"
+# defaultFont.size = 16
+# defaultFont.color = 0xD0D0D0
+# separator.color = 0x00B976
+# separator.width = 1
+# windowBorder.color = 0x0F0F0F
+# windowBorder.width = 2
+# colors.caption = 0x0F0F0F
+# colors.client = 0x0F0F0F
+# respondOnMouseUp = true
+# changeWindowRegion = true
+
+
+# Register extension folder from this repo in kit
+# [settings.app.exts]
+# folders = ["${app}/../exts", "${app}/../extscache", "${app}/../extsPhysics", "${app}/../extsUser"]
+
+[settings.crashreporter.data]
+experience = "Isaac Sim Python"
+
+# Isaac Sim Settings
+###############################
+# [settings.app.renderer]
+# skipWhileMinimized = false
+# sleepMsOnFocus = 0
+# sleepMsOutOfFocus = 0
+# resolution.width=1280
+# resolution.height=720
+
+# [settings.app.livestream]
+# proto = "ws"
+# allowResize = true
+# outDirectory = "${data}"
+
+# # default camera position in meters
+# [settings.app.viewport]
+# defaultCamPos.x = 5
+# defaultCamPos.y = 5
+# defaultCamPos.z = 5
+
+# [settings.rtx]
+# raytracing.fractionalCutoutOpacity = false
+# hydra.enableSemanticSchema = true
+# mdltranslator.mdlDistilling = false
+# descriptorSets=60000
+# reservedDescriptors=500000
+# sceneDb.maxInstances=1000000
+# Enable this for static scenes, improves visual quality
+# directLighting.sampledLighting.enabled = true
+
+[settings.persistent]
+# app.file.recentFiles = []
+app.stage.upAxis = "Z"
+app.stage.timeCodeRange = [0, 1000000]
+app.stage.movePrimInPlace = false
+app.stage.instanceableOnCreatingReference = false
+app.stage.materialStrength = "weakerThanDescendants"
+
+# app.transform.gizmoUseSRT = true
+# app.viewport.grid.scale = 1.0
+# app.viewport.pickingMode = "kind:model.ALL"
+# app.viewport.camMoveVelocity = 0.05 # 5 m/s
+# app.viewport.gizmo.scale = 0.01 # scaled to meters
+# app.viewport.previewOnPeek = false
+# app.viewport.snapToSurface = false
+# app.viewport.displayOptions = 31887 # Disable Frame Rate and Resolution by default
+# app.window.uiStyle = "NvidiaDark"
+app.primCreation.DefaultXformOpType = "Scale, Orient, Translate"
+app.primCreation.DefaultXformOpOrder="xformOp:translate, xformOp:orient, xformOp:scale"
+app.primCreation.typedDefaults.camera.clippingRange = [0.01, 10000000.0]
+simulation.minFrameRate = 15
+simulation.defaultMetersPerUnit = 1.0
+omnigraph.updateToUsd = false
+omnigraph.useSchemaPrims = true
+omnigraph.disablePrimNodes = true
+physics.updateToUsd = true
+physics.updateVelocitiesToUsd = true
+physics.useFastCache = false
+physics.visualizationDisplayJoints = false
+physics.visualizationSimulationOutput = false
+# omni.replicator.captureOnPlay = true
+# exts."omni.anim.navigation.core".navMesh.viewNavMesh = false
+# exts."omni.anim.navigation.core".navMesh.config.autoRebakeOnChanges = false
+# resourcemonitor.timeBetweenQueries = 100
+
+# renderer.startupMessageDisplayed = true # hides the IOMMU popup window
+
+# Make Detail panel visible by default
+# app.omniverse.content_browser.options_menu.show_details = true
+# app.omniverse.filepicker.options_menu.show_details = true
+
+# [settings.ngx]
+# enabled=true # Enable this for DLSS
