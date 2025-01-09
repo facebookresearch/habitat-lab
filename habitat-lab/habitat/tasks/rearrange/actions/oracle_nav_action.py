@@ -361,7 +361,7 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
             )
-        return (agent_pos, np.array(look_at_pos))
+        return (np.array(agent_pos), np.array(look_at_pos))
 
     def _path_to_point(self, point):
         """

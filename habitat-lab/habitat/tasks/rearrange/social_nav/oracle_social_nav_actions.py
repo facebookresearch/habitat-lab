@@ -72,7 +72,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
             )
-        return (start_pos, np.array(obj_pos))
+        return (np.array(start_pos), np.array(obj_pos))
 
     def step(self, *args, **kwargs):
         self.skill_done = False
@@ -95,7 +95,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             # Compute distance and angle to target
             if len(curr_path_points) == 1:
                 curr_path_points += curr_path_points
-            cur_nav_targ = curr_path_points[1]
+            cur_nav_targ = np.array(curr_path_points[1])
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 
@@ -109,7 +109,6 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
 
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
-
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
@@ -322,7 +321,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
             )
-        return (start_pos, np.array(obj_pos))
+        return (np.array(start_pos), np.array(obj_pos))
 
     def step(self, *args, **kwargs):
         max_tries = 10
