@@ -125,7 +125,7 @@ class SpotStateMachine:
         angle_scalar = 10.0
         max_angular_speed = 2.0
         self._spot_wrapper._robot.set_angular_velocity([curr_ang_vel[0], curr_ang_vel[1], 
-                                                        min(angle * angle_scalar, max_angular_speed)])
+                                                        mn.math.clamp(angle * angle_scalar, -max_angular_speed, max_angular_speed)])
 
         angle_threshold = 5 * mn.math.pi / 180.0
         if abs(angle) < angle_threshold:
@@ -161,6 +161,13 @@ class SpotStateMachine:
     def update(self, dt):
 
         if not self._get_pick_target_pos:
+            return
+
+        if self._pause_timer is None:
+            self._pause_timer = 0.0
+        self._pause_timer += dt
+        pause_duration = 2.0
+        if self._pause_timer < pause_duration:
             return
 
         target_pos = self._get_pick_target_pos()
@@ -200,33 +207,18 @@ class SpotStateMachine:
 
         # spot_spawn_pos = mn.Vector3(-1.2, 1.0, -5.2)
         
-        waypoint_pos = mn.Vector3(random.uniform(-2.0, -4.0), 0.8, -4.8)
+        waypoint_pos = mn.Vector3(-3.0, 0.8, -4.8)
         dist_xz = self._dist_xz(robot_pos, waypoint_pos)
         approach_threshold = 0.5
-        if self._pause_timer is None and dist_xz > approach_threshold:
+        if dist_xz > approach_threshold:
             self._update_nav(robot_pos, waypoint_pos)
             return
-        
-        # if self._pause_timer is None:
-        #     self._pause_timer = 0.0
-        # self._pause_timer += dt
-        # pause_duration = 2.0
-        # if self._pause_timer < pause_duration:
-        #     return
-        
-        # # navigate back to spawn
-        # waypoint_pos = mn.Vector3(-1.2, 1.0, -5.2)
-        # dist_xz = self._dist_xz(robot_pos, waypoint_pos)
-        # approach_threshold = 0.5
-        # if dist_xz > approach_threshold:
-        #     self._update_nav(robot_pos, waypoint_pos)
-        #     return
-
+             
         pass
 
 class SpotPickHelper:
 
-    APPROACH_DIST = 0.14
+    APPROACH_DIST = 0.16
     APPROACH_DURATION = 2.0
 
     def __init__(self, num_dof):
@@ -527,6 +519,7 @@ class AppStateIsaacSimViewer(AppState):
 
         # self._spot_pick_helper = SpotPickHelper(len(self._spot_wrapper._arm_joint_indices))
         self._spot_state_machine = SpotStateMachine(self._spot_wrapper, self._app_service.line_render)
+        self._spot_state_machine.reset()
         self._hide_gui = False
         self._is_recording = False
 
@@ -549,67 +542,66 @@ class AppStateIsaacSimViewer(AppState):
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._do_pause_physics = False
+        self._timer = 0.0
 
         pass
 
 
     def add_or_reset_rigid_objects(self):
 
+        # on dining table
         drop_pos = mn.Vector3(-3.6, 0.8, -7.22)  # mn.Vector3(-7.4, 0.8, -7.5)
         offset_vec = mn.Vector3(1.3, 0.0, 0.0)
+
+        # above coffee table
+        # drop_pos = mn.Vector3(-8.1, 0.5, -3.9)
+
+        # middle of room
+        # drop_pos = mn.Vector3(-5.4, 1.2, -3.9)
+
         up_vec = mn.Vector3(0.0, 1.0, 0.0)
         path_to_configs = "data/objects/ycb/configs"
 
         do_add = len(self._rigid_objects) == 0
 
-        # objects_to_add = [
-        #     (f"{path_to_configs}/002_master_chef_can.object_config.json", drop_pos + offset_vec * 0/7),
-        #     (f"{path_to_configs}/003_cracker_box.object_config.json", drop_pos + offset_vec * 1/7),
-        #     (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 2/7),
-        #     (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 3/7),
-        #     (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 4/7),
-        #     (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 5/7),
-        #     (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 6/7),
-        #     (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 7/7),
-        # ]
+        # for coffee table
+        if False:
+            objects_to_add = []
+            object_names = ["024_bowl", "013_apple", "011_banana", "010_potted_meat_can", "077_rubiks_cube", "036_wood_block", "004_sugar_box"]
+            next_obj_idx = 0
+            sp = 0.25
+            for cell_y in range(5):
+                for cell_x in range(3):
+                    for cell_z in range(3):
+                        offset_vec = mn.Vector3(cell_x * sp - sp, cell_y * sp, cell_z * sp - sp)
+                        objects_to_add.append((f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json", drop_pos + offset_vec))
+                        next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
-        objects_to_add = [
-            (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0 + up_vec * 0.0),
-#            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
-            (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * -0.01 + up_vec * 0.05),
-#             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
-             (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.1),
+        if True:
+            # for dining table
+            objects_to_add = [
+                (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0 + up_vec * 0.0),
+    #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
+                (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * -0.01 + up_vec * 0.05),
+    #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
+                (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.1),
 
-            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.3 + up_vec * 0.0),
+                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.3 + up_vec * 0.0),
 
-            (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.1),
-            (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.0),
+                (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.1),
+                (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.0),
 
-            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.9),
+                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.9),
 
-            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.0),
-            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.1),
-            (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.8),
+                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.0),
+                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.1),
+                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.8),
 
-            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.22 + up_vec * 0.0),
-            (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.38 + up_vec * 0.0),
-        ]
+                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.22 + up_vec * 0.0),
+                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.38 + up_vec * 0.0),
+            ]
 
-        # objects_to_add = [
-        #     (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0,
-        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
-        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.05,
-        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
-        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.1,
-        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
-        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.15,
-        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
-        #     (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.2,
-        #         mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.y_axis())),
-        # ]
 
-        # sim = self._sim
-        # rigid_obj_mgr = sim.get_rigid_object_manager()
         from habitat.isaac_sim.isaac_rigid_object_manager import IsaacRigidObjectManager
         self._isaac_rom = IsaacRigidObjectManager(self._isaac_wrapper.service)
         rigid_obj_mgr = self._isaac_rom
@@ -753,7 +745,7 @@ class AppStateIsaacSimViewer(AppState):
         robot_forward = isaac_prim_utils.get_forward(self._spot_wrapper._robot)
 
         curr_linear_vel_usd = self._spot_wrapper._robot.get_linear_velocity()
-        linear_speed = 10.0
+        linear_speed = 3.5
         gui_input = self._app_service.gui_input
         if gui_input.get_key(GuiInput.KeyNS.W):
             linear_vel = robot_forward * linear_speed
@@ -767,7 +759,7 @@ class AppStateIsaacSimViewer(AppState):
         self._spot_wrapper._robot.set_linear_velocity(linear_vel_usd)
 
         curr_ang_vel = self._spot_wrapper._robot.get_angular_velocity()
-        angular_speed = 10.0
+        angular_speed = 4.0
         gui_input = self._app_service.gui_input
         if gui_input.get_key(GuiInput.KeyNS.A):
             angular_vel_z = angular_speed
@@ -779,7 +771,9 @@ class AppStateIsaacSimViewer(AppState):
 
     def update_spot_pre_step(self, dt):
 
+        # enable these two, plus turn down friction, to demo spot base controller
         # self.update_spot_base()
+        # self._spot_wrapper._target_arm_joint_positions = [0.0, -1.18, 0.0, 1.12, 0.0, 0.83, 0.0, 0.0]
 
         # self.update_spot_arm(dt)
 
@@ -1168,6 +1162,42 @@ class AppStateIsaacSimViewer(AppState):
         if gui_input.get_key_down(GuiInput.KeyNS.J):
             self.add_or_reset_rigid_objects()
 
+
+        def set_spot_pick_target(rigid_object_idx):
+            self._pick_target_rigid_object_idx = rigid_object_idx
+
+            def get_pick_target_pos():
+                ro = self._rigid_objects[self._pick_target_rigid_object_idx]
+                com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
+                self.draw_axis(0.05, mn.Matrix4.translation(com_world))
+                return com_world
+
+            self._spot_state_machine.set_pick_target(get_pick_target_pos)
+
+        self._timer += dt
+        reset_period = 25.0
+        if self._timer > reset_period:
+            self._timer = 0.0
+            self.add_or_reset_rigid_objects()
+            # self._spot_state_machine.reset()
+            # self._pick_target_rigid_object_idx = 2
+            # # if self._pick_target_rigid_object_idx is None:
+            # #     self._pick_target_rigid_object_idx = 2
+            # # self._pick_target_rigid_object_idx += 1
+            # # # iterate over range [2, 6]
+            # # if self._pick_target_rigid_object_idx > 6:
+            # #     self._pick_target_rigid_object_idx = 2
+            # print(f"setting pick target = {self._pick_target_rigid_object_idx}")
+            # set_spot_pick_target(self._pick_target_rigid_object_idx)
+
+        # self._timer += dt
+        # reset_period = 3.0
+        # if self._timer > reset_period:
+        #     world = self._isaac_wrapper.service.world
+        #     if world.is_playing():
+        #         self.add_or_reset_rigid_objects()
+        #     self._timer = 0.0
+
         pick_target_keys = [
             GuiInput.KeyNS.ONE,
             GuiInput.KeyNS.TWO,
@@ -1181,15 +1211,7 @@ class AppStateIsaacSimViewer(AppState):
         assert len(pick_target_keys) <= len(self._rigid_objects)
         for i, key in enumerate(pick_target_keys):
             if gui_input.get_key_down(key):
-                self._pick_target_rigid_object_idx = i
-
-                def get_pick_target_pos():
-                    ro = self._rigid_objects[self._pick_target_rigid_object_idx]
-                    com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
-                    self.draw_axis(0.05, mn.Matrix4.translation(com_world))
-                    return com_world
-
-                self._spot_state_machine.set_pick_target(get_pick_target_pos)
+                set_spot_pick_target(i)
                 break
 
         if gui_input.get_key_down(GuiInput.KeyNS.ZERO):
@@ -1225,7 +1247,7 @@ class AppStateIsaacSimViewer(AppState):
 
         # self.update_record_remote_hands()
 
-        self.update_play_back_remote_hands()
+        # self.update_play_back_remote_hands()
 
         # extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
         # self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
@@ -1240,7 +1262,8 @@ class AppStateIsaacSimViewer(AppState):
         
         # extra_pos = [-7.0, 1.0, -2.75]
         # self.update_metahand_from_art_hand(use_identify_root_transform=True, extra_pos=extra_pos)
-        self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))
+        # self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))
+        self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=None)
 
         self.update_spot_pre_step(dt)
 
