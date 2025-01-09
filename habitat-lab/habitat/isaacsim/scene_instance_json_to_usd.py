@@ -259,8 +259,14 @@ def convert_meshes_to_static_colliders(stage, root_path) -> None:
 
 def add_habitat_visual_to_usd_root(
     usd_filepath, render_asset_filepath, render_asset_scale
-):
-    """TODO: Add function description, param description, and output description"""
+) -> None:
+    """
+    This function adds habitat visual information into a usda file.
+    
+    :param usd_filepath: Filepath to scene instance json file
+    :param render_asset_filepath: Filepath that contains render asset information
+    :param render_asset_scale: An array that defines scale on the xyz axis
+    """
 
     # Open the USD file
     stage = Usd.Stage.Open(usd_filepath)
