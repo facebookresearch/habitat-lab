@@ -74,11 +74,6 @@ def object_usd_info(obj_instance_json, object_counts):
     )
 
 
-############################################################################################
-# Convert scence instance object to a usd file
-############################################################################################
-
-
 def convert_object_to_usd(
     objects_folder: str,
     object_config_filename: str,
@@ -293,11 +288,6 @@ def add_habitat_visual_to_usd_root(
     )
 
 
-############################################################################################
-# Add xform spatial information
-############################################################################################
-
-
 def add_xform_scale(object_xform) -> None:
     """Add object scale value into xform class for scene instance json."""
     # Ensure scale op exists, default value
@@ -419,11 +409,6 @@ def habitat_to_usd_position(position) -> List[float]:
     return [-x, z, y]
 
 
-############################################################################################
-# Main function
-############################################################################################
-
-
 def convert_hab_scene(
     scene_filepath: str,
     project_root_folder: str,
@@ -431,18 +416,14 @@ def convert_hab_scene(
     scene_usd_filepath: str = "./data/test_scene_instance.usda",
 ) -> None:
     """
-    This is the main function takes data from a scene_instance.json file to .usda.
-    NOTE, folder directories for objects are speific to the hssd object dataset.
+    This function converts scene_instance.json file types to .usda.
+    
+    :param scene_filepath: Filepath of the scene_instance,json
+    :param project_root_folder: Directory path of habitat-lab
+    :param objects_folder: Directory path that contains scence instance objects.
+    :param scene_usd_filepath: Filepath location of scene instance usda file after conversion.
     """
-
-    # TODO: DANIEL Not sure why check is here, when json library for scene_json_data variable does same check?
-    try:
-        assert os.path.exists(scene_filepath)
-    except AssertionError:
-        raise FileNotFoundError(
-            f"Scene instance json {scene_filepath} does not exist"
-        )
-
+    
     with open(scene_filepath, "r") as file:
         scene_json_data = json.load(file)
 
@@ -468,8 +449,6 @@ def convert_hab_scene(
     # A scene may have multiple instances of the same object mesh. Xform usda needs
     # to have one unique name per mesh.
     object_counts: Dict[str, int] = {}
-    max_count = -1  # 50  #TODO: temp only convert the first N objects
-    count = 0
 
     try:
         assert "object_instances" in scene_json_data
@@ -500,9 +479,6 @@ def convert_hab_scene(
             unique_object_name,
         ) = object_usd_info(obj_instance_json, object_counts)
 
-        # TODO: gather these up and do them later with multiprocessing
-        # NOTE: This will be answered when trying to proccess multiple scene_instance_jsons.
-        # if not os.path.exists(out_usd_path):
         convert_object_to_usd(
             objects_folder,
             object_config_filename,
@@ -527,10 +503,6 @@ def convert_hab_scene(
 
         # NOTE: Let's not change the xform order. I don't know what's going on with Xform order.
         # object_xform.SetXformOpOrder(xform_op_order)
-
-        count += 1
-        if count == max_count:
-            break
 
     stage.GetRootLayer().Save()
     print(f"wrote scene {scene_usd_filepath}")
