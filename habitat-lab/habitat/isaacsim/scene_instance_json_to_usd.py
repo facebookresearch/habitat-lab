@@ -148,6 +148,33 @@ def find_file(folder: str, filename: str) -> str:
             result = os.path.join(root, filename)
     return os.path.abspath(result)
 
+def find_scene_instance_json_files(scene_directory: str) -> List[str]:
+    """
+    Find all files in the given folder and its subfolders whose names end with 'scene_instance.json'.
+    :param folder_path: The path to the folder to search.
+    :return: A list of paths to the matching files.
+    """
+    matching_files = []
+    for root, _ , files in os.walk(scene_directory):
+        for file in files:
+            if file.endswith('scene_instance.json'):
+                matching_files.append(os.path.join(root, file))
+    return matching_files
+
+
+def make_scene_instance_usd_path(scene_filepath: str, scene_usd_directory: str) -> str:
+
+    filename_with_extension = os.path.basename(scene_filepath)
+    filename_without_extension = os.path.splitext(filename_with_extension)[0]
+    usda_filename = f"{filename_without_extension}.usda"
+
+    # Create the new directory if it doesn't exist
+    if not os.path.exists(scene_usd_directory):
+        os.makedirs(scene_usd_directory)
+ 
+    usda_filepath = os.path.join(scene_usd_directory, usda_filename)
+    
+    return usda_filepath
 
 def convert_mesh_to_usd(
     in_file: str, out_file: str, load_materials: bool = True
@@ -430,6 +457,9 @@ def convert_hab_scene(
     :param scene_usd_filepath: Filepath location of scene instance usda file after conversion.
     """
     
+    # from omni.isaac.core.utils.extensions import enable_extension
+    from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+    
     with open(scene_filepath, "r") as file:
         scene_json_data = json.load(file)
 
@@ -530,10 +560,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
     )
-    parser.add_argument("scene_filepath", help="Path to scene instance json file.")
-    parser.add_argument("project_root_folder", help="Path to habitat-lab repo")
-    parser.add_argument("scene_usd_filepath", help="Path to output usda file")
-    parser.add_argument("objects_folder", help="Path to the objects folder", nargs='?')
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Parser for convert_hab_scene
+    parser_convert_hab_scene = subparsers.add_parser('convert_hab_scene', help='Run convert_hab_scene function')
+    parser_convert_hab_scene.add_argument('scene_filepath')
+    parser_convert_hab_scene.add_argument('project_root_folder')
+    parser_convert_hab_scene.add_argument('scene_usd_filepath')
+    parser_convert_hab_scene.add_argument('--objects_folder')
+    parser_convert_hab_scene.set_defaults(func=convert_hab_scene)
+    
+
+    # Parser for bulk_scene_instance_conversion
+    parser_bulk_scene_instance_conversion = subparsers.add_parser('bulk_scene_instance_conversion', help='Run bulk_scene_instance_conversion function')
+    parser_bulk_scene_instance_conversion.add_argument('scene_directory')
+    parser_bulk_scene_instance_conversion.add_argument('project_root_folder')
+    parser_bulk_scene_instance_conversion.add_argument('scene_usd_directory')
+    parser_bulk_scene_instance_conversion.add_argument('--objects_folder')
+    parser_bulk_scene_instance_conversion.set_defaults(func=bulk_scene_instance_conversion)
     
     # Launch Issac Lab Applauncher
     from omni.isaac.lab.app import AppLauncher
@@ -545,11 +589,16 @@ if __name__ == "__main__":
     
     from omni.isaac.core.utils.extensions import enable_extension
     from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+
     
-    convert_hab_scene(args.scene_filepath, args.project_root_folder,args.scene_usd_filepath, args.objects_folder)
+    # Argparse function selection
+    if args.command:
+        if args.command == 'convert_hab_scene':
+            args.func(args.scene_filepath, args.project_root_folder, args.scene_usd_filepath, args.objects_folder)
+        elif args.command == 'bulk_scene_instance_conversion':
+            args.func(args.scene_directory, args.project_root_folder, args.scene_usd_directory, args.objects_folder)
+    else:
+        parser.print_help()
+    
 
 
-if __name__ == "__main__":
-    scene_conversion_main()
-    
-        
