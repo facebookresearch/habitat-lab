@@ -513,8 +513,19 @@ def convert_hab_scene(
     stage.GetRootLayer().Save()
     print(f"wrote scene {scene_usd_filepath}")
     
-def scene_conversion_main():
+
+def bulk_scene_instance_conversion(scene_directory: str, project_root_folder: str, scene_usd_directory: str, objects_folder: str = ""):
+
+    scene_instance_json_list = find_scene_instance_json_files(scene_directory)
     
+    for scene_filepath in scene_instance_json_list[:3]:
+        scene_usd_filepath = make_scene_instance_usd_path(scene_filepath, scene_usd_directory)
+        
+        print(scene_usd_filepath)
+        convert_hab_scene(scene_filepath, project_root_folder, scene_usd_filepath)
+        
+
+if __name__ == "__main__":
     # Build parser
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
