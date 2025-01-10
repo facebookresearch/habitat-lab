@@ -1558,14 +1558,14 @@ def get_obj_receptacle_and_confidence(
             fallback_to_floor_matching = True
         else:
             # try matching to the candidate receptacles
-            matches, confidence, info_string = match_point_to_receptacle(
+            matches, confidence, info_text = match_point_to_receptacle(
                 obj_bottom_point,
                 sim,
                 matching_recs,
                 max_dist_to_rec=max_dist_to_rec,
             )
             if len(matches) > 0:
-                return (matches, confidence, info_string)
+                return (matches, confidence, info_text)
 
     # map the point to regions
     point_regions = sim.semantic_scene.get_weighted_regions_for_point(
