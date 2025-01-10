@@ -418,8 +418,8 @@ def habitat_to_usd_position(position) -> List[float]:
 def convert_hab_scene(
     scene_filepath: str,
     project_root_folder: str,
+    scene_usd_filepath: str,
     objects_folder: str = "",
-    scene_usd_filepath: str = "./data/test_scene_instance.usda",
 ) -> None:
     """
     This function converts scene_instance.json file types to .usda.
@@ -512,29 +512,33 @@ def convert_hab_scene(
 
     stage.GetRootLayer().Save()
     print(f"wrote scene {scene_usd_filepath}")
-
-
-if __name__ == "__main__":
-    scene_instance_filepath = "/home/trandaniel/dev/habitat-sim/data/hssd-hab/scenes/102343992.scene_instance.json"
-
-    from omni.isaac.lab.app import AppLauncher
-
+    
+def scene_conversion_main():
+    
+    # Build parser
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
     )
-    # append AppLauncher cli args
+    parser.add_argument("scene_filepath", help="Path to scene instance json file.")
+    parser.add_argument("project_root_folder", help="Path to habitat-lab repo")
+    parser.add_argument("scene_usd_filepath", help="Path to output usda file")
+    parser.add_argument("objects_folder", help="Path to the objects folder", nargs='?')
+    
+    # Launch Issac Lab Applauncher
+    from omni.isaac.lab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
-    # parse the arguments
-    args_cli = parser.parse_args()
-    # launch omniverse app
-    args_cli.headless = True  # Config to have Isaac Lab UI off
-    app_launcher = AppLauncher(args_cli)
+    args = parser.parse_args()
+    args.headless = True 
+    app_launcher = AppLauncher(args)
     simulation_app = app_launcher.app
-
+    
     from omni.isaac.core.utils.extensions import enable_extension
     from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+    
+    convert_hab_scene(args.scene_filepath, args.project_root_folder,args.scene_usd_filepath, args.objects_folder)
 
-    convert_hab_scene(
-        scene_instance_filepath,
-        project_root_folder="/home/trandaniel/dev/habitat-lab/test_convert",
-    )
+
+if __name__ == "__main__":
+    scene_conversion_main()
+    
+        

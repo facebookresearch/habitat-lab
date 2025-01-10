@@ -2,8 +2,6 @@ import argparse
 import os
 import xml.etree.ElementTree as ET
 
-from omni.isaac.lab.app import AppLauncher
-
 
 def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
     """
@@ -184,26 +182,55 @@ def convert_urdf_test():
         project_root_folder="./",
     )
 
-
-if __name__ == "__main__":
+def convert_urdf_main():
+    """This function converts urdf files to usda."""
+    # Build parser and subparser
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
     )
-    # append AppLauncher cli args
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Parser for clean_urdf
+    parser_clean_urdf = subparsers.add_parser('clean_urdf', help='Run clean_urdf function')
+    parser_clean_urdf.add_argument('input_file', required=True)
+    parser_clean_urdf.add_argument('output_file', required=True)
+    parser_clean_urdf.add_argument('remove_visual', required=False)
+    parser_clean_urdf.set_defaults(func=clean_urdf)
+    
+    # Parser for convert_urdf function
+    parser_convert_urdf = subparsers.add_parser('convert_urdf', help='Run convert_urdf function')
+    parser_convert_urdf.add_argument('urdf_filepath', required=True)
+    parser_convert_urdf.add_argument('out_usd_filepath', required=True)
+    parser_convert_urdf.set_defaults(func=convert_urdf)
+    
+    # Parser for add_habitat_visual_metadata_for_articulation function
+    parser_add_hab_visual_metadata = subparsers.add_parser('add_habitat_visual_metadata_for_articulation', help='add_habitat_visual_metadata_for_articulation')
+    parser_add_hab_visual_metadata.add_argument('usd_filepath', required=True)
+    parser_add_hab_visual_metadata.add_argument('reference_urdf_filepath', required=True)
+    parser_add_hab_visual_metadata.add_argument('out_usd_filepath', required=True)
+    parser_add_hab_visual_metadata.add_argument('project_root_folder', required=True)
+    parser_add_hab_visual_metadata.set_defaults(func=add_habitat_visual_metadata_for_articulation)
+    
+    # Launch Issac Lab Applauncher and load libraries
+    from omni.isaac.lab.app import AppLauncher
     AppLauncher.add_app_launcher_args(parser)
-    # parse the arguments
-    ## args_cli = parser.parse_args()
-    args_cli, _ = parser.parse_known_args()
-    # launch omniverse app
-    args_cli.headless = True  # Config to have Isaac Lab UI off
-    app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
-
-    # TODO: DELETE library if not used.
-    # from omni.isaac.core.utils.extensions import enable_extension
-
-    # TODO: DELETE line with extra modules if not needed
-    # from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Gf, Sdf
+    args = parser.parse_args()
+    args.headless = True 
+    app_launcher = AppLauncher(args)
+    simulation_app = app_launcher.app                  
     from pxr import Gf, Sdf, Usd
-
-    convert_urdf_test()
+    
+    # Argparse function selection
+    if args.command:
+        if args.command == 'clean_urdf':
+            args.func(args.input_file, args.output_file, args.remove_visual)
+        elif args.command == 'convert_urdf':
+            args.func(args.urdf_filepath, args.out_usd_filepath)
+        elif args.command == 'add_habitat_visual_metadata_for_articulation':
+            args.func(args.usd_filepath, args.reference_urdf_filepath, args.out_usd_filepath, args.project_root_folder)  
+    else:
+        parser.print_help()
+    
+    
+if __name__ == "__main__":
+    convert_urdf_main()
