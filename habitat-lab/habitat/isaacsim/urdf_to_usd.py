@@ -1,7 +1,7 @@
 import argparse
 import os
-import xml.etree.ElementTree as ET
-
+#import xml.etree.ElementTree as ET
+from lxml import etree as ET  # Using lxml for better XML handling
 
 def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
     """
@@ -163,26 +163,7 @@ def add_habitat_visual_metadata_for_articulation(
     print(f"Updated USD file written to: {out_usd_filepath}")
 
 
-def convert_urdf_test():
-    """
-    This is an exmaple use case of going from an unformatted urdf file to usd file.
-    Specifically, this is render the habitat spot arm urdf.
-    """
-    # /home/trandaniel/dev/habitat-lab/data/hab_spot_arm/urdf
-    source_urdf_filepath = "data/hab_spot_arm/urdf/hab_spot_arm.urdf"
-    clean_urdf_filepath = "data/hab_spot_arm/urdf/hab_spot_arm_clean.urdf"
-    # Temp USD must be in same folder as final USD. It's okay to be the exact same file.
-    temp_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
-    out_usd_filepath = "data/usd/robots/hab_spot_arm.usda"
-    convert_urdf(clean_urdf_filepath, temp_usd_filepath)
-    add_habitat_visual_metadata_for_articulation(
-        temp_usd_filepath,
-        source_urdf_filepath,
-        out_usd_filepath,
-        project_root_folder="./",
-    )
-
-def convert_urdf_main():
+if __name__ == "__main__":
     """This function converts urdf files to usda."""
     # Build parser and subparser
     parser = argparse.ArgumentParser(
@@ -192,23 +173,23 @@ def convert_urdf_main():
     
     # Parser for clean_urdf
     parser_clean_urdf = subparsers.add_parser('clean_urdf', help='Run clean_urdf function')
-    parser_clean_urdf.add_argument('input_file', required=True)
-    parser_clean_urdf.add_argument('output_file', required=True)
-    parser_clean_urdf.add_argument('remove_visual', required=False)
+    parser_clean_urdf.add_argument('input_file')
+    parser_clean_urdf.add_argument('output_file')
+    parser_clean_urdf.add_argument('--remove_visual')
     parser_clean_urdf.set_defaults(func=clean_urdf)
     
     # Parser for convert_urdf function
     parser_convert_urdf = subparsers.add_parser('convert_urdf', help='Run convert_urdf function')
-    parser_convert_urdf.add_argument('urdf_filepath', required=True)
-    parser_convert_urdf.add_argument('out_usd_filepath', required=True)
+    parser_convert_urdf.add_argument('urdf_filepath')
+    parser_convert_urdf.add_argument('out_usd_filepath')
     parser_convert_urdf.set_defaults(func=convert_urdf)
     
     # Parser for add_habitat_visual_metadata_for_articulation function
     parser_add_hab_visual_metadata = subparsers.add_parser('add_habitat_visual_metadata_for_articulation', help='add_habitat_visual_metadata_for_articulation')
-    parser_add_hab_visual_metadata.add_argument('usd_filepath', required=True)
-    parser_add_hab_visual_metadata.add_argument('reference_urdf_filepath', required=True)
-    parser_add_hab_visual_metadata.add_argument('out_usd_filepath', required=True)
-    parser_add_hab_visual_metadata.add_argument('project_root_folder', required=True)
+    parser_add_hab_visual_metadata.add_argument('usd_filepath')
+    parser_add_hab_visual_metadata.add_argument('reference_urdf_filepath')
+    parser_add_hab_visual_metadata.add_argument('out_usd_filepath')
+    parser_add_hab_visual_metadata.add_argument('project_root_folder')
     parser_add_hab_visual_metadata.set_defaults(func=add_habitat_visual_metadata_for_articulation)
     
     # Launch Issac Lab Applauncher and load libraries
@@ -231,6 +212,3 @@ def convert_urdf_main():
     else:
         parser.print_help()
     
-    
-if __name__ == "__main__":
-    convert_urdf_main()
