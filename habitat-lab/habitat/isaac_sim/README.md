@@ -17,6 +17,7 @@ python -c "import isaacsim; print(isaacsim)"
 
 1. Ensure your system is headed. If using ssh to a remote machine, use display forwarding.
 2. Follow official [Workstation installation steps](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_workstation.html).
+    * Beware you will likely need a web browser installed in order to log into your Nvidia account during the setup process.
 
 
 ### Isaac Lab
