@@ -1,7 +1,9 @@
 import argparse
 import os
-#import xml.etree.ElementTree as ET
+
+# import xml.etree.ElementTree as ET
 from lxml import etree as ET  # Using lxml for better XML handling
+
 
 def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
     """
@@ -169,46 +171,60 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
     )
-    subparsers = parser.add_subparsers(dest='command')
-    
+    subparsers = parser.add_subparsers(dest="command")
+
     # Parser for clean_urdf
-    parser_clean_urdf = subparsers.add_parser('clean_urdf', help='Run clean_urdf function')
-    parser_clean_urdf.add_argument('input_file')
-    parser_clean_urdf.add_argument('output_file')
-    parser_clean_urdf.add_argument('--remove_visual')
+    parser_clean_urdf = subparsers.add_parser(
+        "clean_urdf", help="Run clean_urdf function"
+    )
+    parser_clean_urdf.add_argument("input_file")
+    parser_clean_urdf.add_argument("output_file")
+    parser_clean_urdf.add_argument("--remove_visual")
     parser_clean_urdf.set_defaults(func=clean_urdf)
-    
+
     # Parser for convert_urdf function
-    parser_convert_urdf = subparsers.add_parser('convert_urdf', help='Run convert_urdf function')
-    parser_convert_urdf.add_argument('urdf_filepath')
-    parser_convert_urdf.add_argument('out_usd_filepath')
+    parser_convert_urdf = subparsers.add_parser(
+        "convert_urdf", help="Run convert_urdf function"
+    )
+    parser_convert_urdf.add_argument("urdf_filepath")
+    parser_convert_urdf.add_argument("out_usd_filepath")
     parser_convert_urdf.set_defaults(func=convert_urdf)
-    
+
     # Parser for add_habitat_visual_metadata_for_articulation function
-    parser_add_hab_visual_metadata = subparsers.add_parser('add_habitat_visual_metadata_for_articulation', help='add_habitat_visual_metadata_for_articulation')
-    parser_add_hab_visual_metadata.add_argument('usd_filepath')
-    parser_add_hab_visual_metadata.add_argument('reference_urdf_filepath')
-    parser_add_hab_visual_metadata.add_argument('out_usd_filepath')
-    parser_add_hab_visual_metadata.add_argument('project_root_folder')
-    parser_add_hab_visual_metadata.set_defaults(func=add_habitat_visual_metadata_for_articulation)
-    
+    parser_add_hab_visual_metadata = subparsers.add_parser(
+        "add_habitat_visual_metadata_for_articulation",
+        help="add_habitat_visual_metadata_for_articulation",
+    )
+    parser_add_hab_visual_metadata.add_argument("usd_filepath")
+    parser_add_hab_visual_metadata.add_argument("reference_urdf_filepath")
+    parser_add_hab_visual_metadata.add_argument("out_usd_filepath")
+    parser_add_hab_visual_metadata.add_argument("project_root_folder")
+    parser_add_hab_visual_metadata.set_defaults(
+        func=add_habitat_visual_metadata_for_articulation
+    )
+
     # Launch Issac Lab Applauncher and load libraries
     from omni.isaac.lab.app import AppLauncher
+
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
-    args.headless = True 
+    args.headless = True
     app_launcher = AppLauncher(args)
-    simulation_app = app_launcher.app                  
+    simulation_app = app_launcher.app
     from pxr import Gf, Sdf, Usd
-    
+
     # Argparse function selection
     if args.command:
-        if args.command == 'clean_urdf':
+        if args.command == "clean_urdf":
             args.func(args.input_file, args.output_file, args.remove_visual)
-        elif args.command == 'convert_urdf':
+        elif args.command == "convert_urdf":
             args.func(args.urdf_filepath, args.out_usd_filepath)
-        elif args.command == 'add_habitat_visual_metadata_for_articulation':
-            args.func(args.usd_filepath, args.reference_urdf_filepath, args.out_usd_filepath, args.project_root_folder)  
+        elif args.command == "add_habitat_visual_metadata_for_articulation":
+            args.func(
+                args.usd_filepath,
+                args.reference_urdf_filepath,
+                args.out_usd_filepath,
+                args.project_root_folder,
+            )
     else:
         parser.print_help()
-    
