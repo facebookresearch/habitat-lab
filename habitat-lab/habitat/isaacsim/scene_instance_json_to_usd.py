@@ -547,54 +547,18 @@ def convert_hab_scene(
     print(f"wrote scene {scene_usd_filepath}")
 
 
-def bulk_scene_instance_conversion(
-    scene_directory: str,
-    project_root_folder: str,
-    scene_usd_directory: str,
-    objects_folder: str = "",
-):
-    scene_instance_json_list = find_scene_instance_json_files(scene_directory)
-
-    for scene_filepath in scene_instance_json_list[:3]:
-        scene_usd_filepath = make_scene_instance_usd_path(
-            scene_filepath, scene_usd_directory
-        )
-
-        print(scene_usd_filepath)
-        convert_hab_scene(
-            scene_filepath, project_root_folder, scene_usd_filepath
-        )
-
-
 if __name__ == "__main__":
     # Build parser
     parser = argparse.ArgumentParser(
         description="Create an empty Issac Sim stage."
     )
-    subparsers = parser.add_subparsers(dest="command")
 
     # Parser for convert_hab_scene
-    parser_convert_hab_scene = subparsers.add_parser(
-        "convert_hab_scene", help="Run convert_hab_scene function"
-    )
-    parser_convert_hab_scene.add_argument("scene_filepath")
-    parser_convert_hab_scene.add_argument("project_root_folder")
-    parser_convert_hab_scene.add_argument("scene_usd_filepath")
-    parser_convert_hab_scene.add_argument("--objects_folder")
-    parser_convert_hab_scene.set_defaults(func=convert_hab_scene)
-
-    # Parser for bulk_scene_instance_conversion
-    parser_bulk_scene_instance_conversion = subparsers.add_parser(
-        "bulk_scene_instance_conversion",
-        help="Run bulk_scene_instance_conversion function",
-    )
-    parser_bulk_scene_instance_conversion.add_argument("scene_directory")
-    parser_bulk_scene_instance_conversion.add_argument("project_root_folder")
-    parser_bulk_scene_instance_conversion.add_argument("scene_usd_directory")
-    parser_bulk_scene_instance_conversion.add_argument("--objects_folder")
-    parser_bulk_scene_instance_conversion.set_defaults(
-        func=bulk_scene_instance_conversion
-    )
+    parser.add_argument("scene_filepath")
+    parser.add_argument("project_root_folder")
+    parser.add_argument("scene_usd_filepath")
+    parser.add_argument("--objects_folder")
+    parser.set_defaults(func=convert_hab_scene)
 
     # Launch Issac Lab Applauncher
     from omni.isaac.lab.app import AppLauncher
@@ -607,22 +571,3 @@ if __name__ == "__main__":
 
     from omni.isaac.core.utils.extensions import enable_extension
     from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
-
-    # Argparse function selection
-    if args.command:
-        if args.command == "convert_hab_scene":
-            args.func(
-                args.scene_filepath,
-                args.project_root_folder,
-                args.scene_usd_filepath,
-                args.objects_folder,
-            )
-        elif args.command == "bulk_scene_instance_conversion":
-            args.func(
-                args.scene_directory,
-                args.project_root_folder,
-                args.scene_usd_directory,
-                args.objects_folder,
-            )
-    else:
-        parser.print_help()
