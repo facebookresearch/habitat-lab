@@ -144,7 +144,6 @@ class PointNavResNetPolicy(NetPolicy):
                 )
             )
         )
-
         agent_name = None
         if "agent_name" in kwargs:
             agent_name = kwargs["agent_name"]
@@ -159,7 +158,7 @@ class PointNavResNetPolicy(NetPolicy):
 
         has_rgb = False
         for keys in observation_space.spaces:
-            if "rgb" in keys and keys != "third_rgb" and "bbox" not in keys:
+            if "rgb" in keys and keys != "third_rgb" and "bbox" not in keys and keys not in ignore_names:
                 has_rgb = True
 
         return cls(
@@ -204,7 +203,6 @@ class ResNetEncoder(nn.Module):
         self._n_input_channels = sum(
             observation_space.spaces[k].shape[2] for k in self.visual_keys
         )
-
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_channels

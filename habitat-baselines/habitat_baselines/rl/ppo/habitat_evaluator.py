@@ -263,7 +263,7 @@ class HabitatEvaluator(Evaluator):
                 device=device,
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
-
+            breakpoint()
             # TODO: better way to handle this
             if transformer_based_policy:
                 cur_not_done_masks = torch.tensor(
@@ -339,7 +339,7 @@ class HabitatEvaluator(Evaluator):
                         )
                     else:
                         process_frame = not not_done_masks[i].any().item()
-
+                    breakpoint()
                     # TODO: Better way to handle transformer done masks
                     if process_frame:
                         # The last frame corresponds to the first frame of the next episode
