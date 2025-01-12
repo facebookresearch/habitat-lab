@@ -60,6 +60,7 @@ def pause_envs(
     batch: Dict[str, Tensor],
     rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     transformer_based_policy: bool = False,
+    observation_action_of_interest: List[List[Any]]= None,
 ) -> Tuple[
     VectorEnv,
     Tensor,
@@ -67,6 +68,7 @@ def pause_envs(
     Tensor,
     Tensor,
     Dict[str, Tensor],
+    List[List[Any]],
     List[List[Any]],
 ]:
     # pausing self.envs with no new episode
@@ -104,6 +106,10 @@ def pause_envs(
         # TODO: make sure the rgb image frames are not decoded
         if rgb_frames is not None:
             rgb_frames = [rgb_frames[i] for i in state_index]
+
+        if observation_action_of_interest is not None:
+            observation_action_of_interest = [observation_action_of_interest[i] for i in state_index]
+
         # actor_critic.do_pause(state_index)
 
     return (
@@ -114,4 +120,5 @@ def pause_envs(
         prev_actions,
         batch,
         rgb_frames,
+        observation_action_of_interest,
     )

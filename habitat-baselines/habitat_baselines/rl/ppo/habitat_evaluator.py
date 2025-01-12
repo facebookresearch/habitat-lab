@@ -135,8 +135,16 @@ class HabitatEvaluator(Evaluator):
                 ]
                 for env_idx in range(config.habitat_baselines.num_environments)
             ]
+            # list of env -> list of the the time -> key of observations and action
+            observation_action_of_interest: List[List[Dict[Any, int]]] = [
+                [
+                    {k: v[env_idx] for k, v in batch.items()}
+                ]
+                for env_idx in range(config.habitat_baselines.num_environments)
+            ]
         else:
             rgb_frames = None
+            observation_action_of_interest = None
 
         if len(config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(config.habitat_baselines.video_dir, exist_ok=True)
@@ -243,6 +251,9 @@ class HabitatEvaluator(Evaluator):
             else:
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
 
+            # Add the action to the dict
+            for env_idx in range(config.habitat_baselines.num_environments):
+                observation_action_of_interest[env_idx][-1]["action"] = step_data[env_idx]
             outputs = envs.step(step_data)
 
             observations, rewards_l, dones, infos = [
@@ -263,7 +274,7 @@ class HabitatEvaluator(Evaluator):
                 device=device,
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
-            breakpoint()
+
             # TODO: better way to handle this
             if transformer_based_policy:
                 cur_not_done_masks = torch.tensor(
@@ -331,6 +342,11 @@ class HabitatEvaluator(Evaluator):
                         {k: v[i] for k, v in batch.items()}, disp_info
                     )
 
+                    # Get the observation of the interest
+                    obs_of_interest = {k: v[i] for k, v in batch.items()}
+                    
+                    # Get the action of the interest
+
                     if transformer_based_policy:
                         # The shape of not_done_masks is [#envs, cur_accumulate_steps, 1]
                         # We need to get the latest frame
@@ -339,7 +355,7 @@ class HabitatEvaluator(Evaluator):
                         )
                     else:
                         process_frame = not not_done_masks[i].any().item()
-                    breakpoint()
+
                     # TODO: Better way to handle transformer done masks
                     if process_frame:
                         # The last frame corresponds to the first frame of the next episode
@@ -352,9 +368,15 @@ class HabitatEvaluator(Evaluator):
                         rgb_frames[i].append(final_frame)
                         # The starting frame of the next episode will be the final element..
                         rgb_frames[i].append(frame)
+
+                        # Mimic the way of processing the frame
+                        final_obs_of_interest =  {k: v[i] * 0.0 for k, v in batch.items()}
+                        observation_action_of_interest[i].append(final_obs_of_interest)
+                        observation_action_of_interest[i].append(obs_of_interest)
                     else:
                         frame = overlay_frame(frame, disp_info)
                         rgb_frames[i].append(frame)
+                        observation_action_of_interest[i].append(obs_of_interest)
 
                 # TODO: Better way to handle transformer done masks
                 if transformer_based_policy:
@@ -392,10 +414,11 @@ class HabitatEvaluator(Evaluator):
                             fps=config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=config.habitat_baselines.eval_keys_to_include_in_name,
+                            save_observation_action_of_interest=observation_action_of_interest[i][:-1],
                         )
-
                         # Since the starting frame of the next episode is the final frame.
                         rgb_frames[i] = rgb_frames[i][-1:]
+                        observation_action_of_interest[i] = observation_action_of_interest[i][-1:]
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":
@@ -415,6 +438,7 @@ class HabitatEvaluator(Evaluator):
                 prev_actions,
                 batch,
                 rgb_frames,
+                observation_action_of_interest,
             ) = pause_envs(
                 envs_to_pause,
                 envs,
@@ -425,6 +449,7 @@ class HabitatEvaluator(Evaluator):
                 batch,
                 rgb_frames,
                 transformer_based_policy,
+                observation_action_of_interest
             )
 
             # TODO: Porpose a fix so that the env is paused on HRL policy
@@ -432,6 +457,8 @@ class HabitatEvaluator(Evaluator):
             if transformer_based_policy_is_multi_agent and any(envs_to_pause):
                 # For human HRL skills
                 agent.actor_critic.on_envs_pause(envs_to_pause)
+
+            # End of the while loop for the env step
 
         pbar.close()
         assert (

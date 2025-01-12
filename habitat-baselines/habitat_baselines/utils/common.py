@@ -390,6 +390,7 @@ def generate_video(
     fps: int = 10,
     verbose: bool = True,
     keys_to_include_in_name: Optional[List[str]] = None,
+    save_observation_action_of_interest: Optional[List[List[Dict]]] = None,
 ) -> str:
     r"""Generate video according to specified information.
 
@@ -439,6 +440,11 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+    
+    # Save save_observation_action_of_interest
+    if save_observation_action_of_interest is not None:
+        np.save(os.path.join(video_dir, video_name), save_observation_action_of_interest)
+
     return video_name
 
 
