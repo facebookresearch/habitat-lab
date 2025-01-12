@@ -459,9 +459,6 @@ def convert_hab_scene(
     :param scene_usd_filepath: Filepath location of scene instance usda file after conversion.
     """
 
-    # from omni.isaac.core.utils.extensions import enable_extension
-    from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
-
     with open(scene_filepath, "r") as file:
         scene_json_data = json.load(file)
 
