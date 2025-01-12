@@ -391,6 +391,7 @@ def generate_video(
     verbose: bool = True,
     keys_to_include_in_name: Optional[List[str]] = None,
     save_observation_action_of_interest: Optional[List[List[Dict]]] = None,
+    debug: bool = False
 ) -> str:
     r"""Generate video according to specified information.
 
@@ -444,6 +445,14 @@ def generate_video(
     # Save save_observation_action_of_interest
     if save_observation_action_of_interest is not None:
         np.save(os.path.join(video_dir, video_name), save_observation_action_of_interest)
+        if debug:
+            from PIL import Image 
+            for i in range(len(save_observation_action_of_interest)):
+                try:
+                    image = Image.fromarray(save_observation_action_of_interest[i]["articulated_agent_arm_rgb"].clone().to("cpu").numpy())
+                    image.save(os.path.join(video_dir, video_name)+f"_index{i}.png")
+                except:
+                    print("issue of" + os.path.join(video_dir, video_name)+f"_index{i}.png")
 
     return video_name
 
