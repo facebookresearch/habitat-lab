@@ -105,17 +105,14 @@ def convert_object_to_usd(
 
     print(f"Converting {collision_asset_filepath}...")
 
-    convert_mesh_to_usd(
-        collision_asset_filepath, out_usd_path, load_materials=False
-    )
+    if not os.path.exists(out_usd_path):
+        convert_mesh_to_usd(
+            collision_asset_filepath, out_usd_path, load_materials=False
+        )
 
-    # TODO: DANIEL is this from urdf?
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
 
     object_config_dir, _ = os.path.split(object_config_filepath)
-
-    # TODO: DELETE LINE IF NOT USED
-    # usd_dir, _ = os.path.split(out_usd_path)
 
     render_asset_filepath_for_usd = os.path.relpath(
         os.path.abspath(
@@ -186,9 +183,7 @@ def convert_mesh_to_usd(
 
     :param in_file: string filepath of input mesh
     :param out_file: string of output usda file
-    :param load_materials: TODO: Add description
-
-    :return: TODO: Add description
+    :param load_materials: load material properties of mesh.
 
     """
     asyncio.run(
@@ -210,7 +205,11 @@ async def async_convert_mesh_to_usd(
     in_file: str, out_file: str, load_materials: bool = True
 ) -> bool:
     """ported from IsaacLab mesh_converter.py _convert_mesh_to_usd
-    TODO: Add param descriptions, and return description.
+
+    :param in_file: Input mesh filepath
+    :param out_file: Output usda filepath
+
+    :return: True if conversion to usd sucessful. False otherwise.
     """
 
     enable_extension("omni.kit.asset_converter")
@@ -571,3 +570,10 @@ if __name__ == "__main__":
 
     from omni.isaac.core.utils.extensions import enable_extension
     from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+
+    convert_hab_scene(
+        args.scene_filepath,
+        args.project_root_folder,
+        args.scene_usd_filepath,
+        args.objects_folder,
+    )
