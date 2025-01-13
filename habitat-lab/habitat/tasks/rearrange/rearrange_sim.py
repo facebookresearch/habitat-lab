@@ -550,7 +550,7 @@ class RearrangeSim(HabitatSim):
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
         Returns the 3D coordinates corresponding to a point belonging
-        to the biggest navmesh island in the scenee and closest to pos.
+        to the biggest navmesh island in the scene and closest to pos.
         When that point returns NaN, computes a navigable point at increasing
         distances to it.
         """
