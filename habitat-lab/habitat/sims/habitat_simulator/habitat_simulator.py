@@ -588,7 +588,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return path.points
 
     def sample_navigable_point(self) -> List[float]:
-        return self.pathfinder.get_random_navigable_point().tolist()
+        return list(self.pathfinder.get_random_navigable_point())
 
     def is_navigable(self, point: List[float]) -> bool:
         return self.pathfinder.is_navigable(point)
