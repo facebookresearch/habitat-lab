@@ -158,6 +158,10 @@ class RearrangeSim(HabitatSim):
 
     @property
     def receptacles(self) -> Dict[str, Receptacle]:
+        """
+        Returns a map of all receptacles in the current scene.
+        The key is the unique name associated to the receptacle.
+        """
         return self._receptacles
 
     @property
