@@ -17,6 +17,7 @@ habitat:
       - arm_depth_bbox_sensor
       - articulated_agent_arm_depth
       - joint
+      - ee_pos
   task:
     measurements:
       end_effector_to_object_distance:

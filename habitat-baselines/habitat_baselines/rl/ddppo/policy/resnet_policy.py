@@ -130,11 +130,17 @@ class PointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
+
         # Exclude cameras for rendering from the observation space.
         ignore_names = [
             sensor.uuid
             for sensor in config.habitat_baselines.eval.extra_sim_sensors.values()
         ]
+
+        # Exclude lab sensor for policy input
+        if config.habitat_baselines.evaluate:
+            ignore_names += [v for v in config.habitat_baselines.eval.ignore_obs_keys_for_lab_sensor_for_policy]
+        
         filtered_obs = spaces.Dict(
             OrderedDict(
                 (

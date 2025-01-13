@@ -51,7 +51,9 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     extra_sim_sensors: Dict[str, SimulatorSensorConfig] = field(
         default_factory=dict
     )
-
+    ignore_obs_keys_for_lab_sensor_for_policy: List[str] = field(
+        default_factory=list
+    )
 
 @dataclass
 class PreemptionConfig(HabitatBaselinesBaseConfig):
