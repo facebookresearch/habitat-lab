@@ -704,7 +704,7 @@ def get_camera_object_angle(
     return obj_angle
 
 
-def get_camera_lookat_relative_to_vertial_line(
+def get_camera_lookat_relative_to_vertical_line(
     agent,
 ) -> float:
     """Get the camera looking angles to a vertical line to the ground"""
