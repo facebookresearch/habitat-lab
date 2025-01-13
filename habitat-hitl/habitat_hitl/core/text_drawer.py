@@ -124,7 +124,9 @@ if not use_headless_text_drawer:
             # Glyphs we need to render everything
             # Using(1024, 768) as a size of the GlyphCache, to fit larger font size
             # Ideal size for the GPU is of power-of-two in at least one dimension
-            self._glyph_cache = text.GlyphCache((1024, 768))
+            self._glyph_cache = text.GlyphCacheGL(
+                mn.PixelFormat.R8_UNORM, (1024, 768)
+            )
             self._display_font.fill_glyph_cache(
                 self._glyph_cache,
                 string.ascii_lowercase
