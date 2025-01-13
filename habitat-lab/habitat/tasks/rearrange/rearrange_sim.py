@@ -113,7 +113,6 @@ class RearrangeSim(HabitatSim):
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
-        self._draw_bb_objs: List[int] = []
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
@@ -167,15 +166,6 @@ class RearrangeSim(HabitatSim):
         Maps a handle name to the relative position of an object in `self._scene_obj_ids`.
         """
         return self._handle_to_object_id
-
-    @property
-    def draw_bb_objs(self) -> List[int]:
-        """
-        Simulator object indices of objects to draw bounding boxes around if
-        debug render is enabled. By default, this is populated with all target
-        objects.
-        """
-        return self._draw_bb_objs
 
     @property
     def scene_obj_ids(self) -> List[int]:
@@ -384,11 +374,6 @@ class RearrangeSim(HabitatSim):
                 for t_handle, _ in self._targets.items()
             ]
         )
-
-        self._draw_bb_objs = [
-            rom.get_object_by_handle(obj_handle).object_id
-            for obj_handle in self._targets
-        ]
 
         if self.first_setup:
             self.first_setup = False
