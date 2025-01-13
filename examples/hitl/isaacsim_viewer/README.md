@@ -1,4 +1,7 @@
 # IsaacSim Viewer
+![spot_and_hand_banner](https://github.com/user-attachments/assets/6aaf5ab1-2568-4b22-bd3c-54ab521b0ee7)
+
+The app is an interactive VR physics sandbox. It features an HSSD scene, YCB objects, and a policy-driven Spot. If you connect a VR client, you can also interact with the scene via a Metahand. The app is also a good starting point for testing/hacking/benchmarking.
 
 ## Installation
 
@@ -30,6 +33,13 @@ Optional. Instructions here coming soon.
 # Run desktop GUI app (no VR):
 python examples/hitl/isaacsim_viewer/isaacsim_viewer.py 
 ```
+
+## Using the app
+When running the desktop app without VR:
+1. On startup, beware the viewport initializes with a weird camera view outside the house. Start by zooming out using the mouse scroll wheel.
+2. The help text includes `server SPS` (steps/second). This should be at least ~15, otherwise the app will be unusable.
+3. Use WASD to move the camera lookat. Hold R + mousemove to rotate the camera. Find the Spot robot in the scene.
+4. Press any number key from 1-8. After a brief pause, Spot will move to an object on the table and attempt to grasp it.
 
 ## Re-exporting USD/USDA data from source data
 
