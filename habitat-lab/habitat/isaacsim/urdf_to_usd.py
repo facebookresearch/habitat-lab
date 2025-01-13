@@ -1,7 +1,8 @@
+"""This module converts urdf files into usda files."""
+
 import argparse
 import os
 
-# import xml.etree.ElementTree as ET
 from lxml import etree as ET  # Using lxml for better XML handling
 
 
@@ -60,6 +61,12 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
 
 
 def convert_urdf(urdf_filepath: str, out_usd_filepath: str) -> None:
+    """Convert urdf file to usda file
+
+    :param urdf_filepath: The filepath of urdf file
+    :param out_usd_filepath: The desired output path of usda file
+    """
+
     from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
 
     out_dir, out_filename = os.path.split(out_usd_filepath)
@@ -95,6 +102,14 @@ def add_habitat_visual_metadata_for_articulation(
     out_usd_filepath: str,
     project_root_folder: str,
 ) -> None:
+    """Add habitat visual metadata into usda file.
+
+    :param usd_filepath: Usd fileapath to add visual metadata
+    :param reference_urdf_filepath: Filepath of reference urdf
+    :param out_usd_filepath: Desired output usd path
+    :param project_root_folder: Directory path of habitat-lab
+    """
+
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
     urdf_root = urdf_tree.getroot()
