@@ -181,7 +181,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             robot_forward = np.array(base_T.transform_vector(forward))
 
             # Compute relative target.
-            rel_targ = cur_nav_targ - robot_pos
+            rel_targ = np.array(cur_nav_targ - robot_pos)
 
             # Compute heading angle (2D calculation)
             robot_forward = robot_forward[[0, 2]]
@@ -361,7 +361,7 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
             self.humanoid_controller.reset(
                 self.cur_articulated_agent.base_transformation
             )
-        return (agent_pos, np.array(look_at_pos))
+        return (np.array(agent_pos), np.array(look_at_pos))
 
     def _path_to_point(self, point):
         """
