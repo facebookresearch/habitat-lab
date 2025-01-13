@@ -440,13 +440,14 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for _attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point(
-                island_index=self._largest_indoor_island_idx
+            start_pos = np.array(
+                self.pathfinder.get_random_navigable_point(
+                    island_index=self._largest_indoor_island_idx
+                )
             )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
-
             if filter_func is not None and not filter_func(
                 start_pos, start_rot
             ):
@@ -593,7 +594,7 @@ class RearrangeSim(HabitatSim):
             new_pos[0]
         ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
 
-        return new_pos
+        return np.array(new_pos)
 
     @add_perf_timing_func()
     def _add_objs(
