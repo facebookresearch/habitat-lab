@@ -134,9 +134,6 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
         self._auto_sleep = self.habitat_config.auto_sleep
         self._load_objs = self.habitat_config.load_objs
-        self._additional_object_paths = (
-            self.habitat_config.additional_object_paths
-        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
         # KRM manages child/parent relationships in kinematic mode. Initialized in reconfigure if applicable.
         self.kinematic_relationship_manager: KinematicRelationshipManager = (
