@@ -6,7 +6,7 @@ import asyncio
 import json
 import os
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 def sanitize_usd_name(name: str) -> Optional[str]:
@@ -17,7 +17,6 @@ def sanitize_usd_name(name: str) -> Optional[str]:
     :return: The sanitized string, suitable for use as a USD node name.
     """
 
-    # assert len(name) > 0
     if len(name) == 0:
         print("Input string for USD node is empty")
         return None
@@ -35,14 +34,18 @@ def sanitize_usd_name(name: str) -> Optional[str]:
     return sanitized_name
 
 
-def object_usd_info(obj_instance_json, object_counts):
+def object_usd_info(
+    obj_instance_json: Dict[str, Union[List[float], str]],
+    object_counts: Dict[str, int],
+) -> Tuple[str, str, Dict[str, int], str]:
     """From the values defined in the object json from the scence instance, generate various
     strings and object counts.
+
     :param obj_instance_json: This is object level information from the scence_instance json file, Dictionary object
     :param object counts: This dictionary contains information about multiples uses of the same mesh
 
     :return: object_config_filename is the name of the object config file.
-    out_usd_path is the filepath where the converted object is located. object_counts might be updated if there is another
+    out_usd_path is the filepath where the converted object is located. object_counts might be updated if there exists another
     instance of the same mesh. unique_object_name is the unique name of a mesh.
     """
     object_config_filename = (
@@ -93,6 +96,7 @@ def convert_object_to_usd(
     object_config_json_data = None
     with open(object_config_filepath, "r") as file:
         object_config_json_data = json.load(file)
+
     # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
     collision_asset_filename = (
         object_config_json_data["collision_asset"]
@@ -111,16 +115,13 @@ def convert_object_to_usd(
         )
 
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
-
     object_config_dir, _ = os.path.split(object_config_filepath)
-
     render_asset_filepath_for_usd = os.path.relpath(
         os.path.abspath(
             os.path.join(object_config_dir, render_asset_filepath_from_urdf)
         ),
         start=project_root_folder,
     )
-
     render_asset_scale = object_config_json_data.get("scale", (1.0, 1.0, 1.0))
 
     add_habitat_visual_to_usd_root(
@@ -149,7 +150,9 @@ def find_file(folder: str, filename: str) -> str:
 def find_scene_instance_json_files(scene_directory: str) -> List[str]:
     """
     Find all files in the given folder and its subfolders whose names end with 'scene_instance.json'.
+
     :param folder_path: The path to the folder to search.
+
     :return: A list of paths to the matching files.
     """
     matching_files = []
@@ -163,6 +166,15 @@ def find_scene_instance_json_files(scene_directory: str) -> List[str]:
 def make_scene_instance_usd_path(
     scene_filepath: str, scene_usd_directory: str
 ) -> str:
+    """
+    Form the scene instance usda filepath from scence instance json filepath'.
+
+    :param scene_filepath: scene instance json filepath
+    :param scene_usd_directory: desired scene instance usd output directory
+
+    :return: desired scene instance usd output filepath
+    """
+
     filename_with_extension = os.path.basename(scene_filepath)
     filename_without_extension = os.path.splitext(filename_with_extension)[0]
     usda_filename = f"{filename_without_extension}.usda"
@@ -248,7 +260,9 @@ async def async_convert_mesh_to_usd(
     return success
 
 
-def convert_meshes_to_static_colliders(stage, root_path) -> None:
+def convert_meshes_to_static_colliders(
+    stage: "Usd.stage", root_path: str
+) -> None:
     """
     Iterates over all meshes in the USD subtree under `root_path` and adds convex hull collision shapes.
 
@@ -287,7 +301,9 @@ def convert_meshes_to_static_colliders(stage, root_path) -> None:
 
 
 def add_habitat_visual_to_usd_root(
-    usd_filepath, render_asset_filepath, render_asset_scale
+    usd_filepath: str,
+    render_asset_filepath: str,
+    render_asset_scale: List[float],
 ) -> None:
     """
     This function adds habitat visual information into a usda file.
@@ -323,8 +339,11 @@ def add_habitat_visual_to_usd_root(
     )
 
 
-def add_xform_scale(object_xform) -> None:
-    """Add object scale value into xform class for scene instance json."""
+def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:
+    """Add object scale value into xform class for scene instance json.
+
+    :param object_xform: The Xform class containing scene object information.
+    """
     # Ensure scale op exists, default value
     scale = [
         1.0,
@@ -345,8 +364,14 @@ def add_xform_scale(object_xform) -> None:
     scale_op.Set(Gf.Vec3f(*scale))
 
 
-def add_xform_rotation(obj_instance_json, object_xform) -> None:
-    """Add object rotation value into xform class for scene instance json."""
+def add_xform_rotation(
+    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"
+) -> None:
+    """Add object rotation value into xform class for scene instance json.
+
+    :param obj_instance_json: Object information from scence instance json
+    :object_xform: The Xform class that contains object information for usd file.
+    """
     # Ensure rotation op exists
     # rotation = habitat_to_usd_rotation([0.0, 0.0, 0.0, 1.0])
     # rotation = [1.0, 0.0, 0.0, 0.0]
@@ -370,19 +395,13 @@ def add_xform_rotation(obj_instance_json, object_xform) -> None:
     orient_op.Set(Gf.Quatd(*rotation))
 
 
-def habitat_to_usd_rotation(rotation) -> List[float]:
+def habitat_to_usd_rotation(rotation: List[float]) -> List[float]:
     """
     Convert a quaternion rotation from Habitat to USD coordinate system.
 
-    Parameters
-    ----------
-    rotation : list[float]
-        Quaternion in Habitat coordinates [w, x, y, z] (wxyz).
+    :param rotation: Quaternion in Habitat coordinates [w, x, y, z] (wxyz).
 
-    Returns
-    -------
-    list[float]
-        Quaternion in USD coordinates [w, x, y, z] (wxyz).
+    :return: Quaternion in USD coordinates [w, x, y, z] (wxyz).
     """
     HALF_SQRT2 = 0.70710678  # √0.5
 
@@ -415,8 +434,14 @@ def habitat_to_usd_rotation(rotation) -> List[float]:
     return rotation_usd
 
 
-def add_xform_translation(obj_instance_json, object_xform) -> None:
-    """Add object translation value into xform class for scene instance json."""
+def add_xform_translation(
+    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"
+) -> None:
+    """Add object translation value into xform class for scene instance json.
+
+    :param obj_instance_json: Object information from scence instance json
+    :object_xform: The Xform class that contains object information for usd file.
+    """
     # Ensure translation op exists
     position = habitat_to_usd_position(
         obj_instance_json.get("translation", [0.0, 0.0, 0.0])
@@ -434,11 +459,12 @@ def add_xform_translation(obj_instance_json, object_xform) -> None:
     translate_op.Set(Gf.Vec3f(*position))
 
 
-def habitat_to_usd_position(position) -> List[float]:
+def habitat_to_usd_position(position: List[float]) -> List[float]:
     """
-    Convert a position from Habitat (Y-up) to USD (Z-up) coordinate system.
+    Convert a position from Habitat (Y-up) to USD (Z-up) coordinate system. Habitat (-x, z, y) -> Isaac (x, y, z)
 
-    Habitat (-x, z, y) -> Isaac (x, y, z)
+    :param position: Habitat coordinates
+    :return: Isaac coordinates
     """
     x, y, z = position
     return [-x, z, y]
@@ -490,7 +516,6 @@ def convert_hab_scene(
     except AssertionError:
         print(f"'object_instances' key not found in {scene_filepath} ")
         return
-        # raise KeyError(f"'object_instances' key not found in {scene_filepath} ")# TODO: may need return instead of raise, incase we need to for loop convert_hab_scene
 
     for obj_instance_json in scene_json_data["object_instances"]:
         # TODO: assert collision_asset_size is (1,1,1) or not present
