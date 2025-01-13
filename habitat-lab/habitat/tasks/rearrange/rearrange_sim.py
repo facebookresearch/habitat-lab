@@ -84,7 +84,6 @@ class RearrangeSim(HabitatSim):
 
         self.first_setup = True
         self.ep_info: Optional[RearrangeEpisode] = None
-        self.prev_loaded_navmesh = None
         self.prev_scene_id: Optional[str] = None
 
         # Number of physics updates per action
