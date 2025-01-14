@@ -135,8 +135,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
-        # TODO: This is a hack. For some reason _polar_pos in overriden by the other
-        # agent.
+        # TODO: This is a hack. For some reason _polar_pos in overridden by the other agent.
         return self._polar_pos.copy()
 
 
@@ -1041,10 +1040,10 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
 
-        # For force collision reward (userful for dynamic simulation)
+        # For force collision reward (useful for dynamic simulation)
         reward += self._get_coll_reward()
 
-        # For count-based collision reward and termination (userful for kinematic simulation)
+        # For count-based collision reward and termination (useful for kinematic simulation)
         if self._want_count_coll():
             reward += self._get_count_coll_reward()
 
