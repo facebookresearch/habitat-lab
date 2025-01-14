@@ -1577,8 +1577,7 @@ def get_obj_receptacle_and_confidence(
     if fallback_to_floor_matching:
         # NOTE: using navmesh snapping to a point within 10cm horizontally as a heuristic for "on the floor"
         snap_point = sim.pathfinder.snap_point(obj_bottom_point, island_index)
-        snap_point[1] = obj_bottom_point[1]
-        if (obj_bottom_point - snap_point).length() < 0.1:
+        if (obj_bottom_point - snap_point).length() < 0.15:
             # this point is on the floor
             if len(point_regions) > 0:
                 # found matching regions, pick the primary (most precise) one
