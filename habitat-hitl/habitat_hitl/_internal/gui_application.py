@@ -51,8 +51,8 @@ class InputHandlerApplication(Application):
                 gui_input._key_held.remove(key)
             gui_input._key_up.add(key)
 
-    def mouse_press_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_button(event.button)
+    def pointer_press_event(self, event: Application.PointerEvent) -> None:
+        key = MagnumKeyConverter.convert_mouse_button(event.pointer)
         if key is not None:
             gui_input = self._gui_input
             # If the key is already held, this is a repeat press event and we should
@@ -61,15 +61,15 @@ class InputHandlerApplication(Application):
                 gui_input._mouse_button_held.add(key)
                 gui_input._mouse_button_down.add(key)
 
-    def mouse_release_event(self, event: Application.MouseEvent) -> None:
-        key = MagnumKeyConverter.convert_mouse_button(event.button)
+    def pointer_release_event(self, event: Application.PointerEvent) -> None:
+        key = MagnumKeyConverter.convert_mouse_button(event.pointer)
         if key is not None:
             gui_input = self._gui_input
             if key in gui_input._mouse_button_held:
                 gui_input._mouse_button_held.remove(key)
             gui_input._mouse_button_up.add(key)
 
-    def mouse_scroll_event(self, event: Application.MouseEvent) -> None:
+    def scroll_event(self, event: Application.PointerEvent) -> None:
         # shift+scroll is forced into x direction on mac, seemingly at OS level,
         # so use both x and y offsets.
         scroll_mod_val = (
@@ -95,7 +95,7 @@ class InputHandlerApplication(Application):
         )
         return mouse_event_position * scaling
 
-    def mouse_move_event(self, event: Application.MouseMoveEvent) -> None:
+    def pointer_move_event(self, event: Application.PointerMoveEvent) -> None:
         mouse_pos = self.get_mouse_position(event.position)
         relative_mouse_position = self.get_mouse_position(
             event.relative_position
