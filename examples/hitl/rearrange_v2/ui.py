@@ -564,6 +564,7 @@ class UI:
         # Cannot place on objects held by agents.
         if self._world.is_any_agent_holding_object(receptacle_object_id):
             return False
+        # NOTE: _info_text contains the reason for the failure
         (
             matching_rec_names,
             _conf,
@@ -576,8 +577,11 @@ class UI:
             candidate_receptacles=self._sim.receptacles,
             island_index=self._sim._largest_indoor_island_idx,
         )
-        if len(matching_rec_names) == 0:
-            # TODO: _info_text contains the reason for the failure
+        if len(matching_rec_names) == 0 or (
+            "floor" not in matching_rec_names[0]
+            and matching_rec_names[0] not in self._sim.receptacles
+        ):
+            # no matches with receptacle or floor. Region match isn't enough for placement.
             return False
         return True
 
