@@ -1509,7 +1509,7 @@ def get_obj_receptacle_and_confidence(
     info_text = ""
 
     # get the center point of the object projected on the local bounding box size in the gravity direction
-    grav_vector = sim.get_gravity()
+    grav_vector = sim.get_gravity().normalized()
     dist, center = get_obj_size_along(sim, obj.object_id, grav_vector)
     # either compute or use the provided object location
     obj_bottom_point = (
