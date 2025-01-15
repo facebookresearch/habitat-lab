@@ -489,6 +489,7 @@ def convert_hab_scene(
         scene_json_data = json.load(file)
 
     # Form Xform stage object for output .usda file.
+    print(scene_usd_filepath)
     stage = Usd.Stage.CreateNew(scene_usd_filepath)
     xform_prim = UsdGeom.Xform.Define(stage, "/Scene")
     stage.SetDefaultPrim(xform_prim.GetPrim())
