@@ -264,4 +264,3 @@ def Xform "spot"
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
     }
 }
-
