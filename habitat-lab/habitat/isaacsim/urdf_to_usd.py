@@ -30,23 +30,23 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
         return name
 
     # Update <link> and <joint> names
-    for element in root.xpath("//*[@name]"):  # type: ignore # noqa: ALL
+    for element in root.xpath("//*[@name]"):  
         original_name = element.get("name")
         sanitized_name = sanitize_name(original_name)
         element.set("name", sanitized_name)
 
     # Update references to <parent link> and <child link>
-    for parent in root.xpath("//parent[@link]"):  # type: ignore # noqa: ALL
+    for parent in root.xpath("//parent[@link]"):  
         original_link = parent.get("link")
         parent.set("link", name_map.get(original_link, original_link))
 
-    for child in root.xpath("//child[@link]"):  # type: ignore # noqa: ALL
+    for child in root.xpath("//child[@link]"):  
         original_link = child.get("link")
         child.set("link", name_map.get(original_link, original_link))
 
     # Optionally remove <visual> elements
     if remove_visual:
-        for visual in root.xpath("//visual"):  # type: ignore # noqa: ALL
+        for visual in root.xpath("//visual"):  
             visual_parent = visual.getparent()
             visual_parent.remove(visual)
 
@@ -55,7 +55,7 @@ def clean_urdf(input_file: str, output_file: str, remove_visual=False) -> None:
         f.write(
             ET.tostring(
                 root, pretty_print=True, xml_declaration=True, encoding="UTF-8"
-            )  # type: ignore # noqa: ALL
+            )  
         )
     print(f"Cleaned URDF written to: {output_file}")
 
