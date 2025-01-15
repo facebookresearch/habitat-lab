@@ -1,0 +1,29 @@
+
+{
+    "_comment": "This document was originally 102343992.scene_instance.json in the hssd repo",
+    "stage_instance": {
+        "template_name": "stages/102343992"
+    },
+    "translation_origin": "asset_local",
+    "object_instances": [{
+        "template_name": "1efdc3d37dfab1eb9f99117bb84c59003d684811",
+        "translation": [
+            7.869999885559082,
+            1.200000514924497,
+            -9.038998947203183
+        ],
+        "rotation": [
+            0.8660254049292261,
+            -1.7140893014617373e-08,
+            0.4999999980171692,
+            2.144662085814174e-08
+        ],
+        "non_uniform_scale": [
+            0.9999999418353455,
+            1.000248074501974,
+            0.439367260520995
+        ],
+        "motion_type": "STATIC"
+    }]
+
+}
