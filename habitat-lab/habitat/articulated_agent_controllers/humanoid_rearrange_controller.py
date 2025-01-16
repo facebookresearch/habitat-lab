@@ -131,7 +131,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
                 self.hand_processed_data[hand_name] = None
 
     def set_framerate_for_linspeed(
-        self, lin_speed: float, ang_speed: float, ctrl_freq: int
+        self, lin_speed: float, ang_speed: float, ctrl_freq: float
     ) -> None:
         """
         Set the linear and angular speed of the humanoid's root motion based on the relative framerate of the simulator and the motion trajectory.
@@ -141,6 +141,7 @@ class HumanoidRearrangeController(HumanoidBaseController):
         :param ctrl_freq: Simulator step frequency. How many times does Simulator step to progress 1 second.
         """
 
+        assert ctrl_freq > 0, "`ctrl_freq` must be strictly greater than zero."
         seconds_per_step = 1.0 / ctrl_freq
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size

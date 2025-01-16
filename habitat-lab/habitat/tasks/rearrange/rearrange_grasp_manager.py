@@ -19,9 +19,8 @@ from habitat_sim.physics import (
 )
 
 if TYPE_CHECKING:
-    from omegaconf import DictConfig
-
     from habitat.articulated_agents.manipulator import Manipulator
+    from habitat.config.default_structured_configs import SimulatorConfig
     from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 
@@ -33,7 +32,7 @@ class RearrangeGraspManager:
     def __init__(
         self,
         sim: "RearrangeSim",
-        config: "DictConfig",
+        config: "SimulatorConfig",
         articulated_agent: "Manipulator",
         ee_index=0,
     ) -> None:

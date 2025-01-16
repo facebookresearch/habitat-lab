@@ -33,6 +33,10 @@ from habitat.tasks.rearrange.utils import (
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+    from habitat.config.default_structured_configs import (
+        AgentConfig,
+        SimulatorConfig,
+    )
     from habitat_sim.simulator import Simulator
 
 
@@ -44,7 +48,7 @@ class ArticulatedAgentData:
 
     articulated_agent: MobileManipulator
     grasp_mgrs: List[RearrangeGraspManager]
-    cfg: "DictConfig"
+    cfg: "AgentConfig"
     start_js: np.ndarray
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None
@@ -69,7 +73,7 @@ class ArticulatedAgentManager:
     Handles creating, updating and managing all agent instances.
     """
 
-    def __init__(self, cfg: "DictConfig", sim: "Simulator"):
+    def __init__(self, cfg: "SimulatorConfig", sim: "Simulator"):
         self._sim = sim
         self._all_agent_data: List[ArticulatedAgentData] = []
         self._is_pb_installed = is_pb_installed()

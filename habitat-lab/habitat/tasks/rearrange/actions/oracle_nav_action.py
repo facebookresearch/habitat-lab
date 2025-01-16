@@ -255,7 +255,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 @registry.register_task_action
 class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ignore
     """
-    An action to drive the anget to a given coordinate
+    An action to drive the agent to a given coordinate
     """
 
     def __init__(self, *args, task, **kwargs):

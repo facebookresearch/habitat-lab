@@ -33,6 +33,8 @@ if TYPE_CHECKING:
         pass
     from omegaconf import DictConfig
 
+    from habitat.config.default_structured_configs import SimulatorConfig
+
 VisualObservation = Union[np.ndarray, "Tensor"]
 
 
@@ -280,7 +282,7 @@ class Simulator:
     :data habitat_config: The Dictconfig object containing configuration parameters specifically pertaining to the habitat Simulator.
     """
 
-    habitat_config: "DictConfig"
+    habitat_config: "SimulatorConfig"
 
     def __init__(self, *args, **kwargs) -> None:
         pass

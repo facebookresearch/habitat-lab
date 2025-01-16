@@ -48,9 +48,11 @@ from habitat.core.spaces import Space
 if TYPE_CHECKING:
     from torch import Tensor
 
+    from habitat.config.default_structured_configs import SimulatorConfig
+
 
 def overwrite_config(
-    config_from: DictConfig,
+    config_from: Any,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
     trans_dict: Optional[Dict[str, Callable]] = None,
@@ -275,7 +277,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         config: configuration for initializing the simulator.
     """
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "SimulatorConfig") -> None:
         self.habitat_config = config
 
         sim_sensors = []
@@ -507,7 +509,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def reconfigure(
         self,
-        habitat_config: DictConfig,
+        habitat_config: "SimulatorConfig",
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:

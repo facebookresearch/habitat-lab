@@ -174,14 +174,14 @@ def test_mp3d_eqa_sim():
                 assert "rgb" in obs, "RGB image is missing in observation."
                 agent_config = get_agent_config(eqa_config.habitat.simulator)
                 assert obs["rgb"].shape[:2] == (
-                    agent_config.sim_sensors.rgb_sensor.height,
-                    agent_config.sim_sensors.rgb_sensor.width,
+                    agent_config.sim_sensors["rgb_sensor"].height,
+                    agent_config.sim_sensors["rgb_sensor"].width,
                 ), (
                     "Observation resolution {} doesn't correspond to config "
                     "({}, {}).".format(
                         obs["rgb"].shape[:2],
-                        eqa_config.habitat.simulator.rgb_sensor.height,
-                        eqa_config.habitat.simulator.rgb_sensor.width,
+                        eqa_config.habitat.simulator["rgb_sensor"].height,
+                        eqa_config.habitat.simulator["rgb_sensor"].width,
                     )
                 )
 

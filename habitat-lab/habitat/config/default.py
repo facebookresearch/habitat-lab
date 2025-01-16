@@ -8,16 +8,24 @@ import inspect
 import os.path as osp
 import threading
 from functools import partial
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from hydra import compose, initialize_config_dir
-from omegaconf import DictConfig, OmegaConf
 
 from habitat.config.default_structured_configs import (
+    AgentConfig,
     HabitatConfigPlugin,
+    SimulatorConfig,
     register_hydra_plugin,
 )
 from habitat.config.read_write import read_write
+
+# from omegaconf import DictConfig, OmegaConf
+
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig, OmegaConf
+
 
 _HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 # Habitat config directory inside the installed package.
@@ -56,8 +64,8 @@ Returns absolute path to the habitat yaml config file if exists, else raises Run
 
 
 def get_agent_config(
-    sim_config: DictConfig, agent_id: Optional[int] = None
-) -> DictConfig:
+    sim_config: SimulatorConfig, agent_id: Optional[int] = None
+) -> AgentConfig:
     r"""Returns agent's config node of default agent or based on index of the agent.
 
     :param sim_config: config of :ref:`habitat.core.simulator.Simulator`.
