@@ -20,9 +20,6 @@ from habitat.config.default_structured_configs import (
 )
 from habitat.config.read_write import read_write
 
-# from omegaconf import DictConfig, OmegaConf
-
-
 if TYPE_CHECKING:
     from omegaconf import DictConfig, OmegaConf
 
