@@ -1476,7 +1476,7 @@ class TaskConfig(HabitatBaseConfig):
 
 @dataclass
 class SimulatorSensorConfig(HabitatBaseConfig):
-    uuid: str = MISSING
+    uuid: Optional[str] = None
     type: str = MISSING
     height: int = 480
     width: int = 640
