@@ -339,17 +339,16 @@ def add_habitat_visual_to_usd_root(
     )
 
 
-def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:
+def add_xform_scale(
+    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"
+) -> None:
     """Add object scale value into xform class for scene instance json.
 
     :param object_xform: The Xform class containing scene object information.
     """
     # Ensure scale op exists, default value
-    scale = [
-        1.0,
-        1.0,
-        1.0,
-    ]  # obj_instance_json.get("non_uniform_scale", [1.0, 1.0, 1.0])
+    hab_scale = obj_instance_json.get("non_uniform_scale", [1.0, 1.0, 1.0])
+    usd_scale = habitat_to_usd_scale(hab_scale)
 
     scale_op = next(
         (
@@ -361,7 +360,20 @@ def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:
     )
     if scale_op is None:
         scale_op = object_xform.AddScaleOp()
-    scale_op.Set(Gf.Vec3f(*scale))
+    scale_op.Set(Gf.Vec3f(*usd_scale))
+
+
+def habitat_to_usd_scale(scale: List[float]) -> List[float]:
+    """
+    Convert a position from Habitat (Y-up) to USD (Z-up) coordinate system. Habitat (-x, z, y) -> Isaac (x, y, z)
+
+    :param position: Habitat coordinates
+    :return: Isaac coordinates
+    """
+
+    abs_scale = [abs(num) for num in scale]
+    x, y, z = abs_scale
+    return [x, z, y]
 
 
 def add_xform_rotation(
@@ -558,7 +570,7 @@ def convert_hab_scene(
 
         # Operation are performed in the order listed, change as desired
         # Current order is scale at global origin, local rotation at global origin, then translate from global origin
-        add_xform_scale(object_xform)
+        add_xform_scale(obj_instance_json, object_xform)
         add_xform_rotation(obj_instance_json, object_xform)
         add_xform_translation(obj_instance_json, object_xform)
 
