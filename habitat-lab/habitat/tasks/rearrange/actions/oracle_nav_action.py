@@ -176,7 +176,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             raise Exception
         else:
             # Compute distance and angle to target
-            cur_nav_targ = curr_path_points[1]
+            cur_nav_targ = np.array(curr_path_points[1])
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 
@@ -407,7 +407,7 @@ class OracleNavCoordinateAction(BaseVelAction, HumanoidJointAction):  # type: ig
             # Compute distance and angle to target
             if len(curr_path_points) == 1:
                 curr_path_points += curr_path_points
-            cur_nav_targ = curr_path_points[1]
+            cur_nav_targ = np.array(curr_path_points[1])
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 

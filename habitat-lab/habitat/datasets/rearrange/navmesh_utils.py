@@ -686,7 +686,7 @@ def path_is_navigable_given_robot(
         path.requested_end = snapped_goal_pos
         pf.find_path(path)
         curr_path_points = path.points
-        cur_nav_targ = curr_path_points[1]
+        cur_nav_targ = np.array(curr_path_points[1])
         robot_forward = np.array(trans.transform_vector(forward))
         # Compute relative target
         rel_targ = cur_nav_targ - robot_pos
