@@ -8,9 +8,10 @@ import inspect
 import os.path as osp
 import threading
 from functools import partial
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from hydra import compose, initialize_config_dir
+from omegaconf import DictConfig, OmegaConf
 
 from habitat.config.default_structured_configs import (
     AgentConfig,
@@ -19,10 +20,6 @@ from habitat.config.default_structured_configs import (
     register_hydra_plugin,
 )
 from habitat.config.read_write import read_write
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig, OmegaConf
-
 
 _HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 # Habitat config directory inside the installed package.
