@@ -1,0 +1,673 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="allegro_digit360_right_calib_free">
+  <!-- ============================================================================= -->
+  <!-- FINGERS -->
+  <!-- RIGHT HAND due to which finger is number 0 -->
+  <!-- for LEFT HAND switch the sign of the **offset_origin_y** and **finger_angle_r** parameters-->
+  <!-- ============================================================================= -->
+    <link name="base_link">
+    <inertial>
+      <mass value="0.4154"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <!-- <collision>
+      <origin rpy="0 0 0" xyz="-0.009300 0 -0.0475"/>
+      <geometry>
+        <box size="0.0408 0.1130 0.095"/>
+      </geometry>
+    </collision> -->
+     <collision>
+      <origin rpy="0 0 0" xyz="-0.009 0.0 -0.023"/>
+      <geometry>
+        <box size="0.0414 0.112 0.0448"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.009 -0.0253 -0.0667"/>
+      <geometry>
+        <box size="0.0414 0.0538 0.0428"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.009300 -0.00557 -0.08874"/>
+      <geometry>
+        <box size="0.0414 0.0720 0.013"/>
+      </geometry>
+    </collision>
+
+  </link>
+
+
+  <link name="link_0_0">
+    <!-- <inertial>
+      <mass value="0.005"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="5.1458e-05" iyy="5.1458e-05" izz="6.125e-05" ixy="0" ixz="0" iyz="0"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0119"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.01666658333e-06" ixy="0.0" ixz="0.0" iyy="6.47677333333e-07" iyz="0.0" izz="1.01666658333e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0164"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0082"/>
+    </collision>
+  </link>
+  <joint name="joint_0_0" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort="0" lower="-0.47" upper="0.47" velocity="10"/>
+    <parent link="base_link"/>
+    <child link="link_0_0"/>
+    <origin rpy="-0.08726646255 0 0" xyz="0 0.0435 -0.001542"/>
+  </joint>
+  <link name="link_1_0">
+    <!-- <inertial>
+      <mass value="0.125164"/>
+      <origin xyz="0.027 0 0"/>
+      <inertia ixx="6.39979e-06" iyy="8.88687e-05" izz="9.13751e-05" ixy="-3.26531e-06" ixz="1.23963e-05"
+               iyz="2.07384e-05"/>
+    </inertial> -->
+     <inertial>
+      <mass value="0.065"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="7.95654166667e-05" ixy="1.7199e-05" ixz="8.75875e-06" iyy="2.47088833333e-05" iyz="2.413125e-05" izz="7.95654166667e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.054"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.027"/>
+    </collision>
+  </link>
+  <joint name="joint_1_0" type="revolute">
+    <limit effort="0" lower="-0.196" upper="1.61" velocity="10"/>
+    <axis xyz="0 1 0"/>
+    <parent link="link_0_0"/>
+    <child link="link_1_0"/>
+    <origin xyz="0 0 0.0164"/>
+  </joint>
+  <link name="link_2_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0355"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="2.63979183333e-05" ixy="6.67968e-06" ixz="4.783625e-06" iyy="1.34948516667e-05" iyz="9.372e-06" izz="2.63979183333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0384"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0192"/>
+    </collision>
+  </link>
+  <joint name="joint_2_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.174" upper="1.709" velocity="10"/>
+    <parent link="link_1_0"/>
+    <child link="link_2_0"/>
+    <origin xyz="0 0 0.054"/>
+  </joint>
+  <link name="link_3_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+     <inertial>
+      <mass value="0.0096"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="4.701248e-06" ixy="1.255968e-06" ixz="1.2936e-06" iyy="3.649312e-06" iyz="1.7622e-06" izz="4.701248e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0235 0.014"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.008"/>
+    </collision>
+  </link>
+  <joint name="joint_3_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.227" upper="1.618" velocity="10"/>
+    <parent link="link_2_0"/>
+    <child link="link_3_0"/>
+    <origin xyz="0 0 0.0384"/>
+  </joint>
+
+  <link name="link_4_0">
+    <!-- <inertial>
+      <mass value="0.005"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="5.1458e-05" iyy="5.1458e-05" izz="6.125e-05" ixy="0" ixz="0" iyz="0"/>
+    </inertial> -->
+
+    <inertial>
+      <mass value="0.0119"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.01666658333e-06" ixy="0.0" ixz="0.0" iyy="6.47677333333e-07" iyz="0.0" izz="1.01666658333e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0164"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0082"/>
+    </collision>
+  </link>
+  <joint name="joint_4_0" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort="0" lower="-0.47" upper="0.47" velocity="10"/>
+    <parent link="base_link"/>
+    <child link="link_4_0"/>
+    <origin rpy="0.0 0 0" xyz="0 0 0.0007"/>
+  </joint>
+  <link name="link_5_0">
+    <!-- <inertial>
+      <mass value="0.125164"/>
+      <origin xyz="0.027 0 0"/>
+      <inertia ixx="6.39979e-06" iyy="8.88687e-05" izz="9.13751e-05" ixy="-3.26531e-06" ixz="1.23963e-05"
+               iyz="2.07384e-05"/>
+    </inertial> -->
+
+    <inertial>
+      <mass value="0.065"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="7.95654166667e-05" ixy="1.7199e-05" ixz="8.75875e-06" iyy="2.47088833333e-05" iyz="2.413125e-05" izz="7.95654166667e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.054"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.027"/>
+    </collision>
+  </link>
+  <joint name="joint_5_0" type="revolute">
+    <limit effort="0" lower="-0.196" upper="1.61" velocity="10"/>
+    <axis xyz="0 1 0"/>
+    <parent link="link_4_0"/>
+    <child link="link_5_0"/>
+    <origin xyz="0 0 0.0164"/>
+  </joint>
+  <link name="link_6_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0355"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="2.63979183333e-05" ixy="6.67968e-06" ixz="4.783625e-06" iyy="1.34948516667e-05" iyz="9.372e-06" izz="2.63979183333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0384"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0192"/>
+    </collision>
+  </link>
+  <joint name="joint_6_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.174" upper="1.709" velocity="10"/>
+    <parent link="link_5_0"/>
+    <child link="link_6_0"/>
+    <origin xyz="0 0 0.054"/>
+  </joint>
+  <link name="link_7_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0096"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="4.701248e-06" ixy="1.255968e-06" ixz="1.2936e-06" iyy="3.649312e-06" iyz="1.7622e-06" izz="4.701248e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0235 0.014"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.008"/>
+    </collision>
+
+    <!-- <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0267"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.01335"/>
+    </collision> -->
+  </link>
+  <joint name="joint_7_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.227" upper="1.618" velocity="10"/>
+    <parent link="link_6_0"/>
+    <child link="link_7_0"/>
+    <origin xyz="0 0 0.0384"/>
+  </joint>
+
+  <link name="link_8_0">
+    <!-- <inertial>
+      <mass value="0.005"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="5.1458e-05" iyy="5.1458e-05" izz="6.125e-05" ixy="0" ixz="0" iyz="0"/>
+    </inertial> -->
+
+    <inertial>
+      <mass value="0.0119"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.01666658333e-06" ixy="0.0" ixz="0.0" iyy="6.47677333333e-07" iyz="0.0" izz="1.01666658333e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0164"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0082"/>
+    </collision>
+
+  </link>
+  <joint name="joint_8_0" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort="0" lower="-0.47" upper="0.47" velocity="10"/>
+    <parent link="base_link"/>
+    <child link="link_8_0"/>
+    <origin rpy="0.08726646255 0 0" xyz="0 -0.0435 -0.001542"/>
+  </joint>
+  <link name="link_9_0">
+    <!-- <inertial>
+      <mass value="0.125164"/>
+      <origin xyz="0.027 0 0"/>
+      <inertia ixx="6.39979e-06" iyy="8.88687e-05" izz="9.13751e-05" ixy="-3.26531e-06" ixz="1.23963e-05"
+               iyz="2.07384e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.065"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="7.95654166667e-05" ixy="1.7199e-05" ixz="8.75875e-06" iyy="2.47088833333e-05" iyz="2.413125e-05" izz="7.95654166667e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.054"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.027"/>
+    </collision>
+  </link>
+  <joint name="joint_9_0" type="revolute">
+    <limit effort="0" lower="-0.196" upper="1.61" velocity="10"/>
+    <axis xyz="0 1 0"/>
+    <parent link="link_8_0"/>
+    <child link="link_9_0"/>
+    <origin xyz="0 0 0.0164"/>
+  </joint>
+  <link name="link_10_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0355"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="2.63979183333e-05" ixy="6.67968e-06" ixz="4.783625e-06" iyy="1.34948516667e-05" iyz="9.372e-06" izz="2.63979183333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0384"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0192"/>
+    </collision>
+  </link>
+  <joint name="joint_10_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.174" upper="1.709" velocity="10"/>
+    <parent link="link_9_0"/>
+    <child link="link_10_0"/>
+    <origin xyz="0 0 0.054"/>
+  </joint>
+  <link name="link_11_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+     <inertial>
+      <mass value="0.0096"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="4.701248e-06" ixy="1.255968e-06" ixz="1.2936e-06" iyy="3.649312e-06" iyz="1.7622e-06" izz="4.701248e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0235 0.014"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.008"/>
+    </collision>
+
+    <!-- <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0267"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.01335"/>
+    </collision> -->
+  </link>
+  <joint name="joint_11_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.227" upper="1.618" velocity="10"/>
+    <parent link="link_10_0"/>
+    <child link="link_11_0"/>
+    <origin xyz="0 0 0.0384"/>
+  </joint>
+
+  <!-- THUMB -->
+  <link name="link_12_0">
+    <!-- <inertial>
+      <mass value="0.005"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="5.1458e-05" iyy="5.1458e-05" izz="6.125e-05" ixy="0" ixz="0" iyz="0"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0176"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.89273333333e-5" ixy="7.16716e-06" ixz="5.35568e-06" iyy="1.43008213333e-05" iyz="6.8068e-06" izz="1.89273333333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0358 0.034 0.0455"/>
+      </geometry>
+      <!-- RIGHT -->
+      <origin rpy="0 0 0" xyz="-0.0179 0.009 0.0145"/>
+      <!-- LEFT -->
+    </collision>
+  </link>
+  <joint name="joint_12_0" type="revolute">
+    <axis xyz="-1 0 0"/>
+    <limit effort="0" lower="0.263" upper="1.396" velocity="10"/>
+    <parent link="base_link"/>
+    <child link="link_12_0"/>
+    <origin rpy="0 -1.65806278845 -1.5707963259" xyz="-0.0182 0.019333 -0.045987"/>
+  </joint>
+  <link name="link_13_0">
+    <!-- <inertial>
+      <mass value="0.125164"/>
+      <origin xyz="0.027 0 0"/>
+      <inertia ixx="6.39979e-06" iyy="8.88687e-05" izz="9.13751e-05" ixy="-3.26531e-06" ixz="1.23963e-05"
+               iyz="2.07384e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0119"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="4.24250866667e-06" ixy="1.032087e-06" ixz="1.603525e-06" iyy="4.52362633333e-06" iyz="1.44808125e-06" izz="4.24250866667e-06"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0177"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.00885"/>
+    </collision>
+  </link>
+  <joint name="joint_13_0" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort="0" lower="-0.105" upper="1.163" velocity="10"/>
+    <parent link="link_12_0"/>
+    <child link="link_13_0"/>
+    <!-- RIGHT -->
+    <origin xyz="-0.027 0.005 0.0399"/>
+    <!-- LEFT -->
+    <!-- <origin xyz="-0.027 -0.005 0.0399"/> -->
+  </joint>
+  <link name="link_14_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.038"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="4.30439933333e-05" ixy="9.57068e-06" ixz="5.1205e-06" iyy="1.44451933333e-05" iyz="1.342825e-05" izz="4.30439933333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0196 0.0275 0.0514"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.0257"/>
+    </collision>
+  </link>
+  <joint name="joint_14_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.189" upper="1.644" velocity="10"/>
+    <parent link="link_13_0"/>
+    <child link="link_14_0"/>
+    <origin xyz="0 0 0.0177"/>
+  </joint>
+  <link name="link_15_0">
+    <!-- <inertial>
+      <mass value="0.131691"/>
+      <origin xyz="0.039 0 0"/>
+      <inertia ixx="7.04217e-05" iyy="3.95744e-05" izz="6.61125e-05" ixy="-9.64342e-05" ixz="5.8796e-05"
+               iyz="-3.62996e-05"/>
+    </inertial> -->
+    <inertial>
+      <mass value="0.0388"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="3.29223173333e-05" ixy="8.042076e-06" ixz="5.2283e-06" iyy="1.47493026667e-5" iyz="1.1283525e-5" izz="3.29223173333e-05"/>
+    </inertial>
+
+    <collision>
+      <geometry>
+        <box size="0.0186 0.0275 0.0323"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.01615"/>
+    </collision>
+  </link>
+  <joint name="joint_15_0" type="revolute">
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-0.162" upper="1.719" velocity="10"/>
+    <parent link="link_14_0"/>
+    <child link="link_15_0"/>
+    <origin xyz="0 0 0.0514"/>
+  </joint>
+
+
+  <link name="link_3_0_digit2_sensor_base">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_3_0_digit2_sensor_base" type="fixed">
+    <parent link="link_3_0"/>
+    <child link="link_3_0_digit2_sensor_base"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_3_0_tip">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base_tip.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_3_0_digit2_sensor_base_tip" type="fixed">
+    <parent link="link_3_0"/>
+    <child link="link_3_0_tip"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_7_0_digit2_sensor_base">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_7_0_digit2_sensor_base" type="fixed">
+    <parent link="link_7_0"/>
+    <child link="link_7_0_digit2_sensor_base"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_7_0_tip">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base_tip.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_7_0_digit2_sensor_base_tip" type="fixed">
+    <parent link="link_7_0"/>
+    <child link="link_7_0_tip"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_11_0_digit2_sensor_base">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_11_0_digit2_sensor_base" type="fixed">
+    <parent link="link_11_0"/>
+    <child link="link_11_0_digit2_sensor_base"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_11_0_tip">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base_tip.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_11_0_digit2_sensor_base_tip" type="fixed">
+    <parent link="link_11_0"/>
+    <child link="link_11_0_tip"/>
+    <origin rpy="0 0 0" xyz="0 0 0.02"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_15_0_digit2_sensor_base">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_15_0_digit2_sensor_base" type="fixed">
+    <parent link="link_15_0"/>
+    <child link="link_15_0_digit2_sensor_base"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0353"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+
+
+  <link name="link_15_0_tip">
+    <collision>
+      <geometry>
+       <mesh filename="digit2_sensor_base_tip.obj"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+  <joint name="joint_15_0_digit2_sensor_base_tip" type="fixed">
+    <parent link="link_15_0"/>
+    <child link="link_15_0_tip"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0353"/>
+  </joint>
+
+  <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="9.68e-07" ixy="0" ixz="0" iyy="9.68e-07" iyz="0" izz="9.68e-07"/>
+  </inertial>
+
+</robot>
