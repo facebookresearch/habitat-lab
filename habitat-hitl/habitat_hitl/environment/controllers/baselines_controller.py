@@ -7,38 +7,40 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
+import gym.spaces as spaces
+import numpy as np
+import torch
+
+import habitat
+import habitat.gym.gym_wrapper as gym_wrapper
+from habitat_baselines.common.env_spec import EnvironmentSpec
+from habitat_baselines.common.obs_transformers import (
+    ObservationTransformer,
+    apply_obs_transforms_batch,
+    apply_obs_transforms_obs_space,
+    get_active_obs_transforms,
+)
+from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import (
+    MultiAgentAccessMgr,
+)
+from habitat_baselines.rl.multi_agent.utils import (
+    update_dict_with_agent_prefix,
+)
+from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
+from habitat_baselines.rl.ppo.single_agent_access_mgr import (
+    SingleAgentAccessMgr,
+)
+from habitat_baselines.utils.common import (
+    batch_obs,
+    get_action_space_info,
+    is_continuous_action_space,
+)
+from habitat_hitl.environment.controllers.controller_abc import Controller
+
 if TYPE_CHECKING:
-    import gym.spaces as spaces
-    import numpy as np
-    import torch
     from omegaconf import DictConfig
 
-    import habitat
-    import habitat.gym.gym_wrapper as gym_wrapper
     from habitat.core.environments import GymHabitatEnv
-    from habitat_baselines.common.env_spec import EnvironmentSpec
-    from habitat_baselines.common.obs_transformers import (
-        ObservationTransformer,
-        apply_obs_transforms_batch,
-        apply_obs_transforms_obs_space,
-        get_active_obs_transforms,
-    )
-    from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import (
-        MultiAgentAccessMgr,
-    )
-    from habitat_baselines.rl.multi_agent.utils import (
-        update_dict_with_agent_prefix,
-    )
-    from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-    from habitat_baselines.rl.ppo.single_agent_access_mgr import (
-        SingleAgentAccessMgr,
-    )
-    from habitat_baselines.utils.common import (
-        batch_obs,
-        get_action_space_info,
-        is_continuous_action_space,
-    )
-    from habitat_hitl.environment.controllers.controller_abc import Controller
 
 
 def clean_dict(d, remove_prefix):
