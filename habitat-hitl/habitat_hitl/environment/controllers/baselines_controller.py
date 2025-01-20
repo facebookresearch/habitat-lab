@@ -249,7 +249,7 @@ class SingleAgentBaselinesController(BaselinesController):
         )
 
     def _create_env_spec(self):
-        # djust the observation and action space to be agent specific (remove other agents)
+        # Adjust the observation and action space to be agent specific (remove other agents)
         original_action_space = clean_dict(
             self._gym_habitat_env.original_action_space, self._agent_k
         )
