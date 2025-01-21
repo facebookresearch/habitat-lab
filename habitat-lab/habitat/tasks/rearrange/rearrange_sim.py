@@ -84,7 +84,6 @@ class RearrangeSim(HabitatSim):
 
         self.first_setup = True
         self.ep_info: Optional[RearrangeEpisode] = None
-        self.prev_loaded_navmesh = None
         self.prev_scene_id: Optional[str] = None
 
         # Number of physics updates per action
@@ -114,7 +113,6 @@ class RearrangeSim(HabitatSim):
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
-        self._draw_bb_objs: List[int] = []
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
@@ -136,9 +134,6 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
         self._auto_sleep = self.habitat_config.auto_sleep
         self._load_objs = self.habitat_config.load_objs
-        self._additional_object_paths = (
-            self.habitat_config.additional_object_paths
-        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
         # KRM manages child/parent relationships in kinematic mode. Initialized in reconfigure if applicable.
         self.kinematic_relationship_manager: KinematicRelationshipManager = (
@@ -160,6 +155,10 @@ class RearrangeSim(HabitatSim):
 
     @property
     def receptacles(self) -> Dict[str, Receptacle]:
+        """
+        Returns a map of all receptacles in the current scene.
+        The key is the unique name associated to the receptacle.
+        """
         return self._receptacles
 
     @property
@@ -168,15 +167,6 @@ class RearrangeSim(HabitatSim):
         Maps a handle name to the relative position of an object in `self._scene_obj_ids`.
         """
         return self._handle_to_object_id
-
-    @property
-    def draw_bb_objs(self) -> List[int]:
-        """
-        Simulator object indices of objects to draw bounding boxes around if
-        debug render is enabled. By default, this is populated with all target
-        objects.
-        """
-        return self._draw_bb_objs
 
     @property
     def scene_obj_ids(self) -> List[int]:
@@ -386,11 +376,6 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-        self._draw_bb_objs = [
-            rom.get_object_by_handle(obj_handle).object_id
-            for obj_handle in self._targets
-        ]
-
         if self.first_setup:
             self.first_setup = False
             self.agents_mgr.first_setup()
@@ -440,13 +425,14 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for _attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point(
-                island_index=self._largest_indoor_island_idx
+            start_pos = np.array(
+                self.pathfinder.get_random_navigable_point(
+                    island_index=self._largest_indoor_island_idx
+                )
             )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
-
             if filter_func is not None and not filter_func(
                 start_pos, start_rot
             ):
@@ -565,7 +551,7 @@ class RearrangeSim(HabitatSim):
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
         Returns the 3D coordinates corresponding to a point belonging
-        to the biggest navmesh island in the scenee and closest to pos.
+        to the biggest navmesh island in the scene and closest to pos.
         When that point returns NaN, computes a navigable point at increasing
         distances to it.
         """
@@ -593,7 +579,7 @@ class RearrangeSim(HabitatSim):
             new_pos[0]
         ), f"The snap position is NaN. scene_id: {self.ep_info.scene_id}, new position: {new_pos}, original position: {pos}"
 
-        return new_pos
+        return np.array(new_pos)
 
     @add_perf_timing_func()
     def _add_objs(

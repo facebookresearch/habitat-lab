@@ -19,7 +19,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RobotForce,
 )
 from habitat.tasks.rearrange.utils import (
-    get_camera_lookat_relative_to_vertial_line,
+    get_camera_lookat_relative_to_vertical_line,
     rearrange_logger,
 )
 
@@ -178,7 +178,7 @@ class RearrangePickReward(RearrangeReward):
 
         if self._config.camera_looking_down_angle != -1:
             # Get angle
-            angle = get_camera_lookat_relative_to_vertial_line(
+            angle = get_camera_lookat_relative_to_vertical_line(
                 self._sim.articulated_agent
             )
             # Get the bbox keys

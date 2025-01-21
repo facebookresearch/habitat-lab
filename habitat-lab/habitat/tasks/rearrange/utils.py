@@ -42,16 +42,6 @@ def make_render_only(obj, sim):
     obj.collidable = False
 
 
-def make_border_red(img):
-    border_color = [255, 0, 0]
-    border_width = 10
-    img[:, :border_width] = border_color
-    img[:border_width, :] = border_color
-    img[-border_width:, :] = border_color
-    img[:, -border_width:] = border_color
-    return img
-
-
 def coll_name_matches(coll, name):
     return name in [coll.object_id_a, coll.object_id_b]
 
@@ -208,37 +198,6 @@ def rearrange_collision(
             robot_scene_colls=min(robot_scene_colls, 1),
         )
     return coll_details.total_collisions > 0, coll_details
-
-
-def convert_legacy_cfg(obj_list):
-    if len(obj_list) == 0:
-        return obj_list
-
-    def convert_fn(obj_dat):
-        fname = "/".join(obj_dat[0].split("/")[-2:])
-        if ".urdf" in fname:
-            obj_dat[0] = osp.join("data/replica_cad/urdf", fname)
-        else:
-            obj_dat[0] = obj_dat[0].replace(
-                "data/objects/", "data/objects/ycb/configs/"
-            )
-
-        if (
-            len(obj_dat) == 2
-            and len(obj_dat[1]) == 4
-            and np.array(obj_dat[1]).shape == (4, 4)
-        ):
-            # Specifies the full transformation, no object type
-            return (obj_dat[0], (obj_dat[1], int(MotionType.DYNAMIC)))
-        elif len(obj_dat) == 2 and len(obj_dat[1]) == 3:
-            # Specifies XYZ, no object type
-            trans = mn.Matrix4.translation(mn.Vector3(obj_dat[1]))
-            return (obj_dat[0], (trans, int(MotionType.DYNAMIC)))
-        else:
-            # Specifies the full transformation and the object type
-            return (obj_dat[0], obj_dat[1])
-
-    return list(map(convert_fn, obj_list))
 
 
 def euler_to_quat(rpy):
@@ -623,12 +582,12 @@ def _get_robot_spawns(
             is_feasible_state = details.robot_scene_colls == 0
 
         if is_feasible_state:
-            # found a feasbile state: reset state and return proposed stated
+            # found a feasible state: reset state and return proposed stated
             agent.base_pos = start_position
             agent.base_rot = start_rotation
             return candidate_navmesh_position, angle_to_object, False
 
-    # failure to sample a feasbile state: reset state and return initial conditions
+    # failure to sample a feasible state: reset state and return initial conditions
     agent.base_pos = start_position
     agent.base_rot = start_rotation
     return start_position, start_rotation, True
@@ -745,7 +704,7 @@ def get_camera_object_angle(
     return obj_angle
 
 
-def get_camera_lookat_relative_to_vertial_line(
+def get_camera_lookat_relative_to_vertical_line(
     agent,
 ) -> float:
     """Get the camera looking angles to a vertical line to the ground"""

@@ -1054,7 +1054,7 @@ def get_floor_point_in_region(
     # first try aiming at the center (nice for convex regions)
     if max_center_samples > 0:
         # get the center of the region's bounds and attempt to snap it to the navmesh
-        region_center = region.aabb.center
+        region_center = region.aabb.center()
         region_center_snap = sim.pathfinder.snap_point(
             region_center, island_index=island_index
         )
@@ -1436,6 +1436,51 @@ def point_to_tri_dist(
         return min_dist, closest_point
 
 
+def match_point_to_receptacle(
+    point: mn.Vector3,
+    sim: habitat_sim.Simulator,
+    candidate_receptacles: List["Receptacle"],
+    max_dist_to_rec: float = 0.25,
+) -> Tuple[List[str], float, str]:
+    """
+    Heuristic to match a 3D point with the nearest Receptacle(s).
+
+    :param sim: The Simulator instance.
+    :param candidate_receptacles: a list of candidate Receptacles for matching.
+    :param max_dist_to_rec: The threshold point to mesh distance to be matched with a Receptacle.
+    :return: Tuple containing: (1): list of receptacle strings [Receptacle.unique_name] or an empty list (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
+    """
+
+    # get point to rec distances for the candidates
+    dist_to_recs = [
+        rec.dist_to_rec(sim, point) for rec in candidate_receptacles
+    ]
+
+    # define an epsilon distance similarity threshold for determining two receptacles are equidistant (e.g. overlapping)
+    same_dist_eps = 0.01
+    min_indices = []
+    min_dist: float = None
+    for ix, dist in enumerate(dist_to_recs):
+        if dist < max_dist_to_rec:
+            if min_dist is None or dist < (min_dist - same_dist_eps):
+                min_dist = dist
+                min_indices = [ix]
+            elif abs(dist - min_dist) < same_dist_eps:
+                # this rec is nearly equidistant to the current best match
+                min_indices.append(ix)
+
+    # if match(es) found, return it/them
+    if len(min_indices) > 0:
+        return (
+            [candidate_receptacles[ix].unique_name for ix in min_indices],
+            1.0 - (min_dist / max_dist_to_rec),
+            "successful match",
+        )
+
+    # default empty return for failure
+    return ([], 0, "No match: point is too far from a candidate Receptacle.")
+
+
 def get_obj_receptacle_and_confidence(
     sim: habitat_sim.Simulator,
     obj: habitat_sim.physics.ManagedRigidObject,
@@ -1448,14 +1493,14 @@ def get_obj_receptacle_and_confidence(
     """
     Heuristic to match a potential placement point with a Receptacle and provide some confidence.
 
-    :param bottom_point: The bottom center point of the object or equivalent (e.g the candidate raycast point for placement)
+    :param sim: The Simulator instance.
     :param obj: The ManagedRigidObject for which to find a Receptacle match.
+    :param candidate_receptacles: a dict (unique_name to Receptacle) of candidate Receptacles for matching.
     :param support_surface_id: The object_id of the intended support surface (rigid object, articulated link, or stage_id). If not provided, a downward raycast from object center will determine the first hit as the support surface.
     :param obj_bottom_location: The optional location of the candidate bottom point of the object. If not provided, project the object center to the lowest extent.
-    :param max_dist_to_rec: The threshold point to mesh distance for an object to be matched with a Receptacle.
-    :param candidate_receptacles: Optionally provide a dict (unique_name to Receptacle) of candidate Receptacles for matching. If not provided, uses sim.receptacles.
+    :param max_dist_to_rec: The threshold point to mesh distance to be matched with a Receptacle.
     :param island_index: Optionally provide an island_index for identifying navigable floor points. Default is full navmesh.
-    :return: Tuple containing: (1): list of receptacle strings: "floor,region", Receptacle.unique_name, or None (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
+    :return: Tuple containing: (1): list of receptacle strings: Receptacle.unique_name, "floor,<region.id>", "<region.id>" or an empty list (2): a floating point confidence score [0,1] (3): a message string describing the results for use in a UI tooltip
 
     When using this util for candidate placement with raycasting (e.g. HitL): provide 'support_surface_id' and 'obj_bottom_location' overrides from the raycast.
     When using this util for assessing current object state (e.g. episode evaluation): leave 'support_surface_id' and 'obj_bottom_location' as default.
@@ -1464,7 +1509,7 @@ def get_obj_receptacle_and_confidence(
     info_text = ""
 
     # get the center point of the object projected on the local bounding box size in the gravity direction
-    grav_vector = mn.Vector3(0, -1, 0)
+    grav_vector = sim.get_gravity().normalized()
     dist, center = get_obj_size_along(sim, obj.object_id, grav_vector)
     # either compute or use the provided object location
     obj_bottom_point = (
@@ -1512,44 +1557,28 @@ def get_obj_receptacle_and_confidence(
             # there are no Receptacles for this support surface
             fallback_to_floor_matching = True
         else:
-            # select a Receptacle which most likely contains the point
-            dist_to_recs = [
-                rec.dist_to_rec(sim, obj_bottom_point) for rec in matching_recs
-            ]
+            # try matching to the candidate receptacles
+            matches, confidence, info_text = match_point_to_receptacle(
+                obj_bottom_point,
+                sim,
+                matching_recs,
+                max_dist_to_rec=max_dist_to_rec,
+            )
+            if len(matches) > 0:
+                return (matches, confidence, info_text)
 
-            # define an epsilon distance similarity threshold for determining two receptacles are equidistant (e.g. overlapping)
-            same_dist_eps = 0.01
-            min_indices = []
-            min_dist: float = None
-            for ix, dist in enumerate(dist_to_recs):
-                if dist < max_dist_to_rec:
-                    if min_dist is None or dist < (min_dist - same_dist_eps):
-                        min_dist = dist
-                        min_indices = [ix]
-                    elif abs(dist - min_dist) < same_dist_eps:
-                        # this rec is nearly equidistant to the current best match
-                        min_indices.append(ix)
-
-            if len(min_indices) > 0:
-                return (
-                    [matching_recs[ix].unique_name for ix in min_indices],
-                    1.0 - (min_dist / max_dist_to_rec),
-                    "successful match",
-                )
-            else:
-                info_text = "Point is too far from a valid Receptacle on the support surface."
+    # map the point to regions
+    point_regions = sim.semantic_scene.get_weighted_regions_for_point(
+        obj_bottom_point
+    )
 
     # If we made it this far, matching to a Receptacle object failed.
     # Now for some cases, check if the point is navigable and if so, try matching it to a region
     if fallback_to_floor_matching:
         # NOTE: using navmesh snapping to a point within 10cm horizontally as a heuristic for "on the floor"
         snap_point = sim.pathfinder.snap_point(obj_bottom_point, island_index)
-        snap_point[1] = obj_bottom_point[1]
-        if (obj_bottom_point - snap_point).length() < 0.1:
-            # this point is on the floor and should be mapped to a region
-            point_regions = sim.semantic_scene.get_weighted_regions_for_point(
-                obj_bottom_point
-            )
+        if (obj_bottom_point - snap_point).length() < 0.15:
+            # this point is on the floor
             if len(point_regions) > 0:
                 # found matching regions, pick the primary (most precise) one
                 region_name = sim.semantic_scene.regions[
@@ -1563,6 +1592,14 @@ def get_obj_receptacle_and_confidence(
             info_text = (
                 "Point does not match any Receptacle and is not navigable."
             )
+
+    # not on the floor or matched to a receptacle, so return the region.id
+    if len(point_regions) > 0:
+        return (
+            [sim.semantic_scene.regions[point_regions[0][0]].id],
+            1.0,
+            "region match",
+        )
 
     # all receptacles are too far away or there are no matches
     return [], 1.0, info_text
