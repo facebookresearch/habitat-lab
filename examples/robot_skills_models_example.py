@@ -11,7 +11,7 @@ Example script to load robot skills models into habitat environment
 import math
 import sys
 
-PATH_TO_ROBOT_SKILLS = "/data/home/jimmytyyang/facebook/vla/robot-skills"
+PATH_TO_ROBOT_SKILLS = "<your_path_to_robot_skills_repo>"
 # Link your path to robot-skills repo
 sys.path.append(PATH_TO_ROBOT_SKILLS)
 from omegaconf import OmegaConf
