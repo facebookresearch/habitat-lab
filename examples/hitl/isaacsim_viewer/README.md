@@ -3,6 +3,11 @@
 
 The app is an interactive VR physics sandbox. It features an HSSD scene, YCB objects, and a policy-driven Spot. If you connect a VR client, you can also interact with the scene via a Metahand. The app is also a good starting point for testing/hacking/benchmarking.
 
+## Requirements
+
+* A headed Linux desktop. Ubuntu is recommended for compatibility with Isaac Sim.
+* for VR (optional), you need a Quest 3, and the Linux server can be run headless.
+
 ## Installation
 
 ### Isaac Sim
@@ -105,5 +110,6 @@ YCB or other objects:
 2. Edit `isaaclab_convert_test.py __main__` to call `convert_objects_folder_to_usd`.
 
 
-## Rebuilding the VR client
-Instructions coming soon!
+## Rebuilding the Unity VR client
+
+See [siro_hitl_unity_client/tree/eundersander/isaac_vr2](https://github.com/eundersander/siro_hitl_unity_client/tree/eundersander/isaac_vr2).
