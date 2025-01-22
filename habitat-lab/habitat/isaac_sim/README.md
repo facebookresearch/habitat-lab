@@ -1,6 +1,6 @@
-
-
 # Habitat Isaac Sim Integration
+
+This integration offers Isaac Sim as an additional physics backend for use in Habitat-lab, alongside Habitat-sim. Habitat-sim is used to render the Isaac simulation.
 
 ## Isaac Sim Installation
 
@@ -24,10 +24,16 @@ python -c "import isaacsim; print(isaacsim)"
 Isaac Lab is only needed for doing asset conversion to USD format. If you've already been provided Isaac Sim USD files, you can skip this.
 
 ```
+# Clone and install Isaac Lab. We recommend cloning it outside your Habitat-lab folder.
 git clone https://github.com/isaac-sim/IsaacLab
 cd IsaacLab
 ./isaaclab.sh --install "none"
 ```
 
-If you encounter issues, see [official instructions for installing Isaac Sim and Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-lab).  
+If you encounter issues, see [official instructions for installing Isaac Sim and Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-lab).
 
+## Converting Physics Assets to USD
+Todo
+
+## Using Isaac Sim
+Coming soon!
