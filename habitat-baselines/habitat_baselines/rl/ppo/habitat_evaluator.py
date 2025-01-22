@@ -25,12 +25,86 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat_baselines.utils.info_dict import extract_scalars_from_info
+from einops import rearrange
+from PIL import Image
 
 
 class HabitatEvaluator(Evaluator):
     """
     Evaluator for Habitat environments.
     """
+
+    def infer_action_vla_model(self, vla_model, processor, observation):
+        """Infer action using vla models."""
+
+        # To something on observation
+        # torch.Size([1, 256, 256, 3])
+        # python -u -m habitat_baselines.run --config-name=rearrange/rl_skill_data_gen.yaml benchmark/rearrange/skills=pick_spot_hssd_3_data_gen habitat_baselines.evaluate=True habitat_baselines.num_checkpoints=5000 habitat_baselines.total_num_steps=1.0e10 habitat_baselines.num_environments=12 habitat_baselines.video_dir=/fsx-siro/jimmytyyang/rl_log/video_mg97hv104evalJan12v2_16 habitat_baselines.checkpoint_folder=/fsx-siro/jimmytyyang/rl_log/checkpoints_mg97hv104evalJan12v2_16 habitat_baselines.eval_ckpt_path_dir=/fsx-siro/jimmytyyang/rl_log/checkpoints_mg97hv104_16/latest.pth habitat_baselines.test_episode_count=100 habitat.task.actions.base_velocity_non_cylinder.longitudinal_lin_speed=1 habitat.task.actions.base_velocity_non_cylinder.ang_speed=2.0 habitat.task.actions.base_velocity_non_cylinder.allow_dyn_slide=False habitat.task.actions.arm_action.delta_pos_limit=0.01667 'habitat.task.actions.arm_action.gaze_distance_range=[0.0,0.5]' habitat.task.actions.arm_action.consider_detected_portion_threshold=0.25 'habitat.task.actions.arm_action.arm_joint_limit=[[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708]]' 'habitat.task.actions.base_velocity_non_cylinder.navmesh_offset=[[0.0,0.0],[0.25,0.0],[-0.25,0.0]]' habitat.task.measurements.pick_reward.dist_reward=20.0 habitat.task.measurements.pick_reward.wrong_pick_pen=5.0 habitat.task.measurements.pick_reward.count_coll_pen=0.05 habitat.task.measurements.pick_reward.max_count_colls=100 habitat.task.measurements.pick_reward.count_coll_end_pen=5 habitat.task.measurements.pick_reward.non_desire_ee_local_pos_dis=0.2 habitat.task.measurements.pick_reward.non_desire_ee_local_pos_pen=5.0 'habitat.task.measurements.pick_reward.non_desire_ee_local_pos=[0.3,0.0,0.0]' habitat.task.measurements.pick_reward.camera_looking_down_angle=-1.0 habitat.task.measurements.pick_reward.camera_looking_down_pen=5.0 habitat.task.measurements.end_effector_to_object_distance.if_consider_gaze_angle=False habitat.task.measurements.end_effector_to_object_distance.desire_distance_between_gripper_object=0.1 habitat.task.measurements.end_effector_to_object_distance.if_consider_detected_portion=True habitat.task.success_reward=10.0 habitat.task.slack_reward=-0.01 habitat.task.base_angle_noise=0.261799 habitat.task.spawn_max_dist_to_obj=1.5 habitat.environment.max_episode_steps=1500 habitat.simulator.kinematic_mode=True habitat.simulator.ac_freq_ratio=4 habitat.simulator.ctrl_freq=120 habitat.simulator.agents.main_agent.joint_start_noise=0.15 habitat_baselines.load_resume_state_config=False
+
+        # observation has dict_keys([
+        # 'arm_depth_bbox_sensor', 'articulated_agent_arm_depth', 
+        # 'articulated_agent_arm_rgb', 'ee_pos', 
+        # 'head_stereo_left_depth', 'head_stereo_right_depth', 
+        # 'joint', 'third_rgb'])
+        RGB = observation["articulated_agent_arm_rgb"][0]
+        
+        # Resize the image here
+        img = Image.fromarray(RGB.cpu().detach().numpy())
+        img = img.resize((224, 224))
+        img = np.array(img)
+        RGB = torch.as_tensor(rearrange(img, 'h w c-> c h w')) #torch.Size([3, 224, 224])
+
+        joint_sensors = None
+        bsz = 1
+        cond_step = 2
+        dummy_images = torch.randint(
+            0, 256, (bsz, cond_step, 3, 224, 224), dtype=torch.uint8
+        )
+
+        # Both are assigned to the same RGB
+        dummy_images[0, 0] = RGB
+        dummy_images[0, 1] = RGB
+        dummy_images = rearrange(
+            dummy_images, "B T C H W -> (B T) C H W"
+        ) 
+
+        dummy_texts = [
+            "pick up the object that is near you",
+        ]
+
+        dummy_proprio = torch.zeros(
+            (bsz, cond_step, 4)
+        )
+        dummy_proprio[0, 0] = observation["joint"]
+        dummy_proprio[0, 1] = observation["joint"]
+
+        device = "cuda"
+        dtype = torch.bfloat16
+
+        # process image and text
+        model_inputs = processor(text=dummy_texts, images=dummy_images)
+        model_inputs["pixel_values"] = rearrange(
+            model_inputs["pixel_values"], "(B T) C H W -> B T C H W", B=bsz, T=cond_step
+        )
+        causal_mask, vlm_position_ids, proprio_position_ids, action_position_ids = (
+            vla_model.build_causal_mask_and_position_ids(model_inputs["attention_mask"], dtype=dtype)
+        )
+        image_text_proprio_mask, action_mask = vla_model.split_full_mask_into_submasks(
+            causal_mask
+        )
+
+        with torch.inference_mode():
+            actions = vla_model.infer_action(
+                input_ids=model_inputs["input_ids"].to(device),
+                pixel_values=model_inputs["pixel_values"].to(dtype).to(device),
+                image_text_proprio_mask=image_text_proprio_mask.to(device),
+                action_mask=action_mask.to(device),
+                vlm_position_ids=vlm_position_ids.to(device),
+                proprio_position_ids=proprio_position_ids.to(device),
+                action_position_ids=action_position_ids.to(device),
+                proprios=dummy_proprio.to(dtype).to(device),
+            ) # [bsz, horizon, dim]
+        return actions
 
     def evaluate_agent(
         self,
@@ -44,6 +118,8 @@ class HabitatEvaluator(Evaluator):
         obs_transforms,
         env_spec,
         rank0_keys,
+        vla_model=None,
+        vla_processor=None,
     ):
         observations = envs.reset()
         observations = envs.post_step(observations)
@@ -254,6 +330,9 @@ class HabitatEvaluator(Evaluator):
             # Add the action to the dict
             for env_idx in range(config.habitat_baselines.num_environments):
                 observation_action_of_interest[env_idx][-1]["action"] = step_data[env_idx]
+            
+            self.infer_action_vla_model(vla_model, vla_processor, batch)
+            breakpoint()
             outputs = envs.step(step_data)
 
             observations, rewards_l, dones, infos = [
