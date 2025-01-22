@@ -652,6 +652,16 @@ class PPOTrainer(BaseRLTrainer):
             * torch.distributed.get_world_size()
         )
 
+    def load_checkpoint_vla(self, path, model):
+        """load to cpu first, then move to gpu"""
+        data = torch.load(path, weights_only=True, map_location="cpu")
+        # remove "_orig_mod." prefix if saved model was compiled
+        data["model"] = {
+            k.replace("_orig_mod.", ""): v for k, v in data["model"].items()
+        }
+        model.load_state_dict(data["model"], strict=True)
+        return model
+
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training DD/PPO.
@@ -845,109 +855,46 @@ class PPOTrainer(BaseRLTrainer):
             OmegaConf.register_new_resolver("round_up", math.ceil)
             OmegaConf.register_new_resolver("round_down", math.floor)
             # import pizero model
-            from src.model.vla.pizero import PiZero
+            from src.model.vla.pizero import PiZero, PiZeroInference
 
             # Define the config path
             config = OmegaConf.load(
                 "/data/home/jimmytyyang/facebook/vla/robot-skills/config/train/mg97hv104eval_jan12v2_0.yaml"
             )
-            config.cond_steps = 1
-            config.use_lm_head = True
-            config.mixture.vlm.use_final_norm = True
+            config.cond_steps = 2
+            config.use_lm_head = False
+            config.mixture.vlm.use_final_norm = False
+            config.horizon_steps = 4
             # load the model
-            model = PiZero(config)
-            model.tie_action_proprio_weights()
-            model.load_pretrained_weights()
+            model = PiZeroInference(config, use_ddp=False)
+            model = self.load_checkpoint_vla(
+                "/fsx-siro/jimmytyyang/vla_ckpt/vla_007_12/checkpoint/step100000.pt",
+                model,
+            )
+            model.freeze_all_weights()
             dtype = torch.bfloat16
             model.to("cuda")
             model.to(dtype)
+            model = torch.compile(
+                model,
+                mode="default",  # "reduce-overhead", max-autotune(-no-cudagraphs)
+                # backend="inductor", # default: inductor; cudagraphs
+            )
             model.eval()
-
-            # dummy image --- replace the first image with a real one
-            bsz = 1
-            dummy_images = torch.randint(
-                0, 256, (bsz, 3, 224, 224), dtype=torch.uint8
-            )  # not used if text_only
-            real_image_path = "/data/home/jimmytyyang/facebook/vla/robot-skills/media/maniskill_pp.png"
-            real_image = Image.open(real_image_path).convert("RGB")
-            real_image_t = torch.as_tensor(
-                np.array(real_image.resize((224, 224))).transpose(2, 0, 1)
-            )
-            dummy_images[0] = real_image_t
-
-            # text and proprio
-            dummy_texts = [
-                "this image shows ",
-                "this is a nice portrait of London because ",
-            ][:bsz]
-            dummy_proprio = torch.rand(
-                bsz, config.cond_steps, config.action_dim
-            )
 
             # tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 config.pretrained_model_path, padding_side="right"
             )
-            assert tokenizer.padding_side == "right"
-
             # processor
             num_image_tokens = config.vision.config.num_image_tokens
             processor = VLAProcessor(
-                tokenizer, num_image_tokens, config.max_seq_len
+                tokenizer,
+                num_image_tokens,
+                config.max_seq_len,
+                config.tokenizer_padding,
             )
 
-            # process image and text
-            model_inputs = processor(text=dummy_texts, images=dummy_images)
-            input_ids = model_inputs["input_ids"]
-            attention_mask = model_inputs["attention_mask"]
-            pixel_values = model_inputs["pixel_values"].to(dtype)
-
-            # inference
-            start_time = time.time()
-
-            kv_cache = model.build_text_cache()
-            num_tokens_to_generate = 20
-            print(
-                f"Generating text of maximum {num_tokens_to_generate} tokens..."
-            )
-
-            stop_token = processor.tokenizer.eos_token_id
-            generated_tokens = []
-            for _ in range(num_tokens_to_generate):
-                with torch.inference_mode():
-                    outputs = model.infer_text(
-                        input_ids=input_ids.to(self.device),
-                        pixel_values=pixel_values.to(self.device),
-                        attention_mask=attention_mask.to(self.device),
-                        kv_cache=kv_cache,
-                    )
-                next_token_logits = outputs["logits"][:, -1, :]
-                next_token = torch.argmax(
-                    next_token_logits, dim=-1, keepdim=True
-                )
-                assert next_token.size() == (1, 1)
-                next_token = next_token.squeeze(0)  # remove batch dimension
-                generated_tokens.append(next_token)
-                # stop if the stop token has been generated
-                if next_token.item() == stop_token:
-                    break
-                # only input the new token the next time since using cache
-                input_ids = next_token.unsqueeze(-1)
-                attention_mask = torch.cat(
-                    [
-                        attention_mask,
-                        torch.ones((1, 1), dtype=attention_mask.dtype),
-                    ],
-                    dim=-1,
-                )
-            generated_tokens = torch.cat(generated_tokens, dim=-1)
-            decoded = processor.tokenizer.decode(
-                generated_tokens, skip_special_tokens=True
-            )
-            print("\n\n=========================")
-            print("Image path:", real_image_path)
-            print("Prompt:", dummy_texts[0])
-            print("Generated text:", decoded)
         else:
             ckpt_dict = {"config": None}
 
@@ -1003,7 +950,7 @@ class PPOTrainer(BaseRLTrainer):
         step_id = checkpoint_index
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
-        breakpoint()
+
         evaluator = hydra.utils.instantiate(config.habitat_baselines.evaluator)
         assert isinstance(evaluator, Evaluator)
         # self._agent.actor_critic is a PointNavResNetPolicy()
