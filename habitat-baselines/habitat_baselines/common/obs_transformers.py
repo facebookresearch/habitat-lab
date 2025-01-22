@@ -841,7 +841,7 @@ def get_cubemap_projections(
 
 
 class Cube2Equirect(ProjectionConverter):
-    """This is the backend Cube2Equirect nn.module that does the stiching.
+    """This is the backend Cube2Equirect nn.module that does the stitching.
     Inspired from https://github.com/fuenwang/PanoramaUtility and
     optimized for modern PyTorch."""
 
@@ -970,7 +970,7 @@ class CubeMap2Equirect(ProjectionTransformer):
     has the 6 sensors in the proper orientations. This code also assumes a 90
     FOV.
 
-    Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
+    Sensor order for cubemap stitching is Back, Down, Front, Left, Right, Up.
     The output will be written the UUID of the first sensor.
     """
 
@@ -1063,7 +1063,7 @@ class CubeMap2Fisheye(ProjectionTransformer):
     has the 6 sensors in the proper orientations. This code also assumes a 90
     FOV.
 
-    Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
+    Sensor order for cubemap stitching is Back, Down, Front, Left, Right, Up.
     The output will be written the UUID of the first sensor.
     """
 

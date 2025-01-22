@@ -44,7 +44,7 @@ def _generate_fn(scene):
     with habitat.config.read_write(cfg):
         cfg.habitat.simulator.scene = scene
         agent_config = get_agent_config(cfg.habitat.simulator)
-        agent_config.sensors.clear()
+        agent_config.sim_sensors.clear()
 
     sim = habitat.sims.make_sim("Sim-v0", config=cfg.habitat.simulator)
 

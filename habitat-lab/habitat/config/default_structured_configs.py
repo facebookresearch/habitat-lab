@@ -1667,7 +1667,7 @@ class AgentConfig(HabitatBaseConfig):
     max_climb: float = 0.2
     max_slope: float = 45.0
     grasp_managers: int = 1
-    sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
+    sim_sensors: Dict[str, Any] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])

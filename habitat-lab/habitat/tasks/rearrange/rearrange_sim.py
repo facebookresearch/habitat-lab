@@ -59,12 +59,12 @@ from habitat_sim.sim import SimulatorBackend
 from habitat_sim.utils.common import quat_from_magnum
 
 if TYPE_CHECKING:
-    from omegaconf import DictConfig
+    from habitat.config.default_structured_configs import SimulatorConfig
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
-    def __init__(self, config: "DictConfig"):
+    def __init__(self, config: "SimulatorConfig"):
         if len(config.agents) > 1:
             with read_write(config):
                 for agent_name, agent_cfg in config.agents.items():
@@ -285,7 +285,9 @@ class RearrangeSim(HabitatSim):
             self._sleep_all_objects()
 
     @add_perf_timing_func()
-    def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+    def reconfigure(
+        self, config: "SimulatorConfig", ep_info: RearrangeEpisode
+    ):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         self.ep_info = ep_info
@@ -309,7 +311,7 @@ class RearrangeSim(HabitatSim):
             # delete old KRM when scene is hard reset
             self.kinematic_relationship_manager = None
             with read_write(config):
-                config["scene"] = ep_info.scene_id
+                config.scene = ep_info.scene_id
             t_start = time.time()
             super().reconfigure(config, should_close_on_new_scene=False)
             self.add_perf_timing("super_reconfigure", t_start)
