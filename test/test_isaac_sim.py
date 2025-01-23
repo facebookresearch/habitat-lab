@@ -296,7 +296,7 @@ def test_add_habitat_visual_metadata_for_articulation():
     stage_before_metadata = Usd.Stage.Open(converted_clean_usda)
     stage_output_metadata = Usd.Stage.Open(out_usd_filepath)
 
-    # Add the habitatVisual metadata to each relevant prim
+    # See if habitatVisual data was contained inside usda file
     for link_name, metadata in visual_metadata.items():
         prim_path = f"/{robot_name}/{link_name}"
         prim = stage_before_metadata.GetPrimAtPath(prim_path)
