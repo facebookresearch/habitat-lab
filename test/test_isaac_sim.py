@@ -31,6 +31,16 @@ from pxr import Usd
 
 
 ## Helper functions
+def usd_to_habitat_scale(scale: List[float]) -> List[float]:
+    """
+    Convert a scale from USD (Z-up) to Habitat (Y-up) coordinate system.
+
+    Issac (x, y, z) -> Habitat (x, z, y)
+    """
+    x, y, z = scale
+    return [x, z, y]
+
+
 def usd_to_habitat_position(position: List[float]) -> List[float]:
     """
     Convert a position from USD (Z-up) to Habitat (Y-up) coordinate system.
@@ -171,14 +181,15 @@ def test_example2_scene_instance():
         xform_prim.GetAttribute("xformOp:orient").Get().imaginary
     )
     usda_orient_real = xform_prim.GetAttribute("xformOp:orient").Get().real
-    # usda_scale = list(xform_prim.GetAttribute("xformOp:scale").Get())
+    usda_scale = list(xform_prim.GetAttribute("xformOp:scale").Get())
     usda_translate = list(xform_prim.GetAttribute("xformOp:translate").Get())
 
     # change usd coords back to habitat coords
 
-    usda_translate_hab_coord = usd_to_habitat_position(usda_translate)
+    hab_translate_from_usd = usd_to_habitat_position(usda_translate)
     usda_rotation = [usda_orient_real] + usda_orient_im
-    usda_rotation_hab_coord = usd_to_habitat_rotation(usda_rotation)
+    hab_rotation_from_usd = usd_to_habitat_rotation(usda_rotation)
+    hab_scale_from_usd = usd_to_habitat_scale(usda_scale)
 
     with open(scene_filepath, "r") as file:
         scene_instance_json_data = json.load(file)
@@ -189,17 +200,19 @@ def test_example2_scene_instance():
     scene_instance_rotation = scene_instance_json_data["object_instances"][0][
         "rotation"
     ]
-    # scene_instance_uniform_scale = scene_instance_json_data[
-    #     "object_instances"
-    # ][0]["non_uniform_scale"]
+    scene_instance_uniform_scale = scene_instance_json_data[
+        "object_instances"
+    ][0]["non_uniform_scale"]
 
-    assert usda_translate_hab_coord == pytest.approx(
-        scene_instance_translation
+    abs_val_scene_instance_uniform_scale = [
+        abs(num) for num in scene_instance_uniform_scale
+    ]
+
+    assert hab_translate_from_usd == pytest.approx(scene_instance_translation)
+    assert hab_rotation_from_usd == pytest.approx(scene_instance_rotation)
+    assert hab_scale_from_usd == pytest.approx(
+        abs_val_scene_instance_uniform_scale
     )
-    assert usda_rotation_hab_coord == pytest.approx(scene_instance_rotation)
-    # TODO: Add Scale to show values are equal, looks like most objects are (1, 1, 1) for the (x, y, z) coordinates in hab space.
-    # Not sure, but pxr space is has values from 0 to infinity, and 1 is default, but hab space has
-    # -1 values?  Don't know what hab space scaling is.
 
 
 ## urdf_to_usd.py unit tests
