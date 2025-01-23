@@ -7,6 +7,7 @@ import torch
 import tqdm
 from einops import rearrange
 from PIL import Image
+import time
 
 from habitat import logger
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -33,9 +34,23 @@ class HabitatEvaluator(Evaluator):
     """
     Evaluator for Habitat environments.
     """
+    observation_dict = []
+    vla_action = []
+
+    def process_rgb(self, rgb):
+        # Resize the image here
+        img = Image.fromarray(rgb.cpu().detach().numpy())
+        img = img.resize((224, 224))
+        img = np.array(img)
+        rgb = torch.as_tensor(
+            rearrange(img, "h w c-> c h w")
+        )  # torch.Size([3, 224, 224])
+        return rgb
 
     def infer_action_vla_model(self, vla_model, processor, observation):
         """Infer action using vla models."""
+
+        self.observation_dict.append(observation)
 
         # To something on observation
         # torch.Size([1, 256, 256, 3])
@@ -46,35 +61,31 @@ class HabitatEvaluator(Evaluator):
         # 'articulated_agent_arm_rgb', 'ee_pos',
         # 'head_stereo_left_depth', 'head_stereo_right_depth',
         # 'joint', 'third_rgb'])
-        RGB = observation["articulated_agent_arm_rgb"][0]
-
-        # Resize the image here
-        img = Image.fromarray(RGB.cpu().detach().numpy())
-        img = img.resize((224, 224))
-        img = np.array(img)
-        RGB = torch.as_tensor(
-            rearrange(img, "h w c-> c h w")
-        )  # torch.Size([3, 224, 224])
-
+        
         joint_sensors = None
         bsz = 1
         cond_step = 2
         dummy_images = torch.randint(
             0, 256, (bsz, cond_step, 3, 224, 224), dtype=torch.uint8
         )
+        dummy_proprio = torch.zeros((bsz, cond_step, 4))
 
         # Both are assigned to the same RGB
-        dummy_images[0, 0] = RGB
-        dummy_images[0, 1] = RGB
+        if len(self.observation_dict) == 1:
+            dummy_images[0, 0] = self.process_rgb(self.observation_dict[-1]["articulated_agent_arm_rgb"][0])
+            dummy_images[0, 1] = self.process_rgb(self.observation_dict[-1]["articulated_agent_arm_rgb"][0])
+            dummy_proprio[0, 0] = self.observation_dict[-1]["joint"]
+            dummy_proprio[0, 1] = self.observation_dict[-1]["joint"]
+        else:
+            dummy_images[0, 0] = self.process_rgb(self.observation_dict[-2]["articulated_agent_arm_rgb"][0])
+            dummy_images[0, 1] = self.process_rgb(self.observation_dict[-1]["articulated_agent_arm_rgb"][0])
+            dummy_proprio[0, 0] = self.observation_dict[-2]["joint"]
+            dummy_proprio[0, 1] = self.observation_dict[-1]["joint"]
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 
         dummy_texts = [
             "pick up the object that is near you",
         ]
-
-        dummy_proprio = torch.zeros((bsz, cond_step, 4))
-        dummy_proprio[0, 0] = observation["joint"]
-        dummy_proprio[0, 1] = observation["joint"]
 
         device = "cuda"
         dtype = torch.bfloat16
@@ -101,6 +112,7 @@ class HabitatEvaluator(Evaluator):
         ) = vla_model.split_full_mask_into_submasks(causal_mask)
 
         with torch.inference_mode():
+            start_time = time.time()
             actions = vla_model.infer_action(
                 input_ids=model_inputs["input_ids"].to(device),
                 pixel_values=model_inputs["pixel_values"].to(dtype).to(device),
@@ -111,6 +123,7 @@ class HabitatEvaluator(Evaluator):
                 action_position_ids=action_position_ids.to(device),
                 proprios=dummy_proprio.to(dtype).to(device),
             )  # [bsz, horizon, dim]
+            print(f"time taken to generate actions: {time.time()-start_time}")
         return actions
 
     def evaluate_agent(
@@ -337,7 +350,7 @@ class HabitatEvaluator(Evaluator):
                 observation_action_of_interest[env_idx][-1][
                     "action"
                 ] = step_data[env_idx]
-
+            
             vla_action = self.infer_action_vla_model(
                 vla_model, vla_processor, batch
             )
@@ -502,6 +515,7 @@ class HabitatEvaluator(Evaluator):
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
                     if len(config.habitat_baselines.eval.video_option) > 0:
+                        self.observation_dict = [] # reset
                         generate_video(
                             video_option=config.habitat_baselines.eval.video_option,
                             video_dir=config.habitat_baselines.video_dir,

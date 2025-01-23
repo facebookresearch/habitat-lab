@@ -862,13 +862,14 @@ class PPOTrainer(BaseRLTrainer):
                 "/data/home/jimmytyyang/facebook/vla/robot-skills/config/train/mg97hv104eval_jan12v2_0.yaml"
             )
             config.cond_steps = 2
-            config.use_lm_head = False
-            config.mixture.vlm.use_final_norm = False
+            config.use_lm_head = True
+            config.mixture.vlm.use_final_norm = True
             config.horizon_steps = 4
             # load the model
             model = PiZeroInference(config, use_ddp=False)
             model = self.load_checkpoint_vla(
-                "/fsx-siro/jimmytyyang/vla_ckpt/vla_007_12/checkpoint/step100000.pt",
+                #"/fsx-siro/jimmytyyang/vla_ckpt/vla_007_12/checkpoint/step100000.pt", #use_lm_head = False
+                "/fsx-siro/jimmytyyang/vla_ckpt/vla_007_4/checkpoint/step250000.pt", # #use_lm_head = True
                 model,
             )
             model.freeze_all_weights()
