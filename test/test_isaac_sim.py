@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from typing import List
@@ -94,6 +95,36 @@ def usd_to_habitat_rotation(rotation: List[float]) -> List[float]:
     rotation_hab = quat_multiply(q_trans, rotation)
 
     return rotation_hab
+
+
+def find_scene_instance_json_files(scene_directory: str) -> List[str]:
+    """
+    Find all files in the given folder and its subfolders whose names end with 'scene_instance.json'.
+    :param folder_path: The path to the folder to search.
+    :return: A list of paths to the matching files.
+    """
+    matching_files = []
+    for root, _, files in os.walk(scene_directory):
+        for file in files:
+            if file.endswith("scene_instance.json"):
+                matching_files.append(os.path.join(root, file))
+    return matching_files
+
+
+def make_scene_instance_usd_path(
+    scene_filepath: str, scene_output_directory: str
+) -> str:
+    filename_with_extension = os.path.basename(scene_filepath)
+    filename_without_extension = os.path.splitext(filename_with_extension)[0]
+    usda_filename = f"{filename_without_extension}.usda"
+
+    # Create the new directory if it doesn't exist
+    if not os.path.exists(scene_output_directory):
+        os.makedirs(scene_output_directory)
+
+    usda_filepath = os.path.join(scene_output_directory, usda_filename)
+
+    return usda_filepath
 
 
 ## scene_instance_json_to_usd.py unit tests
@@ -296,7 +327,7 @@ def test_add_habitat_visual_metadata_for_articulation():
                     scale_element = mesh.find("scale")
                     if scale_element is not None:
                         scale = tuple(
-                            map(float, scale_element.text.split())
+                            map(float, scale_element.text.split())  # type: ignore # noqa: E501
                         )  # type: ignore # noqa: ALL
 
                     # Replace periods with underscores for USD-safe names
@@ -330,3 +361,61 @@ def test_add_habitat_visual_metadata_for_articulation():
                     "habitatVisual:assetScale"
                 ).Get()
             )
+
+
+scene_directory = repo_dir + "/../" + "habitat-sim/data/hssd-hab/scenes"
+
+
+@pytest.mark.skipif(
+    not os.path.exists(scene_directory),
+    reason=f"Directory '{scene_directory}' does not exist",
+)
+def test_bulk_hssd_scene_instance_conversion():
+    project_root_folder = repo_dir
+    scene_directory = repo_dir + "/data/hssd-hab/scenes"
+    scene_output_dir = (
+        repo_dir + "/test/data/usd_conversion_data/bulk_testing_output"
+    )
+
+    if os.path.exists(scene_output_dir):
+        shutil.rmtree(scene_output_dir)
+        print(f"Directory '{scene_output_dir}' deleted successfully.")
+
+    if not os.path.exists(scene_output_dir):
+        os.mkdir(scene_output_dir)
+
+    scene_instance_json_list = find_scene_instance_json_files(scene_directory)
+
+    try:
+        assert len(scene_instance_json_list) >= 1
+        print(
+            f"There exists at least one scene instance json in {scene_directory}"
+        )
+    except AssertionError as e:
+        pytest.fail(
+            f"There are no scene instance json files in : {scene_directory}"
+        )
+
+    output_scene_instance_usd_filepath = []
+    for scene_filepath in scene_instance_json_list:
+        scene_usd_filepath = make_scene_instance_usd_path(
+            scene_filepath, scene_output_dir
+        )
+
+        subprocess.run(
+            [
+                "python",
+                scene_instance_conversion_script,
+                scene_filepath,
+                project_root_folder,
+                scene_usd_filepath,
+            ]
+        )
+        output_scene_instance_usd_filepath.append(scene_usd_filepath)
+
+    for output_usd in output_scene_instance_usd_filepath:
+        assert os.path.exists(output_usd)
+
+    if os.path.exists(scene_output_dir):
+        shutil.rmtree(scene_output_dir)
+        print(f"Directory '{scene_output_dir}' deleted successfully.")
