@@ -330,7 +330,3 @@ def test_add_habitat_visual_metadata_for_articulation():
                     "habitatVisual:assetScale"
                 ).Get()
             )
-
-    if os.path.exists(out_usd_filepath):
-        assert True
-        os.remove(out_usd_filepath)
