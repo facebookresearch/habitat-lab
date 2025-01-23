@@ -11,7 +11,9 @@ repo_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, repo_dir)
 isaacsim_dir = repo_dir + "/habitat-lab/habitat/isaac_sim"
 sys.path.insert(0, isaacsim_dir)
-sys.path.insert(0, repo_dir + "/habitat-lab/habitat/isaac_sim/asset_conversion")
+sys.path.insert(
+    0, repo_dir + "/habitat-lab/habitat/isaac_sim/asset_conversion"
+)
 
 scene_instance_conversion_script = (
     isaacsim_dir + "/asset_conversion/scene_instance_json_to_usd.py"
@@ -172,6 +174,10 @@ def test_example2_scene_instance():
     # Not sure, but pxr space is has values from 0 to infinity, and 1 is default, but hab space has
     # -1 values?  Don't know what hab space scaling is.
 
+    if os.path.exists(scene_usd_filepath):
+        assert True
+        os.remove(scene_usd_filepath)
+
 
 ## urdf_to_usd.py unit tests
 
@@ -221,12 +227,13 @@ def test_clean_urdf():
     # Optionally remove <visual> elements
     assert len(root_removed_visual.xpath("//visual")) == 0
     assert len(root_removed_visual_CORRECT.xpath("//visual")) == 0
-    
+
     if os.path.exists(output_file):
         os.remove(output_file)
-        
+
     if os.path.exists(removed_visual):
         os.remove(removed_visual)
+
 
 def test_convert_urdf():
     urdf_dir = repo_dir + "/test/data/usd_conversion_data/"
@@ -234,14 +241,15 @@ def test_convert_urdf():
     output_usd = urdf_dir + "hab_spot_arm_test_convert_urdf.usda"
 
     convert_urdf(clean_urdf_filepath, output_usd)
-    # TODO: Issac sim drops a prim. "Warning: Prim not found for link: fl_uleg"
 
-    assert True
+    if os.path.exists(output_usd):
+        assert True
+        os.remove(output_usd)
 
 
 def test_add_habitat_visual_metadata_for_articulation():
     urdf_dir = repo_dir + "/test/data/usd_conversion_data/"
-    converted_clean_usda = urdf_dir + "hab_spot_arm_test_convert_urdf.usda"
+    converted_clean_usda = urdf_dir + "hab_spot_arm_test_converted_urdf.usda"
     reference_urdf_filepath = urdf_dir + "hab_spot_arm_EXAMPLE.urdf"
     out_usd_filepath = urdf_dir + "hab_spot_arm_with_hab_metadata.usda"
     project_root_folder = repo_dir
@@ -323,5 +331,6 @@ def test_add_habitat_visual_metadata_for_articulation():
                 ).Get()
             )
 
-if __name__ == "__main__":
-    test_clean_urdf()
+    if os.path.exists(out_usd_filepath):
+        assert True
+        os.remove(out_usd_filepath)
