@@ -348,7 +348,14 @@ def test_add_habitat_visual_metadata_for_articulation():
             )
 
 
-def test_bulk_scene_instance_conversion():
+scene_directory = repo_dir + "/../" + "habitat-sim/data/hssd-hab/scenes"
+
+
+@pytest.mark.skipif(
+    not os.path.exists(scene_directory),
+    reason=f"Directory '{scene_directory}' does not exist",
+)
+def test_bulk_hssd_scene_instance_conversion():
     project_root_folder = repo_dir
     scene_directory = repo_dir + "/../" + "habitat-sim/data/hssd-hab/scenes"
     scene_output_dir = (
@@ -361,13 +368,20 @@ def test_bulk_scene_instance_conversion():
 
     if not os.path.exists(scene_output_dir):
         os.mkdir(scene_output_dir)
-        gitignore_filepath = scene_output_dir + "/.gitignore"
-        with open(gitignore_filepath, "w"):
-            pass
-        print(f"File '{gitignore_filepath}' created successfully.")
 
     scene_instance_json_list = find_scene_instance_json_files(scene_directory)
 
+    try:
+        assert len(scene_instance_json_list) >= 1
+        print(
+            f"There exists at least one scene instance json in {scene_directory}"
+        )
+    except AssertionError as e:
+        pytest.fail(
+            f"There are no scene instance json files in : {scene_directory}"
+        )
+
+    output_scene_instance_usd_filepath = []
     for scene_filepath in scene_instance_json_list:
         scene_usd_filepath = make_scene_instance_usd_path(
             scene_filepath, scene_output_dir
@@ -382,13 +396,11 @@ def test_bulk_scene_instance_conversion():
                 scene_usd_filepath,
             ]
         )
+        output_scene_instance_usd_filepath.append(scene_usd_filepath)
 
-        assert True
+    for output_usd in output_scene_instance_usd_filepath:
+        assert os.path.exists(output_usd)
 
     if os.path.exists(scene_output_dir):
         shutil.rmtree(scene_output_dir)
         print(f"Directory '{scene_output_dir}' deleted successfully.")
-
-
-if __name__ == "__main__":
-    test_bulk_scene_instance_conversion()
