@@ -9,12 +9,14 @@ from lxml import etree as ET
 
 repo_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, repo_dir)
-isaacsim_dir = repo_dir + "/habitat-lab/habitat/isaacsim"
+isaacsim_dir = repo_dir + "/habitat-lab/habitat/isaac_sim"
 sys.path.insert(0, isaacsim_dir)
+sys.path.insert(0, repo_dir + "/habitat-lab/habitat/isaac_sim/asset_conversion")
+
 scene_instance_conversion_script = (
-    isaacsim_dir + "/scene_instance_json_to_usd.py"
+    isaacsim_dir + "/asset_conversion/scene_instance_json_to_usd.py"
 )
-urdf_conversion_script = isaacsim_dir + "/urdf_to_usd.py"
+urdf_conversion_script = isaacsim_dir + "/asset_conversion//urdf_to_usd.py"
 
 from scene_instance_json_to_usd import convert_hab_scene
 from urdf_to_usd import clean_urdf, convert_urdf
@@ -219,7 +221,12 @@ def test_clean_urdf():
     # Optionally remove <visual> elements
     assert len(root_removed_visual.xpath("//visual")) == 0
     assert len(root_removed_visual_CORRECT.xpath("//visual")) == 0
-
+    
+    if os.path.exists(output_file):
+        os.remove(output_file)
+        
+    if os.path.exists(removed_visual):
+        os.remove(removed_visual)
 
 def test_convert_urdf():
     urdf_dir = repo_dir + "/test/data/usd_conversion_data/"
@@ -315,3 +322,6 @@ def test_add_habitat_visual_metadata_for_articulation():
                     "habitatVisual:assetScale"
                 ).Get()
             )
+
+if __name__ == "__main__":
+    test_clean_urdf()
