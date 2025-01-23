@@ -7,13 +7,10 @@ Inspect Habitat environments, episodes, and agent policy evaluation in real time
 ## Installing and using HITL apps
 See [habitat-hitl/README.md](../../../habitat-hitl/README.md)
 
-## To run
-cd path/to/habitat-lab # Or wherever data/ is symlinked
-
 ## Example launch command
+Run the following command from the root `habitat-lab` directory:
 
 ```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/basic_viewer/basic_viewer.py habitat_hitl.episodes_filter='0 2 4 10:15 1000:4000:500'
 ```
 
