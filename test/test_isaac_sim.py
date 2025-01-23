@@ -357,7 +357,7 @@ scene_directory = repo_dir + "/../" + "habitat-sim/data/hssd-hab/scenes"
 )
 def test_bulk_hssd_scene_instance_conversion():
     project_root_folder = repo_dir
-    scene_directory = repo_dir + "/../" + "habitat-sim/data/hssd-hab/scenes"
+    scene_directory = repo_dir + "/data/hssd-hab/scenes"
     scene_output_dir = (
         repo_dir + "/test/data/usd_conversion_data/bulk_testing_output"
     )
