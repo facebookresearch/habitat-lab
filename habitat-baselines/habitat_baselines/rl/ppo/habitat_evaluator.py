@@ -36,6 +36,7 @@ class HabitatEvaluator(Evaluator):
     """
     observation_dict = []
     vla_action = []
+    depoly_one_action = True
 
     def process_rgb(self, rgb):
         # Resize the image here
@@ -351,14 +352,19 @@ class HabitatEvaluator(Evaluator):
                     "action"
                 ] = step_data[env_idx]
             
-            vla_action = self.infer_action_vla_model(
-                vla_model, vla_processor, batch
-            )
-            # first batch and first action
-            vla_action = [vla_action[0][0].cpu().detach().float().numpy()]
+            if self.vla_action == [] or self.depoly_one_action:
+                self.vla_action = []
+                vla_action = self.infer_action_vla_model(
+                    vla_model, vla_processor, batch
+                )
+                for vla_a in vla_action[0]:
+                    self.vla_action.append([vla_a.cpu().detach().float().numpy()])
+
+                # first batch and first action
+                #vla_action = [vla_action[0][0].cpu().detach().float().numpy()]
 
             # envs.step(vla_action) OR envs.step(step_data)
-            outputs = envs.step(vla_action)
+            outputs = envs.step(self.vla_action.pop(0))
 
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
@@ -516,6 +522,7 @@ class HabitatEvaluator(Evaluator):
 
                     if len(config.habitat_baselines.eval.video_option) > 0:
                         self.observation_dict = [] # reset
+                        self.vla_action = [] # reset
                         generate_video(
                             video_option=config.habitat_baselines.eval.video_option,
                             video_dir=config.habitat_baselines.video_dir,
