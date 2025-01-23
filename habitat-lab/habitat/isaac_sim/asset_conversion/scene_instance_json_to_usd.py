@@ -83,9 +83,9 @@ def convert_object_to_usd(
     out_usd_path: str,
     project_root_folder: str,
 ) -> None:
-    """This converts an hssd object to a usda file.
+    """This converts an object mesh to a usda file.
 
-    :param objects_folder : Parent folder that contains all the objects to an hssd scene.
+    :param objects_folder : Parent folder that contains all the object meshes.
     :param object_config_filename: String name of the config file associated with an object.
     :param out_usd_path: Filepath where object usd will be located after conversion
     :project_root_folder: Path of habitat-lab repo
