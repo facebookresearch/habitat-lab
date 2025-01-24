@@ -38,7 +38,6 @@ See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 ## Example launch command (mouse/keyboard)
 
 ```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/pick_throw_vr/pick_throw_vr.py
 ```
 
@@ -80,9 +79,7 @@ The standard keyboard-mouse launch command-line arguments can be used with those
 * The `habitat_hitl.networking.enable=True` config override launches the Pick_throw_vr app as a server, allowing a remote client (e.g. VR headset) to connect and control the human avatar.
 
 ```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
-python examples/hitl/pick_throw_vr/pick_throw_vr.py \
-habitat_hitl.networking.enable=True
+python examples/hitl/pick_throw_vr/pick_throw_vr.py habitat_hitl.networking.enable=True
 ```
 
 We also have an experimental headless server:
