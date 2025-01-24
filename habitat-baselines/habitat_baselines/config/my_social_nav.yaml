@@ -1,0 +1,73 @@
+defaults:
+  - social_nav/social_nav.yaml  # Inherit from the base social_nav configuration
+#  - minimal_spot_agent.yaml@habitat.simulator.agents.agent_0
+  - _self_
+
+benchmark:
+  multi_agent: hssd_spot_human_social_nav
+
+habitat_baselines:
+  evaluate: False
+  num_checkpoints: 5000
+  total_num_steps: 1.0e9
+  num_environments: 1
+  writer_type: "wb"
+  video_dir: "video_social_nav"
+  checkpoint_folder: "checkpoints_social_nav"
+  eval_ckpt_path_dir: "checkpoints_social_nav"
+
+habitat:
+  task:
+    actions:
+      agent_0_base_velocity:
+        longitudinal_lin_speed: 10.0
+        ang_speed: 10.0
+        allow_dyn_slide: True
+        enable_rotation_check_for_dyn_slide: False
+      agent_1_oracle_nav_randcoord_action:
+        lin_speed: 10.0
+        ang_speed: 10.0
+      agent_1_oracle_nav_action:
+        lin_speed: 10.0
+        ang_speed: 10.0
+
+    measurements:
+      social_nav_reward:
+        facing_human_reward: 3.0
+        count_coll_pen: 0.01
+        max_count_colls: -1
+        count_coll_end_pen: 5
+        use_geo_distance: True
+        facing_human_dis: 3.0
+      social_nav_seek_success:
+        following_step_succ_threshold: 400
+        need_to_face_human: True
+        use_geo_distance: True
+        facing_threshold: 0.5
+
+    lab_sensors:
+      humanoid_detector_sensor:
+        return_image: True
+        is_return_image_bbox: True
+
+    success_reward: 10.0
+    end_on_success: True
+    slack_reward: -0.1
+
+  environment:
+    max_episode_steps: 1500
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 4
+    ctrl_freq: 120
+    agents:
+      agent_0:
+        joint_start_noise: 0.0
+
+    # habitat_sim_v0:
+    #   enable_gfx_replay_save: True
+
+    # renderer:
+    #   enable_batch_renderer: True
+    #   classic_replay_renderer: True
