@@ -84,7 +84,7 @@ class SpotRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, -0.05, -0.107),
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),

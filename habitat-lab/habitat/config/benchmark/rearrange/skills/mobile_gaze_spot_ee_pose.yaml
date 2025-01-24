@@ -3,9 +3,11 @@ defaults:
   - pick
   - /habitat/task/measurements:
     - base_to_object_distance
+    - episode_data_logger
   - /habitat/task/lab_sensors:
     - arm_depth_bbox_sensor
     - end_effector_pose_sensor
+    - heuristic_action_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
@@ -56,6 +58,11 @@ habitat:
       pick_success:
         ee_resting_success_threshold: -1.0
         ee_pose_threshold: -1.0
+      episode_data_logger:
+        skill: Pick
+        save_path: /fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/pick_large/train
+        metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/scene_datasets/hssd-hab/metadata/fpmodels-with-decomposed.csv
+        save_keys: ["articulated_agent_jaw_depth", "articulated_agent_jaw_rgb", "articulated_agent_arm_depth", "articulated_agent_arm_rgb"]
     lab_sensors:
       arm_depth_bbox_sensor:
         height: 240
@@ -102,5 +109,6 @@ habitat:
       main_agent:
         joint_start_noise: 0.1
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
+        arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708],[-1.5708,1.5708]] 
         # The real-world gaze ready location
         joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]

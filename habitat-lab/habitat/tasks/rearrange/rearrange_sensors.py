@@ -5,11 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import json
 import os
+import time
 from collections import defaultdict, deque
 
+import cv2
 import magnum as mn
 import numpy as np
+import pandas as pd
 import quaternion
 import torch
 from gym import spaces
@@ -199,6 +203,13 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
     cls_uuid: str = "obj_goal_sensor"
 
+    def __init__(self, *args, task, **kwargs):
+        self._task = task
+        super().__init__(*args, task=task, **kwargs)
+
+    def _get_uuid(self, *args, **kwargs):
+        return "obj_goal_sensor"
+
     def _get_observation_space(self, *args, **kwargs):
         if self.config.only_one_target or self.config.use_noise_target:
             n_targets = 1
@@ -210,6 +221,21 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             high=np.finfo(np.float32).max,
             dtype=np.float32,
         )
+
+    # def reset_metric(self, *args, episode, **kwargs):
+    #     base_episode_json = {'episode_id: ': episode.episode_id,
+    #                          'scene_id: ': episode.scene_id.split('/')[-1],
+    #                          'episode_data': []
+    #                         }
+    #     save_pth = '/fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert_place'
+    #     episode_id = episode.episode_id
+    #     if self.episode_json != base_episode_json:
+    #         print('SAVING JSON')
+    #         with open(f"{save_pth}/{episode_id}.json", "w") as outfile:
+    #             json.dump(self.episode_json, outfile)
+
+    #     self.episode_json = base_episode_json
+    #     print('RESET')
 
     def xyz_T_hab(self, tf, reverse=False):
         """
@@ -262,9 +288,79 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
         global_T_ee = self._sim.articulated_agent.ee_transform()
         ee_T_obj_XYZ = global_T_ee.inverted().transform_point(global_T_obj_std)
+
         return np.array(ee_T_obj_XYZ, dtype=np.float32)
 
+    def heuristic_action(self):
+        def get_point_along_vector(
+            curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
+        ) -> np.ndarray:
+            """
+            Calculate a point that lies on the vector from curr to goal,
+            at a specified distance (step_size) from curr.
+
+            Args:
+                curr: numpy array [x, y, z] representing current position
+                goal: numpy array [x, y, z] representing goal position
+                step_size: Distance the returned point should be from curr (default 0.15)
+
+            Returns:
+                numpy array [x, y, z] representing the calculated point
+                If distance between curr and goal is less than step_size, returns goal
+            """
+            # Calculate vector from curr to goal
+            vector = goal - curr
+
+            # Calculate distance between points
+            distance = np.linalg.norm(vector)
+
+            # If distance is less than step_size, return goal
+            if distance <= step_size:
+                return goal
+
+            # Normalize the vector and multiply by step_size
+            unit_vector = vector / distance
+            new_point = curr + (unit_vector * step_size)
+
+            # Round to reduce floating point errors
+            return np.round(new_point, 6)
+
+        end_effector_position_YZX = (
+            self._sim.articulated_agent.ee_transform().translation
+        )
+        _, sim_global_T_obj_pos = self._sim.get_targets()
+        target_position_YZX = sim_global_T_obj_pos[0]
+
+        position_goal = get_point_along_vector(
+            end_effector_position_YZX, target_position_YZX, 0.15
+        )
+
+        global_T_base = self._sim.articulated_agent.base_transformation
+        position_goal_base_T_ee = global_T_base.inverted().transform_point(
+            position_goal
+        )
+
+        # end_effector_position_YZX = (
+        #     self._sim.articulated_agent.ee_transform_YZX().translation
+        # )
+        # _, sim_global_T_obj_pos = self._sim.get_targets()
+        # target_position_YZX = sim_global_T_obj_pos[0]
+
+        # position_goal = get_point_along_vector(
+        #     end_effector_position_YZX, target_position_YZX, 0.15
+        # )
+
+        # global_T_base = self._sim.articulated_agent.base_transformation_YZX
+        # position_goal_base_T_ee = global_T_base.inverted().transform_point(
+        #     position_goal
+        # )
+
+        os.environ["POSITION_GOAL"] = ",".join(
+            [str(i) for i in position_goal_base_T_ee]
+        )
+
     def get_observation(self, observations, episode, task, *args, **kwargs):
+        # self.heuristic_action()
         if self.config.use_real_world_conventions:
             return self.get_observation_real(task)
 
@@ -404,6 +500,98 @@ class GoalSensor(UsesArticulatedAgentInterface, MultiObjSensor):
                     ).reshape(-1)
             # print("obj_goal_sensor: ", pos_array)
             return np.array(pos_array, dtype=np.float32)
+
+
+@registry.register_sensor
+class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
+    """
+    Heuristic action
+    """
+
+    cls_uuid: str = "heuristic_action_sensor"
+
+    def __init__(self, *args, task, **kwargs):
+        self._task = task
+        super().__init__(*args, task=task, **kwargs)
+
+    def _get_uuid(self, *args, **kwargs):
+        return "heuristic_action_sensor"
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def heuristic_action(self):
+        def get_point_along_vector(
+            curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
+        ) -> np.ndarray:
+            """
+            Calculate a point that lies on the vector from curr to goal,
+            at a specified distance (step_size) from curr.
+
+            Args:
+                curr: numpy array [x, y, z] representing current position
+                goal: numpy array [x, y, z] representing goal position
+                step_size: Distance the returned point should be from curr (default 0.15)
+
+            Returns:
+                numpy array [x, y, z] representing the calculated point
+                If distance between curr and goal is less than step_size, returns goal
+            """
+            # Calculate vector from curr to goal
+            vector = goal - curr
+
+            # Calculate distance between points
+            distance = np.linalg.norm(vector)
+
+            # If distance is less than step_size, return goal
+            if distance <= step_size:
+                return goal
+
+            # Normalize the vector and multiply by step_size
+            unit_vector = vector / distance
+            new_point = curr + (unit_vector * step_size)
+
+            # Round to reduce floating point errors
+            return np.round(new_point, 6)
+
+        end_effector_position_YZX = (
+            self._sim.articulated_agent.ee_transform().translation
+        )
+        ## place
+        _, sim_global_T_obj_pos = self._sim.get_targets()
+        target_position_YZX = sim_global_T_obj_pos[0]
+
+        ## pick
+        # scene_pos = self._sim.get_scene_pos()
+        # targ_idxs = self._sim.get_targets()[0]
+        # target_position_YZX = scene_pos[targ_idxs][0]
+
+        position_goal = get_point_along_vector(
+            end_effector_position_YZX, target_position_YZX, 0.15
+        )
+
+        global_T_base = self._sim.articulated_agent.base_transformation
+        position_goal_base_T_ee = global_T_base.inverted().transform_point(
+            position_goal
+        )
+
+        # grasp = 1
+        # dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
+        # if dist < 0.12:
+        #     grasp = -1  # 1 = grasp, -1 = ungrasp
+        os.environ["POSITION_GOAL"] = ",".join(
+            [str(i) for i in position_goal_base_T_ee]
+        )
+        # os.environ["GRASP"] = str(grasp)
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        self.heuristic_action()
+        return np.array([0], dtype=np.float32)
 
 
 @registry.register_sensor
@@ -960,6 +1148,112 @@ class IsHoldingSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_measure
+class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
+    """
+    Euclidean distance from the target object to the goal.
+    """
+
+    cls_uuid: str = "episode_data_logger"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+        self.episode_json = {}
+        self.metadata_dict = pd.read_csv(config.metadata_path)
+        self.save_path = config.save_path
+        self.save_keys = config.save_keys
+        self.skill = config.skill
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EpisodeDataLogger.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        object_name = list(episode.info["object_labels"].keys())[0].split(
+            "_:0000"
+        )[0]
+        receptacle_id = episode.target_receptacles[0][0].split("_:0000")[0]
+        receptacle_name = self.metadata_dict.loc[
+            self.metadata_dict["id"] == receptacle_id, "name"
+        ].iloc[0]
+
+        base_episode_json = {
+            "episode_id": episode.episode_id,
+            "scene_id": episode.scene_id.split("/")[-1],
+            "instruction": f"{self.skill} the {object_name} on the {receptacle_name}",
+            "episode_data": [],
+        }
+        # self.save_pth = f"/fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/place_large/train"
+        if self.episode_json != base_episode_json and self.episode_json != {}:
+            episode_id = self.episode_json["episode_id"]
+            ep_save_path = f"{self.save_path}/ep_{episode_id}"
+            os.makedirs(self.save_path, exist_ok=True)
+            with open(f"{ep_save_path}/ep_{episode_id}.json", "w") as outfile:
+                json.dump(self.episode_json, outfile)
+
+        self.episode_json = base_episode_json
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def save_img(self, observations, img_key, ep_data):
+        if img_key in observations.keys():
+            robot_img = observations[img_key]
+            if "depth" in img_key:
+                robot_img_tmp = np.concatenate(
+                    [robot_img, robot_img, robot_img], axis=-1
+                )
+                robot_img = robot_img_tmp
+                robot_img *= 255
+            elif "rgb" in img_key:
+                robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGR2RGB)
+            img_dir = (
+                f'{self.save_path}/ep_{self.episode_json["episode_id"]}/imgs'
+            )
+            os.makedirs(img_dir, exist_ok=True)
+            img_pth = f"{img_dir}/{img_key}_img_{int(time.time()*1000)}.png"
+            cv2.imwrite(f"{img_pth}", robot_img)
+            ep_data[img_key] = img_pth
+        return ep_data
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        curr_joints = np.array(
+            self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent.arm_joint_pos
+        ).tolist()
+        curr_ee_pos = np.array(
+            self._sim.articulated_agent.ee_transform().translation
+        ).tolist()
+        curr_ee_rot = np.array(
+            self._sim.articulated_agent.ee_transform().rotation()
+        ).tolist()
+        curr_base_pos = np.array(
+            self._sim.articulated_agent.base_transformation.translation
+        ).tolist()
+        curr_base_rot = np.array(
+            self._sim.articulated_agent.base_transformation.rotation()
+        ).tolist()
+
+        _, sim_global_T_obj_pos = self._sim.get_targets()
+        target_position_YZX = np.array(sim_global_T_obj_pos[0]).tolist()
+
+        ep_data = {
+            "joints": curr_joints,
+            "ee_pos": curr_ee_pos,
+            "ee_rot": curr_ee_rot,
+            "base_pos": curr_base_pos,
+            "base_rot": curr_base_rot,
+            "target_position": target_position_YZX,
+        }
+
+        for save_key in self.save_keys:
+            ep_data = self.save_img(observations, save_key, ep_data)
+
+        self.episode_json["episode_data"].append(ep_data)
+        self._metric = self.episode_json
+
+
+@registry.register_measure
 class ObjectToGoalDistance(Measure):
     """
     Euclidean distance from the target object to the goal.
@@ -981,13 +1275,19 @@ class ObjectToGoalDistance(Measure):
 
     def update_metric(self, *args, episode, **kwargs):
         idxs, goal_pos = self._sim.get_targets()
-        if self._sim.use_real_world_conventions:
-            goal_pos = [
-                np.array(convert_conventions(mn.Vector3(*goal)))
-                for goal in goal_pos
-            ]
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
+        if self._sim.use_real_world_conventions:
+            goal_pos = np.array(
+                [convert_conventions(mn.Vector3(*goal)) for goal in goal_pos]
+            )
+            target_pos = np.array(
+                [
+                    convert_conventions(mn.Vector3(*target))
+                    for target in target_pos
+                ]
+            )
+
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
         self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 

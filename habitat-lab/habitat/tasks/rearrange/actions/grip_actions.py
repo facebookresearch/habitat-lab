@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from typing import Optional, Union
 
 import magnum as mn
@@ -343,11 +344,41 @@ class GazeGraspAction(MagicGraspAction):
     def _ungrasp(self):
         self.cur_grasp_mgr.desnap()
 
+    def _magic_grasp(self):
+        scene_obj_pos = self._sim.get_scene_pos()
+        ee_pos = self.cur_articulated_agent.ee_transform().translation
+        # Get objects we are close to.
+        if len(scene_obj_pos) != 0:
+            # Get the target the EE is closest to.
+            closest_obj_idx = np.argmin(
+                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+            )
+
+            to_target = np.linalg.norm(
+                ee_pos - scene_obj_pos[closest_obj_idx], ord=2
+            )
+
+            keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+
+            self.cur_grasp_mgr.snap_to_obj(
+                self._sim.scene_obj_ids[closest_obj_idx],
+                force=False,
+                rel_pos=mn.Vector3(0.1, 0.0, 0.0),
+                keep_T=keep_T,
+            )
+
     def step(self, grip_action, should_step=True, *args, **kwargs):
+        # if os.environ.get("GRASP", 0):
+        #     grip_action = int(os.environ["GRASP"])
+        #     if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        #         self._magic_grasp()
+        #         return
+        #     elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
+        #         self._ungrasp()
+        #         return
         if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
             return
-
         if grip_action is None:
             return
 

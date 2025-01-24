@@ -3,8 +3,10 @@ defaults:
   - place
   - /habitat/task/measurements:
     - base_to_object_distance
+    - episode_data_logger
   - /habitat/task/lab_sensors:
     - end_effector_pose_sensor
+    - heuristic_action_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent_jaw_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
   - override /habitat/task/rearrange/actions: spot_base_arm_empty
@@ -69,6 +71,11 @@ habitat:
         horizontal_diff_threshold: 0.30
         surface_vertical_diff_threshold: -1.0
         snap_down_surface_vertical_diff_threshold: 0.1
+      episode_data_logger:
+        skill: Place
+        save_path: /fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/place_large_v2/train
+        metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/scene_datasets/hssd-hab/metadata/fpmodels-with-decomposed.csv
+        save_keys: ["articulated_agent_jaw_depth"]
     lab_sensors:
       # We can only control 4 of the joints of Spot's arm
       joint_sensor:
@@ -131,6 +138,7 @@ habitat:
         joint_start_noise: 0.0
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
         # The real-world gaze ready location
+        arm_joint_limit: [[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708],[-1.5708,1.5708]] 
         joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
         joint_start_override_random: [[0,-3.14,0,3.14,0,0,1.57],[0,-3.14,0,3.14,0,0,0.78],[0,-3.14,0,3.14,0,0,0],[0,-3.14,0,3.14,0,0,-0.78],[0,-3.14,0,3.14,0,0,-1.57],[-0.016,-1.621,0,1.592,0,1.571,0],[-0.016,-1.621,0,1.592,0,1.571,-1.57],[-0.016,-1.621,0,1.592,0,1.571,1.57],[-0.046,-1.920,0,2.094,0,1.396,0],[-0.046,-1.920,0,2.094,0,1.396,1.57],[-0.046,-1.920,0,2.094,0,1.396,-1.57]]
   dataset:

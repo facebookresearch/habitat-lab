@@ -867,93 +867,18 @@ class ArmEEAction(ArticulatedAgentAction):
         tf_new = tf_retranslate @ tf_new
         return tf_new
 
-    # def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-    #     articulated_agent_data = self._sim.articulated_agent
-    #     # global_T_ee = articulated_agent_data.ee_transform()
-    #     global_T_base = articulated_agent_data.base_transformation
-    #     # T_curr = global_T_base.inverted() @ global_T_ee
-    #     # print("T_curr_hab: ", base_T_ee_transform)
-
-    #     self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-    #         np.array(self._sim.articulated_agent.arm_joint_pos)
-    #     )
-    #     global_T_ee = global_T_base.transform_point(self.ee_target)
-    #     T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
-
-    #     if self._use_ee_rot:
-    #         T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
-    #     else:
-    #         T_delta = self.get_T_matrix(ee_pos[:3])
-
-    #     T_new = np.dot(T_curr, T_delta)
-    #     self.ee_target = T_new[:3, 3]
-    #     self.ee_rot_target = self.get_euler_from_matrix(T_new)
-    #     self.apply_ee_constraints()
-
-    #     joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
-    #     joint_vel = np.zeros(joint_pos.shape)
-
-    #     self._ik_helper.set_arm_state(joint_pos, joint_vel)
-
-    #     # des_joint_pos = self._ik_helper.calc_ik(
-    #     #     self.ee_target, self.ee_rot_target
-    #     # )
-
-    #     # DEBUGGING START
-    #     """
-    #     For now, use os.environ to override what we want the position goal to be
-    #     """
-    #     import os
-
-    #     position_goal = os.environ["POSITION_GOAL"]
-    #     position_goal = [float(x) for x in position_goal.split(",")]
-    #     des_joint_pos = self._ik_helper.calc_ik(
-    #         position_goal, self.ee_rot_target
-    #     )
-
-    #     if "debugging_tfs" not in os.environ:
-    #         os.environ["debugging_tfs"] = "1"
-    #         if os.path.exists("debugging_data.json"):
-    #             os.remove("debugging_data.json")
-
-    #     if not os.path.isfile("debugging_data.json"):
-    #         _, sim_global_T_obj_pos = self._sim.get_targets()
-
-    #         target_position_global_YZX = [
-    #             float(i) for i in sim_global_T_obj_pos[0]
-    #         ]
-    #         print(target_position_global_YZX, 7685467547654)
-    #         with open("debugging_data.json", "w") as f:
-    #             import json
-
-    #             data = {
-    #                 "target_position_global_YZX": target_position_global_YZX,
-    #             }
-    #             json.dump(data, f)
-
-    #     global_T_ee_YZX = np.array(self._sim.articulated_agent.ee_transform())
-    #     global_T_ee_YZX = matrix4_to_list(global_T_ee_YZX)
-
-    #     append_to_json_list(
-    #         "debugging_data.json", "global_T_ee_YZX", global_T_ee_YZX
-    #     )
-
-    #     # DEBUGGING END
-    #     des_joint_pos = list(des_joint_pos)
-
-    #     if self._sim.habitat_config.kinematic_mode:
-    #         self.set_joint_pos_kinematic(des_joint_pos)
-    #         self.cur_articulated_agent.arm_joint_pos = des_joint_pos
-    #         self.cur_articulated_agent.fix_joint_values = des_joint_pos
-    #     else:
-    #         self._sim.articulated_agent.arm_motor_pos = des_joint_pos
-
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
         articulated_agent_data = self._sim.articulated_agent
-        global_T_ee = articulated_agent_data.ee_transform()
+        # global_T_ee = articulated_agent_data.ee_transform()
         global_T_base = articulated_agent_data.base_transformation
-        base_T_ee_transform = global_T_base.inverted() @ global_T_ee
-        T_curr = base_T_ee_transform
+        # T_curr = global_T_base.inverted() @ global_T_ee
+        # print("T_curr_hab: ", base_T_ee_transform)
+
+        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+            np.array(self._sim.articulated_agent.arm_joint_pos)
+        )
+        global_T_ee = global_T_base.transform_point(self.ee_target)
+        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
 
         if self._use_ee_rot:
             T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
@@ -961,15 +886,8 @@ class ArmEEAction(ArticulatedAgentAction):
             T_delta = self.get_T_matrix(ee_pos[:3])
 
         T_new = np.dot(T_curr, T_delta)
-
         self.ee_target = T_new[:3, 3]
-
-        if self._use_ee_rot:
-            # self.ee_rot_target = self.get_euler_from_matrix(T_new)
-            self.ee_rot_target = extract_roll_pitch_yaw(T_new)
-        else:
-            self.ee_rot_target = None
-        self.ee_rot_target = None
+        self.ee_rot_target = self.get_euler_from_matrix(T_new)
         self.apply_ee_constraints()
 
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
@@ -977,15 +895,95 @@ class ArmEEAction(ArticulatedAgentAction):
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = self._ik_helper.calc_ik(
-            self.ee_target, self.ee_rot_target
-        )
+        # des_joint_pos = self._ik_helper.calc_ik(
+        #     self.ee_target, self.ee_rot_target
+        # )
+
+        # DEBUGGING START
+        """
+        For now, use os.environ to override what we want the position goal to be
+        """
+        import os
+
+        position_goal = os.environ["POSITION_GOAL"]
+        position_goal = [float(x) for x in position_goal.split(",")]
+        des_joint_pos = self._ik_helper.calc_ik(position_goal)
+
+        # if "debugging_tfs" not in os.environ:
+        #     os.environ["debugging_tfs"] = "1"
+        #     if os.path.exists("debugging_data.json"):
+        #         os.remove("debugging_data.json")
+
+        # if not os.path.isfile("debugging_data.json"):
+        #     _, sim_global_T_obj_pos = self._sim.get_targets()
+
+        #     target_position_global_YZX = [
+        #         float(i) for i in sim_global_T_obj_pos[0]
+        #     ]
+        #     print(target_position_global_YZX, 7685467547654)
+        #     with open("debugging_data.json", "w") as f:
+        #         import json
+
+        #         data = {
+        #             "target_position_global_YZX": target_position_global_YZX,
+        #         }
+        #         json.dump(data, f)
+
+        # global_T_ee_YZX = np.array(self._sim.articulated_agent.ee_transform())
+        # global_T_ee_YZX = matrix4_to_list(global_T_ee_YZX)
+
+        # append_to_json_list(
+        #     "debugging_data.json", "global_T_ee_YZX", global_T_ee_YZX
+        # )
+
+        # DEBUGGING END
         des_joint_pos = list(des_joint_pos)
 
         if self._sim.habitat_config.kinematic_mode:
             self.set_joint_pos_kinematic(des_joint_pos)
+            self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+            self.cur_articulated_agent.fix_joint_values = des_joint_pos
         else:
             self._sim.articulated_agent.arm_motor_pos = des_joint_pos
+
+    # def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+    #     articulated_agent_data = self._sim.articulated_agent
+    #     global_T_ee = articulated_agent_data.ee_transform()
+    #     global_T_base = articulated_agent_data.base_transformation
+    #     base_T_ee_transform = global_T_base.inverted() @ global_T_ee
+    #     T_curr = base_T_ee_transform
+
+    #     if self._use_ee_rot:
+    #         T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
+    #     else:
+    #         T_delta = self.get_T_matrix(ee_pos[:3])
+
+    #     T_new = np.dot(T_curr, T_delta)
+
+    #     self.ee_target = T_new[:3, 3]
+
+    #     if self._use_ee_rot:
+    #         # self.ee_rot_target = self.get_euler_from_matrix(T_new)
+    #         self.ee_rot_target = extract_roll_pitch_yaw(T_new)
+    #     else:
+    #         self.ee_rot_target = None
+    #     self.ee_rot_target = None
+    #     self.apply_ee_constraints()
+
+    #     joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
+    #     joint_vel = np.zeros(joint_pos.shape)
+
+    #     self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+    #     des_joint_pos = self._ik_helper.calc_ik(
+    #         self.ee_target, self.ee_rot_target
+    #     )
+    #     des_joint_pos = list(des_joint_pos)
+
+    #     if self._sim.habitat_config.kinematic_mode:
+    #         self.set_joint_pos_kinematic(des_joint_pos)
+    #     else:
+    #         self._sim.articulated_agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)

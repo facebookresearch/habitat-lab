@@ -241,12 +241,8 @@ def main(sim):
 
     # robot = load_robot(sim, ROBOT_FILE)
     robot = load_spot_robot(sim, ROBOT_FILE)
-    pt = np.array([-7.03365, 0.95533, -7.7762])
-    mn_vec3 = mn.Vector3(*pt)
-    mn_mat4 = mn.Matrix4.translation(mn_vec3)
-
-    print("1: ", convert_conventions(mn_vec3))
-    print("2: ", convert_conventions(mn_mat4).translation)
+    robot.open_gripper()
+    get_obs(sim, save_img=True)
 
     # test_rotation(sim, robot.sim_obj)
 

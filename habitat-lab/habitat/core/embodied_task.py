@@ -7,6 +7,7 @@ r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
+import os
 import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
@@ -321,6 +322,30 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
+        if os.environ.get("POSITION_GOAL", 0):
+            action["action_args"]["base_vel"] = np.array([0.0, 0.0])
+            action["action_args"]["grip_action"] = None
+        # if os.environ.get("GRASP", 0):
+        #     action["action_args"]["grip_action"] = np.array(
+        #         [int(os.environ["GRASP"])]
+        #     )
+
+        # if os.environ.get("JOANNE_DEBUG", 0):
+        #     action["action_args"]["arm_action"] = np.array(
+        #         [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        #     )
+        # action["action_args"]["base_vel"] = np.array([0.0, 0.0])
+        # action["action_args"]["arm_action"] = np.array(
+        #     [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # x y z r p y
+        # )
+        # print('action["action_args"]: ', action["action_args"])
+        # import os
+
+        # x, y, z = [float(i) for i in os.environ["arm_action"].split(",")]
+        # action["action_args"]["arm_action"] = np.array(
+        #     [x, y, z, 0.0, 0.0, 0.0]  # x y z r p y
+        #     # [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # x y z r p y
+        # )
         return task_action.step(
             **action["action_args"],
             task=self,

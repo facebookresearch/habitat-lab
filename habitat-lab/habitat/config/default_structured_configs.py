@@ -71,6 +71,7 @@ __all__ = [
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
+    "HeuristicActionSensorConfig",
     "DistanceGoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
     "InitialGpsCompassSensorConfig",
@@ -83,6 +84,7 @@ __all__ = [
     "RobotForceMeasurementConfig",
     "DoesWantTerminateMeasurementConfig",
     "ForceTerminateMeasurementConfig",
+    "EpisodeDataLoggerMeasurementConfig"
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
     "ObjAtReceptacleMeasurementConfig",
@@ -782,6 +784,15 @@ class GoalSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HeuristicActionSensorConfig(LabSensorConfig):
+    """
+    Rearrangement only. Sets a heuristic action.
+    """
+
+    type: str = "HeuristicActionSensor"
+
+
+@dataclass
 class ReceptacleBBoxSensorConfig(LabSensorConfig):
     """
     Rearrangement only. Returns the bbox of the target receptacle.
@@ -1031,6 +1042,15 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 @dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
+
+
+@dataclass
+class EpisodeDataLoggerMeasurementConfig(MeasurementConfig):
+    type: str = "EpisodeDataLogger"
+    skill: str = "Place"
+    save_path: str = "data/"
+    metadata_path: str = "metadata"
+    save_keys: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -1738,7 +1758,7 @@ class TaskConfig(HabitatBaseConfig):
     render_target: bool = False
     # Spawn parameters
     filter_colliding_states: bool = True
-    num_spawn_attempts: int = 1000
+    num_spawn_attempts: int = 100
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
     spawn_type: str = "orig_snap"
@@ -2012,7 +2032,6 @@ class AgentConfig(HabitatBaseConfig):
     # Addtional data for joint selection
     joint_start_override_random: Optional[List[float]] = None
     arm_joint_limit: Optional[List[float]] = None
-
 
 
 @dataclass
@@ -2622,6 +2641,12 @@ cs.store(
     node=GoalSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.heuristic_action_sensor",
+    group="habitat/task/lab_sensors",
+    name="heuristic_action_sensor",
+    node=HeuristicActionSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.receptacle_bbox_sensor",
     group="habitat/task/lab_sensors",
     name="receptacle_bbox_sensor",
@@ -2942,6 +2967,12 @@ cs.store(
     group="habitat/task/measurements",
     name="articulated_agent_colls",
     node=RobotCollisionsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.episode_data_logger",
+    group="habitat/task/measurements",
+    name="episode_data_logger",
+    node=EpisodeDataLoggerMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.object_to_goal_distance",

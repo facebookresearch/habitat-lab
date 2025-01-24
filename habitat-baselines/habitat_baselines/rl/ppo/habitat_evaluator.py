@@ -324,6 +324,10 @@ class HabitatEvaluator(Evaluator):
                 disp_info = {
                     k: v for k, v in infos[i].items() if k not in rank0_keys
                 }
+                blacklist_keys = ["episode_data_logger"]
+                for k in blacklist_keys:
+                    if k in disp_info:
+                        del disp_info[k]
 
                 if len(config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

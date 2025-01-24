@@ -579,13 +579,9 @@ class PlaceReward(RearrangeReward):
             ori_to_init = ee_orientation_to_initial_distance
             min_ori = self._config.min_ori_to_init
 
-        if (not self._prev_dropped) and (
-            not cur_picked or not self._config.obj_at_receptacle_success
-        ):
+        if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
             if (
-                obj_at_goal and not self._config.obj_at_receptacle_success
-            ) or (
                 self._prev_obj_at_receptacle
                 and self._config.obj_at_receptacle_success
                 and ee_orientation_to_initial_distance
