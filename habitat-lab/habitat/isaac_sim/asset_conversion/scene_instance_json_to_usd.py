@@ -224,6 +224,8 @@ async def async_convert_mesh_to_usd(
     :return: True if conversion to usd sucessful. False otherwise.
     """
 
+    from omni.isaac.core.utils.extensions import enable_extension
+
     enable_extension("omni.kit.asset_converter")
 
     import omni.kit.asset_converter
@@ -261,7 +263,7 @@ async def async_convert_mesh_to_usd(
 
 
 def convert_meshes_to_static_colliders(
-    stage: "Usd.stage", root_path: str
+    stage: "Usd.stage", root_path: str  # type: ignore[name-defined]  # noqa: F821
 ) -> None:
     """
     Iterates over all meshes in the USD subtree under `root_path` and adds convex hull collision shapes.
@@ -269,6 +271,8 @@ def convert_meshes_to_static_colliders(
     :param stage: The USD stage.
     :param root_path: The root path of the subtree to process.
     """
+    from pxr import PhysxSchema, Usd, UsdGeom, UsdPhysics
+
     # Get the root prim
     root_prim = stage.GetPrimAtPath(root_path)
     if not root_prim.IsValid():
@@ -312,6 +316,7 @@ def add_habitat_visual_to_usd_root(
     :param render_asset_filepath: Filepath that contains render asset information
     :param render_asset_scale: An array that defines scale on the xyz axis
     """
+    from pxr import Gf, Sdf, Usd
 
     # Open the USD file
     stage = Usd.Stage.Open(usd_filepath)
@@ -339,11 +344,13 @@ def add_habitat_visual_to_usd_root(
     )
 
 
-def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:
+def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:  # type: ignore[name-defined]  # noqa: F821
     """Add object scale value into xform class for scene instance json.
 
     :param object_xform: The Xform class containing scene object information.
     """
+    from pxr import Gf
+
     # Ensure scale op exists, default value
     scale = [
         1.0,
@@ -365,13 +372,15 @@ def add_xform_scale(object_xform: "UsdGeom.Xform") -> None:
 
 
 def add_xform_rotation(
-    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"
+    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"  # type: ignore[name-defined]  # noqa: F821
 ) -> None:
     """Add object rotation value into xform class for scene instance json.
 
     :param obj_instance_json: Object information from scence instance json
     :object_xform: The Xform class that contains object information for usd file.
     """
+    from pxr import Gf, UsdGeom
+
     # Ensure rotation op exists
     # rotation = habitat_to_usd_rotation([0.0, 0.0, 0.0, 1.0])
     # rotation = [1.0, 0.0, 0.0, 0.0]
@@ -435,13 +444,15 @@ def habitat_to_usd_rotation(rotation: List[float]) -> List[float]:
 
 
 def add_xform_translation(
-    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"
+    obj_instance_json: Dict[str, Any], object_xform: "UsdGeom.Xform"  # type: ignore[name-defined]  # noqa: F821
 ) -> None:
     """Add object translation value into xform class for scene instance json.
 
     :param obj_instance_json: Object information from scence instance json
     :object_xform: The Xform class that contains object information for usd file.
     """
+    from pxr import Gf
+
     # Ensure translation op exists
     position = habitat_to_usd_position(
         obj_instance_json.get("translation", [0.0, 0.0, 0.0])
@@ -484,6 +495,7 @@ def convert_hab_scene(
     :param objects_folder: Directory path that contains scence instance objects.
     :param scene_usd_filepath: Filepath location of scene instance usda file after conversion.
     """
+    from pxr import Usd, UsdGeom
 
     with open(scene_filepath, "r") as file:
         scene_json_data = json.load(file)
@@ -570,9 +582,15 @@ def convert_hab_scene(
 
 
 if __name__ == "__main__":
+    # Launch Issac Lab Applauncher
+    from omni.isaac.lab.app import AppLauncher
+
+    app_launcher = AppLauncher(headless=True)
+    simulation_app = app_launcher.app
+
     # Build parser
     parser = argparse.ArgumentParser(
-        description="Create an empty Issac Sim stage."
+        description="Convert scene instance json to usd."
     )
 
     # Parser for convert_hab_scene
@@ -582,17 +600,7 @@ if __name__ == "__main__":
     parser.add_argument("--objects_folder")
     parser.set_defaults(func=convert_hab_scene)
 
-    # Launch Issac Lab Applauncher
-    from omni.isaac.lab.app import AppLauncher
-
-    AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
-    args.headless = True
-    app_launcher = AppLauncher(args)
-    simulation_app = app_launcher.app
-
-    from omni.isaac.core.utils.extensions import enable_extension
-    from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
 
     convert_hab_scene(
         args.scene_filepath,

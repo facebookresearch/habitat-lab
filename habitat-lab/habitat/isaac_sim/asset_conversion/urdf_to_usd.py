@@ -109,6 +109,7 @@ def add_habitat_visual_metadata_for_articulation(
     :param out_usd_filepath: Desired output usd path
     :param project_root_folder: Directory path of habitat-lab
     """
+    from pxr import Gf, Sdf, Usd
 
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
@@ -181,11 +182,15 @@ def add_habitat_visual_metadata_for_articulation(
 
 
 if __name__ == "__main__":
+    # Launch Issac Lab Applauncher
+    from omni.isaac.lab.app import AppLauncher
+
+    app_launcher = AppLauncher(headless=True)
+    simulation_app = app_launcher.app
+
     """This function converts urdf files to usda."""
     # Build parser and subparser
-    parser = argparse.ArgumentParser(
-        description="Create an empty Issac Sim stage."
-    )
+    parser = argparse.ArgumentParser(description="Convert urdf file to usd.")
     subparsers = parser.add_subparsers(dest="command")
 
     # Parser for clean_urdf
@@ -218,15 +223,7 @@ if __name__ == "__main__":
         func=add_habitat_visual_metadata_for_articulation
     )
 
-    # Launch Issac Lab Applauncher and load libraries
-    from omni.isaac.lab.app import AppLauncher
-
-    AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
-    args.headless = True
-    app_launcher = AppLauncher(args)
-    simulation_app = app_launcher.app
-    from pxr import Gf, Sdf, Usd
 
     # Argparse function selection
     if args.command:

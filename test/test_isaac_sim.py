@@ -1,6 +1,5 @@
 import json
 import os
-import subprocess
 import sys
 from typing import List
 
@@ -14,14 +13,17 @@ sys.path.insert(0, isaacsim_dir)
 sys.path.insert(
     0, repo_dir + "/habitat-lab/habitat/isaac_sim/asset_conversion"
 )
-
 scene_instance_conversion_script = (
     isaacsim_dir + "/asset_conversion/scene_instance_json_to_usd.py"
 )
 urdf_conversion_script = isaacsim_dir + "/asset_conversion//urdf_to_usd.py"
 
 from scene_instance_json_to_usd import convert_hab_scene
-from urdf_to_usd import clean_urdf, convert_urdf
+from urdf_to_usd import (
+    add_habitat_visual_metadata_for_articulation,
+    clean_urdf,
+    convert_urdf,
+)
 
 # Initialize the app here
 print("Initializing AppLauncher...")
@@ -124,17 +126,21 @@ def test_example2_scene_instance():
         repo_dir + "/test/data/usd_conversion_data/objects_EXAMPLE2"
     )
 
-    subprocess.run(
-        [
-            "python",
-            scene_instance_conversion_script,
-            scene_filepath,
-            project_root_folder,
-            scene_usd_filepath,
-            "--objects_folder",
-            object_folder,
-        ]
+    convert_hab_scene(
+        scene_filepath, project_root_folder, scene_usd_filepath, object_folder
     )
+
+    # subprocess.run(
+    #     [
+    #         "python",
+    #         scene_instance_conversion_script,
+    #         scene_filepath,
+    #         project_root_folder,
+    #         scene_usd_filepath,
+    #         "--objects_folder",
+    #         object_folder,
+    #     ]
+    # )
 
     stage = Usd.Stage.Open(scene_usd_filepath)
     xform_path = "/Scene/OBJECT_1efdc3d37dfab1eb9f99117bb84c59003d684811"
@@ -254,17 +260,23 @@ def test_add_habitat_visual_metadata_for_articulation():
     out_usd_filepath = urdf_dir + "hab_spot_arm_with_hab_metadata.usda"
     project_root_folder = repo_dir
 
-    subprocess.run(
-        [
-            "python",
-            urdf_conversion_script,
-            "add_habitat_visual_metadata_for_articulation",
-            converted_clean_usda,
-            reference_urdf_filepath,
-            out_usd_filepath,
-            project_root_folder,
-        ]
+    add_habitat_visual_metadata_for_articulation(
+        converted_clean_usda,
+        reference_urdf_filepath,
+        out_usd_filepath,
+        project_root_folder,
     )
+    # subprocess.run(
+    #     [
+    #         "python",
+    #         urdf_conversion_script,
+    #         "add_habitat_visual_metadata_for_articulation",
+    #         converted_clean_usda,
+    #         reference_urdf_filepath,
+    #         out_usd_filepath,
+    #         project_root_folder,
+    #     ]
+    # )
 
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
