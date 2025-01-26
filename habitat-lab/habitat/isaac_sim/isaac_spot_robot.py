@@ -8,11 +8,19 @@ import magnum as mn
 import numpy as np
 import quaternion
 
+from habitat.articulated_agents.mobile_manipulator import ArticulatedAgentCameraParams
 from habitat.articulated_agents.mobile_manipulator import MobileManipulatorParams
 from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 
+
+
 class IsaacSpotRobot(IsaacMobileManipulator):
+    """Isaac-internal wrapper for a robot.
+    
+    
+    The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
+    """
 
     # todo: put most of this logic in IsaacMobileManipulator
     @property
@@ -58,10 +66,12 @@ class IsaacSpotRobot(IsaacMobileManipulator):
     def __init__(
         self,
         agent_cfg,
-        isaac_service
+        isaac_service,
+        sim=None
     ):
         super().__init__(
-            SpotRobot.get_spot_params(),
+            SpotRobot._get_spot_params(),
             agent_cfg,
             isaac_service,
+            sim=sim
         )

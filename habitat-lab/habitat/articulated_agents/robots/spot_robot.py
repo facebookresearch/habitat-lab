@@ -14,8 +14,9 @@ from habitat.articulated_agents.mobile_manipulator import (
 
 
 class SpotRobot(MobileManipulator):
-    def _get_spot_params(self):
-        return MobileManipulatorParams(
+    @classmethod
+    def _get_spot_params(cls):
+        return SpotParams(
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
