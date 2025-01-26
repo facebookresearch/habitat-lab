@@ -428,6 +428,8 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
 
 
+
+
 @registry.register_task_action
 class BaseVelAction(ArticulatedAgentAction):
     """
@@ -534,6 +536,21 @@ class BaseVelAction(ArticulatedAgentAction):
         if lin_vel != 0.0 or ang_vel != 0.0:
             self.update_base()
 
+
+@registry.register_task_action
+class BaseVelIsaacAction(BaseVelAction):
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+        self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity([0, 0, ang_vel])
+        self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity([lin_vel, 0, 0])
+        
 
 @registry.register_task_action
 class BaseVelNonCylinderAction(ArticulatedAgentAction):
