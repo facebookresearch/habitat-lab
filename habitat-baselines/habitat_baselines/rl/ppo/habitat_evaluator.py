@@ -46,16 +46,21 @@ class HabitatEvaluator(Evaluator):
     vla_target_proprio = "joint"  # Target proprio sensor
 
     @staticmethod
-    def process_rgb(rgb, target_size):
+    def process_rgb(rgbs, target_size):
         """Resize the rgb images"""
         # Resize the image here
-        img = Image.fromarray(rgb.cpu().detach().numpy())
-        img = img.resize((target_size, target_size))
-        img = np.array(img)
-        rgb = torch.as_tensor(
-            rearrange(img, "h w c-> c h w")
-        )  # torch.Size([3, 224, 224]) for robot-skills
-        return rgb
+        rgbs_process = torch.zeros(
+            (rgbs.shape[0], 3, target_size, target_size)
+        )
+        for i, rgb in enumerate(rgbs):
+            img = Image.fromarray(rgb.cpu().detach().numpy())
+            img = img.resize((target_size, target_size))
+            img = np.array(img)
+            rgb = torch.as_tensor(
+                rearrange(img, "h w c-> c h w")
+            )  # torch.Size([3, 224, 224])
+            rgbs_process[i] = rgb
+        return rgbs_process
 
     def infer_action_vla_model(
         self,
@@ -68,59 +73,55 @@ class HabitatEvaluator(Evaluator):
     ):
         """Infer action using vla models."""
         self.observation_dict.append(observation)
-        bsz = 1
-        dummy_images = torch.randint(
-            0,
-            256,
-            (
-                bsz,
-                vla_config.cond_steps,
-                3,
-                vla_config.image_size,
-                vla_config.image_size,
-            ),
-            dtype=torch.uint8,
+        # Confirm the number of batches
+        bsz = observation[self.vla_target_image].shape[0]
+        dummy_images[:, vla_config.cond_steps - i - 1] = self.process_rgb(
+            self.observation_dict[-i - 1][self.vla_target_image],
+            vla_config.image_size,
         )
-        dummy_proprio = torch.zeros(
-            (bsz, vla_config.cond_steps, vla_config.proprio_dim)
+        dummy_proprio[:, vla_config.cond_steps - i - 1] = (
+            self.observation_dict[-i - 1][self.vla_target_proprio]
         )
 
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
-                dummy_images[0, vla_config.cond_steps - i - 1] = (
+                dummy_images[:, vla_config.cond_steps - i - 1] = (
                     self.process_rgb(
-                        self.observation_dict[-i - 1][self.vla_target_image][
-                            0
-                        ],
+                        self.observation_dict[-i - 1][self.vla_target_image],
                         vla_config.image_size,
                     )
                 )
+                dummy_proprio[:, vla_config.cond_steps - i - 1] = (
+                    self.observation_dict[-i - 1][self.vla_target_proprio]
+                )
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps - store_size):
-                dummy_images[0, i] = self.process_rgb(
-                    self.observation_dict[0][self.vla_target_image][0],
+                dummy_images[:, i] = self.process_rgb(
+                    self.observation_dict[0][self.vla_target_image],
                     vla_config.image_size,
                 )
+                dummy_proprio[:, i] = self.observation_dict[0][
+                    self.vla_target_proprio
+                ]
         else:
             for i in range(vla_config.cond_steps):
-                dummy_images[0, i] = self.process_rgb(
+                dummy_images[:, i] = self.process_rgb(
                     self.observation_dict[i - vla_config.cond_steps][
                         self.vla_target_image
-                    ][0],
+                    ],
                     vla_config.image_size,
                 )
-                dummy_proprio[0, i] = self.observation_dict[
+                dummy_proprio[:, i] = self.observation_dict[
                     i - vla_config.cond_steps
                 ][self.vla_target_proprio]
 
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 
         # TODO: get the text
-        dummy_texts = [current_episodes_info[0].language_instruction]
-        # dummy_texts = [
-        #     "pick up the object that is near you",
-        # ]
+        dummy_texts = [
+            ep_info.language_instruction for ep_info in current_episodes_info
+        ]
 
         dtype = torch.bfloat16
         # process image and text
@@ -310,10 +311,15 @@ class HabitatEvaluator(Evaluator):
                     vla_config,
                     current_episodes_info,
                 )
-                for vla_a in vla_action[0]:
-                    self.vla_action.append(
-                        [vla_a.cpu().detach().float().numpy()]
-                    )
+                # Make the time horizon as a leading dimension
+                vla_action = rearrange(vla_action, "b h a-> h b a")
+                for vla_a_time in vla_action:
+                    vla_temp = []
+                    for vla_a_batch in vla_a_time:
+                        vla_temp.append(
+                            vla_a_batch.cpu().detach().float().numpy()
+                        )
+                    self.vla_action.append(vla_temp)
 
             a_action = self.vla_action.pop(0)
             # a_action = np.mean(np.array(self.vla_action), axis=0)
@@ -408,6 +414,60 @@ class HabitatEvaluator(Evaluator):
                     ep_eval_count[k] += 1
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
+                    aggregated_stats = {}
+                    print_ks = {
+                        "place_success",
+                        "pick_success",
+                        "num_steps",
+                        "ee_to_object_distance.0",
+                        "robot_collisions.total_collisions",
+                    }
+                    for stat_key in print_ks:
+                        aggregated_stats[stat_key] = np.mean(
+                            [
+                                v[stat_key]
+                                for v in stats_episodes.values()
+                                if stat_key in v
+                            ]
+                        )
+                    num_evaled = len(stats_episodes.values())
+
+                    print(
+                        f"Evaluated {num_evaled} episodes. Average episode "
+                        "; ".join(
+                            [
+                                f" {k}: {v:.4f}"
+                                for k, v in aggregated_stats.items()
+                            ]
+                        )
+                    )
+
+                    if "results_dir" in config.habitat_baselines:
+                        results_dir = config.habitat_baselines.results_dir
+                        success_key = next(
+                            (
+                                key
+                                for key in episode_stats.keys()
+                                if "success" in key
+                            ),
+                            None,
+                        )
+                        if results_dir != "" and success_key is not None:
+                            if not os.path.isdir(results_dir):
+                                os.makedirs(results_dir)
+                            episode_steps_filename = os.path.join(
+                                results_dir, f"ckpt_{checkpoint_index}.csv"
+                            )
+                            if not os.path.isfile(episode_steps_filename):
+                                episode_steps_data = f"#,id,reward,dist2goal,total_collisions,{success_key},num_steps\n"
+                            else:
+                                with open(episode_steps_filename) as f:
+                                    episode_steps_data = f.read()
+                            # try:
+                            #     episode_steps_data = (
+                            #         "{},{},{},{},{},{},{}\n".format(
+                            #             num_evaled,
+                            #             current_episodes_info[i].episode_id
 
                     if len(config.habitat_baselines.eval.video_option) > 0:
                         self.observation_dict = []  # reset
