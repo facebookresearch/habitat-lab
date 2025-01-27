@@ -34,12 +34,12 @@ class HabitatEvaluator(Evaluator):
     Evaluator for Habitat environments.
     """
 
-    observation_dict: List[
-        Any
-    ] = []  # This is to store the past observations from habitat
-    vla_action: List[
-        Any
-    ] = []  # This is to store the actions from action chunk
+    observation_dict: List[Any] = (
+        []
+    )  # This is to store the past observations from habitat
+    vla_action: List[Any] = (
+        []
+    )  # This is to store the actions from action chunk
     depoly_one_action = True  # If we want to do MPC style -- only depoly one action from action chunk
     # TODO: expand these to multi-sensors
     vla_target_image = "articulated_agent_arm_rgb"  # Target RGB
@@ -58,10 +58,15 @@ class HabitatEvaluator(Evaluator):
         return rgb
 
     def infer_action_vla_model(
-        self, vla_model, processor, observation, device, vla_config
+        self,
+        vla_model,
+        processor,
+        observation,
+        device,
+        vla_config,
+        current_episodes_info,
     ):
         """Infer action using vla models."""
-
         self.observation_dict.append(observation)
         bsz = 1
         dummy_images = torch.randint(
@@ -83,11 +88,13 @@ class HabitatEvaluator(Evaluator):
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
-                dummy_images[
-                    0, vla_config.cond_steps - i - 1
-                ] = self.process_rgb(
-                    self.observation_dict[-i - 1][self.vla_target_image][0],
-                    vla_config.image_size,
+                dummy_images[0, vla_config.cond_steps - i - 1] = (
+                    self.process_rgb(
+                        self.observation_dict[-i - 1][self.vla_target_image][
+                            0
+                        ],
+                        vla_config.image_size,
+                    )
                 )
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps - store_size):
@@ -110,9 +117,10 @@ class HabitatEvaluator(Evaluator):
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 
         # TODO: get the text
-        dummy_texts = [
-            "pick up the object that is near you",
-        ]
+        dummy_texts = [current_episodes_info[0].language_instruction]
+        # dummy_texts = [
+        #     "pick up the object that is near you",
+        # ]
 
         dtype = torch.bfloat16
         # process image and text
@@ -199,9 +207,9 @@ class HabitatEvaluator(Evaluator):
             device=device,
             dtype=torch.bool,
         )
-        stats_episodes: Dict[
-            Any, Any
-        ] = {}  # dict of dicts that stores stats per episode
+        stats_episodes: Dict[Any, Any] = (
+            {}
+        )  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
         if len(config.habitat_baselines.eval.video_option) > 0:
@@ -295,16 +303,23 @@ class HabitatEvaluator(Evaluator):
             ) and config.habitat_baselines.load_third_party_ckpt:
                 self.vla_action = []
                 vla_action = self.infer_action_vla_model(
-                    vla_model, vla_processor, batch, device, vla_config
+                    vla_model,
+                    vla_processor,
+                    batch,
+                    device,
+                    vla_config,
+                    current_episodes_info,
                 )
                 for vla_a in vla_action[0]:
                     self.vla_action.append(
                         [vla_a.cpu().detach().float().numpy()]
                     )
 
+            a_action = self.vla_action.pop(0)
+            # a_action = np.mean(np.array(self.vla_action), axis=0)
             # Depoly an action
             if config.habitat_baselines.load_third_party_ckpt:
-                outputs = envs.step(self.vla_action.pop(0))
+                outputs = envs.step(a_action)
             else:
                 outputs = envs.step(step_data)
 

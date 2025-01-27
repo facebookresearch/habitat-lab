@@ -35,6 +35,7 @@ class RearrangeEpisode(Episode):
     :property target_receptacles: The names and link indices of the receptacles containing the target objects.
     :property goal_receptacles: The names and link indices of the receptacles containing the goals.
     :property name_to_receptacle: Map ManagedObject instance handles to containing Receptacle unique_names.
+    :property language_instruction: Language instruction for the episode
     """
 
     ao_states: Dict[str, Dict[int, float]]
@@ -79,7 +80,6 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
-
             self.episodes.append(rearrangement_episode)
 
     def to_binary(self) -> Dict[str, Any]:

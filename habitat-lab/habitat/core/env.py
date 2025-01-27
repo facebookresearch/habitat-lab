@@ -410,13 +410,14 @@ class RLEnv(gym.Env):
                          and scene_id will be included.
         :return: The BaseEpisode object for the current episode.
         """
-        if all_info:
-            return self._env.current_episode
-        else:
-            return BaseEpisode(
-                episode_id=self._env.current_episode.episode_id,
-                scene_id=self._env.current_episode.scene_id,
-            )
+        return self._env.current_episode
+        # if all_info:
+        #     return self._env.current_episode
+        # else:
+        #     return BaseEpisode(
+        #         episode_id=self._env.current_episode.episode_id,
+        #         scene_id=self._env.current_episode.scene_id,
+        #     )
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(
