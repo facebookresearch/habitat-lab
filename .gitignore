@@ -111,6 +111,3 @@ data
 .asset_hash
 test/data/usd_conversion_data/config.yaml
 
-# Dependency Repos
-IssacLab/
-habitat-sim/
