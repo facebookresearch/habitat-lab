@@ -48,7 +48,7 @@ habitat:
         width: 228
       joint_sensor:
         dimensionality: 4
-        arm_joint_mask: [1,1,0,1,0,1,0]
+        arm_joint_mask: [1,1,0,1,0,1,0] #[1,1,0,1,0,1,0]
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
