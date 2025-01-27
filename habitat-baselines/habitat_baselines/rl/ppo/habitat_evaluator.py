@@ -46,16 +46,21 @@ class HabitatEvaluator(Evaluator):
     vla_target_proprio = "joint"  # Target proprio sensor
 
     @staticmethod
-    def process_rgb(rgb, target_size):
+    def process_rgb(rgbs, target_size):
         """Resize the rgb images"""
         # Resize the image here
-        img = Image.fromarray(rgb.cpu().detach().numpy())
-        img = img.resize((target_size, target_size))
-        img = np.array(img)
-        rgb = torch.as_tensor(
-            rearrange(img, "h w c-> c h w")
-        )  # torch.Size([3, 224, 224]) for robot-skills
-        return rgb
+        rgbs_process = torch.zeros(
+            (rgbs.shape[0], 3, target_size, target_size)
+        )
+        for i, rgb in enumerate(rgbs):
+            img = Image.fromarray(rgb.cpu().detach().numpy())
+            img = img.resize((target_size, target_size))
+            img = np.array(img)
+            rgb = torch.as_tensor(
+                rearrange(img, "h w c-> c h w")
+            )  # torch.Size([3, 224, 224])
+            rgbs_process[i] = rgb
+        return rgbs_process
 
     def infer_action_vla_model(
         self, vla_model, processor, observation, device, vla_config
@@ -63,7 +68,8 @@ class HabitatEvaluator(Evaluator):
         """Infer action using vla models."""
 
         self.observation_dict.append(observation)
-        bsz = 1
+        # Confirm the number of batches
+        bsz = observation[self.vla_target_image].shape[0]
         dummy_images = torch.randint(
             0,
             256,
@@ -79,31 +85,36 @@ class HabitatEvaluator(Evaluator):
         dummy_proprio = torch.zeros(
             (bsz, vla_config.cond_steps, vla_config.proprio_dim)
         )
-
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
                 dummy_images[
-                    0, vla_config.cond_steps - i - 1
+                    :, vla_config.cond_steps - i - 1
                 ] = self.process_rgb(
-                    self.observation_dict[-i - 1][self.vla_target_image][0],
+                    self.observation_dict[-i - 1][self.vla_target_image],
                     vla_config.image_size,
                 )
+                dummy_proprio[
+                    :, vla_config.cond_steps - i - 1
+                ] = self.observation_dict[-i - 1][self.vla_target_proprio]
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps - store_size):
-                dummy_images[0, i] = self.process_rgb(
-                    self.observation_dict[0][self.vla_target_image][0],
+                dummy_images[:, i] = self.process_rgb(
+                    self.observation_dict[0][self.vla_target_image],
                     vla_config.image_size,
                 )
+                dummy_proprio[:, i] = self.observation_dict[0][
+                    self.vla_target_proprio
+                ]
         else:
             for i in range(vla_config.cond_steps):
-                dummy_images[0, i] = self.process_rgb(
+                dummy_images[:, i] = self.process_rgb(
                     self.observation_dict[i - vla_config.cond_steps][
                         self.vla_target_image
-                    ][0],
+                    ],
                     vla_config.image_size,
                 )
-                dummy_proprio[0, i] = self.observation_dict[
+                dummy_proprio[:, i] = self.observation_dict[
                     i - vla_config.cond_steps
                 ][self.vla_target_proprio]
 
@@ -112,7 +123,7 @@ class HabitatEvaluator(Evaluator):
         # TODO: get the text
         dummy_texts = [
             "pick up the object that is near you",
-        ]
+        ] * bsz
 
         dtype = torch.bfloat16
         # process image and text
@@ -297,10 +308,15 @@ class HabitatEvaluator(Evaluator):
                 vla_action = self.infer_action_vla_model(
                     vla_model, vla_processor, batch, device, vla_config
                 )
-                for vla_a in vla_action[0]:
-                    self.vla_action.append(
-                        [vla_a.cpu().detach().float().numpy()]
-                    )
+                # Make the time horizon as a leading dimension
+                vla_action = rearrange(vla_action, "b h a-> h b a")
+                for vla_a_time in vla_action:
+                    vla_temp = []
+                    for vla_a_batch in vla_a_time:
+                        vla_temp.append(
+                            vla_a_batch.cpu().detach().float().numpy()
+                        )
+                    self.vla_action.append(vla_temp)
 
             # Depoly an action
             if config.habitat_baselines.load_third_party_ckpt:
