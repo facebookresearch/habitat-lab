@@ -180,9 +180,8 @@ def test_example2_scene_instance():
     # Not sure, but pxr space is has values from 0 to infinity, and 1 is default, but hab space has
     # -1 values?  Don't know what hab space scaling is.
 
-    if os.path.exists(scene_usd_filepath):
-        assert True
-        os.remove(scene_usd_filepath)
+    assert os.path.exists(scene_usd_filepath)
+    os.remove(scene_usd_filepath)
 
 
 ## urdf_to_usd.py unit tests
@@ -247,10 +246,9 @@ def test_convert_urdf():
     output_usd = urdf_dir + "hab_spot_arm_test_convert_urdf.usda"
 
     convert_urdf(clean_urdf_filepath, output_usd)
-
-    if os.path.exists(output_usd):
-        assert True
-        os.remove(output_usd)
+    
+    assert os.path.exists(output_usd)
+    os.remove(output_usd)
 
 
 def test_add_habitat_visual_metadata_for_articulation():
