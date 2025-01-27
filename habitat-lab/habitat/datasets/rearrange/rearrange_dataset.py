@@ -31,6 +31,7 @@ class RearrangeEpisode(Episode):
     :property target_receptacles: The names and link indices of the receptacles containing the target objects.
     :property goal_receptacles: The names and link indices of the receptacles containing the goals.
     :property name_to_receptacle: Map ManagedObject instance handles to containing Receptacle unique_names.
+    :property language_instruction: Language instruction for the episode
     """
 
     ao_states: Dict[str, Dict[int, float]]
@@ -40,11 +41,13 @@ class RearrangeEpisode(Episode):
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
+    language_instruction: str = ""
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
+
     episodes: List[RearrangeEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
@@ -72,7 +75,6 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
-
             self.episodes.append(rearrangement_episode)
 
     def to_binary(self) -> Dict[str, Any]:
