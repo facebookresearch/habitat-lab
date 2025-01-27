@@ -40,15 +40,18 @@ class HabitatEvaluator(Evaluator):
     vla_target_image = "articulated_agent_arm_rgb"
     vla_target_proprio = "joint"
 
-    def process_rgb(self, rgb, target_size):
+    def process_rgb(self, rgbs, target_size):
         # Resize the image here
-        img = Image.fromarray(rgb.cpu().detach().numpy())
-        img = img.resize((target_size, target_size))
-        img = np.array(img)
-        rgb = torch.as_tensor(
-            rearrange(img, "h w c-> c h w")
-        )  # torch.Size([3, 224, 224])
-        return rgb
+        rgbs_process = torch.zeros((rgbs.shape[0], 3, target_size, target_size))
+        for i, rgb in enumerate(rgbs):
+            img = Image.fromarray(rgb.cpu().detach().numpy())
+            img = img.resize((target_size, target_size))
+            img = np.array(img)
+            rgb = torch.as_tensor(
+                rearrange(img, "h w c-> c h w")
+            )  # torch.Size([3, 224, 224])
+            rgbs_process[i] = rgb
+        return rgbs_process
 
     def infer_action_vla_model(self, vla_model, processor, observation, device, vla_config):
         """Infer action using vla models."""
@@ -65,31 +68,38 @@ class HabitatEvaluator(Evaluator):
         # 'head_stereo_left_depth', 'head_stereo_right_depth',
         # 'joint', 'third_rgb'])
         
+        # Confirm the number of batches 
+        bsz = observation[self.vla_target_image].shape[0]
+        print(f"bsz: {bsz}")
         joint_sensors = None
-        bsz = 1
         dummy_images = torch.randint(
             0, 256, (bsz, vla_config.cond_steps, 3, vla_config.image_size, vla_config.image_size), dtype=torch.uint8
         )
         dummy_proprio = torch.zeros((bsz, vla_config.cond_steps, vla_config.proprio_dim))
-
+        print("------")
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
-                dummy_images[0, vla_config.cond_steps-i-1] = self.process_rgb(self.observation_dict[-i-1][self.vla_target_image][0], vla_config.image_size)
+                dummy_images[:, vla_config.cond_steps-i-1] = self.process_rgb(self.observation_dict[-i-1][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, vla_config.cond_steps-i-1] = self.observation_dict[-i-1][self.vla_target_proprio]
+                print(f"input* i {vla_config.cond_steps-i-1} -> data i {-i-1}")
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps-store_size):
-                dummy_images[0, i] = self.process_rgb(self.observation_dict[0][self.vla_target_image][0], vla_config.image_size)
+                dummy_images[:, i] = self.process_rgb(self.observation_dict[0][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, i] = self.observation_dict[0][self.vla_target_proprio]
+                print(f"input* i {i} -> data i {0}")
         else:
             for i in range(vla_config.cond_steps):
-                dummy_images[0, i] = self.process_rgb(self.observation_dict[i-vla_config.cond_steps][self.vla_target_image][0], vla_config.image_size)
-                dummy_proprio[0, i] = self.observation_dict[i-vla_config.cond_steps][self.vla_target_proprio]
+                dummy_images[:, i] = self.process_rgb(self.observation_dict[i-vla_config.cond_steps][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, i] = self.observation_dict[i-vla_config.cond_steps][self.vla_target_proprio]
+                print(f"input i {i} -> data i {i-vla_config.cond_steps}")
 
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 
         # TODO: get the text
         dummy_texts = [
             "pick up the object that is near you",
-        ]
+        ] * bsz
 
         dtype = torch.bfloat16
         # process image and text
@@ -112,7 +122,6 @@ class HabitatEvaluator(Evaluator):
             image_text_proprio_mask,
             action_mask,
         ) = vla_model.split_full_mask_into_submasks(causal_mask)
-
         with torch.inference_mode():
             start_time = time.time()
             actions = vla_model.infer_action(
@@ -359,11 +368,13 @@ class HabitatEvaluator(Evaluator):
                 vla_action = self.infer_action_vla_model(
                     vla_model, vla_processor, batch, device, vla_config
                 )
-                for vla_a in vla_action[0]:
-                    self.vla_action.append([vla_a.cpu().detach().float().numpy()])
-
-                # first batch and first action
-                #vla_action = [vla_action[0][0].cpu().detach().float().numpy()]
+                # Make the time horizon as a leading dimension
+                vla_action = rearrange(vla_action, "b h a-> h b a")
+                for vla_a_time in vla_action:
+                    vla_temp = []
+                    for vla_a_batch in vla_a_time:
+                        vla_temp.append(vla_a_batch.cpu().detach().float().numpy())
+                    self.vla_action.append(vla_temp)
 
             if config.habitat_baselines.load_third_party_ckpt:
                 outputs = envs.step(self.vla_action.pop(0))
@@ -388,7 +399,6 @@ class HabitatEvaluator(Evaluator):
                 device=device,
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
-
             # TODO: better way to handle this
             if transformer_based_policy:
                 cur_not_done_masks = torch.tensor(
@@ -444,6 +454,7 @@ class HabitatEvaluator(Evaluator):
                     == evals_per_ep
                 ):
                     envs_to_pause.append(i)
+                    breakpoint()
 
                 # Exclude the keys from `_rank0_keys` from displaying in the video
                 disp_info = {

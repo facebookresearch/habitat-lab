@@ -47,13 +47,13 @@ habitat:
         height: 240
         width: 228
       joint_sensor:
-        dimensionality: 7 #4
-        arm_joint_mask: [1,1,1,1,1,1,1] #[1,1,0,1,0,1,0]
+        dimensionality: 4
+        arm_joint_mask: [1,1,0,1,0,1,0] #[1,1,0,1,0,1,0]
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
         center_cone_vector: [0.0, 1.0, 0.0]
-        #arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
+        arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
         auto_grasp: True
         should_clip: True
         consider_detected_portion_threshold: 0.5 # 0.5 or 0.3 should be good
