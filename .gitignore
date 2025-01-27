@@ -108,6 +108,6 @@ data
 *.navmesh
 
 # urdf conversion artifact
-.asset_hash
+test/data/usd_conversion_data/.asset_hash
 test/data/usd_conversion_data/config.yaml
 
