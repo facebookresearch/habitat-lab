@@ -264,17 +264,6 @@ def test_add_habitat_visual_metadata_for_articulation():
         out_usd_filepath,
         project_root_folder,
     )
-    # subprocess.run(
-    #     [
-    #         "python",
-    #         urdf_conversion_script,
-    #         "add_habitat_visual_metadata_for_articulation",
-    #         converted_clean_usda,
-    #         reference_urdf_filepath,
-    #         out_usd_filepath,
-    #         project_root_folder,
-    #     ]
-    # )
 
     # Parse the URDF file
     urdf_tree = ET.parse(reference_urdf_filepath)
