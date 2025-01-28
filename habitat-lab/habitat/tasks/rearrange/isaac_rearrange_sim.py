@@ -60,13 +60,12 @@ from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 from habitat_sim.utils.common import quat_from_magnum
 
+
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_friction, dynamic_friction, restitution):
     
-    from pxr import UsdShade, UsdPhysics
-    from omni.isaac.core.materials.physics_material import PhysicsMaterial
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -75,7 +74,10 @@ def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_f
     # material.CreateStaticFrictionAttr().Set(static_friction)
     # material.CreateDynamicFrictionAttr().Set(dynamic_friction)
     # material.CreateRestitutionAttr().Set(restitution)
-    
+    from pxr import UsdShade, UsdPhysics
+    from omni.isaac.core.materials.physics_material import PhysicsMaterial
+
+
     physics_material = PhysicsMaterial(
         prim_path=f"/PhysicsMaterials/{material_name}",
         name=material_name,
@@ -381,6 +383,10 @@ class IsaacRearrangeSim(HabitatSim):
         new_scene = self.prev_scene_id != ep_info.scene_id
         if new_scene:
             self._prev_obj_names = None
+        
+        if new_scene:
+            self._load_navmesh(ep_info)
+
 
         # Only remove and re-add objects if we have a new set of objects.
         ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
@@ -550,36 +556,13 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
-        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
-
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-
+        # TODO: later will work in other scenes
+        navmesh_path = "/home/xavierpuig/habitat_llm/habitat-llm-planner-2/habitat-llm/102344193/navmeshes/102344193.navmesh"
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")
         else:
-            logger.warning(
-                f"Requested navmesh to load from {navmesh_path} does not exist. Recomputing from configured values and caching."
-            )
-            navmesh_settings = NavMeshSettings()
-            navmesh_settings.set_defaults()
-
-            agent_config = None
-            if hasattr(self.habitat_config.agents, "agent_0"):
-                agent_config = self.habitat_config.agents.agent_0
-            elif hasattr(self.habitat_config.agents, "main_agent"):
-                agent_config = self.habitat_config.agents.main_agent
-            else:
-                raise ValueError(f"Cannot find agent parameters.")
-            navmesh_settings.agent_radius = agent_config.radius
-            navmesh_settings.agent_height = agent_config.height
-            navmesh_settings.agent_max_climb = agent_config.max_climb
-            navmesh_settings.agent_max_slope = agent_config.max_slope
-            navmesh_settings.include_static_objects = True
-            self.recompute_navmesh(self.pathfinder, navmesh_settings)
-            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
-            self.pathfinder.save_nav_mesh(navmesh_path)
+            raise Exception
 
         # NOTE: allowing indoor islands only
         self._largest_indoor_island_idx = get_largest_island_index(

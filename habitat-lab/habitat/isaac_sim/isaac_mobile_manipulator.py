@@ -75,48 +75,63 @@ class IsaacMobileManipulator:
                 for sensor_name in sensor_names:
                     sens_obj = self._sim._sensors[sensor_name]._sensor_object
                     cam_info = self.params.cameras[cam_prefix]
-
+                    agent = sim.agents_mgr._all_agent_data[0].articulated_agent
                     look_at = sim.agents_mgr._all_agent_data[0].articulated_agent.base_pos
-                    camera_pos = look_at + mn.Vector3(-0.7, 1.5, -0.7)
+                    camera_pos = look_at + mn.Vector3(-0.5, 5.0, 0)
+                    
+                    if cam_info.attached_link_id == -1:
+                        link_trans = agent.base_transformation
+                    else:
+                        link_trans = agent.get_link_transform(cam_info.attached_link_id)
 
+                    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                        pos = cam_info.cam_offset_pos
+                        ori = cam_info.cam_orientation
+                        Mt = mn.Matrix4.translation(pos)
+                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        cam_transform_rel = Mt @ Mz @ My @ Mx
+                    else:
+                        cam_transform_rel = mn.Matrix4.look_at(
+                            cam_info.cam_offset_pos,
+                            cam_info.cam_look_at_pos,
+                            mn.Vector3(0, 1, 0),
+                        )
+                    gt_look_at = mn.Matrix4.look_at(camera_pos, look_at, look_up)
+                    # print(look_at)
+                    # print(gt_look_at)
+                    # print("----")
+                    # print(cam_transform)
+                    # breakpoint()
+                    
+                    cam_transform = (
+                        link_trans
+                        @ cam_transform_rel
+                        @ cam_info.relative_transform
+                    )
+                    
+                    camera_pos = link_trans.transform_point(cam_info.cam_offset_pos)
+                    look_at = link_trans.transform_point(cam_info.cam_look_at_pos)
+                    
+                    sens_obj.node.transformation = mn.Matrix4.look_at(camera_pos, look_at, look_up)
+                    
+                    # sens_obj.node.translation = camera_pos
 
-
-                    # if cam_info.attached_link_id == -1:
-                    #     link_trans = self.sim_obj.transformation
-                    # else:
-                    #     link_trans = self.sim_obj.get_link_scene_node(
-                    #         cam_info.attached_link_id
-                    #     ).transformation
-
-                    # if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                    #     pos = cam_info.cam_offset_pos
-                    #     ori = cam_info.cam_orientation
-                    #     Mt = mn.Matrix4.translation(pos)
-                    #     Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                    #     My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                    #     Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                    #     cam_transform = Mt @ Mz @ My @ Mx
-                    # else:
-                    #     cam_transform = mn.Matrix4.look_at(
-                    #         cam_info.cam_offset_pos,
-                    #         cam_info.cam_look_at_pos,
-                    #         mn.Vector3(0, 1, 0),
-                    #     )
-                    # cam_transform = (
-                    #     link_trans
-                    #     @ cam_transform
-                    #     @ cam_info.relative_transform
-                    # )
                     # cam_transform = inv_T @ cam_transform
 
                     # sens_obj.node.transformation = (
-                    #     orthonormalize_rotation_shear(cam_transform)
+                    #     cam_transform
                     # )
-                    sens_obj.node.rotation = mn.Quaternion.from_matrix(
-                        mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
-                    )
-                    sens_obj.node.translation = camera_pos
-                    print(sens_obj.node.translation)
+                    if "third" in cam_prefix:
+                        # breakpoint()
+                        pass
+                        # breakpoint()
+                    # sens_obj.node.rotation = mn.Quaternion.from_matrix(
+                    #     mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
+                    # )
+                    # sens_obj.node.translation = camera_pos
+                    # print(sens_obj.node.translation)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
