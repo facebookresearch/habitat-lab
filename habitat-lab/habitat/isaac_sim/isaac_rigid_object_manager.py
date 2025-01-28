@@ -35,12 +35,7 @@ class IsaacRigidObjectWrapper:
         rotation_quat = mn.Quaternion.from_matrix(transform_mat.rotation_normalized())
         translation = transform_mat.translation
 
-        translation_usd = isaac_prim_utils.habitat_to_usd_position([translation.x, translation.y, translation.z])
-        vec = rotation_quat.vector
-        rotation_quat_wxyz_usd = isaac_prim_utils.habitat_to_usd_rotation([rotation_quat.scalar, vec.x, vec.y, vec.z])
-
-        isaac_prim_utils.set_rotation(self._prim, rotation_quat_wxyz=rotation_quat_wxyz_usd)
-        isaac_prim_utils.set_translation(self._prim, translation_usd)
+        isaac_prim_utils.set_pose(self._rigid_prim, [*translation], isaac_prim_utils.magnum_quat_to_list_wxyz(rotation_quat))
 
 
         # todo: consider self._rigid_prim.set_world_pose

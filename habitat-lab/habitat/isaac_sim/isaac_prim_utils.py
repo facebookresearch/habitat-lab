@@ -132,6 +132,15 @@ def habitat_to_usd_rotation(rotation_wxyz):
     return rotation_usd
 
 
+
+def set_pose(rigid_prim: "RigidPrim", position, rotation_quat_wxyz):
+
+    rotation_usd = habitat_to_usd_rotation(rotation_quat_wxyz)
+    pos_usd = habitat_to_usd_position(position)
+    rigid_prim.set_world_pose(pos_usd, rotation_usd)
+
+
+
 def set_translation(prim, translation):
     """Note that accessing a rigid object through USD prim API is not preferred. See RigidPrim."""
 

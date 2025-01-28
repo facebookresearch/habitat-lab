@@ -73,6 +73,11 @@ class IsaacAppWrapper:
     def service(self):
         return self._service
 
+    # must call this before rendering in habitat-sim!
+    def pre_render(self):
+        if self._service.usd_visualizer:
+            self._service.usd_visualizer.flush_to_hab_sim()
+
     def step(self, num_steps=1):
         # todo: think about dt here
         if self._headless:
@@ -84,9 +89,6 @@ class IsaacAppWrapper:
                 self._simulation_app.update()
             # sleep a bit to avoid 100% CPU usage and thus keep the OS windowing environment responsive
             time.sleep(0.01)
-
-        if self._service.usd_visualizer:
-            self._service.usd_visualizer.flush_to_hab_sim()
 
 
     # probably don't ever need to close simulation_app
