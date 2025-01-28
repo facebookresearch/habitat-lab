@@ -458,7 +458,8 @@ class AppStateIsaacSimViewer(AppState):
         assert not self._app_service.hitl_config.camera.first_person_mode
 
         self._cursor_pos = mn.Vector3(-7.2, 0.8, -7.7)  # mn.Vector3(-7.0, 1.0, -2.75)
-        self._do_camera_follow_spot = False
+        self._do_camera_follow_spot = True
+        self._do_control_spot = True
         self._camera_helper.update(self._cursor_pos, 0.0)
 
         # self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
@@ -466,7 +467,7 @@ class AppStateIsaacSimViewer(AppState):
         # self._spot = SpotWrapper(self._sim)
 
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        do_isaac_headless = True  # not self._app_service.hitl_config.experimental.headless.do_headless
+        do_isaac_headless = not self._app_service.hitl_config.experimental.headless.do_headless
 
         # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
         self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)
@@ -478,7 +479,7 @@ class AppStateIsaacSimViewer(AppState):
         isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
         add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
         self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
@@ -735,6 +736,7 @@ class AppStateIsaacSimViewer(AppState):
                 approx_app_fps = 30
                 num_steps = int(1.0 / (approx_app_fps * self._isaac_physics_dt))
                 self._isaac_wrapper.step(num_steps=num_steps)
+                self._isaac_wrapper.pre_render()
 
     def update_spot_base(self):
 
@@ -771,13 +773,12 @@ class AppStateIsaacSimViewer(AppState):
 
     def update_spot_pre_step(self, dt):
 
-        # enable these two, plus turn down friction, to demo spot base controller
-        # self.update_spot_base()
-        # self._spot_wrapper._target_arm_joint_positions = [0.0, -1.18, 0.0, 1.12, 0.0, 0.83, 0.0, 0.0]
-
-        # self.update_spot_arm(dt)
-
-        self._spot_state_machine.update(dt)
+        if self._do_control_spot:
+          self.update_spot_base()
+          self._spot_wrapper._target_arm_joint_positions = [0.0, -1.18, 0.0, 1.12, 0.0, 0.83, 0.0, 0.0]
+            # self.update_spot_arm(dt)
+        else:
+            self._spot_state_machine.update(dt)
 
 
     def update_record_remote_hands(self):
