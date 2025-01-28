@@ -76,9 +76,9 @@ class RearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[
-                            f"{agent_name}_{sensor_key}"
-                        ] = sensor_config
+                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
+                            sensor_config
+                        )
 
         super().__init__(config)
 

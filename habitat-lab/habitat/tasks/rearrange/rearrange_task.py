@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 from gym import spaces
+import quaternion
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -86,6 +87,8 @@ class RearrangeTask(NavigationTask):
         self._min_distance_start_agents = (
             self._config.min_distance_start_agents
         )
+        self.init_ee_orientation = None
+        self.target_obj_orientation = None
         # TODO: this patch supports hab2 benchmark fixed states, but should be refactored w/ state caching for multi-agent
         if (
             hasattr(self._sim.habitat_config.agents, "main_agent")
@@ -256,6 +259,12 @@ class RearrangeTask(NavigationTask):
         self.should_end = False
         self._done = False
         self._cur_episode_step = 0
+        _, self.init_ee_orientation = self._sim.get_agent_data(
+            None
+        ).articulated_agent.get_ee_local_pose()
+        self.target_obj_orientation = quaternion.quaternion(
+            self.init_ee_orientation
+        )
         if fetch_observations:
             self._sim.maybe_update_articulated_agent()
             return self._get_observations(episode)

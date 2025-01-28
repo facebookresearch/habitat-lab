@@ -355,7 +355,8 @@ class IkHelper:
             physicsClientId=self.pc_id,
         )
         world_ee = ls[4]
-        return world_ee
+        world_ee_rot = p.getEulerFromQuaternion(ls[5])
+        return world_ee, world_ee_rot
 
     def get_joint_limits(self):
         lower = []
@@ -371,15 +372,23 @@ class IkHelper:
                 upper.append(ret[9])
         return np.array(lower), np.array(upper)
 
-    def calc_ik(self, targ_ee: np.ndarray):
+    def calc_ik(self, targ_ee: np.ndarray, targ_ee_rot: np.ndarray = None):
         """
         :param targ_ee: 3D target position in the robot BASE coordinate frame
         """
+        target_ori = (
+            p.getQuaternionFromEuler(targ_ee_rot)
+            if targ_ee_rot is not None
+            else None
+        )
         js = p.calculateInverseKinematics(
             self.robo_id,
             self.pb_link_idx,
-            targ_ee,
+            targetPosition=targ_ee,
+            targetOrientation=target_ori,
             physicsClientId=self.pc_id,
+            maxNumIterations=100,
+            residualThreshold=0.00001,
         )
         return js[: self._arm_len]
 
@@ -760,3 +769,21 @@ def get_camera_lookat_relative_to_vertial_line(
     # Get angle between location and the vector
     angle = get_camera_object_angle(cam_T, vertical_dir, local_vertical_dir)
     return angle
+
+
+def get_angle_to_pos_xyz(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 1]]
+    rel_pos = rel_pos[[0, 1]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle
