@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 import numpy as np
 from habitat.articulated_agents.robots import FetchRobot
 from habitat.config.default import get_agent_config
-from habitat.config.default_structured_configs import ThirdRGBSensorConfig, HeadRGBSensorConfig, HeadPanopticSensorConfig
+from habitat.config.default_structured_configs import ThirdRGBSensorConfig, HeadRGBSensorConfig, ArmDepthSensorConfig, HeadPanopticSensorConfig
 from habitat.config.default_structured_configs import SimulatorConfig, HabitatSimV0Config, AgentConfig
 from habitat.config.default import get_agent_config
 import habitat
@@ -35,6 +35,7 @@ def make_sim_cfg(agent_dict):
     # This is for better graphics
     sim_cfg.habitat_sim_v0.enable_hbao = True
     sim_cfg.habitat_sim_v0.enable_physics = False
+    sim_cfg.habitat_sim_v0.frustum_culling = False
 
     
     # Set up an example scene
@@ -77,6 +78,103 @@ def init_rearrange_env(agent_dict, action_dict):
     return Env(res_cfg)
 
 
+from habitat.tasks.utils import get_angle
+from habitat.datasets.rearrange.navmesh_utils import compute_turn
+class OracleNavSkill():
+    def __init__(self, env, target_pos):
+        self.env = env
+        self.target_pos = target_pos
+        self.target_base_pos = target_pos
+        self.dist_thresh = 0.1
+        self.turn_velocity = 2
+
+        self.forward_velocity = 10
+        self.turn_thresh = 0.2
+        self.articulated_agent = self.env.sim.articulated_agent
+
+    def _path_to_point(self, point):
+        """
+        Obtain path to reach the coordinate point. If agent_pos is not given
+        the path starts at the agent base pos, otherwise it starts at the agent_pos
+        value
+        :param point: Vector3 indicating the target point
+        """
+        agent_pos = self.articulated_agent.base_pos
+
+        path = habitat_sim.ShortestPath()
+        path.requested_start = agent_pos
+        path.requested_end = point
+        found_path = self.env.sim.pathfinder.find_path(path)
+        if not found_path:
+            return [agent_pos, point]
+        return path.points
+    
+    def get_step(self):
+
+        obj_targ_pos = np.array(self.target_pos)
+        base_T = self.articulated_agent.base_transformation
+
+        curr_path_points = self._path_to_point(self.target_base_pos)
+        robot_pos = np.array(self.articulated_agent.base_pos)
+        if len(curr_path_points) == 1:
+            curr_path_points += curr_path_points
+
+        cur_nav_targ = np.array(curr_path_points[1])
+        forward = np.array([1.0, 0, 0])
+        robot_forward = np.array(base_T.transform_vector(forward))
+
+        # Compute relative target
+        rel_targ = cur_nav_targ - robot_pos
+        # Compute heading angle (2D calculation)
+        robot_forward = robot_forward[[0, 2]]
+        rel_targ = rel_targ[[0, 2]]
+        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+        dist_to_final_nav_targ = np.linalg.norm(
+            (np.array(self.target_base_pos) - robot_pos)[[0, 2]],
+        )
+        angle_to_target = get_angle(robot_forward, rel_targ)
+        angle_to_obj = get_angle(robot_forward, rel_pos)
+        
+        # Compute the distance
+        at_goal = (
+            dist_to_final_nav_targ < self.dist_thresh
+            and angle_to_obj < self.turn_thresh
+        )
+
+        # Planning to see if the robot needs to do back-up
+
+        if not at_goal:
+            if dist_to_final_nav_targ < self.dist_thresh:
+                # TODO: this does not account for the sampled pose's final rotation
+                # Look at the object target position when getting close
+                vel = compute_turn(
+                    rel_pos,
+                    self.turn_velocity,
+                    robot_forward,
+                )
+            elif angle_to_target < self.turn_thresh:
+                # Move forward towards the target
+                vel = [self.forward_velocity, 0]
+            else:
+                # Look at the target waypoint
+                vel = compute_turn(
+                    rel_targ,
+                    self.turn_velocity,
+                    robot_forward,
+                )
+        else:
+            vel = [0, 0]
+        vel2 = compute_turn(
+                    rel_targ,
+                    self.turn_velocity,
+                    robot_forward,
+                )
+        vel2 = vel
+        
+        # print(vel, dist_to_final_nav_targ, angle_to_obj, angle_to_target)
+        action = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ vel[0], vel[1]], dtype=np.float32)}}
+        return action
+
 
 def main():
     # Define the agent configuration
@@ -90,7 +188,7 @@ def main():
     # We will later talk about why we are giving the sensors these names
     main_agent_config.sim_sensors = {
         "third_rgb": ThirdRGBSensorConfig(),
-        "head_rgb": HeadRGBSensorConfig(),
+        "articulated_agent_arm_depth": ArmDepthSensorConfig(),
     }
 
     # We create a dictionary with names of agents and their corresponding agent configuration
@@ -106,50 +204,38 @@ def main():
         "output_env.mp4",
         fps=30,
     )
-    action = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 10.0, 0], dtype=np.float32)}}
-    for i in range(100):
+
+    writer2 = imageio.get_writer(
+        "output_env_head.mp4",
+        fps=30,
+    )
+    action1 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 5.0, 0], dtype=np.float32)}}
+    action2 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 0, 5], dtype=np.float32)}}
+    action3 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 0, 0], dtype=np.float32)}}
+    
+    first_obj = env.sim._rigid_objects[0].translation
+    nav_point = env.sim.pathfinder.get_random_navigable_point_near(circle_center=first_obj, radius=1)
+    curr_pos = env.sim.articulated_agent.base_pos
+    dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
+    nav_planner = OracleNavSkill(env, nav_point)
+    i = 0
+    while dist > 0.10 or i < 200:
         
-        obs = env.step(action)
+        i += 1
+        action_planner = nav_planner.get_step()
+        obs = env.step(action_planner)
         im = obs["third_rgb"]
+        
         writer.append_data(im)
+    
+        curr_pos = env.sim.articulated_agent.base_pos
+        dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
+        print(dist)
     writer.close()
     breakpoint()
-    # def get_pick_target_pos():
-    #     ro = isaac_viewer._rigid_objects[isaac_viewer._pick_target_rigid_object_idx]
-    #     com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
-    #     # self.draw_axis(0.05, mn.Matrix4.translation(com_world))
-    #     return com_world
 
-    # isaac_viewer._spot_state_machine.set_pick_target(get_pick_target_pos)
+    writer2.close()
 
-    # # breakpoint()
-    # for it in range(100):
-    #     isaac_viewer.update_isaac({})
-    #     look_up = mn.Vector3(0,1,0)
-    #     isaac_viewer.update_spot_pre_step(0.01)
-
-    #     look_at = sim.agents_mgr._all_agent_data[0].articulated_agent.base_pos
-    #     print(look_at)
-    #     camera_pos = look_at + mn.Vector3(-0.7, 1.5, -0.7)
-        
-    #     sim._sensors["third_rgb"]._sensor_object.node.rotation =  mn.Quaternion.from_matrix(
-    #         mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
-    #     )
-        
-    #     sim._sensors["third_rgb"]._sensor_object.node.translation = camera_pos
-    #     # import cv2
-    #     sim.reset()
-    
-    #     res = sim.get_sensor_observations()
-        
-    #     im = res["third_rgb"][:,:,[0,1,2]]
-    #     import cv2
-    #     cv2.imwrite("third2.png", im)
-    #     breakpoint()
-    #     writer.append_data(im)
-        
-    # writer.close()
-    # breakpoint()
         
 
 if __name__ == "__main__":

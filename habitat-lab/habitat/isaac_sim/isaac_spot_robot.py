@@ -26,13 +26,20 @@ class IsaacSpotRobot(IsaacMobileManipulator):
     @property
     def base_transformation(self):
         add_rot = mn.Matrix4.rotation(
-            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+            mn.Rad(np.pi / 2), mn.Vector3(1.0, 0, 0)
         )
-        base_position, base_orientation = self._robot_wrapper.robot.get_world_pose()
-        # todo: get Hab transform from pos and orient
-        assert False
-        return None
+        base_position, base_rotation = self._robot_wrapper.get_root_pose()
+        pose = mn.Matrix4.from_(base_rotation.to_matrix(), base_position)
+        return pose @ add_rot
 
+    def get_link_transform(self, link_id):
+        link_positions, link_rotations = self._robot_wrapper.get_link_world_poses()
+        position, rotation = link_positions[link_id], link_rotations[link_id]
+        # breakpoint()
+        
+        pose = mn.Matrix4.from_(rotation.to_matrix(), position)
+        return pose
+    
     def get_ee_local_pose(
         self, ee_index: int = 0
     ) -> Tuple[np.ndarray, np.ndarray]:
