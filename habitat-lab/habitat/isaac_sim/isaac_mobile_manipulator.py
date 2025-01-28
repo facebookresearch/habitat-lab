@@ -35,11 +35,15 @@ class IsaacMobileManipulator:
         # maintain_link_order: bool = False,
         # base_type="mobile",
     ):
-        self.params = params
         self._sim = sim
         self._robot_wrapper = SpotRobotWrapper(isaac_service=isaac_service, instance_id=0)
+        # Modify here the params:
+       
+        self.params = params
+        
         # TODO: this should move later, cameras should not be attached to agents
         # @alexclegg
+        
         self._cameras = None
         if hasattr(self.params, "cameras"):
             from collections import defaultdict
@@ -77,13 +81,11 @@ class IsaacMobileManipulator:
                     cam_info = self.params.cameras[cam_prefix]
                     agent = sim.agents_mgr._all_agent_data[0].articulated_agent
                     look_at = sim.agents_mgr._all_agent_data[0].articulated_agent.base_pos
-                    camera_pos = look_at + mn.Vector3(-0.5, 5.0, 0)
                     
                     if cam_info.attached_link_id == -1:
                         link_trans = agent.base_transformation
                     else:
-                        link_trans = agent.get_link_transform(cam_info.attached_link_id)
-
+                        link_trans = agent.get_link_transform(cam_info.attached_link_id+1)
                     if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
                         pos = cam_info.cam_offset_pos
                         ori = cam_info.cam_orientation
@@ -98,12 +100,6 @@ class IsaacMobileManipulator:
                             cam_info.cam_look_at_pos,
                             mn.Vector3(0, 1, 0),
                         )
-                    gt_look_at = mn.Matrix4.look_at(camera_pos, look_at, look_up)
-                    # print(look_at)
-                    # print(gt_look_at)
-                    # print("----")
-                    # print(cam_transform)
-                    # breakpoint()
                     
                     cam_transform = (
                         link_trans
@@ -111,28 +107,11 @@ class IsaacMobileManipulator:
                         @ cam_info.relative_transform
                     )
                     
-                    camera_pos = link_trans.transform_point(cam_info.cam_offset_pos)
-                    look_at = link_trans.transform_point(cam_info.cam_look_at_pos)
                     
-                    sens_obj.node.transformation = mn.Matrix4.look_at(camera_pos, look_at, look_up)
+                    sens_obj.node.transformation = (
+                        cam_transform
+                    )
                     
-                    # sens_obj.node.translation = camera_pos
-
-                    # cam_transform = inv_T @ cam_transform
-
-                    # sens_obj.node.transformation = (
-                    #     cam_transform
-                    # )
-                    if "third" in cam_prefix:
-                        # breakpoint()
-                        pass
-                        # breakpoint()
-                    # sens_obj.node.rotation = mn.Quaternion.from_matrix(
-                    #     mn.Matrix4.look_at(camera_pos, look_at, look_up).rotation()
-                    # )
-                    # sens_obj.node.translation = camera_pos
-                    # print(sens_obj.node.translation)
-
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
