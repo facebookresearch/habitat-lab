@@ -113,10 +113,10 @@ def convert_meshes_to_static_colliders(stage, root_path):
                 mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
 
 
-def convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True) -> bool:
+def convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True, merge_all_meshes: bool = False) -> bool:
 
     asyncio.run(
-        async_convert_mesh_to_usd(in_file=in_file, out_file=out_file, load_materials=load_materials)
+        async_convert_mesh_to_usd(in_file=in_file, out_file=out_file, load_materials=load_materials, merge_all_meshes=merge_all_meshes)
     )
 
     # from pxr import Usd
@@ -125,7 +125,7 @@ def convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True
     # stage.GetRootLayer().Export(out_file)
 
 
-async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True) -> bool:
+async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True, merge_all_meshes: bool = False) -> bool:
     """ported from IsaacLab mesh_converter.py _convert_mesh_to_usd"""
 
     enable_extension("omni.kit.asset_converter")
@@ -142,7 +142,7 @@ async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials:
     converter_context.ignore_camera = True
     converter_context.ignore_light = True
     # We avoid merging meshes. This is specifically for collider GLBs, where each mesh is meant to be a separate convex hull at runtime.
-    converter_context.merge_all_meshes = False
+    converter_context.merge_all_meshes = merge_all_meshes
     # Sets world units to meters, this will also scale asset if it's centimeters model.
     # This does not work right now :(, so we need to scale the mesh manually
     converter_context.use_meter_as_world_unit = True
@@ -217,7 +217,7 @@ def sanitize_usd_name(name):
     return sanitized_name
 
 
-def convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder):
+def convert_object_to_usd(object_config_filepath, out_usd_path, project_root_folder, enable_collision=True):
 
     object_config_folder, _ = os.path.split(object_config_filepath)
 
@@ -226,12 +226,21 @@ def convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_p
         object_config_json_data = json.load(file)
     # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
     collision_asset_rel_filepath = object_config_json_data["collision_asset"] if "collision_asset" in object_config_json_data else object_config_json_data["render_asset"]
+    # Render assets should be merged; collision assets should not as they already represent a convex decomposition into nodes. Later, a render asset's mesh should be set to "convexDecomposition" and a collision asset's meshes should be set to "convexHull".
+    merge_all_meshes = "collision_asset" not in object_config_json_data
     # collision_asset_filepath = find_file(objects_root_folder, collision_asset_filename)
     collision_asset_filepath = os.path.abspath(os.path.join(object_config_folder, collision_asset_rel_filepath))
 
     print(f"Converting {collision_asset_filepath}...")
 
-    convert_mesh_to_usd(collision_asset_filepath, out_usd_path, load_materials=False)
+    if enable_collision:
+        convert_mesh_to_usd(collision_asset_filepath, out_usd_path, load_materials=False, merge_all_meshes=merge_all_meshes)
+    else:
+        # create empty scene
+        usd_stage = Usd.Stage.CreateNew(out_usd_path)
+        xform_prim = UsdGeom.Xform.Define(usd_stage, "/World")
+        usd_stage.SetDefaultPrim(xform_prim.GetPrim())
+        usd_stage.GetRootLayer().Save()        
 
     render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
 
@@ -304,7 +313,7 @@ def habitat_to_usd_rotation(rotation):
 
 
 
-def convert_hab_scene(scene_filepath, project_root_folder):
+def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_stage=True):
 
 
     # scene_usd_filepath = "./data/usd/test_scene.usda"
@@ -314,11 +323,13 @@ def convert_hab_scene(scene_filepath, project_root_folder):
     scene_usd_folder = "data/usd/scenes"
     scene_usd_filepath = os.path.join(scene_usd_folder, f"{scene_name}.usda")
 
-    stage = Usd.Stage.CreateNew(scene_usd_filepath)
-    xform_prim = UsdGeom.Xform.Define(stage, "/Scene")
-    stage.SetDefaultPrim(xform_prim.GetPrim())
+    usd_stage = Usd.Stage.CreateNew(scene_usd_filepath)
+    xform_prim = UsdGeom.Xform.Define(usd_stage, "/Scene")
+    usd_stage.SetDefaultPrim(xform_prim.GetPrim())
 
     scenes_folder = os.path.dirname(scene_filepath)
+    stages_folder = scenes_folder + "/../stages"
+    assert os.path.exists(stages_folder) and os.path.isdir(stages_folder)
     objects_root_folder = scenes_folder + "/../objects"
     assert os.path.exists(objects_root_folder) and os.path.isdir(objects_root_folder)
 
@@ -329,6 +340,68 @@ def convert_hab_scene(scene_filepath, project_root_folder):
 
     max_count = -1 # 50  # temp only convert the first N objects
     count = 0
+
+    assert "stage_instance" in scene_json_data
+    if True:
+        stage_json_data = scene_json_data["stage_instance"]
+        stage_template_name = stage_json_data['template_name']
+        base_stage_name = stage_template_name[stage_template_name.rfind('/') + 1:]
+        stage_config_filepath = os.path.abspath(os.path.join(stages_folder, base_stage_name + ".stage_config.json"))
+        assert os.path.exists(stage_config_filepath)
+        out_usd_path = f"./data/usd/stages/{base_stage_name}.usda"
+        if not os.path.exists(out_usd_path):
+            convert_object_to_usd(stage_config_filepath, out_usd_path, project_root_folder, enable_collision=enable_collision_for_stage)
+
+        relative_usd_path = os.path.relpath(out_usd_path, start=scene_usd_folder)
+
+        object_xform = UsdGeom.Xform.Define(
+            usd_stage, f"/Scene/stage_{base_stage_name}"
+        )  
+        prim = object_xform.GetPrim()
+        prim.GetReferences().AddReference(relative_usd_path)
+
+        # use convexDecomposition for stage
+        omni.physx.scripts.utils.setStaticCollider(prim, "meshSimplification")
+        # set purpose to "guide" so that this mesh doesn't render in Isaac?
+        if False:
+            mesh_geom = UsdGeom.Imageable(prim)
+            mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
+
+        # Collect or create transform ops in the desired order: scale, rotation, translation
+        xform_op_order = []
+
+        # Ensure scale op exists
+        scale = [1.0, 1.0, 1.0]
+        scale_op = next(
+            (op for op in object_xform.GetOrderedXformOps() if op.GetName() == "xformOp:scale"),
+            None,
+        )
+        if scale_op is None:
+            scale_op = object_xform.AddScaleOp()
+        scale_op.Set(Gf.Vec3f(*scale))
+        xform_op_order.append(scale_op)
+
+        # Ensure rotation op exists
+        rotation = habitat_to_usd_rotation([1.0, 0.0, 0.0, 0.0])
+        orient_op = next(
+            (op for op in object_xform.GetOrderedXformOps() if op.GetName() == "xformOp:orient"),
+            None,
+        )
+        if orient_op is None:
+            orient_op = object_xform.AddOrientOp(precision=UsdGeom.XformOp.PrecisionDouble)
+        orient_op.Set(Gf.Quatd(*rotation))
+        xform_op_order.append(orient_op)
+
+        # Ensure translation op exists
+        position = habitat_to_usd_position([0.0, 0.0, 0.0])
+        translate_op = next(
+            (op for op in object_xform.GetOrderedXformOps() if op.GetName() == "xformOp:translate"),
+            None,
+        )
+        if translate_op is None:
+            translate_op = object_xform.AddTranslateOp()
+        translate_op.Set(Gf.Vec3f(*position))
+        xform_op_order.append(translate_op)
 
     assert "object_instances" in scene_json_data
     for obj_instance_json in scene_json_data["object_instances"]:
@@ -357,13 +430,13 @@ def convert_hab_scene(scene_filepath, project_root_folder):
             object_config_filepath = find_file(objects_root_folder, object_config_filename)
             assert object_config_filepath
 
-            convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
+            convert_object_to_usd(object_config_filepath, out_usd_path, project_root_folder)
 
         # relative_usd_path = out_usd_path.removeprefix("./data/usd/")
         relative_usd_path = os.path.relpath(out_usd_path, start=scene_usd_folder)
 
         object_xform = UsdGeom.Xform.Define(
-            stage, f"/Scene/{unique_object_name}"
+            usd_stage, f"/Scene/{unique_object_name}"
         )  
         prim = object_xform.GetPrim()
         prim.GetReferences().AddReference(relative_usd_path)
@@ -423,7 +496,7 @@ def convert_hab_scene(scene_filepath, project_root_folder):
         if count == max_count:
             break
 
-    stage.GetRootLayer().Save()
+    usd_stage.GetRootLayer().Save()
     print(f"wrote scene {scene_usd_filepath}")
 
 
@@ -557,13 +630,12 @@ def convert_objects_folder_to_usd(objects_root_folder, out_usd_folder, project_r
         # todo: gather these up and do them later with multiprocessing
         if not os.path.exists(out_usd_path):
 
-            convert_object_to_usd(objects_root_folder, object_config_filepath, out_usd_path, project_root_folder)
+            convert_object_to_usd(object_config_filepath, out_usd_path, project_root_folder)
 
-if __name__ == "__main__":
-    convert_urdf_test()
-    # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./")
-    # convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
-    # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/104862669_172226853.scene_instance.json", project_root_folder="./")
-    # convert_object_to_usd("data/fpss_ci/objects", "99a5f505af290fb896dbb6407665336df9fce83a.object_config.json", "data/usd/objects/OBJECT_99a5f505af290fb896dbb6407665336df9fce83a.usda", "./")
 
-    # convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
+# convert_urdf_test()
+convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./")
+# convert_hab_scene("data/fpss_ci/scenes-siro/102817140.scene_instance.json", project_root_folder="./")
+# convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/104862669_172226853.scene_instance.json", project_root_folder="./")
+
+# convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
