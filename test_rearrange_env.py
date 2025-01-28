@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 import numpy as np
 from habitat.articulated_agents.robots import FetchRobot
 from habitat.config.default import get_agent_config
-from habitat.config.default_structured_configs import ThirdRGBSensorConfig, HeadRGBSensorConfig, ArmDepthSensorConfig, HeadPanopticSensorConfig
+from habitat.config.default_structured_configs import ThirdRGBSensorConfig, HeadRGBSensorConfig, ArmDepthSensorConfig, ArmRGBSensorConfig, HeadPanopticSensorConfig
 from habitat.config.default_structured_configs import SimulatorConfig, HabitatSimV0Config, AgentConfig
 from habitat.config.default import get_agent_config
 import habitat
@@ -35,13 +35,13 @@ def make_sim_cfg(agent_dict):
     # This is for better graphics
     sim_cfg.habitat_sim_v0.enable_hbao = True
     sim_cfg.habitat_sim_v0.enable_physics = False
+
+    # TODO: disable this, causes performance issues
     sim_cfg.habitat_sim_v0.frustum_culling = False
 
     
     # Set up an example scene
     sim_cfg.scene = "NONE" # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
-    # sim_cfg.scene_dataset = os.path.join(data_path, "hab3_bench_assets/hab3-hssd/hab3-hssd.scene_dataset_config.json")
-    # sim_cfg.additional_object_paths = [os.path.join(data_path, 'objects/ycb/configs/')]
 
     
     cfg = OmegaConf.create(sim_cfg)
@@ -188,7 +188,7 @@ def main():
     # We will later talk about why we are giving the sensors these names
     main_agent_config.sim_sensors = {
         "third_rgb": ThirdRGBSensorConfig(),
-        "articulated_agent_arm_depth": ArmDepthSensorConfig(),
+        "articulated_agent_arm_rgb": ArmRGBSensorConfig(),
     }
 
     # We create a dictionary with names of agents and their corresponding agent configuration
@@ -209,9 +209,7 @@ def main():
         "output_env_head.mp4",
         fps=30,
     )
-    action1 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 5.0, 0], dtype=np.float32)}}
-    action2 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 0, 5], dtype=np.float32)}}
-    action3 = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 0, 0], dtype=np.float32)}}
+    action_example = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 5.0, 0], dtype=np.float32)}}
     
     first_obj = env.sim._rigid_objects[0].translation
     nav_point = env.sim.pathfinder.get_random_navigable_point_near(circle_center=first_obj, radius=1)
@@ -219,19 +217,23 @@ def main():
     dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
     nav_planner = OracleNavSkill(env, nav_point)
     i = 0
-    while dist > 0.10 or i < 200:
+    while dist > 0.10 and i < 200:
         
         i += 1
         action_planner = nav_planner.get_step()
         obs = env.step(action_planner)
         im = obs["third_rgb"]
+        im2 = obs["articulated_agent_arm_rgb"]
         
         writer.append_data(im)
+        writer2.append_data(im2)
     
         curr_pos = env.sim.articulated_agent.base_pos
         dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
-        print(dist)
+        
     writer.close()
+    writer2.close()
+    
     breakpoint()
 
     writer2.close()

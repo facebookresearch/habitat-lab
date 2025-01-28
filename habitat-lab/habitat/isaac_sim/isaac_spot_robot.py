@@ -38,6 +38,9 @@ class IsaacSpotRobot(IsaacMobileManipulator):
         # breakpoint()
         
         pose = mn.Matrix4.from_(rotation.to_matrix(), position)
+        add_rot = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        )
         return pose
     
     def get_ee_local_pose(
@@ -76,8 +79,17 @@ class IsaacSpotRobot(IsaacMobileManipulator):
         isaac_service,
         sim=None
     ):
+        # TODO: This should be obtained from _target_arm_joint_positions but it is not intialized here yet.
+        ee_index = 19
+        arm_joints = [0,  5, 10, 15, 16, 17, 18]
+        leg_joints = [jid for jid in range(19) if jid not in arm_joints]
+
+        spot_params = SpotRobot._get_spot_params()
+        spot_params.arm_joints = arm_joints
+        spot_params.gripper_joints = [ee_index]
+        spot_params.leg_joints = leg_joints
         super().__init__(
-            SpotRobot._get_spot_params(),
+            spot_params,
             agent_cfg,
             isaac_service,
             sim=sim
