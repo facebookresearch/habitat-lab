@@ -8,24 +8,28 @@ import argparse
 import os
 import struct
 import subprocess
-from typing import Any, Optional, Union
-import boto3
 import tarfile
 from pathlib import Path
-import psutil
-from tqdm import tqdm
-from boto3.s3.transfer import S3Transfer, TransferConfig
+from typing import Optional, Union
 
+import boto3
+import psutil
+from boto3.s3.transfer import S3Transfer, TransferConfig
+from tqdm import tqdm
 
 
 def get_uncompressed_file_size(file_name: str):
     with open(file_name, "rb") as f:
         f.seek(-4, 2)
-        return struct.unpack('I', f.read(4))[0]
+        return struct.unpack("I", f.read(4))[0]
+
 
 def extract(file_name: str, dest_dir: str):
     file_size = get_uncompressed_file_size(file_name)
-    progress_bar = tqdm(total=file_size, unit="B", unit_scale=True, desc="Extracting")
+    progress_bar = tqdm(
+        total=file_size, unit="B", unit_scale=True, desc="Extracting"
+    )
+
     def track_progress(members):
         for member in members:
             yield member
@@ -36,31 +40,38 @@ def extract(file_name: str, dest_dir: str):
 
     os.remove(file_name)
 
+
 def download_fast(bucket_name: str, s3_key: str, file_name: str):
     # Check if local file exists
     if os.path.exists(file_name):
         raise ValueError(f"Local file {file_name} exists.")
-    
+
     s3_client = boto3.client("s3")
     cpu_count = psutil.cpu_count()
     transfer_config = TransferConfig(max_concurrency=cpu_count)
 
     response = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
     file_size: int = response["ContentLength"]
-    progress_bar = tqdm(total=file_size, unit="B", unit_scale=True, desc="Downloading")
+    progress_bar = tqdm(
+        total=file_size, unit="B", unit_scale=True, desc="Downloading"
+    )
+
     def progress_callback(bytes_transferred):
         progress_bar.update(bytes_transferred)
 
     transfer = S3Transfer(client=s3_client, config=transfer_config)
-    transfer.download_file(bucket_name, s3_key, file_name, callback=progress_callback)
+    transfer.download_file(
+        bucket_name, s3_key, file_name, callback=progress_callback
+    )
     progress_bar.close()
+
 
 def get_bucket_names_with_tag(tag_key: str, tag_value: str) -> list[str]:
     s3 = boto3.client("s3")
     response = s3.list_buckets()
     buckets = response["Buckets"]
     matching_bucket_names: list[str] = []
-    
+
     for bucket in buckets:
         bucket_name = bucket["Name"]
         try:
@@ -76,18 +87,25 @@ def get_bucket_names_with_tag(tag_key: str, tag_value: str) -> list[str]:
                 continue
             else:
                 raise e
-    
+
     return matching_bucket_names
 
+
 def find_server_data_bucket_name() -> str:
-    matching_bucket_names = get_bucket_names_with_tag(tag_key="Name", tag_value="server-data")
-    assert len(matching_bucket_names) > 0, "This cloud does not have a 'server-data' bucket."
+    matching_bucket_names = get_bucket_names_with_tag(
+        tag_key="Name", tag_value="server-data"
+    )
+    assert (
+        len(matching_bucket_names) > 0
+    ), "This cloud does not have a 'server-data' bucket."
     if len(matching_bucket_names) > 1:
         print("Warning: This cloud has multiple 'server-data' buckets.")
     return matching_bucket_names[0]
 
+
 def is_directory_empty(directory_path: Union[str, Path]) -> bool:
     return len(os.listdir(directory_path) == 0)
+
 
 def main(data_archive_name: Optional[str], launch_command: str):
     if data_archive_name is not None:
@@ -102,7 +120,7 @@ def main(data_archive_name: Optional[str], launch_command: str):
             if not archive_file.exists():
                 bucket_name = find_server_data_bucket_name()
                 download_fast(bucket_name, s3_key, archive_file)
-        
+
         if archive_file.exists():
             extract(archive_file, data_folder)
 
@@ -118,6 +136,7 @@ def main(data_archive_name: Optional[str], launch_command: str):
     process = subprocess.Popen(launch_command, shell=True)
     process.wait()
     print(f"Launch command terminated.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -137,4 +156,7 @@ if __name__ == "__main__":
         help="The launch command.",
     )
     args = parser.parse_args()
-    main(data_archive_name=args.data_archive_name, launch_command=args.launch_command)
+    main(
+        data_archive_name=args.data_archive_name,
+        launch_command=args.launch_command,
+    )
