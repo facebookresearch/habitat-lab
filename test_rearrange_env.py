@@ -234,9 +234,6 @@ def main():
     writer.close()
     writer2.close()
     
-    breakpoint()
-
-    writer2.close()
 
         
 
