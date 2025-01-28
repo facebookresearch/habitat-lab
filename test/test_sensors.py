@@ -575,13 +575,15 @@ def test_noise_models_rgbd():
 
     with habitat.config.read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
-        agent_config.sim_sensors.rgb_sensor.noise_model = "GaussianNoiseModel"
-        agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.intensity_constant = (
-            0.5
-        )
-        agent_config.sim_sensors.depth_sensor.noise_model = (
-            "RedwoodDepthNoiseModel"
-        )
+        agent_config.sim_sensors[
+            "rgb_sensor"
+        ].noise_model = "GaussianNoiseModel"
+        agent_config.sim_sensors["rgb_sensor"].noise_model_kwargs[
+            "intensity_constant"
+        ] = 0.5
+        agent_config.sim_sensors[
+            "depth_sensor"
+        ].noise_model = "RedwoodDepthNoiseModel"
 
     with habitat.Env(config=config, dataset=None) as env:
         env.episode_iterator = iter([test_episode])

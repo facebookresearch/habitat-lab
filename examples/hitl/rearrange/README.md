@@ -12,7 +12,6 @@ See [habitat-hitl/README.md](../../../habitat-hitl/README.md).
 ## Example launch command
 
 ```bash
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/hitl/rearrange/rearrange.py
 ```
 

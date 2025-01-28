@@ -3,23 +3,21 @@
 # LICENSE file in the root directory of this source tree.
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator
+from typing import Any, Generator
 
-from omegaconf import OmegaConf
+from omegaconf import Container, OmegaConf
 from omegaconf.base import Node
-
-if TYPE_CHECKING:
-    from omegaconf import Container
 
 
 @contextmanager
-def read_write(config: "Container") -> Generator[Node, None, None]:
+def read_write(config: Any) -> Generator[Node, None, None]:
     r"""
     Temporarily authorizes the modification of a OmegaConf configuration
     within a context. Use the 'with' statement to enter the context.
 
     :param config: The configuration object that should get writing access
     """
+    assert isinstance(config, Container)
     prev_state_readonly = config._get_node_flag("readonly")
     prev_state_struct = config._get_node_flag("struct")
     try:
