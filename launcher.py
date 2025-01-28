@@ -86,8 +86,8 @@ def find_server_data_bucket_name() -> str:
         print("Warning: This cloud has multiple 'server-data' buckets.")
     return matching_bucket_names[0]
 
-def is_directory_empty(directory_path: Union[str, Path]):
-    return not os.listdir(directory_path)
+def is_directory_empty(directory_path: Union[str, Path]) -> bool:
+    return len(os.listdir(directory_path) == 0)
 
 def main(data_archive_name: Optional[str], launch_command: str):
     if data_archive_name is not None:
@@ -120,7 +120,10 @@ def main(data_archive_name: Optional[str], launch_command: str):
     print(f"Launch command terminated.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog="Habitat HITL Launcher",
+        description="Utility for launching Habitat HITL applications.",
+    )
     parser.add_argument(
         "--data-archive-name",
         type=str,
