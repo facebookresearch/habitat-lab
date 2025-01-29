@@ -91,6 +91,8 @@ def get_bucket_names_with_tag(tag_key: str, tag_value: str) -> list[str]:
     return matching_bucket_names
 
 
+# TODO: This must be done by the crowdsource server.
+#       Just pass the bucket name via parameter.
 def find_server_data_bucket_name() -> str:
     matching_bucket_names = get_bucket_names_with_tag(
         tag_key="Name", tag_value="server-data"
@@ -104,22 +106,22 @@ def find_server_data_bucket_name() -> str:
 
 
 def is_directory_empty(directory_path: Union[str, Path]) -> bool:
-    return len(os.listdir(directory_path) == 0)
+    dir_content = os.listdir(directory_path)
+    return len(dir_content) == 0
 
 
-def main(data_archive_name: Optional[str], launch_command: str):
+def main(data_archive_name: Optional[str], data_bucket: Optional[str], launch_command: str):
     if data_archive_name is not None:
         data_folder = Path("data")
         archive_file = Path.joinpath(data_folder, "data.tar.gz")
-        s3_data_folder_directory = "hitl_data"
-        s3_key = os.path.join(s3_data_folder_directory, data_archive_name)
 
         os.makedirs(data_folder, exist_ok=True)
 
         if is_directory_empty(data_folder):
             if not archive_file.exists():
-                bucket_name = find_server_data_bucket_name()
-                download_fast(bucket_name, s3_key, archive_file)
+                if data_bucket is None:
+                    data_bucket = find_server_data_bucket_name()
+                download_fast(data_bucket, data_archive_name, archive_file)
 
         if archive_file.exists():
             extract(archive_file, data_folder)
@@ -150,6 +152,12 @@ if __name__ == "__main__":
         help="[REQUIES boto3] The data folder archive name to download and extract as './data'. E.g. experiment_001.tar.gz. If omitted, no data folder will be downloaded.",
     )
     parser.add_argument(
+        "--data-bucket",
+        type=str,
+        required=False,
+        help="[REQUIES boto3] The bucket that contains the data folder.",
+    )
+    parser.add_argument(
         "--launch-command",
         type=str,
         required=True,
@@ -158,5 +166,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(
         data_archive_name=args.data_archive_name,
+        data_bucket=args.data_bucket,
         launch_command=args.launch_command,
     )
