@@ -100,6 +100,15 @@ class SpotRobotWrapper:
 
     def get_prim_path(self):
         return self._robot_prim_path
+    
+
+    def set_root_pose(self, pos, rot):
+        
+        rot = [rot.scalar] + list(rot.vector)
+        pos_usd = isaac_prim_utils.habitat_to_usd_position(pos)
+        rot_usd = isaac_prim_utils.habitat_to_usd_rotation(rot)
+        self._robot.set_world_pose(pos_usd, rot_usd)
+        
 
     def get_root_pose(self):
 
@@ -167,7 +176,8 @@ class SpotRobotWrapper:
             arm_joint_indices.append(dof_names.index(arm_joint_name))
 
         self._arm_joint_indices = np.array(arm_joint_indices)
-        self._target_arm_joint_positions = None
+        # self._target_arm_joint_positions = None
+        self._target_arm_joint_positions = [0.0, -2.36, 0.0, 2.25, 0.0, 1.67, 0.0, -1.67]
 
 
     def scale_prim_mass_and_inertia(self, path, scale):
