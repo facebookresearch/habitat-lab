@@ -32,6 +32,18 @@ class IsaacSpotRobot(IsaacMobileManipulator):
         pose = mn.Matrix4.from_(base_rotation.to_matrix(), base_position)
         return pose @ add_rot
 
+    
+    @base_transformation.setter
+    def base_transformation(self, base_transformation):
+        rot = mn.Matrix4.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        )
+        base_transformation = base_transformation @ rot
+        rot = mn.Quaternion.from_matrix(base_transformation.rotation())
+        self._robot_wrapper.set_root_pose(base_transformation.translation, rot)
+        # pose = mn.Matrix4.from_(base_rotation.to_matrix(), base_position
+    
+
     def get_link_transform(self, link_id):
         link_positions, link_rotations = self._robot_wrapper.get_link_world_poses()
         position, rotation = link_positions[link_id], link_rotations[link_id]

@@ -21,9 +21,10 @@ from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat.isaac_sim import isaac_prim_utils
 import random
 from habitat.config.default_structured_configs import TaskConfig, EnvironmentConfig, DatasetConfig, HabitatConfig
-from habitat.config.default_structured_configs import ArmActionConfig, BaseVelocityActionConfig, OracleNavActionConfig, ActionConfig
+from habitat.config.default_structured_configs import ArmActionConfig, BaseVelocityActionConfig, ActionConfig, OracleNavActionConfig, ActionConfig
 import imageio
 from habitat.core.env import Env
+from habitat.isaac_sim import actions
 
 data_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/"
 
@@ -189,26 +190,27 @@ def main():
     main_agent_config.sim_sensors = {
         "third_rgb": ThirdRGBSensorConfig(),
         "articulated_agent_arm_rgb": ArmRGBSensorConfig(),
+        "articulated_agent_arm_depth": ArmDepthSensorConfig(),
     }
 
     # We create a dictionary with names of agents and their corresponding agent configuration
     agent_dict = {"main_agent": main_agent_config}
 
     action_dict = {
-        "base_velocity_action": BaseVelocityActionConfig(type="BaseVelIsaacAction"),
+        "base_velocity_action": BaseVelocityActionConfig(type="BaseVelKinematicIsaacAction"),
+        "arm_reach_action": ActionConfig(type="ArmReachAction")
     }
     env = init_rearrange_env(agent_dict, action_dict)
+    
+    
+    
     aux = env.reset()
-
     writer = imageio.get_writer(
         "output_env.mp4",
         fps=30,
     )
 
-    writer2 = imageio.get_writer(
-        "output_env_head.mp4",
-        fps=30,
-    )
+    
     action_example = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 5.0, 0], dtype=np.float32)}}
     
     first_obj = env.sim._rigid_objects[0].translation
@@ -224,15 +226,36 @@ def main():
         obs = env.step(action_planner)
         im = obs["third_rgb"]
         im2 = obs["articulated_agent_arm_rgb"]
+        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        imt = np.zeros(im.shape)
+        imt[:im2.shape[0], :im2.shape[1], :] = im2
+        imt[im2.shape[0]:, :im2.shape[1], 0] = im3[:, :, 0]
+        imt[im2.shape[0]:, :im2.shape[1], 1] = im3[:, :, 0]
+        imt[im2.shape[0]:, :im2.shape[1], 2] = im3[:, :, 0]
         
+        im  = np.concatenate([im, imt], 1)
         writer.append_data(im)
-        writer2.append_data(im2)
-    
         curr_pos = env.sim.articulated_agent.base_pos
         dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
+    
+    print(env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions)
+    for i in range(200):
+        arm_reach = {'action': 'arm_reach_action', 'action_args': {'target_pos': np.array(first_obj, dtype=np.float32)}}
+
+        obs = env.step(arm_reach)
+        im = obs["third_rgb"]
+        im2 = obs["articulated_agent_arm_rgb"]
+        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        imt = np.zeros(im.shape)
+        imt[:im2.shape[0], :im2.shape[1], :] = im2
+        imt[im2.shape[0]:, :im2.shape[1], 0] = im3[:, :, 0]
+        imt[im2.shape[0]:, :im2.shape[1], 1] = im3[:, :, 0]
+        imt[im2.shape[0]:, :im2.shape[1], 2] = im3[:, :, 0]
+        im  = np.concatenate([im, imt], 1)
+        writer.append_data(im)
         
     writer.close()
-    writer2.close()
+    
     
 
         
