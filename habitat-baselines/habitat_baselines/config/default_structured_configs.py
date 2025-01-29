@@ -459,6 +459,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     num_processes: int = -1  # deprecated
     rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
+    results_dir: str = "data/results"
     num_updates: int = 10000
     num_checkpoints: int = 10
     # Number of model updates between checkpoints
