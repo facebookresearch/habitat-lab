@@ -20,6 +20,7 @@ class RenderAsset:
     """A render asset that can be provided to Habitat-sim ResourceManager::loadAndCreateRenderAssetInstance."""
     filepath: str
     # todo: possible color override
+    semantic_id: int
 
 
 import numpy as np
@@ -53,7 +54,7 @@ class _InstanceGroup:
         self._render_instance_helper.clear_all_instances()
         for prim_path in prim_paths:
             render_asset = self._prim_path_to_render_asset[prim_path]
-            self._render_instance_helper.add_instance(render_asset.filepath)
+            self._render_instance_helper.add_instance(render_asset.filepath, render_asset.semantic_id)
 
     def flush_to_hab_sim(self):
         if len(self._prim_path_to_render_asset) == 0:
@@ -118,7 +119,7 @@ class UsdVisualizer:
 
 
     # todo: get rid of usd_path or make it optional (only used for error messages)
-    def on_add_reference_to_stage(self, usd_path, prim_path, strict=True):
+    def on_add_reference_to_stage(self, usd_path, prim_path, semantic_id_offset=0):
 
         usd_dir = os.path.dirname(os.path.abspath(usd_path))
 
@@ -147,6 +148,15 @@ class UsdVisualizer:
             # we found a habitatVisual; it will visualize the entire subtree, so let's ignore children
             it.PruneChildren()
 
+            semantic_id_attr = prim.GetAttribute("habitatVisual:semanticId")
+            semantic_id = semantic_id_attr.Get() if semantic_id_attr and semantic_id_attr.HasAuthoredValue() else None
+
+            if semantic_id is None: 
+                # if no semantic id is specified, assign a unique instance id (only unique to this USD file)
+                semantic_id = found_count
+
+            semantic_id += semantic_id_offset
+
             found_count += 1
 
             # asset_path should be relative to the project root, which is hopefully our CWD
@@ -162,7 +172,7 @@ class UsdVisualizer:
             group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
             group = self._instance_groups[group_type]
 
-            group._prim_path_to_render_asset[prim_path] = RenderAsset(filepath=asset_abs_path)
+            group._prim_path_to_render_asset[prim_path] = RenderAsset(filepath=asset_abs_path, semantic_id=semantic_id)
             group.set_dirty()
 
         if not found_count:
