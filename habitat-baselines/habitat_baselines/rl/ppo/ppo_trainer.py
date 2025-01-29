@@ -7,6 +7,7 @@
 import contextlib
 import os
 import random
+import re
 import time
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
@@ -76,6 +77,7 @@ class PPOTrainer(BaseRLTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.
     """
+
     supported_tasks = ["Nav-v0"]
 
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
@@ -277,9 +279,9 @@ class PPOTrainer(BaseRLTrainer):
                 self._encoder is not None
             ), "Visual encoder is not specified for this actor"
             with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
+                batch[PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY] = (
+                    self._encoder(batch)
+                )
 
         self._agent.rollouts.insert_first_observations(batch)
 
@@ -469,9 +471,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._is_static_encoder:
             with inference_mode(), g_timer.avg_time("trainer.visual_features"):
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
+                batch[PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY] = (
+                    self._encoder(batch)
+                )
 
         self._agent.rollouts.insert(
             next_observations=batch,
@@ -925,6 +927,9 @@ class PPOTrainer(BaseRLTrainer):
                 self.config.habitat_baselines.third_party_ckpt_root_folder,
             )
             ckpt_dict = {"config": None}
+            checkpoint_index = int(
+                re.findall(r"\d+", checkpoint_path.split("/")[-1])[0]
+            )
         else:
             ckpt_dict = {"config": None}
 
@@ -977,7 +982,6 @@ class PPOTrainer(BaseRLTrainer):
             and not self.config.habitat_baselines.load_third_party_ckpt  # block the loading of the hab-baseline ckpt
         ):
             self._agent.load_state_dict(ckpt_dict)
-
         step_id = checkpoint_index
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]

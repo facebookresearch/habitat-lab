@@ -434,7 +434,7 @@ class HabitatEvaluator(Evaluator):
 
                     print(
                         f"Evaluated {num_evaled} episodes. Average episode "
-                        "; ".join(
+                        + "; ".join(
                             [
                                 f" {k}: {v:.4f}"
                                 for k, v in aggregated_stats.items()
@@ -463,11 +463,33 @@ class HabitatEvaluator(Evaluator):
                             else:
                                 with open(episode_steps_filename) as f:
                                     episode_steps_data = f.read()
-                            # try:
-                            #     episode_steps_data = (
-                            #         "{},{},{},{},{},{},{}\n".format(
-                            #             num_evaled,
-                            #             current_episodes_info[i].episode_id
+                            try:
+                                episode_steps_data += (
+                                    "{},{},{},{},{},{},{}\n".format(
+                                        num_evaled,
+                                        current_episodes_info[i].episode_id,
+                                        np.round(episode_stats["reward"], 2),
+                                        np.round(
+                                            episode_stats[
+                                                "ee_to_object_distance.0"
+                                            ],
+                                            2,
+                                        ),
+                                        episode_stats[
+                                            "robot_collisions.total_collisions"
+                                        ],
+                                        episode_stats[success_key],
+                                        episode_stats["num_steps"],
+                                    )
+                                )  # number of steps taken
+                                lines = episode_steps_data.split("\n")
+                                with open(episode_steps_filename, "w") as f:
+                                    f.write(episode_steps_data)
+                            except Exception as e:
+                                print(f"Error saving results: {e}")
+                            print(
+                                f"Results saved to: {episode_steps_filename}"
+                            )
 
                     if len(config.habitat_baselines.eval.video_option) > 0:
                         self.observation_dict = []  # reset
