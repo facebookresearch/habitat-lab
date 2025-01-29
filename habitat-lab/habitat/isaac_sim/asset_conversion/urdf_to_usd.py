@@ -181,6 +181,29 @@ def add_habitat_visual_metadata_for_articulation(
     print(f"Updated USD file written to: {out_usd_filepath}")
 
 
+def convert_urdf_to_usd(
+    input_urdf_file: str,
+    output_usda_file: str,
+    project_root_folder: str,
+    remove_visual: bool = False,
+) -> None:
+    filename, file_extension = os.path.splitext(input_urdf_file)
+    clean_urdf_temp = f"{filename}_TEMP{file_extension}"
+    clean_urdf(input_urdf_file, clean_urdf_temp, remove_visual)
+
+    convert_urdf(clean_urdf_temp, output_usda_file)
+
+    if os.path.exists(clean_urdf_temp):
+        os.remove(clean_urdf_temp)
+
+    add_habitat_visual_metadata_for_articulation(
+        output_usda_file,
+        input_urdf_file,
+        output_usda_file,
+        project_root_folder,
+    )
+
+
 if __name__ == "__main__":
     # Launch Issac Lab Applauncher
     from omni.isaac.lab.app import AppLauncher
@@ -188,6 +211,21 @@ if __name__ == "__main__":
     app_launcher = AppLauncher(headless=True)
     simulation_app = app_launcher.app
 
+    # Build parser and subparser
+    parser = argparse.ArgumentParser(description="Convert urdf file to usd.")
+
+    parser.add_argument("input_urdf_file")
+    parser.add_argument("output_usda_file")
+    parser.add_argument("project_root_folder")
+    parser.add_argument("--remove-visual")
+
+    args = parser.parse_args()
+
+    convert_urdf_to_usd(
+        args.input_urdf_file, args.output_usda_file, args.project_root_folder
+    )
+
+    '''
     """This function converts urdf files to usda."""
     # Build parser and subparser
     parser = argparse.ArgumentParser(description="Convert urdf file to usd.")
@@ -240,3 +278,5 @@ if __name__ == "__main__":
             )
     else:
         parser.print_help()
+
+    '''

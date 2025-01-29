@@ -246,7 +246,7 @@ def test_convert_urdf():
     output_usd = urdf_dir + "hab_spot_arm_test_convert_urdf.usda"
 
     convert_urdf(clean_urdf_filepath, output_usd)
-    
+
     assert os.path.exists(output_usd)
     os.remove(output_usd)
 

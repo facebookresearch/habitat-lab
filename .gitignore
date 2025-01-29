@@ -110,4 +110,3 @@ data
 # urdf conversion artifact
 test/data/usd_conversion_data/.asset_hash
 test/data/usd_conversion_data/config.yaml
-
