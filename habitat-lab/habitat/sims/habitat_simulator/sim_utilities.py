@@ -1054,7 +1054,7 @@ def get_floor_point_in_region(
     # first try aiming at the center (nice for convex regions)
     if max_center_samples > 0:
         # get the center of the region's bounds and attempt to snap it to the navmesh
-        region_center = region.aabb.center
+        region_center = region.aabb.center()
         region_center_snap = sim.pathfinder.snap_point(
             region_center, island_index=island_index
         )
