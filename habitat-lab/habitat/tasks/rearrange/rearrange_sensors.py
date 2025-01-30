@@ -606,17 +606,7 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         return position_goal_base_T_ee, grasp
 
     def expert_base_action(self, target_position_YZX):
-        action_map = {
-            "0": np.array([0.0, 0.0]),  # stop
-            "1": np.array([1.0, 0.0]),  # forward
-            "2": np.array([0.0, 1.0]),  # left
-            "3": np.array([0.0, -1.0]),  # right
-        }
-        best_action = self.follower.get_next_action(target_position_YZX)
-        print("expert_best_action: ", best_action)
-
-        # base_vel = action_map[str(best_action)]
-        return best_action
+        return self.follower.get_next_action(target_position_YZX)
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
         robot_position = (
