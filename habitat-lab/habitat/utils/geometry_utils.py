@@ -249,3 +249,13 @@ def cam_pose_from_xzy_to_xyz(camera_pose_xzy: np.ndarray) -> np.ndarray:
     camera_pose_xyz[:3, 3] = translation_vector_xyz
 
     return camera_pose_xyz
+
+
+def quat_to_rad(rotation):
+    r"""Returns the yaw represented by the rotation np quaternion"""
+    heading_vector = quaternion_rotate_vector(
+        rotation.inverse(), np.array([0, 0, -1])
+    )
+    phi = np.arctan2(heading_vector[0], -heading_vector[2])
+
+    return phi

@@ -368,14 +368,14 @@ class GazeGraspAction(MagicGraspAction):
             )
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
-        # if os.environ.get("GRASP", 0):
-        #     grip_action = int(os.environ["GRASP"])
-        #     if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
-        #         self._magic_grasp()
-        #         return
-        #     elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
-        #         self._ungrasp()
-        #         return
+        if os.environ.get("GRASP", 0):
+            grip_action = int(os.environ["GRASP"])
+            if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+                self._magic_grasp()
+                return
+            elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
+                self._ungrasp()
+                return
         if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
             return

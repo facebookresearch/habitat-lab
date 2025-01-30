@@ -324,10 +324,25 @@ class HabitatEvaluator(Evaluator):
                 disp_info = {
                     k: v for k, v in infos[i].items() if k not in rank0_keys
                 }
-                blacklist_keys = ["episode_data_logger"]
-                for k in blacklist_keys:
-                    if k in disp_info:
-                        del disp_info[k]
+                # blacklist_keys = ["episode_data_logger"]
+                # for k in blacklist_keys:
+                # if k in disp_info:
+                # del disp_info[k]
+                keep_keys = [
+                    "num_steps",
+                    "pick_success",
+                    "episode_data_logger",
+                ]
+                disp_info = {
+                    k: v
+                    for k, v in disp_info.items()
+                    if any(match in k for match in keep_keys)
+                }
+                if "episode_data_logger" in disp_info.keys():
+                    disp_info["instruction"] = disp_info[
+                        "episode_data_logger"
+                    ]["instruction"]
+                    del disp_info["episode_data_logger"]
 
                 if len(config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
@@ -578,4 +593,5 @@ class HabitatEvaluator(Evaluator):
 
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         for k, v in metrics.items():
+            writer.add_scalar(f"eval_metrics/{k}", v, step_id)
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)

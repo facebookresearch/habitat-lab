@@ -322,8 +322,11 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
-        if os.environ.get("POSITION_GOAL", 0):
-            action["action_args"]["base_vel"] = np.array([0.0, 0.0])
+        if os.environ.get("BASE_VEL", 0):
+            position_goal = os.environ["BASE_VEL"]
+            action["action_args"]["base_vel"] = np.array(
+                [float(x) for x in position_goal.split(",")]
+            )
             action["action_args"]["grip_action"] = None
         # if os.environ.get("GRASP", 0):
         #     action["action_args"]["grip_action"] = np.array(

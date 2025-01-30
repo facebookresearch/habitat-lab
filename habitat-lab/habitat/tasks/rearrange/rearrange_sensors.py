@@ -7,6 +7,7 @@
 
 import json
 import os
+import shutil
 import time
 from collections import defaultdict, deque
 
@@ -24,6 +25,8 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+from habitat.tasks.nav.shortest_path_follower_vel import ShortestPathFollowerv2
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
@@ -513,6 +516,8 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
     def __init__(self, *args, task, **kwargs):
         self._task = task
         super().__init__(*args, task=task, **kwargs)
+        goal_radius = 0.8
+        self.follower = ShortestPathFollowerv2(self._sim, goal_radius)
 
     def _get_uuid(self, *args, **kwargs):
         return "heuristic_action_sensor"
@@ -525,7 +530,20 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             dtype=np.float32,
         )
 
-    def heuristic_action(self):
+    def get_closest_target_pose(self):
+        robot_pos = self._sim.articulated_agent.base_transformation.translation
+        robot_position = np.array([robot_pos[0], robot_pos[1], robot_pos[2]])
+
+        target_positions = self._sim.target_start_pos
+        distances = np.linalg.norm(target_positions - robot_position, axis=1)
+        closest_idx = np.argmin(distances)
+
+        closest_target_position = target_positions[
+            closest_idx
+        ]  # Pose of closest target
+        return np.array([*closest_target_position])
+
+    def heuristic_arm_action(self):
         def get_point_along_vector(
             curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
         ) -> np.ndarray:
@@ -563,16 +581,17 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             self._sim.articulated_agent.ee_transform().translation
         )
         ## place
-        _, sim_global_T_obj_pos = self._sim.get_targets()
-        target_position_YZX = sim_global_T_obj_pos[0]
+        # _, sim_global_T_obj_pos = self._sim.get_targets()
+        # target_position_YZX = sim_global_T_obj_pos[0]
 
-        ## pick
+        # pick
         # scene_pos = self._sim.get_scene_pos()
         # targ_idxs = self._sim.get_targets()[0]
         # target_position_YZX = scene_pos[targ_idxs][0]
+        target_position_YZX = self.get_closest_target_pose()
 
         position_goal = get_point_along_vector(
-            end_effector_position_YZX, target_position_YZX, 0.15
+            end_effector_position_YZX, target_position_YZX, 0.1
         )
 
         global_T_base = self._sim.articulated_agent.base_transformation
@@ -580,17 +599,47 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             position_goal
         )
 
-        # grasp = 1
-        # dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
-        # if dist < 0.12:
-        #     grasp = -1  # 1 = grasp, -1 = ungrasp
-        os.environ["POSITION_GOAL"] = ",".join(
-            [str(i) for i in position_goal_base_T_ee]
-        )
-        # os.environ["GRASP"] = str(grasp)
+        grasp = -1
+        dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
+        if dist < 0.3:
+            grasp = 1  # 1 = grasp, -1 = ungrasp
+        return position_goal_base_T_ee, grasp
+
+    def expert_base_action(self, target_position_YZX):
+        action_map = {
+            "0": np.array([0.0, 0.0]),  # stop
+            "1": np.array([1.0, 0.0]),  # forward
+            "2": np.array([0.0, 1.0]),  # left
+            "3": np.array([0.0, -1.0]),  # right
+        }
+        best_action = self.follower.get_next_action(target_position_YZX)
+        print("expert_best_action: ", best_action)
+
+        # base_vel = action_map[str(best_action)]
+        return best_action
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        self.heuristic_action()
+        robot_position = (
+            self._sim.articulated_agent.base_transformation.translation
+        )
+        robot_position_YX = np.array([robot_position[0], robot_position[2]])
+        target_position_YZX = self.get_closest_target_pose()
+        target_position_YX = np.array(
+            [target_position_YZX[0], target_position_YZX[2]]
+        )
+        robot_obj_dist = np.linalg.norm(robot_position_YX - target_position_YX)
+        ee_goal = np.array([0.0, 0.0, 0.0])
+        grasp = -1
+        base_vel = np.array([0.0, 0.0])
+
+        base_vel = self.expert_base_action(target_position_YZX)
+        if base_vel == [0.0, 0.0]:
+            ee_goal, grasp = self.heuristic_arm_action()
+
+        print(f"{base_vel=}, {ee_goal=}, {grasp=}")
+        os.environ["POSITION_GOAL"] = ",".join([str(i) for i in ee_goal])
+        os.environ["GRASP"] = str(grasp)
+        os.environ["BASE_VEL"] = ",".join([str(i) for i in base_vel])
         return np.array([0], dtype=np.float32)
 
 
@@ -1155,7 +1204,7 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
 
     cls_uuid: str = "episode_data_logger"
 
-    def __init__(self, sim, config, *args, **kwargs):
+    def __init__(self, sim, config, task, *args, **kwargs):
         self._sim = sim
         self._config = config
         super().__init__(**kwargs)
@@ -1164,36 +1213,98 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
         self.save_path = config.save_path
         self.save_keys = config.save_keys
         self.skill = config.skill
+        self._success_measure_name = task._config.success_measure
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return EpisodeDataLogger.cls_uuid
 
-    def reset_metric(self, *args, episode, **kwargs):
-        object_name = list(episode.info["object_labels"].keys())[0].split(
-            "_:0000"
-        )[0]
-        receptacle_id = episode.target_receptacles[0][0].split("_:0000")[0]
-        receptacle_name = self.metadata_dict.loc[
-            self.metadata_dict["id"] == receptacle_id, "name"
+    def get_object_name(self, object_label):
+        object_name = object_label.split("_:")[0].split("_")[1:]
+        object_name = " ".join(object_name)
+        return object_name
+
+    def get_receptacle_name(self, receptacle_id):
+        receptacle_full_name = self.metadata_dict.loc[
+            self.metadata_dict["id"] == receptacle_id, "wnsynsetkey"
         ].iloc[0]
+        if pd.isna(receptacle_full_name):
+            receptacle_name = self.metadata_dict.loc[
+                self.metadata_dict["id"] == receptacle_id, "name"
+            ].iloc[0]
+        else:
+            receptacle_name = receptacle_full_name.split(".")[0]
+        return receptacle_name
+
+    def get_targets_name_pose(self):
+        target_names = list(self._sim._targets.keys())
+        target_positions = self._sim.target_start_pos
+        return target_names, target_positions
+
+    def find_closest_target(self):
+        robot_pos = self._sim.articulated_agent.base_transformation.translation
+        robot_position = np.array([robot_pos[0], robot_pos[1], robot_pos[2]])
+
+        target_names, target_positions = self.get_targets_name_pose()
+        distances = np.linalg.norm(target_positions - robot_position, axis=1)
+        closest_idx = np.argmin(distances)
+
+        return (
+            target_names[closest_idx],  # Name of closest target
+            target_positions[closest_idx],  # Pose of closest target
+        )
+
+    def find_closest_receptacle(self, episode, closest_target_name):
+        receptacle_id = episode.name_to_receptacle[closest_target_name].split(
+            "_:"
+        )[0]
+        receptacle_name = self.get_receptacle_name(receptacle_id)
+        return receptacle_name
+
+    def find_current_target(self):
+        scene_pos = self._sim.get_scene_pos()
+        targ_idxs = self._sim.get_targets()[0]
+        target_position_YZX = scene_pos[targ_idxs][0]
+        return target_position_YZX
+
+    def reset_metric(self, *args, episode, task, **kwargs):
+        closest_target_name, _ = self.find_closest_target()
+        object_name = self.get_object_name(closest_target_name)
+        receptacle_name = self.find_closest_receptacle(
+            episode, closest_target_name
+        )
 
         base_episode_json = {
             "episode_id": episode.episode_id,
             "scene_id": episode.scene_id.split("/")[-1],
-            "instruction": f"{self.skill} the {object_name} on the {receptacle_name}",
+            "instruction": f"Navigate to the {receptacle_name} and {self.skill} the {object_name}",
+            # "instruction": f"{self.skill} the {object_name} on the {receptacle_name}",
             "episode_data": [],
+            "success": False,
         }
         # self.save_pth = f"/fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/place_large/train"
         if self.episode_json != base_episode_json and self.episode_json != {}:
             episode_id = self.episode_json["episode_id"]
             ep_save_path = f"{self.save_path}/ep_{episode_id}"
-            os.makedirs(self.save_path, exist_ok=True)
-            with open(f"{ep_save_path}/ep_{episode_id}.json", "w") as outfile:
-                json.dump(self.episode_json, outfile)
+            if self.episode_json["success"]:
+                os.makedirs(self.save_path, exist_ok=True)
+                with open(
+                    f"{ep_save_path}/ep_{episode_id}.json", "w"
+                ) as outfile:
+                    json.dump(self.episode_json, outfile)
+            else:
+                # remove the directory for failed episode
+                print(
+                    "success: ",
+                    self.episode_json["success"],
+                    "removing: ",
+                    ep_save_path,
+                )
+                if os.path.exists(ep_save_path):
+                    shutil.rmtree(ep_save_path)
 
         self.episode_json = base_episode_json
-        self.update_metric(*args, episode=episode, **kwargs)
+        self.update_metric(*args, episode=episode, task=task, **kwargs)
 
     def save_img(self, observations, img_key, ep_data):
         if img_key in observations.keys():
@@ -1250,6 +1361,9 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
             ep_data = self.save_img(observations, save_key, ep_data)
 
         self.episode_json["episode_data"].append(ep_data)
+        self.episode_json["success"] = task.measurements.measures[
+            self._success_measure_name
+        ].get_metric()
         self._metric = self.episode_json
 
 

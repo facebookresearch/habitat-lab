@@ -907,7 +907,10 @@ class ArmEEAction(ArticulatedAgentAction):
 
         position_goal = os.environ["POSITION_GOAL"]
         position_goal = [float(x) for x in position_goal.split(",")]
-        des_joint_pos = self._ik_helper.calc_ik(position_goal)
+        if position_goal == [0, 0, 0]:
+            des_joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
+        else:
+            des_joint_pos = self._ik_helper.calc_ik(position_goal)
 
         # if "debugging_tfs" not in os.environ:
         #     os.environ["debugging_tfs"] = "1"
