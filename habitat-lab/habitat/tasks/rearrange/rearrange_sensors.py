@@ -19,6 +19,7 @@ import quaternion
 import torch
 from gym import spaces
 
+import habitat_sim
 from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
@@ -518,6 +519,8 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         super().__init__(*args, task=task, **kwargs)
         goal_radius = 0.8
         self.follower = ShortestPathFollowerv2(self._sim, goal_radius)
+        self.past_robot_pose = np.array([0.0, 0.0, 0.0, 0.0])
+        self.stuck_ctr = 0
 
     def _get_uuid(self, *args, **kwargs):
         return "heuristic_action_sensor"
@@ -605,28 +608,56 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             grasp = 1  # 1 = grasp, -1 = ungrasp
         return position_goal_base_T_ee, grasp
 
-    def expert_base_action(self, target_position_YZX):
-        return self.follower.get_next_action(target_position_YZX)
+    def get_sp_waypoint(self, start, end):
+        path = habitat_sim.ShortestPath()
+        path.requested_start = start
+        path.requested_end = end
+        pathfinder = self._sim.pathfinder
+        found_path = pathfinder.find_path(path)
+        return found_path, path
+
+    def expert_base_action(self, robot_position, target_position_YZX):
+        found_path, path = self.get_sp_waypoint(
+            robot_position, target_position_YZX
+        )
+        is_navigating: bool = found_path and len(path.points) >= 2
+
+        target_position = target_position_YZX
+        if is_navigating:
+            target_position = path.points[
+                1
+            ]  # path.points[0] is the robot's current position
+        return self.follower.get_next_action(target_position)
+
+    def robot_stuck(self, robot_position, robot_rotation, threshold=10):
+        yaw = np.arctan2(robot_rotation[1, 0], robot_rotation[0, 0])
+        robot_pose = np.array([*robot_position, yaw])
+        if np.all(self.past_robot_pose == robot_pose):
+            self.stuck_ctr += 1
+        self.past_robot_pose = robot_pose
+        if self.stuck_ctr > threshold:
+            return True
+        return False
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
         robot_position = (
             self._sim.articulated_agent.base_transformation.translation
         )
-        robot_position_YX = np.array([robot_position[0], robot_position[2]])
-        target_position_YZX = self.get_closest_target_pose()
-        target_position_YX = np.array(
-            [target_position_YZX[0], target_position_YZX[2]]
+        robot_rotation = (
+            self._sim.articulated_agent.base_transformation.rotation()
         )
-        robot_obj_dist = np.linalg.norm(robot_position_YX - target_position_YX)
+        target_position_YZX = self.get_closest_target_pose()
         ee_goal = np.array([0.0, 0.0, 0.0])
         grasp = -1
         base_vel = np.array([0.0, 0.0])
 
-        base_vel = self.expert_base_action(target_position_YZX)
-        if base_vel == [0.0, 0.0]:
+        base_vel = self.expert_base_action(robot_position, target_position_YZX)
+        if base_vel == [0.0, 0.0] or self.robot_stuck(
+            robot_position, robot_rotation
+        ):
             ee_goal, grasp = self.heuristic_arm_action()
 
-        print(f"{base_vel=}, {ee_goal=}, {grasp=}")
+        # print(f"{base_vel=}, {ee_goal=}, {grasp=}")
         os.environ["POSITION_GOAL"] = ",".join([str(i) for i in ee_goal])
         os.environ["GRASP"] = str(grasp)
         os.environ["BASE_VEL"] = ",".join([str(i) for i in base_vel])
