@@ -868,27 +868,27 @@ class ArmEEAction(ArticulatedAgentAction):
         return tf_new
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        articulated_agent_data = self._sim.articulated_agent
-        # global_T_ee = articulated_agent_data.ee_transform()
-        global_T_base = articulated_agent_data.base_transformation
-        # T_curr = global_T_base.inverted() @ global_T_ee
-        # print("T_curr_hab: ", base_T_ee_transform)
+        # articulated_agent_data = self._sim.articulated_agent
+        # # global_T_ee = articulated_agent_data.ee_transform()
+        # global_T_base = articulated_agent_data.base_transformation
+        # # T_curr = global_T_base.inverted() @ global_T_ee
+        # # print("T_curr_hab: ", base_T_ee_transform)
 
-        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent.arm_joint_pos)
-        )
-        global_T_ee = global_T_base.transform_point(self.ee_target)
-        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
+        # self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+        #     np.array(self._sim.articulated_agent.arm_joint_pos)
+        # )
+        # global_T_ee = global_T_base.transform_point(self.ee_target)
+        # T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
 
-        if self._use_ee_rot:
-            T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
-        else:
-            T_delta = self.get_T_matrix(ee_pos[:3])
+        # if self._use_ee_rot:
+        #     T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
+        # else:
+        #     T_delta = self.get_T_matrix(ee_pos[:3])
 
-        T_new = np.dot(T_curr, T_delta)
-        self.ee_target = T_new[:3, 3]
-        self.ee_rot_target = self.get_euler_from_matrix(T_new)
-        self.apply_ee_constraints()
+        # T_new = np.dot(T_curr, T_delta)
+        # self.ee_target = T_new[:3, 3]
+        # self.ee_rot_target = self.get_euler_from_matrix(T_new)
+        # self.apply_ee_constraints()
 
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)

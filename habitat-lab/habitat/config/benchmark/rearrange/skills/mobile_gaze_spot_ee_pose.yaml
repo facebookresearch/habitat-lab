@@ -21,6 +21,12 @@ habitat:
       - ee_pose
   task:
     measurements:
+      episode_data_logger:
+        skill: pick
+        save_path: /fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/fremont/val_fine_grain
+        # metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/scene_datasets/hssd-hab/metadata/fpmodels-with-decomposed.csv
+        metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/Fremont-Knuckles/metadata/fremont_object_categories_filtered_hlab.csv
+        save_keys: ["articulated_agent_jaw_depth", "articulated_agent_jaw_rgb", "articulated_agent_arm_depth", "articulated_agent_arm_rgb"]
       end_effector_to_object_distance:
         if_consider_gaze_angle: True
         center_cone_vector: [0.0, 1.0, 0.0]
@@ -58,11 +64,6 @@ habitat:
       pick_success:
         ee_resting_success_threshold: -1.0
         ee_pose_threshold: -1.0
-      episode_data_logger:
-        skill: Pick
-        save_path: /fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/pick_large/train
-        metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/scene_datasets/hssd-hab/metadata/fpmodels-with-decomposed.csv
-        save_keys: ["articulated_agent_jaw_depth", "articulated_agent_jaw_rgb", "articulated_agent_arm_depth", "articulated_agent_arm_rgb"]
     lab_sensors:
       arm_depth_bbox_sensor:
         height: 240

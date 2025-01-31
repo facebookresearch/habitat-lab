@@ -517,10 +517,14 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
     def __init__(self, *args, task, **kwargs):
         self._task = task
         super().__init__(*args, task=task, **kwargs)
-        goal_radius = 0.8
+        self.ee_step_size = 0.05
+        self.grasp_dist = 0.15
+
+        goal_radius = 0.5
         self.follower = ShortestPathFollowerv2(self._sim, goal_radius)
         self.past_robot_pose = np.array([0.0, 0.0, 0.0, 0.0])
         self.stuck_ctr = 0
+        self.episode_id = -1
 
     def _get_uuid(self, *args, **kwargs):
         return "heuristic_action_sensor"
@@ -550,26 +554,8 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         def get_point_along_vector(
             curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
         ) -> np.ndarray:
-            """
-            Calculate a point that lies on the vector from curr to goal,
-            at a specified distance (step_size) from curr.
-
-            Args:
-                curr: numpy array [x, y, z] representing current position
-                goal: numpy array [x, y, z] representing goal position
-                step_size: Distance the returned point should be from curr (default 0.15)
-
-            Returns:
-                numpy array [x, y, z] representing the calculated point
-                If distance between curr and goal is less than step_size, returns goal
-            """
-            # Calculate vector from curr to goal
             vector = goal - curr
-
-            # Calculate distance between points
             distance = np.linalg.norm(vector)
-
-            # If distance is less than step_size, return goal
             if distance <= step_size:
                 return goal
 
@@ -577,7 +563,6 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
             unit_vector = vector / distance
             new_point = curr + (unit_vector * step_size)
 
-            # Round to reduce floating point errors
             return np.round(new_point, 6)
 
         end_effector_position_YZX = (
@@ -594,7 +579,7 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         target_position_YZX = self.get_closest_target_pose()
 
         position_goal = get_point_along_vector(
-            end_effector_position_YZX, target_position_YZX, 0.1
+            end_effector_position_YZX, target_position_YZX, self.ee_step_size
         )
 
         global_T_base = self._sim.articulated_agent.base_transformation
@@ -604,7 +589,7 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
         grasp = -1
         dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
-        if dist < 0.3:
+        if dist < self.grasp_dist:
             grasp = 1  # 1 = grasp, -1 = ungrasp
         return position_goal_base_T_ee, grasp
 
@@ -640,6 +625,9 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         return False
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
+        if int(episode.episode_id) != self.episode_id:
+            self.stuck_ctr = 0
+            self.episode_id = int(episode.episode_id)
         robot_position = (
             self._sim.articulated_agent.base_transformation.translation
         )
@@ -1241,9 +1229,18 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
         return EpisodeDataLogger.cls_uuid
 
     def get_object_name(self, object_label):
-        object_name = object_label.split("_:")[0].split("_")[1:]
-        object_name = " ".join(object_name)
-        return object_name
+        object_name = object_label.split("_:")[0]
+        object_name_full = self.metadata_dict.loc[
+            self.metadata_dict["id"] == object_name, "wnsynsetkey"
+        ].iloc[0]
+        if pd.isna(object_name_full):
+            object_name_full = object_name
+        if "_" in object_name_full:
+            # object_name_full = object_name_full.split("_")[1:]
+            object_name_full = object_name_full.split("_")
+            object_name_full = " ".join(object_name_full)
+
+        return object_name_full
 
     def get_receptacle_name(self, receptacle_id):
         receptacle_full_name = self.metadata_dict.loc[
@@ -1380,6 +1377,22 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
 
         for save_key in self.save_keys:
             ep_data = self.save_img(observations, save_key, ep_data)
+
+        if "action" in kwargs.keys():
+            arm_action = kwargs["action"]["action_args"]["arm_action"].tolist()
+            if np.all(arm_action == [0.0, 0.0, 0.0]):
+                arm_action = curr_ee_pos
+            ep_data["arm_action"] = arm_action
+            ep_data["base_action"] = kwargs["action"]["action_args"][
+                "base_vel"
+            ].tolist()
+            ep_data["empty_action"] = kwargs["action"]["action_args"][
+                "empty_action"
+            ].tolist()
+        else:
+            ep_data["arm_action"] = [0, 0, 0]
+            ep_data["base_action"] = [0, 0]
+            ep_data["empty_action"] = [0]
 
         self.episode_json["episode_data"].append(ep_data)
         self.episode_json["success"] = task.measurements.measures[
@@ -2251,46 +2264,47 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         return rmin, rmax, cmin, cmax
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        # Get a correct observation space
-        if self.agent_id is None:
-            target_key = "articulated_agent_arm_panoptic"
-            assert target_key in observations
-        else:
-            target_key = (
-                f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
-            )
-            assert target_key in observations
+        return np.zeros([self._height, self._width, 1], dtype=np.float32)
+        # # Get a correct observation space
+        # if self.agent_id is None:
+        #     target_key = "articulated_agent_arm_panoptic"
+        #     assert target_key in observations
+        # else:
+        #     target_key = (
+        #         f"agent_{self.agent_id}_articulated_agent_arm_panoptic"
+        #     )
+        #     assert target_key in observations
 
-        img_seg = observations[target_key]
+        # img_seg = observations[target_key]
 
-        # Check the size of the observation
-        assert (
-            img_seg.shape[0] == self._height
-            and img_seg.shape[1] == self._width
-        )
+        # # Check the size of the observation
+        # assert (
+        #     img_seg.shape[0] == self._height
+        #     and img_seg.shape[1] == self._width
+        # )
 
-        # Check if task has the attribute of the abs_targ_idx
-        assert hasattr(task, "abs_targ_idx")
+        # # Check if task has the attribute of the abs_targ_idx
+        # assert hasattr(task, "abs_targ_idx")
 
-        # Get the target from sim, and ensure that the index is offset
-        tgt_idx = (
-            self._sim.scene_obj_ids[task.abs_targ_idx]
-            + self._sim.habitat_config.object_ids_start
-        )
-        tgt_mask = (img_seg == tgt_idx).astype(int)
+        # # Get the target from sim, and ensure that the index is offset
+        # tgt_idx = (
+        #     self._sim.scene_obj_ids[task.abs_targ_idx]
+        #     + self._sim.habitat_config.object_ids_start
+        # )
+        # tgt_mask = (img_seg == tgt_idx).astype(int)
 
-        # Get the bounding box
-        bbox = np.zeros(tgt_mask.shape)
+        # # Get the bounding box
+        # bbox = np.zeros(tgt_mask.shape)
 
-        # Don't show bounding box with some probability
-        if np.random.rand() < self._noise:
-            return np.float32(bbox)
+        # # Don't show bounding box with some probability
+        # if np.random.rand() < self._noise:
+        #     return np.float32(bbox)
 
-        if np.sum(tgt_mask) != 0:
-            rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
-            bbox[rmin:rmax, cmin:cmax] = 1.0
+        # if np.sum(tgt_mask) != 0:
+        #     rmin, rmax, cmin, cmax = self._get_bbox(tgt_mask)
+        #     bbox[rmin:rmax, cmin:cmax] = 1.0
 
-        return np.float32(bbox)
+        # return np.float32(bbox)
 
 
 @registry.register_sensor

@@ -629,7 +629,11 @@ class RearrangeSim(HabitatSim):
             t_start = time.time()
             if should_add_objects:
                 template = None
-                for obj_path in self._additional_object_paths:
+                combined_paths = [
+                    *self._additional_object_paths,
+                    *ep_info.additional_obj_config_paths,
+                ]
+                for obj_path in combined_paths:
                     template = osp.join(obj_path, obj_handle)
                     if osp.isfile(template):
                         break

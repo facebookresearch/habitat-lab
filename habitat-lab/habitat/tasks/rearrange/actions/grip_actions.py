@@ -376,13 +376,14 @@ class GazeGraspAction(MagicGraspAction):
             elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
                 self._ungrasp()
                 return
-        if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
-            return
-        if grip_action is None:
-            return
+        return
+        # if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
+        #     self._grasp()
+        #     return
+        # if grip_action is None:
+        #     return
 
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
-        elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
-            self._ungrasp()
+        # if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        #     self._grasp()
+        # elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
+        #     self._ungrasp()

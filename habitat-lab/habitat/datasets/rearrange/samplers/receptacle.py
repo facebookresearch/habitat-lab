@@ -674,29 +674,34 @@ def parse_receptacles_from_user_config(
                     )
                 )
             elif mesh_receptacle_id_string in sub_config_key:
-                mesh_file = os.path.join(
-                    parent_template_directory,
-                    sub_config.get("mesh_filepath"),
-                )
-                assert os.path.exists(
-                    mesh_file
-                ), f"Configured receptacle mesh asset '{mesh_file}' not found."
-                # TODO: build the mesh_data entry from scale and mesh
-                mesh_data: List[mn.trade.MeshData] = import_tri_mesh(mesh_file)
+                try:
+                    mesh_file = os.path.join(
+                        parent_template_directory,
+                        sub_config.get("mesh_filepath"),
+                    )
+                    assert os.path.exists(
+                        mesh_file
+                    ), f"Configured receptacle mesh asset '{mesh_file}' not found."
+                    # TODO: build the mesh_data entry from scale and mesh
+                    mesh_data: List[mn.trade.MeshData] = import_tri_mesh(
+                        mesh_file
+                    )
 
-                for mix, single_mesh_data in enumerate(mesh_data):
-                    single_receptacle_name = (
-                        receptacle_name + "." + str(mix).rjust(4, "0")
-                    )
-                    receptacles.append(
-                        TriangleMeshReceptacle(
-                            name=single_receptacle_name,
-                            mesh_data=single_mesh_data,
-                            up=up,
-                            parent_object_handle=parent_object_handle,
-                            parent_link=parent_link_ix,
+                    for mix, single_mesh_data in enumerate(mesh_data):
+                        single_receptacle_name = (
+                            receptacle_name + "." + str(mix).rjust(4, "0")
                         )
-                    )
+                        receptacles.append(
+                            TriangleMeshReceptacle(
+                                name=single_receptacle_name,
+                                mesh_data=single_mesh_data,
+                                up=up,
+                                parent_object_handle=parent_object_handle,
+                                parent_link=parent_link_ix,
+                            )
+                        )
+                except:
+                    pass
             else:
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
