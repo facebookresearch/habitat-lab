@@ -49,6 +49,9 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+import math
+import sys
+
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.evaluator import Evaluator
@@ -652,6 +655,17 @@ class PPOTrainer(BaseRLTrainer):
             * torch.distributed.get_world_size()
         )
 
+    @staticmethod
+    def load_robot_skills_ckpt(path, model):
+        """load the torch checkpoint"""
+        data = torch.load(path, weights_only=True, map_location="cpu")
+        # remove "_orig_mod." prefix if saved model was compiled
+        data["model"] = {
+            k.replace("_orig_mod.", ""): v for k, v in data["model"].items()
+        }
+        model.load_state_dict(data["model"], strict=True)
+        return model
+
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training DD/PPO.
@@ -800,6 +814,69 @@ class PPOTrainer(BaseRLTrainer):
 
             self.envs.close()
 
+    def load_process_robot_skills_ckpt(
+        self,
+        load_vla_ckpt,
+        third_party_config_path_dir,
+        third_party_ckpt_root_folder,
+    ):
+        """Load and process robot skills ckpt"""
+
+        sys.path.append(third_party_ckpt_root_folder)
+        # robot-skills related import
+        from src.model.vla.pizero import PiZeroInference
+        from src.model.vla.processing import VLAProcessor
+        from transformers import AutoTokenizer
+
+        # Process the config
+        OmegaConf.register_new_resolver("eval", eval, replace=True)
+        OmegaConf.register_new_resolver("round_up", math.ceil)
+        OmegaConf.register_new_resolver("round_down", math.floor)
+
+        # Define the config path
+        config = OmegaConf.load(
+            third_party_config_path_dir,
+        )
+
+        # Make sure your config here is correct. We can also do config overwrite here if
+        # you want to do a quick hack
+        config.cond_steps = 2
+        config.use_lm_head = True
+        config.mixture.vlm.use_final_norm = True
+        config.horizon_steps = 4
+
+        # Load the model
+        model = PiZeroInference(config, use_ddp=False)
+        model = self.load_robot_skills_ckpt(
+            load_vla_ckpt,
+            model,
+        )
+
+        # Housekeeping the model
+        model.freeze_all_weights()
+        model.to(self.device)
+        model.to(torch.bfloat16)  # Save memeory
+        model = torch.compile(
+            model,
+            mode="default",
+        )
+        model.eval()
+
+        # tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            config.pretrained_model_path, padding_side="right"
+        )
+
+        # processor
+        processor = VLAProcessor(
+            tokenizer,
+            config.vision.config.num_image_tokens,
+            config.max_seq_len,
+            config.tokenizer_padding,
+        )
+
+        return model, processor, config
+
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -819,15 +896,35 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
+        vla_model, vla_processor = None, None
+
         # Some configurations require not to load the checkpoint, like when using
         # a hierarchial policy
-        if self.config.habitat_baselines.eval.should_load_ckpt:
+        if (
+            self.config.habitat_baselines.eval.should_load_ckpt
+            and not self.config.habitat_baselines.load_third_party_ckpt
+        ):
             # map_location="cpu" is almost always better than mapping to a CUDA device.
             ckpt_dict = self.load_checkpoint(
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
             logger.info(f"Loaded checkpoint trained for {step_id} steps")
+        elif (
+            self.config.habitat_baselines.eval.should_load_ckpt
+            and self.config.habitat_baselines.load_third_party_ckpt
+        ):
+            # Starting from here to load robot-skills model
+            (
+                vla_model,
+                vla_processor,
+                vla_config,
+            ) = self.load_process_robot_skills_ckpt(
+                checkpoint_path,
+                self.config.habitat_baselines.third_party_config_path_dir,
+                self.config.habitat_baselines.third_party_ckpt_root_folder,
+            )
+            ckpt_dict = {"config": None}
         else:
             ckpt_dict = {"config": None}
 
@@ -877,6 +974,7 @@ class PPOTrainer(BaseRLTrainer):
         if (
             self._agent.actor_critic.should_load_agent_state
             and self.config.habitat_baselines.eval.should_load_ckpt
+            and not self.config.habitat_baselines.load_third_party_ckpt  # block the loading of the hab-baseline ckpt
         ):
             self._agent.load_state_dict(ckpt_dict)
 
@@ -897,6 +995,9 @@ class PPOTrainer(BaseRLTrainer):
             self.obs_transforms,
             self._env_spec,
             self._rank0_keys,
+            vla_model,
+            vla_processor,
+            vla_config,
         )
 
         self.envs.close()
