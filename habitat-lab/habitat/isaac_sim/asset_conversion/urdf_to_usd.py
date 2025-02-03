@@ -226,10 +226,13 @@ if __name__ == "__main__":
     parser.add_argument("input_urdf_file")
     parser.add_argument("output_usda_file")
     parser.add_argument("project_root_folder")
-    parser.add_argument("--remove-visual")
+    parser.add_argument("--remove_visual")
 
     args = parser.parse_args()
 
     convert_urdf_to_usd(
-        args.input_urdf_file, args.output_usda_file, args.project_root_folder, arg.remove-visual
+        args.input_urdf_file,
+        args.output_usda_file,
+        args.project_root_folder,
+        args.remove_visual,
     )
