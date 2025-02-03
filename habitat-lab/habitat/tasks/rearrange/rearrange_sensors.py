@@ -336,6 +336,45 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class EEPoseSensor(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "ee_pose"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EEPoseSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(6,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation_real(self):
+        global_T_ee = self._sim.articulated_agent.ee_transform()
+        local_ee_pos = global_T_ee.translation
+        local_ee_rpy = extract_roll_pitch_yaw(global_T_ee.rotation())
+
+        return np.array([*local_ee_pos, *local_ee_rpy], dtype=np.float32)
+
+    def get_observation(self, observations, episode, task, *args, **kwargs):
+        if self.config.use_real_world_conventions:
+            return self.get_observation_real()
+
+        bullet_ee_xyz, bullet_ee_rpy = task.actions["arm_action"].get_ee_pose()
+
+        return np.array([*bullet_ee_xyz, *bullet_ee_rpy], dtype=np.float32)
+
+
+@registry.register_sensor
 class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
     cls_uuid: str = "relative_resting_position"
 

@@ -259,6 +259,7 @@ class GazeGraspAction(MagicGraspAction):
 
             # Skip if not in the central cone
             obj_angle = self._get_camera_object_angle(obj_pos)
+
             if abs(obj_angle) > self.center_cone_angle_threshold:
                 return None, None
 
@@ -287,9 +288,34 @@ class GazeGraspAction(MagicGraspAction):
     def _ungrasp(self):
         self.cur_grasp_mgr.desnap()
 
+    def _magic_grasp(self):
+        scene_obj_pos = self._sim.get_scene_pos()
+        ee_pos = self.cur_articulated_agent.ee_transform().translation
+        # Get objects we are close to.
+        if len(scene_obj_pos) != 0:
+            # Get the target the EE is closest to.
+            closest_obj_idx = np.argmin(
+                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+            )
+
+            dist = np.linalg.norm(
+                ee_pos - scene_obj_pos[closest_obj_idx], ord=2
+            )
+            if dist > self.min_dist and dist < self.max_dist:
+
+                keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+
+                self.cur_grasp_mgr.snap_to_obj(
+                    self._sim.scene_obj_ids[closest_obj_idx],
+                    force=False,
+                    rel_pos=mn.Vector3(0.1, 0.0, 0.0),
+                    keep_T=keep_T,
+                )
+
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if self.auto_grasp and not self.cur_grasp_mgr.is_grasped:
-            self._grasp()
+            self._magic_grasp()
+            # self._grasp()
             return
 
         if grip_action is None:

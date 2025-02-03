@@ -44,6 +44,7 @@ class HabitatEvaluator(Evaluator):
     # TODO: expand these to multi-sensors
     vla_target_image = "articulated_agent_arm_rgb"  # Target RGB
     vla_target_proprio = "joint"  # Target proprio sensor
+    # vla_target_proprio = "ee_pos"  # Target proprio sensor
 
     @staticmethod
     def process_rgb(rgbs, target_size):
@@ -75,14 +76,21 @@ class HabitatEvaluator(Evaluator):
         self.observation_dict.append(observation)
         # Confirm the number of batches
         bsz = observation[self.vla_target_image].shape[0]
-        dummy_images[:, vla_config.cond_steps - i - 1] = self.process_rgb(
-            self.observation_dict[-i - 1][self.vla_target_image],
-            vla_config.image_size,
+        dummy_images = torch.randint(
+            0,
+            256,
+            (
+                bsz,
+                vla_config.cond_steps,
+                3,
+                vla_config.image_size,
+                vla_config.image_size,
+            ),
+            dtype=torch.uint8,
         )
-        dummy_proprio[:, vla_config.cond_steps - i - 1] = (
-            self.observation_dict[-i - 1][self.vla_target_proprio]
+        dummy_proprio = torch.zeros(
+            (bsz, vla_config.cond_steps, vla_config.proprio_dim)
         )
-
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
@@ -92,18 +100,27 @@ class HabitatEvaluator(Evaluator):
                         vla_config.image_size,
                     )
                 )
-                dummy_proprio[:, vla_config.cond_steps - i - 1] = (
-                    self.observation_dict[-i - 1][self.vla_target_proprio]
-                )
+                if self.vla_target_proprio == "ee_pos":
+                    prop_obs = self.observation_dict[-i - 1]["ee_pose"][:, :3]
+                else:
+                    prop_obs = self.observation_dict[-i - 1][
+                        self.vla_target_proprio
+                    ]
+                dummy_proprio[:, vla_config.cond_steps - i - 1] = prop_obs
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps - store_size):
                 dummy_images[:, i] = self.process_rgb(
                     self.observation_dict[0][self.vla_target_image],
                     vla_config.image_size,
                 )
-                dummy_proprio[:, i] = self.observation_dict[0][
-                    self.vla_target_proprio
-                ]
+                if self.vla_target_proprio == "ee_pos":
+                    prop_obs = self.observation_dict[-i - 1]["ee_pose"][:, :3]
+                else:
+                    prop_obs = self.observation_dict[-i - 1][
+                        self.vla_target_proprio
+                    ]
+
+                dummy_proprio[:, i] = prop_obs
         else:
             for i in range(vla_config.cond_steps):
                 dummy_images[:, i] = self.process_rgb(
@@ -112,9 +129,16 @@ class HabitatEvaluator(Evaluator):
                     ],
                     vla_config.image_size,
                 )
-                dummy_proprio[:, i] = self.observation_dict[
-                    i - vla_config.cond_steps
-                ][self.vla_target_proprio]
+                if self.vla_target_proprio == "ee_pos":
+                    prop_obs = self.observation_dict[
+                        i - vla_config.cond_steps
+                    ]["ee_pose"][:, :3]
+                else:
+                    prop_obs = self.observation_dict[
+                        i - vla_config.cond_steps
+                    ][self.vla_target_proprio]
+
+                dummy_proprio[:, i] = prop_obs
 
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 

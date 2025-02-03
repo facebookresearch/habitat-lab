@@ -9,6 +9,7 @@ from typing import Optional, cast
 import magnum as mn
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
@@ -133,6 +134,11 @@ class ArmAction(ArticulatedAgentAction):
         if self.grip_ctrlr is not None:
             self.grip_ctrlr.reset(*args, **kwargs)
 
+    def get_ee_pose(self):
+        return self._ik_helper.calc_fk(
+            np.array(self._sim.articulated_agent.arm_joint_pos)
+        )
+
     @property
     def action_space(self):
         action_spaces = {
@@ -140,9 +146,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[
-                self._action_arg_prefix + "grip_action"
-            ] = self.grip_ctrlr.action_space
+            action_spaces[self._action_arg_prefix + "grip_action"] = (
+                self.grip_ctrlr.action_space
+            )
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -741,61 +747,121 @@ class ArmEEAction(ArticulatedAgentAction):
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
+        self.ee_rot_target: Optional[np.ndarray] = None
         self.ee_index: Optional[int] = 0
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
-        self._ee_ctrl_lim = self._config.ee_ctrl_lim
+        self._ee_rot_ctrl_lim = self._config.get("ee_rot_ctrl_lim", 0.0125)
+        self._use_ee_rot = self._config.get("use_ee_rot", False)
+        self._ee_ctrl_lim = self._config.get("ee_ctrl_lim", 0.15)
+        self._use_contact_test = self._config.get("use_contact_test", False)
+        self.collided = False
 
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent.arm_joint_pos)
+            np.array(self.cur_articulated_agent.arm_joint_pos)
         )
-
-        self.ee_target = cur_ee
+        self.ee_target, self.ee_rot_target = cur_ee
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+        ee_shape = 3
+        if self._use_ee_rot:
+            ee_shape += 3
+
+        return spaces.Box(shape=(ee_shape,), low=-1, high=1, dtype=np.float32)
 
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.articulated_agent.params.ee_constraint[
+            self.cur_articulated_agent.params.ee_constraint[
                 self.ee_index, :, 0
             ],
-            self._sim.articulated_agent.params.ee_constraint[
+            self.cur_articulated_agent.params.ee_constraint[
                 self.ee_index, :, 1
             ],
         )
 
-    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        self.ee_target += np.array(ee_pos)
+    def set_joint_pos_kinematic(self, des_joint_pos):
+        self.collided = False
+        curr_joint_pos = np.array(self.cur_articulated_agent.arm_joint_pos)
+        self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+        self.cur_articulated_agent.fix_joint_values = des_joint_pos
+        if self._use_contact_test:
+            self.collided = self.cur_articulated_agent.sim_obj.contact_test()
+            if self.collided:
+                self.cur_articulated_agent.arm_joint_pos = curr_joint_pos
+                self.cur_articulated_agent.fix_joint_values = curr_joint_pos
 
+    def get_T_matrix(self, position, rotation=None):
+        T_matrix = np.eye(4)
+        T_matrix[:3, 3] = position
+        if rotation is not None:
+            T_matrix[:3, :3] = R.from_euler("xyz", rotation).as_matrix()
+        return T_matrix
+
+    def get_euler_from_matrix(self, T_matrix):
+        # Extract the rotation matrix (3x3) from the transformation matrix (4x4)
+        rotation_matrix = T_matrix[:3, :3]
+
+        # Create a Rotation object
+        r = R.from_matrix(rotation_matrix)
+
+        # Get Euler angles (in radians)
+        return r.as_euler("xyz", degrees=False)
+
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+            np.array(self.cur_articulated_agent.arm_joint_pos)
+        )
+        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
+
+        if self._use_ee_rot:
+            T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
+            T_delta[:3, :3] = R.from_euler("xyz", ee_pos[3:]).as_matrix()
+        else:
+            T_delta = self.get_T_matrix(ee_pos[:3])
+
+        T_new = np.dot(T_curr, T_delta)
+        self.ee_target = T_new[:3, 3]
+        self.ee_rot_target = self.get_euler_from_matrix(T_new)
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
+        joint_pos = np.array(self.cur_articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+        des_joint_pos = self._ik_helper.calc_ik(
+            self.ee_target, self.ee_rot_target
+        )
         des_joint_pos = list(des_joint_pos)
-        self._sim.articulated_agent.arm_motor_pos = des_joint_pos
+
+        if self._sim.habitat_config.kinematic_mode:
+            self.set_joint_pos_kinematic(des_joint_pos)
+            self.cur_articulated_agent.arm_joint_pos = des_joint_pos
+            self.cur_articulated_agent.fix_joint_values = des_joint_pos
+        else:
+            self.cur_articulated_agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
-        ee_pos *= self._ee_ctrl_lim
+        if self._use_ee_rot:
+            ee_pos[:3] *= self._ee_ctrl_lim
+            ee_pos[3:] *= self._ee_rot_ctrl_lim
+        else:
+            ee_pos *= self._ee_ctrl_lim
         self.set_desired_ee_pos(ee_pos)
 
         if self._render_ee_target:
-            global_pos = self._sim.articulated_agent.base_transformation.transform_point(
-                self.ee_target
+            global_pos = (
+                self.cur_articulated_agent.base_transformation.transform_point(
+                    self.ee_target
+                )
             )
-            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
-                global_pos, self._sim.viz_ids["ee_target"]
-            )
+        return self.collided
 
 
 @registry.register_task_action
