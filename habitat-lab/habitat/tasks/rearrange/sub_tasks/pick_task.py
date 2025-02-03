@@ -149,6 +149,7 @@ class RearrangePickTaskV1(RearrangeTask):
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
+        print("start_pos: ", start_pos, angle_to_obj)
         return start_pos, angle_to_obj
 
     def _should_prevent_grip(self, action_args):

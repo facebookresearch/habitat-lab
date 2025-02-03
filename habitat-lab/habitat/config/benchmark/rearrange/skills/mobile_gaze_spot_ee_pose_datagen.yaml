@@ -23,7 +23,7 @@ habitat:
     measurements:
       episode_data_logger:
         skill: pick
-        save_path: /fsx-siro/jtruong/repos/habitat-lab/data/sim_robot_data/heuristic_expert/fremont/val_fine_grain
+        save_path: /fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/delme
         # metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/scene_datasets/hssd-hab/metadata/fpmodels-with-decomposed.csv
         metadata_path: /opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/Fremont-Knuckles/metadata/fremont_object_categories_filtered_hlab.csv
         save_keys: ["articulated_agent_jaw_depth", "articulated_agent_jaw_rgb", "articulated_agent_arm_depth", "articulated_agent_arm_rgb"]
@@ -48,7 +48,7 @@ habitat:
         non_desire_ee_local_pos_dis: -1.0
         non_desire_ee_local_pos_pen: 5.0
         non_desire_ee_local_pos: [0.3,0.0,0.0]
-        camera_looking_down_angle: 0.959931
+        camera_looking_down_angle: -1.0
         camera_looking_down_pen: 5.0
         pick_reward: 2.0
         constraint_violate_pen: 1.0
@@ -88,7 +88,9 @@ habitat:
         arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
         gaze_distance_range: [0.2, 0.4]
         delta_pos_limit: 0.01667
-        ee_ctrl_lim: 0.015
+        ee_ctrl_lim: 0.05
+        ee_rot_ctrl_lim: 0.05
+        use_ee_rot: True
         auto_grasp: True
         should_clip: True
         grasp_thresh_dist: -1.0
@@ -98,9 +100,10 @@ habitat:
         object_lockon_needed: 1
     success_reward: 10.0
     slack_reward: -0.01
-    spawn_max_dist_to_obj: 1.5
-    base_angle_noise: 0.1
-    spawn_type: "orig_snap"
+    spawn_max_dist_to_obj: 3.0
+    base_angle_noise: 0.0
+    spawn_type: "embodied_unoccluded_navmesh_snap"
+    render_target: False
   simulator:
     kinematic_mode: True
     ac_freq_ratio: 1

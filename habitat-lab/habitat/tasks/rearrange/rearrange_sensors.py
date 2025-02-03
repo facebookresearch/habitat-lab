@@ -517,8 +517,8 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
     def __init__(self, *args, task, **kwargs):
         self._task = task
         super().__init__(*args, task=task, **kwargs)
-        self.ee_step_size = 0.05
-        self.grasp_dist = 0.15
+        self.ee_step_size = 0.1
+        self.grasp_dist = 0.2
 
         goal_radius = 0.5
         self.follower = ShortestPathFollowerv2(self._sim, goal_radius)
@@ -577,6 +577,7 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         # targ_idxs = self._sim.get_targets()[0]
         # target_position_YZX = scene_pos[targ_idxs][0]
         target_position_YZX = self.get_closest_target_pose()
+        target_position_YZX += np.array([0.0, 0.15, -0.15])
 
         position_goal = get_point_along_vector(
             end_effector_position_YZX, target_position_YZX, self.ee_step_size
@@ -589,6 +590,7 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
         grasp = -1
         dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
+        print("dist: ", dist)
         if dist < self.grasp_dist:
             grasp = 1  # 1 = grasp, -1 = ungrasp
         return position_goal_base_T_ee, grasp
