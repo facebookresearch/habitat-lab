@@ -9,6 +9,7 @@ from typing import Optional, cast
 import magnum as mn
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
@@ -132,6 +133,11 @@ class ArmAction(ArticulatedAgentAction):
         self.arm_ctrlr.reset(*args, **kwargs)
         if self.grip_ctrlr is not None:
             self.grip_ctrlr.reset(*args, **kwargs)
+
+    def get_ee_pose(self):
+        return self._ik_helper.calc_fk(
+            np.array(self._sim.articulated_agent.arm_joint_pos)
+        )
 
     @property
     def action_space(self):
@@ -741,6 +747,7 @@ class ArmEEAction(ArticulatedAgentAction):
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
+        self.ee_rot_target: Optional[np.ndarray] = None
         self.ee_index: Optional[int] = 0
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
@@ -750,22 +757,25 @@ class ArmEEAction(ArticulatedAgentAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent.arm_joint_pos)
+            np.array(self.cur_articulated_agent.arm_joint_pos)
         )
-
-        self.ee_target = cur_ee
+        self.ee_target, self.ee_rot_target = cur_ee
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(3,), low=-1, high=1, dtype=np.float32)
+        ee_shape = 3
+        if self._use_ee_rot:
+            ee_shape += 3
+
+        return spaces.Box(shape=(ee_shape,), low=-1, high=1, dtype=np.float32)
 
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.articulated_agent.params.ee_constraint[
+            self.cur_articulated_agent.params.ee_constraint[
                 self.ee_index, :, 0
             ],
-            self._sim.articulated_agent.params.ee_constraint[
+            self.cur_articulated_agent.params.ee_constraint[
                 self.ee_index, :, 1
             ],
         )
@@ -801,12 +811,12 @@ class ArmEEAction(ArticulatedAgentAction):
         self.set_desired_ee_pos(des_joint_pos, "kinematic")
 
         if self._render_ee_target:
-            global_pos = self._sim.articulated_agent.base_transformation.transform_point(
-                self.ee_target
+            global_pos = (
+                self.cur_articulated_agent.base_transformation.transform_point(
+                    self.ee_target
+                )
             )
-            self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
-                global_pos, self._sim.viz_ids["ee_target"]
-            )
+        return self.collided
 
 
 @registry.register_task_action

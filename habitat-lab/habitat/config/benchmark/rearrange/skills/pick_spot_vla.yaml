@@ -5,11 +5,12 @@ defaults:
     - base_to_object_distance
   - /habitat/task/lab_sensors:
     - arm_depth_bbox_sensor
+    - end_effector_pose_sensor
     - spot_head_stereo_depth_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: spot
-  # - override /habitat/task/rearrange/actions: spot_base_arm_empty
-  - override /habitat/task/rearrange/actions: spot_arm
+  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  # - override /habitat/task/rearrange/actions: spot_arm
   - _self_
 
 # This yaml is designed specifically for learning a mobile gaze policy for the Boston Dynamics Spot robot.
@@ -28,6 +29,7 @@ habitat:
       - articulated_agent_arm_rgb
       - spot_head_stereo_depth_sensor
       - joint
+      - ee_pose
   task:
     measurements:
       end_effector_to_object_distance:
@@ -66,11 +68,17 @@ habitat:
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
+        # arm_controller: "ArmEEAction"
         center_cone_vector: [0.0, 1.0, 0.0]
         # We limit the joint angles to ensure that this is feasible in the real world
         arm_joint_limit: [[-0.7853, 0.7853], [-3.1415, -0.7853], [0, 3.1415], [-1.5708, 1.5708]]
         auto_grasp: True
         should_clip: True
+        ee_ctrl_lim: 0.15
+        gaze_distance_range: [0.2, 0.35]
+      # base_velocity_non_cylinder:
+      #   longitudinal_lin_speed: 4.0
+      #   ang_speed: 8.0
     success_reward: 10.0
     slack_reward: -0.01
     spawn_max_dist_to_obj: 1.0
@@ -86,4 +94,4 @@ habitat:
         # joint_that_can_control: [1, 1, 1, 1, 1, 1, 1]
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
         # The real-world gaze ready location
-        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
+        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0] 

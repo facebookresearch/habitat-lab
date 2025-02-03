@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
@@ -62,6 +63,10 @@ class RearrangePickTaskV1(RearrangeTask):
         return sel_idx
 
     def _gen_start_pos(self, sim, episode, sel_idx):
+        if np.all(episode.start_position != [0.0, 0.0, 0.0]):
+            start_pos = mn.Vector3(*episode.start_position)
+            angle_to_obj = episode.start_rotation[-1]
+            return start_pos, angle_to_obj
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
 
