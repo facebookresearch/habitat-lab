@@ -231,5 +231,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     convert_urdf_to_usd(
-        args.input_urdf_file, args.output_usda_file, args.project_root_folder
+        args.input_urdf_file, args.output_usda_file, args.project_root_folder, arg.remove-visual
     )
