@@ -25,8 +25,8 @@ runs:
       touch ./.vscode/settings.json
     # mkdir -p $GITHUB_WORKSPACE/isaacsim/.vscode
     # cp $GITHUB_WORKSPACE/isaacsim/extscache/omni.kit.window.extensions/ext_template/vscode/settings.json $GITHUB_WORKSPACE/isaacsim/.vscode/
-      #yes | ./IsaacLab/isaaclab.sh --install
-      #ignore-errors: true
+      yes | ./IsaacLab/isaaclab.sh --install
+      ignore-errors: true
     shell: bash
   - name: Import Issac Sim
     run: |
