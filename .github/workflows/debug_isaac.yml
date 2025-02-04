@@ -1,0 +1,13 @@
+name: Hello World Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Hello World Action
+        uses: ./path/to/action.yml@v1
