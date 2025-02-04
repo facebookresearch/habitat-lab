@@ -7,7 +7,7 @@ runs:
     shell: bash
   - name: Setup miniconda
     uses: conda-incubator/setup-miniconda@v3.0.1
-      with:
-        miniconda-version: "latest"
-        python-version: "3.9"
-        activate-environment: "habitat"
+    with:
+      miniconda-version: "latest"
+      python-version: "3.9"
+      activate-environment: "habitat"
