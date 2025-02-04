@@ -1,16 +1,14 @@
 name: Hello World
 on:
+  pull_request: {}
   push:
     branches:
-      - main
+    - main
+    tags: [ "v*" ]
+
 jobs:
   hello-world:
-    runs-on: 4-core-ubuntu-gpu-t4
-    env:
-      PYPI_LAB_UPLOAD_TOKEN: ${{ secrets.PYPI_LAB_UPLOAD_TOKEN }}
-    defaults:
-      run:
-        shell: bash -el {0}
+    runs-on: ubuntu-latest
     steps:
       - name: Print Hello World
         run: echo "Hello World"
