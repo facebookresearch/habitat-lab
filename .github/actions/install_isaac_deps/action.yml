@@ -1,12 +1,7 @@
-name: Hello World
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  hello-world:
+name: Hello World 1
+runs:
+  using: composite
+  - name: Hello World 2
     runs-on: ubuntu-latest
     steps:
       - name: Print Hello World
