@@ -590,7 +590,6 @@ class HeuristicActionSensor(UsesArticulatedAgentInterface, MultiObjSensor):
 
         grasp = -1
         dist = np.linalg.norm(end_effector_position_YZX - target_position_YZX)
-        print("dist: ", dist)
         if dist < self.grasp_dist:
             grasp = 1  # 1 = grasp, -1 = ungrasp
         return position_goal_base_T_ee, grasp
