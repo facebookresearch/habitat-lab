@@ -10,8 +10,8 @@ runs:
     with:
       miniconda-version: "latest"
       python-version: "3.10"
-  - name: Install conda and dependencies
-    run: |-
-      echo "Install conda and dependencies"
-      conda create -n env_isaaclab python=3.10
-      conda activate env_isaaclab
+  # - name: Install conda and dependencies
+  #   run: |-
+  #     echo "Install conda and dependencies"
+  #     conda create -n env_isaaclab python=3.10
+  #     conda activate env_isaaclab
