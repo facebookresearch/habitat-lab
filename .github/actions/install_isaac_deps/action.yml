@@ -2,5 +2,6 @@ name: Hello World 1
 runs:
   using: composite
   steps:
+    shell: bash
     - name: Print Hello World
     run: echo "Hello World"
