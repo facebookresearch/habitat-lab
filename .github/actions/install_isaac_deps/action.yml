@@ -13,7 +13,7 @@ runs:
   - name: Install conda and dependencies 
     run: |-
       echo "Install conda and dependencies"
-      conda init
       conda create -n env_isaaclab python=3.10
+      conda init
       conda activate env_isaaclab
     shell: bash
