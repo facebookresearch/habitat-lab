@@ -21,6 +21,8 @@ runs:
       pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
       git clone https://github.com/isaac-sim/IsaacLab.git
       sudo apt install cmake build-essential
+      mkdir -p $GITHUB_WORKSPACE/isaacsim/.vscode
+      cp $GITHUB_WORKSPACE/isaacsim/extscache/omni.kit.window.extensions/ext_template/vscode/settings.json $GITHUB_WORKSPACE/isaacsim/.vscode/
       yes | ./IsaacLab/isaaclab.sh --install
       ignore-errors: true
     shell: bash
