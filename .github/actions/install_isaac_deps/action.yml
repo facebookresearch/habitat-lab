@@ -15,5 +15,6 @@ runs:
       echo "Install conda and dependencies"
       conda create -n env_isaaclab python=3.10
       conda init
+      source ~/.bashrc
       conda activate env_isaaclab
     shell: bash
