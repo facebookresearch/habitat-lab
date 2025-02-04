@@ -1,9 +1,10 @@
 name: Hello World Workflow
-
 on:
+  pull_request: {}
   push:
     branches:
-      - main
+    - main
+    tags: [ "v*" ]
 
 jobs:
   hello-world:
