@@ -2,9 +2,10 @@ name: Hello World 1
 runs:
   using: composite
   steps:
+  shell: bash
   - name: Print Hello World
     run: echo "Hello World"
-    shell: bash
+    # shell: bash
   - name: Setup miniconda
     uses: conda-incubator/setup-miniconda@v3.0.1
     with:
