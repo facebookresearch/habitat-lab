@@ -5,11 +5,11 @@ runs:
   - name: Print Hello World
     run: echo "Hello World"
     shell: bash
-  # - name: Setup miniconda
-  #   uses: conda-incubator/setup-miniconda@v3.0.1
-  #   with:
-  #     miniconda-version: "latest"
-  #     python-version: "3.10"
+  - name: Setup miniconda
+    uses: conda-incubator/setup-miniconda@v3.0.1
+    with:
+      miniconda-version: "latest"
+      python-version: "3.10"
   - name: Install conda and dependencies 
     run: |-
       echo "Install conda and dependencies"
