@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Hello World Action
-        uses: ./path/to/action.yml@v1
+        uses: "./habitat-lab/.github/actions/install_isaac_deps"
