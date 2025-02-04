@@ -21,7 +21,8 @@ runs:
       pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
       git clone https://github.com/isaac-sim/IsaacLab.git
       sudo apt install cmake build-essential
-      yes | ./IsaacLab/isaaclab.sh --install > /dev/null 2>&1
+      yes | ./IsaacLab/isaaclab.sh --install
+      ignore-errors: true
     shell: bash
   - name: Import Issac Sim
     run: |
