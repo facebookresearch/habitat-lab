@@ -21,10 +21,12 @@ runs:
       pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
       git clone https://github.com/isaac-sim/IsaacLab.git 
     shell: bash
-    - copy:
-      content: './habitat-lab/isaaclab_modified.sh'
-      dest: './IsaacLab/isaaclab_modified.sh'
-      mode: '755'
+    - name: Copy isaaclab_modified.sh
+        uses: actions/download-artifact@v3
+        with:
+          name: habitat-lab/isaaclab_modified.sh
+          path: ./IsaacLab/isaaclab_modified.sh
+          mode: '755'
     - name: Install Isaac Lab
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
