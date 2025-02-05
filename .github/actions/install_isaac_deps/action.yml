@@ -23,10 +23,11 @@ runs:
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
       cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
-      chmod +x ./IsaacLab/isaaclab_modified.sh
       yes | ./IsaacLab/isaaclab_modified.sh --install
       python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
     shell: bash
+
+  #   chmod +x ./IsaacLab/isaaclab_modified.sh
   #    cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
   #     cp $GITHUB_WORKSPACE/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
   #     mkdir /home/runner/miniconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/.vscode/
