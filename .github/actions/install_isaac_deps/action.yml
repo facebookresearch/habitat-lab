@@ -18,7 +18,7 @@ runs:
       source ~/.bashrc
       conda activate env_isaaclab
       pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu118
-      pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
+      yes | pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
       git clone https://github.com/isaac-sim/IsaacLab.git 
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
