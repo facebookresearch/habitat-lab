@@ -20,7 +20,8 @@ runs:
       pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu118
       pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
       git clone https://github.com/isaac-sim/IsaacLab.git 
-      find .github -type f -name 'isaaclab_modified.sh' -exec cp {} ./IsaacLab/ \;
+      ls ./habitat-lab
+      cp ./habitat-lab/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
       yes | ./IsaacLab/isaaclab_modified.sh --install
