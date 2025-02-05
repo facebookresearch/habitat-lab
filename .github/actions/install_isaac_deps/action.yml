@@ -23,7 +23,9 @@ runs:
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
       ls
-      cp $GITHUB_WORKSPACE/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
+      ls /home/runner/
+      ls /home/runner/work/
+      cp /home/runner/work/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
       yes | ./IsaacLab/isaaclab_modified.sh --install
       python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
 
