@@ -19,8 +19,12 @@ runs:
       conda activate env_isaaclab
       pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu118
       pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
-      git clone https://github.com/isaac-sim/IsaacLab.git 
-      sudo apt install cmake build-essential
+  - name: Clone IsaacLab repository
+    run: git clone https://github.com/isaac-sim/IsaacLab.git
+    shell: bash
+  - name: Install 3
+    run: |-
+      sudo apt install cmake build-essentia
       echo "ISAAC SIM PATH"
       ls -d $PWD/*
       cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
@@ -28,7 +32,8 @@ runs:
       yes | ./IsaacLab/isaaclab_modified.sh --install
       python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
     shell: bash
-
+# git clone https://github.com/isaac-sim/IsaacLab.git 
+  #    sudo apt install cmake build-essential
   #   chmod +x ./IsaacLab/isaaclab_modified.sh
   #    cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
   #     cp $GITHUB_WORKSPACE/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
