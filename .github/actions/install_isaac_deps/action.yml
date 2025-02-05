@@ -30,7 +30,7 @@ runs:
       ls -d $PWD/*
       cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
       chmod +x ./IsaacLab/isaaclab_modified.sh
-      yes | ./IsaacLab/isaaclab_modified.sh --install
+      yes | ./IsaacLab/isaaclab.sh --install
       python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
     shell: bash
 # git clone https://github.com/isaac-sim/IsaacLab.git 
