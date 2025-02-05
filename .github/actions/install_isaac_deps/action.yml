@@ -33,7 +33,6 @@ runs:
   #     yes | python -c "import isaacsim; print(isaacsim.__file__)"
   #    yes | ./IsaacLab/isaaclab.sh --install
   #    ignore-errors: true
-    shell: bash
   # - name: Import Issac Sim
   #   run: |
   #     python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
