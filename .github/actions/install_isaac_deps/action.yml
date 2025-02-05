@@ -25,7 +25,7 @@ runs:
     shell: bash
   - name: Install 3
     run: |-
-      sudo apt install cmake build-essentia
+      sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
       ls -d $PWD/*
       cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
