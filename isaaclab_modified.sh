@@ -250,7 +250,7 @@ while [[ $# -gt 0 ]]; do
         -i|--install)
             # install the python packages in IsaacLab/source directory
             echo "[INFO] Installing extensions inside the Isaac Lab repository..."
-            echo ISAACLAB_PATH
+            echo "${ISAACLAB_PATH}"
             python_exe=$(extract_python_exe)
             # recursively look into directories and install them
             # this does not check dependencies between extensions
