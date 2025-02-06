@@ -23,6 +23,8 @@ runs:
       sudo apt install cmake build-essential
       echo "ISAAC SIM PATH"
       ls -d $PWD/*
+      ls -a /home/runner
+      ls -a /home/runner/work/
       ls -a /home/runner/work/habitat-lab
       ls -a /home/runner/work/habitat-lab/habitat-lab
       cp -f /home/runner/work/habitat-lab/isaaclab_modified.sh ./IsaacLab/isaaclab.sh
