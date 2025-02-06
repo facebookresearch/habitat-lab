@@ -1,0 +1,45 @@
+name: Hello World 1
+runs:
+  using: composite
+  steps:
+  - name: Print Hello World
+    run: echo "Hello World"
+    shell: bash
+  - name: Setup miniconda
+    uses: conda-incubator/setup-miniconda@v3.0.1
+    with:
+      miniconda-version: "latest"
+      python-version: "3.10"
+  - name: Install conda and isaac lab 
+    run: |-
+      echo "Install conda and dependencies"
+      conda create -n env_isaaclab python=3.10
+      conda init
+      source ~/.bashrc
+      conda activate env_isaaclab
+      pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu118
+      pip install isaacsim[all,extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
+      git clone https://github.com/isaac-sim/IsaacLab.git
+      sudo apt install cmake build-essential
+      echo "ISAAC SIM PATH"
+      ls /home/runner/work/habitat-lab/habitat-lab/IsaacLab/source
+      cp -f /home/runner/work/habitat-lab/habitat-lab/habitat-lab/isaaclab_modified.sh /home/runner/work/habitat-lab/habitat-lab/IsaacLab/isaaclab.sh
+      chmod +x ./IsaacLab/isaaclab.sh
+      yes | ./IsaacLab/isaaclab.sh --install
+      python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
+    shell: bash
+# git clone https://github.com/isaac-sim/IsaacLab.git 
+  #    sudo apt install cmake build-essential
+  #   chmod +x ./IsaacLab/isaaclab_modified.sh
+  #    cp ./habitat-lab/isaaclab_modified.sh ./IsaacLab/
+  #     cp $GITHUB_WORKSPACE/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/
+  #     mkdir /home/runner/miniconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/.vscode/
+  #     echo "{}" > /home/runner/miniconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/.vscode/settings.json
+      
+  #     yes | python -c "import isaacsim; print(isaacsim.__file__)"
+  #    yes | ./IsaacLab/isaaclab.sh --install
+  #    ignore-errors: true
+  # - name: Import Issac Sim
+  #   run: |
+  #     python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
+  #   shell: bash
