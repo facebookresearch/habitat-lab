@@ -16,8 +16,8 @@ set -e
 tabs 4
 
 # get source directory
-#export ISAACLAB_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-export ISAACLAB_PATH= "/home/runner/work/habitat-lab/habitat-lab/IsaacLab"
+export ISAACLAB_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 #==
 # Helper functions
 #==
