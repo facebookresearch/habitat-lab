@@ -1390,10 +1390,14 @@ class EpisodeDataLogger(UsesArticulatedAgentInterface, Measure):
             ep_data["empty_action"] = kwargs["action"]["action_args"][
                 "empty_action"
             ].tolist()
+            ep_data["grip_action"] = np.array(
+                [kwargs["action"]["action_args"]["grip_action"]]
+            ).tolist()
         else:
             ep_data["arm_action"] = [0, 0, 0]
             ep_data["base_action"] = [0, 0]
             ep_data["empty_action"] = [0]
+            ep_data["grip_action"] = [0]
 
         self.episode_json["episode_data"].append(ep_data)
         self.episode_json["success"] = task.measurements.measures[

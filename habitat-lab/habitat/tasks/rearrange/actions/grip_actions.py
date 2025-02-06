@@ -201,6 +201,7 @@ class GazeGraspAction(MagicGraspAction):
             "consider_detected_portion_threshold", 0.5
         )
         self.object_lockon = 0
+        self.object_lockon_needed = self._config.get("object_lockon_needed", 1)
 
     @property
     def action_space(self):
@@ -345,27 +346,35 @@ class GazeGraspAction(MagicGraspAction):
         self.cur_grasp_mgr.desnap()
 
     def _magic_grasp(self):
-        scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self.cur_articulated_agent.ee_transform().translation
-        # Get objects we are close to.
-        if len(scene_obj_pos) != 0:
-            # Get the target the EE is closest to.
-            closest_obj_idx = np.argmin(
-                np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
-            )
+        self.object_lockon += 1
+        print(
+            "self.object_lockon: ",
+            self.object_lockon,
+            self.object_lockon_needed,
+        )
+        if self.object_lockon > self.object_lockon_needed:
+            scene_obj_pos = self._sim.get_scene_pos()
+            ee_pos = self.cur_articulated_agent.ee_transform().translation
+            # Get objects we are close to.
+            if len(scene_obj_pos) != 0:
+                # Get the target the EE is closest to.
+                closest_obj_idx = np.argmin(
+                    np.linalg.norm(scene_obj_pos - ee_pos, ord=2, axis=-1)
+                )
 
-            to_target = np.linalg.norm(
-                ee_pos - scene_obj_pos[closest_obj_idx], ord=2
-            )
+                to_target = np.linalg.norm(
+                    ee_pos - scene_obj_pos[closest_obj_idx], ord=2
+                )
 
-            keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+                keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
-            self.cur_grasp_mgr.snap_to_obj(
-                self._sim.scene_obj_ids[closest_obj_idx],
-                force=False,
-                rel_pos=mn.Vector3(0.1, 0.0, 0.0),
-                keep_T=keep_T,
-            )
+                self.cur_grasp_mgr.snap_to_obj(
+                    self._sim.scene_obj_ids[closest_obj_idx],
+                    force=False,
+                    rel_pos=mn.Vector3(0.1, 0.0, 0.0),
+                    keep_T=keep_T,
+                )
+                self.object_lockon = 0
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if os.environ.get("GRASP", 0):
