@@ -25,7 +25,7 @@ runs:
       ls -d $PWD/*
       ls -a /home/runner/work/habitat-lab
       ls -a /home/runner/work/habitat-lab/habitat-lab
-      cp -f /home/runner/work/habitat-lab/.github/actions/install_isaac_deps/isaaclab_modified.sh ./IsaacLab/isaaclab.sh
+      cp -f /home/runner/work/habitat-lab/isaaclab_modified.sh ./IsaacLab/isaaclab.sh
       chmod +x ./IsaacLab/isaaclab.sh
       yes | ./IsaacLab/isaaclab.sh --install
       python -c "from omni.isaac.lab.app import AppLauncher; print('Libraries imported successfully')"
