@@ -8,11 +8,14 @@ import os
 
 import magnum as mn
 import numpy as np
+
 from habitat.articulated_agent_controllers import (
     HumanoidBaseController,
     Motion,
 )
-from habitat.articulated_agent_controllers.humanoid_base_controller import BASE_HUMANOID_OFFSET 
+from habitat.articulated_agent_controllers.humanoid_base_controller import (
+    BASE_HUMANOID_OFFSET 
+)
 
 class HumanoidSeqPoseController(HumanoidBaseController):
     """
