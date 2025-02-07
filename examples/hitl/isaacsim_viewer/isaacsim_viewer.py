@@ -219,7 +219,7 @@ class SpotStateMachine:
 class SpotPickHelper:
 
     APPROACH_DIST = 0.16
-    APPROACH_DURATION = 2.0
+    APPROACH_DURATION = 50.0
 
     def __init__(self, num_dof):
 
@@ -320,7 +320,7 @@ class SpotPickHelper:
         # target_arm_joint_positions[7] = -1.0
 
         if approach_progress > 0.0:
-            print(f"approach_progress: {approach_progress}")
+            print(f"approach_progress: {approach_progress}", target_arm_joint_positions[7])
 
         return target_arm_joint_positions
 
