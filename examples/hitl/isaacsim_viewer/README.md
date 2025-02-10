@@ -85,6 +85,8 @@ Tested on Quest 3
 
 ## Re-exporting USD/USDA data from source data
 
+**Updated instructions [here](../../../habitat-lab/habitat/isaac_sim/README.md#converting-habitat-data-to-isaac-usd-format). Below instructions are outdated.**
+
 Beware this pipeline is not polished! Note `.usda` is simply the ascii, human-readable version of USD. Beware, the VR client relies on on-device Unity-converted versions of all visual assets (GLB models used for rendering). If you're adding new visual assets to this app, you will also have to update the Unity build with these new assets (see "Rebuilding the VR client").
 
 The source data is from above installation steps:
