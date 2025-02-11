@@ -143,7 +143,7 @@ class SpotRobotWrapper:
         for rot in rotations_usd:
             if convention == "hab":
                 rot = isaac_prim_utils.usd_to_habitat_rotation(rot)
-            isaac_prim_utils.rotation_wxyz_to_magnum_quat(rot)
+            rot = isaac_prim_utils.rotation_wxyz_to_magnum_quat(rot)
             rotations.append(rot)
 
         # perf todo: consider RobotView.get_body_coms instead
@@ -360,6 +360,7 @@ class SpotRobotWrapper:
     def arm_joint_pos(self):
         """Get the current arm joint positions."""
         robot_joint_positions = self._robot.get_joint_positions()
+        print("robot_joint_positions: ", robot_joint_positions)
         arm_joint_positions = np.array(
             [robot_joint_positions[i] for i in self._arm_joint_indices],
             dtype=np.float32,
@@ -369,9 +370,8 @@ class SpotRobotWrapper:
 
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        ee_link_id = self._arm_joint_indices[-1]
+        ee_link_id = 8
         link_poses = self.get_link_world_poses(convention=convention)
-        print("link_poses: ", link_poses)
         ee_pos = link_poses[0][ee_link_id]
         ee_rot = link_poses[1][ee_link_id]
 

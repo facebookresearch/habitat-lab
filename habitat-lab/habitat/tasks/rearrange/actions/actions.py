@@ -137,9 +137,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[
-                self._action_arg_prefix + "grip_action"
-            ] = self.grip_ctrlr.action_space
+            action_spaces[self._action_arg_prefix + "grip_action"] = (
+                self.grip_ctrlr.action_space
+            )
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -426,8 +426,6 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
 
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
-
-
 
 
 @registry.register_task_action
@@ -735,7 +733,7 @@ class ArmEEAction(ArticulatedAgentAction):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
-        self._ee_ctrl_lim = self._config.ee_ctrl_lim
+        self._ee_ctrl_lim = self._config.get("ee_ctrl_lim", 0.15)
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -760,24 +758,35 @@ class ArmEEAction(ArticulatedAgentAction):
             ],
         )
 
-    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        self.ee_target += np.array(ee_pos)
-
+    def calc_ee_target(self, delta_ee_pos):
+        # delta_ee_pos = np.clip(delta_ee_pos, -1, 1)
+        # delta_ee_pos *= self._ee_ctrl_lim
+        # self.ee_target += np.array(delta_ee_pos)
+        self.ee_target = np.array(delta_ee_pos)
         self.apply_ee_constraints()
 
+    def calc_desired_joints(self):
         joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
-        des_joint_pos = list(des_joint_pos)
-        self._sim.articulated_agent.arm_motor_pos = des_joint_pos
+        return list(des_joint_pos)
 
-    def step(self, ee_pos, **kwargs):
-        ee_pos = np.clip(ee_pos, -1, 1)
-        ee_pos *= self._ee_ctrl_lim
-        self.set_desired_ee_pos(ee_pos)
+    def set_arm(
+        self, arm_pos: np.ndarray, simulation_mode="kinematic"
+    ) -> None:
+        if simulation_mode == "dynamic":
+            self._sim.articulated_agent.arm_motor_pos = arm_pos
+        elif simulation_mode == "kinematic":
+            self._sim.articulated_agent.arm_joint_pos = arm_pos
+
+    def step(self, delta_ee_pos, **kwargs):
+        self.calc_ee_target(delta_ee_pos)
+        des_joint_pos = self.calc_desired_joints()
+
+        self.set_desired_ee_pos(des_joint_pos, "kinematic")
 
         if self._render_ee_target:
             global_pos = self._sim.articulated_agent.base_transformation.transform_point(

@@ -3,7 +3,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, List, Optional, Any
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+
 import magnum as mn
 import numpy as np
 
@@ -66,11 +67,10 @@ class IsaacAgentData:
     """
     Data needed to manage an agent instance.
     """
+
     articulated_agent: Any
     start_js: np.ndarray
     cfg: Any
-
-        
 
 
 class ArticulatedAgentManager:
@@ -272,11 +272,16 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
 
             agent_cfg = cfg.agents[agent_name]
             # TODO: put this later into a config
-            agent = IsaacSpotRobot(agent_cfg=agent_cfg, isaac_service=sim._isaac_wrapper.service, sim=sim)
-            
-            
-            # TODO: correct this
-            use_arm_init = np.array([0.0]) # (agent.params.arm_init_params)
+            agent = IsaacSpotRobot(
+                agent_cfg=agent_cfg,
+                isaac_service=sim._isaac_wrapper.service,
+                sim=sim,
+            )
+
+            if agent_cfg.joint_start_override is None:
+                use_arm_init = np.array(agent.params.arm_init_params)
+            else:
+                use_arm_init = np.array(agent_cfg.joint_start_override)
             self._all_agent_data.append(
                 IsaacAgentData(
                     articulated_agent=agent,
@@ -284,23 +289,20 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
                     start_js=use_arm_init,
                 )
             )
-    
 
     @property
     def grasp_iter(self) -> Iterator[RearrangeGraspManager]:
         return iter(())
-        
+
     def on_new_scene(self):
         pass
 
     def pre_obj_clear(self) -> None:
-        
-        pass
 
+        pass
 
     def agent(self):
         return self._all_agent_data[0].articulated_agent
-    
 
     @add_perf_timing_func()
     def post_obj_load_reconfigure(self):

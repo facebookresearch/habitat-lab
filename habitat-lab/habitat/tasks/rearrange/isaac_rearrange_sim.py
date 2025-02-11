@@ -421,6 +421,15 @@ class IsaacRearrangeSim(HabitatSim):
         self._clear_objects(should_add_objects, new_scene)
 
         is_hard_reset = new_scene or should_add_objects
+        if self.first_setup:
+            self.first_setup = False
+            self.agents_mgr.first_setup()
+            # Capture the starting art states
+            self._start_art_states = {
+                ao: (ao.joint_positions, ao.transformation)
+                for ao in self.art_objs
+            }
+
         return
         if is_hard_reset:
             with read_write(config):
@@ -490,15 +499,6 @@ class IsaacRearrangeSim(HabitatSim):
             rom.get_object_by_handle(obj_handle).object_id
             for obj_handle in self._targets
         ]
-
-        if self.first_setup:
-            self.first_setup = False
-            self.agents_mgr.first_setup()
-            # Capture the starting art states
-            self._start_art_states = {
-                ao: (ao.joint_positions, ao.transformation)
-                for ao in self.art_objs
-            }
 
         if self._should_setup_semantic_ids:
             self._setup_semantic_ids()
@@ -1071,7 +1071,9 @@ class IsaacRearrangeSim(HabitatSim):
         template_mgr = self.get_object_template_manager()
         rom = self.get_rigid_object_manager()
         viz_obj = None
-        if viz_id is None:
+        if viz_id is not None:
+            viz_obj = rom.get_object_by_id(viz_id)
+        if viz_id is None or viz_obj is None:
             if r not in self._viz_templates:
                 template = template_mgr.get_template_by_handle(
                     template_mgr.get_template_handles("sphere")[0]

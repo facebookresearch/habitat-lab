@@ -39,7 +39,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
         The IK helper for this articulated_agent instance.
         """
 
-        return self._articulated_agent_mgr.ik_helper
+        return self._articulated_agent_mgr._ik_helper
 
     @property
     def cur_articulated_agent(self):
