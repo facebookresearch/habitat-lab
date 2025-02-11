@@ -41,7 +41,7 @@ from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentData,
     ArticulatedAgentManager,
-    IsaacArticulatedAgentManager
+    IsaacArticulatedAgentManager,
 )
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -60,30 +60,36 @@ from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 from habitat_sim.utils.common import quat_from_magnum
 
-
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
-def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_friction, dynamic_friction, restitution):
-    
+
+def bind_physics_material_to_hierarchy(
+    stage,
+    root_prim,
+    material_name,
+    static_friction,
+    dynamic_friction,
+    restitution,
+):
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
     # material = UsdPhysics.MaterialAPI(material_prim)
-    
+
     # material.CreateStaticFrictionAttr().Set(static_friction)
     # material.CreateDynamicFrictionAttr().Set(dynamic_friction)
     # material.CreateRestitutionAttr().Set(restitution)
-    from pxr import UsdShade, UsdPhysics
     from omni.isaac.core.materials.physics_material import PhysicsMaterial
-
+    from pxr import UsdPhysics, UsdShade
 
     physics_material = PhysicsMaterial(
         prim_path=f"/PhysicsMaterials/{material_name}",
         name=material_name,
         static_friction=static_friction,
         dynamic_friction=dynamic_friction,
-        restitution=restitution)
+        restitution=restitution,
+    )
 
     binding_api = UsdShade.MaterialBindingAPI.Apply(root_prim)
     binding_api.Bind(
@@ -91,6 +97,7 @@ def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_f
         bindingStrength=UsdShade.Tokens.strongerThanDescendants,
         materialPurpose="physics",
     )
+
 
 @registry.register_simulator(name="IsaacRearrangeSim-v0")
 class IsaacRearrangeSim(HabitatSim):
@@ -107,33 +114,37 @@ class IsaacRearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[
-                            f"{agent_name}_{sensor_key}"
-                        ] = sensor_config
+                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
+                            sensor_config
+                        )
 
-        
         super().__init__(config)
         from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 
-        self._isaac_wrapper = IsaacAppWrapper(self, headless=True) 
+        self._isaac_wrapper = IsaacAppWrapper(self, headless=True)
 
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        self._isaac_physics_dt = 1.0 / 180
+        self._isaac_physics_dt = 1.0 / 90
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
-        isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
+        isaac_world.set_simulation_dt(
+            physics_dt=self._isaac_physics_dt,
+            rendering_dt=self._isaac_physics_dt,
+        )
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
-        add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
-        self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
 
-
-        
-
+        add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
+        self._usd_visualizer.on_add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
 
         self._rigid_objects = []
         self.add_or_reset_rigid_objects()
@@ -141,8 +152,17 @@ class IsaacRearrangeSim(HabitatSim):
 
         stage = self._isaac_wrapper.service.world.stage
         prim = stage.GetPrimAtPath("/World")
-        bind_physics_material_to_hierarchy(stage=stage, root_prim=prim, material_name="my_material", static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
-        self.agents_mgr = IsaacArticulatedAgentManager(self.habitat_config, self)
+        bind_physics_material_to_hierarchy(
+            stage=stage,
+            root_prim=prim,
+            material_name="my_material",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+            restitution=0.0,
+        )
+        self.agents_mgr = IsaacArticulatedAgentManager(
+            self.habitat_config, self
+        )
 
         isaac_world.reset()
         self._isaac_rom.post_reset()
@@ -150,7 +170,6 @@ class IsaacRearrangeSim(HabitatSim):
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
 
-        
         self.first_setup = True
         self.ep_info: Optional[RearrangeEpisode] = None
         self.prev_loaded_navmesh = None
@@ -184,7 +203,6 @@ class IsaacRearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
-
         # Setup config options.
         self._debug_render_articulated_agent = (
             self.habitat_config.debug_render_articulated_agent
@@ -215,9 +233,6 @@ class IsaacRearrangeSim(HabitatSim):
             self.habitat_config.should_setup_semantic_ids
         )
         self._isaac_wrapper.step(num_steps=1)
-
-
-
 
     def enable_perf_logging(self):
         """
@@ -346,14 +361,15 @@ class IsaacRearrangeSim(HabitatSim):
         asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
+
         isaac_world = self._isaac_wrapper.service.world
-        
-        add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
-        self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
 
-
-        
-
+        add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
+        self._usd_visualizer.on_add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
 
         self._rigid_objects = []
         self.add_or_reset_rigid_objects()
@@ -361,7 +377,14 @@ class IsaacRearrangeSim(HabitatSim):
 
         stage = self._isaac_wrapper.service.world.stage
         prim = stage.GetPrimAtPath("/World")
-        bind_physics_material_to_hierarchy(stage=stage, root_prim=prim, material_name="my_material", static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
+        bind_physics_material_to_hierarchy(
+            stage=stage,
+            root_prim=prim,
+            material_name="my_material",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+            restitution=0.0,
+        )
         # self.agents_mgr = IsaacArticulatedAgentManager(self.habitat_config, self)
 
         isaac_world.reset()
@@ -379,14 +402,13 @@ class IsaacRearrangeSim(HabitatSim):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         self.ep_info = ep_info
-        
+
         new_scene = self.prev_scene_id != ep_info.scene_id
         if new_scene:
             self._prev_obj_names = None
-        
+
         if new_scene:
             self._load_navmesh(ep_info)
-
 
         # Only remove and re-add objects if we have a new set of objects.
         ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
@@ -399,7 +421,7 @@ class IsaacRearrangeSim(HabitatSim):
         self._clear_objects(should_add_objects, new_scene)
 
         is_hard_reset = new_scene or should_add_objects
-        return 
+        return
         if is_hard_reset:
             with read_write(config):
                 config["scene"] = ep_info.scene_id
@@ -668,7 +690,7 @@ class IsaacRearrangeSim(HabitatSim):
         should_add_objects: bool,
         new_scene: bool,
     ) -> None:
-        return 
+        return
         # Load clutter objects:
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
@@ -942,7 +964,7 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
-        
+
         rom = self.get_rigid_object_manager()
         self._isaac_wrapper.step(num_steps=1)
 
@@ -1162,42 +1184,90 @@ class IsaacRearrangeSim(HabitatSim):
         # for coffee table
         if False:
             objects_to_add = []
-            object_names = ["024_bowl", "013_apple", "011_banana", "010_potted_meat_can", "077_rubiks_cube", "036_wood_block", "004_sugar_box"]
+            object_names = [
+                "024_bowl",
+                "013_apple",
+                "011_banana",
+                "010_potted_meat_can",
+                "077_rubiks_cube",
+                "036_wood_block",
+                "004_sugar_box",
+            ]
             next_obj_idx = 0
             sp = 0.25
             for cell_y in range(5):
                 for cell_x in range(3):
                     for cell_z in range(3):
-                        offset_vec = mn.Vector3(cell_x * sp - sp, cell_y * sp, cell_z * sp - sp)
-                        objects_to_add.append((f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json", drop_pos + offset_vec))
+                        offset_vec = mn.Vector3(
+                            cell_x * sp - sp, cell_y * sp, cell_z * sp - sp
+                        )
+                        objects_to_add.append(
+                            (
+                                f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json",
+                                drop_pos + offset_vec,
+                            )
+                        )
                         next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
         if True:
             # for dining table
             objects_to_add = [
-                (f"{path_to_configs}/024_bowl.object_config.json", drop_pos + offset_vec * 0.0 + up_vec * 0.0),
-    #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
-                (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * -0.01 + up_vec * 0.05),
-    #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
-                (f"{path_to_configs}/013_apple.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.1),
-
-                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.3 + up_vec * 0.0),
-
-                (f"{path_to_configs}/077_rubiks_cube.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.1),
-                (f"{path_to_configs}/036_wood_block.object_config.json", drop_pos + offset_vec * 0.6 + up_vec * 0.0),
-
-                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.9),
-
-                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.0),
-                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 1.1),
-                (f"{path_to_configs}/004_sugar_box.object_config.json", drop_pos + offset_vec * 0.8),
-
-                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.22 + up_vec * 0.0),
-                (f"{path_to_configs}/010_potted_meat_can.object_config.json", drop_pos + offset_vec * 0.38 + up_vec * 0.0),
+                (
+                    f"{path_to_configs}/024_bowl.object_config.json",
+                    drop_pos + offset_vec * 0.0 + up_vec * 0.0,
+                ),
+                #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
+                (
+                    f"{path_to_configs}/013_apple.object_config.json",
+                    drop_pos + offset_vec * -0.01 + up_vec * 0.05,
+                ),
+                #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
+                (
+                    f"{path_to_configs}/013_apple.object_config.json",
+                    drop_pos + offset_vec * 0.01 + up_vec * 0.1,
+                ),
+                (
+                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
+                    drop_pos + offset_vec * 0.3 + up_vec * 0.0,
+                ),
+                (
+                    f"{path_to_configs}/077_rubiks_cube.object_config.json",
+                    drop_pos + offset_vec * 0.6 + up_vec * 0.1,
+                ),
+                (
+                    f"{path_to_configs}/036_wood_block.object_config.json",
+                    drop_pos + offset_vec * 0.6 + up_vec * 0.0,
+                ),
+                (
+                    f"{path_to_configs}/004_sugar_box.object_config.json",
+                    drop_pos + offset_vec * 0.9,
+                ),
+                (
+                    f"{path_to_configs}/004_sugar_box.object_config.json",
+                    drop_pos + offset_vec * 1.0,
+                ),
+                (
+                    f"{path_to_configs}/004_sugar_box.object_config.json",
+                    drop_pos + offset_vec * 1.1,
+                ),
+                (
+                    f"{path_to_configs}/004_sugar_box.object_config.json",
+                    drop_pos + offset_vec * 0.8,
+                ),
+                (
+                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
+                    drop_pos + offset_vec * 0.22 + up_vec * 0.0,
+                ),
+                (
+                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
+                    drop_pos + offset_vec * 0.38 + up_vec * 0.0,
+                ),
             ]
 
+        from habitat.isaac_sim.isaac_rigid_object_manager import (
+            IsaacRigidObjectManager,
+        )
 
-        from habitat.isaac_sim.isaac_rigid_object_manager import IsaacRigidObjectManager
         self._isaac_rom = IsaacRigidObjectManager(self._isaac_wrapper.service)
         rigid_obj_mgr = self._isaac_rom
 
@@ -1211,4 +1281,5 @@ class IsaacRearrangeSim(HabitatSim):
             rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
             trans = mn.Matrix4.from_(rotation.to_matrix(), position)
             ro.transformation = trans
+
     # breakpoint()

@@ -1,38 +1,55 @@
-import habitat_sim
-import magnum as mn
 import warnings
+
+import magnum as mn
+
+import habitat_sim
 from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
-warnings.filterwarnings('ignore')
-from habitat_sim.utils.settings import make_cfg
-from matplotlib import pyplot as plt
-from habitat_sim.utils import viz_utils as vut
-from omegaconf import DictConfig
+
+warnings.filterwarnings("ignore")
+import os
+import random
+
+import imageio
 import numpy as np
+from matplotlib import pyplot as plt
+from omegaconf import DictConfig, OmegaConf
+
+import habitat
 from habitat.articulated_agents.robots import FetchRobot
 from habitat.config.default import get_agent_config
-from habitat.config.default_structured_configs import ThirdRGBSensorConfig, HeadRGBSensorConfig, ArmDepthSensorConfig, ArmRGBSensorConfig, HeadPanopticSensorConfig
-from habitat.config.default_structured_configs import SimulatorConfig, HabitatSimV0Config, AgentConfig
-from habitat.config.default import get_agent_config
-import habitat
-from habitat_sim.physics import JointMotorSettings, MotionType
-from omegaconf import OmegaConf
-import os
-from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
-from habitat.isaac_sim import isaac_prim_utils
-import random
-from habitat.config.default_structured_configs import TaskConfig, EnvironmentConfig, DatasetConfig, HabitatConfig
-from habitat.config.default_structured_configs import ArmActionConfig, BaseVelocityActionConfig, ActionConfig, OracleNavActionConfig, ActionConfig
-import imageio
+from habitat.config.default_structured_configs import (
+    ActionConfig,
+    AgentConfig,
+    ArmActionConfig,
+    ArmDepthSensorConfig,
+    ArmRGBSensorConfig,
+    BaseVelocityActionConfig,
+    DatasetConfig,
+    EnvironmentConfig,
+    HabitatConfig,
+    HabitatSimV0Config,
+    HeadPanopticSensorConfig,
+    HeadRGBSensorConfig,
+    OracleNavActionConfig,
+    SimulatorConfig,
+    TaskConfig,
+    ThirdRGBSensorConfig,
+)
 from habitat.core.env import Env
-from habitat.isaac_sim import actions
+from habitat.isaac_sim import actions, isaac_prim_utils
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
+from habitat_sim.physics import JointMotorSettings, MotionType
+from habitat_sim.utils import viz_utils as vut
+from habitat_sim.utils.settings import make_cfg
 
-data_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/"
+# data_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/"
+data_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data"
 
 
 def make_sim_cfg(agent_dict):
     # Start the scene config
     sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
-    
+
     # This is for better graphics
     sim_cfg.habitat_sim_v0.enable_hbao = True
     sim_cfg.habitat_sim_v0.enable_physics = False
@@ -40,11 +57,10 @@ def make_sim_cfg(agent_dict):
     # TODO: disable this, causes performance issues
     sim_cfg.habitat_sim_v0.frustum_culling = False
 
-    
     # Set up an example scene
-    sim_cfg.scene = "NONE" # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
+    sim_cfg.scene = "NONE"  #
+    # sim_cfg.scene = os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
 
-    
     cfg = OmegaConf.create(sim_cfg)
 
     # Set the scene agents
@@ -58,13 +74,15 @@ def make_hab_cfg(agent_dict, action_dict):
     task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
     task_cfg.actions = action_dict
     env_cfg = EnvironmentConfig()
-    dataset_cfg = DatasetConfig(type="RearrangeDataset-v0", data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz")
-    
-    
+    dataset_cfg = DatasetConfig(
+        type="RearrangeDataset-v0",
+        data_path="data/datasets/hssd/rearrange/test/rearrange_ep_dataset_55k.json.gz",  # "data/hab3_bench_assets/episode_datasets/small_large.json.gz",
+    )
+
     hab_cfg = HabitatConfig()
     hab_cfg.environment = env_cfg
     hab_cfg.task = task_cfg
-    
+
     hab_cfg.dataset = dataset_cfg
     hab_cfg.simulator = sim_cfg
     hab_cfg.simulator.seed = hab_cfg.seed
@@ -72,16 +90,19 @@ def make_hab_cfg(agent_dict, action_dict):
     return hab_cfg
 
 
-
 def init_rearrange_env(agent_dict, action_dict):
     hab_cfg = make_hab_cfg(agent_dict, action_dict)
     res_cfg = OmegaConf.create(hab_cfg)
+    print("hab_cfg: ", hab_cfg)
+    print("res_cfg: ", res_cfg)
     return Env(res_cfg)
 
 
-from habitat.tasks.utils import get_angle
 from habitat.datasets.rearrange.navmesh_utils import compute_turn
-class OracleNavSkill():
+from habitat.tasks.utils import get_angle
+
+
+class OracleNavSkill:
     def __init__(self, env, target_pos):
         self.env = env
         self.target_pos = target_pos
@@ -109,7 +130,7 @@ class OracleNavSkill():
         if not found_path:
             return [agent_pos, point]
         return path.points
-    
+
     def get_step(self):
 
         obj_targ_pos = np.array(self.target_pos)
@@ -135,7 +156,7 @@ class OracleNavSkill():
         )
         angle_to_target = get_angle(robot_forward, rel_targ)
         angle_to_obj = get_angle(robot_forward, rel_pos)
-        
+
         # Compute the distance
         at_goal = (
             dist_to_final_nav_targ < self.dist_thresh
@@ -166,22 +187,57 @@ class OracleNavSkill():
         else:
             vel = [0, 0]
         vel2 = compute_turn(
-                    rel_targ,
-                    self.turn_velocity,
-                    robot_forward,
-                )
+            rel_targ,
+            self.turn_velocity,
+            robot_forward,
+        )
         vel2 = vel
-        
+
         # print(vel, dist_to_final_nav_targ, angle_to_obj, angle_to_target)
-        action = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ vel[0], vel[1]], dtype=np.float32)}}
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array([vel[0], vel[1]], dtype=np.float32)
+            },
+        }
         return action
+
+
+def process_obs_img(obs):
+    im = obs["third_rgb"]
+    im2 = obs["articulated_agent_arm_rgb"]
+    im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+    imt = np.zeros(im.shape, dtype=np.uint8)
+    imt[: im2.shape[0], : im2.shape[1], :] = im2
+    imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+    imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+    imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+    im = np.concatenate([im, imt], 1)
+    return im
+
+
+def get_point_along_vector(
+    curr: np.ndarray, goal: np.ndarray, step_size: float = 0.15
+) -> np.ndarray:
+    vector = goal - curr
+    distance = np.linalg.norm(vector)
+    if distance <= step_size:
+        return goal
+
+    # Normalize the vector and multiply by step_size
+    unit_vector = vector / distance
+    new_point = curr + (unit_vector * step_size)
+
+    return np.round(new_point, 6)
 
 
 def main():
     # Define the agent configuration
     main_agent_config = AgentConfig()
-    
-    urdf_path = os.path.join(data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf")
+
+    urdf_path = os.path.join(
+        data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
+    )
     main_agent_config.articulated_agent_urdf = urdf_path
     main_agent_config.articulated_agent_type = "SpotRobot"
 
@@ -197,68 +253,148 @@ def main():
     agent_dict = {"main_agent": main_agent_config}
 
     action_dict = {
-        "base_velocity_action": BaseVelocityActionConfig(type="BaseVelKinematicIsaacAction"),
-        "arm_reach_action": ActionConfig(type="ArmReachAction")
+        "base_velocity_action": BaseVelocityActionConfig(
+            type="BaseVelKinematicIsaacAction"
+        ),
+        "arm_reach_action": ActionConfig(type="ArmReachAction"),
     }
     env = init_rearrange_env(agent_dict, action_dict)
-    
-    
-    
+
     aux = env.reset()
     writer = imageio.get_writer(
         "output_env.mp4",
         fps=30,
     )
 
-    
-    action_example = {'action': 'base_velocity_action', 'action_args': {'base_vel': np.array([ 5.0, 0], dtype=np.float32)}}
-    
-    first_obj = env.sim._rigid_objects[0].translation
-    nav_point = env.sim.pathfinder.get_random_navigable_point_near(circle_center=first_obj, radius=1)
+    action_example = {
+        "action": "base_velocity_action",
+        "action_args": {"base_vel": np.array([5.0, 0], dtype=np.float32)},
+    }
+
+    first_obj = env.sim._rigid_objects[5].translation
+    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
+        circle_center=first_obj, radius=1
+    )
     curr_pos = env.sim.articulated_agent.base_pos
-    dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
+
+    # set initial arm joints
+    # curr_arm_joints =
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+    print("first_obj: ", first_obj)
+    print("curr_ee_pos: ", curr_ee_pos)
+    print(
+        "_arm_joint_indices: ",
+        env.sim.articulated_agent._robot_wrapper._arm_joint_indices,
+    )
+    breakpoint()
+    # Joints
+    # dof names:  ['arm0_sh0', 'fl_hx', 'fr_hx', 'hl_hx', 'hr_hx', 'arm0_sh1', 'fl_hy',
+    # 'fr_hy', 'hl_hy', 'hr_hy', 'arm0_hr0', 'fl_kn', 'fr_kn',
+    # 'hl_kn', 'hr_kn', 'arm0_el0', 'arm0_el1', 'arm0_wr0', 'arm0_wr1', 'arm0_f1x']
+    curr_ee_pos = mn.Vector3(0, 1, 0)
+    for _ in range(500):
+        arm_reach = {
+            "action": "arm_reach_action",
+            "action_args": {
+                "target_pos": np.array(curr_ee_pos, dtype=np.float32)
+            },
+        }
+
+        obs = env.step(arm_reach)
+
+        im = process_obs_img(obs)
+        writer.append_data(im)
+    writer.close()
+    exit()
+
+    ctr = 0
+    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.0]
+    while not np.allclose(
+        env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
+        joint_pos,
+        atol=0.003,
+    ):
+        env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+            joint_pos
+        )
+        # env.sim.articulated_agent._robot_wrapper.drive_arm(1 / 10)
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+            },
+        }
+        obs = env.step(action)
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        ctr += 1
+    # writer.close()
+
+    # exit()
+
+    dist = np.linalg.norm(
+        (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
+    )
     nav_planner = OracleNavSkill(env, nav_point)
     i = 0
     while dist > 0.10 and i < 200:
-        
+
         i += 1
         action_planner = nav_planner.get_step()
         obs = env.step(action_planner)
-        im = obs["third_rgb"]
-        im2 = obs["articulated_agent_arm_rgb"]
-        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-        imt = np.zeros(im.shape)
-        imt[:im2.shape[0], :im2.shape[1], :] = im2
-        imt[im2.shape[0]:, :im2.shape[1], 0] = im3[:, :, 0]
-        imt[im2.shape[0]:, :im2.shape[1], 1] = im3[:, :, 0]
-        imt[im2.shape[0]:, :im2.shape[1], 2] = im3[:, :, 0]
-        
-        im  = np.concatenate([im, imt], 1)
+        im = process_obs_img(obs)
         writer.append_data(im)
         curr_pos = env.sim.articulated_agent.base_pos
-        dist = np.linalg.norm((np.array(curr_pos) - nav_point) * np.array([1,0,1]))
-    
-    print(env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions)
+        dist = np.linalg.norm(
+            (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
+        )
+
     for i in range(200):
-        arm_reach = {'action': 'arm_reach_action', 'action_args': {'target_pos': np.array(first_obj, dtype=np.float32)}}
+        # first_obj in habitat conventions
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        new_pos = get_point_along_vector(curr_ee_pos, first_obj)
+        print("first_obj: ", first_obj)
+        print("curr_ee_pos: ", curr_ee_pos)
+        print("new_pos: ", new_pos)
+
+        arm_reach = {
+            "action": "arm_reach_action",
+            "action_args": {"target_pos": np.array(new_pos, dtype=np.float32)},
+        }
 
         obs = env.step(arm_reach)
-        im = obs["third_rgb"]
-        im2 = obs["articulated_agent_arm_rgb"]
-        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-        imt = np.zeros(im.shape)
-        imt[:im2.shape[0], :im2.shape[1], :] = im2
-        imt[im2.shape[0]:, :im2.shape[1], 0] = im3[:, :, 0]
-        imt[im2.shape[0]:, :im2.shape[1], 1] = im3[:, :, 0]
-        imt[im2.shape[0]:, :im2.shape[1], 2] = im3[:, :, 0]
-        im  = np.concatenate([im, imt], 1)
-        writer.append_data(im)
-        
-    writer.close()
-    
-    
 
-        
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        # im = obs["third_rgb"]
+        # im2 = obs["articulated_agent_arm_rgb"]
+        # im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        # imt = np.zeros(im.shape)
+        # imt[: im2.shape[0], : im2.shape[1], :] = im2
+        # imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+        # imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+        # imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+        # im = np.concatenate([im, imt], 1)
+        # writer.append_data(im)
+
+    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.5]
+    for i in range(300):
+        env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+            joint_pos
+        )
+        # env.sim.articulated_agent._robot_wrapper.drive_arm(1 / 10)
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+            },
+        }
+        obs = env.step(action)
+        im = process_obs_img(obs)
+        writer.append_data(im)
+
+    writer.close()
+
 
 if __name__ == "__main__":
     main()
