@@ -385,6 +385,7 @@ class SpotRobotWrapper:
     def arm_joint_pos(self):
         """Get the current arm joint positions."""
         robot_joint_positions = self._robot.get_joint_positions()
+        print("robot_joint_positions: ", robot_joint_positions)
         arm_joint_positions = np.array(
             [robot_joint_positions[i] for i in self._arm_joint_indices],
             dtype=np.float32,

@@ -437,8 +437,6 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
 
 
-
-
 @registry.register_task_action
 class BaseVelAction(ArticulatedAgentAction):
     """

@@ -51,7 +51,6 @@ def bind_physics_material_to_hierarchy(
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
     # material = UsdPhysics.MaterialAPI(material_prim)
-
     # material.CreateStaticFrictionAttr().Set(static_friction)
     # material.CreateDynamicFrictionAttr().Set(dynamic_friction)
     # material.CreateRestitutionAttr().Set(restitution)
@@ -100,9 +99,7 @@ class SpotStateMachine:
             0.0,
         ]
 
-        pos_usd = isaac_prim_utils.habitat_to_usd_position(
-            [-4.0, 0.8, -3.5]
-        )
+        pos_usd = isaac_prim_utils.habitat_to_usd_position([-4.0, 0.8, -3.5])
         self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
     def set_pick_target(self, get_pick_target_pos):
@@ -841,7 +838,7 @@ class AppStateIsaacSimViewer(AppState):
             f"({cursor_pos.x:.1f}, {cursor_pos.y:.1f}, {cursor_pos.z:.1f})\n"
         )
         if self._recent_mouse_ray_hit_info:
-            status_str += self._recent_mouse_ray_hit_info['rigidBody'] + "\n"
+            status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
         # status_str += f"Hand playback: {self._hand_records[0]._playback_file_count}, {self._hand_records[1]._playback_file_count}"
         return status_str
 
@@ -1488,6 +1485,7 @@ class AppStateIsaacSimViewer(AppState):
         for ro in self._rigid_objects:
             com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
             self.draw_axis(0.05, mn.Matrix4.translation(com_world))
+
     def init_mouse_raycaster(self):
 
         self._recent_mouse_ray_hit_info = None
@@ -1505,27 +1503,40 @@ class AppStateIsaacSimViewer(AppState):
         origin_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.origin)
         dir_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.direction)
 
-        from pxr import Gf
         from omni.physx import get_physx_scene_query_interface
+        from pxr import Gf
+
         hit_info = get_physx_scene_query_interface().raycast_closest(
-            isaac_prim_utils.to_gf_vec3(origin_usd), 
-            isaac_prim_utils.to_gf_vec3(dir_usd), 1000.0)
+            isaac_prim_utils.to_gf_vec3(origin_usd),
+            isaac_prim_utils.to_gf_vec3(dir_usd),
+            1000.0,
+        )
 
         if not hit_info["hit"]:
             return
 
         # dist = hit_info['distance']
-        hit_pos_usd = hit_info['position']
-        hit_normal_usd = hit_info['normal']
-        hit_pos_habitat = mn.Vector3(*isaac_prim_utils.usd_to_habitat_position(hit_pos_usd))
-        hit_normal_habitat = mn.Vector3(*isaac_prim_utils.usd_to_habitat_position(hit_normal_usd))
+        hit_pos_usd = hit_info["position"]
+        hit_normal_usd = hit_info["normal"]
+        hit_pos_habitat = mn.Vector3(
+            *isaac_prim_utils.usd_to_habitat_position(hit_pos_usd)
+        )
+        hit_normal_habitat = mn.Vector3(
+            *isaac_prim_utils.usd_to_habitat_position(hit_normal_usd)
+        )
         # collision_name = hit_info['collision']
-        body_name = hit_info['rigidBody']
+        body_name = hit_info["rigidBody"]
 
         line_render = self._app_service.line_render
 
-        hit_radius = 0.05        
-        line_render.draw_circle(hit_pos_habitat, hit_radius, mn.Color3(255, 0, 255), 16, hit_normal_habitat)
+        hit_radius = 0.05
+        line_render.draw_circle(
+            hit_pos_habitat,
+            hit_radius,
+            mn.Color3(255, 0, 255),
+            16,
+            hit_normal_habitat,
+        )
 
         self._recent_mouse_ray_hit_info = hit_info
 
@@ -1533,12 +1544,18 @@ class AppStateIsaacSimViewer(AppState):
         if gui_input.get_key_down(GuiInput.KeyNS.Y):
             force_mag = 600.0
             import carb
+
             # instead of hit_normal_usd, consider dir_usd
-            force_vec = carb.Float3(hit_normal_usd[0] * force_mag, hit_normal_usd[1] * force_mag, hit_normal_usd[2] * force_mag)
+            force_vec = carb.Float3(
+                hit_normal_usd[0] * force_mag,
+                hit_normal_usd[1] * force_mag,
+                hit_normal_usd[2] * force_mag,
+            )
             from omni.physx import get_physx_interface
-            get_physx_interface().apply_force_at_pos(body_name, force_vec, hit_pos_usd)
 
-
+            get_physx_interface().apply_force_at_pos(
+                body_name, force_vec, hit_pos_usd
+            )
 
     def sim_update(self, dt, post_sim_update_dict):
 
