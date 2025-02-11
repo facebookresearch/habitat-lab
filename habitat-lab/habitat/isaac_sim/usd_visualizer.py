@@ -53,7 +53,7 @@ class _InstanceGroup:
         self._render_instance_helper.clear_all_instances()
         for prim_path in prim_paths:
             render_asset = self._prim_path_to_render_asset[prim_path]
-            self._render_instance_helper.add_instance(render_asset.filepath)
+            self._render_instance_helper.add_instance(render_asset.filepath, 0)
 
     def flush_to_hab_sim(self):
         if len(self._prim_path_to_render_asset) == 0:
