@@ -437,8 +437,6 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
 
 
-
-
 @registry.register_task_action
 class BaseVelAction(ArticulatedAgentAction):
     """
@@ -754,11 +752,7 @@ class ArmEEAction(ArticulatedAgentAction):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
-        self._ee_rot_ctrl_lim = self._config.get("ee_rot_ctrl_lim", 0.0125)
-        self._use_ee_rot = self._config.get("use_ee_rot", False)
         self._ee_ctrl_lim = self._config.get("ee_ctrl_lim", 0.15)
-        self._use_contact_test = self._config.get("use_contact_test", False)
-        self.collided = False
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -786,76 +780,35 @@ class ArmEEAction(ArticulatedAgentAction):
             ],
         )
 
-    def set_joint_pos_kinematic(self, des_joint_pos):
-        self.collided = False
-        curr_joint_pos = np.array(self.cur_articulated_agent.arm_joint_pos)
-        self.cur_articulated_agent.arm_joint_pos = des_joint_pos
-        self.cur_articulated_agent.fix_joint_values = des_joint_pos
-        if self._use_contact_test:
-            self.collided = self.cur_articulated_agent.sim_obj.contact_test()
-            if self.collided:
-                self.cur_articulated_agent.arm_joint_pos = curr_joint_pos
-                self.cur_articulated_agent.fix_joint_values = curr_joint_pos
-
-    def get_T_matrix(self, position, rotation=None):
-        T_matrix = np.eye(4)
-        T_matrix[:3, 3] = position
-        if rotation is not None:
-            T_matrix[:3, :3] = R.from_euler("xyz", rotation).as_matrix()
-        return T_matrix
-
-    def get_euler_from_matrix(self, T_matrix):
-        # Extract the rotation matrix (3x3) from the transformation matrix (4x4)
-        rotation_matrix = T_matrix[:3, :3]
-
-        # Create a Rotation object
-        r = R.from_matrix(rotation_matrix)
-
-        # Get Euler angles (in radians)
-        return r.as_euler("xyz", degrees=False)
-
-    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
-        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-            np.array(self.cur_articulated_agent.arm_joint_pos)
-        )
-        T_curr = self.get_T_matrix(self.ee_target, self.ee_rot_target)
-
-        if self._use_ee_rot:
-            T_delta = self.get_T_matrix(ee_pos[:3], ee_pos[3:])
-            T_delta[:3, :3] = R.from_euler("xyz", ee_pos[3:]).as_matrix()
-        else:
-            T_delta = self.get_T_matrix(ee_pos[:3])
-
-        T_new = np.dot(T_curr, T_delta)
-        self.ee_target = T_new[:3, 3]
-        self.ee_rot_target = self.get_euler_from_matrix(T_new)
+    def calc_ee_target(self, delta_ee_pos):
+        # delta_ee_pos = np.clip(delta_ee_pos, -1, 1)
+        # delta_ee_pos *= self._ee_ctrl_lim
+        # self.ee_target += np.array(delta_ee_pos)
+        self.ee_target = np.array(delta_ee_pos)
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self.cur_articulated_agent.arm_joint_pos)
+    def calc_desired_joints(self):
+        joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        des_joint_pos = self._ik_helper.calc_ik(
-            self.ee_target, self.ee_rot_target
-        )
-        des_joint_pos = list(des_joint_pos)
+        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+        return list(des_joint_pos)
 
-        if self._sim.habitat_config.kinematic_mode:
-            self.set_joint_pos_kinematic(des_joint_pos)
-            self.cur_articulated_agent.arm_joint_pos = des_joint_pos
-            self.cur_articulated_agent.fix_joint_values = des_joint_pos
-        else:
-            self.cur_articulated_agent.arm_motor_pos = des_joint_pos
+    def set_arm(
+        self, arm_pos: np.ndarray, simulation_mode="kinematic"
+    ) -> None:
+        if simulation_mode == "dynamic":
+            self._sim.articulated_agent.arm_motor_pos = arm_pos
+        elif simulation_mode == "kinematic":
+            self._sim.articulated_agent.arm_joint_pos = arm_pos
 
-    def step(self, ee_pos, **kwargs):
-        ee_pos = np.clip(ee_pos, -1, 1)
-        if self._use_ee_rot:
-            ee_pos[:3] *= self._ee_ctrl_lim
-            ee_pos[3:] *= self._ee_rot_ctrl_lim
-        else:
-            ee_pos *= self._ee_ctrl_lim
-        self.set_desired_ee_pos(ee_pos)
+    def step(self, delta_ee_pos, **kwargs):
+        self.calc_ee_target(delta_ee_pos)
+        des_joint_pos = self.calc_desired_joints()
+
+        self.set_desired_ee_pos(des_joint_pos, "kinematic")
 
         if self._render_ee_target:
             global_pos = (

@@ -301,8 +301,10 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
                 sim=sim,
             )
 
-            # TODO: correct this
-            use_arm_init = np.array([0.0])  # (agent.params.arm_init_params)
+            if agent_cfg.joint_start_override is None:
+                use_arm_init = np.array(agent.params.arm_init_params)
+            else:
+                use_arm_init = np.array(agent_cfg.joint_start_override)
             self._all_agent_data.append(
                 IsaacAgentData(
                     articulated_agent=agent,

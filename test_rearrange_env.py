@@ -230,6 +230,39 @@ def get_point_along_vector(
 
     return np.round(new_point, 6)
 
+def move_to_ee(env, writer, ee_pos):
+
+def move_to_joint(env, writer, curr_joint_pos, target_joint_pos, visualize=False):
+    # joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, -1.57]
+    # -1.57 is open, 0 is closed
+    ctr = 0
+    while not np.allclose(
+        curr_joint_pos,
+        target_joint_pos,
+        atol=0.003,
+    ):
+        if visualize:
+            curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+
+            env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
+                curr_ee_pos, env.sim.viz_ids["place_tar"]
+            )
+        env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+            target_joint_pos
+        )
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+            },
+        }
+        obs = env.step(action)
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        ctr += 1
+    
+
+    
 
 def main():
     # Define the agent configuration
@@ -238,8 +271,13 @@ def main():
     urdf_path = os.path.join(
         data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
     )
+    ik_arm_urdf_path = os.path.join(
+        data_path, "robots/hab_spot_arm/urdf/spot_onlyarm.urdf"
+    )
+
     main_agent_config.articulated_agent_urdf = urdf_path
     main_agent_config.articulated_agent_type = "SpotRobot"
+    main_agent_config.ik_arm_urdf = ik_arm_urdf_path
 
     # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
     # We will later talk about why we are giving the sensors these names
@@ -257,6 +295,7 @@ def main():
             type="BaseVelKinematicIsaacAction"
         ),
         "arm_reach_action": ActionConfig(type="ArmReachAction"),
+        "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
     }
     env = init_rearrange_env(agent_dict, action_dict)
 
@@ -271,49 +310,27 @@ def main():
         "action_args": {"base_vel": np.array([5.0, 0], dtype=np.float32)},
     }
 
-    first_obj = env.sim._rigid_objects[5].translation
-    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
-        circle_center=first_obj, radius=1
-    )
-    curr_pos = env.sim.articulated_agent.base_pos
-
-    # set initial arm joints
-    # curr_arm_joints =
-    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-    print("first_obj: ", first_obj)
-    print("curr_ee_pos: ", curr_ee_pos)
-    print(
-        "_arm_joint_indices: ",
-        env.sim.articulated_agent._robot_wrapper._arm_joint_indices,
-    )
-    breakpoint()
     # Joints
     # dof names:  ['arm0_sh0', 'fl_hx', 'fr_hx', 'hl_hx', 'hr_hx', 'arm0_sh1', 'fl_hy',
     # 'fr_hy', 'hl_hy', 'hr_hy', 'arm0_hr0', 'fl_kn', 'fr_kn',
     # 'hl_kn', 'hr_kn', 'arm0_el0', 'arm0_el1', 'arm0_wr0', 'arm0_wr1', 'arm0_f1x']
-    curr_ee_pos = mn.Vector3(0, 1, 0)
-    for _ in range(500):
-        arm_reach = {
-            "action": "arm_reach_action",
-            "action_args": {
-                "target_pos": np.array(curr_ee_pos, dtype=np.float32)
-            },
-        }
 
-        obs = env.step(arm_reach)
+    target_joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, -1.57]
+    curr_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    move_to_joint(env, writer, curr_joint_pos, target_joint_pos, visualize=True)
 
-        im = process_obs_img(obs)
-        writer.append_data(im)
-    writer.close()
-    exit()
 
-    ctr = 0
-    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.0]
+    # -1.57 is open, 0 is closed
     while not np.allclose(
         env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
         joint_pos,
         atol=0.003,
     ):
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+
+        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
+            curr_ee_pos, env.sim.viz_ids["place_tar"]
+        )
         env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
             joint_pos
         )
@@ -332,6 +349,16 @@ def main():
 
     # exit()
 
+    first_obj = env.sim._rigid_objects[2].translation
+    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
+        circle_center=first_obj, radius=1
+    )
+    curr_pos = env.sim.articulated_agent.base_pos
+
+    # set initial arm joints
+    # curr_arm_joints =
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+    print("curr_ee_pos: ", curr_ee_pos)
     dist = np.linalg.norm(
         (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
     )
@@ -348,41 +375,64 @@ def main():
         dist = np.linalg.norm(
             (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
         )
+    print(
+        "root_pose: ", env.sim.articulated_agent._robot_wrapper.get_root_pose()
+    )
+    # first_obj in habitat conventions
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
 
-    for i in range(200):
-        # first_obj in habitat conventions
-        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-        new_pos = get_point_along_vector(curr_ee_pos, first_obj)
-        print("first_obj: ", first_obj)
-        print("curr_ee_pos: ", curr_ee_pos)
-        print("new_pos: ", new_pos)
-
+    new_pos = get_point_along_vector(curr_ee_pos, first_obj, step_size=0.3)
+    print("curr_ee_pos: ", curr_ee_pos)
+    print("new_pos: ", new_pos)
+    print("first_obj: ", first_obj)
+    ctr = 0
+    while not np.allclose(curr_ee_pos, first_obj, atol=0.003):
+        first_obj_shift = first_obj - mn.Vector3(0, 0.15, 0)
         arm_reach = {
-            "action": "arm_reach_action",
-            "action_args": {"target_pos": np.array(new_pos, dtype=np.float32)},
+            "action": "arm_reach_ee_action",
+            "action_args": {
+                "target_pos": np.array(first_obj_shift, dtype=np.float32)
+            },
         }
+        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
+            first_obj, env.sim.viz_ids["place_tar"]
+        )
 
         obs = env.step(arm_reach)
 
         im = process_obs_img(obs)
         writer.append_data(im)
-        # im = obs["third_rgb"]
-        # im2 = obs["articulated_agent_arm_rgb"]
-        # im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-        # imt = np.zeros(im.shape)
-        # imt[: im2.shape[0], : im2.shape[1], :] = im2
-        # imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
-        # imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
-        # imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
-        # im = np.concatenate([im, imt], 1)
-        # writer.append_data(im)
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        ctr += 1
+        print("ctr: ", ctr, curr_ee_pos, first_obj)
+    
+    curr_ee_pos_closed = curr_ee_pos
+    while not np.allclose(curr_ee_pos, first_obj, atol=0.003):
+        first_obj_shift = first_obj - mn.Vector3(0, 0.15, 0)
+        arm_reach = {
+            "action": "arm_reach_ee_action",
+            "action_args": {
+                "target_pos": np.array(first_obj_shift, dtype=np.float32)
+            },
+        }
+        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
+            first_obj, env.sim.viz_ids["place_tar"]
+        )
 
-    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.5]
+        obs = env.step(arm_reach)
+
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        ctr += 1
+        print("ctr: ", ctr, curr_ee_pos, first_obj)
+
+    # first_obj in habitat conventions
+    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.0]
     for i in range(300):
         env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
             joint_pos
         )
-        # env.sim.articulated_agent._robot_wrapper.drive_arm(1 / 10)
         action = {
             "action": "base_velocity_action",
             "action_args": {
