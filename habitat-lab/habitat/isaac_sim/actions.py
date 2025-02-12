@@ -93,7 +93,6 @@ class ArmReachEEAction(ArmEEAction):
         target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
         self.calc_ee_target(target_rel_pos)
         des_joint_pos = self.calc_desired_joints()
-        print("des_joint_pos: ", des_joint_pos)
 
         should_grasp = False
         grasp = [0] if should_grasp else [-1.57]

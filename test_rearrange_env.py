@@ -230,12 +230,56 @@ def get_point_along_vector(
 
     return np.round(new_point, 6)
 
-def move_to_ee(env, writer, ee_pos):
 
-def move_to_joint(env, writer, curr_joint_pos, target_joint_pos, visualize=False):
+def move_to_ee(env, writer, target_ee_pos, visualize=False):
+    offset = mn.Vector3(0, 0.4, 0)
+    ctr = 0
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+    while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.16):
+        target_ee_pos_shift = target_ee_pos - offset
+        arm_reach = {
+            "action": "arm_reach_ee_action",
+            "action_args": {
+                "target_pos": np.array(target_ee_pos_shift, dtype=np.float32)
+            },
+        }
+        if visualize:
+            env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
+                target_ee_pos, env.sim.viz_ids["place_tar"]
+            )
+            env.sim.viz_ids["place_tar_shift"] = env.sim.visualize_position(
+                target_ee_pos_shift, env.sim.viz_ids["place_tar_shift"]
+            )
+
+        obs = env.step(arm_reach)
+
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        ctr += 1
+        # print(
+        #     "ee ctr: ",
+        #     ctr,
+        #     curr_ee_pos,
+        #     target_ee_pos,
+        #     np.absolute(curr_ee_pos - target_ee_pos),
+        # )
+        if ctr > 200:
+            break
+
+
+def visualize_pos(env, target_pos, r=0.05):
+    env.sim.viz_ids["target"] = env.sim.visualize_position(
+        target_pos, env.sim.viz_ids["target"], r=r
+    )
+
+
+def move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False):
     # joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, -1.57]
     # -1.57 is open, 0 is closed
     ctr = 0
+    curr_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+
     while not np.allclose(
         curr_joint_pos,
         target_joint_pos,
@@ -260,9 +304,44 @@ def move_to_joint(env, writer, curr_joint_pos, target_joint_pos, visualize=False
         im = process_obs_img(obs)
         writer.append_data(im)
         ctr += 1
-    
+        curr_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        # print(
+        #     "joint ctr: ",
+        #     ctr,
+        #     curr_joint_pos,
+        #     target_joint_pos,
+        #     np.absolute(curr_joint_pos - target_joint_pos),
+        # )
+        if ctr > timeout:
+            break
 
-    
+
+def nav_to_obj(env, writer, target_obj):
+    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
+        circle_center=target_obj, radius=1
+    )
+    curr_pos = env.sim.articulated_agent.base_pos
+
+    dist = np.linalg.norm(
+        (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
+    )
+    nav_planner = OracleNavSkill(env, nav_point)
+    i = 0
+    while dist > 0.10 and i < 200:
+
+        i += 1
+        action_planner = nav_planner.get_step()
+        obs = env.step(action_planner)
+        im = process_obs_img(obs)
+        writer.append_data(im)
+        curr_pos = env.sim.articulated_agent.base_pos
+        dist = np.linalg.norm(
+            (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
+        )
+    print(
+        "root_pose: ", env.sim.articulated_agent._robot_wrapper.get_root_pose()
+    )
+
 
 def main():
     # Define the agent configuration
@@ -315,133 +394,64 @@ def main():
     # 'fr_hy', 'hl_hy', 'hr_hy', 'arm0_hr0', 'fl_kn', 'fr_kn',
     # 'hl_kn', 'hr_kn', 'arm0_el0', 'arm0_el1', 'arm0_wr0', 'arm0_wr1', 'arm0_f1x']
 
-    target_joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, -1.57]
-    curr_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-    move_to_joint(env, writer, curr_joint_pos, target_joint_pos, visualize=True)
-
-
     # -1.57 is open, 0 is closed
-    while not np.allclose(
-        env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
-        joint_pos,
-        atol=0.003,
-    ):
-        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-
-        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
-            curr_ee_pos, env.sim.viz_ids["place_tar"]
-        )
-        env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
-            joint_pos
-        )
-        # env.sim.articulated_agent._robot_wrapper.drive_arm(1 / 10)
-        action = {
-            "action": "base_velocity_action",
-            "action_args": {
-                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
-            },
-        }
-        obs = env.step(action)
-        im = process_obs_img(obs)
-        writer.append_data(im)
-        ctr += 1
-    # writer.close()
-
-    # exit()
-
-    first_obj = env.sim._rigid_objects[2].translation
-    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
-        circle_center=first_obj, radius=1
-    )
-    curr_pos = env.sim.articulated_agent.base_pos
-
-    # set initial arm joints
-    # curr_arm_joints =
-    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-    print("curr_ee_pos: ", curr_ee_pos)
-    dist = np.linalg.norm(
-        (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
-    )
-    nav_planner = OracleNavSkill(env, nav_point)
-    i = 0
-    while dist > 0.10 and i < 200:
-
-        i += 1
-        action_planner = nav_planner.get_step()
-        obs = env.step(action_planner)
-        im = process_obs_img(obs)
-        writer.append_data(im)
-        curr_pos = env.sim.articulated_agent.base_pos
-        dist = np.linalg.norm(
-            (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
-        )
+    target_joint_pos = [
+        0.0,
+        -2.0943951,
+        0.0,
+        1.04719755,
+        0.0,
+        1.53588974,
+        0.0,
+        -1.57,
+    ]
+    move_to_joint(env, writer, target_joint_pos, visualize=False)
     print(
-        "root_pose: ", env.sim.articulated_agent._robot_wrapper.get_root_pose()
+        "env.sim._rigid_objects: ",
+        env.sim._rigid_objects,
+        len(env.sim._rigid_objects),
     )
+    first_obj = env.sim._rigid_objects[
+        2
+    ].translation  # first_obj in habitat conventions
+    nav_to_obj(env, writer, first_obj)
+
+    move_to_ee(env, writer, first_obj, visualize=False)
+
+    print("Translating down")
+    target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    target_joint_pos[1] += 0.2
+    target_joint_pos[3] += 0.2
+
+    move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
+
+    print("closing gripper")
+    target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    target_joint_pos[-1] = 0.0
+    move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
+
+    print(
+        "finished closing: ",
+        env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
+    )
+    # 12 rigid objects
+    # visualize_pos(env, env.sim._rigid_objects[3].translation, r=0.05)
+    # visualize_pos(env, env.sim._rigid_objects[4].translation, r=0.1)
+    # visualize_pos(env, env.sim._rigid_objects[5].translation, r=0.15)
+
+    print("moving arm to rest")
     # first_obj in habitat conventions
-    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-
-    new_pos = get_point_along_vector(curr_ee_pos, first_obj, step_size=0.3)
-    print("curr_ee_pos: ", curr_ee_pos)
-    print("new_pos: ", new_pos)
-    print("first_obj: ", first_obj)
-    ctr = 0
-    while not np.allclose(curr_ee_pos, first_obj, atol=0.003):
-        first_obj_shift = first_obj - mn.Vector3(0, 0.15, 0)
-        arm_reach = {
-            "action": "arm_reach_ee_action",
-            "action_args": {
-                "target_pos": np.array(first_obj_shift, dtype=np.float32)
-            },
-        }
-        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
-            first_obj, env.sim.viz_ids["place_tar"]
-        )
-
-        obs = env.step(arm_reach)
-
-        im = process_obs_img(obs)
-        writer.append_data(im)
-        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-        ctr += 1
-        print("ctr: ", ctr, curr_ee_pos, first_obj)
-    
-    curr_ee_pos_closed = curr_ee_pos
-    while not np.allclose(curr_ee_pos, first_obj, atol=0.003):
-        first_obj_shift = first_obj - mn.Vector3(0, 0.15, 0)
-        arm_reach = {
-            "action": "arm_reach_ee_action",
-            "action_args": {
-                "target_pos": np.array(first_obj_shift, dtype=np.float32)
-            },
-        }
-        env.sim.viz_ids["place_tar"] = env.sim.visualize_position(
-            first_obj, env.sim.viz_ids["place_tar"]
-        )
-
-        obs = env.step(arm_reach)
-
-        im = process_obs_img(obs)
-        writer.append_data(im)
-        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-        ctr += 1
-        print("ctr: ", ctr, curr_ee_pos, first_obj)
-
-    # first_obj in habitat conventions
-    joint_pos = [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0, 0.0]
-    for i in range(300):
-        env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
-            joint_pos
-        )
-        action = {
-            "action": "base_velocity_action",
-            "action_args": {
-                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
-            },
-        }
-        obs = env.step(action)
-        im = process_obs_img(obs)
-        writer.append_data(im)
+    target_joint_pos = [
+        0.0,
+        -2.0943951,
+        0.0,
+        1.04719755,
+        0.0,
+        1.53588974,
+        0.0,
+        0.0,
+    ]
+    move_to_joint(env, writer, target_joint_pos, visualize=False)
 
     writer.close()
 

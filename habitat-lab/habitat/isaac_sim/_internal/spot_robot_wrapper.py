@@ -328,9 +328,33 @@ class SpotRobotWrapper:
             ]
         )
 
+    def drive_legs(self):
+        self._target_leg_joint_positions = [
+            0.0,
+            0.7,
+            -1.5,
+            0.0,
+            0.7,
+            -1.5,
+            0.0,
+            0.7,
+            -1.5,
+            0.0,
+            0.7,
+            -1.5,
+        ]
+        self._leg_joint_indices = [1, 6, 11, 2, 7, 12, 3, 8, 13, 4, 9, 14]
+
+        self._robot_controller.apply_action(
+            ArticulationAction(
+                joint_positions=self._target_leg_joint_positions,
+                joint_indices=self._leg_joint_indices,
+            )
+        )
+
     def drive_arm(self, step_size):
 
-        if self._target_arm_joint_positions:
+        if np.array(self._target_arm_joint_positions).any():
             assert len(self._target_arm_joint_positions) == len(
                 self._arm_joint_indices
             )
@@ -354,13 +378,13 @@ class SpotRobotWrapper:
         base_position, base_orientation = self._robot.get_world_pose()
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
+        self.drive_legs()
         self._step_count += 1
 
     @property
     def arm_joint_pos(self):
         """Get the current arm joint positions."""
         robot_joint_positions = self._robot.get_joint_positions()
-        print("robot_joint_positions: ", robot_joint_positions)
         arm_joint_positions = np.array(
             [robot_joint_positions[i] for i in self._arm_joint_indices],
             dtype=np.float32,
