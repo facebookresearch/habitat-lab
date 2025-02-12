@@ -86,7 +86,8 @@ def make_hab_cfg(agent_dict, action_dict):
     hab_cfg.dataset = dataset_cfg
     hab_cfg.simulator = sim_cfg
     hab_cfg.simulator.seed = hab_cfg.seed
-
+    hab_cfg.environment.max_episode_steps = 2000
+    hab_cfg.environment.max_episode_seconds = 20000000
     return hab_cfg
 
 
@@ -339,7 +340,8 @@ def nav_to_obj(env, writer, target_obj):
             (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
         )
     print(
-        "root_pose: ", env.sim.articulated_agent._robot_wrapper.get_root_pose()
+        "root_pose 2: ",
+        env.sim.articulated_agent._robot_wrapper.get_root_pose(),
     )
 
 
@@ -394,6 +396,11 @@ def main():
     # 'fr_hy', 'hl_hy', 'hr_hy', 'arm0_hr0', 'fl_kn', 'fr_kn',
     # 'hl_kn', 'hr_kn', 'arm0_el0', 'arm0_el1', 'arm0_wr0', 'arm0_wr1', 'arm0_f1x']
 
+    print(
+        "root_pose 1: ",
+        env.sim.articulated_agent._robot_wrapper.get_root_pose(),
+    )
+
     # -1.57 is open, 0 is closed
     target_joint_pos = [
         0.0,
@@ -414,26 +421,48 @@ def main():
     first_obj = env.sim._rigid_objects[
         2
     ].translation  # first_obj in habitat conventions
+    visualize_pos(env, first_obj)
     nav_to_obj(env, writer, first_obj)
 
     move_to_ee(env, writer, first_obj, visualize=False)
 
-    print("Translating down")
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+    ee_to_obj_dist = curr_ee_pos[1] - first_obj[1]
     target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-    target_joint_pos[1] += 0.2
-    target_joint_pos[3] += 0.2
+    # target_joint_pos[1] += 0.1
+    # target_joint_pos[3] += ee_to_obj_dist - 0.14
 
-    move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
+    # move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
+
+    while np.abs(ee_to_obj_dist) > 0.17:
+        print("Translating down: ", ee_to_obj_dist)
+        target_joint_pos = (
+            env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        # target_joint_pos[1] += 0.1
+        target_joint_pos[3] += 0.05
+
+        move_to_joint(
+            env, writer, target_joint_pos, timeout=200, visualize=False
+        )
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        ee_to_obj_dist = curr_ee_pos[1] - first_obj[1]
+        print("ee_to_obj_dist: ", ee_to_obj_dist)
 
     print("closing gripper")
     target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
     target_joint_pos[-1] = 0.0
-    move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
-
+    move_to_joint(env, writer, target_joint_pos, timeout=100, visualize=False)
     print(
         "finished closing: ",
         env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
     )
+
+    print("Translating up")
+    target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    target_joint_pos[3] += 0.1
+    move_to_joint(env, writer, target_joint_pos, timeout=200, visualize=False)
+
     # 12 rigid objects
     # visualize_pos(env, env.sim._rigid_objects[3].translation, r=0.05)
     # visualize_pos(env, env.sim._rigid_objects[4].translation, r=0.1)

@@ -95,7 +95,7 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
 
         should_grasp = False
-        grasp = [0] if should_grasp else [-1.57]
+        grasp = [0.5] if should_grasp else [-1.57]
         self._spot_wrapper._target_arm_joint_positions = des_joint_pos + grasp
 
 
