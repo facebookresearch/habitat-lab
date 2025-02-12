@@ -126,7 +126,7 @@ class IsaacRearrangeSim(HabitatSim):
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        self._isaac_physics_dt = 1.0 / 90
+        self._isaac_physics_dt = 1.0 / 180
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
         isaac_world.set_simulation_dt(
             physics_dt=self._isaac_physics_dt,
