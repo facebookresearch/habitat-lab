@@ -669,29 +669,32 @@ class InitialGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(2,),
+            shape=(3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
         )
 
+    def wrap_heading(self, heading):
+        """Ensures input heading is between -180 an 180; can be float or np.ndarray"""
+        return (heading + np.pi) % (2 * np.pi) - np.pi
+
     def get_observation(self, task, *args, **kwargs):
         agent_data = self._sim.get_agent_data(self.agent_id).articulated_agent
         agent_pos = np.array(agent_data.base_pos)
         init_articulated_agent_T = task.initial_robot_trans
-
+        init_articulated_rot = task.initial_robot_rot
         # Do not support human relative GPS
         if init_articulated_agent_T is None or isinstance(
             agent_data, KinematicHumanoid
         ):
-            return np.zeros(2, dtype=np.float32)
+            return np.zeros(3, dtype=np.float32)
         else:
             rel_pos = batch_transform_point(
                 np.array([agent_pos]),
                 init_articulated_agent_T.inverted(),
                 np.float32,
             )
-            rho, phi = cartesian_to_polar(rel_pos[0][0], rel_pos[0][1])
-            init_rel_pos = np.array([rho, -phi], dtype=np.float32)
-
-            return init_rel_pos
+            x, y = rel_pos[0][0], rel_pos[0][1]
+            rot = self.wrap_heading(agent_data.base_rot-init_articulated_rot)
+            return np.array([x, y, rot])

@@ -130,6 +130,24 @@ class RearrangeTask(NavigationTask):
         if len(self._sim.agents_mgr) > 1:
             # Duplicate sensors that handle articulated agents. One for each articulated agent.
             self._duplicate_sensor_suite(self.sensor_suite)
+        self._initial_robot_trans = None
+        self._initial_robot_rot = None
+
+    @property
+    def initial_robot_trans(self):
+        return self._initial_robot_trans
+
+    @initial_robot_trans.setter
+    def initial_robot_trans(self, value):
+        self._initial_robot_trans = value
+
+    @property
+    def initial_robot_rot(self):
+        return self._initial_robot_rot
+
+    @initial_robot_rot.setter
+    def initial_robot_rot(self, value):
+        self._initial_robot_rot = value
 
     def overwrite_sim_config(self, config: Any, episode: Episode) -> Any:
         return config
