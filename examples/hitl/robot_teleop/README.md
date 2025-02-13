@@ -13,7 +13,8 @@ Install the ([eundersander/isaac_vr](https://github.com/facebookresearch/habitat
 git clone --branch eundersander/isaac_vr https://github.com/facebookresearch/habitat-sim.git
 cd habitat-sim
 
-conda create -n habitat_teleop python=3.9 cmake=3.14.0
+#we use python 3.10+ to support momentum IK
+conda create -n habitat_teleop python=3.10 cmake=3.14.0
 conda activate habitat_teleop
 pip install -r requirements.txt
 
@@ -33,6 +34,8 @@ git clone --branch eundersander/isaac_vr https://github.com/facebookresearch/hab
 cd habitat-lab
 pip install -e habitat-lab
 pip install -e habitat-hitl
+#don't need the baselines package, but it provides necessary dependencies
+pip install -e habitat-baselines
 
 #optionally symblink your data directory to habitat-sim/data
 ln -s ../habitat-sim/data data/
