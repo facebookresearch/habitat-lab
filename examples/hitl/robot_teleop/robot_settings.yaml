@@ -3,7 +3,8 @@
 #This config file can be hot-reloaded with 'T' to quickly change robot settings
 
 #global robot settings
-urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
+#urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
+urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
 #if True, the base is kinematic
 fixed_base: True
 
