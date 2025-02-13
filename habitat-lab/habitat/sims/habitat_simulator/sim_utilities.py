@@ -4,12 +4,172 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 
 import habitat_sim
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+
+############################################################
+# Things brought over from more recent habitat-lab
+
+
+def object_shortname_from_handle(object_handle: str) -> str:
+    """
+    Splits any path directory and instance increment from the handle.
+
+    :param object_handle: The raw object template or instance handle.
+    :return: the shortened name string.
+    """
+
+    return object_handle.split("/")[-1].split(".")[0].split("_:")[0]
+
+
+def get_ao_link_id_map(sim: habitat_sim.Simulator) -> Dict[int, int]:
+    """
+    Construct a dict mapping ArticulatedLink object_id to parent ArticulatedObject object_id.
+    NOTE: also maps ao's root object id to itself for ease of use.
+
+    :param sim: The Simulator instance.
+    :return: dict mapping ArticulatedLink object ids to parent object ids.
+    """
+
+    aom = sim.get_articulated_object_manager()
+    ao_link_map: Dict[int, int] = {}
+    for ao in aom.get_objects_by_handle_substring().values():
+        # add the ao itself for ease of use
+        ao_link_map[ao.object_id] = ao.object_id
+        # add the links
+        for link_id in ao.link_object_ids:
+            ao_link_map[link_id] = ao.object_id
+
+    return ao_link_map
+
+
+def get_obj_from_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Optional[Dict[int, int]] = None,
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from an object_id.
+
+    :param sim: The Simulator instance.
+    :param obj_id: object id for which ManagedObject is desired.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :return: a ManagedObject or None
+
+    ArticulatedLink object_ids will return the ManagedArticulatedObject.
+    If you want link id, use ManagedArticulatedObject.link_object_ids[obj_id].
+    """
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_id(obj_id):
+        return rom.get_object_by_id(obj_id)
+
+    if ao_link_map is None:
+        # Note: better to pre-compute this and pass it around
+        ao_link_map = get_ao_link_id_map(sim)
+
+    aom = sim.get_articulated_object_manager()
+    if obj_id in ao_link_map:
+        return aom.get_object_by_id(ao_link_map[obj_id])
+
+    return None
+
+
+def get_obj_from_handle(
+    sim: habitat_sim.Simulator, obj_handle: str
+) -> Union[
+    habitat_sim.physics.ManagedRigidObject,
+    habitat_sim.physics.ManagedArticulatedObject,
+]:
+    """
+    Get a ManagedRigidObject or ManagedArticulatedObject from its instance handle.
+
+    :param sim: The Simulator instance.
+    :param obj_handle: object instance handle for which ManagedObject is desired.
+    :return: a ManagedObject or None
+    """
+
+    rom = sim.get_rigid_object_manager()
+    if rom.get_library_has_handle(obj_handle):
+        return rom.get_object_by_handle(obj_handle)
+    aom = sim.get_articulated_object_manager()
+    if aom.get_library_has_handle(obj_handle):
+        return aom.get_object_by_handle(obj_handle)
+
+    return None
+
+
+def get_bb_for_object_id(
+    sim: habitat_sim.Simulator,
+    obj_id: int,
+    ao_link_map: Dict[int, int] = None,
+) -> Tuple[mn.Range3D, mn.Matrix4]:
+    """
+    Wrapper to get a bb and global transform directly from an object id.
+    Handles RigidObject and ArticulatedLink ids.
+
+    :param sim: The Simulator instance.
+    :param obj_id: The integer id of the object or link.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :return: tuple (local_aabb, global_transform)
+    """
+
+    # stage bounding box
+    if obj_id == habitat_sim.stage_id:
+        return (
+            sim.get_active_scene_graph().get_root_node().cumulative_bb,
+            mn.Matrix4.identity_init(),
+        )
+
+    obj = get_obj_from_id(sim, obj_id, ao_link_map)
+
+    if obj is None:
+        raise AssertionError(
+            f"object id {obj_id} is not found, this is unexpected. Invalid/stale object id?"
+        )
+
+    # ManagedObject
+    if obj.object_id == obj_id:
+        return (obj.aabb, obj.transformation)
+
+    # this is a link
+    link_node = obj.get_link_scene_node(obj.link_object_ids[obj_id])
+    link_transform = link_node.absolute_transformation()
+    return (link_node.cumulative_bb, link_transform)
+
+
+def get_obj_size_along(
+    sim: habitat_sim.Simulator,
+    object_id: int,
+    global_vec: mn.Vector3,
+    ao_link_map: Dict[int, int] = None,
+) -> Tuple[float, mn.Vector3]:
+    """
+    Uses object bounding box ellipsoid scale as a heuristic to estimate object size in a particular global direction.
+
+    :param sim: The Simulator instance.
+    :param object_id: The integer id of the object or link.
+    :param global_vec: Vector in global space indicating the direction to approximate object size.
+    :param ao_link_map: A pre-computed map from link object ids to their parent ArticulatedObject's object id.
+    :return: distance along the specified direction and global center of bounding box from which distance was estimated.
+    """
+
+    obj_bb, transform = get_bb_for_object_id(sim, object_id, ao_link_map)
+    center = transform.transform_point(obj_bb.center())
+    local_scale = mn.Matrix4.scaling(obj_bb.size() / 2.0)
+    local_vec = transform.inverted().transform_vector(global_vec).normalized()
+    local_vec_size = local_scale.transform_vector(local_vec).length()
+    return local_vec_size, center
+
+
+##############################################################
 
 
 def register_custom_wireframe_box_template(

@@ -13,7 +13,13 @@ from habitat_hitl.core.gui_input import GuiInput
 
 
 class CameraHelper:
-    def __init__(self, hitl_config, gui_input):
+    """
+    Helper class for generic camera control using GuiInput.
+    Does not have any "Habitat specific" implementation for camera sensors.
+    Instead, abstracts a control scheme and provides geometric queries.
+    """
+
+    def __init__(self, hitl_config, gui_input: GuiInput):
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
         self._first_person_mode = hitl_config.camera.first_person_mode
@@ -58,6 +64,9 @@ class CameraHelper:
         self._gui_input = gui_input
 
     def _camera_pitch_and_yaw_wasd_control(self):
+        """
+        Changes the pitch and yaw of the camera from _gui_input 'A'|'D' and 'I'|'K' keys.
+        """
         # update yaw and pitch using ADIK keys
         cam_rot_angle = 0.1
 
@@ -76,6 +85,9 @@ class CameraHelper:
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
+        """
+        Changes the pitch and yaw of the camera from _gui_input.relative_mouse_position when 'R' is pressed.
+        """
         enable_mouse_control = self._gui_input.get_key(GuiInput.KeyNS.R)
 
         if enable_mouse_control:
@@ -94,6 +106,9 @@ class CameraHelper:
             )
 
     def _get_eye_and_lookat(self, base_pos) -> Tuple[mn.Vector3, mn.Vector3]:
+        """
+        Computes and returns the camera(eye) position and cursor (lookat) position as a pair of global points.
+        """
         offset = mn.Vector3(
             np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
             np.sin(self.lookat_offset_pitch),
@@ -109,6 +124,9 @@ class CameraHelper:
         return eye_pos, lookat_pos
 
     def update(self, base_pos, dt):
+        """
+        Consumes GUIInput to update the camera state: pitch/yaw and zoom.
+        """
         if (
             not self._first_person_mode
             and self._gui_input.mouse_scroll_offset != 0
@@ -142,6 +160,9 @@ class CameraHelper:
         )
 
     def get_xz_forward(self):
+        """
+        Gets the global "forward" direction of the camera in xz plane (i.e. horizontal forward projection)
+        """
         assert self._cam_transform
         forward_dir = self._cam_transform.transform_vector(
             -mn.Vector3(0, 0, 1)
