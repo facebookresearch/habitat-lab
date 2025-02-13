@@ -25,10 +25,11 @@ Isaac Lab is only needed for doing asset conversion to USD format. If you've alr
 ```
 git clone https://github.com/isaac-sim/IsaacLab
 cd IsaacLab
+git checkout b9a49caebc912b86f2ace0709c08d9884d167cda
 ./isaaclab.sh --install "none"
 ```
 
-If you encounter issues, see [official instructions for installing Isaac Sim and Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-lab).  
+If you encounter issues, see [official instructions for installing Isaac Sim and Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-lab).
 
 ## Converting Habitat data to Isaac USD format
 
