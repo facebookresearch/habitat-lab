@@ -2,18 +2,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import magnum as mn
 import os
 
-import habitat_sim
-
-from habitat.isaac_sim import isaac_prim_utils
-
-from omni.isaac.core.utils.stage import add_reference_to_stage
+import magnum as mn
 import omni.physx.scripts.utils
 from omni.isaac.core.prims.rigid_prim import RigidPrim
-
+from omni.isaac.core.utils.stage import add_reference_to_stage
 from pxr import UsdPhysics
+
+import habitat_sim
+from habitat.isaac_sim import isaac_prim_utils
+
 
 class IsaacRigidObjectWrapper:
 
@@ -32,16 +31,23 @@ class IsaacRigidObjectWrapper:
 
     @transformation.setter
     def transformation(self, transform_mat: mn.Matrix4):
-        rotation_quat = mn.Quaternion.from_matrix(transform_mat.rotation_normalized())
+        rotation_quat = mn.Quaternion.from_matrix(
+            transform_mat.rotation_normalized()
+        )
         translation = transform_mat.translation
 
-        translation_usd = isaac_prim_utils.habitat_to_usd_position([translation.x, translation.y, translation.z])
+        translation_usd = isaac_prim_utils.habitat_to_usd_position(
+            [translation.x, translation.y, translation.z]
+        )
         vec = rotation_quat.vector
-        rotation_quat_wxyz_usd = isaac_prim_utils.habitat_to_usd_rotation([rotation_quat.scalar, vec.x, vec.y, vec.z])
+        rotation_quat_wxyz_usd = isaac_prim_utils.habitat_to_usd_rotation(
+            [rotation_quat.scalar, vec.x, vec.y, vec.z]
+        )
 
-        isaac_prim_utils.set_rotation(self._prim, rotation_quat_wxyz=rotation_quat_wxyz_usd)
+        isaac_prim_utils.set_rotation(
+            self._prim, rotation_quat_wxyz=rotation_quat_wxyz_usd
+        )
         isaac_prim_utils.set_translation(self._prim, translation_usd)
-
 
         # todo: consider self._rigid_prim.set_world_pose
 
@@ -53,14 +59,16 @@ class IsaacRigidObjectWrapper:
 
     @translation.setter
     def translation(self, translation: mn.Vector3):
-        translation_usd = isaac_prim_utils.habitat_to_usd_position([translation.x, translation.y, translation.z])
+        translation_usd = isaac_prim_utils.habitat_to_usd_position(
+            [translation.x, translation.y, translation.z]
+        )
         isaac_prim_utils.set_translation(self._prim, translation_usd)
 
     # todo: implement angular_velocity and linear_velocity
     @property
     def angular_velocity(self) -> mn.Vector3:
         return mn.Vector3(0, 0, 0)
-    
+
     @angular_velocity.setter
     def angular_velocity(self, vel: mn.Vector3):
         pass
@@ -68,7 +76,7 @@ class IsaacRigidObjectWrapper:
     @property
     def linear_velocity(self) -> mn.Vector3:
         return mn.Vector3(0, 0, 0)
-    
+
     @linear_velocity.setter
     def linear_velocity(self, vel: mn.Vector3):
         pass
@@ -93,6 +101,7 @@ class IsaacRigidObjectWrapper:
         # ignore these requests for now and leave dynamic object awake
         pass
 
+
 class IsaacRigidObjectManager:
 
     FIRST_OBJECT_ID = 100000
@@ -107,7 +116,6 @@ class IsaacRigidObjectManager:
         self._next_object_id = IsaacRigidObjectManager.FIRST_OBJECT_ID
         pass
 
-
     def get_library_has_handle(self, object_handle):
         return object_handle in self._obj_wrapper_by_object_handle
 
@@ -120,13 +128,16 @@ class IsaacRigidObjectManager:
 
         usd_filepath = os.path.join(
             folder.replace("data/", "data/usd/"),
-            f"OBJECT_{filename.removesuffix('.object_config.json')}.usda")
+            f"OBJECT_{filename.removesuffix('.object_config.json')}.usda",
+        )
 
         return os.path.abspath(usd_filepath)
 
     def _configure_as_dynamic_rigid_object(self, prim):
 
-        omni.physx.scripts.utils.setRigidBody(prim, "convexHull", kinematic=False)        
+        omni.physx.scripts.utils.setRigidBody(
+            prim, "convexHull", kinematic=False
+        )
 
         mass_api = UsdPhysics.MassAPI.Apply(prim)
         # mass_api.CreateMassAttr(10)
@@ -140,13 +151,17 @@ class IsaacRigidObjectManager:
 
         prim_path = f"/World/rigid_objects/obj_{object_id}"
 
-        add_reference_to_stage(usd_path=object_usd_filepath, prim_path=prim_path)
+        add_reference_to_stage(
+            usd_path=object_usd_filepath, prim_path=prim_path
+        )
 
         prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
         self._configure_as_dynamic_rigid_object(prim)
 
         # sloppy: must call on_add_reference_to_stage after configuring object as RigidObject via USD
-        self._isaac_service.usd_visualizer.on_add_reference_to_stage(usd_path=object_usd_filepath, prim_path=prim_path)
+        self._isaac_service.usd_visualizer.on_add_reference_to_stage(
+            usd_path=object_usd_filepath, prim_path=prim_path
+        )
 
         obj_wrapper = IsaacRigidObjectWrapper(object_id, prim)
         self._obj_wrapper_by_object_id[object_id] = obj_wrapper
@@ -165,7 +180,9 @@ class IsaacRigidObjectManager:
         assert object_path.endswith(".object_config.json")
         object_config_filepath = object_path
 
-        object_usd_filepath = self._get_usd_filepath_for_object_config(object_config_filepath)
+        object_usd_filepath = self._get_usd_filepath_for_object_config(
+            object_config_filepath
+        )
         return self._add_object(object_usd_filepath)
 
     def get_object_by_id(self, object_id):
@@ -175,15 +192,17 @@ class IsaacRigidObjectManager:
     def get_objects_by_handle_substring(self):
 
         return self._obj_wrapper_by_object_handle
-    
+
     def set_object_handle(self, object_id, object_handle):
 
-        self._obj_wrapper_by_object_handle[object_handle] = self.get_object_by_id(object_id)
+        self._obj_wrapper_by_object_handle[object_handle] = (
+            self.get_object_by_id(object_id)
+        )
 
     def get_object_by_handle(self, object_handle):
 
         return self._obj_wrapper_by_object_handle[object_handle]
-    
+
     def get_object_handles(self):
 
         return self._obj_wrapper_by_object_handle.keys()
