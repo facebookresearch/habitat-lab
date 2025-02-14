@@ -135,7 +135,9 @@ class IsaacRearrangeSim(HabitatSim):
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
         # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
-        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
+        asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static_v2.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
@@ -358,7 +360,9 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
-        asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static_v2.usda"
+        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
@@ -543,10 +547,12 @@ class IsaacRearrangeSim(HabitatSim):
             # start_pos = self.pathfinder.get_random_navigable_point(
             #     island_index=self._largest_indoor_island_idx
             # )
-            start_pos = mn.Vector3([-3.39, 0.8, -4.8])
+            # start_pos = mn.Vector3([-3.39, 0.8, -4.8])
+            start_pos = mn.Vector3([2.4812376, 0.7, -0.44570129])
 
             # start_pos = self.safe_snap_point(start_pos)
-            start_rot = np.random.uniform(0, 2 * np.pi)
+            # start_rot = np.random.uniform(0, 2 * np.pi)
+            start_rot = -1.7210809626391623
 
             if filter_func is not None and not filter_func(
                 start_pos, start_rot
@@ -554,6 +560,7 @@ class IsaacRearrangeSim(HabitatSim):
                 continue
 
             articulated_agent.base_pos = start_pos
+            print("set start_rot 2: ", start_rot)
             articulated_agent.base_rot = start_rot
             self.perform_discrete_collision_detection()
 
@@ -579,7 +586,9 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
         # TODO: later will work in other scenes
-        navmesh_path = "/home/xavierpuig/habitat_llm/habitat-llm-planner-2/habitat-llm/102344193/navmeshes/102344193.navmesh"
+        # navmesh_path = "/home/xavierpuig/habitat_llm/habitat-llm-planner-2/habitat-llm/102344193/navmeshes/102344193.navmesh"
+        # navmesh_path = ( "/fsx-siro/jtruong/data/fphab/navmeshes/102344529.navmesh" )
+        navmesh_path = "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")
@@ -1212,59 +1221,65 @@ class IsaacRearrangeSim(HabitatSim):
                         next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
         if True:
-            # for dining table
             objects_to_add = [
                 (
-                    f"{path_to_configs}/024_bowl.object_config.json",
-                    drop_pos + offset_vec * 0.0 + up_vec * 0.0,
-                ),
-                #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
-                (
-                    f"{path_to_configs}/013_apple.object_config.json",
-                    drop_pos + offset_vec * -0.01 + up_vec * 0.05,
-                ),
-                #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
-                (
-                    f"{path_to_configs}/013_apple.object_config.json",
-                    drop_pos + offset_vec * 0.01 + up_vec * 0.1,
-                ),
-                (
-                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
-                    drop_pos + offset_vec * 0.3 + up_vec * 0.0,
-                ),
-                (
-                    f"{path_to_configs}/077_rubiks_cube.object_config.json",
-                    drop_pos + offset_vec * 0.6 + up_vec * 0.1,
-                ),
-                (
-                    f"{path_to_configs}/036_wood_block.object_config.json",
-                    drop_pos + offset_vec * 0.6 + up_vec * 0.0,
-                ),
-                (
-                    f"{path_to_configs}/004_sugar_box.object_config.json",
-                    drop_pos + offset_vec * 0.9,
-                ),
-                (
-                    f"{path_to_configs}/004_sugar_box.object_config.json",
-                    drop_pos + offset_vec * 1.0,
-                ),
-                (
-                    f"{path_to_configs}/004_sugar_box.object_config.json",
-                    drop_pos + offset_vec * 1.1,
-                ),
-                (
-                    f"{path_to_configs}/004_sugar_box.object_config.json",
-                    drop_pos + offset_vec * 0.8,
-                ),
-                (
-                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
-                    drop_pos + offset_vec * 0.22 + up_vec * 0.0,
-                ),
-                (
-                    f"{path_to_configs}/010_potted_meat_can.object_config.json",
-                    drop_pos + offset_vec * 0.38 + up_vec * 0.0,
+                    f"data/objects/fremont/other/plush2/plush2.object_config.json",
+                    mn.Vector3(2.04542, 0.87047, 0.75122),
                 ),
             ]
+            # for dining table
+            # objects_to_add = [
+            #     (
+            #         f"{path_to_configs}/024_bowl.object_config.json",
+            #         drop_pos + offset_vec * 0.0 + up_vec * 0.0,
+            #     ),
+            #     #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
+            #     (
+            #         f"{path_to_configs}/013_apple.object_config.json",
+            #         drop_pos + offset_vec * -0.01 + up_vec * 0.05,
+            #     ),
+            #     #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
+            #     (
+            #         f"{path_to_configs}/013_apple.object_config.json",
+            #         drop_pos + offset_vec * 0.01 + up_vec * 0.1,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+            #         drop_pos + offset_vec * 0.3 + up_vec * 0.0,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/077_rubiks_cube.object_config.json",
+            #         drop_pos + offset_vec * 0.6 + up_vec * 0.1,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/036_wood_block.object_config.json",
+            #         drop_pos + offset_vec * 0.6 + up_vec * 0.0,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/004_sugar_box.object_config.json",
+            #         drop_pos + offset_vec * 0.9,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/004_sugar_box.object_config.json",
+            #         drop_pos + offset_vec * 1.0,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/004_sugar_box.object_config.json",
+            #         drop_pos + offset_vec * 1.1,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/004_sugar_box.object_config.json",
+            #         drop_pos + offset_vec * 0.8,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+            #         drop_pos + offset_vec * 0.22 + up_vec * 0.0,
+            #     ),
+            #     (
+            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+            #         drop_pos + offset_vec * 0.38 + up_vec * 0.0,
+            #     ),
+            # ]
 
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
@@ -1280,7 +1295,8 @@ class IsaacRearrangeSim(HabitatSim):
             else:
                 ro = self._rigid_objects[i]
 
-            rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
+            # rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
+            rotation = mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.x_axis())
             trans = mn.Matrix4.from_(rotation.to_matrix(), position)
             ro.transformation = trans
 

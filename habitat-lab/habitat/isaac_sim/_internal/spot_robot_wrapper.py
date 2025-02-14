@@ -220,7 +220,7 @@ class SpotRobotWrapper:
             0.0,
             1.53588974,
             0.0,
-            0.5,
+            -1.57,
         ]
 
     def scale_prim_mass_and_inertia(self, path, scale):
