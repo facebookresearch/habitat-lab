@@ -137,7 +137,8 @@ class IsaacRearrangeSim(HabitatSim):
         # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
-        asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static_v2.usda"
+        # asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static_v2.usda"
+        asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
@@ -361,7 +362,8 @@ class IsaacRearrangeSim(HabitatSim):
     def reset(self):
         SimulatorBackend.reset(self)
         # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
-        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static_v2.usda"
+        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static_v2.usda"
+        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static.usda"
         # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -547,12 +549,12 @@ class IsaacRearrangeSim(HabitatSim):
             # start_pos = self.pathfinder.get_random_navigable_point(
             #     island_index=self._largest_indoor_island_idx
             # )
-            # start_pos = mn.Vector3([-3.39, 0.8, -4.8])
-            start_pos = mn.Vector3([2.4812376, 0.7, -0.44570129])
+            start_pos = mn.Vector3([-3.39, 0.8, -4.8])
+            # start_pos = mn.Vector3([2.2812376, 0.7, -0.44570129])
 
             # start_pos = self.safe_snap_point(start_pos)
-            # start_rot = np.random.uniform(0, 2 * np.pi)
-            start_rot = -1.7210809626391623
+            start_rot = np.random.uniform(0, 2 * np.pi)
+            # start_rot = -1.7210809626391623
 
             if filter_func is not None and not filter_func(
                 start_pos, start_rot
@@ -560,7 +562,6 @@ class IsaacRearrangeSim(HabitatSim):
                 continue
 
             articulated_agent.base_pos = start_pos
-            print("set start_rot 2: ", start_rot)
             articulated_agent.base_rot = start_rot
             self.perform_discrete_collision_detection()
 
@@ -1224,7 +1225,7 @@ class IsaacRearrangeSim(HabitatSim):
             objects_to_add = [
                 (
                     f"data/objects/fremont/other/plush2/plush2.object_config.json",
-                    mn.Vector3(2.04542, 0.87047, 0.75122),
+                    mn.Vector3(2.04542, 0.870047, 0.75122),
                 ),
             ]
             # for dining table

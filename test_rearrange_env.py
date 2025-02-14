@@ -496,11 +496,6 @@ def main():
     target_joint_pos[-1] = 0.0
     move_to_joint(env, writer, target_joint_pos, timeout=100, visualize=False)
 
-    # target_joint_pos = env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-    # target_joint_pos[5] = 1.53588974
-    # target_joint_pos[-1] = 0.0
-    # move_to_joint(env, writer, target_joint_pos, timeout=100, visualize=False)
-
     # print("moving arm to rest")
     target_joint_pos = [
         0.0,
