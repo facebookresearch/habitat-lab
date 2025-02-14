@@ -4,7 +4,8 @@
 
 #global robot settings
 #urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
-urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
+#urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
+urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
 #if True, the base is kinematic
 fixed_base: True
 

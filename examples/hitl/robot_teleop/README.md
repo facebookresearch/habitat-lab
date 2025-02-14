@@ -34,11 +34,23 @@ git clone --branch eundersander/isaac_vr https://github.com/facebookresearch/hab
 cd habitat-lab
 pip install -e habitat-lab
 pip install -e habitat-hitl
-#don't need the baselines package, but it provides necessary dependencies
-pip install -e habitat-baselines
 
 #optionally symblink your data directory to habitat-sim/data
 ln -s ../habitat-sim/data data/
+```
+
+## (optional) Install pymomentum for Inverse Kinematics
+https://github.com/facebookincubator/momentum
+
+*NOTE: waiting on IK feature to be added to the framework. ETA early March.*
+
+> Momentum provides foundational algorithms for human kinematic motion and numerical optimization solvers to apply human motion in various applications.
+
+Installing pymomentum from conda-forge :
+```
+mamba install -c conda-forge pymomentum=0.1.29
+#need to downgrade numpy for Habitat compatibility.
+mamba install numpy=1.26.4
 ```
 
 ## Get the data

@@ -12,9 +12,9 @@ from habitat.config.default_structured_configs import (
     HabitatConfigPlugin,
     register_hydra_plugin,
 )
-from habitat_baselines.config.default_structured_configs import (
-    HabitatBaselinesConfigPlugin,
-)
+# from habitat_baselines.config.default_structured_configs import (
+#     HabitatBaselinesConfigPlugin,
+# )
 
 
 class HabitatHitlConfigPlugin(SearchPathPlugin):
@@ -27,7 +27,7 @@ class HabitatHitlConfigPlugin(SearchPathPlugin):
 
 def register_hydra_plugins():
     register_hydra_plugin(HabitatConfigPlugin)
-    register_hydra_plugin(HabitatBaselinesConfigPlugin)
+    #register_hydra_plugin(HabitatBaselinesConfigPlugin)
     register_hydra_plugin(HabitatHitlConfigPlugin)
 
 

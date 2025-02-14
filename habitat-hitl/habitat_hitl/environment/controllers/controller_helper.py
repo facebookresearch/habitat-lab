@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 
-from habitat_hitl.environment.controllers.baselines_controller import (
-    MultiAgentBaselinesController,
-    SingleAgentBaselinesController,
-)
+# from habitat_hitl.environment.controllers.baselines_controller import (
+#     MultiAgentBaselinesController,
+#     SingleAgentBaselinesController,
+# )
 from habitat_hitl.environment.controllers.controller_abc import Controller
 from habitat_hitl.environment.controllers.gui_controller import (
     GuiHumanoidController,
@@ -55,65 +55,65 @@ class ControllerHelper:
             raise ValueError("ControllerHelper only supports 1 or 2 agents.")
 
         self.controllers: List[Controller] = []
-        if self.n_agents == self.n_policy_controlled_agents:
-            # all agents are policy controlled
-            if not is_multi_agent:
-                # single agent case
-                self.controllers.append(
-                    SingleAgentBaselinesController(
-                        0,
-                        is_multi_agent,
-                        config,
-                        self._gym_habitat_env,
-                    )
-                )
-            else:
-                # multi agent case (2 agents)
-                self.controllers.append(
-                    MultiAgentBaselinesController(
-                        is_multi_agent,
-                        config,
-                        self._gym_habitat_env,
-                    )
-                )
-        else:
-            # one agent is gui controlled and the rest (if any) are policy controlled
-            agent_name: str = self._env.sim.habitat_config.agents_order[
-                self._gui_controlled_agent_index
-            ]
-            articulated_agent_type: str = self._env.sim.habitat_config.agents[
-                agent_name
-            ].articulated_agent_type
+        # if self.n_agents == self.n_policy_controlled_agents:
+        #     # all agents are policy controlled
+        #     # if not is_multi_agent:
+        #     #     # single agent case
+        #     #     self.controllers.append(
+        #     #         SingleAgentBaselinesController(
+        #     #             0,
+        #     #             is_multi_agent,
+        #     #             config,
+        #     #             self._gym_habitat_env,
+        #     #         )
+        #     #     )
+        #     # else:
+        #     #     # multi agent case (2 agents)
+        #     #     self.controllers.append(
+        #     #         MultiAgentBaselinesController(
+        #     #             is_multi_agent,
+        #     #             config,
+        #     #             self._gym_habitat_env,
+        #     #         )
+        #     #     )
+        # else:
+        #     # one agent is gui controlled and the rest (if any) are policy controlled
+        #     agent_name: str = self._env.sim.habitat_config.agents_order[
+        #         self._gui_controlled_agent_index
+        #     ]
+        #     articulated_agent_type: str = self._env.sim.habitat_config.agents[
+        #         agent_name
+        #     ].articulated_agent_type
 
-            gui_agent_controller: Controller
-            if articulated_agent_type == "KinematicHumanoid":
-                gui_agent_controller = GuiHumanoidController(
-                    agent_idx=self._gui_controlled_agent_index,
-                    is_multi_agent=is_multi_agent,
-                    gui_input=gui_input,
-                    env=self._env,
-                    walk_pose_path=hitl_config.walk_pose_path,
-                    lin_speed=hitl_config.gui_controlled_agent.lin_speed,
-                    ang_speed=hitl_config.gui_controlled_agent.ang_speed,
-                    recorder=recorder.get_nested_recorder("gui_humanoid"),
-                )
-            else:
-                gui_agent_controller = GuiRobotController(
-                    agent_idx=self._gui_controlled_agent_index,
-                    is_multi_agent=is_multi_agent,
-                    gui_input=gui_input,
-                )
-            self.controllers.append(gui_agent_controller)
+        #     gui_agent_controller: Controller
+        #     if articulated_agent_type == "KinematicHumanoid":
+        #         gui_agent_controller = GuiHumanoidController(
+        #             agent_idx=self._gui_controlled_agent_index,
+        #             is_multi_agent=is_multi_agent,
+        #             gui_input=gui_input,
+        #             env=self._env,
+        #             walk_pose_path=hitl_config.walk_pose_path,
+        #             lin_speed=hitl_config.gui_controlled_agent.lin_speed,
+        #             ang_speed=hitl_config.gui_controlled_agent.ang_speed,
+        #             recorder=recorder.get_nested_recorder("gui_humanoid"),
+        #         )
+        #     else:
+        #         gui_agent_controller = GuiRobotController(
+        #             agent_idx=self._gui_controlled_agent_index,
+        #             is_multi_agent=is_multi_agent,
+        #             gui_input=gui_input,
+        #         )
+        #     self.controllers.append(gui_agent_controller)
 
-            if is_multi_agent:
-                self.controllers.append(
-                    SingleAgentBaselinesController(
-                        0 if self._gui_controlled_agent_index == 1 else 1,
-                        is_multi_agent,
-                        config,
-                        self._gym_habitat_env,
-                    )
-                )
+        #     if is_multi_agent:
+        #         self.controllers.append(
+        #             SingleAgentBaselinesController(
+        #                 0 if self._gui_controlled_agent_index == 1 else 1,
+        #                 is_multi_agent,
+        #                 config,
+        #                 self._gym_habitat_env,
+        #             )
+        #         )
 
     def get_gui_agent_controller(self) -> Optional[Controller]:
         if self._gui_controlled_agent_index is None:

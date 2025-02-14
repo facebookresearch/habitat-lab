@@ -91,6 +91,19 @@ class Robot:
         self.set_cached_pose(
             pose_name=self.robot_cfg.initial_pose, set_positions=True
         )
+        self.init_ik()
+
+    def init_ik(self):
+        """
+        Initialize pymomentum and load a model.
+        """
+        try:
+            import pymomentum.geometry as pym_geo
+            self.momentum_character = pym_geo.Character.load_urdf(self.robot_cfg.urdf)
+            #TODO: the above character is available for ik
+        except:
+            print("Could not initialize pymomentum IK library.")
+
 
     def create_joint_motors(self):
         """
