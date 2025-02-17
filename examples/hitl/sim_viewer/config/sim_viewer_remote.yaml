@@ -1,0 +1,21 @@
+# @package _global_
+
+defaults:
+  - hitl_defaults
+  - _self_
+
+habitat_hitl:
+  driver: "HitlBareSimDriver"
+  disable_policies_and_stepping: True
+  window:
+    title: "Sim Viewer"
+  networking:
+    enable: True
+    max_client_count: 1
+    http_availability_server:
+      enable: False
+    enable_connections_by_default: True
+    client_sync:
+      server_camera: True
+      server_input: True
+      skinning: True

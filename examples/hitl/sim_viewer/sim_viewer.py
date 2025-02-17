@@ -25,8 +25,8 @@ class AppStateBasicViewer(AppState):
         self._gui_input = self._app_service.gui_input
 
         config = self._app_service.config
-        #self._end_on_success = config.habitat.task.end_on_success
-        #self._success_measure_name = config.habitat.task.success_measure
+        # self._end_on_success = config.habitat.task.end_on_success
+        # self._success_measure_name = config.habitat.task.success_measure
 
         self._lookat_pos = None
         self._cam_transform = None
@@ -38,7 +38,13 @@ class AppStateBasicViewer(AppState):
         self._paused = False
         self._do_single_step = False
 
-        self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
+        self._app_service.reconfigure_sim(
+            "data/fpss/hssd-hab-siro.scene_dataset_config.json",
+            "102817140.scene_instance.json",
+        )
+
+        # Activate the first user.
+        self._app_service.users.activate_user(0)
 
     def _init_lookat_pos(self):
         self._lookat_pos = mn.Vector3(0.0, 0.0, -1.0)
@@ -78,10 +84,10 @@ class AppStateBasicViewer(AppState):
 
     @property
     def _env_task_complete(self):
-        #return (
+        # return (
         #    self._end_on_success
         #    and self._app_service.get_metrics()[self._success_measure_name]
-        #)
+        # )
         return False
 
     def _get_camera_lookat_pos(self):
@@ -158,9 +164,7 @@ class AppStateBasicViewer(AppState):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        if (
-            self._app_service.gui_input.get_key_down(KeyCode.P)
-        ):
+        if self._app_service.gui_input.get_key_down(KeyCode.P):
             self._paused = not self._paused
 
         if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
@@ -178,7 +182,7 @@ class AppStateBasicViewer(AppState):
 
         self._update_lookat_pos()
         if not is_paused_this_frame:
-            #self._app_service.compute_action_and_step_env()
+            # self._app_service.compute_action_and_step_env()
             self._do_single_step = False
 
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
@@ -189,9 +193,7 @@ class AppStateBasicViewer(AppState):
         self._update_help_text()
 
 
-@hydra.main(
-    version_base=None, config_path="config", config_name="sim_viewer"
-)
+@hydra.main(version_base=None, config_path="config", config_name="sim_viewer")
 def main(config):
     hitl_main(
         config,
