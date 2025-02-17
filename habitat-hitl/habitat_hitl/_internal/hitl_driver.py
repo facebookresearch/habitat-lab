@@ -84,7 +84,7 @@ class HitlDriver(AppDriver):
         *,
         config,
         gui_input: GuiInput,
-        debug_line_drawer: Optional[DebugLineRender],
+        line_render: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
     ):
@@ -189,7 +189,7 @@ class HitlDriver(AppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager(users)
 
-        gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
+        gui_drawer = GuiDrawer(line_render, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
 
         self._check_init_server(gui_drawer, gui_input, users)
