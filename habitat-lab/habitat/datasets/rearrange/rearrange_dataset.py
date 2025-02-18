@@ -14,7 +14,11 @@ import habitat_sim.utils.datasets_download as data_downloader
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.utils import DatasetFloatJSONEncoder
+from habitat.core.utils import (
+    DatasetFloatJSONEncoder,
+    DatasetJSONEncoder,
+    not_none_validator,
+)
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
 
@@ -33,6 +37,7 @@ class RearrangeEpisode(Episode):
     :property target_receptacles: The names and link indices of the receptacles containing the target objects.
     :property goal_receptacles: The names and link indices of the receptacles containing the goals.
     """
+
     ao_states: Dict[str, Dict[int, float]]
     rigid_objs: List[Tuple[str, np.ndarray]]
     targets: Dict[str, np.ndarray]
@@ -40,11 +45,14 @@ class RearrangeEpisode(Episode):
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
+    navmesh_path: str = attr.ib(default=None, validator=not_none_validator)
+    language_instruction: str = ""
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
+
     episodes: List[RearrangeEpisode] = []  # type: ignore
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 

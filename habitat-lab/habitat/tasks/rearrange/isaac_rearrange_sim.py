@@ -132,14 +132,7 @@ class IsaacRearrangeSim(HabitatSim):
             physics_dt=self._isaac_physics_dt,
             rendering_dt=self._isaac_physics_dt,
         )
-
-        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
-        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
-        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
-        # asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static_v2.usda"
-        asset_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data/usd/scenes/fremont_static.usda"
-        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        asset_path = os.path.abspath(config.scene_dataset)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -361,11 +354,7 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
-        # asset_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
-        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static_v2.usda"
-        asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/fremont_static.usda"
-        # asset_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/usd/scenes/102344529.usda"
-        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"
+        asset_path = os.path.abspath(self.ep_info.scene_dataset_config)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
@@ -586,10 +575,7 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
-        # TODO: later will work in other scenes
-        # navmesh_path = "/home/xavierpuig/habitat_llm/habitat-llm-planner-2/habitat-llm/102344193/navmeshes/102344193.navmesh"
-        # navmesh_path = ( "/fsx-siro/jtruong/data/fphab/navmeshes/102344529.navmesh" )
-        navmesh_path = "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
+        navmesh_path = os.path.abspath(ep_info.navmesh_path)
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")
@@ -1177,7 +1163,6 @@ class IsaacRearrangeSim(HabitatSim):
         return stats_dict
 
     def add_or_reset_rigid_objects(self):
-
         # on dining table
         drop_pos = mn.Vector3(-3.6, 0.8, -7.22)  # mn.Vector3(-7.4, 0.8, -7.5)
         offset_vec = mn.Vector3(1.3, 0.0, 0.0)

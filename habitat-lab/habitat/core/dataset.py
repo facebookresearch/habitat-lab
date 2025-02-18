@@ -66,6 +66,7 @@ class Episode(BaseEpisode):
 
     This information is provided by a :ref:`Dataset` instance.
     """
+
     # path to the SceneDataset config file
     scene_dataset_config: str = attr.ib(
         default="default", validator=not_none_validator
@@ -110,6 +111,7 @@ T = TypeVar("T", bound=Episode)
 
 class Dataset(Generic[T]):
     r"""Base class for dataset specification."""
+
     episodes: List[T]
 
     @staticmethod
