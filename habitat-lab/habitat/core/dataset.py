@@ -109,7 +109,7 @@ T = TypeVar("T", bound=Episode)
 
 
 class Dataset(Generic[T]):
-    """Base class for dataset specification."""
+    r"""Base class for dataset specification."""
 
     episodes: List[T]
 

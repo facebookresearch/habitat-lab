@@ -12,7 +12,11 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.core.utils import DatasetFloatJSONEncoder
+from habitat.core.utils import (
+    DatasetFloatJSONEncoder,
+    DatasetJSONEncoder,
+    not_none_validator,
+)
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
 
@@ -41,6 +45,7 @@ class RearrangeEpisode(Episode):
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
+    navmesh_path: str = attr.ib(default=None, validator=not_none_validator)
     language_instruction: str = ""
 
 
