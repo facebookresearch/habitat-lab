@@ -2,14 +2,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Dict, List, Optional, Set
 
+import attr
 import magnum as mn
 import numpy as np
 
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
-    MobileManipulatorParams,
 )
 
 
@@ -96,8 +97,8 @@ class SpotRobot(MobileManipulator):
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            arm_init_params=np.array([0.0, -3.14, 0.0, 3.14, 0.0, 0.0, 0.0]),
-            gripper_init_params=np.array([-1.56]),
+            arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
+            gripper_init_params=[-1.56],
             leg_init_params=[
                 0.0,
                 0.7,
@@ -112,10 +113,9 @@ class SpotRobot(MobileManipulator):
                 0.7,
                 -1.5,
             ],
-            # ee_offset=[mn.Vector3(0.08, 0, 0)],
-            ee_offset=[mn.Vector3(0.0, 0, -0.1)],
+            ee_offset=[mn.Vector3(0.08, 0, 0)],
             ee_links=[7],
-            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [-0.35, 1.5]]]),
+            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
@@ -158,27 +158,9 @@ class SpotRobot(MobileManipulator):
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
                 ),
-                "articulated_agent_jaw_depth": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, -0.05, -0.107),
-                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                    attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
-                ),
-                "articulated_agent_jaw_rgb": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.023, -0.095),
-                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                    attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
-                ),
-                "articulated_agent_jaw_panoptic": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.0, -0.107),
-                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                    attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
-                ),
             },
-            gripper_closed_state=np.array([0.0], dtype=np.float32),
-            gripper_open_state=np.array([-1.56], dtype=np.float32),
+            gripper_closed_state=[0.0],
+            gripper_open_state=[-1.56],
             gripper_state_eps=0.01,
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
@@ -190,9 +172,12 @@ class SpotRobot(MobileManipulator):
             base_link_names={
                 "base",
             },
+<<<<<<< HEAD
             ik_pb_link_idx=7,
             ik_arm_len=7,
             ik_arm_start_idx=0,
+=======
+>>>>>>> c20c2a134 (fixes for eval to work)
         )
 
     @property
