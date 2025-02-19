@@ -810,8 +810,10 @@ def add_habitat_visual_metadata_for_articulation(
 
 
 def convert_urdf_test():
-    base_urdf_name = "hab_spot_arm"
-    base_urdf_folder = "data/robots/hab_spot_arm/urdf"
+    base_urdf_name = "murp_tmr_franka_metahand"
+    base_urdf_folder = "/fsx-siro/jtruong/data/hab_murp/murp_tmr_franka"
+    # base_urdf_name = "hab_spot_arm"
+    # base_urdf_folder = "data/robots/hab_spot_arm/urdf"
     # base_urdf_name = "allegro_digit360_right_calib_free"
     # base_urdf_folder = "data/from_gum"
 
@@ -860,16 +862,16 @@ def convert_objects_folder_to_usd(
 if __name__ == "__main__":
     # example usage:
 
-    # convert_urdf_test()
+    convert_urdf_test()
     # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./", enable_collision_for_stage=True)
     # convert_objects_folder_to_usd(
     #     "data/objects/ycb", "data/usd/objects/ycb/configs_v2", "./"
     # )
-    convert_object_glb_to_usd(
-        "data/Fremont-Knuckles/objects/other/plush4/",
-        "data/usd/objects/fremont/other/plush4/OBJECT_plush4.usda",
-        "./",
-    )
+    # convert_object_glb_to_usd(
+    #     "data/Fremont-Knuckles/objects/other/plush4/",
+    #     "data/usd/objects/fremont/other/plush4/OBJECT_plush4.usda",
+    #     "./",
+    # )
     # convert_hab_scene(
     #     "data/scene_datasets/hssd-hab/scenes-uncluttered/102344529.scene_instance.json",
     #     project_root_folder="./",
