@@ -4,14 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 import logging
 import os
 import os.path as osp
 import pickle
 import time
 from functools import wraps
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import attr
 import magnum as mn
@@ -26,10 +25,6 @@ from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
 
-if TYPE_CHECKING:
-    # avoids circular import while allowing type hints
-    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-
 rearrange_logger = HabitatLogger(
     name="rearrange_task",
     level=int(os.environ.get("HABITAT_REARRANGE_LOG", logging.ERROR)),
@@ -40,6 +35,16 @@ rearrange_logger = HabitatLogger(
 def make_render_only(obj, sim):
     obj.motion_type = MotionType.KINEMATIC
     obj.collidable = False
+
+
+def make_border_red(img):
+    border_color = [255, 0, 0]
+    border_width = 10
+    img[:, :border_width] = border_color
+    img[:border_width, :] = border_color
+    img[-border_width:, :] = border_color
+    img[:, -border_width:] = border_color
+    return img
 
 
 def coll_name_matches(coll, name):
@@ -84,52 +89,16 @@ class CollisionDetails:
         )
 
 
-def general_sim_collision(
-    sim: habitat_sim.Simulator,
-    agent_embodiment: MobileManipulator,
-    ignore_object_ids: Optional[List[int]] = None,
-) -> Tuple[bool, CollisionDetails]:
-    """
-    Proxy for "rearrange_collision()" which does not require a RearrangeSim.
-
-    Used for testing functions which require a collision testing routine.
-
-    :return: boolean flag denoting collisions and a details struct (not complete)
-    """
-    colls = sim.get_physics_contact_points()
-
-    agent_embodiment_object_id = agent_embodiment.sim_obj.object_id
-
-    robot_scene_colls = 0
-    for col in colls:
-        if coll_name_matches(col, agent_embodiment_object_id) and (
-            ignore_object_ids is None
-            or not any(
-                [
-                    coll_name_matches(col, ignore_object_id)
-                    for ignore_object_id in ignore_object_ids
-                ]
-            )
-        ):
-            robot_scene_colls += 1
-
-    return (robot_scene_colls > 0), CollisionDetails(
-        robot_scene_colls=robot_scene_colls
-    )
-
-
 def rearrange_collision(
-    sim: "RearrangeSim",
+    sim,
     count_obj_colls: bool,
     verbose: bool = False,
-    ignore_object_ids: Optional[List[int]] = None,
+    ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
     agent_idx: Optional[int] = None,
-) -> Tuple[bool, CollisionDetails]:
-    """
-    Defines what counts as a collision for the Rearrange environment execution.
-    """
+):
+    """Defines what counts as a collision for the Rearrange environment execution"""
     agent_model = sim.get_agent_data(agent_idx).articulated_agent
     grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
@@ -143,10 +112,10 @@ def rearrange_collision(
             if match_link is not None and agent_model.is_base_link(match_link):
                 return False
 
-        if ignore_object_ids is not None:
+        if ignore_names is not None:
             should_ignore = any(
-                coll_name_matches(x, ignore_object_id)
-                for ignore_object_id in ignore_object_ids
+                coll_name_matches(x, ignore_name)
+                for ignore_name in ignore_names
             )
             if should_ignore:
                 return False
@@ -200,10 +169,110 @@ def rearrange_collision(
     return coll_details.total_collisions > 0, coll_details
 
 
+def convert_legacy_cfg(obj_list):
+    if len(obj_list) == 0:
+        return obj_list
+
+    def convert_fn(obj_dat):
+        fname = "/".join(obj_dat[0].split("/")[-2:])
+        if ".urdf" in fname:
+            obj_dat[0] = osp.join("data/replica_cad/urdf", fname)
+        else:
+            obj_dat[0] = obj_dat[0].replace(
+                "data/objects/", "data/objects/ycb/configs/"
+            )
+
+        if (
+            len(obj_dat) == 2
+            and len(obj_dat[1]) == 4
+            and np.array(obj_dat[1]).shape == (4, 4)
+        ):
+            # Specifies the full transformation, no object type
+            return (obj_dat[0], (obj_dat[1], int(MotionType.DYNAMIC)))
+        elif len(obj_dat) == 2 and len(obj_dat[1]) == 3:
+            # Specifies XYZ, no object type
+            trans = mn.Matrix4.translation(mn.Vector3(obj_dat[1]))
+            return (obj_dat[0], (trans, int(MotionType.DYNAMIC)))
+        else:
+            # Specifies the full transformation and the object type
+            return (obj_dat[0], obj_dat[1])
+
+    return list(map(convert_fn, obj_list))
+
+
+def get_rigid_aabb(
+    obj_id: int, sim: habitat_sim.Simulator, transformed: bool = False
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a RigidObject. Returns None if object is not found.
+
+    :param obj_id: The unique id of the object instance.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
+    obj_node = obj.root_scene_node
+    obj_bb = obj_node.cumulative_bb
+    if transformed:
+        obj_bb = habitat_sim.geo.get_transformed_bb(
+            obj_node.cumulative_bb, obj_node.transformation
+        )
+    return obj_bb
+
+
+def get_ao_link_aabb(
+    ao_obj_id: int,
+    link_id: int,
+    sim: habitat_sim.Simulator,
+    transformed: bool = False,
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a link of an ArticulatedObject. Returns None if object or link are not found.
+
+    :param ao_obj_id: The unique id of the ArticulatedObject instance.
+    :param link_id: The index of the link within the ArticulatedObject instance. -1 for base link. Note this is not unique object_id of the link.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
+
+    ao = sim.get_articulated_object_manager().get_object_by_id(ao_obj_id)
+    if ao is None:
+        return None
+    assert link_id < ao.num_links, "Link index out of range."
+    link_node = ao.get_link_scene_node(link_id)
+    link_bb = link_node.cumulative_bb
+    if transformed:
+        link_bb = habitat_sim.geo.get_transformed_bb(
+            link_bb, link_node.absolute_transformation()
+        )
+    return link_bb
+
+
+def get_aabb(obj_id, sim, transformed=False):
+    obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
+    if obj is None:
+        return None
+    obj_node = obj.root_scene_node
+    obj_bb = obj_node.cumulative_bb
+    if transformed:
+        obj_bb = habitat_sim.geo.get_transformed_bb(
+            obj_node.cumulative_bb, obj_node.transformation
+        )
+    return obj_bb
+
+
 def euler_to_quat(rpy):
     rot = quaternion.from_euler_angles(rpy)
     rot = mn.Quaternion(mn.Vector3(rot.vec), rot.w)
     return rot
+
+
+def allowed_region_to_bb(allowed_region):
+    if len(allowed_region) == 0:
+        return allowed_region
+    return mn.Range2D(allowed_region[0], allowed_region[1])
 
 
 class CacheHelper:
@@ -255,7 +324,7 @@ except ImportError:
     p = None
 
 
-def is_pb_installed() -> bool:
+def is_pb_installed():
     return p is not None
 
 
@@ -349,7 +418,6 @@ class IkHelper:
             maxNumIterations=100,
             residualThreshold=0.00001,
         )
-
         return js[: self._arm_len]
 
 
@@ -592,12 +660,12 @@ def _get_robot_spawns(
             is_feasible_state = details.robot_scene_colls == 0
 
         if is_feasible_state:
-            # found a feasible state: reset state and return proposed stated
+            # found a feasbile state: reset state and return proposed stated
             agent.base_pos = start_position
             agent.base_rot = start_rotation
             return candidate_navmesh_position, angle_to_object, False
 
-    # failure to sample a feasible state: reset state and return initial conditions
+    # failure to sample a feasbile state: reset state and return initial conditions
     agent.base_pos = start_position
     agent.base_rot = start_rotation
     return start_position, start_rotation, True
@@ -605,10 +673,7 @@ def _get_robot_spawns(
 
 def get_angle_to_pos(rel_pos: np.ndarray) -> float:
     """
-    Get the 1D orientation angle (around Y axis) for an agent with X axis forward to face toward a relative 3D position.
-
     :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
-
     :returns: Angle in radians.
     """
 
@@ -714,7 +779,7 @@ def get_camera_object_angle(
     return obj_angle
 
 
-def get_camera_lookat_relative_to_vertical_line(
+def get_camera_lookat_relative_to_vertial_line(
     agent,
 ) -> float:
     """Get the camera looking angles to a vertical line to the ground"""
