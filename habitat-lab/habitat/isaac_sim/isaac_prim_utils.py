@@ -5,6 +5,11 @@
 import magnum as mn
 import numpy as np
 
+def to_gf_vec3(src):
+
+    from pxr import Gf
+    return Gf.Vec3f(src[0], src[1], src[2])
+
 def magnum_quat_to_list_wxyz(rot_quat):
 
     return [rot_quat.scalar, *list(rot_quat.vector)]

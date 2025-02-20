@@ -545,6 +545,8 @@ class AppStateIsaacSimViewer(AppState):
         self._do_pause_physics = False
         self._timer = 0.0
 
+        self.init_mouse_raycaster()
+
         pass
 
 
@@ -668,6 +670,7 @@ class AppStateIsaacSimViewer(AppState):
         controls_str += "J: reset rigid objects\n"
         controls_str += "K: start recording\n"
         controls_str += "L: stop recording\n"
+        controls_str += "Y: apply force at mouse\n"
         if self._sps_tracker.get_smoothed_rate() is not None:
             controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
 
@@ -677,6 +680,9 @@ class AppStateIsaacSimViewer(AppState):
         status_str = ""
         cursor_pos = self._cursor_pos
         status_str += f"({cursor_pos.x:.1f}, {cursor_pos.y:.1f}, {cursor_pos.z:.1f})\n"
+        if self._recent_mouse_ray_hit_info:
+            status_str += self._recent_mouse_ray_hit_info['rigidBody'] + "\n"
+
         # status_str += f"Hand playback: {self._hand_records[0]._playback_file_count}, {self._hand_records[1]._playback_file_count}"
         return status_str
 
@@ -1237,6 +1243,58 @@ class AppStateIsaacSimViewer(AppState):
             self.draw_axis(0.05, mn.Matrix4.translation(com_world))
 
 
+    def init_mouse_raycaster(self):
+
+        self._recent_mouse_ray_hit_info = None
+        pass
+
+    def update_mouse_raycaster(self, dt):
+
+        self._recent_mouse_ray_hit_info = None
+
+        mouse_ray = self._app_service.gui_input.mouse_ray
+
+        if not mouse_ray:
+            return
+
+        origin_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.origin)
+        dir_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.direction)
+
+        from pxr import Gf
+        from omni.physx import get_physx_scene_query_interface
+        hit_info = get_physx_scene_query_interface().raycast_closest(
+            isaac_prim_utils.to_gf_vec3(origin_usd), 
+            isaac_prim_utils.to_gf_vec3(dir_usd), 1000.0)
+
+        if not hit_info["hit"]:
+            return
+        
+        # dist = hit_info['distance']
+        hit_pos_usd = hit_info['position']
+        hit_normal_usd = hit_info['normal']
+        hit_pos_habitat = mn.Vector3(*isaac_prim_utils.usd_to_habitat_position(hit_pos_usd))
+        hit_normal_habitat = mn.Vector3(*isaac_prim_utils.usd_to_habitat_position(hit_normal_usd))
+        # collision_name = hit_info['collision']
+        body_name = hit_info['rigidBody']
+
+        line_render = self._app_service.line_render
+
+        hit_radius = 0.05        
+        line_render.draw_circle(hit_pos_habitat, hit_radius, mn.Color3(255, 0, 255), 16, hit_normal_habitat)
+
+        self._recent_mouse_ray_hit_info = hit_info
+
+        gui_input = self._app_service.gui_input
+        if gui_input.get_key_down(GuiInput.KeyNS.Y):
+            force_mag = 200.0
+            import carb
+            # instead of hit_normal_usd, consider dir_usd
+            force_vec = carb.Float3(hit_normal_usd[0] * force_mag, hit_normal_usd[1] * force_mag, hit_normal_usd[2] * force_mag)
+            from omni.physx import get_physx_interface
+            get_physx_interface().apply_force_at_pos(body_name, force_vec, hit_pos_usd)
+
+
+
     def sim_update(self, dt, post_sim_update_dict):
         
         self._sps_tracker.increment()
@@ -1267,6 +1325,8 @@ class AppStateIsaacSimViewer(AppState):
         self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=None)
 
         self.update_spot_pre_step(dt)
+
+        self.update_mouse_raycaster(dt)
 
         self.update_isaac(post_sim_update_dict)
 
