@@ -3,8 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, List, Optional
-
+from typing import TYPE_CHECKING, Iterator, List, Optional, Any
 import magnum as mn
 import numpy as np
 
@@ -60,6 +59,18 @@ class ArticulatedAgentData:
                 "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
             )
         return self._ik_helper
+
+
+@dataclass
+class IsaacAgentData:
+    """
+    Data needed to manage an agent instance.
+    """
+    articulated_agent: Any
+    start_js: np.ndarray
+    cfg: Any
+
+        
 
 
 class ArticulatedAgentManager:
@@ -236,3 +247,97 @@ class ArticulatedAgentManager:
         for agent_data in self._all_agent_data:
             for grasp_mgr in agent_data.grasp_mgrs:
                 grasp_mgr.update_debug()
+
+
+class IsaacArticulatedAgentManager(ArticulatedAgentManager):
+    """
+    Handles creating, updating and managing all agent instances.
+    """
+
+    def update_agents(self):
+        """
+        Update all agent instance managers.
+        """
+        for agent_data in self._all_agent_data:
+            agent_data.articulated_agent.update()
+
+    def __init__(self, cfg, sim):
+        self._sim = sim
+        self._all_agent_data = []
+        self._is_pb_installed = is_pb_installed()
+        self.agent_names = cfg.agents
+        from habitat.isaac_sim.isaac_spot_robot import IsaacSpotRobot
+
+        for agent_name in cfg.agents_order:
+
+            agent_cfg = cfg.agents[agent_name]
+            # TODO: put this later into a config
+            agent = IsaacSpotRobot(agent_cfg=agent_cfg, isaac_service=sim._isaac_wrapper.service, sim=sim)
+            
+            
+            # TODO: correct this
+            use_arm_init = np.array([0.0]) # (agent.params.arm_init_params)
+            self._all_agent_data.append(
+                IsaacAgentData(
+                    articulated_agent=agent,
+                    cfg=agent_cfg,
+                    start_js=use_arm_init,
+                )
+            )
+    
+
+    @property
+    def grasp_iter(self) -> Iterator[RearrangeGraspManager]:
+        return iter(())
+        
+    def on_new_scene(self):
+        pass
+
+    def pre_obj_clear(self) -> None:
+        
+        pass
+
+
+    def agent(self):
+        return self._all_agent_data[0].articulated_agent
+    
+
+    @add_perf_timing_func()
+    def post_obj_load_reconfigure(self):
+        """
+        Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
+        """
+        for agent_data in self._all_agent_data:
+            target_arm_init_params = (
+                agent_data.start_js
+                + agent_data.cfg.joint_start_noise
+                * np.random.randn(len(agent_data.start_js))
+            )
+
+            # We only randomly set the location of the particular joint if that joint can be controlled
+            # and given joint_that_can_control value.
+            if agent_data.cfg.joint_that_can_control is not None:
+                assert len(agent_data.start_js) == len(
+                    agent_data.cfg.joint_that_can_control
+                )
+                for i in range(len(agent_data.cfg.joint_that_can_control)):
+                    # We cannot control this joint
+                    if agent_data.cfg.joint_that_can_control[i] == 0:
+                        # The initial parameter for this joint should be the original angle
+                        target_arm_init_params[i] = agent_data.start_js[i]
+
+            # TODO: reset?
+            # agent_data.articulated_agent.params.arm_init_params = (
+            #     target_arm_init_params
+            # )
+            # agent_data.articulated_agent.reset()
+
+            # consume a fixed position from SIMUALTOR.agent_0 if configured
+            if agent_data.cfg.is_set_start_state:
+                agent_data.articulated_agent.base_pos = mn.Vector3(
+                    agent_data.cfg.start_position
+                )
+                agent_rot = agent_data.cfg.start_rotation
+                agent_data.articulated_agent.sim_obj.rotation = mn.Quaternion(
+                    mn.Vector3(agent_rot[:3]), agent_rot[3]
+                )
