@@ -32,7 +32,6 @@ class MurpRobotWrapper:
         asset_path = "./data/usd/robots/murp_tmr_franka_metahand.usda"
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
-        breakpoint()
 
         add_reference_to_stage(usd_path=asset_path, prim_path=robot_prim_path)
         self._isaac_service.usd_visualizer.on_add_reference_to_stage(
@@ -192,14 +191,13 @@ class MurpRobotWrapper:
 
         # todo: specify this in isaac_spot_robot.py
         arm_joint_names = [
-            "arm0_sh0",
-            "arm0_sh1",
-            "arm0_hr0",
-            "arm0_el0",
-            "arm0_el1",
-            "arm0_wr0",
-            "arm0_wr1",
-            "arm0_f1x",
+            "fr3_one_joint1",
+            "fr3_one_joint2",
+            "fr3_one_joint3",
+            "fr3_one_joint4",
+            "fr3_one_joint5",
+            "fr3_one_joint6",
+            "fr3_one_joint7",
         ]
 
         arm_joint_indices = []
@@ -220,7 +218,6 @@ class MurpRobotWrapper:
             0.0,
             1.53588974,
             0.0,
-            -1.57,
         ]
 
     def scale_prim_mass_and_inertia(self, path, scale):

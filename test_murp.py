@@ -250,7 +250,10 @@ def main():
     nav_planner = OracleNavSkill(env, nav_point)
     i = 0
     for _ in range(100):
-
+        print(
+            "arm_joint_pos: ",
+            env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
+        )
         action = {
             "action": "base_velocity_action",
             "action_args": {
@@ -261,7 +264,7 @@ def main():
         im = obs["third_rgb"]
         im2 = obs["articulated_agent_arm_rgb"]
         im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-        imt = np.zeros(im.shape)
+        imt = np.zeros(im.shape, dtype=np.uint8)
         imt[: im2.shape[0], : im2.shape[1], :] = im2
         imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
         imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]

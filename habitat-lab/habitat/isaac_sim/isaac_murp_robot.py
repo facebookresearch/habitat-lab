@@ -106,5 +106,5 @@ class IsaacMurpRobot(IsaacMobileManipulator):
             isaac_service=isaac_service, instance_id=0
         )
         super().__init__(
-            spot_params, agent_cfg, isaac_service, robot_wrapper, sim=sim
+            murp_params, agent_cfg, isaac_service, robot_wrapper, sim=sim
         )
