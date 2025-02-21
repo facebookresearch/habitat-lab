@@ -9,6 +9,7 @@ from habitat.articulated_agents.robots.fetch_robot import (
     FetchRobotNoWheels,
 )
 from habitat.articulated_agents.robots.franka_robot import FrankaRobot
+from habitat.articulated_agents.robots.murp_robot import MurpRobot
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 
@@ -17,6 +18,7 @@ __all__ = [
     "FetchRobotNoWheels",
     "FrankaRobot",
     "SpotRobot",
+    "MurpRobot",
     "StretchRobot",
     "fetch_suction",
     "spot_robot",

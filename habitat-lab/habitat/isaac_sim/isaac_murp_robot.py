@@ -12,12 +12,12 @@ from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulatorParams,
 )
-from habitat.articulated_agents.robots.spot_robot import SpotRobot
-from habitat.isaac_sim._internal.murp_robot_wrapper import SpotRobotWrapper
+from habitat.articulated_agents.robots.murp_robot import MurpRobot
+from habitat.isaac_sim._internal.murp_robot_wrapper import MurpRobotWrapper
 from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
 
 
-class IsaacSpotRobot(IsaacMobileManipulator):
+class IsaacMurpRobot(IsaacMobileManipulator):
     """Isaac-internal wrapper for a robot.
 
 
@@ -89,11 +89,11 @@ class IsaacSpotRobot(IsaacMobileManipulator):
         arm_joints = [0, 5, 10, 15, 16, 17, 18]
         leg_joints = [jid for jid in range(19) if jid not in arm_joints]
 
-        spot_params = SpotRobot._get_spot_params()
-        spot_params.arm_joints = arm_joints
-        spot_params.gripper_joints = [ee_index]
-        spot_params.leg_joints = leg_joints
-        spot_params.arm_init_params = [
+        murp_params = MurpRobot._get_murp_params()
+        murp_params.arm_joints = arm_joints
+        murp_params.gripper_joints = [ee_index]
+        murp_params.leg_joints = leg_joints
+        murp_params.arm_init_params = [
             0.0,
             -2.0943951,
             0.0,
@@ -102,7 +102,7 @@ class IsaacSpotRobot(IsaacMobileManipulator):
             1.53588974,
             0.0,
         ]
-        robot_wrapper = SpotRobotWrapper(
+        robot_wrapper = MurpRobotWrapper(
             isaac_service=isaac_service, instance_id=0
         )
         super().__init__(

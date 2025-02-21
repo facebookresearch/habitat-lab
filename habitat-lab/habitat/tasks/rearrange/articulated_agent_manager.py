@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import importlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional
 
@@ -289,17 +290,25 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
         self._all_agent_data = []
         self._is_pb_installed = is_pb_installed()
         self.agent_names = cfg.agents
-        from habitat.isaac_sim.isaac_spot_robot import IsaacSpotRobot
 
         for agent_name in cfg.agents_order:
-
             agent_cfg = cfg.agents[agent_name]
-            # TODO: put this later into a config
-            agent = IsaacSpotRobot(
-                agent_cfg=agent_cfg,
-                isaac_service=sim._isaac_wrapper.service,
-                sim=sim,
+            agent_type = (
+                agent_cfg["articulated_agent_type"].lower().split("robot")[0]
             )
+            module_name = f"habitat.isaac_sim.isaac_{agent_type}_robot"
+            class_name = f"Isaac{agent_type.capitalize()}Robot"
+            try:
+                module = importlib.import_module(module_name)
+                agent_class = getattr(module, class_name)
+                agent = agent_class(
+                    agent_cfg=agent_cfg,
+                    isaac_service=sim._isaac_wrapper.service,
+                    sim=sim,
+                )
+            except ImportError:
+                # Handle unknown agent type
+                raise ValueError(f"Unknown agent type: {agent_type}")
 
             if agent_cfg.joint_start_override is None:
                 use_arm_init = np.array(agent.params.arm_init_params)
