@@ -169,7 +169,8 @@ class OracleNavSkill:
 
 class VLAEvaluator:
     def __init__(self, ep_id, exp_name, ckpt):
-        self.json_path = "data/datasets/fremont_hlab_isaac/fremont_100.json.gz"
+        self.exp_name = exp_name
+        self.json_path = "data/datasets/fremont_hlab_isaac/fremont_900.json.gz"
 
         # Define the agent configuration
         main_agent_config = AgentConfig()
@@ -210,11 +211,11 @@ class VLAEvaluator:
         data = read_dataset(self.json_path)
         self.episode_info = data["episodes"][self.ep_id]
 
-        video_dir = f"videos_eval/{exp_name}/ckpt_{ckpt}/"
+        video_dir = f"videos_vla_eval/{self.exp_name}/ckpt_{ckpt}"
         os.makedirs(video_dir, exist_ok=True)
-
+        self.video_path = f"{video_dir}/eval_{ep_id}.mp4"
         self.writer = imageio.get_writer(
-            f"{video_dir}/eval_{ep_id}.mp4",
+            self.video_path,
             fps=30,
         )
 
@@ -230,8 +231,8 @@ class VLAEvaluator:
         ]
 
         vla_configs = CN()
-        vla_configs.VLA_CKPT = f"/fsx-siro/jtruong/repos/robot-skills/results/{exp_name}/train_lr_5e-05_seed_42/checkpoint/step{ckpt}.pt"
-        vla_configs.VLA_CONFIG_FILE = f"/fsx-siro/jtruong/repos/robot-skills/results/{exp_name}/vla_cfg.yaml"
+        vla_configs.VLA_CKPT = f"/fsx-siro/jtruong/repos/robot-skills/results/{self.exp_name}/train_lr_5e-05_seed_42/checkpoint/step{ckpt}.pt"
+        vla_configs.VLA_CONFIG_FILE = f"/fsx-siro/jtruong/repos/robot-skills/results/{self.exp_name}/vla_cfg.yaml"
         vla_configs.LANGUAGE_INSTRUCTION = (
             "Navigate to the dresser and pick up the avocado plush toy"
         )
@@ -252,6 +253,7 @@ class VLAEvaluator:
         sim_cfg.scene = "NONE"  #
         # sim_cfg.scene = os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
 
+        sim_cfg.ctrl_freq = 180.0  # match isaac freq
         cfg = OmegaConf.create(sim_cfg)
 
         # Set the scene agents
@@ -348,6 +350,57 @@ class VLAEvaluator:
             self.arm_rest_pose, visualize=False, save_info=False
         )
 
+    def replay_data(self):
+        self.reset_robot_pose()
+
+        episode_path = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/nav_pick_fremont_physics_v2/fremont/test_npy/ep_0.npy"
+        data = np.load(episode_path, allow_pickle=True)
+
+        forward_velocity = 8.0
+        turn_velocity = 2.0
+
+        target_joint_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        for i in range(len(data)):
+            action = data[i]["joint_action"]
+            joint_action = data[i]["joint_action"][:7]
+            print("data action: ", action)
+            action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
+            masked_joint_action = joint_action[action_mask == 1]
+            target_joint_pos[0] += masked_joint_action[0]
+            target_joint_pos[1] += masked_joint_action[1]
+            target_joint_pos[3] += masked_joint_action[2]
+            target_joint_pos[4] += joint_action[4]
+            target_joint_pos[5] += masked_joint_action[3]
+            # target_joint_pos[6] += joint_action[6]
+            # target_joint_pos[:7] += data[i]["joint_action"][:7]
+            target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
+            target_base_action = [
+                action[7] * forward_velocity,
+                action[8] * turn_velocity,
+            ]
+
+            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+                target_joint_pos
+            )
+            action_dict = {
+                "action": "base_velocity_action",
+                "action_args": {
+                    "base_vel": np.array(
+                        target_base_action,
+                        dtype=np.float32,
+                    )
+                },
+            }
+            obs = self.env.step(action_dict)
+            im = self.process_obs_img(obs)
+            self.writer.append_data(im)
+
+        self.writer.close()
+        print("saved video at: ", self.video_path)
+        return
+
     def run(self):
         self.reset_robot_pose()
 
@@ -364,31 +417,69 @@ class VLAEvaluator:
         curr_arm_joints = (
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
-        mask = np.array([1, 1, 1, 0, 1, 0, 0, 0])
+        # mask = np.array([1, 1, 1, 0, 1, 0, 0, 0])
+        mask = np.array([1, 1, 0, 1, 0, 1, 0, 0])
         print("curr_arm_joints: ", curr_arm_joints)
         obs["joint"] = curr_arm_joints[mask == 1]
         print("obs: ", obs.keys())
         done = False
         ctr = 0
-        while not done:
+        forward_velocity = 8.0
+        turn_velocity = 2.0
+        episode_path = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/nav_pick_fremont_physics_v2/fremont/train/tmp_npy_v4/ep_0.npy"
+        data = np.load(episode_path, allow_pickle=True)
+
+        max_steps = 250
+        max_steps = len(data)
+        print("max_steps: ", max_steps)
+        target_joint_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        for i in range(max_steps):
             # print(f"=================== step # {ctr} ===================")
-            action = self.policy.act(obs)[0]
-            print("action: ", action)
-            target_joint_pos = (
-                self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-            )
-            target_joint_pos[0] = action[0]
-            target_joint_pos[1] = action[1]
-            target_joint_pos[2] = action[2]
-            target_joint_pos[4] = action[3]
-            target_joint_pos[-1] = action[-1]
+            # action = self.policy.act(obs)[0]
+
+            # # n_repeat = 6 if "30" in self.exp_name else 1
+            # print("action: ", action)
+            # target_joint_pos = (
+            #     self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+            # )
+            # target_joint_pos[0] = action[0]
+            # target_joint_pos[1] = action[1]
+            # target_joint_pos[2] = action[2]
+            # target_joint_pos[4] = action[3]
+            # target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
+            # target_base_action =  [ action[7] * forward_velocity, action[8] * turn_velocity]
+
+            action = data[i]["joint_action"]
+            joint_action = data[i]["joint_action"][:7]
+            print("data action: ", action)
+            action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
+            masked_joint_action = joint_action[action_mask == 1]
+
+            # target_joint_pos[:7] = data[i]["joint"][:7]
+            target_joint_pos[:7] += data[i]["joint_action"][:7]
+
+            # target_joint_pos[0] += masked_joint_action[0]
+            # target_joint_pos[1] += masked_joint_action[1]
+            # target_joint_pos[3] += masked_joint_action[2]
+            # target_joint_pos[5] += masked_joint_action[3]
+            target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
+            target_base_action = [
+                action[7] * forward_velocity,
+                action[8] * turn_velocity,
+            ]
+
             self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_joint_pos
             )
             action_dict = {
                 "action": "base_velocity_action",
                 "action_args": {
-                    "base_vel": np.array(action[4:6], dtype=np.float32)
+                    "base_vel": np.array(
+                        target_base_action,
+                        dtype=np.float32,
+                    )
                 },
             }
             obs = self.env.step(action_dict)
@@ -401,10 +492,8 @@ class VLAEvaluator:
             )
 
             obs["joint"] = curr_arm_joints[mask == 1]
-            ctr += 1
-            if done or ctr > 250:
-                break
         self.writer.close()
+        print("saved video at: ", self.video_path)
 
 
 if __name__ == "__main__":
@@ -419,4 +508,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     datagen = VLAEvaluator(args.ep_id, args.exp, args.ckpt)
-    datagen.run()
+    # datagen.run()
+    datagen.replay_data()
