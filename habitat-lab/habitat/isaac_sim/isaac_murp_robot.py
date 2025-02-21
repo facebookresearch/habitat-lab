@@ -86,8 +86,25 @@ class IsaacMurpRobot(IsaacMobileManipulator):
     def __init__(self, agent_cfg, isaac_service, sim=None):
         # TODO: This should be obtained from _target_arm_joint_positions but it is not intialized here yet.
         ee_index = 19
-        arm_joints = [0, 5, 10, 15, 16, 17, 18]
-        leg_joints = [jid for jid in range(19) if jid not in arm_joints]
+        arm_joints = [0, 2, 4, 6, 8, 10, 12]
+        leg_joints = [
+            14,
+            15,
+            16,
+            17,
+            22,
+            23,
+            24,
+            25,
+            30,
+            31,
+            32,
+            33,
+            38,
+            39,
+            40,
+            41,
+        ]
 
         murp_params = MurpRobot._get_murp_params()
         murp_params.arm_joints = arm_joints
@@ -95,12 +112,12 @@ class IsaacMurpRobot(IsaacMobileManipulator):
         murp_params.leg_joints = leg_joints
         murp_params.arm_init_params = [
             0.0,
-            -2.0943951,
             0.0,
+            0.0,
+            -0.15707963,
+            0.6981317,
             1.04719755,
-            0.0,
-            1.53588974,
-            0.0,
+            -0.55850536,
         ]
         robot_wrapper = MurpRobotWrapper(
             isaac_service=isaac_service, instance_id=0

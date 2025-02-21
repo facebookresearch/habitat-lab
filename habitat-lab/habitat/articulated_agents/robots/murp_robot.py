@@ -165,9 +165,7 @@ class MurpRobot(MobileManipulator):
             leg_mtr_vel_gain=1.3,
             leg_mtr_max_impulse=100.0,
             base_offset=mn.Vector3(0.0, -0.48, 0.0),
-            base_link_names={
-                "base",
-            },
+            base_link_names={"base_link", "spine"},
         )
 
     @property
