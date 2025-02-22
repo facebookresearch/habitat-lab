@@ -18,6 +18,11 @@ def do_isaacsim_imports():
     from omni.isaac.core.utils.stage import add_reference_to_stage
     from omni.isaac.core.utils.types import ArticulationAction
     from pxr import PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+    from omni.isaac.core.objects.ground_plane import GroundPlane
+    import numpy as np
+    from omni.isaac.core.objects.ground_plane import GroundPlane
+    from omni.isaac.core.physics_context import PhysicsContext
+
 
     # todo: explain this hack
     globals().update(locals())
@@ -60,6 +65,11 @@ class IsaacAppWrapper:
         # sloppy: Initialize our scene here, just a ground plane.
         # todo: initialize a proper scene with objects based on the episode. But don't do this in this class.
         world.scene.add_default_ground_plane()
+
+        ####TRIED ADDING GROUND PLANE#####
+        # GroundPlane(prim_path="/World/scene/groundPlane", size=10, color=np.array([0.5, 0.5, 0.5]))
+        # PhysicsContext()
+        # GroundPlane(prim_path="/World/groundPlane",axis="Y",size=500, color=np.array([0.5, 0.5, 0.5]))
         # fancy_cube =  world.scene.add(
         #     DynamicCuboid(
         #         prim_path="/World/random_cube",
