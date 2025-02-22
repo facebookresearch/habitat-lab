@@ -205,7 +205,7 @@ def main():
 
     # urdf_path = os.path.join(data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf")
     # main_agent_config.articulated_agent_urdf = urdf_path
-    main_agent_config.articulated_agent_type = "MurpRobot"
+    main_agent_config.articulated_agent_type = "SpotRobot"
 
     # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
     # We will later talk about why we are giving the sensors these names

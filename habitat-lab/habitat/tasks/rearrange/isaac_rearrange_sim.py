@@ -132,7 +132,8 @@ class IsaacRearrangeSim(HabitatSim):
             physics_dt=self._isaac_physics_dt,
             rendering_dt=self._isaac_physics_dt,
         )
-        asset_path = "data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "data/usd/scenes/102344193_with_stage.usda"
+        asset_path = "data/usd/scenes/fremont_static.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -354,7 +355,8 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
-        asset_path = "data/usd/scenes/102344193_with_stage.usda"
+        # asset_path = "data/usd/scenes/102344193_with_stage.usda"
+        asset_path = "data/usd/scenes/fremont_static.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
@@ -538,8 +540,8 @@ class IsaacRearrangeSim(HabitatSim):
             # start_pos = self.pathfinder.get_random_navigable_point(
             #     island_index=self._largest_indoor_island_idx
             # )
-            start_pos = mn.Vector3([-3.39, 0.8, -4.8])
-            # start_pos = mn.Vector3([2.2812376, 0.7, -0.44570129])
+            # start_pos = mn.Vector3([-3.39, 0.8, -4.8])
+            start_pos = mn.Vector3([2.2812376, 0.7, -0.44570129])
 
             # start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -575,7 +577,8 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
-        navmesh_path = "data/fphab/navmeshes/102344193.navmesh"
+        # navmesh_path = "data/fphab/navmeshes/102344193.navmesh"
+        navmesh_path = "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")

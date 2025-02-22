@@ -208,6 +208,7 @@ def main():
     # urdf_path = os.path.join(data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf")
     # main_agent_config.articulated_agent_urdf = urdf_path
     main_agent_config.articulated_agent_type = "MurpRobot"
+    # main_agent_config.articulated_agent_type = "SpotRobot"
 
     # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
     # We will later talk about why we are giving the sensors these names
@@ -249,6 +250,17 @@ def main():
     )
     nav_planner = OracleNavSkill(env, nav_point)
     i = 0
+    start_position = np.array([2.0, 0.7, -1.64570129])
+    start_rotation = -90
+
+    position = mn.Vector3(start_position)
+    rotation = mn.Quaternion.rotation(
+        mn.Deg(start_rotation), mn.Vector3.y_axis()
+    )
+    trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+    env.sim.articulated_agent.base_transformation = trans
+    print("set base: ", start_position, start_rotation)
+
     for _ in range(100):
         print(
             "arm_joint_pos: ",

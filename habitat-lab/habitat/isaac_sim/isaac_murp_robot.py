@@ -108,8 +108,8 @@ class IsaacMurpRobot(IsaacMobileManipulator):
 
         murp_params = MurpRobot._get_murp_params()
         murp_params.arm_joints = arm_joints
-        murp_params.gripper_joints = [ee_index]
-        murp_params.leg_joints = leg_joints
+        murp_params.gripper_joints = leg_joints
+        # murp_params.leg_joints = leg_joints
         murp_params.arm_init_params = [
             0.0,
             0.0,

@@ -13,7 +13,7 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulatorParams,
 )
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
-from habitat.isaac_sim._internal.murp_robot_wrapper import SpotRobotWrapper
+from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
 from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
 
 
