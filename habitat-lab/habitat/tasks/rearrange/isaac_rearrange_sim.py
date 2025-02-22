@@ -133,7 +133,8 @@ class IsaacRearrangeSim(HabitatSim):
             rendering_dt=self._isaac_physics_dt,
         )
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = "data/usd/scenes/fremont_static.usda"
+        asset_path = os.path.abspath("data/usd/scenes/fremont_static.usda")
+        print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -356,7 +357,7 @@ class IsaacRearrangeSim(HabitatSim):
     def reset(self):
         SimulatorBackend.reset(self)
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = "data/usd/scenes/fremont_static.usda"
+        asset_path = os.path.abspath("data/usd/scenes/fremont_static.usda")
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
@@ -578,7 +579,9 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
         # navmesh_path = "data/fphab/navmeshes/102344193.navmesh"
-        navmesh_path = "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
+        navmesh_path = os.path.abspath(
+            "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
+        )
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")
