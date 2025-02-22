@@ -577,10 +577,10 @@ def convert_hab_scene(
             if "collision_asset" in object_config_json_data
             else object_config_json_data["render_asset"]
         )
-        
        if urdf_filepath:
             # Step 1: Convert the URDF to USD using the UrdfConverter
-            base_object_name = f"OBJECT_{collision_asset_rel_filepath.removesuffix('.urdf')}"
+            base_object_name = os.path.splitext(os.path.basename(collision_asset_rel_filepath))[0]
+            base_object_name = f"OBJECT_{base_object_name}"
             base_object_name = sanitize_usd_name(collision_asset_rel_filepath)
             out_usd_path = f"./data/usd/objects/{base_object_name}.usda"
 
@@ -975,6 +975,8 @@ def convert_object_urdf(path,out_usd_path):
 
    base_urdf_name = "FREMONT-KITCHENISLAND"
    base_urdf_folder = path
+   base_directory = "/home/joanne/habitat-lab/data/Fremont-Knuckles"
+   base_urdf_folder=os.path.normpath(os.path.join(base_directory,path))
    source_urdf_filepath = f"{base_urdf_folder}"
    clean_urdf_filepath = f"{base_urdf_folder}"
    temp_usd_filepath = out_usd_path
