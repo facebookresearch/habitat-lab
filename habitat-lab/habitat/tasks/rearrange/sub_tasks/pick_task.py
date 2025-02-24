@@ -6,7 +6,7 @@
 
 
 import random
-
+import magnum as mn
 import numpy as np
 import quaternion
 
@@ -141,7 +141,17 @@ class RearrangePickTaskV1(RearrangeTask):
         self.prev_colls = 0
 
         sel_idx = self._sample_idx(sim)
+        sel_idx = 1
+        # 1 -> white box
+        # 0 -> spam can
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
+        # Fix location
+        start_pos = mn.Vector3(-2.6196303, 0.1766345, 3.9796443)
+        start_rot = 1.0381504609239443
+
+        print(f"sel_idx: {sel_idx}")
+        print(f"start_pos: {start_pos}")
+        print(f"start_rot: {start_rot}")
 
         set_agent_base_via_obj_trans(
             start_pos, start_rot, sim.articulated_agent

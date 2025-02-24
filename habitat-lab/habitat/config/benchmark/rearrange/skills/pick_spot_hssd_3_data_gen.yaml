@@ -48,7 +48,7 @@ habitat:
         width: 228
       joint_sensor:
         dimensionality: 4
-        arm_joint_mask: [1,1,0,1,0,1,0]
+        arm_joint_mask: [1,1,0,1,0,1,0] #[1,1,0,1,0,1,0]
     actions:
       arm_action:
         arm_controller: "ArmRelPosKinematicAction"
@@ -72,6 +72,6 @@ habitat:
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
         # The real-world gaze ready location
         joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0]
-        joint_start_override_random: [[0, -2.792, 0, 1.745, 0, 1.571, 0], [0, -3.14, 0, 3.14, 0, 0, 0], [-0.046, -1.920, 0, 2.094, 0, 1.396, 0]]
+        joint_start_override_random: [[0, -3.14, 0, 3.14, 0, 0, 0]] #[[0, -2.792, 0, 1.745, 0, 1.571, 0], [0, -3.14, 0, 3.14, 0, 0, 0], [-0.046, -1.920, 0, 2.094, 0, 1.396, 0]]
   dataset:
     data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz

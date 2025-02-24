@@ -497,7 +497,10 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # Function signature: fn(save_file_path: str) -> None
     # If not specified, there is no callback.
     on_save_ckpt_callback: Optional[HydraCallbackConfig] = None
-
+    # If we want to load third party 
+    load_third_party_ckpt: bool = False
+    third_party_config_path_dir: str = "third_party/config"
+    third_party_ckpt_root_folder: str = "third_party/model"
 
 @dataclass
 class HabitatBaselinesRLConfig(HabitatBaselinesConfig):

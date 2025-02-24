@@ -652,6 +652,16 @@ class PPOTrainer(BaseRLTrainer):
             * torch.distributed.get_world_size()
         )
 
+    def load_checkpoint_vla(self, path, model):
+        """load to cpu first, then move to gpu"""
+        data = torch.load(path, weights_only=True, map_location="cpu")
+        # remove "_orig_mod." prefix if saved model was compiled
+        data["model"] = {
+            k.replace("_orig_mod.", ""): v for k, v in data["model"].items()
+        }
+        model.load_state_dict(data["model"], strict=True)
+        return model
+
     @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training DD/PPO.
@@ -800,6 +810,73 @@ class PPOTrainer(BaseRLTrainer):
 
             self.envs.close()
 
+    def _load_vla_ckpt(self, load_vla_ckpt, third_party_config_path_dir, third_party_ckpt_root_folder):
+        """load ckpt vla"""
+
+        import sys
+        # third_party_ckpt_root_folder
+        # "/data/home/jimmytyyang/facebook/vla/robot-skills"
+        sys.path.append(third_party_ckpt_root_folder)
+        import math
+
+        import hydra
+        from omegaconf import OmegaConf
+        from PIL import Image
+        from src.model.vla.processing import VLAProcessor
+        from transformers import AutoTokenizer
+
+        OmegaConf.register_new_resolver("eval", eval, replace=True)
+        OmegaConf.register_new_resolver("round_up", math.ceil)
+        OmegaConf.register_new_resolver("round_down", math.floor)
+        # import pizero model
+        from src.model.vla.pizero import PiZero, PiZeroInference
+
+        # Define the config path
+        config = OmegaConf.load(
+            #"/data/home/jimmytyyang/facebook/vla/robot-skills/config/train/mg97hv104eval_jan12v2_0.yaml"
+            third_party_config_path_dir,
+        )
+        # Make sure your config here is correct. We can also do config overwrite here if
+        # you want to do a quick hack
+        config.cond_steps = 1
+        config.use_lm_head = False
+        config.mixture.vlm.use_final_norm = False
+        config.horizon_steps = 2
+        # load the model
+        model = PiZeroInference(config, use_ddp=False)
+        model = self.load_checkpoint_vla(
+            #"/fsx-siro/jimmytyyang/vla_ckpt/vla_007_12/checkpoint/step100000.pt", #use_lm_head = False
+            #"/fsx-siro/jimmytyyang/vla_ckpt/vla_007_4/checkpoint/step250000.pt", # #use_lm_head = True
+            load_vla_ckpt,
+            model,
+        )
+        
+        model.freeze_all_weights()
+        dtype = torch.bfloat16
+        model.to(self.device)
+        model.to(dtype)
+        model = torch.compile(
+            model,
+            mode="default",  # "reduce-overhead", max-autotune(-no-cudagraphs)
+            # backend="inductor", # default: inductor; cudagraphs
+        )
+        model.eval()
+
+        # tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            config.pretrained_model_path, padding_side="right"
+        )
+        # processor
+        num_image_tokens = config.vision.config.num_image_tokens
+        processor = VLAProcessor(
+            tokenizer,
+            num_image_tokens,
+            config.max_seq_len,
+            config.tokenizer_padding,
+        )
+
+        return model, processor, config
+        
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -819,15 +896,20 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
+        model, processor, vla_config = None, None, None
         # Some configurations require not to load the checkpoint, like when using
         # a hierarchial policy
-        if self.config.habitat_baselines.eval.should_load_ckpt:
+        if self.config.habitat_baselines.eval.should_load_ckpt and not self.config.habitat_baselines.load_third_party_ckpt:
             # map_location="cpu" is almost always better than mapping to a CUDA device.
             ckpt_dict = self.load_checkpoint(
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
             logger.info(f"Loaded checkpoint trained for {step_id} steps")
+        elif self.config.habitat_baselines.eval.should_load_ckpt and self.config.habitat_baselines.load_third_party_ckpt:
+            # Starting from here to load robot-skills model
+            model, processor, vla_config = self._load_vla_ckpt(checkpoint_path, self.config.habitat_baselines.third_party_config_path_dir, self.config.habitat_baselines.third_party_ckpt_root_folder)
+            ckpt_dict = {"config": None}
         else:
             ckpt_dict = {"config": None}
 
@@ -872,11 +954,12 @@ class PPOTrainer(BaseRLTrainer):
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
 
         self._init_envs(config, is_eval=True)
-
         self._agent = self._create_agent(None)
+        # Block the loading the policy
         if (
             self._agent.actor_critic.should_load_agent_state
             and self.config.habitat_baselines.eval.should_load_ckpt
+            and not self.config.habitat_baselines.load_third_party_ckpt
         ):
             self._agent.load_state_dict(ckpt_dict)
 
@@ -886,6 +969,7 @@ class PPOTrainer(BaseRLTrainer):
 
         evaluator = hydra.utils.instantiate(config.habitat_baselines.evaluator)
         assert isinstance(evaluator, Evaluator)
+        # self._agent.actor_critic is a PointNavResNetPolicy()
         evaluator.evaluate_agent(
             self._agent,
             self.envs,
@@ -897,6 +981,9 @@ class PPOTrainer(BaseRLTrainer):
             self.obs_transforms,
             self._env_spec,
             self._rank0_keys,
+            model,
+            processor,
+            vla_config,
         )
 
         self.envs.close()

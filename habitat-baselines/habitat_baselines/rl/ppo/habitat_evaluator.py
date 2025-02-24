@@ -5,6 +5,9 @@ from typing import Any, Dict, List
 import numpy as np
 import torch
 import tqdm
+from einops import rearrange
+from PIL import Image
+import time
 
 from habitat import logger
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -31,6 +34,108 @@ class HabitatEvaluator(Evaluator):
     """
     Evaluator for Habitat environments.
     """
+    observation_dict = []
+    vla_action = []
+    depoly_one_action = True
+    vla_target_image = "articulated_agent_arm_rgb"
+    vla_target_proprio = "joint"
+
+    def process_rgb(self, rgbs, target_size):
+        # Resize the image here
+        rgbs_process = torch.zeros((rgbs.shape[0], 3, target_size, target_size))
+        for i, rgb in enumerate(rgbs):
+            img = Image.fromarray(rgb.cpu().detach().numpy())
+            img = img.resize((target_size, target_size))
+            img = np.array(img)
+            rgb = torch.as_tensor(
+                rearrange(img, "h w c-> c h w")
+            )  # torch.Size([3, 224, 224])
+            rgbs_process[i] = rgb
+        return rgbs_process
+
+    def infer_action_vla_model(self, vla_model, processor, observation, device, vla_config):
+        """Infer action using vla models."""
+
+        self.observation_dict.append(observation)
+
+        # To something on observation
+        # torch.Size([1, 256, 256, 3])
+        # python -u -m habitat_baselines.run --config-name=rearrange/rl_skill_data_gen.yaml benchmark/rearrange/skills=pick_spot_hssd_3_data_gen habitat_baselines.evaluate=True habitat_baselines.num_checkpoints=5000 habitat_baselines.total_num_steps=1.0e10 habitat_baselines.num_environments=12 habitat_baselines.video_dir=/fsx-siro/jimmytyyang/rl_log/video_mg97hv104evalJan12v2_16 habitat_baselines.checkpoint_folder=/fsx-siro/jimmytyyang/rl_log/checkpoints_mg97hv104evalJan12v2_16 habitat_baselines.eval_ckpt_path_dir=/fsx-siro/jimmytyyang/rl_log/checkpoints_mg97hv104_16/latest.pth habitat_baselines.test_episode_count=100 habitat.task.actions.base_velocity_non_cylinder.longitudinal_lin_speed=1 habitat.task.actions.base_velocity_non_cylinder.ang_speed=2.0 habitat.task.actions.base_velocity_non_cylinder.allow_dyn_slide=False habitat.task.actions.arm_action.delta_pos_limit=0.01667 'habitat.task.actions.arm_action.gaze_distance_range=[0.0,0.5]' habitat.task.actions.arm_action.consider_detected_portion_threshold=0.25 'habitat.task.actions.arm_action.arm_joint_limit=[[-1.5708,1.5708],[-3.1415,0.0000],[0,3.1415],[-1.5708,1.5708]]' 'habitat.task.actions.base_velocity_non_cylinder.navmesh_offset=[[0.0,0.0],[0.25,0.0],[-0.25,0.0]]' habitat.task.measurements.pick_reward.dist_reward=20.0 habitat.task.measurements.pick_reward.wrong_pick_pen=5.0 habitat.task.measurements.pick_reward.count_coll_pen=0.05 habitat.task.measurements.pick_reward.max_count_colls=100 habitat.task.measurements.pick_reward.count_coll_end_pen=5 habitat.task.measurements.pick_reward.non_desire_ee_local_pos_dis=0.2 habitat.task.measurements.pick_reward.non_desire_ee_local_pos_pen=5.0 'habitat.task.measurements.pick_reward.non_desire_ee_local_pos=[0.3,0.0,0.0]' habitat.task.measurements.pick_reward.camera_looking_down_angle=-1.0 habitat.task.measurements.pick_reward.camera_looking_down_pen=5.0 habitat.task.measurements.end_effector_to_object_distance.if_consider_gaze_angle=False habitat.task.measurements.end_effector_to_object_distance.desire_distance_between_gripper_object=0.1 habitat.task.measurements.end_effector_to_object_distance.if_consider_detected_portion=True habitat.task.success_reward=10.0 habitat.task.slack_reward=-0.01 habitat.task.base_angle_noise=0.261799 habitat.task.spawn_max_dist_to_obj=1.5 habitat.environment.max_episode_steps=1500 habitat.simulator.kinematic_mode=True habitat.simulator.ac_freq_ratio=4 habitat.simulator.ctrl_freq=120 habitat.simulator.agents.main_agent.joint_start_noise=0.15 habitat_baselines.load_resume_state_config=False
+
+        # observation has dict_keys([
+        # 'arm_depth_bbox_sensor', 'articulated_agent_arm_depth',
+        # 'articulated_agent_arm_rgb', 'ee_pos',
+        # 'head_stereo_left_depth', 'head_stereo_right_depth',
+        # 'joint', 'third_rgb'])
+        
+        # Confirm the number of batches 
+        bsz = observation[self.vla_target_image].shape[0]
+        #print(f"bsz: {bsz}")
+        joint_sensors = None
+        dummy_images = torch.randint(
+            0, 256, (bsz, vla_config.cond_steps, 3, vla_config.image_size, vla_config.image_size), dtype=torch.uint8
+        )
+        dummy_proprio = torch.zeros((bsz, vla_config.cond_steps, vla_config.proprio_dim))
+        #print("------")
+        if len(self.observation_dict) < vla_config.cond_steps:
+            store_size = len(self.observation_dict)
+            for i in range(store_size):
+                dummy_images[:, vla_config.cond_steps-i-1] = self.process_rgb(self.observation_dict[-i-1][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, vla_config.cond_steps-i-1] = self.observation_dict[-i-1][self.vla_target_proprio]
+                #print(f"input* i {vla_config.cond_steps-i-1} -> data i {-i-1}")
+            # Pad the image one with the last image
+            for i in range(vla_config.cond_steps-store_size):
+                dummy_images[:, i] = self.process_rgb(self.observation_dict[0][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, i] = self.observation_dict[0][self.vla_target_proprio]
+                #print(f"input* i {i} -> data i {0}")
+        else:
+            for i in range(vla_config.cond_steps):
+                dummy_images[:, i] = self.process_rgb(self.observation_dict[i-vla_config.cond_steps][self.vla_target_image], vla_config.image_size)
+                dummy_proprio[:, i] = self.observation_dict[i-vla_config.cond_steps][self.vla_target_proprio]
+                #print(f"input i {i} -> data i {i-vla_config.cond_steps}")
+
+        dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
+
+        # TODO: get the text
+        dummy_texts = [
+            "pick up the object that is near you",
+        ] * bsz
+
+        dtype = torch.bfloat16
+        # process image and text
+        model_inputs = processor(text=dummy_texts, images=dummy_images)
+        model_inputs["pixel_values"] = rearrange(
+            model_inputs["pixel_values"],
+            "(B T) C H W -> B T C H W",
+            B=bsz,
+            T=vla_config.cond_steps,
+        )
+        (
+            causal_mask,
+            vlm_position_ids,
+            proprio_position_ids,
+            action_position_ids,
+        ) = vla_model.build_causal_mask_and_position_ids(
+            model_inputs["attention_mask"], dtype=dtype
+        )
+        (
+            image_text_proprio_mask,
+            action_mask,
+        ) = vla_model.split_full_mask_into_submasks(causal_mask)
+        with torch.inference_mode():
+            start_time = time.time()
+            actions = vla_model.infer_action(
+                input_ids=model_inputs["input_ids"].to(device),
+                pixel_values=model_inputs["pixel_values"].to(dtype).to(device),
+                image_text_proprio_mask=image_text_proprio_mask.to(device),
+                action_mask=action_mask.to(device),
+                vlm_position_ids=vlm_position_ids.to(device),
+                proprio_position_ids=proprio_position_ids.to(device),
+                action_position_ids=action_position_ids.to(device),
+                proprios=dummy_proprio.to(dtype).to(device),
+            )  # [bsz, horizon, dim]
+            print(f"time taken to generate actions: {time.time()-start_time}")
+        return actions
 
     def evaluate_agent(
         self,
@@ -44,11 +149,15 @@ class HabitatEvaluator(Evaluator):
         obs_transforms,
         env_spec,
         rank0_keys,
+        vla_model=None,
+        vla_processor=None,
+        vla_config=None,
     ):
         observations = envs.reset()
         observations = envs.post_step(observations)
         batch = batch_obs(observations, device=device)
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
+        #self._episode_iterator.set_next_episode_by_id(episode_id)
 
         action_shape, discrete_actions = get_action_space_info(
             agent.actor_critic.policy_action_space
@@ -137,9 +246,7 @@ class HabitatEvaluator(Evaluator):
             ]
             # list of env -> list of the the time -> key of observations and action
             observation_action_of_interest: List[List[Dict[Any, int]]] = [
-                [
-                    {k: v[env_idx] for k, v in batch.items()}
-                ]
+                [{k: v[env_idx] for k, v in batch.items()}]
                 for env_idx in range(config.habitat_baselines.num_environments)
             ]
         else:
@@ -164,7 +271,8 @@ class HabitatEvaluator(Evaluator):
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
             else:
-                assert evals_per_ep == 1
+                print("pass")
+                #assert evals_per_ep == 1
         assert (
             number_of_eval_episodes > 0
         ), "You must specify a number of evaluation episodes with test_episode_count"
@@ -253,9 +361,28 @@ class HabitatEvaluator(Evaluator):
 
             # Add the action to the dict
             for env_idx in range(config.habitat_baselines.num_environments):
-                observation_action_of_interest[env_idx][-1]["action"] = step_data[env_idx]
-            outputs = envs.step(step_data)
+                observation_action_of_interest[env_idx][-1][
+                    "action"
+                ] = step_data[env_idx]
 
+            if (self.vla_action == [] or self.depoly_one_action) and config.habitat_baselines.load_third_party_ckpt:
+                self.vla_action = []
+                vla_action = self.infer_action_vla_model(
+                    vla_model, vla_processor, batch, device, vla_config
+                )
+                # Make the time horizon as a leading dimension
+                vla_action = rearrange(vla_action, "b h a-> h b a")
+                for vla_a_time in vla_action:
+                    vla_temp = []
+                    for vla_a_batch in vla_a_time:
+                        vla_temp.append(vla_a_batch.cpu().detach().float().numpy())
+                    self.vla_action.append(vla_temp)
+
+            if config.habitat_baselines.load_third_party_ckpt:
+                outputs = envs.step(self.vla_action.pop(0))
+            else:
+                outputs = envs.step(step_data)
+            
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
@@ -274,7 +401,6 @@ class HabitatEvaluator(Evaluator):
                 device=device,
             )
             batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
-
             # TODO: better way to handle this
             if transformer_based_policy:
                 cur_not_done_masks = torch.tensor(
@@ -344,7 +470,7 @@ class HabitatEvaluator(Evaluator):
 
                     # Get the observation of the interest
                     obs_of_interest = {k: v[i] for k, v in batch.items()}
-                    
+
                     # Get the action of the interest
 
                     if transformer_based_policy:
@@ -370,13 +496,21 @@ class HabitatEvaluator(Evaluator):
                         rgb_frames[i].append(frame)
 
                         # Mimic the way of processing the frame
-                        final_obs_of_interest =  {k: v[i] * 0.0 for k, v in batch.items()}
-                        observation_action_of_interest[i].append(final_obs_of_interest)
-                        observation_action_of_interest[i].append(obs_of_interest)
+                        final_obs_of_interest = {
+                            k: v[i] * 0.0 for k, v in batch.items()
+                        }
+                        observation_action_of_interest[i].append(
+                            final_obs_of_interest
+                        )
+                        observation_action_of_interest[i].append(
+                            obs_of_interest
+                        )
                     else:
                         frame = overlay_frame(frame, disp_info)
                         rgb_frames[i].append(frame)
-                        observation_action_of_interest[i].append(obs_of_interest)
+                        observation_action_of_interest[i].append(
+                            obs_of_interest
+                        )
 
                 # TODO: Better way to handle transformer done masks
                 if transformer_based_policy:
@@ -403,6 +537,8 @@ class HabitatEvaluator(Evaluator):
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
                     if len(config.habitat_baselines.eval.video_option) > 0:
+                        self.observation_dict = [] # reset
+                        self.vla_action = [] # reset
                         generate_video(
                             video_option=config.habitat_baselines.eval.video_option,
                             video_dir=config.habitat_baselines.video_dir,
@@ -414,11 +550,18 @@ class HabitatEvaluator(Evaluator):
                             fps=config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=config.habitat_baselines.eval_keys_to_include_in_name,
-                            save_observation_action_of_interest=observation_action_of_interest[i][:-1],
+                            save_observation_action_of_interest=observation_action_of_interest[
+                                i
+                            ][
+                                :-1
+                            ],
+                            debug=False,
                         )
                         # Since the starting frame of the next episode is the final frame.
                         rgb_frames[i] = rgb_frames[i][-1:]
-                        observation_action_of_interest[i] = observation_action_of_interest[i][-1:]
+                        observation_action_of_interest[
+                            i
+                        ] = observation_action_of_interest[i][-1:]
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":
@@ -449,7 +592,7 @@ class HabitatEvaluator(Evaluator):
                 batch,
                 rgb_frames,
                 transformer_based_policy,
-                observation_action_of_interest
+                observation_action_of_interest,
             )
 
             # TODO: Porpose a fix so that the env is paused on HRL policy
