@@ -30,7 +30,11 @@ class MurpRobotWrapper:
 
         self._isaac_service = isaac_service
         # asset_path = "./data/usd/robots/murp_tmr_franka_metahand.usda"
-        asset_path = "./data/usd/robots/murp_tmr_franka_metahand_cleaned.usda"
+        # asset_path = "./data/usd/robots/murp_tmr_franka_metahand_cleaned.usda"
+        asset_path = (
+            "./data/usd/robots/murp_tmr_franka_metahand_cleaned_no_reskin.usda"
+        )
+        # asset_path = ( "./data/usd/robots/murp_tmr_franka_metahand_cleaned_isaac.usda" )
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -191,7 +195,7 @@ class MurpRobotWrapper:
         )
 
         # todo: specify this in isaac_spot_robot.py
-        arm_joint_names = [
+        arm_left_joint_names = [
             "fr3_one_joint1",
             "fr3_one_joint2",
             "fr3_one_joint3",
@@ -201,25 +205,44 @@ class MurpRobotWrapper:
             "fr3_one_joint7",
         ]
 
-        arm_joint_indices = []
+        arm_right_joint_names = [
+            "fr3_two_joint1",
+            "fr3_two_joint2",
+            "fr3_two_joint3",
+            "fr3_two_joint4",
+            "fr3_two_joint5",
+            "fr3_two_joint6",
+            "fr3_two_joint7",
+        ]
+
+        arm_left_joint_indices = []
+        arm_right_joint_indices = []
         dof_names = self._robot.dof_names
         print("dof names: ", dof_names)
         assert len(dof_names) > 0
-        for arm_joint_name in arm_joint_names:
-            arm_joint_indices.append(dof_names.index(arm_joint_name))
+        for arm_joint_name in arm_left_joint_names:
+            arm_left_joint_indices.append(dof_names.index(arm_joint_name))
 
-        self._arm_joint_indices = np.array(arm_joint_indices)
+        for arm_joint_name in arm_right_joint_names:
+            arm_right_joint_indices.append(dof_names.index(arm_joint_name))
+
+        self._arm_joint_indices = np.array(arm_right_joint_indices)
+        self._arm_left_joint_indices = np.array(arm_left_joint_indices)
         # self._target_arm_joint_positions = None
         # self._target_arm_joint_positions = [0.0, -2.36, 0.0, 2.25, 0.0, 1.67, 0.0, -1.67]
-        self._target_arm_joint_positions = [
-            0.0,
-            -2.0943951,
-            0.0,
-            1.04719755,
-            0.0,
-            1.53588974,
-            0.0,
-        ]
+        rest = np.array(
+            [
+                2.6116285,
+                1.5283098,
+                1.0930868,
+                -0.50559217,
+                0.48147443,
+                2.628784,
+                -1.3962275,
+            ]
+        )
+        self._target_arm_left_joint_positions = rest
+        self._target_arm_joint_positions = rest
 
     def scale_prim_mass_and_inertia(self, path, scale):
 
@@ -363,6 +386,19 @@ class MurpRobotWrapper:
                 )
             )
 
+    def drive_left_arm(self, step_size):
+
+        if np.array(self._target_arm_left_joint_positions).any():
+            assert len(self._target_arm_left_joint_positions) == len(
+                self._arm_left_joint_indices
+            )
+            self._robot_controller.apply_action(
+                ArticulationAction(
+                    joint_positions=self._target_arm_left_joint_positions,
+                    joint_indices=self._arm_left_joint_indices,
+                )
+            )
+
     def fix_base(self, step_size, base_position, base_orientation):
 
         self.fix_base_height_via_linear_vel_z(
@@ -376,6 +412,7 @@ class MurpRobotWrapper:
         base_position, base_orientation = self._robot.get_world_pose()
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
+        self.drive_left_arm(step_size)
         self.drive_legs()
         self._step_count += 1
 
@@ -385,6 +422,17 @@ class MurpRobotWrapper:
         robot_joint_positions = self._robot.get_joint_positions()
         arm_joint_positions = np.array(
             [robot_joint_positions[i] for i in self._arm_joint_indices],
+            dtype=np.float32,
+        )
+
+        return arm_joint_positions
+
+    @property
+    def arm_left_joint_pos(self):
+        """Get the current arm joint positions."""
+        robot_joint_positions = self._robot.get_joint_positions()
+        arm_joint_positions = np.array(
+            [robot_joint_positions[i] for i in self._arm_left_joint_indices],
             dtype=np.float32,
         )
 

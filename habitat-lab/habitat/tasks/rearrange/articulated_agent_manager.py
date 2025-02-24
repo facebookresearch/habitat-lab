@@ -251,6 +251,10 @@ class ArticulatedAgentManager:
                     agent_data.cfg.ik_arm_urdf,
                     agent_data.start_js,
                 )
+            else:
+                print(
+                    f"Not initializing IK helper. IK arm urdf: {agent_data.cfg.ik_arm_urdf}, IK Arm URDF is not None: {ik_arm_urdf is not None}, is_pb_installed: {self._is_pb_installed}"
+                )
 
     def update_agents(self):
         """

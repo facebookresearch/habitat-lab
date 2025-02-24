@@ -42,7 +42,7 @@ from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 
-data_path = "/fsx-siro/xavierpuig/projects/habitat_isaac/habitat-lab/data/"
+data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
 
 
 def make_sim_cfg(agent_dict):
@@ -201,14 +201,35 @@ class OracleNavSkill:
         return action
 
 
+def process_obs_img(obs):
+    im = obs["third_rgb"]
+    im2 = obs["articulated_agent_arm_rgb"]
+    im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+    imt = np.zeros(im.shape, dtype=np.uint8)
+    imt[: im2.shape[0], : im2.shape[1], :] = im2
+    imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+    imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+    imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+    im = np.concatenate([im, imt], 1)
+    return im
+
+
 def main():
     # Define the agent configuration
     main_agent_config = AgentConfig()
 
-    # urdf_path = os.path.join(data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf")
-    # main_agent_config.articulated_agent_urdf = urdf_path
+    urdf_path = os.path.join(
+        data_path,
+        "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_obj.urdf",
+    )
+    arm_urdf_path = os.path.join(
+        data_path,
+        "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_right_arm_obj.urdf",
+    )
+    main_agent_config.urdf = urdf_path
     main_agent_config.articulated_agent_type = "MurpRobot"
     # main_agent_config.articulated_agent_type = "SpotRobot"
+    main_agent_config.ik_arm_urdf = arm_urdf_path
 
     # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
     # We will later talk about why we are giving the sensors these names
@@ -225,7 +246,7 @@ def main():
         "base_velocity_action": BaseVelocityActionConfig(
             type="BaseVelKinematicIsaacAction"
         ),
-        "arm_reach_action": ActionConfig(type="ArmReachAction"),
+        "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
     }
     env = init_rearrange_env(agent_dict, action_dict)
 
@@ -261,29 +282,87 @@ def main():
     env.sim.articulated_agent.base_transformation = trans
     print("set base: ", start_position, start_rotation)
 
-    for _ in range(100):
-        print(
-            "arm_joint_pos: ",
-            env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
-        )
-        action = {
-            "action": "base_velocity_action",
+    # for _ in range(100):
+    #     print(
+    #         "arm_joint_pos: ",
+    #         env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
+    #     )
+    #     action = {
+    #         "action": "base_velocity_action",
+    #         "action_args": {
+    #             "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+    #         },
+    #     }
+    #     obs = env.step(action)
+    #     im = process_obs_img(obs)
+    #     writer.append_data(im)
+
+    ctr = 0
+    timeout = 500
+    curr_left_joint_pos = (
+        env.sim.articulated_agent._robot_wrapper.arm_left_joint_pos
+    )
+    curr_right_joint_pos = (
+        env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    )
+    print("curr_left_joint_pos: ", curr_left_joint_pos)
+    print("curr_right_joint_pos: ", curr_right_joint_pos)
+    target_joint_pos = np.array(
+        [-1.57, -1.57, -1.57, -1.57, -1.57, -1.57, -1.57]
+    )
+    # while not np.allclose(
+    #     curr_left_joint_pos,
+    #     target_joint_pos,
+    #     atol=0.003,
+    # ):
+    #     env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+    #         target_joint_pos
+    #     )
+    #     action = {
+    #         "action": "base_velocity_action",
+    #         "action_args": {
+    #             "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+    #         },
+    #     }
+    #     curr_left_joint_pos = (
+    #         env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+    #     )
+    #     print("curr_left_joint_pos: ", curr_left_joint_pos)
+    #     ctr += 1
+    #     obs = env.step(action)
+    #     im = process_obs_img(obs)
+    #     writer.append_data(im)
+    #     if ctr > timeout:
+    #         break
+
+    target_ee_pos = env.sim._rigid_objects[0].translation
+    ctr = 0
+    curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+    while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.16):
+        target_ee_pos_shift = target_ee_pos
+        arm_reach = {
+            "action": "arm_reach_ee_action",
             "action_args": {
-                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+                "target_pos": np.array(target_ee_pos_shift, dtype=np.float32)
             },
         }
-        obs = env.step(action)
-        im = obs["third_rgb"]
-        im2 = obs["articulated_agent_arm_rgb"]
-        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-        imt = np.zeros(im.shape, dtype=np.uint8)
-        imt[: im2.shape[0], : im2.shape[1], :] = im2
-        imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
-        imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
-        imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
 
-        im = np.concatenate([im, imt], 1)
+        obs = env.step(arm_reach)
+        curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
+        curr_left_joint_pos = (
+            env.sim.articulated_agent._robot_wrapper.arm_left_joint_pos
+        )
+        curr_right_joint_pos = (
+            env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        print("curr_ee_pos: ", curr_ee_pos, target_ee_pos)
+        print("curr_left_joint_pos: ", curr_left_joint_pos)
+        print("curr_right_joint_pos: ", curr_right_joint_pos)
+        im = process_obs_img(obs)
         writer.append_data(im)
+        ctr += 1
+        if ctr > 300:
+            break
 
     writer.close()
 
