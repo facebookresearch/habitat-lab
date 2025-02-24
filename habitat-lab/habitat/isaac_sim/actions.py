@@ -67,9 +67,15 @@ class ArmReachEEAction(ArmEEAction):
         self._use_ee_rot = self._config.get("use_ee_rot", False)
 
     def reset(self, *args, **kwargs):
-        self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent._robot_wrapper.arm_joint_pos)
-        )
+        try:
+            self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                np.array(
+                    self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                )
+            )
+        except:
+            self.ee_target = None
+            self.ee_rot_target = None
 
     def calc_desired_joints(self):
         joint_pos = np.array(
