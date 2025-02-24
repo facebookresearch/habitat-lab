@@ -515,6 +515,8 @@ class AppStateIsaacSimViewer(AppState):
         pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 1.0, -5.2])
         self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
+        self.init_mujoco()
+
         self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]
         self._did_function_load_fail = False
 
@@ -546,6 +548,47 @@ class AppStateIsaacSimViewer(AppState):
         self._timer = 0.0
 
         self.init_mouse_raycaster()
+
+        pass
+
+
+    def init_mujoco(self):
+
+        # temp hack deferred import
+        from habitat.mujoco.mujoco_app_wrapper import MuJoCoAppWrapper
+
+        self._mj_dt = 1.0 / 120
+        self._mj_wrapper = MuJoCoAppWrapper(self._sim)
+        self._mj_wrapper.load_model_from_xml(
+            "/home/eric/projects/habitat-lab5/data_vc/mujoco/scenes/test_scene.xml",
+            "/home/eric/projects/habitat-lab5/data_vc/mujoco/scenes/test_scene.render_map.json",
+            )
+        self._mj_wrapper._model.opt.timestep = self._mj_dt
+
+
+    def update_mujoco(self, dt, post_sim_update_dict):
+
+        approx_app_fps = 30
+        num_steps = int(1.0 / (approx_app_fps * self._mj_dt))
+        self._mj_wrapper.step(num_steps=num_steps)
+        self._mj_wrapper._visualizer.flush_to_hab_sim()
+
+        # data = self._mj_wrapper.data
+        # model = self._mj_wrapper.model
+
+        # geom_name = "thingy_geom1"  # Replace with your geom name
+        # import mujoco # temp hack deferred import
+        # geom_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
+        # assert geom_id != -1
+
+        # geom_position = data.geom_xpos[geom_id]  # 3D position (x, y, z)
+        # geom_rotation_matrix = data.geom_xmat[geom_id].reshape(3, 3)  # 3×3 rotation matrix
+
+        # body_name = "thingy_instance1"
+        # body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+        # assert body_id != -1
+        # body_position = data.xpos[body_id]  # 3D position (x, y, z)
+        # body_orientation = data.xquat[body_id]  # Quaternion (w, x, y, z)
 
         pass
 
@@ -1329,6 +1372,8 @@ class AppStateIsaacSimViewer(AppState):
         self.update_mouse_raycaster(dt)
 
         self.update_isaac(post_sim_update_dict)
+
+        self.update_mujoco(dt, post_sim_update_dict)
 
         do_show_vr_cam_pose = False
         vr_cam_pose = self.get_vr_camera_pose()
