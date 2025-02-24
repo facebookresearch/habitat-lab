@@ -191,6 +191,7 @@ class MurpRobotWrapper:
         self._isaac_service.world.add_physics_callback(
             f"{self._name}_physics_callback", callback_fn=self.physics_callback
         )
+        print("added murp robot callback 12312")
 
         # todo: specify this in isaac_spot_robot.py
         arm_left_joint_names = [

@@ -90,8 +90,8 @@ class MurpRobot(MobileManipulator):
     @classmethod
     def _get_murp_params(cls):
         return MurpParams(
-            arm_joints=list(range(0, 7)),
-            gripper_joints=[7],
+            arm_joints=[0, 2, 4, 6, 8, 10, 12],
+            gripper_joints=[19],
             leg_joints=list(range(8, 20)),
             arm_init_params=[
                 2.6116285,
