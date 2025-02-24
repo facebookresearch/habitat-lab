@@ -91,15 +91,24 @@ class SpotStateMachine:
         self._get_pick_target_pos = None
 
         self._spot_wrapper._target_arm_joint_positions = [
-            0.0,
-            -2.36,
-            0.0,
-            2.25,
-            0.0,
-            1.67,
-            0.0,
-            0.0,
-        ]
+                2.6116285,
+                1.5283098,
+                1.0930868,
+                -0.50559217,
+                0.48147443,
+                2.628784,
+                -1.3962275,
+            ]
+        # self._spot_wrapper._target_arm_joint_positions = [
+        #     0.0,
+        #     -2.0943951,
+        #     0.0,
+        #     1.04719755,
+        #     0.0,
+        #     1.53588974,
+        #     0.0,
+        #     -1.57,
+        # ]
 
         pos_usd = isaac_prim_utils.habitat_to_usd_position(
             [-4.0, 0.8, -3.5]
@@ -559,7 +568,7 @@ class AppStateIsaacSimViewer(AppState):
         )
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"  # YOUR_PATH
+        asset_path = "/home/joanne/habitat-lab/data/usd/scenes/fremont_static_objects.usda"  # YOUR_PATH
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -569,11 +578,15 @@ class AppStateIsaacSimViewer(AppState):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        from habitat.isaac_sim._internal.spot_robot_wrapper import (
-            SpotRobotWrapper,
+        from habitat.isaac_sim._internal.murp_robot_wrapper import (
+            MurpRobotWrapper,
         )
+        # from habitat.isaac_sim._internal.spot_robot_wrapper import (
+        #     SpotRobotWrapper,
+        # )
 
-        self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
+
+        self._spot_wrapper = MurpRobotWrapper(self._isaac_wrapper.service)
 
         from habitat.isaac_sim._internal.metahand_robot_wrapper import (
             MetahandRobotWrapper,
@@ -615,7 +628,7 @@ class AppStateIsaacSimViewer(AppState):
 
         # position spot near table
         # pos_usd = isaac_prim_utils.habitat_to_usd_position([-7.9, 1.0, -6.4])
-        pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 1.0, -5.2])
+        pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 0.0, -5.2])
         self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
         self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]

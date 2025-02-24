@@ -885,9 +885,9 @@ def add_habitat_visual_metadata_for_articulation(
                     scale = (1.0, 1.0, 1.0)  # Default scale
 
                     # Check for scale in the <mesh> element
-                    scale_element = mesh.find("scale")
+                    scale_element = mesh.get("scale")
                     if scale_element is not None:
-                        scale = tuple(map(float, scale_element.text.split()))
+                        scale = tuple(map(float, scale_element.split()))
 
                     # Replace periods with underscores for USD-safe names
                     safe_link_name = link_name.replace(".", "_")
@@ -950,15 +950,15 @@ def add_habitat_visual_metadata_for_articulation(
 
 
 def convert_urdf_test():
-    base_urdf_name = "hab_spot_arm"
-    base_urdf_folder = "data/robots/hab_spot_arm/urdf"
+    base_urdf_name = "murp_tmr_franka_metahand"
+    base_urdf_folder = "data/hab_murp/murp_tmr_franka"
     # base_urdf_name = "allegro_digit360_right_calib_free"
     # base_urdf_folder = "data/from_gum"
 
     source_urdf_filepath = f"{base_urdf_folder}/{base_urdf_name}.urdf"
     # create clean urdf with `python clean_urdf_xml.py --input_file [source_urdf_filepath] --output_file [clean_urdf_filepath] --remove_visual`
     # todo: combine cleaning and converting into single user-friendly function
-    clean_urdf_filepath = f"{base_urdf_folder}/{base_urdf_name}_clean.urdf"
+    clean_urdf_filepath = f"{base_urdf_folder}/{base_urdf_name}.urdf"
 
     # Temp USD must be in same folder as final USD. It's okay to be the exact same file.
     temp_usd_filepath = f"data/usd/robots/{base_urdf_name}.usda"
@@ -1018,7 +1018,7 @@ def convert_objects_folder_to_usd(
 if __name__ == "__main__":
     # example usage:
 
-    # convert_urdf_test()
+    convert_urdf_test()
     # convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./", enable_collision_for_stage=True)
     # convert_objects_folder_to_usd(
     #     "data/objects/ycb", "data/usd/objects/ycb/configs_v2", "./"
@@ -1039,9 +1039,9 @@ if __name__ == "__main__":
     #     project_root_folder="./",
     #     enable_collision_for_stage=True,
     # )
-    convert_hab_scene(
-       "data/Fremont-Knuckles/configs/scenes/fremont_static_objects.scene_instance.json",
-       project_root_folder="./",
-       enable_collision_for_stage=True,
-   )
+#     convert_hab_scene(
+#        "data/Fremont-Knuckles/configs/scenes/fremont_static_objects.scene_instance.json",
+#        project_root_folder="./",
+#        enable_collision_for_stage=True,
+#    )
 
