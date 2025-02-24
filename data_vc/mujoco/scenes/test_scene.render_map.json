@@ -1,0 +1,24 @@
+{
+    "render_map": {
+        "apple_geom0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/habitat-lab5/data/objects/ycb/meshes/013_apple/google_16k/textured.glb",
+            "semantic_id": 1
+        },
+        "thingy_geom0": {
+            "is_dynamic": false,
+            "render_asset_filepath": "/home/eric/projects/hssd-hab/objects/0/00a1a59b75fae9b7e42a128ce2249158dfa7d847.glb",
+            "semantic_id": 2
+        },
+        "thingy_geom1": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/hssd-hab/objects/0/00a1a59b75fae9b7e42a128ce2249158dfa7d847.glb",
+            "semantic_id": 3
+        },
+        "thingy_geom2": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/hssd-hab/objects/0/00a1a59b75fae9b7e42a128ce2249158dfa7d847.glb",
+            "semantic_id": 4
+        }
+    }
+}
