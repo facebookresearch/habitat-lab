@@ -838,10 +838,10 @@ class PPOTrainer(BaseRLTrainer):
         )
         # Make sure your config here is correct. We can also do config overwrite here if
         # you want to do a quick hack
-        config.cond_steps = 2
-        config.use_lm_head = True
-        config.mixture.vlm.use_final_norm = True
-        config.horizon_steps = 4
+        config.cond_steps = 1
+        config.use_lm_head = False
+        config.mixture.vlm.use_final_norm = False
+        config.horizon_steps = 2
         # load the model
         model = PiZeroInference(config, use_ddp=False)
         model = self.load_checkpoint_vla(
@@ -850,7 +850,7 @@ class PPOTrainer(BaseRLTrainer):
             load_vla_ckpt,
             model,
         )
-
+        
         model.freeze_all_weights()
         dtype = torch.bfloat16
         model.to(self.device)
@@ -896,7 +896,7 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
-        model, processor = None, None
+        model, processor, vla_config = None, None, None
         # Some configurations require not to load the checkpoint, like when using
         # a hierarchial policy
         if self.config.habitat_baselines.eval.should_load_ckpt and not self.config.habitat_baselines.load_third_party_ckpt:

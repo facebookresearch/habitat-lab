@@ -250,7 +250,10 @@ class Env:
             self._episode_iterator is not None
             and self._episode_from_iter_on_reset
         ):
+            # Forcefully use episode id zero for testing
+            #self._episode_iterator.set_next_episode_by_id("0")
             self._current_episode = next(self._episode_iterator)
+            print(f"check the current episode id: {self._current_episode.episode_id}")
 
         # This is always set to true after a reset that way
         # on the next reset an new episode is taken (if possible)

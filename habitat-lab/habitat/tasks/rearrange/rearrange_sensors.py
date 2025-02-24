@@ -1282,7 +1282,7 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         reward = 0.0
 
         # For force collision reward (userful for dynamic simulation)
-        reward += self._get_coll_reward()
+        reward += 0 #self._get_coll_reward()
 
         # For count-based collision reward and termination (userful for kinematic simulation)
         if self._want_count_coll():
@@ -1295,9 +1295,10 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             reward -= self._config.constraint_violate_pen
 
         # For force termination
-        force_terminate = task.measurements.measures[
-            ForceTerminate.cls_uuid
-        ].get_metric()
+        # force_terminate = task.measurements.measures[
+        #     ForceTerminate.cls_uuid
+        # ].get_metric()
+        force_terminate = False
         if force_terminate:
             reward -= self._config.force_end_pen
 

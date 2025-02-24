@@ -82,6 +82,8 @@ class HabDemoRunner:
         profile_sums = defaultdict(lambda: 0)  # type: ignore[var-annotated]
 
         for step_idx in range(self.args.n_steps):
+            if self.envs.episode_over:
+                break
             # print(f"step_idx = {step_idx}")
             actions = self.get_actions(step_idx)  # type: ignore[has-type]
 
@@ -98,9 +100,10 @@ class HabDemoRunner:
             from habitat_sim.utils import viz_utils as vut
 
             # TODO: setup an optional 3rd person render camera for debugging
-            sensor_to_use = "third_rgb"
+            sensor_to_use = "head_rgb"
             if "agent_1_head_depth" not in final_vid[0]:
                 sensor_to_use = "third_rgb"
+            breakpoint()
             vut.make_video(
                 final_vid,
                 sensor_to_use,

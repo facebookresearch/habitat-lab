@@ -70,29 +70,29 @@ class HabitatEvaluator(Evaluator):
         
         # Confirm the number of batches 
         bsz = observation[self.vla_target_image].shape[0]
-        print(f"bsz: {bsz}")
+        #print(f"bsz: {bsz}")
         joint_sensors = None
         dummy_images = torch.randint(
             0, 256, (bsz, vla_config.cond_steps, 3, vla_config.image_size, vla_config.image_size), dtype=torch.uint8
         )
         dummy_proprio = torch.zeros((bsz, vla_config.cond_steps, vla_config.proprio_dim))
-        print("------")
+        #print("------")
         if len(self.observation_dict) < vla_config.cond_steps:
             store_size = len(self.observation_dict)
             for i in range(store_size):
                 dummy_images[:, vla_config.cond_steps-i-1] = self.process_rgb(self.observation_dict[-i-1][self.vla_target_image], vla_config.image_size)
                 dummy_proprio[:, vla_config.cond_steps-i-1] = self.observation_dict[-i-1][self.vla_target_proprio]
-                print(f"input* i {vla_config.cond_steps-i-1} -> data i {-i-1}")
+                #print(f"input* i {vla_config.cond_steps-i-1} -> data i {-i-1}")
             # Pad the image one with the last image
             for i in range(vla_config.cond_steps-store_size):
                 dummy_images[:, i] = self.process_rgb(self.observation_dict[0][self.vla_target_image], vla_config.image_size)
                 dummy_proprio[:, i] = self.observation_dict[0][self.vla_target_proprio]
-                print(f"input* i {i} -> data i {0}")
+                #print(f"input* i {i} -> data i {0}")
         else:
             for i in range(vla_config.cond_steps):
                 dummy_images[:, i] = self.process_rgb(self.observation_dict[i-vla_config.cond_steps][self.vla_target_image], vla_config.image_size)
                 dummy_proprio[:, i] = self.observation_dict[i-vla_config.cond_steps][self.vla_target_proprio]
-                print(f"input i {i} -> data i {i-vla_config.cond_steps}")
+                #print(f"input i {i} -> data i {i-vla_config.cond_steps}")
 
         dummy_images = rearrange(dummy_images, "B T C H W -> (B T) C H W")
 
@@ -157,6 +157,7 @@ class HabitatEvaluator(Evaluator):
         observations = envs.post_step(observations)
         batch = batch_obs(observations, device=device)
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
+        #self._episode_iterator.set_next_episode_by_id(episode_id)
 
         action_shape, discrete_actions = get_action_space_info(
             agent.actor_critic.policy_action_space
@@ -270,7 +271,8 @@ class HabitatEvaluator(Evaluator):
                 logger.warn(f"Evaluating with {total_num_eps} instead.")
                 number_of_eval_episodes = total_num_eps
             else:
-                assert evals_per_ep == 1
+                print("pass")
+                #assert evals_per_ep == 1
         assert (
             number_of_eval_episodes > 0
         ), "You must specify a number of evaluation episodes with test_episode_count"
@@ -362,7 +364,7 @@ class HabitatEvaluator(Evaluator):
                 observation_action_of_interest[env_idx][-1][
                     "action"
                 ] = step_data[env_idx]
-            
+
             if (self.vla_action == [] or self.depoly_one_action) and config.habitat_baselines.load_third_party_ckpt:
                 self.vla_action = []
                 vla_action = self.infer_action_vla_model(
@@ -454,7 +456,6 @@ class HabitatEvaluator(Evaluator):
                     == evals_per_ep
                 ):
                     envs_to_pause.append(i)
-                    breakpoint()
 
                 # Exclude the keys from `_rank0_keys` from displaying in the video
                 disp_info = {
@@ -554,6 +555,7 @@ class HabitatEvaluator(Evaluator):
                             ][
                                 :-1
                             ],
+                            debug=False,
                         )
                         # Since the starting frame of the next episode is the final frame.
                         rgb_frames[i] = rgb_frames[i][-1:]

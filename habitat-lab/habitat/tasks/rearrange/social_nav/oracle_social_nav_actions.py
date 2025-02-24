@@ -327,12 +327,15 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         max_tries = 10
         self.skill_done = False
 
+        # Get the navigation target for the object 
+        # kwargs["task"]._nav_to_info
+        breakpoint()
         if self.coord_nav is None:
             self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
                 max_tries,
                 island_index=self._sim.largest_island_idx,
             )
-
+        
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
         ] = self.coord_nav
