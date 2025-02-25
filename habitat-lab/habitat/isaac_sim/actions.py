@@ -85,12 +85,14 @@ class ArmReachEEAction(ArmEEAction):
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        # self.ee_rot_target = np.array([0, 1.57, 0])
-        self.ee_rot_target = None
+        # self.ee_rot_target = np.deg2rad(np.array([-240, -90, 0]))
+        self.ee_rot_target = np.deg2rad(np.array([0, 30, 0]))
+        # self.ee_rot_target = np.array([0, 0, 0])
+        # self.ee_rot_target = None
         des_joint_pos = self._ik_helper.calc_ik(
             self.ee_target, self.ee_rot_target
         )
-        return list(des_joint_pos)
+        return np.array(des_joint_pos)
 
     def step(self, *args, **kwargs):
         target_pos = kwargs[self._action_arg_prefix + "target_pos"]
@@ -101,11 +103,9 @@ class ArmReachEEAction(ArmEEAction):
             return inv_pos
 
         target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
-        print("target_rel_pos: ", target_rel_pos)
         # self.calc_ee_target(target_rel_pos)
         self.ee_target = np.array(target_rel_pos)
         des_joint_pos = self.calc_desired_joints()
-        print("des_joint_pos: ", des_joint_pos)
         curr_joint_pos = np.array(
             self._sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
@@ -113,7 +113,10 @@ class ArmReachEEAction(ArmEEAction):
         should_grasp = False
         grasp = [0] if should_grasp else [-1.57]
         self._robot_wrapper._target_arm_joint_positions = des_joint_pos
-        self._robot_wrapper._target_arm_right_joint_positions = des_joint_pos
+        des_right_joint_pos = des_joint_pos
+        self._robot_wrapper._target_arm_right_joint_positions = (
+            des_right_joint_pos
+        )
         # + grasp
 
 

@@ -82,8 +82,8 @@ class MurpRobotWrapper:
                     physx_api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
 
                 # todo: decide hard-coded values here
-                physx_api.CreateLinearDampingAttr(50.0)
-                physx_api.CreateAngularDampingAttr(10.0)
+                physx_api.CreateLinearDampingAttr(500.0)
+                physx_api.CreateAngularDampingAttr(100.0)
 
         # todo: investigate if this is needed for kinematic base
         # todo: resolve off-by-100 scale issue
@@ -186,12 +186,7 @@ class MurpRobotWrapper:
 
         return XFormPrimView(prim_paths)
 
-    def post_reset(self):
-        # todo: just do a single callback
-        self._isaac_service.world.add_physics_callback(
-            f"{self._name}_physics_callback", callback_fn=self.physics_callback
-        )
-
+    def reset_arm(self):
         # todo: specify this in isaac_spot_robot.py
         left_arm_joint_names = [
             "fr3_one_joint1",
@@ -212,7 +207,36 @@ class MurpRobotWrapper:
             "fr3_two_joint6",
             "fr3_two_joint7",
         ]
-        right_hand_joint_names = [
+
+        left_arm_joint_indices = []
+        right_arm_joint_indices = []
+        dof_names = self._robot.dof_names
+        print("dof names: ", dof_names)
+        assert len(dof_names) > 0
+        for arm_joint_name in left_arm_joint_names:
+            left_arm_joint_indices.append(dof_names.index(arm_joint_name))
+
+        for arm_joint_name in right_arm_joint_names:
+            right_arm_joint_indices.append(dof_names.index(arm_joint_name))
+
+        self._arm_joint_indices = np.array(left_arm_joint_indices)
+        self._right_arm_joint_indices = np.array(right_arm_joint_indices)
+        rest_positions = [
+            2.6116285,
+            1.5283098,
+            1.0930868,
+            -0.50559217,
+            0.48147443,
+            2.628784,
+            -1.3962275,
+        ]
+        self._target_arm_joint_positions = rest_positions
+        self._target_right_arm_joint_positions = rest_positions
+
+    def reset_hand(self):
+        # todo: specify this in isaac_spot_robot.py
+        # only list the revolute joints
+        left_hand_joint_names = [
             "allegro_joint_one_1",
             "allegro_joint_one_2",
             "allegro_joint_one_3",
@@ -224,7 +248,8 @@ class MurpRobotWrapper:
             "allegro_joint_one_11",
             "allegro_joint_one_14",
         ]
-        left_hand_joint_names = [
+
+        right_hand_joint_names = [
             "allegro_joint_two_1",
             "allegro_joint_two_2",
             "allegro_joint_two_3",
@@ -234,59 +259,44 @@ class MurpRobotWrapper:
             "allegro_joint_two_9",
             "allegro_joint_two_10",
             "allegro_joint_two_11",
-            "allegro_joint_one_14",
+            "allegro_joint_two_14",
         ]
 
-        left_arm_joint_indices = []
-        right_arm_joint_indices = []
-        right_finger_joint_indices=[]
-        left_finger_joint_indices=[]
+        left_hand_joint_indices = []
+        right_hand_joint_indices = []
         dof_names = self._robot.dof_names
-        print("dof names: ", dof_names)
         assert len(dof_names) > 0
-        for arm_joint_name in left_arm_joint_names:
-            left_arm_joint_indices.append(dof_names.index(arm_joint_name))
+        for hand_joint_name in left_hand_joint_names:
+            left_hand_joint_indices.append(dof_names.index(hand_joint_name))
 
-        for arm_joint_name in right_arm_joint_names:
-            right_arm_joint_indices.append(dof_names.index(arm_joint_name))
-        for finger_joint_name in right_hand_joint_names:
-            right_finger_joint_indices.append(dof_names.index(finger_joint_name))
-        for finger_joint_name in left_hand_joint_names:
-            left_finger_joint_indices.append(dof_names.index(finger_joint_name))
+        for hand_joint_name in right_hand_joint_names:
+            right_hand_joint_indices.append(dof_names.index(hand_joint_name))
 
-
-        self._arm_joint_indices = np.array(left_arm_joint_indices)
-        self._right_arm_joint_indices = np.array(right_arm_joint_indices)
-        self._right_finger_joint_indices = np.array(right_finger_joint_indices)
-        self._left_finger_joint_indices = np.array(left_finger_joint_indices)
-
-
-        rest_positions = [
-            2.6116285,
-            1.5283098,
-            1.0930868,
-            -0.50559217,
-            0.48147443,
-            2.628784,
-            -1.3962275,
+        self._hand_joint_indices = np.array(left_hand_joint_indices)
+        self._right_hand_joint_indices = np.array(right_hand_joint_indices)
+        closed_positions = [
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
         ]
-        self._target_arm_joint_positions = rest_positions
-        finger_closed_positions = [
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159
+        open_positions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self._target_hand_joint_positions = open_positions
+        self._target_right_hand_joint_positions = open_positions
 
-            
-        ]
-        self._target_right_arm_joint_positions = rest_positions
-        self._target_finger_joint_positions = finger_closed_positions
+    def post_reset(self):
+        # todo: just do a single callback
+        self._isaac_service.world.add_physics_callback(
+            f"{self._name}_physics_callback", callback_fn=self.physics_callback
+        )
+        self.reset_arm()
+        self.reset_hand()
 
     def scale_prim_mass_and_inertia(self, path, scale):
 
@@ -393,30 +403,6 @@ class MurpRobotWrapper:
             ]
         )
 
-    def drive_legs(self):
-        self._target_leg_joint_positions = [
-            0.0,
-            0.7,
-            -1.5,
-            0.0,
-            0.7,
-            -1.5,
-            0.0,
-            0.7,
-            -1.5,
-            0.0,
-            0.7,
-            -1.5,
-        ]
-        self._leg_joint_indices = [1, 6, 11, 2, 7, 12, 3, 8, 13, 4, 9, 14]
-
-        self._robot_controller.apply_action(
-            ArticulationAction(
-                joint_positions=self._target_leg_joint_positions,
-                joint_indices=self._leg_joint_indices,
-            )
-        )
-
     def drive_arm(self, step_size):
 
         if np.array(self._target_arm_joint_positions).any():
@@ -442,30 +428,30 @@ class MurpRobotWrapper:
                     joint_indices=self._right_arm_joint_indices,
                 )
             )
-    def drive_right_hands(self, step_size):
 
-        if np.array(self._target_finger_joint_positions).any():
-            assert len(self._target_finger_joint_positions) == len(
-                self._right_finger_joint_indices 
+    def drive_hand(self, step_size):
 
+        if np.array(self._target_hand_joint_positions).any():
+            assert len(self._target_hand_joint_positions) == len(
+                self._hand_joint_indices
             )
             self._robot_controller.apply_action(
                 ArticulationAction(
-                    joint_positions=self._target_finger_joint_positions,
-                    joint_indices=self._right_finger_joint_indices,
+                    joint_positions=self._target_hand_joint_positions,
+                    joint_indices=self._hand_joint_indices,
                 )
             )
-    def drive_left_hands(self, step_size):
 
-        if np.array(self._target_finger_joint_positions).any():
-            assert len(self._target_finger_joint_positions) == len(
-                self._left_finger_joint_indices 
+    def drive_right_hand(self, step_size):
 
+        if np.array(self._target_right_hand_joint_positions).any():
+            assert len(self._target_right_hand_joint_positions) == len(
+                self._right_hand_joint_indices
             )
             self._robot_controller.apply_action(
                 ArticulationAction(
-                    joint_positions=self._target_finger_joint_positions,
-                    joint_indices=self._left_finger_joint_indices,
+                    joint_positions=self._target_right_hand_joint_positions,
+                    joint_indices=self._right_hand_joint_indices,
                 )
             )
 
@@ -483,10 +469,8 @@ class MurpRobotWrapper:
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        self.drive_right_hands(step_size)
-        self.drive_left_hands(step_size)
-
-        # self.drive_legs()
+        self.drive_hand(step_size)
+        self.drive_right_hand(step_size)
         self._step_count += 1
 
     @property
@@ -511,9 +495,31 @@ class MurpRobotWrapper:
 
         return arm_joint_positions
 
+    @property
+    def hand_joint_pos(self):
+        """Get the current arm joint positions."""
+        robot_joint_positions = self._robot.get_joint_positions()
+        hand_joint_positions = np.array(
+            [robot_joint_positions[i] for i in self._hand_joint_indices],
+            dtype=np.float32,
+        )
+
+        return hand_joint_positions
+
+    @property
+    def right_hand_joint_pos(self):
+        """Get the current arm joint positions."""
+        robot_joint_positions = self._robot.get_joint_positions()
+        hand_joint_positions = np.array(
+            [robot_joint_positions[i] for i in self._right_hand_joint_indices],
+            dtype=np.float32,
+        )
+
+        return hand_joint_positions
+
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        ee_link_id = 8
+        ee_link_id = 12
         link_poses = self.get_link_world_poses(convention=convention)
         ee_pos = link_poses[0][ee_link_id]
         ee_rot = link_poses[1][ee_link_id]
