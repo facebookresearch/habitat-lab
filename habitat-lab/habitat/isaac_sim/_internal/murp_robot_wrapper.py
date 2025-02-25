@@ -251,7 +251,7 @@ class MurpRobotWrapper:
             right_arm_joint_indices.append(dof_names.index(arm_joint_name))
         for finger_joint_name in right_hand_joint_names:
             right_finger_joint_indices.append(dof_names.index(finger_joint_name))
-         for finger_joint_name in left_hand_joint_names:
+        for finger_joint_name in left_hand_joint_names:
             left_finger_joint_indices.append(dof_names.index(finger_joint_name))
 
 
@@ -455,7 +455,7 @@ class MurpRobotWrapper:
                     joint_indices=self._right_finger_joint_indices,
                 )
             )
-     def drive_left_hands(self, step_size):
+    def drive_left_hands(self, step_size):
 
         if np.array(self._target_finger_joint_positions).any():
             assert len(self._target_finger_joint_positions) == len(
