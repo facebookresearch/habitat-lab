@@ -212,9 +212,35 @@ class MurpRobotWrapper:
             "fr3_two_joint6",
             "fr3_two_joint7",
         ]
+        right_hand_joint_names = [
+            "allegro_joint_one_1",
+            "allegro_joint_one_2",
+            "allegro_joint_one_3",
+            "allegro_joint_one_5",
+            "allegro_joint_one_6",
+            "allegro_joint_one_7",
+            "allegro_joint_one_9",
+            "allegro_joint_one_10",
+            "allegro_joint_one_11",
+            "allegro_joint_one_14",
+        ]
+        left_hand_joint_names = [
+            "allegro_joint_two_1",
+            "allegro_joint_two_2",
+            "allegro_joint_two_3",
+            "allegro_joint_two_5",
+            "allegro_joint_two_6",
+            "allegro_joint_two_7",
+            "allegro_joint_two_9",
+            "allegro_joint_two_10",
+            "allegro_joint_two_11",
+            "allegro_joint_one_14",
+        ]
 
         left_arm_joint_indices = []
         right_arm_joint_indices = []
+        right_finger_joint_indices=[]
+        left_finger_joint_indices=[]
         dof_names = self._robot.dof_names
         print("dof names: ", dof_names)
         assert len(dof_names) > 0
@@ -223,9 +249,18 @@ class MurpRobotWrapper:
 
         for arm_joint_name in right_arm_joint_names:
             right_arm_joint_indices.append(dof_names.index(arm_joint_name))
+        for finger_joint_name in right_hand_joint_names:
+            right_finger_joint_indices.append(dof_names.index(finger_joint_name))
+         for finger_joint_name in left_hand_joint_names:
+            left_finger_joint_indices.append(dof_names.index(finger_joint_name))
+
 
         self._arm_joint_indices = np.array(left_arm_joint_indices)
         self._right_arm_joint_indices = np.array(right_arm_joint_indices)
+        self._right_finger_joint_indices = np.array(right_finger_joint_indices)
+        self._left_finger_joint_indices = np.array(left_finger_joint_indices)
+
+
         rest_positions = [
             2.6116285,
             1.5283098,
@@ -236,7 +271,22 @@ class MurpRobotWrapper:
             -1.3962275,
         ]
         self._target_arm_joint_positions = rest_positions
+        finger_closed_positions = [
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159,
+            3.14159
+
+            
+        ]
         self._target_right_arm_joint_positions = rest_positions
+        self._target_finger_joint_positions = finger_closed_positions
 
     def scale_prim_mass_and_inertia(self, path, scale):
 
@@ -392,6 +442,32 @@ class MurpRobotWrapper:
                     joint_indices=self._right_arm_joint_indices,
                 )
             )
+    def drive_right_hands(self, step_size):
+
+        if np.array(self._target_finger_joint_positions).any():
+            assert len(self._target_finger_joint_positions) == len(
+                self._right_finger_joint_indices 
+
+            )
+            self._robot_controller.apply_action(
+                ArticulationAction(
+                    joint_positions=self._target_finger_joint_positions,
+                    joint_indices=self._right_finger_joint_indices,
+                )
+            )
+     def drive_left_hands(self, step_size):
+
+        if np.array(self._target_finger_joint_positions).any():
+            assert len(self._target_finger_joint_positions) == len(
+                self._left_finger_joint_indices 
+
+            )
+            self._robot_controller.apply_action(
+                ArticulationAction(
+                    joint_positions=self._target_finger_joint_positions,
+                    joint_indices=self._left_finger_joint_indices,
+                )
+            )
 
     def fix_base(self, step_size, base_position, base_orientation):
 
@@ -407,6 +483,9 @@ class MurpRobotWrapper:
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self.drive_right_arm(step_size)
+        self.drive_right_hands(step_size)
+        self.drive_left_hands(step_size)
+
         # self.drive_legs()
         self._step_count += 1
 

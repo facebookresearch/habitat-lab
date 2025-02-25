@@ -98,7 +98,6 @@ class SpotStateMachine:
             0.0,
             1.67,
             0.0,
-            0.0,
         ]
 
         pos_usd = isaac_prim_utils.habitat_to_usd_position(
@@ -559,7 +558,7 @@ class AppStateIsaacSimViewer(AppState):
         )
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193_with_stage.usda"  # YOUR_PATH
+        asset_path = "/home/joanne/habitat-lab/data/usd/scenes/fremont_static_objects.usda"  # YOUR_PATH
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -569,11 +568,11 @@ class AppStateIsaacSimViewer(AppState):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        from habitat.isaac_sim._internal.spot_robot_wrapper import (
-            SpotRobotWrapper,
+        from habitat.isaac_sim._internal.murp_robot_wrapper import (
+            MurpRobotWrapper,
         )
 
-        self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
+        self._spot_wrapper = MurpRobotWrapper(self._isaac_wrapper.service)
 
         from habitat.isaac_sim._internal.metahand_robot_wrapper import (
             MetahandRobotWrapper,
