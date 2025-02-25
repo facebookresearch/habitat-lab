@@ -86,7 +86,8 @@ class IsaacMurpRobot(IsaacMobileManipulator):
     def __init__(self, agent_cfg, isaac_service, sim=None):
         # TODO: This should be obtained from _target_arm_joint_positions but it is not intialized here yet.
         ee_index = 19
-        arm_joints = [0, 2, 4, 6, 8, 10, 12]
+        # arm_joints = [0, 2, 4, 6, 8, 10, 12]
+        arm_joints = list(range(0, 13))
         leg_joints = [
             14,
             15,

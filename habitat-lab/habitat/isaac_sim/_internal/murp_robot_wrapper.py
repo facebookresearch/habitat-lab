@@ -191,10 +191,9 @@ class MurpRobotWrapper:
         self._isaac_service.world.add_physics_callback(
             f"{self._name}_physics_callback", callback_fn=self.physics_callback
         )
-        print("added murp robot callback 12312")
 
         # todo: specify this in isaac_spot_robot.py
-        arm_left_joint_names = [
+        left_arm_joint_names = [
             "fr3_one_joint1",
             "fr3_one_joint2",
             "fr3_one_joint3",
@@ -204,7 +203,7 @@ class MurpRobotWrapper:
             "fr3_one_joint7",
         ]
 
-        arm_right_joint_names = [
+        right_arm_joint_names = [
             "fr3_two_joint1",
             "fr3_two_joint2",
             "fr3_two_joint3",
@@ -214,32 +213,30 @@ class MurpRobotWrapper:
             "fr3_two_joint7",
         ]
 
-        arm_left_joint_indices = []
-        arm_right_joint_indices = []
+        left_arm_joint_indices = []
+        right_arm_joint_indices = []
         dof_names = self._robot.dof_names
         print("dof names: ", dof_names)
         assert len(dof_names) > 0
-        for arm_joint_name in arm_left_joint_names:
-            arm_left_joint_indices.append(dof_names.index(arm_joint_name))
+        for arm_joint_name in left_arm_joint_names:
+            left_arm_joint_indices.append(dof_names.index(arm_joint_name))
 
-        for arm_joint_name in arm_right_joint_names:
-            arm_right_joint_indices.append(dof_names.index(arm_joint_name))
+        for arm_joint_name in right_arm_joint_names:
+            right_arm_joint_indices.append(dof_names.index(arm_joint_name))
 
-        self._arm_joint_indices = np.array(arm_left_joint_indices)
-        self._arm_right_joint_indices = np.array(arm_right_joint_indices)
-        rest = np.array(
-            [
-                2.6116285,
-                1.5283098,
-                1.0930868,
-                -0.50559217,
-                0.48147443,
-                2.628784,
-                -1.3962275,
-            ]
-        )
-        self._target_arm_joint_positions = rest
-        self._target_arm_right_joint_positions = rest
+        self._arm_joint_indices = np.array(left_arm_joint_indices)
+        self._right_arm_joint_indices = np.array(right_arm_joint_indices)
+        rest_positions = [
+            2.6116285,
+            1.5283098,
+            1.0930868,
+            -0.50559217,
+            0.48147443,
+            2.628784,
+            -1.3962275,
+        ]
+        self._target_arm_joint_positions = rest_positions
+        self._target_right_arm_joint_positions = rest_positions
 
     def scale_prim_mass_and_inertia(self, path, scale):
 
@@ -385,14 +382,14 @@ class MurpRobotWrapper:
 
     def drive_right_arm(self, step_size):
 
-        if np.array(self._target_arm_right_joint_positions).any():
-            assert len(self._target_arm_right_joint_positions) == len(
-                self._arm_right_joint_indices
+        if np.array(self._target_right_arm_joint_positions).any():
+            assert len(self._target_right_arm_joint_positions) == len(
+                self._right_arm_joint_indices
             )
             self._robot_controller.apply_action(
                 ArticulationAction(
-                    joint_positions=self._target_arm_right_joint_positions,
-                    joint_indices=self._arm_right_joint_indices,
+                    joint_positions=self._target_right_arm_joint_positions,
+                    joint_indices=self._right_arm_joint_indices,
                 )
             )
 
@@ -410,7 +407,7 @@ class MurpRobotWrapper:
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        self.drive_legs()
+        # self.drive_legs()
         self._step_count += 1
 
     @property
@@ -419,6 +416,17 @@ class MurpRobotWrapper:
         robot_joint_positions = self._robot.get_joint_positions()
         arm_joint_positions = np.array(
             [robot_joint_positions[i] for i in self._arm_joint_indices],
+            dtype=np.float32,
+        )
+
+        return arm_joint_positions
+
+    @property
+    def right_arm_joint_pos(self):
+        """Get the current arm joint positions."""
+        robot_joint_positions = self._robot.get_joint_positions()
+        arm_joint_positions = np.array(
+            [robot_joint_positions[i] for i in self._right_arm_joint_indices],
             dtype=np.float32,
         )
 

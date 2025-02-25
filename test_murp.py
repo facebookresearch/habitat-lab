@@ -101,107 +101,6 @@ from habitat.datasets.rearrange.navmesh_utils import compute_turn
 from habitat.tasks.utils import get_angle
 
 
-class OracleNavSkill:
-    def __init__(self, env, target_pos):
-        self.env = env
-        self.target_pos = target_pos
-        self.target_base_pos = target_pos
-        self.dist_thresh = 0.1
-        self.turn_velocity = 2
-
-        self.forward_velocity = 10
-        self.turn_thresh = 0.2
-        self.articulated_agent = self.env.sim.articulated_agent
-
-    def _path_to_point(self, point):
-        """
-        Obtain path to reach the coordinate point. If agent_pos is not given
-        the path starts at the agent base pos, otherwise it starts at the agent_pos
-        value
-        :param point: Vector3 indicating the target point
-        """
-        agent_pos = self.articulated_agent.base_pos
-
-        path = habitat_sim.ShortestPath()
-        path.requested_start = agent_pos
-        path.requested_end = point
-        found_path = self.env.sim.pathfinder.find_path(path)
-        if not found_path:
-            return [agent_pos, point]
-        return path.points
-
-    def get_step(self):
-
-        obj_targ_pos = np.array(self.target_pos)
-        base_T = self.articulated_agent.base_transformation
-
-        curr_path_points = self._path_to_point(self.target_base_pos)
-        robot_pos = np.array(self.articulated_agent.base_pos)
-        if len(curr_path_points) == 1:
-            curr_path_points += curr_path_points
-
-        cur_nav_targ = np.array(curr_path_points[1])
-        forward = np.array([1.0, 0, 0])
-        robot_forward = np.array(base_T.transform_vector(forward))
-
-        # Compute relative target
-        rel_targ = cur_nav_targ - robot_pos
-        # Compute heading angle (2D calculation)
-        robot_forward = robot_forward[[0, 2]]
-        rel_targ = rel_targ[[0, 2]]
-        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-        dist_to_final_nav_targ = np.linalg.norm(
-            (np.array(self.target_base_pos) - robot_pos)[[0, 2]],
-        )
-        angle_to_target = get_angle(robot_forward, rel_targ)
-        angle_to_obj = get_angle(robot_forward, rel_pos)
-
-        # Compute the distance
-        at_goal = (
-            dist_to_final_nav_targ < self.dist_thresh
-            and angle_to_obj < self.turn_thresh
-        )
-
-        # Planning to see if the robot needs to do back-up
-
-        if not at_goal:
-            if dist_to_final_nav_targ < self.dist_thresh:
-                # TODO: this does not account for the sampled pose's final rotation
-                # Look at the object target position when getting close
-                vel = compute_turn(
-                    rel_pos,
-                    self.turn_velocity,
-                    robot_forward,
-                )
-            elif angle_to_target < self.turn_thresh:
-                # Move forward towards the target
-                vel = [self.forward_velocity, 0]
-            else:
-                # Look at the target waypoint
-                vel = compute_turn(
-                    rel_targ,
-                    self.turn_velocity,
-                    robot_forward,
-                )
-        else:
-            vel = [0, 0]
-        vel2 = compute_turn(
-            rel_targ,
-            self.turn_velocity,
-            robot_forward,
-        )
-        vel2 = vel
-
-        # print(vel, dist_to_final_nav_targ, angle_to_obj, angle_to_target)
-        action = {
-            "action": "base_velocity_action",
-            "action_args": {
-                "base_vel": np.array([vel[0], vel[1]], dtype=np.float32)
-            },
-        }
-        return action
-
-
 def process_obs_img(obs):
     im = obs["third_rgb"]
     im2 = obs["articulated_agent_arm_rgb"]
@@ -257,57 +156,23 @@ def main():
         fps=30,
     )
 
-    action_example = {
-        "action": "base_velocity_action",
-        "action_args": {"base_vel": np.array([5.0, 0], dtype=np.float32)},
-    }
+    start_position = np.array([2.0, 0.7, -1.64570129])
+    start_rotation = -90
 
-    first_obj = env.sim._rigid_objects[0].translation
-    nav_point = env.sim.pathfinder.get_random_navigable_point_near(
-        circle_center=first_obj, radius=1
+    position = mn.Vector3(start_position)
+    rotation = mn.Quaternion.rotation(
+        mn.Deg(start_rotation), mn.Vector3.y_axis()
     )
-    curr_pos = env.sim.articulated_agent.base_pos
-    dist = np.linalg.norm(
-        (np.array(curr_pos) - nav_point) * np.array([1, 0, 1])
-    )
-    nav_planner = OracleNavSkill(env, nav_point)
-    i = 0
-    # start_position = np.array([2.0, 0.7, -1.64570129])
-    # start_rotation = -90
-
-    # position = mn.Vector3(start_position)
-    # rotation = mn.Quaternion.rotation(
-    #     mn.Deg(start_rotation), mn.Vector3.y_axis()
-    # )
-    # trans = mn.Matrix4.from_(rotation.to_matrix(), position)
-    # env.sim.articulated_agent.base_transformation = trans
-    # print("set base: ", start_position, start_rotation)
-
-    # for _ in range(100):
-    #     print(
-    #         "arm_joint_pos: ",
-    #         env.sim.articulated_agent._robot_wrapper.arm_joint_pos,
-    #     )
-    #     action = {
-    #         "action": "base_velocity_action",
-    #         "action_args": {
-    #             "base_vel": np.array([0.0, 0.0], dtype=np.float32)
-    #         },
-    #     }
-    #     obs = env.step(action)
-    #     im = process_obs_img(obs)
-    #     writer.append_data(im)
+    trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+    env.sim.articulated_agent.base_transformation = trans
+    print("set base: ", start_position, start_rotation)
 
     ctr = 0
     timeout = 500
     curr_left_joint_pos = (
         env.sim.articulated_agent._robot_wrapper.arm_joint_pos
     )
-    # curr_right_joint_pos = (
-    #     env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-    # )
     print("curr_left_joint_pos: ", curr_left_joint_pos)
-    # print("curr_right_joint_pos: ", curr_right_joint_pos)
     target_joint_pos = np.array(
         [
             2.6116285,
@@ -327,6 +192,9 @@ def main():
         env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
             target_joint_pos
         )
+        env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = (
+            target_joint_pos
+        )
         action = {
             "action": "base_velocity_action",
             "action_args": {
@@ -337,41 +205,17 @@ def main():
             env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
         print("curr_left_joint_pos: ", curr_left_joint_pos)
+        print(
+            "curr_right_joint_pos: ",
+            env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos,
+        )
+        print("ctr: ", ctr)
         ctr += 1
         obs = env.step(action)
         im = process_obs_img(obs)
         writer.append_data(im)
-        if ctr > 500:
+        if ctr > 2000:
             break
-
-    # target_ee_pos = env.sim._rigid_objects[0].translation
-    # ctr = 0
-    # curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-    # while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.16):
-    #     target_ee_pos_shift = target_ee_pos
-    #     arm_reach = {
-    #         "action": "arm_reach_ee_action",
-    #         "action_args": {
-    #             "target_pos": np.array(target_ee_pos_shift, dtype=np.float32)
-    #         },
-    #     }
-
-    #     obs = env.step(arm_reach)
-    #     curr_ee_pos, _ = env.sim.articulated_agent._robot_wrapper.ee_pose()
-    #     curr_left_joint_pos = (
-    #         env.sim.articulated_agent._robot_wrapper.arm_left_joint_pos
-    #     )
-    #     curr_right_joint_pos = (
-    #         env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-    #     )
-    #     print("curr_ee_pos: ", curr_ee_pos, target_ee_pos)
-    #     print("curr_left_joint_pos: ", curr_left_joint_pos)
-    #     print("curr_right_joint_pos: ", curr_right_joint_pos)
-    #     im = process_obs_img(obs)
-    #     writer.append_data(im)
-    #     ctr += 1
-    #     if ctr > 300:
-    #         break
 
     writer.close()
 
