@@ -93,7 +93,7 @@ The camera follows a cursor visualized as a yellow and white circle in the frame
 The robot's configuration settings are defined in a re-loadable config: `robot_settings.yaml`
 - `T` removes the current robot and reloads the settings file including any changes you have made while the app was running
 
-Use this feature to quickly iterate on URDF paramters, navmesh parameters, motor settings, etc...
+Use this feature to quickly iterate on URDF parameters, navmesh parameters, motor settings, etc...
 
 ### Teleop with mouse
 The robot joints can be manipulated with the mouse.

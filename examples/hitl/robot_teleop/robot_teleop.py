@@ -586,7 +586,7 @@ class AppStateRobotTeleopViewer(AppState):
             self._sim.pathfinder,
             navmesh_settings,
         )
-        # set all Aos to back to their previosu motion types
+        # set all Aos to back to their previous motion types
         for _handle, ao in (
             self._sim.get_articulated_object_manager()
             .get_objects_by_handle_substring()
