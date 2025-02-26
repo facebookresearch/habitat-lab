@@ -82,8 +82,8 @@ class MurpRobotWrapper:
                     physx_api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
 
                 # todo: decide hard-coded values here
-                physx_api.CreateLinearDampingAttr(500.0)
-                physx_api.CreateAngularDampingAttr(100.0)
+                physx_api.CreateLinearDampingAttr(50.0)
+                physx_api.CreateAngularDampingAttr(10.0)
 
         # todo: investigate if this is needed for kinematic base
         # todo: resolve off-by-100 scale issue
@@ -175,10 +175,10 @@ class MurpRobotWrapper:
 
             # we found a rigid body, so let's ignore children
             it.PruneChildren()
-
             prim_paths.append(prim_path)
 
         assert len(prim_paths)
+        print("prim_paths: ", prim_paths, len(prim_paths))
 
         self._body_prim_paths = prim_paths
 
@@ -274,19 +274,8 @@ class MurpRobotWrapper:
 
         self._hand_joint_indices = np.array(left_hand_joint_indices)
         self._right_hand_joint_indices = np.array(right_hand_joint_indices)
-        closed_positions = [
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-            3.14159,
-        ]
-        open_positions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        closed_positions = np.array([3.14159] * 10)
+        open_positions = np.zeros(10)
         self._target_hand_joint_positions = open_positions
         self._target_right_hand_joint_positions = open_positions
 
@@ -519,8 +508,9 @@ class MurpRobotWrapper:
 
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        ee_link_id = 12
+        ee_link_id = 9
         link_poses = self.get_link_world_poses(convention=convention)
+
         ee_pos = link_poses[0][ee_link_id]
         ee_rot = link_poses[1][ee_link_id]
 

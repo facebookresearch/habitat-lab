@@ -250,6 +250,7 @@ class ArticulatedAgentManager:
                 agent_data._ik_helper = IkHelper(
                     agent_data.cfg.ik_arm_urdf,
                     agent_data.start_js,
+                    agent_data.articulated_agent.params,
                 )
                 print("Initialized IK helper")
             else:

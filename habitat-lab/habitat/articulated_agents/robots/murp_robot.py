@@ -77,6 +77,10 @@ class MurpParams:
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
+    ik_pb_link_idx: int
+    ik_arm_len: int
+    ik_arm_start_idx: int
+
     leg_joints: Optional[List[int]] = None
     leg_init_params: Optional[List[float]] = None
     leg_mtr_pos_gain: Optional[float] = None
@@ -158,8 +162,8 @@ class MurpRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                    cam_offset_pos=mn.Vector3(-0.5, 1.7, 0.5),
+                    cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
                     attached_link_id=-1,
                 ),
             },
@@ -174,6 +178,9 @@ class MurpRobot(MobileManipulator):
             leg_mtr_max_impulse=100.0,
             base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={"base_link", "spine"},
+            ik_pb_link_idx=8,  # link to use for IK
+            ik_arm_len=7,  # num links in arm URDF for IK
+            ik_arm_start_idx=2,  # starting link for arm in URDF for IK
         )
 
     @property

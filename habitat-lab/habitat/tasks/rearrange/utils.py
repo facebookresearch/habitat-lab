@@ -329,9 +329,10 @@ def is_pb_installed():
 
 
 class IkHelper:
-    def __init__(self, only_arm_urdf, arm_start):
+    def __init__(self, only_arm_urdf, arm_start, robot_params):
         self._arm_start = arm_start
-        self._arm_len = 7
+        self._arm_start_idx = getattr(robot_params, "ik_arm_start_idx", 0)
+        self._arm_len = getattr(robot_params, "ik_arm_len", 7)
         self.pc_id = p.connect(p.DIRECT)
 
         self.robo_id = p.loadURDF(
@@ -344,7 +345,7 @@ class IkHelper:
 
         p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
         JOINT_DAMPING = 0.5
-        self.pb_link_idx = 7
+        self.pb_link_idx = getattr(robot_params, "ik_pb_link_idx", 7)
 
         for link_idx in range(15):
             p.changeDynamics(
@@ -365,10 +366,10 @@ class IkHelper:
     def set_arm_state(self, joint_pos, joint_vel=None):
         if joint_vel is None:
             joint_vel = np.zeros((len(joint_pos),))
-        for i in range(7):
+        for i in range(self._arm_len):
             p.resetJointState(
                 self.robo_id,
-                i,
+                i + self._arm_start_idx,
                 joint_pos[i],
                 joint_vel[i],
                 physicsClientId=self.pc_id,
@@ -389,7 +390,9 @@ class IkHelper:
     def get_joint_limits(self):
         lower = []
         upper = []
-        for joint_i in range(self._arm_len):
+        for joint_i in range(
+            self._arm_start_idx, self._arm_start_idx + self._arm_len
+        ):
             ret = p.getJointInfo(
                 self.robo_id, joint_i, physicsClientId=self.pc_id
             )

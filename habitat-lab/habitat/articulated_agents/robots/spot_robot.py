@@ -77,6 +77,10 @@ class SpotParams:
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
+    ik_pb_link_idx: int
+    ik_arm_len: int
+    ik_arm_start_idx: int
+
     leg_joints: Optional[List[int]] = None
     leg_init_params: Optional[List[float]] = None
     leg_mtr_pos_gain: Optional[float] = None
@@ -88,8 +92,6 @@ class SpotParams:
 
 class SpotRobot(MobileManipulator):
     @classmethod
-
-
     def _get_spot_params(cls):
         return SpotParams(
             arm_joints=list(range(0, 7)),
@@ -170,6 +172,9 @@ class SpotRobot(MobileManipulator):
             base_link_names={
                 "base",
             },
+            ik_pb_link_idx=7,
+            ik_arm_len=7,
+            ik_arm_start_idx=0,
         )
 
     @property

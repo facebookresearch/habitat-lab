@@ -13,6 +13,7 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulatorParams,
 )
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
 from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
 
 
@@ -101,4 +102,9 @@ class IsaacSpotRobot(IsaacMobileManipulator):
             1.53588974,
             0.0,
         ]
-        super().__init__(spot_params, agent_cfg, isaac_service, sim=sim)
+        robot_wrapper = SpotRobotWrapper(
+            isaac_service=isaac_service, instance_id=0
+        )
+        super().__init__(
+            spot_params, agent_cfg, isaac_service, robot_wrapper, sim=sim
+        )
