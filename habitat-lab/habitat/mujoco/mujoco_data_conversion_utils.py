@@ -1,149 +1,22 @@
 
 
 import os
-import asyncio
 import re
 import xml.etree.ElementTree as ET
-import argparse
 import json
-
+from dataclasses import dataclass
+from typing import List
 
 from habitat.mujoco.convert_glb_to_obj import convert_glb_to_obj
 
-def add_habitat_visual_to_usd_root(usd_filepath, render_asset_filepath, render_asset_scale):
-    # Open the USD file
-    stage = Usd.Stage.Open(usd_filepath)
-    if not stage:
-        raise ValueError(f"Could not open USD file: {usd_filepath}")
+@dataclass
+class RenderAsset:
+    """A render asset that can be provided to Habitat-sim ResourceManager::loadAndCreateRenderAssetInstance."""
+    abs_filepath: str
+    # todo: possible color override
+    semantic_id: int
+    scale: List[float]
 
-    default_prim = stage.GetDefaultPrim()
-
-    # Add habitatVisual:assetPath
-    asset_path_attr = default_prim.CreateAttribute("habitatVisual:assetPath", Sdf.ValueTypeNames.String)
-    asset_path_attr.Set(render_asset_filepath)
-
-    # Add habitatVisual:assetScale
-    asset_scale_attr = default_prim.CreateAttribute("habitatVisual:assetScale", Sdf.ValueTypeNames.Float3)
-    asset_scale_attr.Set(Gf.Vec3f(*render_asset_scale))
-
-    # Save the updated USD file
-    stage.GetRootLayer().Save()
-    # print(f"Added habitat visual metadata to root prim in: {usd_filepath}")
-
-
-def add_habitat_visual_to_usd_root_rigid_body(usd_filepath, render_asset_filepath, render_asset_scale):
-    # Open the USD file
-    stage = Usd.Stage.Open(usd_filepath)
-    if not stage:
-        raise ValueError(f"Could not open USD file: {usd_filepath}")
-
-    # Find all prims with RigidBodyAPI
-    rigid_body_prims = [prim for prim in stage.Traverse() if prim.HasAPI(UsdPhysics.RigidBodyAPI)]
-
-    if not rigid_body_prims:
-        raise ValueError("No prim with UsdPhysics.RigidBodyAPI found in USD file")
-
-    if len(rigid_body_prims) > 1:
-        raise ValueError("Multiple prims with UsdPhysics.RigidBodyAPI found in USD file")
-
-    # Get the single rigid body prim
-    rigid_body_prim = rigid_body_prims[0]
-
-    # Add habitatVisual:assetPath
-    asset_path_attr = rigid_body_prim.CreateAttribute("habitatVisual:assetPath", Sdf.ValueTypeNames.String)
-    asset_path_attr.Set(render_asset_filepath)
-
-    # Add habitatVisual:assetScale
-    asset_scale_attr = rigid_body_prim.CreateAttribute("habitatVisual:assetScale", Sdf.ValueTypeNames.Float3)
-    asset_scale_attr.Set(Gf.Vec3f(*render_asset_scale))
-
-    # Save the updated USD file
-    stage.GetRootLayer().Save()
-    print(f"Added habitat visual metadata to RigidBody prim in: {usd_filepath}")
-
-
-def convert_meshes_to_static_colliders(stage, root_path):
-    """
-    Iterates over all meshes in the USD subtree under `root_path` and adds convex hull collision shapes.
-
-    :param stage: The USD stage.
-    :param root_path: The root path of the subtree to process.
-    """
-    # todo: instead of this function, use omni.physx.scripts.utils.setRigidBody
-
-    # Get the root prim
-    root_prim = stage.GetPrimAtPath(root_path)
-    if not root_prim.IsValid():
-        raise ValueError(f"The specified root path '{root_path}' is not valid.")
-    
-    # Iterate over all child prims in the subtree
-    for prim in Usd.PrimRange(root_prim):
-        # Check if the prim is a mesh
-        if prim.IsA(UsdGeom.Mesh):
-            # print(f"Processing mesh: {prim.GetPath()}")
-
-            # Check if MeshCollisionAPI is already applied
-            UsdPhysics.CollisionAPI.Apply(prim)
-            collision_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
-            collision_api.GetApproximationAttr().Set("convexHull")  # "convexDecomposition")
-
-            # todo: do this on the root prim, not each collider
-            physicsAPI = UsdPhysics.RigidBodyAPI.Apply(prim)
-            PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
-            physicsAPI.CreateRigidBodyEnabledAttr(True)
-            physicsAPI.CreateKinematicEnabledAttr(True)
-
-            # set purpose to "guide" so that this mesh doesn't render in Isaac?
-            if True:
-                mesh_geom = UsdGeom.Imageable(prim)
-                mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
-
-
-def convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True, merge_all_meshes: bool = False) -> bool:
-
-    asyncio.run(
-        async_convert_mesh_to_usd(in_file=in_file, out_file=out_file, load_materials=load_materials, merge_all_meshes=merge_all_meshes)
-    )
-
-    # from pxr import Usd
-    # stage = Usd.Stage.Open(out_file)
-    # convert_meshes_to_static_colliders(stage, "/World")
-    # stage.GetRootLayer().Export(out_file)
-
-
-async def async_convert_mesh_to_usd(in_file: str, out_file: str, load_materials: bool = True, merge_all_meshes: bool = False) -> bool:
-    """ported from IsaacLab mesh_converter.py _convert_mesh_to_usd"""
-
-    enable_extension("omni.kit.asset_converter")
-
-    import omni.kit.asset_converter
-    import omni.usd
-
-    # Create converter context
-    converter_context = omni.kit.asset_converter.AssetConverterContext()
-    # Set up converter settings
-    # Don't import/export materials
-    converter_context.ignore_materials = not load_materials
-    converter_context.ignore_animations = True
-    converter_context.ignore_camera = True
-    converter_context.ignore_light = True
-    # We avoid merging meshes. This is specifically for collider GLBs, where each mesh is meant to be a separate convex hull at runtime.
-    converter_context.merge_all_meshes = merge_all_meshes
-    # Sets world units to meters, this will also scale asset if it's centimeters model.
-    # This does not work right now :(, so we need to scale the mesh manually
-    converter_context.use_meter_as_world_unit = True
-    converter_context.baking_scales = True
-    # Uses double precision for all transform ops.
-    converter_context.use_double_precision_to_usd_transform_op = True
-
-    # Create converter task
-    instance = omni.kit.asset_converter.get_instance()
-    task = instance.create_converter_task(in_file, out_file, None, converter_context)
-    # Start conversion task and wait for it to finish
-    success = await task.wait_until_finished()
-    if not success:
-        raise RuntimeError(f"Failed to convert {in_file} to USD. Error: {task.get_error_message()}")
-    return success
 
 def find_all_files(root_folder, file_suffix):
     files = []
@@ -203,25 +76,33 @@ def sanitize_usd_name(name):
     return sanitized_name
 
 
-def convert_object_to_obj(object_config_filepath, out_obj_path):
+def convert_object_to_obj_and_get_render_asset(object_config_filepath, out_obj_path):
 
     object_config_folder, _ = os.path.split(object_config_filepath)
 
     object_config_json_data = None
     with open(object_config_filepath, 'r') as file:
         object_config_json_data = json.load(file)
-    # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
-    collision_asset_rel_filepath = object_config_json_data["collision_asset"] if "collision_asset" in object_config_json_data else object_config_json_data["render_asset"]
-    # Render assets should be merged; collision assets should not as they already represent a convex decomposition into nodes. Later, a render asset's mesh should be set to "convexDecomposition" and a collision asset's meshes should be set to "convexHull".
-    merge_all_meshes = "collision_asset" not in object_config_json_data
-    # collision_asset_filepath = find_file(objects_root_folder, collision_asset_filename)
-    collision_asset_filepath = os.path.abspath(os.path.join(object_config_folder, collision_asset_rel_filepath))
 
-    print(f"Converting {collision_asset_filepath}...")
+    if not os.path.exists(out_obj_path):
+        # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
+        collision_asset_rel_filepath = object_config_json_data["collision_asset"] if "collision_asset" in object_config_json_data else object_config_json_data["render_asset"]
+        # Render assets should be merged; collision assets should not as they already represent a convex decomposition into nodes. Later, a render asset's mesh should be set to "convexDecomposition" and a collision asset's meshes should be set to "convexHull".
+        merge_all_meshes = "collision_asset" not in object_config_json_data
+        # collision_asset_filepath = find_file(objects_root_folder, collision_asset_filename)
+        collision_asset_filepath = os.path.abspath(os.path.join(object_config_folder, collision_asset_rel_filepath))
 
-    convert_glb_to_obj(collision_asset_filepath, out_obj_path)
+        print(f"Converting {collision_asset_filepath}...")
 
-    print(f"Wrote {out_obj_path}")   
+        convert_glb_to_obj(collision_asset_filepath, out_obj_path)
+        
+        print(f"Wrote {out_obj_path}")   
+
+    render_asset_rel_filepath = object_config_json_data["render_asset"]
+    render_asset_abs_filepath = os.path.abspath(os.path.join(object_config_folder, render_asset_rel_filepath))
+    render_asset_scale = object_config_json_data.get("scale", (1.0, 1.0, 1.0))
+
+    return RenderAsset(abs_filepath=render_asset_abs_filepath, semantic_id=None, scale=render_asset_scale)
 
 
 def convert_object_to_usd(object_config_filepath, out_usd_path, project_root_folder, enable_collision=True):
@@ -325,6 +206,8 @@ def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_
     # not yet supported; we need to do convex hull decomposition
     assert not enable_collision_for_stage
 
+    render_map = {}
+
     _, scene_filename = os.path.split(scene_filepath)
     scene_name = scene_filename.removesuffix(".scene_instance.json")
     scene_mjcf_folder = "data/mujoco/scenes"
@@ -332,6 +215,7 @@ def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_
     objects_mjcf_folder = "data/mujoco/objects"
     assert os.path.exists(objects_mjcf_folder) and os.path.isdir(objects_mjcf_folder)
     scene_mjcf_filepath = os.path.join(scene_mjcf_folder, f"{scene_name}.xml")
+    render_map_filepath = os.path.join(scene_mjcf_folder, f"{scene_name}.render_map.json")
 
     
     # Create the root element
@@ -379,12 +263,10 @@ def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_
 
         out_obj_path = os.path.join(objects_mjcf_folder, f"{base_object_name}.obj")
 
-        # todo: gather these up and do them later with multiprocessing
-        if not os.path.exists(out_obj_path):
-            object_config_filepath = find_file(objects_root_folder, object_config_filename)
-            assert object_config_filepath
+        object_config_filepath = find_file(objects_root_folder, object_config_filename)
+        assert object_config_filepath
 
-            convert_object_to_obj(object_config_filepath, out_obj_path)
+        render_asset = convert_object_to_obj_and_get_render_asset(object_config_filepath, out_obj_path)
 
         mesh_name = base_object_name + "_mesh"
         if object_counts[base_object_name] == 1:
@@ -403,6 +285,15 @@ def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_
 
         ET.SubElement(worldbody_elem, "geom", name=unique_object_name, type="mesh", mesh=mesh_name, pos=position_str, quat=rotation_str)
 
+        render_asset_project_rel_filepath = os.path.relpath(render_asset.abs_filepath, start=project_root_folder)
+
+        render_map[unique_object_name] = {
+            "is_dynamic": False,  # all object instances are assumed to be static
+            "render_asset_filepath": render_asset_project_rel_filepath,
+            "semantic_id": render_asset.semantic_id,
+            "scale": render_asset.semantic_id,
+        }
+
         count += 1
         if count == max_count:
             break
@@ -416,7 +307,10 @@ def convert_hab_scene(scene_filepath, project_root_folder, enable_collision_for_
     with open(scene_mjcf_filepath, "w", encoding="utf-8") as f:
         f.write(ET.tostring(mujoco_elem, encoding="unicode"))
 
-    print(f"MuJoCo XML initialized and saved to {scene_mjcf_filepath}")
+    with open(render_map_filepath, "w") as f:
+        root_dict = {"render_map": render_map}
+        json.dump(root_dict, f, indent=2)
+    print(f"MuJoCo scene saved to {scene_mjcf_filepath}. Render map saved to {render_map_filepath}.")
 
 
 def convert_urdf(urdf_filepath, out_usd_filepath):
@@ -552,5 +446,5 @@ if __name__ == "__main__":
     # example usage:
 
     # convert_urdf_test()
-    convert_hab_scene("data/scene_datasets/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./", enable_collision_for_stage=False)
+    convert_hab_scene("data/hssd-hab/scenes-uncluttered/102344193.scene_instance.json", project_root_folder="./", enable_collision_for_stage=False)
     # convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
