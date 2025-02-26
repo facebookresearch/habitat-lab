@@ -1,0 +1,23 @@
+# @package _global_
+
+#This config file can be hot-reloaded with 'T' to quickly change robot settings
+
+#global robot settings
+#urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
+#urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
+urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
+#if True, the base is kinematic
+fixed_base: True
+
+#what radius is required to represent the robot on the navmesh
+navmesh_radius: 0.45
+navmesh_height: 1.2
+
+#joint motor settings
+create_joint_motors: True
+joint_motor_pos_gains: 0.3
+joint_motor_vel_gains: 0.3
+joint_motor_max_impulse: 10.0
+
+#initial pose options. This refers to an entry in the robot_poses.json file.
+initial_pose: "initial"
