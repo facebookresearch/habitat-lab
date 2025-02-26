@@ -463,6 +463,8 @@ class AppStateIsaacSimViewer(AppState):
         self._camera_helper.update(self._cursor_pos, 0.0)
 
         # self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
+        # self._app_service.reconfigure_sim("data/hssd-hab/hssd-hab-uncluttered.scene_dataset_config.json", "102344193.scene_instance.json")
+        # self._app_service.reconfigure_sim("data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json", "102344193.scene_instance.json")
 
         # self._spot = SpotWrapper(self._sim)
 
@@ -478,11 +480,10 @@ class AppStateIsaacSimViewer(AppState):
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
         isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
 
-        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
-        from omni.isaac.core.utils.stage import add_reference_to_stage
-        add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
-        self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
+        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
+        # from omni.isaac.core.utils.stage import add_reference_to_stage
+        # add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
+        # self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
 
         from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
         self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
@@ -560,8 +561,10 @@ class AppStateIsaacSimViewer(AppState):
         self._mj_dt = 1.0 / 120
         self._mj_wrapper = MuJoCoAppWrapper(self._sim)
         self._mj_wrapper.load_model_from_xml(
-            "/home/eric/projects/habitat-lab5/data_vc/mujoco/scenes/test_scene.xml",
-            "/home/eric/projects/habitat-lab5/data_vc/mujoco/scenes/test_scene.render_map.json",
+            # "data_vc/mujoco/scenes/test_scene.xml",
+            # "data_vc/mujoco/scenes/test_scene.render_map.json",
+            "data/mujoco/scenes/102344193.xml",
+            "data/mujoco/scenes/102344193.render_map.json",
             )
         self._mj_wrapper._model.opt.timestep = self._mj_dt
 
