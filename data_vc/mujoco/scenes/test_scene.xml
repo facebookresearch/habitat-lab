@@ -5,22 +5,24 @@
     <!-- Ground Plane -->
     <geom name="ground_plane" type="plane" pos="0 0 0" size="10 10 0.1" material="ground_material" />
 
+    <!--
     <body name="apple_instance0" pos="0 0 3.5">
       <geom name="apple_geom0" type="mesh" mesh="apple_mesh" />
       <joint name="apple_joint0" type="free" />
     </body>
+    -->
 
-    <geom name="thingy_geom0" type="mesh" mesh="thingy_mesh" pos="0 -0.2 0.5" />
+    <geom name="labeled_axes_geom0" type="mesh" mesh="labled_axes_mesh" pos="0 0 0" />
+    <geom name="labeled_axes_geom1" type="mesh" mesh="labled_axes_mesh" pos="4 0 0" quat="0.7071 0 0 0.7071" />
+    <geom name="labeled_axes_geom2" type="mesh" mesh="labled_axes_mesh" pos="8 0 0" quat="-0.5 -0.5 -0.5 -0.5" />
 
+    <!--
     <body name="thingy_instance1" pos="0 -0.2 1.5" >
       <geom name="thingy_geom1" type="mesh" mesh="thingy_mesh" />
       <joint name="thingy_joint1" type="free" />
     </body>
+    -->    
 
-    <body name="thingy_instance2" pos="0 -0.2 2.5">
-      <geom name="thingy_geom2" type="mesh" mesh="thingy_mesh" />
-      <joint name="thingy_joint2" type="free" />
-    </body>
 
   </worldbody>
   <asset>
@@ -31,5 +33,6 @@
     <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1="0.8 0.8 0.8" rgb2="0.6 0.6 0.6" />
     <material name="ground_material" texture="grid" specular="0.1" />
     <mesh name="thingy_mesh" file="../00a1a59b75fae9b7e42a128ce2249158dfa7d847.obj" />
+    <mesh name="labled_axes_mesh" file="/home/eric/blender/labeled_axes.obj" />
   </asset>
 </mujoco>
