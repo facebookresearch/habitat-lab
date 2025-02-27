@@ -111,45 +111,12 @@ class ArmReachEEAction(ArmEEAction):
             return inv_pos
 
         target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
-        # self.calc_ee_target(target_rel_pos)
         self.ee_target = np.array(target_rel_pos)
         self.ee_rot_target = np.array(target_rot)
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
-        curr_joint_pos = np.array(
-            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
-        )
 
-        should_grasp = False
-        grasp = [0] if should_grasp else [-1.57]
-        # des_joint_pos = np.array(
-        #     [
-        #         1.91,
-        #         1.6567535,
-        #         0.59521294,
-        #         -0.21944518,
-        #         -0.33965185,
-        #         1.8663365,
-        #         -1.2217304764,
-        #     ]
-        # )
-        # des_joint_pos = np.array(
-        #     [
-        #         -1.5707963268,
-        #         -1.6567535,
-        #         -0.59521294,
-        #         0.21944518,
-        #         -1.0471975512,
-        #         1.8663365,
-        #         -0.5235987756,
-        #     ]
-        # )
         self._robot_wrapper._target_arm_joint_positions = des_joint_pos
-        # des_right_joint_pos = des_joint_pos
-        # self._robot_wrapper._target_arm_right_joint_positions = (
-        #     des_right_joint_pos
-        # )
-        # + grasp
 
 
 @registry.register_task_action
