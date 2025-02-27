@@ -42,15 +42,6 @@ class MurpParams:
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
     :property base_link_names: The name of the links
-    :property leg_joints: The joint ids of the legs if applicable. If the legs are not controlled, then this should be None
-    :property leg_init_params: The starting joint positions of the leg joints. If None,
-        resets to 0.
-    :property leg_mtr_pos_gain: The position gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
-        there are legs).
     :property ee_count: how many end effectors
     """
 
@@ -81,12 +72,6 @@ class MurpParams:
     ik_arm_len: int
     ik_arm_start_idx: int
 
-    leg_joints: Optional[List[int]] = None
-    leg_init_params: Optional[List[float]] = None
-    leg_mtr_pos_gain: Optional[float] = None
-    leg_mtr_vel_gain: Optional[float] = None
-    leg_mtr_max_impulse: Optional[float] = None
-
     ee_count: Optional[int] = 1
 
 
@@ -96,7 +81,6 @@ class MurpRobot(MobileManipulator):
         return MurpParams(
             arm_joints=[0, 2, 4, 6, 8, 10, 12],
             gripper_joints=[19],
-            leg_joints=list(range(8, 20)),
             arm_init_params=[
                 2.6116285,
                 1.5283098,
@@ -107,20 +91,6 @@ class MurpRobot(MobileManipulator):
                 -1.3962275,
             ],
             gripper_init_params=[-1.56],
-            leg_init_params=[
-                0.0,
-                0.7,
-                -1.5,
-                0.0,
-                0.7,
-                -1.5,
-                0.0,
-                0.7,
-                -1.5,
-                0.0,
-                0.7,
-                -1.5,
-            ],
             ee_offset=[mn.Vector3(0.08, 0, 0)],
             ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
@@ -173,9 +143,6 @@ class MurpRobot(MobileManipulator):
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
             arm_mtr_max_impulse=10.0,
-            leg_mtr_pos_gain=2.0,
-            leg_mtr_vel_gain=1.3,
-            leg_mtr_max_impulse=100.0,
             base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={"base_link", "spine"},
             # for left arm

@@ -88,29 +88,10 @@ class IsaacMurpRobot(IsaacMobileManipulator):
         ee_index = 19
         # arm_joints = [0, 2, 4, 6, 8, 10, 12]
         arm_joints = list(range(0, 13))
-        leg_joints = [
-            14,
-            15,
-            16,
-            17,
-            22,
-            23,
-            24,
-            25,
-            30,
-            31,
-            32,
-            33,
-            38,
-            39,
-            40,
-            41,
-        ]
 
         murp_params = MurpRobot._get_murp_params()
         murp_params.arm_joints = arm_joints
         murp_params.gripper_joints = [ee_index]
-        murp_params.leg_joints = leg_joints
         murp_params.arm_init_params = [
             2.6116285,
             1.5283098,
