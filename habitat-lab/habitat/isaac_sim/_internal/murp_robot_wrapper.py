@@ -508,7 +508,8 @@ class MurpRobotWrapper:
 
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        ee_link_id = 9
+        ee_link_id = 9  # for left arm
+        # ee_link_id = 51 # for right arm
         link_poses = self.get_link_world_poses(convention=convention)
 
         ee_pos = link_poses[0][ee_link_id]

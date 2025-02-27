@@ -178,6 +178,7 @@ class MurpRobot(MobileManipulator):
             leg_mtr_max_impulse=100.0,
             base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={"base_link", "spine"},
+            # for left arm
             ik_pb_link_idx=8,  # link to use for IK
             ik_arm_len=7,  # num links in arm URDF for IK
             ik_arm_start_idx=2,  # starting link for arm in URDF for IK

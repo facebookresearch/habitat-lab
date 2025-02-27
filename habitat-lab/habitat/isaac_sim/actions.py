@@ -85,17 +85,25 @@ class ArmReachEEAction(ArmEEAction):
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
-        # self.ee_rot_target = np.deg2rad(np.array([-240, -90, 0]))
-        self.ee_rot_target = np.deg2rad(np.array([0, 30, 0]))
-        # self.ee_rot_target = np.array([0, 0, 0])
-        # self.ee_rot_target = None
         des_joint_pos = self._ik_helper.calc_ik(
             self.ee_target, self.ee_rot_target
         )
         return np.array(des_joint_pos)
 
+    def apply_joint_limits(self, des_joint_pos):
+        murp_joint_limits_lower = np.deg2rad(
+            np.array([-157, -102, -166, -174, -160, 31, -172])
+        )
+        murp_joint_limits_upper = np.deg2rad(
+            np.array([157, 102, 166, -8, 160, 258, 172])
+        )
+        return np.clip(
+            des_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
+        )
+
     def step(self, *args, **kwargs):
         target_pos = kwargs[self._action_arg_prefix + "target_pos"]
+        target_rot = kwargs[self._action_arg_prefix + "target_rot"]
         base_pos, base_rot = self._robot_wrapper.get_root_pose()
 
         def inverse_transform(pos_a, rot_b, pos_b):
@@ -105,18 +113,42 @@ class ArmReachEEAction(ArmEEAction):
         target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
         # self.calc_ee_target(target_rel_pos)
         self.ee_target = np.array(target_rel_pos)
+        self.ee_rot_target = np.array(target_rot)
         des_joint_pos = self.calc_desired_joints()
+        des_joint_pos = self.apply_joint_limits(des_joint_pos)
         curr_joint_pos = np.array(
             self._sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
 
         should_grasp = False
         grasp = [0] if should_grasp else [-1.57]
+        # des_joint_pos = np.array(
+        #     [
+        #         1.91,
+        #         1.6567535,
+        #         0.59521294,
+        #         -0.21944518,
+        #         -0.33965185,
+        #         1.8663365,
+        #         -1.2217304764,
+        #     ]
+        # )
+        # des_joint_pos = np.array(
+        #     [
+        #         -1.5707963268,
+        #         -1.6567535,
+        #         -0.59521294,
+        #         0.21944518,
+        #         -1.0471975512,
+        #         1.8663365,
+        #         -0.5235987756,
+        #     ]
+        # )
         self._robot_wrapper._target_arm_joint_positions = des_joint_pos
-        des_right_joint_pos = des_joint_pos
-        self._robot_wrapper._target_arm_right_joint_positions = (
-            des_right_joint_pos
-        )
+        # des_right_joint_pos = des_joint_pos
+        # self._robot_wrapper._target_arm_right_joint_positions = (
+        #     des_right_joint_pos
+        # )
         # + grasp
 
 
