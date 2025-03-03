@@ -122,31 +122,33 @@ class OracleNavSkill:
 
         # Compute the distance
         at_goal = (
-            dist_to_final_nav_targ < self.dist_thresh
-            and angle_to_obj < self.turn_thresh
+            dist_to_final_nav_targ
+            < self.dist_thresh
+            # and angle_to_obj < self.turn_thresh
         )
 
         # Planning to see if the robot needs to do back-up
 
         if not at_goal:
-            if dist_to_final_nav_targ < self.dist_thresh:
-                # TODO: this does not account for the sampled pose's final rotation
-                # Look at the object target position when getting close
-                vel = compute_turn(
-                    rel_pos,
-                    self.turn_velocity,
-                    robot_forward,
-                )
-            elif angle_to_target < self.turn_thresh:
-                # Move forward towards the target
-                vel = [self.forward_velocity, 0]
-            else:
-                # Look at the target waypoint
-                vel = compute_turn(
-                    rel_targ,
-                    self.turn_velocity,
-                    robot_forward,
-                )
+            # if dist_to_final_nav_targ < self.dist_thresh:
+            #     # TODO: this does not account for the sampled pose's final rotation
+            #     # Look at the object target position when getting close
+            #     vel = compute_turn(
+            #         rel_pos,
+            #         self.turn_velocity,
+            #         robot_forward,
+            #     )
+            # elif angle_to_target < self.turn_thresh:
+            #     # Move forward towards the target
+            #     vel = [self.forward_velocity, 0]
+            # else:
+            #     # Look at the target waypoint
+            #     vel = compute_turn(
+            #         rel_targ,
+            #         self.turn_velocity,
+            #         robot_forward,
+            #     )
+            vel = [self.forward_velocity, 0]
         else:
             vel = [0, 0]
         vel2 = compute_turn(
@@ -155,6 +157,7 @@ class OracleNavSkill:
             robot_forward,
         )
         vel2 = vel
+        print("vel: ", vel)
 
         # print(vel, dist_to_final_nav_targ, angle_to_obj, angle_to_target)
         action = {
@@ -177,7 +180,7 @@ class ExpertDatagen:
                 "data/datasets/fremont_hlab_isaac/fremont_100.json.gz"
             )
         self.retract = retract
-        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/nav_pick_fremont_physics_v2/fremont"
+        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/nav_pick_fremont_physics_v3/fremont"
         if not self.retract:
             save_pth_base += "_no_retract"
         self.save_path = f"{save_pth_base}/{mode}"
@@ -210,7 +213,8 @@ class ExpertDatagen:
 
         action_dict = {
             "base_velocity_action": BaseVelocityActionConfig(
-                type="BaseVelKinematicIsaacAction"
+                type="BaseVelIsaacAction"
+                # type="BaseVelKinematicIsaacAction"
             ),
             "arm_reach_action": ActionConfig(type="ArmReachAction"),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
