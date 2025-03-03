@@ -273,11 +273,14 @@ def convert_object_glb_to_usd(
     enable_collision=True,
 ):
     merge_all_meshes = False
-    files = find_all_files(objects_root_folder, ".glb")
-    collision_asset_filepath = [f for f in files if "collider" in f][0]
-    render_asset_filepath = [f for f in files if "collider" not in f][0]
+    # files = find_all_files(objects_root_folder, ".glb")
+    collision_asset_filepath = objects_root_folder
+    render_asset_filepath = objects_root_folder
+    # collision_asset_filepath = [f for f in files if "collider" in f][0]
+    # render_asset_filepath = [f for f in files if "collider" not in f][0]
 
     print(f"Converting {collision_asset_filepath}...")
+    print(f"out_usd_path {out_usd_path}...")
 
     if enable_collision:
         convert_mesh_to_usd(
@@ -322,6 +325,28 @@ def convert_object_glb_to_usd(
     )
 
     print(f"Wrote {out_usd_path}")
+
+
+def batch_convert_object_glb_to_usd(
+    input_dir, output_dir, project_root_folder
+):
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            if file.endswith("textured.glb"):
+                input_file_path = os.path.join(root, file)
+                output_file_path = os.path.join(
+                    output_dir,
+                    "OBJECT_" + file.replace(".glb", ".usda"),
+                )
+                if not os.path.exists(output_file_path):
+                    os.makedirs(output_file_path)
+                # print("input_file_path: ", input_file_path)
+                # print("output_file_path: ", output_file_path)
+                convert_object_glb_to_usd(
+                    os.path.abspath(input_file_path),
+                    output_file_path,
+                    project_root_folder,
+                )
 
 
 def convert_object_to_usd(
@@ -563,125 +588,124 @@ def convert_hab_scene(
 
     assert "object_instances" in scene_json_data
     # TODO: Cleanup this format due to high repetitive content
-    #Handling articulated objects
+    # Handling articulated objects
     for obj_instance_json in scene_json_data["articulated_object_instances"]:
-       urdf_filename = f"{obj_instance_json['template_name']}.object_config.json"
-       urdf_filepath = find_file(objects_root_folder,urdf_filename)
-       urdf_filepath=os.path.join(objects_root_folder,urdf_filename)
+        urdf_filename = (
+            f"{obj_instance_json['template_name']}.object_config.json"
+        )
+        urdf_filepath = find_file(objects_root_folder, urdf_filename)
+        urdf_filepath = os.path.join(objects_root_folder, urdf_filename)
 
-       with open(urdf_filepath, "r") as file:
-          object_config_json_data = json.load(file)
+        with open(urdf_filepath, "r") as file:
+            object_config_json_data = json.load(file)
             # By convention, we fall back to render_asset if collision_asset is not set. See Habitat-sim Simulator::getJoinedMesh.
-       collision_asset_rel_filepath = (
+        collision_asset_rel_filepath = (
             object_config_json_data["collision_asset"]
             if "collision_asset" in object_config_json_data
             else object_config_json_data["render_asset"]
         )
-       if urdf_filepath:
+        if urdf_filepath:
             # Step 1: Convert the URDF to USD using the UrdfConverter
-            base_object_name = os.path.splitext(os.path.basename(collision_asset_rel_filepath))[0]
+            base_object_name = os.path.splitext(
+                os.path.basename(collision_asset_rel_filepath)
+            )[0]
             base_object_name = f"OBJECT_{base_object_name}"
             base_object_name = sanitize_usd_name(collision_asset_rel_filepath)
             out_usd_path = f"./data/usd/objects/{base_object_name}.usda"
 
             if not os.path.exists(out_usd_path):
                 try:
-                    convert_object_urdf(collision_asset_rel_filepath,out_usd_path)
+                    convert_object_urdf(
+                        collision_asset_rel_filepath, out_usd_path
+                    )
                 except Exception as e:
-                    print(f"Error converting URDF to USD for {urdf_filename}: {e}")
-                    continue 
-       # relative_usd_path = out_usd_path.removeprefix("./data/usd/")
-       relative_usd_path = os.path.relpath(
-           out_usd_path, start=scene_usd_folder
-       )
-       
-       object_xform = UsdGeom.Xform.Define(
-           usd_stage, f"/Scene/{base_object_name}"
-       )
-       prim = object_xform.GetPrim()
-       prim.GetReferences().AddReference(relative_usd_path)
-    #    UsdPhysics.ArticulationRootAPI.Apply(prim)
-    #    omni.physx.scripts.utils.setStaticCollider(prim, "convexHull")
-       # set purpose to "guide" so that this mesh doesn't render in Isaac?
-       if False:
-           mesh_geom = UsdGeom.Imageable(prim)
-           mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
+                    print(
+                        f"Error converting URDF to USD for {urdf_filename}: {e}"
+                    )
+                    continue
+        # relative_usd_path = out_usd_path.removeprefix("./data/usd/")
+        relative_usd_path = os.path.relpath(
+            out_usd_path, start=scene_usd_folder
+        )
 
+        object_xform = UsdGeom.Xform.Define(
+            usd_stage, f"/Scene/{base_object_name}"
+        )
+        prim = object_xform.GetPrim()
+        prim.GetReferences().AddReference(relative_usd_path)
+        #    UsdPhysics.ArticulationRootAPI.Apply(prim)
+        #    omni.physx.scripts.utils.setStaticCollider(prim, "convexHull")
+        # set purpose to "guide" so that this mesh doesn't render in Isaac?
+        if False:
+            mesh_geom = UsdGeom.Imageable(prim)
+            mesh_geom.CreatePurposeAttr(UsdGeom.Tokens.guide)
 
-       # Collect or create transform ops in the desired order: scale, rotation, translation
-       xform_op_order = []
+        # Collect or create transform ops in the desired order: scale, rotation, translation
+        xform_op_order = []
 
+        # Ensure scale op exists
+        scale = [
+            1.0,
+            1.0,
+            1.0,
+        ]  # obj_instance_json.get("non_uniform_scale", [1.0, 1.0, 1.0])
+        scale_op = next(
+            (
+                op
+                for op in object_xform.GetOrderedXformOps()
+                if op.GetName() == "xformOp:scale"
+            ),
+            None,
+        )
+        if scale_op is None:
+            scale_op = object_xform.AddScaleOp()
+        scale_op.Set(Gf.Vec3f(*scale))
+        xform_op_order.append(scale_op)
 
-       # Ensure scale op exists
-       scale = [
-           1.0,
-           1.0,
-           1.0,
-       ]  # obj_instance_json.get("non_uniform_scale", [1.0, 1.0, 1.0])
-       scale_op = next(
-           (
-               op
-               for op in object_xform.GetOrderedXformOps()
-               if op.GetName() == "xformOp:scale"
-           ),
-           None,
-       )
-       if scale_op is None:
-           scale_op = object_xform.AddScaleOp()
-       scale_op.Set(Gf.Vec3f(*scale))
-       xform_op_order.append(scale_op)
+        # Ensure rotation op exists
+        # rotation = habitat_to_usd_rotation([0.0, 0.0, 0.0, 1.0])
+        # rotation = [1.0, 0.0, 0.0, 0.0]
+        # 90 degrees about x in wxyz format
+        # rotation = [0.7071068,0.7071067,0.0,0.0]
+        rotation = habitat_to_usd_rotation(obj_instance_json.get("rotation"))
+        orient_op = next(
+            (
+                op
+                for op in object_xform.GetOrderedXformOps()
+                if op.GetName() == "xformOp:orient"
+            ),
+            None,
+        )
+        if orient_op is None:
+            orient_op = object_xform.AddOrientOp(
+                precision=UsdGeom.XformOp.PrecisionDouble
+            )
+        orient_op.Set(Gf.Quatd(*rotation))
+        xform_op_order.append(orient_op)
 
+        # Ensure translation op exists
+        position = habitat_to_usd_position(
+            obj_instance_json.get("translation")
+        )
+        translate_op = next(
+            (
+                op
+                for op in object_xform.GetOrderedXformOps()
+                if op.GetName() == "xformOp:translate"
+            ),
+            None,
+        )
+        if translate_op is None:
+            translate_op = object_xform.AddTranslateOp()
+        translate_op.Set(Gf.Vec3f(*position))
+        xform_op_order.append(translate_op)
 
-       # Ensure rotation op exists
-       # rotation = habitat_to_usd_rotation([0.0, 0.0, 0.0, 1.0])
-       # rotation = [1.0, 0.0, 0.0, 0.0]
-       # 90 degrees about x in wxyz format
-       # rotation = [0.7071068,0.7071067,0.0,0.0]
-       rotation = habitat_to_usd_rotation(
-           obj_instance_json.get("rotation")
-       )
-       orient_op = next(
-           (
-               op
-               for op in object_xform.GetOrderedXformOps()
-               if op.GetName() == "xformOp:orient"
-           ),
-           None,
-       )
-       if orient_op is None:
-           orient_op = object_xform.AddOrientOp(
-               precision=UsdGeom.XformOp.PrecisionDouble
-           )
-       orient_op.Set(Gf.Quatd(*rotation))
-       xform_op_order.append(orient_op)
+        #    Let's not change the xform order. I don't know what's going on with Xform order.
+        #    object_xform.SetXformOpOrder(xform_op_order)
 
-
-       # Ensure translation op exists
-       position = habitat_to_usd_position(
-           obj_instance_json.get("translation")
-       )
-       translate_op = next(
-           (
-               op
-               for op in object_xform.GetOrderedXformOps()
-               if op.GetName() == "xformOp:translate"
-           ),
-           None,
-       )
-       if translate_op is None:
-           translate_op = object_xform.AddTranslateOp()
-       translate_op.Set(Gf.Vec3f(*position))
-       xform_op_order.append(translate_op)
-
-
-    #    Let's not change the xform order. I don't know what's going on with Xform order.
-    #    object_xform.SetXformOpOrder(xform_op_order)
-
-
-       count += 1
-       if count == max_count:
-           break
-
+        count += 1
+        if count == max_count:
+            break
 
     for obj_instance_json in scene_json_data["object_instances"]:
 
@@ -851,6 +875,7 @@ import xml.etree.ElementTree as ET
 
 from pxr import Gf, Sdf, Usd
 
+
 def add_habitat_visual_metadata_for_articulation(
     usd_filepath,
     reference_urdf_filepath,
@@ -896,10 +921,12 @@ def add_habitat_visual_metadata_for_articulation(
                         "assetScale": scale,
                     }
                 else:
-                    print(f"Warning: No mesh found for visual in link {link_name}")
+                    print(
+                        f"Warning: No mesh found for visual in link {link_name}"
+                    )
         else:
             print(f"Warning: No visual found for link {link_name}")
-    
+
     # Extract damping values from URDF joints
     joint_damping_data = {}
     for joint in urdf_root.findall("joint"):
@@ -933,13 +960,15 @@ def add_habitat_visual_metadata_for_articulation(
             asset_scale_attr.Set(Gf.Vec3f(*metadata["assetScale"]))
         else:
             print(f"Warning: Prim not found for link: {link_name}")
-    
+
     # Update joints with damping values
     for joint_name, damping in joint_damping_data.items():
         joint_path = f"/{robot_name}/{joint_name}"
         joint_prim = stage.GetPrimAtPath(joint_path)
         if joint_prim:
-            damping_attr = joint_prim.CreateAttribute("drive:angular:physics:damping", Sdf.ValueTypeNames.Float)
+            damping_attr = joint_prim.CreateAttribute(
+                "drive:angular:physics:damping", Sdf.ValueTypeNames.Float
+            )
             damping_attr.Set(damping)
         else:
             print(f"Warning: Joint not found in USD: {joint_name}")
@@ -971,23 +1000,24 @@ def convert_urdf_test():
         project_root_folder="./",
     )
 
-def convert_object_urdf(path,out_usd_path):
 
-   base_urdf_name = "FREMONT-KITCHENISLAND"
-   base_urdf_folder = path
-   base_directory = "/home/joanne/habitat-lab/data/Fremont-Knuckles"
-   base_urdf_folder=os.path.normpath(os.path.join(base_directory,path))
-   source_urdf_filepath = f"{base_urdf_folder}"
-   clean_urdf_filepath = f"{base_urdf_folder}"
-   temp_usd_filepath = out_usd_path
-   out_usd_filepath = out_usd_path
-   convert_urdf(clean_urdf_filepath, temp_usd_filepath)
-   add_habitat_visual_metadata_for_articulation(
-       temp_usd_filepath,
-       source_urdf_filepath,
-       out_usd_filepath,
-       project_root_folder="./",
-   )
+def convert_object_urdf(path, out_usd_path):
+
+    base_urdf_name = "FREMONT-KITCHENISLAND"
+    base_urdf_folder = path
+    base_directory = "/home/joanne/habitat-lab/data/Fremont-Knuckles"
+    base_urdf_folder = os.path.normpath(os.path.join(base_directory, path))
+    source_urdf_filepath = f"{base_urdf_folder}"
+    clean_urdf_filepath = f"{base_urdf_folder}"
+    temp_usd_filepath = out_usd_path
+    out_usd_filepath = out_usd_path
+    convert_urdf(clean_urdf_filepath, temp_usd_filepath)
+    add_habitat_visual_metadata_for_articulation(
+        temp_usd_filepath,
+        source_urdf_filepath,
+        out_usd_filepath,
+        project_root_folder="./",
+    )
 
 
 def convert_objects_folder_to_usd(
@@ -1039,9 +1069,13 @@ if __name__ == "__main__":
     #     project_root_folder="./",
     #     enable_collision_for_stage=True,
     # )
-    convert_hab_scene(
-       "data/Fremont-Knuckles/configs/scenes/fremont_static_objects.scene_instance.json",
-       project_root_folder="./",
-       enable_collision_for_stage=True,
-   )
-
+    #     convert_hab_scene(
+    #        "data/Fremont-Knuckles/configs/scenes/fremont_static_objects.scene_instance.json",
+    #        project_root_folder="./",
+    #        enable_collision_for_stage=True,
+    #    )
+    batch_convert_object_glb_to_usd(
+        "data/sim_assets_all/assets/dexgraspnet2/meshdata_glb",
+        "data/sim_assets_all/assets/dexgraspnet2/meshdata_usda",
+        "./",
+    )

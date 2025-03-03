@@ -126,14 +126,17 @@ class IsaacRearrangeSim(HabitatSim):
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        self._isaac_physics_dt = 1.0 / 180
+        self._isaac_physics_dt = 1.0 / 60
+        self._isaac_rendering_dt = 1.0 / 30
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
         isaac_world.set_simulation_dt(
             physics_dt=self._isaac_physics_dt,
             rendering_dt=self._isaac_physics_dt,
         )
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath("data/usd/scenes/fremont_static.usda")
+        asset_path = os.path.abspath(
+            "data/usd/scenes/fremont_static_objects.usda"
+        )
         print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
@@ -357,7 +360,9 @@ class IsaacRearrangeSim(HabitatSim):
     def reset(self):
         SimulatorBackend.reset(self)
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath("data/usd/scenes/fremont_static.usda")
+        asset_path = os.path.abspath(
+            "data/usd/scenes/fremont_static_objects.usda"
+        )
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
@@ -1215,7 +1220,7 @@ class IsaacRearrangeSim(HabitatSim):
         if True:
             objects_to_add = [
                 (
-                    f"data/objects/fremont/other/plush2/plush2.object_config.json",
+                    f"data/objects/fremont/other/plush4/plush4.object_config.json",
                     mn.Vector3(2.04542, 0.870047, 0.75122),
                 ),
             ]
@@ -1288,7 +1293,9 @@ class IsaacRearrangeSim(HabitatSim):
                 ro = self._rigid_objects[i]
 
             # rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
-            rotation = mn.Quaternion.rotation(mn.Deg(0), mn.Vector3.x_axis())
+            rotation1 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.x_axis())
+            rotation2 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.z_axis())
+            rotation = rotation1 * rotation2
             trans = mn.Matrix4.from_(rotation.to_matrix(), position)
             ro.transformation = trans
 

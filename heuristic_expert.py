@@ -154,7 +154,7 @@ class ExpertDatagen:
         aux = self.env.reset()
         self.target_name = target_name
         self.skill = skill
-        self.save_path = f"output_env_murp_{target_name}.mp4"
+        self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
         self.writer = imageio.get_writer(
             self.save_path,
             fps=30,
@@ -292,6 +292,13 @@ class ExpertDatagen:
                 )
                 break
 
+    def visualize_pos(self, pos):
+        self.env.sim.viz_ids["target_ee_pos"] = (
+            self.env.sim.visualize_position(
+                pos, self.env.sim.viz_ids["target_ee_pos"]
+            )
+        )
+
     def get_poses(self, name, pose_type="base"):
         poses = {
             "cabinet": {
@@ -313,34 +320,34 @@ class ExpertDatagen:
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
             "oven": {
-                "base_pos": np.array([-4.935, 0.1, -3.3]),
+                "base_pos": np.array([-4.75, 0.1, -3.3]),
                 "base_rot": 180,
-                "ee_pos": np.array([-5.5, 1.4, -2.7]),
+                "ee_pos": np.array([-5.5, 1.6, -2.7]),
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
+            # "fridge": {
+            #     "base_pos": np.array([-4.4, 0.1, 0.7]),
+            #     "base_rot": 180,
+            #     "ee_pos": np.array([-5.4, 1.4, 1.3]),
+            #     "ee_rot": np.deg2rad([0, 0, 0]),
+            # },
             "fridge": {
-                "base_pos": np.array([-4.6, 1.0, 0.74]),
+                "base_pos": np.array([-4.97, 0.1, 0.74]),
                 "base_rot": 180,
-                "ee_pos": np.array([-4.4, 0.8, -2.0]),
-                "ee_rot": np.deg2rad([0, 80, -30]),
+                "ee_pos": np.array([-5.60977, 0.95913, 1.51181]),
+                "ee_rot": np.deg2rad([0, 0, 0]),
             },
             "freezer": {
-                "base_pos": np.array([-4.97, 0.4, 0.74]),
+                "base_pos": np.array([-4.9, 0.1, 0.7]),
                 "base_rot": 180,
-                "ee_pos": np.array([-4.4, 0.8, -2.0]),
+                "ee_pos": np.array([-5.7, 0.5, 1.34531]),
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
         }
-        if pose_type == "base":
-            return (
-                poses[name]["base_pos"],
-                poses[name]["base_rot"],
-            )
-        elif pose_type == "ee":
-            return (
-                poses[name]["ee_pos"],
-                poses[name]["ee_rot"],
-            )
+        return (
+            poses[name][f"{pose_type}_pos"],
+            poses[name][f"{pose_type}_rot"],
+        )
 
     def run_expert(self):
         self.reset_robot(self.target_name)
@@ -348,11 +355,8 @@ class ExpertDatagen:
         target_ee_pos, target_ee_rot = self.get_poses(
             self.target_name, pose_type="ee"
         )
-        self.env.sim.viz_ids["target_ee_pos"] = (
-            self.env.sim.visualize_position(
-                target_ee_pos, self.env.sim.viz_ids["target_ee_pos"]
-            )
-        )
+        self.visualize_pos(target_ee_pos)
+
         # target_ee_pos[1] += 0.05
         self.move_to_ee(
             target_ee_pos, target_ee_rot, grasp="open", timeout=700
@@ -366,19 +370,21 @@ class ExpertDatagen:
             target_ee_pos, _ = self.get_curr_ee_pose()
             target_ee_pos[1] += 0.3
         elif self.skill == "open":
-            # move hand up
+            # move hand backwards
             target_ee_pos, _ = self.get_curr_ee_pose()
-            target_ee_pos[0] += 0.5
-            self.move_to_ee(
-                target_ee_pos, target_ee_rot, grasp="close", timeout=300
-            )
+            target_ee_pos[0] += 0.2
+            target_ee_pos[1] -= 0.2
+
+        self.move_to_ee(
+            target_ee_pos, target_ee_rot, grasp="close", timeout=300
+        )
 
         self.writer.close()
         print(f"saved file to: {self.save_path}")
 
 
 if __name__ == "__main__":
-    target_name = "oven"
+    target_name = "freezer"
     skill = "open"
     datagen = ExpertDatagen(target_name, skill)
     datagen.run_expert()
