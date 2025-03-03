@@ -199,7 +199,7 @@ class VLAEvaluator:
 
         action_dict = {
             "base_velocity_action": BaseVelocityActionConfig(
-                type="BaseVelKinematicIsaacAction"
+                type="BaseVelIsaacAction"
             ),
             "arm_reach_action": ActionConfig(type="ArmReachAction"),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
@@ -365,7 +365,7 @@ class VLAEvaluator:
         for i in range(len(data)):
             action = data[i]["joint_action"]
             joint_action = data[i]["joint_action"][:7]
-            print("data action: ", action)
+            # print("data action: ", action)
             action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
             masked_joint_action = joint_action[action_mask == 1]
             target_joint_pos[0] += masked_joint_action[0]
@@ -380,6 +380,7 @@ class VLAEvaluator:
                 action[7] * forward_velocity,
                 action[8] * turn_velocity,
             ]
+            print("base_velocity_action: ", target_base_action)
 
             self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_joint_pos
@@ -426,49 +427,46 @@ class VLAEvaluator:
         ctr = 0
         forward_velocity = 8.0
         turn_velocity = 2.0
-        episode_path = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert/nav_pick_fremont_physics_v2/fremont/train/tmp_npy_v4/ep_0.npy"
-        data = np.load(episode_path, allow_pickle=True)
 
         max_steps = 250
-        max_steps = len(data)
         print("max_steps: ", max_steps)
         target_joint_pos = (
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
         for i in range(max_steps):
             # print(f"=================== step # {ctr} ===================")
-            # action = self.policy.act(obs)[0]
+            action = self.policy.act(obs)[0]
 
-            # # n_repeat = 6 if "30" in self.exp_name else 1
+            # n_repeat = 6 if "30" in self.exp_name else 1
             # print("action: ", action)
-            # target_joint_pos = (
-            #     self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-            # )
-            # target_joint_pos[0] = action[0]
-            # target_joint_pos[1] = action[1]
-            # target_joint_pos[2] = action[2]
-            # target_joint_pos[4] = action[3]
-            # target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
-            # target_base_action =  [ action[7] * forward_velocity, action[8] * turn_velocity]
-
-            action = data[i]["joint_action"]
-            joint_action = data[i]["joint_action"][:7]
-            print("data action: ", action)
-            action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
-            masked_joint_action = joint_action[action_mask == 1]
-
-            # target_joint_pos[:7] = data[i]["joint"][:7]
-            target_joint_pos[:7] += data[i]["joint_action"][:7]
-
-            # target_joint_pos[0] += masked_joint_action[0]
-            # target_joint_pos[1] += masked_joint_action[1]
-            # target_joint_pos[3] += masked_joint_action[2]
-            # target_joint_pos[5] += masked_joint_action[3]
+            target_joint_pos = (
+                self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
+            target_joint_pos[0] = action[0]
+            target_joint_pos[1] = action[1]
+            target_joint_pos[2] = action[2]
+            target_joint_pos[4] = action[3]
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
             target_base_action = [
                 action[7] * forward_velocity,
                 action[8] * turn_velocity,
             ]
+
+            # action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
+            # masked_joint_action = joint_action[action_mask == 1]
+
+            # target_joint_pos[:7] = data[i]["joint"][:7]
+            # target_joint_pos[:7] += data[i]["joint_action"][:7]
+
+            # target_joint_pos[0] += masked_joint_action[0]
+            # target_joint_pos[1] += masked_joint_action[1]
+            # target_joint_pos[3] += masked_joint_action[2]
+            # target_joint_pos[5] += masked_joint_action[3]
+            # target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
+            # target_base_action = [
+            #     action[7] * forward_velocity,
+            #     action[8] * turn_velocity,
+            # ]
 
             self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_joint_pos
@@ -504,9 +502,12 @@ if __name__ == "__main__":
     parser.add_argument("--ep-id", type=int, default=0, help="Episode id")
     parser.add_argument("--exp", default="", help="Episode id")
     parser.add_argument("--ckpt", type=int, default=10000, help="Episode id")
+    parser.add_argument("--replay", action="store_true")
 
     args = parser.parse_args()
 
     datagen = VLAEvaluator(args.ep_id, args.exp, args.ckpt)
-    # datagen.run()
-    datagen.replay_data()
+    if args.replay:
+        datagen.replay_data()
+    else:
+        datagen.run()

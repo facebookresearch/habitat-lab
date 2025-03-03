@@ -21,13 +21,14 @@ class BaseVelIsaacAction(BaseVelAction):
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
-        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(0, lin_vel, 0)
+        # self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
         self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
             [0, 0, ang_vel]
         )
         self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
-            [lin_vel, 0, 0]
+            [0, lin_vel, 0]
         )
 
 
