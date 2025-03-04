@@ -338,8 +338,8 @@ def batch_convert_object_glb_to_usd(
                     output_dir,
                     "OBJECT_" + file.replace(".glb", ".usda"),
                 )
-                if not os.path.exists(output_file_path):
-                    os.makedirs(output_file_path)
+                if not os.path.exists(output_dir):
+                    os.makedirs(output_dir)
                 # print("input_file_path: ", input_file_path)
                 # print("output_file_path: ", output_file_path)
                 convert_object_glb_to_usd(
