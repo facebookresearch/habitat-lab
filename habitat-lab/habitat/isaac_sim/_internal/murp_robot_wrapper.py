@@ -186,24 +186,26 @@ class MurpRobotWrapper:
     def reset_arm(self):
         # todo: specify this in isaac_spot_robot.py
         left_arm_joint_names = [
-            "fr3_one_joint1",
-            "fr3_one_joint2",
-            "fr3_one_joint3",
-            "fr3_one_joint4",
-            "fr3_one_joint5",
-            "fr3_one_joint6",
-            "fr3_one_joint7",
+            "left_fr3_joint1",
+            "left_fr3_joint2",
+            "left_fr3_joint3",
+            "left_fr3_joint4",
+            "left_fr3_joint5",
+            "left_fr3_joint6",
+            "left_fr3_joint7"
         ]
 
         right_arm_joint_names = [
-            "fr3_two_joint1",
-            "fr3_two_joint2",
-            "fr3_two_joint3",
-            "fr3_two_joint4",
-            "fr3_two_joint5",
-            "fr3_two_joint6",
-            "fr3_two_joint7",
+            "right_fr3_joint1",
+            "right_fr3_joint2",
+            "right_fr3_joint3",
+            "right_fr3_joint4",
+            "right_fr3_joint5",
+            "right_fr3_joint6",
+            "right_fr3_joint7",
         ]
+   
+
 
         left_arm_joint_indices = []
         right_arm_joint_indices = []
@@ -233,31 +235,33 @@ class MurpRobotWrapper:
     def reset_hand(self):
         # todo: specify this in isaac_spot_robot.py
         # only list the revolute joints
+        right_hand_joint_names = [
+            "joint_1_0",
+            "joint_2_0",
+            "joint_3_0",
+            "joint_5_0",
+            "joint_6_0",
+            "joint_7_0",
+            "joint_9_0",
+            "joint_10_0",
+            "joint_11_0",
+            "joint_14_0",
+            "joint_15_0",
+        ]
         left_hand_joint_names = [
-            "allegro_joint_one_1",
-            "allegro_joint_one_2",
-            "allegro_joint_one_3",
-            "allegro_joint_one_5",
-            "allegro_joint_one_6",
-            "allegro_joint_one_7",
-            "allegro_joint_one_9",
-            "allegro_joint_one_10",
-            "allegro_joint_one_11",
-            "allegro_joint_one_14",
+            "joint_l_1_0",
+            "joint_l_2_0",
+            "joint_l_3_0",
+            "joint_l_5_0",
+            "joint_l_6_0",
+            "joint_l_7_0",
+            "joint_l_9_0",
+            "joint_l_10_0",
+            "joint_l_11_0",
+            "joint_l_14_0",
+            "joint_l_15_0",
         ]
 
-        right_hand_joint_names = [
-            "allegro_joint_two_1",
-            "allegro_joint_two_2",
-            "allegro_joint_two_3",
-            "allegro_joint_two_5",
-            "allegro_joint_two_6",
-            "allegro_joint_two_7",
-            "allegro_joint_two_9",
-            "allegro_joint_two_10",
-            "allegro_joint_two_11",
-            "allegro_joint_two_14",
-        ]
 
         left_hand_joint_indices = []
         right_hand_joint_indices = []
