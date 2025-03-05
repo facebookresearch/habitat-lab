@@ -171,8 +171,12 @@ class ExpertDatagen:
         num_hand_joints = 16
         grasp_joints = {
             "open": np.zeros(num_hand_joints),
-            "pre_grasp": np.array([0.7] * num_hand_joints),
-            "close": np.array([1.57] * num_hand_joints),
+            "pre_grasp": np.concatenate((np.full(12, 0.7), np.zeros(4))),
+            "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.90), np.full(4, 0.4))
+            ),
+            # "close": np.array([1.0] * num_hand_joints),
         }
         return grasp_joints[name]
 
@@ -277,6 +281,7 @@ class ExpertDatagen:
 
     def move_hand_joints(self, target_hand_pos, timeout=100):
         curr_hand_pos = self.get_curr_hand_pose()
+        print("curr_hand_pos: ", curr_hand_pos)
         ctr = 0
         while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
             action = {
@@ -346,9 +351,9 @@ class ExpertDatagen:
             #     "ee_rot": np.deg2rad([0, 0, 0]),
             # },
             "fridge": {
-                "base_pos": np.array([-4.7, 0.1, 0.74]),
+                "base_pos": np.array([-4.7, 0.1, 0.8]),
                 "base_rot": 180,
-                "ee_pos": np.array([-6.0, 1.0, 2.2]),
+                "ee_pos": np.array([-6.3, 1.0, 2.4]),
                 "ee_rot": np.deg2rad([120, 0, 0]),
             },
             "freezer": {
@@ -492,50 +497,6 @@ class ExpertDatagen:
             print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
             self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
 
-    def run_expert(self):
-        self.reset_robot(self.target_name)
-
-        target_ee_pos, target_ee_rot = self.get_poses(
-            self.target_name, pose_type="ee"
-        )
-        print("init target_ee_pos: ", target_ee_pos)
-        self.visualize_pos(target_ee_pos)
-
-        # target_ee_pos[1] += 0.05
-        self.move_to_ee(
-            target_ee_pos, target_ee_rot, grasp="open", timeout=500
-        )
-        # target_ee_pos[1] -= 0.1
-        # self.visualize_pos(target_ee_pos)
-
-        # self.move_to_ee(
-        #     target_ee_pos,
-        #     target_ee_rot,
-        #     grasp="pre_grasp",
-        #     timeout=700,
-        # )
-
-        # grasp object
-        self.move_hand("close")
-
-        if self.skill == "pick":
-            # move hand up
-            target_ee_pos, _ = self.get_curr_ee_pose()
-            target_ee_pos[1] += 0.3
-        elif self.skill == "open":
-            # move hand backwards
-            target_ee_pos, _ = self.get_curr_ee_pose()
-            target_ee_pos[0] += 0.2
-            target_ee_pos[2] += 0.2
-        self.visualize_pos(target_ee_pos)
-
-        self.move_to_ee(
-            target_ee_pos, target_ee_rot, grasp="close", timeout=300
-        )
-
-        self.writer.close()
-        print(f"saved file to: {self.save_path}")
-
     def run_expert_w_grasp(self):
         self.reset_robot(self.target_name)
 
@@ -634,6 +595,5 @@ if __name__ == "__main__":
     target_name = "fridge"
     skill = "open"
     datagen = ExpertDatagen(target_name, skill)
-    datagen.run_expert()
     # datagen.run_expert_w_grasp()
-    # datagen.replay_grasp()
+    datagen.replay_grasp()

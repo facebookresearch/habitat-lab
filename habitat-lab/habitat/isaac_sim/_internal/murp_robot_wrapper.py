@@ -4,6 +4,7 @@
 
 import magnum as mn
 import numpy as np
+import omni
 import omni.physx.scripts.utils as physxUtils
 
 # todo: add guard to ensure SimulatorApp is created, or give nice error message, so we don't get weird import errors here
@@ -210,16 +211,8 @@ class MurpRobotWrapper:
             "joint", "link"
         )
 
-        self.ee_link_id = [
-            i
-            for i, s in enumerate(self._body_prim_paths)
-            if self.ee_link_name in s
-        ][0]
-        self.right_ee_link_id = [
-            i
-            for i, s in enumerate(self._body_prim_paths)
-            if self.right_ee_link_name in s
-        ][0]
+        self.ee_link_id = self.get_link_id(self.ee_link_name)
+        self.right_ee_link_id = self.get_link_id(self.right_ee_link_name)
         left_arm_joint_indices = []
         right_arm_joint_indices = []
         dof_names = self._robot.dof_names
@@ -244,6 +237,11 @@ class MurpRobotWrapper:
         ]
         self._target_arm_joint_positions = rest_positions
         self._target_right_arm_joint_positions = rest_positions
+
+    def get_link_id(self, link_str):
+        return [
+            i for i, s in enumerate(self._body_prim_paths) if link_str in s
+        ][0]
 
     def reset_hand(self):
         # todo: specify this in isaac_spot_robot.py
@@ -480,7 +478,9 @@ class MurpRobotWrapper:
 
     def physics_callback(self, step_size):
         base_position, base_orientation = self._robot.get_world_pose()
-        trans,rot=self.get_prim_transform("_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1")
+        trans, rot = self.get_prim_transform(
+            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
+        )
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self.drive_right_arm(step_size)
@@ -534,24 +534,42 @@ class MurpRobotWrapper:
 
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        # self.ee_link_id = 9  # for left arm
-        # ee_link_id = 51 # for right arm
         link_poses = self.get_link_world_poses(convention=convention)
 
         ee_pos = link_poses[0][self.ee_link_id]
         ee_rot = link_poses[1][self.ee_link_id]
 
         return ee_pos, ee_rot
-    def get_prim_transform(self,asset_path):
-        """Get Scene prim's position and rotation."""
 
-        prim_path=f"/World/test_scene/{asset_path}"
-        prim=self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+    def get_prim_transform(self, asset_path=None):
+        """Get Scene prim's position and rotation."""
+        if asset_path is None:
+            asset_path = os.path.abspath(
+                "data/usd/scenes/fremont_static_objects.usda"
+            )
+        prim_path = f"/World/test_scene/{asset_path}"
+        prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
         matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
         translate: Gf.Vec3d = matrix.ExtractTranslation()
-        rotation : Gf.Rotation = matrix.ExtractRotation()
-        quat_rotation : Gf.Quatd = matrix.ExtractRotationQuat()
+        rotation: Gf.Rotation = matrix.ExtractRotation()
+        quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         euler_rotation = rotation.GetAngle()
+
+        # prim_range = Usd.PrimRange(root_prim)
+        # it = iter(prim_range)
+        # for prim in it:
+        #     prim_path = str(prim.GetPath())
+
+        #     if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
+        #         continue
+
+        #     # we found a rigid body, so let's ignore children
+        #     it.PruneChildren()
+        #     prim_paths.append(prim_path)
+
+        # assert len(prim_paths)
+        # print("prim_paths: ", prim_paths, len(prim_paths))
+
         # print("THE PRIM PATH",pos)
         # print(f"Position: {list(translate)}")
         # print(f"Rotation (Quaternion): [{quat_rotation}]")
@@ -559,23 +577,33 @@ class MurpRobotWrapper:
 
         return list(translate), rotation
 
-        def get_articulation_links(self, prim_path: str):
-            """ Function to get link names which articulation can be applied 
-                Sample call: get_articulation_links(prim_path="/World/test_scene")"""
-            prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+    def get_articulation_links(self, prim_path: str):
+        """Function to get link names which articulation can be applied
+        Sample call: get_articulation_links(prim_path="/World/test_scene")"""
+        prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
 
-            articulation_links = {}
+        articulation_links = {}
 
-            for child_prim in prim.GetChildren():
-                if UsdPhysics.ArticulationRootAPI.CanApply(child_prim):
-                    articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
+        for child_prim in prim.GetChildren():
+            if UsdPhysics.ArticulationRootAPI.CanApply(child_prim):
+                articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
 
-                    link_names = []
+                link_names = []
 
-                    for link_prim in child_prim.GetChildren():
-                            if link_prim.GetTypeName() == "Xform":
-                                link_names.append(link_prim.GetName())
+                for link_prim in child_prim.GetChildren():
+                    if link_prim.GetTypeName() == "Xform":
+                        link_names.append(link_prim.GetName())
 
-                    articulation_links[child_prim.GetName()] = link_names
-            
-            return articulation_links
+                articulation_links[child_prim.GetName()] = link_names
+
+        return articulation_links
+
+    def hand_pose(self, convention="hab"):
+        """Get the current hand base link position and rotation."""
+        link_poses = self.get_link_world_poses(convention=convention)
+        hand_base_id = self.get_link_id("link_0_0")
+
+        ee_pos = link_poses[0][hand_base_id]
+        ee_rot = link_poses[1][hand_base_id]
+
+        return ee_pos, ee_rot

@@ -6,16 +6,20 @@ import habitat_sim
 from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 
 warnings.filterwarnings("ignore")
+import math
 import os
 import random
 
+import cv2
 import imageio
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from omegaconf import DictConfig, OmegaConf
 from scipy.spatial.transform import Rotation as R
 
 import habitat
+import rotation_conversions
 from habitat.articulated_agents.robots import FetchRobot
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -98,6 +102,97 @@ def init_rearrange_env(agent_dict, action_dict):
     return Env(res_cfg)
 
 
+def generate_text_image(width: int, text: str) -> np.ndarray:
+    """
+    Generates an image of the given text with line breaks, honoring given width.
+
+    Args:
+        width (int): Width of the image.
+        text (str): Text to be drawn.
+
+    Returns:
+        np.ndarray: Text drawn on white image with the given width.
+    """
+    # Define the parameters for the text
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.8
+    font_thickness = 2
+    line_spacing = 10  # Spacing between lines in pixels
+
+    # Calculate the maximum width and height of the text
+    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+    max_width = width - 20  # Allow some padding
+    max_height = text_size[1] + line_spacing
+
+    # Split the text into words
+    words = text.split()
+
+    # Initialize variables for text positioning
+    x = 10
+    y = text_size[1]
+
+    to_draw = []
+
+    # Iterate over the words and add them to the image
+    num_rows = 1
+    for word in words:
+        # Get the size of the word
+        word_size, _ = cv2.getTextSize(word, font, font_scale, font_thickness)
+
+        # Check if adding the word exceeds the maximum width
+        if x + word_size[0] > max_width:
+            # Add a line break before the word
+            y += max_height
+            x = 10
+            num_rows += 1
+
+        # Draw the word on the image
+        to_draw.append((word, x, y))
+
+        # Update the position for the next word
+        x += word_size[0] + 5  # Add some spacing between words
+
+    # Create a blank white image with the calculated dimensions
+    image = 255 * np.ones((max_height * num_rows, width, 3), dtype=np.uint8)
+    for word, x, y in to_draw:
+        cv2.putText(
+            image,
+            word,
+            (x, y),
+            font,
+            font_scale,
+            (0, 0, 0),
+            font_thickness,
+            cv2.LINE_AA,
+        )
+
+    return image
+
+
+def add_text_to_image(
+    image: np.ndarray, text: str, top: bool = False
+) -> np.ndarray:
+    """
+    Adds text to the given image.
+
+    Args:
+        image (np.ndarray): Input image.
+        text (str): Text to be added.
+        top (bool, optional): Whether to add the text to the top or bottom of the image.
+
+    Returns:
+        np.ndarray: Image with text added.
+    """
+    width = image.shape[1]
+    text_image = generate_text_image(width, text)
+    if top:
+        combined_image = np.vstack([text_image, image])
+    else:
+        combined_image = np.vstack([image, text_image])
+
+    return combined_image
+
+
 from habitat.datasets.rearrange.navmesh_utils import compute_turn
 from habitat.tasks.utils import get_angle
 
@@ -122,11 +217,13 @@ class ExpertDatagen:
 
         urdf_path = os.path.join(
             data_path,
-            "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_obj.urdf",
+            "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand.urdf",
         )
         arm_urdf_path = os.path.join(
             data_path,
-            "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_left_arm_obj.urdf",
+            # "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_left_arm_obj.urdf",
+            "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+            # "franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
         )
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
@@ -162,9 +259,16 @@ class ExpertDatagen:
         self.base_trans = None
 
     def get_grasp_mode(self, name):
+        # num_hand_joints = 10
+        num_hand_joints = 16
         grasp_joints = {
-            "open": np.zeros(10),
-            "close": np.array([1.57] * 10),
+            "open": np.zeros(num_hand_joints),
+            "pre_grasp": np.concatenate((np.full(12, 0.7), np.zeros(4))),
+            "close": np.concatenate((np.full(12, 0.9), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.95), np.full(4, 0.4))
+            ),
+            # "close": np.array([1.0] * num_hand_joints),
         }
         return grasp_joints[name]
 
@@ -205,7 +309,7 @@ class ExpertDatagen:
         )
 
     def get_curr_ee_pose(self):
-        curr_ee_pos, curr_ee_rot = (
+        curr_ee_pos_vec, curr_ee_rot = (
             self.env.sim.articulated_agent._robot_wrapper.ee_pose()
         )
 
@@ -213,6 +317,7 @@ class ExpertDatagen:
             [*curr_ee_rot.vector, curr_ee_rot.scalar]
         )
         curr_ee_rot_rpy = curr_ee_rot_quat.as_euler("xyz", degrees=True)
+        curr_ee_pos = np.array([*curr_ee_pos_vec])
         return curr_ee_pos, curr_ee_rot_rpy
 
     def get_curr_joint_pose(self, arm="left"):
@@ -233,7 +338,7 @@ class ExpertDatagen:
         print(f"moving arm to: {target_ee_pos}, with hand {grasp}")
         ctr = 0
         curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
-        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.08):
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
             action = {
                 "action": "arm_reach_ee_action",
                 "action_args": {
@@ -251,22 +356,26 @@ class ExpertDatagen:
 
             obs = self.env.step(action)
             im = process_obs_img(obs)
+            im = add_text_to_image(im, "moving ee")
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
             ctr += 1
             if ctr > timeout:
                 print(
-                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target. EE currently at {curr_ee_pos}"
                 )
                 break
 
     def move_hand(self, mode="close", timeout=100):
         target_hand_pos = self.get_grasp_mode(mode)
-        curr_hand_pos = self.get_curr_hand_pose()
         print(f"moving hand to: {mode}")
+        self.move_hand_joints(target_hand_pos, timeout)
+
+    def move_hand_joints(self, target_hand_pos, timeout=100):
+        curr_hand_pos = self.get_curr_hand_pose()
         ctr = 0
-        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.08):
+        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
             action = {
                 "action": "base_velocity_action",
                 "action_args": {
@@ -276,13 +385,16 @@ class ExpertDatagen:
             self.env.sim.articulated_agent.base_transformation = (
                 self.base_trans
             )
+            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+                self.get_curr_joint_pose()
+            )
             self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
                 target_hand_pos
             )
             self.pin_right_arm()
-
             obs = self.env.step(action)
             im = process_obs_img(obs)
+            im = add_text_to_image(im, "moving hand")
             self.writer.append_data(im)
             curr_hand_pos = self.get_curr_hand_pose()
             ctr += 1
@@ -332,10 +444,11 @@ class ExpertDatagen:
             #     "ee_rot": np.deg2rad([0, 0, 0]),
             # },
             "fridge": {
-                "base_pos": np.array([-4.97, 0.1, 0.74]),
+                "base_pos": np.array([-4.7, 0.1, 0.8]),
                 "base_rot": 180,
-                "ee_pos": np.array([-5.60977, 0.95913, 1.51181]),
-                "ee_rot": np.deg2rad([0, 0, 0]),
+                # "ee_pos": np.array([-6.1, 1.0, 2.0]),
+                "ee_pos": np.array([-6.3, 1.0, 2.4]),
+                "ee_rot": np.deg2rad([120, 0, 0]),
             },
             "freezer": {
                 "base_pos": np.array([-4.9, 0.1, 0.7]),
@@ -355,15 +468,21 @@ class ExpertDatagen:
         target_ee_pos, target_ee_rot = self.get_poses(
             self.target_name, pose_type="ee"
         )
+        print("init target_ee_pos: ", target_ee_pos)
         self.visualize_pos(target_ee_pos)
 
         # target_ee_pos[1] += 0.05
         self.move_to_ee(
-            target_ee_pos, target_ee_rot, grasp="open", timeout=700
+            target_ee_pos, target_ee_rot, grasp="pre_grasp", timeout=200
         )
 
         # grasp object
-        self.move_hand("close")
+        self.move_hand("close", timeout=50)
+        self.move_hand("close_thumb", timeout=20)
+
+        print("done closing")
+        curr_hand_pos = self.get_curr_hand_pose()
+        print("curr_hand_pos: ", curr_hand_pos)
 
         if self.skill == "pick":
             # move hand up
@@ -373,10 +492,11 @@ class ExpertDatagen:
             # move hand backwards
             target_ee_pos, _ = self.get_curr_ee_pose()
             target_ee_pos[0] += 0.2
-            target_ee_pos[1] -= 0.2
+            target_ee_pos[2] += 0.1
+        self.visualize_pos(target_ee_pos)
 
         self.move_to_ee(
-            target_ee_pos, target_ee_rot, grasp="close", timeout=300
+            target_ee_pos, target_ee_rot, grasp="close_thumb", timeout=100
         )
 
         self.writer.close()
@@ -384,7 +504,7 @@ class ExpertDatagen:
 
 
 if __name__ == "__main__":
-    target_name = "freezer"
+    target_name = "fridge"
     skill = "open"
     datagen = ExpertDatagen(target_name, skill)
     datagen.run_expert()
