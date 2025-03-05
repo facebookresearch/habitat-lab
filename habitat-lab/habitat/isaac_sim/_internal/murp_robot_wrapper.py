@@ -480,6 +480,7 @@ class MurpRobotWrapper:
 
     def physics_callback(self, step_size):
         base_position, base_orientation = self._robot.get_world_pose()
+        trans,rot=self.get_prim_transform("_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1")
         self.fix_base(step_size, base_position, base_orientation)
         self.drive_arm(step_size)
         self.drive_right_arm(step_size)
@@ -541,3 +542,19 @@ class MurpRobotWrapper:
         ee_rot = link_poses[1][self.ee_link_id]
 
         return ee_pos, ee_rot
+    def get_prim_transform(self,asset_path):
+        """Get Scene prim's position and rotation."""
+
+        prim_path=f"/World/test_scene/{asset_path}"
+        prim=self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
+        translate: Gf.Vec3d = matrix.ExtractTranslation()
+        rotation : Gf.Rotation = matrix.ExtractRotation()
+        quat_rotation : Gf.Quatd = matrix.ExtractRotationQuat()
+        euler_rotation = rotation.GetAngle()
+        # print("THE PRIM PATH",pos)
+        # print(f"Position: {list(translate)}")
+        # print(f"Rotation (Quaternion): [{quat_rotation}]")
+        # print(f"Rotation (Rotation): [{rotation}]")
+
+        return list(translate), rotation
