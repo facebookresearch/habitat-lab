@@ -132,8 +132,8 @@ class MurpRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.5, 1.9, -0.5),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                    cam_offset_pos=mn.Vector3(-0.5, 1.9, 0.5),
+                    cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
                     attached_link_id=-1,
                 ),
             },
@@ -146,9 +146,9 @@ class MurpRobot(MobileManipulator):
             base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={"base_link", "spine"},
             # for left arm
-            ik_pb_link_idx=8,  # link to use for IK
+            ik_pb_link_idx=9,  # link to use for IK
             ik_arm_len=7,  # num links in arm URDF for IK
-            ik_arm_start_idx=2,  # starting link for arm in URDF for IK
+            ik_arm_start_idx=3,  # starting link for arm in URDF for IK
         )
 
     @property

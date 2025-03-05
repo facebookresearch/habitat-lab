@@ -29,7 +29,7 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/murp_tmr_franka_metahand.usda"
+        asset_path = "./data/usd/robots/franka_with_hand.usda"
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -192,7 +192,7 @@ class MurpRobotWrapper:
             "left_fr3_joint4",
             "left_fr3_joint5",
             "left_fr3_joint6",
-            "left_fr3_joint7"
+            "left_fr3_joint7",
         ]
 
         right_arm_joint_names = [
@@ -204,9 +204,22 @@ class MurpRobotWrapper:
             "right_fr3_joint6",
             "right_fr3_joint7",
         ]
-   
 
+        self.ee_link_name = left_arm_joint_names[-1].replace("joint", "link")
+        self.right_ee_link_name = left_arm_joint_names[-1].replace(
+            "joint", "link"
+        )
 
+        self.ee_link_id = [
+            i
+            for i, s in enumerate(self._body_prim_paths)
+            if self.ee_link_name in s
+        ][0]
+        self.right_ee_link_id = [
+            i
+            for i, s in enumerate(self._body_prim_paths)
+            if self.right_ee_link_name in s
+        ][0]
         left_arm_joint_indices = []
         right_arm_joint_indices = []
         dof_names = self._robot.dof_names
@@ -236,32 +249,41 @@ class MurpRobotWrapper:
         # todo: specify this in isaac_spot_robot.py
         # only list the revolute joints
         right_hand_joint_names = [
+            "joint_0_0",
             "joint_1_0",
             "joint_2_0",
             "joint_3_0",
+            "joint_4_0",
             "joint_5_0",
             "joint_6_0",
             "joint_7_0",
+            "joint_8_0",
             "joint_9_0",
             "joint_10_0",
             "joint_11_0",
+            "joint_12_0",
+            "joint_13_0",
             "joint_14_0",
             "joint_15_0",
         ]
         left_hand_joint_names = [
+            "joint_l_0_0",
             "joint_l_1_0",
             "joint_l_2_0",
             "joint_l_3_0",
+            "joint_l_4_0",
             "joint_l_5_0",
             "joint_l_6_0",
             "joint_l_7_0",
+            "joint_l_8_0",
             "joint_l_9_0",
             "joint_l_10_0",
             "joint_l_11_0",
+            "joint_l_12_0",
+            "joint_l_13_0",
             "joint_l_14_0",
             "joint_l_15_0",
         ]
-
 
         left_hand_joint_indices = []
         right_hand_joint_indices = []
@@ -275,8 +297,10 @@ class MurpRobotWrapper:
 
         self._hand_joint_indices = np.array(left_hand_joint_indices)
         self._right_hand_joint_indices = np.array(right_hand_joint_indices)
-        closed_positions = np.array([3.14159] * 10)
-        open_positions = np.zeros(10)
+
+        n_hand_joints = len(left_hand_joint_names)
+        closed_positions = np.array([3.14159] * n_hand_joints)
+        open_positions = np.zeros(n_hand_joints)
         self._target_hand_joint_positions = open_positions
         self._target_right_hand_joint_positions = open_positions
 
@@ -509,11 +533,11 @@ class MurpRobotWrapper:
 
     def ee_pose(self, convention="hab"):
         """Get the current ee position and rotation."""
-        ee_link_id = 9  # for left arm
+        # self.ee_link_id = 9  # for left arm
         # ee_link_id = 51 # for right arm
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][ee_link_id]
-        ee_rot = link_poses[1][ee_link_id]
+        ee_pos = link_poses[0][self.ee_link_id]
+        ee_rot = link_poses[1][self.ee_link_id]
 
         return ee_pos, ee_rot
