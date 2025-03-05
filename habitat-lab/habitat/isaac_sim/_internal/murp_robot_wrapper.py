@@ -558,3 +558,24 @@ class MurpRobotWrapper:
         # print(f"Rotation (Rotation): [{rotation}]")
 
         return list(translate), rotation
+
+        def get_articulation_links(self, prim_path: str):
+            """ Function to get link names which articulation can be applied 
+                Sample call: get_articulation_links(prim_path="/World/test_scene")"""
+            prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+
+            articulation_links = {}
+
+            for child_prim in prim.GetChildren():
+                if UsdPhysics.ArticulationRootAPI.CanApply(child_prim):
+                    articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
+
+                    link_names = []
+
+                    for link_prim in child_prim.GetChildren():
+                            if link_prim.GetTypeName() == "Xform":
+                                link_names.append(link_prim.GetName())
+
+                    articulation_links[child_prim.GetName()] = link_names
+            
+            return articulation_links
