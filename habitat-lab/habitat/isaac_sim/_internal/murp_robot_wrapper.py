@@ -555,26 +555,6 @@ class MurpRobotWrapper:
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         euler_rotation = rotation.GetAngle()
 
-        # prim_range = Usd.PrimRange(root_prim)
-        # it = iter(prim_range)
-        # for prim in it:
-        #     prim_path = str(prim.GetPath())
-
-        #     if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
-        #         continue
-
-        #     # we found a rigid body, so let's ignore children
-        #     it.PruneChildren()
-        #     prim_paths.append(prim_path)
-
-        # assert len(prim_paths)
-        # print("prim_paths: ", prim_paths, len(prim_paths))
-
-        # print("THE PRIM PATH",pos)
-        # print(f"Position: {list(translate)}")
-        # print(f"Rotation (Quaternion): [{quat_rotation}]")
-        # print(f"Rotation (Rotation): [{rotation}]")
-
         return list(translate), rotation
 
     def get_articulation_links(self, prim_path: str):

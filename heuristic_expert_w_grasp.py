@@ -241,7 +241,7 @@ class ExpertDatagen:
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
 
     def move_to_ee(
-        self, target_ee_pos, target_ee_rot=None, grasp="open", timeout=1000
+        self, target_ee_pos, target_ee_rot=None, grasp=None, timeout=1000
     ):
         print(f"moving arm to: {target_ee_pos}, with hand {grasp}")
         ctr = 0
@@ -257,9 +257,14 @@ class ExpertDatagen:
             self.env.sim.articulated_agent.base_transformation = (
                 self.base_trans
             )
-            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = self.get_grasp_mode(
-                grasp
-            )
+            if grasp is None:
+                self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+                    self.get_curr_hand_pose()
+                )
+            else:
+                self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = self.get_grasp_mode(
+                    grasp
+                )
             self.pin_right_arm()
 
             obs = self.env.step(action)
@@ -456,6 +461,7 @@ class ExpertDatagen:
         return act
 
     def grasp_obj(self):
+        ## TODO: replace door quat with real quaternion we get from scene prim
         door_orientation_rpy = R.from_euler("xyz", [-90, 0, -1], degrees=True)
         quat_door = door_orientation_rpy.as_quat()
         cur_obs = {
@@ -465,6 +471,7 @@ class ExpertDatagen:
         }
         act = self.generate_action(cur_obs)
         self.move_hand_joints(act["tar_fingers"])
+        self.move_to_ee(act["tar_xyz"], act["tar_rot"], timeout=700)
         self.current_target_fingers = act["tar_fingers"]
         self.current_target_xyz = act["tar_xyz"]
         _current_target_rotmat = R.from_matrix(act["tar_rot"])
@@ -505,9 +512,9 @@ class ExpertDatagen:
         )
         self.visualize_pos(self.target_ee_pos)
 
-        # self.move_to_ee(
-        #     self.target_ee_pos, self.target_ee_rot, grasp="open", timeout=700
-        # )
+        self.move_to_ee(
+            self.target_ee_pos, self.target_ee_rot, grasp="open", timeout=700
+        )
 
         # grasp object
         self.step = 0
@@ -595,5 +602,5 @@ if __name__ == "__main__":
     target_name = "fridge"
     skill = "open"
     datagen = ExpertDatagen(target_name, skill)
-    # datagen.run_expert_w_grasp()
-    datagen.replay_grasp()
+    datagen.run_expert_w_grasp()
+    # datagen.replay_grasp()
