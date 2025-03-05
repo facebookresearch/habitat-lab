@@ -448,8 +448,8 @@ class VLAEvaluator:
             target_joint_pos[4] = action[3]
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
             target_base_action = [
-                action[7] * forward_velocity,
-                action[8] * turn_velocity,
+                action[4] * forward_velocity,
+                action[5] * turn_velocity,
             ]
 
             # action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
