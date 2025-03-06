@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Optional
+
 import hydra
 import magnum as mn
 
@@ -14,7 +15,6 @@ from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.key_mapping import KeyCode, XRButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
-from habitat_hitl.environment.camera_helper import CameraHelper
 
 
 class AppStateQuestReader(AppState):
@@ -44,10 +44,16 @@ class AppStateQuestReader(AppState):
         state = self._app_service.remote_client_state
 
         def btn(button_list: list[XRButton]) -> str:
-            button_names = [button.name for button in button_list if isinstance(button, XRButton)]
+            button_names = [
+                button.name
+                for button in button_list
+                if isinstance(button, XRButton)
+            ]
             return f"[{', '.join(button_names)}]"
-        
-        def pos(legacy_tuple: Optional[tuple[mn.Vector3, mn.Quaternion]]) -> str:
+
+        def pos(
+            legacy_tuple: Optional[tuple[mn.Vector3, mn.Quaternion]]
+        ) -> str:
             if legacy_tuple is None:
                 return "None"
             v = legacy_tuple[0]
@@ -88,7 +94,7 @@ class AppStateQuestReader(AppState):
         - Thumbstick:   {right.get_thumbstick()}
         - In hand:      {right.get_is_controller_in_hand()}
         """
-        
+
         # TODO: Magnum crashes when rendering more than 512 characters.
         #       > Text::Renderer::render(): capacity 512 too small to render 584 glyphs
         text = text[0:512]
@@ -111,8 +117,9 @@ class AppStateQuestReader(AppState):
         )
 
 
-
-@hydra.main(version_base=None, config_path="config", config_name="quest_reader")
+@hydra.main(
+    version_base=None, config_path="config", config_name="quest_reader"
+)
 def main(config):
     hitl_main(
         config,

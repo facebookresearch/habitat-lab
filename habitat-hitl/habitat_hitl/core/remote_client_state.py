@@ -7,7 +7,6 @@
 import math
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from habitat_hitl.core.xr_input import XRInput
 import magnum as mn
 
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -28,6 +27,7 @@ from habitat_hitl.core.types import (
     DisconnectionRecord,
 )
 from habitat_hitl.core.user_mask import Mask, Users
+from habitat_hitl.core.xr_input import XRInput
 from habitat_sim.geo import Ray
 
 
@@ -87,10 +87,6 @@ class RemoteClientState:
         }
 
     @property
-    def xr_input(self) -> XRInput:
-        return self._xr_input
-
-    @property
     def on_client_connected(self) -> Event:
         return self._on_client_connected
 
@@ -105,7 +101,7 @@ class RemoteClientState:
     def get_gui_inputs(self) -> List[GuiInput]:
         """Get a list of all GuiInputs indexed by user index."""
         return self._gui_inputs
-    
+
     def get_xr_input(self, user_index: int = 0) -> XRInput:
         """Get the XrInput for a specified user index."""
         return self._xr_inputs[user_index]
@@ -250,7 +246,7 @@ class RemoteClientState:
         """Update mouse/keyboard input based on new client states."""
         if len(all_client_states) == 0 or len(self._gui_inputs) == 0:
             return
-        
+
         self._update_xr_input_state(all_client_states)
 
         # Gather all input events.
@@ -371,54 +367,67 @@ class RemoteClientState:
                         continue
                     gui_input._mouse_button_held.add(MouseButton(button))
 
-    def _update_xr_input_state(self, all_client_states: list[ClientState]):
+    def _update_xr_input_state(
+        self, all_client_states: list[list[ClientState]]
+    ):
         for user_index in range(len(all_client_states)):
             client_states = all_client_states[user_index]
             if len(client_states) == 0:
                 continue
-            input = self._xr_inputs[user_index]
+            xr_input = self._xr_inputs[user_index]
 
             # Consolidate all event-based inputs like button presses.
             for client_state in client_states:
                 xr = client_state.get("xr", None)
                 if xr is not None:
                     controllers = xr.get("controllers", [])
-                    if len(controllers) == len(input.controllers):
+                    if len(controllers) == len(xr_input.controllers):
                         for i in range(len(controllers)):
-                            ctrl_input = input.controllers[i]
+                            ctrl_input = xr_input.controllers[i]
                             ctrl = controllers[i]
                             for button in ctrl.get("down", []):
                                 if button in XRButton:
-                                    ctrl_input._buttons_down.add(XRButton(button))
+                                    ctrl_input._buttons_down.add(
+                                        XRButton(button)
+                                    )
                             for button in ctrl.get("up", []):
                                 if button in XRButton:
-                                    ctrl_input._buttons_up.add(XRButton(button))
+                                    ctrl_input._buttons_up.add(
+                                        XRButton(button)
+                                    )
 
             # Update other inputs from the latest data.
             last_client_state = client_states[-1]
 
-            for i in range(len(input.controllers)):
-                ctrl_input = input.controllers[i]
+            for i in range(len(xr_input.controllers)):
+                ctrl_input = xr_input.controllers[i]
                 ctrl_input._buttons_held.clear()
                 ctrl_input._buttons_touched.clear()
 
                 xr = last_client_state.get("xr", None)
                 if xr is not None:
                     controllers = xr.get("controllers", [])
-                    if len(controllers) == len(input.controllers):
+                    if len(controllers) == len(xr_input.controllers):
                         ctrl = controllers[i]
                         for button in ctrl.get("held", []):
                             if button in XRButton:
                                 ctrl_input._buttons_held.add(XRButton(button))
                         for button in ctrl.get("touch", []):
                             if button in XRButton:
-                                ctrl_input._buttons_touched.add(XRButton(button))
+                                ctrl_input._buttons_touched.add(
+                                    XRButton(button)
+                                )
 
                         ctrl_input._hand_trigger = ctrl.get("handTrigger", 0.0)
-                        ctrl_input._index_trigger = ctrl.get("indexTrigger", 0.0)
-                        ctrl_input._thumbstick_axis = ctrl.get("thumbstick", [0.0, 0.0])
-                        ctrl_input._is_controller_in_hand = ctrl.get("inHand", False)
-
+                        ctrl_input._index_trigger = ctrl.get(
+                            "indexTrigger", 0.0
+                        )
+                        ctrl_input._thumbstick_axis = ctrl.get(
+                            "thumbstick", [0.0, 0.0]
+                        )
+                        ctrl_input._is_controller_in_hand = ctrl.get(
+                            "inHand", False
+                        )
 
     def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""

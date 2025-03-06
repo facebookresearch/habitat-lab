@@ -39,9 +39,7 @@ from habitat_hitl.core.user_mask import Users
 from habitat_sim.gfx import DebugLineRender
 
 
-# todo: define AppDriver in one place
 class AppDriver:
-    # todo: rename to just "update"?
     @abc.abstractmethod
     def sim_update(self, dt):
         pass
@@ -66,7 +64,6 @@ class HitlBareSimDriver(AppDriver):
         self.habitat_env: habitat.Env = None
 
         # todo: construct a sim with no renderer
-        # hab_cfg = config.habitat.simulator
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
@@ -104,7 +101,6 @@ class HitlBareSimDriver(AppDriver):
 
         # unsupported for HitlBareSimDriver
         assert self._hitl_config.disable_policies_and_stepping
-        self.ctrl_helper = None
 
         self._debug_images = self._hitl_config.debug_images
 
@@ -113,12 +109,9 @@ class HitlBareSimDriver(AppDriver):
 
         self._episode_helper = None
 
-        # gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
-        # gui_drawer.set_line_width(self._hitl_config.debug_line_width)
         if line_render:
             line_render.set_line_width(self._hitl_config.debug_line_width)
 
-        # self._check_init_server(line_render)
         # Create a user container.
         # In local mode, there is always 1 active user.
         # In remote mode, use 'activate_user()' and 'deactivate_user()' when handling connections.
@@ -141,12 +134,6 @@ class HitlBareSimDriver(AppDriver):
         # TODO: Dependency injection
         text_drawer._client_message_manager = self._client_message_manager
 
-        gui_agent_controller: Any = (
-            self.ctrl_helper.get_gui_agent_controller()
-            if self.ctrl_helper
-            else None
-        )
-
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
@@ -167,8 +154,8 @@ class HitlBareSimDriver(AppDriver):
             set_cursor_style=self._set_cursor_style,
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
-            gui_agent_controllers=[gui_agent_controller],
-            all_agent_controllers=[gui_agent_controller],
+            gui_agent_controllers=[],
+            all_agent_controllers=[],
             ui_manager=None,
             users=users,
         )

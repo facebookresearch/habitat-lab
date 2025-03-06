@@ -8,7 +8,6 @@ import asyncio
 import json
 import os
 import signal
-import socket
 import ssl
 import time
 import traceback
@@ -516,6 +515,8 @@ async def start_websocket_server(
         f"NetworkManager started on networking thread. Listening for client websocket connections on port {networking_config.port}..."
     )
     return websocket_server
+
+
 class DiscoveryProtocol(asyncio.DatagramProtocol):
     def __init__(self, hitl_port: int):
         self.hitl_port = hitl_port
@@ -531,12 +532,19 @@ class DiscoveryProtocol(asyncio.DatagramProtocol):
         response = f"{self.hitl_port}"
         self.transport.sendto(response.encode(), addr)
 
-async def start_discovery_server(loop: asyncio.AbstractEventLoop, network_mgr: NetworkManager, networking_config):
+
+async def start_discovery_server(
+    loop: asyncio.AbstractEventLoop,
+    network_mgr: NetworkManager,
+    networking_config,
+):
     task = loop.create_datagram_endpoint(
         lambda: DiscoveryProtocol(networking_config.port),
-        local_addr=('0.0.0.0', 12345))
+        local_addr=("0.0.0.0", 12345),
+    )
     transport, protocol = await task
     return transport
+
 
 async def start_http_availability_server(
     network_mgr: NetworkManager, networking_config
@@ -655,7 +663,7 @@ async def networking_main_async(
     # Close servers.
     websocket_server.close()
     await websocket_server.wait_closed()
-    
+
     discovery_transport.close()
 
     if http_runner:

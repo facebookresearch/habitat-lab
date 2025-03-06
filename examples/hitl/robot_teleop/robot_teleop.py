@@ -8,10 +8,8 @@ import json
 import os
 from typing import Any, Dict, List, Tuple, Union
 
-from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 import hydra
 import magnum as mn
-import numpy as np
 from hydra import compose
 from omegaconf import DictConfig
 
@@ -22,12 +20,12 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
 )
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import (
     omegaconf_to_object,
     register_hydra_plugins,
 )
+from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_sim.gfx import DebugLineRender
@@ -100,11 +98,13 @@ class Robot:
         """
         try:
             import pymomentum.geometry as pym_geo
-            self.momentum_character = pym_geo.Character.load_urdf(self.robot_cfg.urdf)
-            #TODO: the above character is available for ik
+
+            self.momentum_character = pym_geo.Character.load_urdf(
+                self.robot_cfg.urdf
+            )
+            # TODO: the above character is available for ik
         except:
             print("Could not initialize pymomentum IK library.")
-
 
     def create_joint_motors(self):
         """
@@ -837,9 +837,7 @@ class AppStateRobotTeleopViewer(AppState):
                     base_pos=self.mouse_cast_results.hits[0].point
                 )
         elif (
-            self._app_service.gui_input.get_mouse_button_down(
-                MouseButton.LEFT
-            )
+            self._app_service.gui_input.get_mouse_button_down(MouseButton.LEFT)
             and self.mouse_cast_results is not None
             and self.mouse_cast_results.has_hits
         ):
@@ -850,9 +848,7 @@ class AppStateRobotTeleopViewer(AppState):
                 self.dof_editor = DoFEditor(self.robot, hit_link)
 
         # destroy any DofEditor when releasing a LEFT click
-        if self._app_service.gui_input.get_mouse_button_up(
-            MouseButton.LEFT
-        ):
+        if self._app_service.gui_input.get_mouse_button_up(MouseButton.LEFT):
             self.dof_editor = None
 
         # update dof editor when dragging an active LEFT click
