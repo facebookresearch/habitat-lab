@@ -105,6 +105,10 @@ class RemoteClientState:
     def get_gui_inputs(self) -> List[GuiInput]:
         """Get a list of all GuiInputs indexed by user index."""
         return self._gui_inputs
+    
+    def get_xr_input(self, user_index: int = 0) -> XRInput:
+        """Get the XrInput for a specified user index."""
+        return self._xr_inputs[user_index]
 
     def is_user_loading(self, user_index: int) -> bool:
         """Return true if the specified user's client is in a loading state."""
@@ -412,7 +416,7 @@ class RemoteClientState:
 
                         ctrl_input._hand_trigger = ctrl.get("handTrigger", 0.0)
                         ctrl_input._index_trigger = ctrl.get("indexTrigger", 0.0)
-                        ctrl_input._thumbstick = ctrl.get("thumbstick", [0.0, 0.0])
+                        ctrl_input._thumbstick_axis = ctrl.get("thumbstick", [0.0, 0.0])
                         ctrl_input._is_controller_in_hand = ctrl.get("inHand", False)
 
 

@@ -68,10 +68,8 @@ class XRController:
         To avoid choppiness, their continuous inputs should be reset before consolidating new remote inputs.
         This differs from discrete input like clicking, which must be reset every frame to avoid extending click events across multiple frames.
         """
-        self._buttons_held.clear()
         self._buttons_down.clear()
         self._buttons_up.clear()
-        self._buttons_touched.clear()
 
         if reset_continuous_input:
             self._thumbstick_axis = [0, 0]
