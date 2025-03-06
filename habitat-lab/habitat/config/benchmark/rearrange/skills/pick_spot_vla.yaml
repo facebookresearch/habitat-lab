@@ -94,4 +94,5 @@ habitat:
         # joint_that_can_control: [1, 1, 1, 1, 1, 1, 1]
         joint_that_can_control: [1, 1, 0, 1, 0, 1, 0]
         # The real-world gaze ready location
-        joint_start_override: [0, -2.792, 0, 1.745, 0, 1.571, 0] 
+        joint_start_override: [0.0, -2.0943951, 0.0, 1.04719755, 0.0, 1.53588974, 0.0] #[0, -2.792, 0, 1.745, 0, 1.571, 0] 
+        

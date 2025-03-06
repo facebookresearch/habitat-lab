@@ -170,7 +170,7 @@ class OracleNavSkill:
 class VLAEvaluator:
     def __init__(self, ep_id, exp_name, ckpt):
         self.exp_name = exp_name
-        self.json_path = "data/datasets/fremont_hlab_isaac/fremont_900.json.gz"
+        self.json_path = "data/datasets/fremont_hlab_isaac/fremont_100.json.gz"
 
         # Define the agent configuration
         main_agent_config = AgentConfig()
@@ -199,7 +199,8 @@ class VLAEvaluator:
 
         action_dict = {
             "base_velocity_action": BaseVelocityActionConfig(
-                type="BaseVelIsaacAction"
+                # type="BaseVelIsaacAction"
+                type="BaseVelKinematicIsaacAction"
             ),
             "arm_reach_action": ActionConfig(type="ArmReachAction"),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
@@ -214,6 +215,7 @@ class VLAEvaluator:
         video_dir = f"videos_vla_eval/{self.exp_name}/ckpt_{ckpt}"
         os.makedirs(video_dir, exist_ok=True)
         self.video_path = f"{video_dir}/eval_{ep_id}.mp4"
+        self.results_path = f"{video_dir}/results.txt"
         self.writer = imageio.get_writer(
             self.video_path,
             fps=30,
@@ -335,6 +337,7 @@ class VLAEvaluator:
 
     def reset_robot_pose(self):
         start_position = self.episode_info["start_position"]
+        # start_position[0] -= 0.2
         start_rotation = np.rad2deg(self.episode_info["start_rotation"][-1])
         # start_position = np.array([2.0, 0.7, -1.64570129])
         # start_rotation = -90
@@ -433,12 +436,13 @@ class VLAEvaluator:
         target_joint_pos = (
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
+        grasp_ctr = 0
         for i in range(max_steps):
             # print(f"=================== step # {ctr} ===================")
             action = self.policy.act(obs)[0]
 
             # n_repeat = 6 if "30" in self.exp_name else 1
-            # print("action: ", action)
+            print("action: ", action)
             target_joint_pos = (
                 self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
             )
@@ -446,27 +450,30 @@ class VLAEvaluator:
             target_joint_pos[1] = action[1]
             target_joint_pos[2] = action[2]
             target_joint_pos[4] = action[3]
+            # if action[-1] > 0:
+            # grasp_ctr += 1
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
+            # target_joint_pos[-1] = -1.57
+            # if grasp_ctr >= 5:
+            # target_joint_pos[-1] = 0
+
+            # if action[-1] > 0:
+            #     grasp = True
             target_base_action = [
                 action[4] * forward_velocity,
                 action[5] * turn_velocity,
             ]
 
-            # action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
-            # masked_joint_action = joint_action[action_mask == 1]
+            target_obj = self.env.sim._rigid_objects[
+                0
+            ].translation  # first_obj in habitat conventions
+            curr_pos = self.env.sim.articulated_agent.base_pos
 
-            # target_joint_pos[:7] = data[i]["joint"][:7]
-            # target_joint_pos[:7] += data[i]["joint_action"][:7]
-
-            # target_joint_pos[0] += masked_joint_action[0]
-            # target_joint_pos[1] += masked_joint_action[1]
-            # target_joint_pos[3] += masked_joint_action[2]
-            # target_joint_pos[5] += masked_joint_action[3]
-            # target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
-            # target_base_action = [
-            #     action[7] * forward_velocity,
-            #     action[8] * turn_velocity,
-            # ]
+            dist = np.linalg.norm(
+                (np.array(curr_pos) - target_obj) * np.array([1, 0, 1])
+            )
+            if dist < 1.0:
+                target_base_action = [0, 0]
 
             self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_joint_pos
@@ -490,6 +497,14 @@ class VLAEvaluator:
             )
 
             obs["joint"] = curr_arm_joints[mask == 1]
+        gripper_state = (
+            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos[-1]
+        )
+        success = True
+        if np.allclose(gripper_state, 0.0, atol=0.03):
+            success = False
+        with open(self.results_path, "a") as f:
+            f.write(f"\n{self.ep_id}, {success}")
         self.writer.close()
         print("saved video at: ", self.video_path)
 
