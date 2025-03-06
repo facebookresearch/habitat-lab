@@ -45,7 +45,7 @@ class RearrangeEpisode(Episode):
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
-    navmesh_path: str = attr.ib(default=None, validator=not_none_validator)
+    navmesh_path: str = ""
     language_instruction: str = ""
 
 
