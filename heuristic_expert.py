@@ -47,7 +47,7 @@ from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 
-data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
+data_path = "/home/joanne/habitat-lab/data/" #Lambda Machine Change
 
 
 def make_sim_cfg(agent_dict):

@@ -30,7 +30,7 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand.usda"
+        asset_path = "./data/usd/robots/franka_with_hand_2.usda" #Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 

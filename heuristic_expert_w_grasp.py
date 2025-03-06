@@ -46,7 +46,7 @@ from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 
-data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
+data_path = "/home/joanne/habitat-lab/data/" #Lambda Change
 
 
 def make_sim_cfg(agent_dict):
@@ -125,12 +125,12 @@ class ExpertDatagen:
 
         urdf_path = os.path.join(
             data_path,
-            "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand.urdf",
+            "franka_tmr/franka_description_tmr/urdf/franka_left_arm.urdf", #Lambda Change
         )
         arm_urdf_path = os.path.join(
             data_path,
             # "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_left_arm_obj.urdf",
-            "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+            "franka_tmr/franka_description_tmr/allegro/allegro.urdf", #Lambda Change
             # "franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
         )
         main_agent_config.articulated_agent_urdf = urdf_path
@@ -397,26 +397,26 @@ class ExpertDatagen:
         self.close_fingers[OPEN_JOINTS] += 0.2
 
     def get_targets(self, name="target"):
-
+        #Lambda Changes
         if name == "target":
             return (
-                torch.tensor(self.grasp_fingers),
-                torch.tensor(self.target_w_xyz),
-                torch.tensor(self.target_w_rotmat),
+                torch.tensor(self.grasp_fingers,device="cuda:0"),
+                torch.tensor(self.target_w_xyz,device="cuda:0"),
+                torch.tensor(self.target_w_rotmat,device="cuda:0"),
             )
 
         elif name == "target_grip":
             return (
-                torch.tensor(self.close_fingers),
-                torch.tensor(self.target_w_xyz),
-                torch.tensor(self.target_w_rotmat),
+                torch.tensor(self.close_fingers,device="cuda:0"),
+                torch.tensor(self.target_w_xyz,device="cuda:0"),
+                torch.tensor(self.target_w_rotmat,device="cuda:0"),
             )
 
         elif name == "open":
             return (
-                torch.tensor(self.close_fingers),
-                torch.tensor(self.open_xyz),
-                torch.tensor(self.target_w_rotmat),
+                torch.tensor(self.close_fingers,device="cuda:0"),
+                torch.tensor(self.open_xyz,device="cuda:0"),
+                torch.tensor(self.target_w_rotmat,device="cuda:0"),
             )
 
     def generate_action(self, cur_obs):
@@ -435,19 +435,23 @@ class ExpertDatagen:
             name = "open"
         tar_joints, tar_xyz, tar_rot = self.get_targets(name=name)
 
-        delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
-        delta_joints = tar_joints.to(cur_tar_fingers) - cur_tar_fingers
-
+        # delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
+        delta_xyz = -(torch.tensor(cur_tar_wrist_xyz, dtype=torch.float32, device=tar_xyz.device) - tar_xyz)
+        delta_joints=(torch.tensor(cur_tar_fingers, dtype=torch.float32, device=tar_joints.device) - tar_joints)
+        # delta_joints = tar_joints.to(cur_tar_fingers) - cur_tar_fingers
+        cur_tar_wrist_xyz = torch.tensor(cur_tar_wrist_xyz, dtype=torch.float32, device=delta_xyz.device)
+        cur_tar_fingers = torch.tensor(cur_tar_fingers, dtype=torch.float32, device=delta_joints.device)
         tar_xyz = cur_tar_wrist_xyz + delta_xyz * delta_t
         tar_joint = cur_tar_fingers + delta_joints * delta_t
 
         # Orientation
         door_orientation = cur_obs["orientation_door"]
+        door_orientation = torch.tensor(door_orientation, dtype=torch.float32, device="cuda:0") #Lambda Change
         door_rot = rotation_conversions.quaternion_to_matrix(door_orientation)
 
         rot_y = rotation_conversions.euler_angles_to_matrix(
-            torch.Tensor([0.0, -math.pi, 0.0]), "XYZ"
-        ).to(door_orientation)
+            torch.tensor([0.0, -math.pi, 0.0],device="cuda:0"), "XYZ"
+        )
         target_rot = torch.einsum("ij,jk->ik", door_rot, rot_y)
 
         tar_rot = target_rot
@@ -462,8 +466,15 @@ class ExpertDatagen:
 
     def grasp_obj(self):
         ## TODO: replace door quat with real quaternion we get from scene prim
-        door_orientation_rpy = R.from_euler("xyz", [-90, 0, -1], degrees=True)
-        quat_door = door_orientation_rpy.as_quat()
+        door_trans,door_orientation_rpy = self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
+        )
+        quat_door = door_orientation_rpy.GetQuaternion()
+        #Getting Quaternion Val to Array 
+        scalar = quat_door.GetReal()
+        vector = quat_door.GetImaginary()
+        quat_door=[scalar, vector[0], vector[1], vector[2]]
+
         cur_obs = {
             "wrist_tar_xyz": self.current_target_xyz,
             "tar_joints": self.current_target_fingers,
@@ -471,7 +482,18 @@ class ExpertDatagen:
         }
         act = self.generate_action(cur_obs)
         self.move_hand_joints(act["tar_fingers"])
-        self.move_to_ee(act["tar_xyz"], act["tar_rot"], timeout=700)
+        # Rot Matrix to RPY
+        r11, r12, r13 = act['tar_rot'][0]
+        r21, r22, r23 = act['tar_rot'][1]
+        r31, r32, r33 = act['tar_rot'][2]
+
+        # Calculate Roll, Pitch, and Yaw
+        roll = np.arctan2(r32, r33)
+        pitch = np.arctan2(-r31, np.sqrt(r32**2 + r33**2))
+        yaw = np.arctan2(r21, r11)
+
+        print(f"Policy XYZ {act['tar_xyz']} and  policy Rot {act['tar_rot']} per policy")
+        self.move_to_ee(act["tar_xyz"], [roll,pitch,yaw], timeout=700)
         self.current_target_fingers = act["tar_fingers"]
         self.current_target_xyz = act["tar_xyz"]
         _current_target_rotmat = R.from_matrix(act["tar_rot"])
@@ -480,19 +502,19 @@ class ExpertDatagen:
     def replay_grasp_obj(self):
         door_orientation_rpy = R.from_euler("xyz", [-90, 0, -1], degrees=True)
         quat_door = door_orientation_rpy.as_quat()
-        quat_door = torch.tensor([1, 0, 0, 0])
+        quat_door = torch.tensor([1, 0, 0, 0],device="cuda:0") #Lambda Change
         print("quat_door: ", quat_door)
         obs_data = np.load("input.npy", allow_pickle=True)
         act_data = np.load("actions.npy", allow_pickle=True)
         for idx in range(30):
             cur_obs = {
                 "wrist_tar_xyz": torch.tensor(
-                    obs_data[idx]["wrist_tar_xyz"][0, :]
-                ),
+                    obs_data[idx]["wrist_tar_xyz"][0, :],device="cuda:0"     
+                ), #Lambda Change
                 "tar_joints": torch.tensor(obs_data[idx]["tar_joints"][0, :]),
                 "orientation_door": torch.tensor(
-                    obs_data[idx]["orientation_door"][0, :]
-                ),
+                    obs_data[idx]["orientation_door"][0, :],device="cuda:0"
+                ),#Lambda Change
             }
             act = self.generate_action(cur_obs)
             saved_act = act_data[idx]
