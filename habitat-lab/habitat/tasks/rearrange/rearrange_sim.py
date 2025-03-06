@@ -394,8 +394,15 @@ class RearrangeSim(HabitatSim):
     def _setup_semantic_ids(self):
         # Add the rigid object id for the semantic map
         rom = self.get_rigid_object_manager()
+        aom = self.get_articulated_object_manager()
         for _, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
+            for node in obj.visual_scene_nodes:
+                node.semantic_id = (
+                    obj.object_id + self.habitat_config.object_ids_start
+                )
+        for _, handle in enumerate(aom.get_object_handles()):
+            obj = aom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
