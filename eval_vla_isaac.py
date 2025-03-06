@@ -47,6 +47,7 @@ from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
+from viz_utils import add_text_to_image
 from vla_policy import VLAPolicy
 
 data_path = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/data"
@@ -337,7 +338,6 @@ class VLAEvaluator:
 
     def reset_robot_pose(self):
         start_position = self.episode_info["start_position"]
-        # start_position[0] -= 0.2
         start_rotation = np.rad2deg(self.episode_info["start_rotation"][-1])
         # start_position = np.array([2.0, 0.7, -1.64570129])
         # start_rotation = -90
@@ -376,14 +376,13 @@ class VLAEvaluator:
             target_joint_pos[3] += masked_joint_action[2]
             target_joint_pos[4] += joint_action[4]
             target_joint_pos[5] += masked_joint_action[3]
-            # target_joint_pos[6] += joint_action[6]
+            target_joint_pos[6] += joint_action[6]
             # target_joint_pos[:7] += data[i]["joint_action"][:7]
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
             target_base_action = [
                 action[7] * forward_velocity,
                 action[8] * turn_velocity,
             ]
-            print("base_velocity_action: ", target_base_action)
 
             self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_joint_pos
@@ -399,6 +398,10 @@ class VLAEvaluator:
             }
             obs = self.env.step(action_dict)
             im = self.process_obs_img(obs)
+            im = add_text_to_image(
+                im,
+                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(target_joint_pos,4)}, grip_action: {action[-1]}",
+            )
             self.writer.append_data(im)
 
         self.writer.close()
@@ -489,6 +492,10 @@ class VLAEvaluator:
             }
             obs = self.env.step(action_dict)
             im = self.process_obs_img(obs)
+            im = add_text_to_image(
+                im,
+                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(action[:4],4)}, grip_action: {action[-1]}",
+            )
             self.writer.append_data(im)
 
             obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=heuristic_expert_pick_joints_base_vel_fremont_livingroom_physics
-#SBATCH --output=/fsx-siro/jtruong/repos/vla-physics/habitat-lab/videos_vla_eval/%x/%x_%J.log
-#SBATCH --error=/fsx-siro/jtruong/repos/vla-physics/habitat-lab/videos_vla_eval/%x/%x_%J.err
+#SBATCH --output=/fsx-siro/jtruong/repos/vla-physics/habitat-lab/videos_vla_eval/%x/logs/%x_%J.log
+#SBATCH --error=/fsx-siro/jtruong/repos/vla-physics/habitat-lab/videos_vla_eval/%x/logs/%x_%J.err
 #SBATCH --time=7200
 #SBATCH --nodes 1
 #SBATCH --gres=gpu:1
@@ -31,5 +31,5 @@ done
 
 
 # for i in $(seq 5000 5000 150000); do 
-#     sbatch --job-name=heuristic_expert_pick_joints_base_vel_fremont_livingroom_physics_no_retract_30_$i eval_vla_sbatch.sh heuristic_expert_pick_joints_base_vel_fremont_livingroom_physics_no_retract_30 $i
+#     sbatch --job-name=heuristic_expert_pick_joints_base_vel_fremont_livingroom_physics_no_retract_30 eval_vla_sbatch.sh heuristic_expert_pick_joints_base_vel_fremont_livingroom_physics_no_retract_30 $i
 # done
