@@ -540,6 +540,8 @@ class AppStateRobotTeleopViewer(AppState):
         self._do_pause_physics = False
         self._timer = 0.0
 
+        self._app_service.users.activate_user(0)
+
     def set_aos_dynamic(self) -> None:
         """
         Sets all AOs to dynamic for interaction in case the scene is STATIC.
