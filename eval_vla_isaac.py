@@ -281,7 +281,7 @@ class VLAEvaluator:
         hab_cfg.dataset = dataset_cfg
         hab_cfg.simulator = sim_cfg
         hab_cfg.simulator.seed = hab_cfg.seed
-        hab_cfg.environment.max_episode_steps = 2000
+        hab_cfg.environment.max_episode_steps = 20000000
         hab_cfg.environment.max_episode_seconds = 20000000
         return hab_cfg
 
@@ -371,22 +371,27 @@ class VLAEvaluator:
             # print("data action: ", action)
             action_mask = np.array([1, 1, 0, 1, 0, 1, 0])
             masked_joint_action = joint_action[action_mask == 1]
-            target_joint_pos[0] += masked_joint_action[0]
-            target_joint_pos[1] += masked_joint_action[1]
-            target_joint_pos[3] += masked_joint_action[2]
-            target_joint_pos[4] += joint_action[4]
-            target_joint_pos[5] += masked_joint_action[3]
-            target_joint_pos[6] += joint_action[6]
-            # target_joint_pos[:7] += data[i]["joint_action"][:7]
+            # target_joint_pos[0] += masked_joint_action[0]
+            # target_joint_pos[1] += masked_joint_action[1]
+            # target_joint_pos[3] += masked_joint_action[2]
+            # target_joint_pos[5] += masked_joint_action[3]
+            ## v2
+            # target_joint_pos[0] += masked_joint_action[0]
+            # target_joint_pos[1] += masked_joint_action[1]
+            # target_joint_pos[3] += masked_joint_action[2]
+            # target_joint_pos[4] += joint_action[4]
+            # target_joint_pos[5] += masked_joint_action[3]
+            # target_joint_pos[6] += joint_action[6]
+            target_joint_pos[:7] += data[i]["joint_action"][:7]
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
             target_base_action = [
                 action[7] * forward_velocity,
                 action[8] * turn_velocity,
             ]
-
-            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
-                target_joint_pos
-            )
+            self.move_to_joint(target_joint_pos)
+            # self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+            #     target_joint_pos
+            # )
             action_dict = {
                 "action": "base_velocity_action",
                 "action_args": {
@@ -400,7 +405,7 @@ class VLAEvaluator:
             im = self.process_obs_img(obs)
             im = add_text_to_image(
                 im,
-                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(target_joint_pos,4)}, grip_action: {action[-1]}",
+                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(target_joint_pos,2)}, grip_action: {action[-1]}",
             )
             self.writer.append_data(im)
 
@@ -451,8 +456,8 @@ class VLAEvaluator:
             )
             target_joint_pos[0] = action[0]
             target_joint_pos[1] = action[1]
-            target_joint_pos[2] = action[2]
-            target_joint_pos[4] = action[3]
+            target_joint_pos[3] = action[2]
+            target_joint_pos[5] = action[3]
             # if action[-1] > 0:
             # grasp_ctr += 1
             target_joint_pos[-1] = 0 if action[-1] > 0 else -1.57
@@ -494,7 +499,7 @@ class VLAEvaluator:
             im = self.process_obs_img(obs)
             im = add_text_to_image(
                 im,
-                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(action[:4],4)}, grip_action: {action[-1]}",
+                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(action[:4],2)}, grip_action: {np.round(action[-1], 2)}",
             )
             self.writer.append_data(im)
 
