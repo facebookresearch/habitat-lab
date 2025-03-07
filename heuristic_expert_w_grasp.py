@@ -175,7 +175,7 @@ class ExpertDatagen:
         num_hand_joints = 16
         grasp_joints = {
             "open": np.zeros(num_hand_joints),
-            "pre_grasp": np.concatenate((np.full(12, 0.7), np.zeros(4))),
+            "pre_grasp": np.concatenate((np.full(12, 0.7), [-0.785], np.full(3, 0.7))),
             "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
             "close_thumb": np.concatenate(
                 (np.full(12, 0.90), np.full(4, 0.4))
@@ -395,7 +395,7 @@ class ExpertDatagen:
             "fridge": {
                 "base_pos": np.array([-4.7, 0.1, 0.8]),
                 "base_rot": 180,
-                "ee_pos": np.array([-6.3, 1.0, 2.4]),
+                "ee_pos": np.array([-6.2, 1.2, 2.4]),
                 "ee_rot": np.deg2rad([120, 0, 0]),
             },
             "freezer": {
@@ -421,11 +421,11 @@ class ExpertDatagen:
 
         # XYZ
         self.open_xyz = target_w_xyz.copy()
-        self.open_xyz[2] += 0.2
-        self.open_xyz[0] += 0.3
+        self.open_xyz[2] += 0.1
+        self.open_xyz[0] += 0.1
 
         # Pre-Grasp Targets
-        OPEN_JOINTS = [1, 6, 9, 13]
+        OPEN_JOINTS = [1, 5, 9, 14]
         # OPEN_JOINTS = [0, 4, 6, 9]
 
         # Grasp fingers
@@ -452,8 +452,8 @@ class ExpertDatagen:
 
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
-            self.open_xyz[2] += 0.2
-            self.open_xyz[0] += 0.3
+            self.open_xyz[2] += 0.1
+            self.open_xyz[0] += 0.1
 
             return (
                 torch.tensor(self.close_fingers, device="cuda:0"),
@@ -636,7 +636,7 @@ class ExpertDatagen:
         )
         self.current_target_xyz = self.target_ee_pos
         target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[0] -= 0.51
+        target_xyz[1] -= 0.51
         target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
         target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
         target_joints = (
