@@ -1,3 +1,4 @@
+import time
 import warnings
 
 import magnum as mn
@@ -6,6 +7,7 @@ import habitat_sim
 from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 
 warnings.filterwarnings("ignore")
+import argparse
 import math
 import os
 import random
@@ -45,6 +47,7 @@ from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
+from viz_utils import add_text_to_image
 
 data_path = "/home/joanne/habitat-lab/data/" #Lambda Change
 
@@ -119,8 +122,9 @@ def process_obs_img(obs):
 
 
 class ExpertDatagen:
-    def __init__(self, target_name="cabinet", skill="pick"):
+    def __init__(self, target_name="cabinet", skill="pick", replay=False):
         # Define the agent configuration
+        self.replay = replay
         main_agent_config = AgentConfig()
 
         urdf_path = os.path.join(
@@ -261,6 +265,7 @@ class ExpertDatagen:
                 self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
                     self.get_curr_hand_pose()
                 )
+                print("using: ", self.get_curr_hand_pose())
             else:
                 self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = self.get_grasp_mode(
                     grasp
@@ -269,6 +274,7 @@ class ExpertDatagen:
 
             obs = self.env.step(action)
             im = process_obs_img(obs)
+            im = add_text_to_image(im, "moving ee")
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
@@ -286,7 +292,6 @@ class ExpertDatagen:
 
     def move_hand_joints(self, target_hand_pos, timeout=100):
         curr_hand_pos = self.get_curr_hand_pose()
-        print("curr_hand_pos: ", curr_hand_pos)
         ctr = 0
         while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
             action = {
@@ -316,11 +321,43 @@ class ExpertDatagen:
                 )
                 break
 
-    def visualize_pos(self, pos):
-        self.env.sim.viz_ids["target_ee_pos"] = (
-            self.env.sim.visualize_position(
-                pos, self.env.sim.viz_ids["target_ee_pos"]
+    def move_ee_and_hand(
+        self, target_ee_pos, target_ee_rot=None, hand_joints=None, timeout=300
+    ):
+        ctr = 0
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
+            action = {
+                "action": "arm_reach_ee_action",
+                "action_args": {
+                    "target_pos": np.array(target_ee_pos, dtype=np.float32),
+                    "target_rot": target_ee_rot,
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
             )
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+                hand_joints
+            )
+            self.pin_right_arm()
+
+            obs = self.env.step(action)
+            im = process_obs_img(obs)
+            im = add_text_to_image(im, "using grasp controller")
+            self.writer.append_data(im)
+
+            curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                )
+                break
+
+    def visualize_pos(self, pos, name="target_ee_pos"):
+        self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
+            pos, self.env.sim.viz_ids[name]
         )
 
     def get_poses(self, name, pose_type="base"):
@@ -384,7 +421,7 @@ class ExpertDatagen:
 
         # XYZ
         self.open_xyz = target_w_xyz.copy()
-        self.open_xyz[1] += 0.2
+        self.open_xyz[2] += 0.2
         self.open_xyz[0] += 0.3
 
         # Pre-Grasp Targets
@@ -407,43 +444,67 @@ class ExpertDatagen:
 
         elif name == "target_grip":
             return (
+<<<<<<< HEAD
                 torch.tensor(self.close_fingers,device="cuda:0"),
                 torch.tensor(self.target_w_xyz,device="cuda:0"),
                 torch.tensor(self.target_w_rotmat,device="cuda:0"),
+=======
+                torch.tensor(self.close_fingers),
+                # torch.tensor(self.target_w_xyz),
+                torch.tensor(self.get_curr_ee_pose()[0]),
+                torch.tensor(self.target_w_rotmat),
+>>>>>>> a72514b71 (grasping controller semi working)
             )
 
         elif name == "open":
+            self.open_xyz = self.get_curr_ee_pose()[0]
+            self.open_xyz[2] += 0.2
+            self.open_xyz[0] += 0.3
+
             return (
                 torch.tensor(self.close_fingers,device="cuda:0"),
                 torch.tensor(self.open_xyz,device="cuda:0"),
                 torch.tensor(self.target_w_rotmat,device="cuda:0"),
             )
 
-    def generate_action(self, cur_obs):
+    def generate_action(self, cur_obs, name):
         cur_tar_wrist_xyz = cur_obs["wrist_tar_xyz"]
         cur_tar_fingers = cur_obs["tar_joints"][:16]
 
         # Phase 2 go to pick
-        delta_t = 0.01
+        delta_t = 0.1
         self.step += 1
         print(self.step)
-        if self.step < 600:
-            name = "target"
-        elif self.step < 1200:
-            name = "target_grip"
-        else:
-            name = "open"
+        # if self.step < 600:
+        #     name = "target"
+        # elif self.step < 1200:
+        #     name = "target_grip"
+        # else:
+        #     name = "open"
+        # if self.step < 600:
+        #     name = "target_grip"
+        # else:
+        #     name = "open"
+
         tar_joints, tar_xyz, tar_rot = self.get_targets(name=name)
 
+<<<<<<< HEAD
         # delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
         delta_xyz = -(torch.tensor(cur_tar_wrist_xyz, dtype=torch.float32, device=tar_xyz.device) - tar_xyz)
         delta_joints=(torch.tensor(cur_tar_fingers, dtype=torch.float32, device=tar_joints.device) - tar_joints)
         # delta_joints = tar_joints.to(cur_tar_fingers) - cur_tar_fingers
         cur_tar_wrist_xyz = torch.tensor(cur_tar_wrist_xyz, dtype=torch.float32, device=delta_xyz.device)
         cur_tar_fingers = torch.tensor(cur_tar_fingers, dtype=torch.float32, device=delta_joints.device)
+=======
+        delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
+        print("cur_tar_wrist_xyz: ", cur_tar_wrist_xyz)
+        print("tar_xyz: ", tar_xyz)
+        print("delta_xyz: ", delta_xyz)
+        delta_joints = tar_joints.to(cur_tar_fingers) - cur_tar_fingers
+
+>>>>>>> a72514b71 (grasping controller semi working)
         tar_xyz = cur_tar_wrist_xyz + delta_xyz * delta_t
         tar_joint = cur_tar_fingers + delta_joints * delta_t
-
         # Orientation
         door_orientation = cur_obs["orientation_door"]
         door_orientation = torch.tensor(door_orientation, dtype=torch.float32, device="cuda:0") #Lambda Change
@@ -453,7 +514,6 @@ class ExpertDatagen:
             torch.tensor([0.0, -math.pi, 0.0],device="cuda:0"), "XYZ"
         )
         target_rot = torch.einsum("ij,jk->ik", door_rot, rot_y)
-
         tar_rot = target_rot
 
         act = {
@@ -464,6 +524,7 @@ class ExpertDatagen:
 
         return act
 
+<<<<<<< HEAD
     def grasp_obj(self):
         ## TODO: replace door quat with real quaternion we get from scene prim
         door_trans,door_orientation_rpy = self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
@@ -474,12 +535,50 @@ class ExpertDatagen:
         scalar = quat_door.GetReal()
         vector = quat_door.GetImaginary()
         quat_door=[scalar, vector[0], vector[1], vector[2]]
+=======
+    def apply_rotation(self, quat_door):
+        hab_T_door = R.from_quat(quat_door)
+        isaac_T_hab_list = [-90, 0, 0]
+        isaac_T_hab = R.from_euler("xyz", isaac_T_hab_list, degrees=True)
+        isaac_T_door_mat = R.from_matrix(
+            isaac_T_hab.as_matrix() @ hab_T_door.as_matrix()
+        )
+        isaac_T_door_quat = isaac_T_door_mat.as_quat()
+        return isaac_T_door_quat
+
+    def get_door_quat(self):
+        door_trans, door_orientation_rpy = (
+            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
+            )
+        )
+        self.visualize_pos(door_trans, "door")
+        quat_door = door_orientation_rpy.GetQuaternion()
+        # Getting Quaternion Val to Array
+        scalar = quat_door.GetReal()
+        vector = quat_door.GetImaginary()
+        quat_door = [scalar, vector[0], vector[1], vector[2]]
+        isaac_T_door_quat = self.apply_rotation(quat_door)
+        print("door_quat: ", isaac_T_door_quat)
+        return isaac_T_door_quat
+
+    def create_T_matrix(self, pos, rot):
+        T_mat = np.eye(4)
+        rot_quat = R.from_quat(np.array([rot.scalar, *rot.vector]))
+        T_mat[:3, :3] = rot_quat.as_matrix()
+        T_mat[:, -1] = np.array([*pos, 1])
+        return T_mat
+
+    def grasp_obj(self, name):
+        quat_door = self.get_door_quat()
+>>>>>>> a72514b71 (grasping controller semi working)
 
         cur_obs = {
-            "wrist_tar_xyz": self.current_target_xyz,
-            "tar_joints": self.current_target_fingers,
-            "orientation_door": quat_door,
+            "wrist_tar_xyz": torch.tensor(self.current_target_xyz),
+            "tar_joints": torch.tensor(self.current_target_fingers),
+            "orientation_door": torch.tensor(quat_door),
         }
+<<<<<<< HEAD
         act = self.generate_action(cur_obs)
         self.move_hand_joints(act["tar_fingers"])
         # Rot Matrix to RPY
@@ -494,15 +593,53 @@ class ExpertDatagen:
 
         print(f"Policy XYZ {act['tar_xyz']} and  policy Rot {act['tar_rot']} per policy")
         self.move_to_ee(act["tar_xyz"], [roll,pitch,yaw], timeout=700)
+=======
+        act = self.generate_action(cur_obs, name)
+
+        base_T_hand = act["tar_xyz"]
+
+        ee_pos, ee_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_ee = self.create_T_matrix(ee_pos, ee_rot)
+
+        hand_pos, hand_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_hand = self.create_T_matrix(hand_pos, hand_rot)
+
+        ee_T_hand = np.linalg.inv(base_T_ee) @ base_T_hand
+        base_T_hand = base_T_ee @ ee_T_hand
+        print("base_T_hand: ", base_T_hand[:, -1])
+
+        self.visualize_pos(act["tar_xyz"], "hand")
+        # self.move_hand_joints(act["tar_fingers"], timeout=10)
+        target_rot_mat = R.from_matrix(act["tar_rot"])
+        target_rot_rpy = target_rot_mat.as_euler("xyz", degrees=False)
+
+        print(
+            f"Policy XYZ {act['tar_xyz']},  Rot {np.rad2deg(target_rot_rpy)}"
+        )
+        curr_xyz, curr_ori = self.get_curr_ee_pose()
+        print(f"Curr XYZ {curr_xyz}, Rot {curr_ori}")
+        target_rot_rpy = self.target_ee_rot
+        self.move_ee_and_hand(
+            act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
+        )
+>>>>>>> a72514b71 (grasping controller semi working)
         self.current_target_fingers = act["tar_fingers"]
         self.current_target_xyz = act["tar_xyz"]
         _current_target_rotmat = R.from_matrix(act["tar_rot"])
         self.current_target_quat = _current_target_rotmat.as_quat()
 
     def replay_grasp_obj(self):
+<<<<<<< HEAD
         door_orientation_rpy = R.from_euler("xyz", [-90, 0, -1], degrees=True)
         quat_door = door_orientation_rpy.as_quat()
         quat_door = torch.tensor([1, 0, 0, 0],device="cuda:0") #Lambda Change
+=======
+        quat_door = self.get_door_quat()
+>>>>>>> a72514b71 (grasping controller semi working)
         print("quat_door: ", quat_door)
         obs_data = np.load("input.npy", allow_pickle=True)
         act_data = np.load("actions.npy", allow_pickle=True)
@@ -535,46 +672,10 @@ class ExpertDatagen:
         self.visualize_pos(self.target_ee_pos)
 
         self.move_to_ee(
-            self.target_ee_pos, self.target_ee_rot, grasp="open", timeout=700
-        )
-
-        # grasp object
-        self.step = 0
-        self.current_target_fingers = (
-            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
-        )
-        self.current_target_xyz = self.target_ee_pos
-        target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[1] -= 0.51
-        target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
-        target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
-        target_joints = (
-            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
-        )
-        self.set_targets(
-            target_w_xyz=target_xyz,
-            target_w_quat=target_quaternion,
-            target_joints=target_joints,
-        )
-        for _ in range(200):
-            self.grasp_obj()
-
-        self.writer.close()
-        print(f"saved file to: {self.save_path}")
-
-    def replay_grasp(self):
-        self.reset_robot(self.target_name)
-
-        self.target_ee_pos, self.target_ee_rot = self.get_poses(
-            self.target_name, pose_type="ee"
-        )
-        self.visualize_pos(self.target_ee_pos)
-
-        self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
             grasp="pre_grasp",
-            timeout=700,
+            timeout=200,
         )
 
         # grasp object
@@ -584,7 +685,7 @@ class ExpertDatagen:
         )
         self.current_target_xyz = self.target_ee_pos
         target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[1] -= 0.51
+        target_xyz[0] -= 0.51
         target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
         target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
         target_joints = (
@@ -595,34 +696,42 @@ class ExpertDatagen:
             target_w_quat=target_quaternion,
             target_joints=target_joints,
         )
-        # for _ in range(1000):
-        self.replay_grasp_obj()
+        if self.replay:
+            self.replay_grasp_obj()
+        else:
+            for _ in range(20):
+                self.grasp_obj(name="target_grip")
 
-        if self.skill == "pick":
-            # move hand up
-            target_ee_pos, _ = self.get_curr_ee_pose()
-            target_ee_pos[1] += 0.3
-        elif self.skill == "open":
-            # move hand backwards
-            target_ee_pos, _ = self.get_curr_ee_pose()
-            target_ee_pos[0] += 0.2
-            target_ee_pos[2] -= 0.2
+        for _ in range(20):
+            self.grasp_obj(name="open")
+        # # move hand backwards
+        # target_ee_pos, _ = self.get_curr_ee_pose()
+        # target_ee_pos[0] += 0.1
+        # target_ee_pos[2] += 0.0
+        # self.visualize_pos(target_ee_pos)
 
-        self.visualize_pos(target_ee_pos)
-
-        print("ee_target: ", target_ee_pos)
-        print("curr_ee_target: ", self.get_curr_ee_pose())
-        self.move_to_ee(
-            target_ee_pos, self.target_ee_rot, grasp="close", timeout=300
-        )
+        # self.move_to_ee(
+        #     self.target_ee_pos,
+        #     self.target_ee_rot,
+        #     grasp=None,
+        #     timeout=200,
+        # )
 
         self.writer.close()
         print(f"saved file to: {self.save_path}")
 
 
 if __name__ == "__main__":
-    target_name = "fridge"
-    skill = "open"
-    datagen = ExpertDatagen(target_name, skill)
+    parser = argparse.ArgumentParser(description="Your program description")
+
+    # Add arguments
+    parser.add_argument(
+        "--target-name", default="fridge", help="target object name"
+    )
+    parser.add_argument("--skill", default="open", help="open, pick")
+    parser.add_argument("--replay", action="store_true")
+
+    args = parser.parse_args()
+    datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
+
     datagen.run_expert_w_grasp()
-    # datagen.replay_grasp()
