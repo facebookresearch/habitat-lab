@@ -54,7 +54,8 @@ class ArmReachAction(ArticulatedAgentAction):
         target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
         dt = 0.5
         new_arm_joints = self._spot_pick_helper.update(dt, target_rel_pos)
-        self._robot_wrapper._target_arm_joint_positions = new_arm_joints
+        self._robot_wrapper._target_right_arm_joint_positions = des_joint_pos
+
 
 
 @registry.register_task_action
