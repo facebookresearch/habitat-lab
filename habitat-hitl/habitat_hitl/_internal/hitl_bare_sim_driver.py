@@ -8,7 +8,6 @@
 See README.md in this directory.
 """
 
-import abc
 import json
 from typing import Any, Callable, Dict, List, Optional
 
@@ -17,6 +16,7 @@ import magnum as mn
 import habitat
 import habitat_sim
 import habitat_sim.utils.settings
+from habitat_hitl._internal.app_driver import AppDriver
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
@@ -37,12 +37,6 @@ from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_hitl.core.types import KeyframeAndMessages
 from habitat_hitl.core.user_mask import Users
 from habitat_sim.gfx import DebugLineRender
-
-
-class AppDriver:
-    @abc.abstractmethod
-    def sim_update(self, dt):
-        pass
 
 
 class HitlBareSimDriver(AppDriver):

@@ -8,7 +8,6 @@
 See README.md in this directory.
 """
 
-import abc
 import json
 from datetime import datetime
 from functools import wraps
@@ -21,6 +20,7 @@ import habitat
 import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
+from habitat_hitl._internal.app_driver import AppDriver
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
@@ -68,13 +68,6 @@ def requires_habitat_sim_with_bullet(callable_):
         return callable_(*args, **kwds)
 
     return wrapper
-
-
-class AppDriver:
-    # todo: rename to just "update"?
-    @abc.abstractmethod
-    def sim_update(self, dt):
-        pass
 
 
 @requires_habitat_sim_with_bullet
