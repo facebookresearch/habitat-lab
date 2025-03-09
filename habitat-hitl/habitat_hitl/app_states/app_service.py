@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from habitat import Env
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -50,7 +50,9 @@ class AppService:
         client_message_manager: ClientMessageManager,
         gui_agent_controllers: List[GuiController],
         all_agent_controllers: List[Controller],
-        reconfigure_sim: Callable = None,
+        reconfigure_sim: Optional[
+            Callable[[Optional[str], Optional[str]], None]
+        ] = None,
     ):
         self._config = config
         self._hitl_config = hitl_config
@@ -155,5 +157,7 @@ class AppService:
         return self._all_agent_controllers
 
     @property
-    def reconfigure_sim(self) -> Callable:
+    def reconfigure_sim(
+        self,
+    ) -> Optional[Callable[[Optional[str], Optional[str]], None]]:
         return self._reconfigure_sim

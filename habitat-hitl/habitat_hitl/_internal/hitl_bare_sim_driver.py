@@ -54,17 +54,15 @@ class HitlBareSimDriver(AppDriver):
             )
         self._hitl_config = omegaconf_to_object(config.habitat_hitl)
         self._gui_input = gui_input
-
         self.habitat_env: habitat.Env = None
 
-        # todo: construct a sim with no renderer
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
         cfg_settings[
             "scene_dataset_config_file"
         ] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
-        cfg_settings["scene"] = "NONE"  # "102344022.scene_instance.json"
+        cfg_settings["scene"] = "NONE"
         cfg_settings["depth_sensor"] = False
         cfg_settings["color_sensor"] = False
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
@@ -171,11 +169,12 @@ class HitlBareSimDriver(AppDriver):
 
     @property
     def network_server_enabled(self) -> bool:
-        return self._hitl_config.networking.enable
+        return (
+            self._hitl_config.networking.enable
+            and self._hitl_config.networking.max_client_count > 0
+        )
 
-    def _reconfigure_sim(self, dataset, scene):
-        # todo: construct a sim with no renderer
-        # hab_cfg = config.habitat.simulator
+    def _reconfigure_sim(self, dataset: Optional[str], scene: Optional[str]):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = scene if scene else "NONE"
@@ -249,7 +248,7 @@ class HitlBareSimDriver(AppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
-    def sim_update(self, dt):
+    def sim_update(self, dt: float):
         post_sim_update_dict: Dict[str, Any] = {}
 
         if self._remote_client_state:

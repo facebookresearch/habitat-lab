@@ -479,7 +479,7 @@ class HitlDriver(AppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
-    def sim_update(self, dt):
+    def sim_update(self, dt: float):
         post_sim_update_dict: Dict[str, Any] = {}
 
         if self._remote_client_state:
