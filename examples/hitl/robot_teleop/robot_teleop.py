@@ -6,7 +6,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hydra
 import magnum as mn
@@ -494,6 +494,7 @@ class AppStateRobotTeleopViewer(AppState):
     def __init__(self, app_service: AppService):
         self._app_service = app_service
         self._sim = app_service.sim
+        self._current_scene_index = 0
 
         # bind the app specific config values
         self._app_cfg: DictConfig = omegaconf_to_object(
@@ -513,13 +514,38 @@ class AppStateRobotTeleopViewer(AppState):
         self.cursor_cast_results: HitObjectInfo = None
         self.mouse_cast_results: HitObjectInfo = None
         self._hide_gui = False
-        # self._cursor_pos = mn.Vector3(-7.2, 0.8, -7.7)  # mn.Vector3(-7.0, 1.0, -2.75)
-        # self._camera_helper.update(self._cursor_pos, 0.0)
+
+        # set with SPACE, when true cursor is locked on robot
+        self.cursor_follow_robot = False
+
+        self.robot: Optional[Robot] = None
+        self.dof_editor: Optional[DoFEditor] = None
+        self._cursor_pos = mn.Vector3(0.0, 0.0, 0.0)
+        self.navmesh_lines: Optional[
+            List[Tuple[mn.Vector3, mn.Vector3]]
+        ] = None
 
         # setup the simulator
-        self._app_service.reconfigure_sim(
-            self._app_cfg.scene_dataset, self._app_cfg.scene
+        self.set_scene(self._current_scene_index)
+
+        self._sps_tracker = AverageRateTracker(2.0)
+        self._do_pause_physics = False
+        self._app_service.users.activate_user(0)
+
+    def next_scene(self) -> None:
+        scenes = self._app_cfg.scenes
+        self._current_scene_index = (self._current_scene_index + 1) % len(
+            scenes
         )
+        self.set_scene(self._current_scene_index)
+
+    def set_scene(self, scene_index: int) -> None:
+        if self.robot is not None:
+            self.robot.clean()
+
+        scene = self._app_cfg.scenes[scene_index]
+        print(f"Loading scene: {scene}.")
+        self._app_service.reconfigure_sim(self._app_cfg.scene_dataset, scene)
 
         self.set_aos_dynamic()
         # import and setup the robot from config
@@ -528,19 +554,9 @@ class AppStateRobotTeleopViewer(AppState):
             self.robot.ao.aabb.center()
         )
         self._camera_helper.update(self._cursor_pos, 0.0)
-        # set with SPACE, when true cursor is locked on robot
-        self.cursor_follow_robot = False
-
-        # DofEditor is a Gui util created when you click an AO link
-        self.dof_editor: DoFEditor = None
-
-        self.navmesh_lines: List[Tuple[mn.Vector3, mn.Vector3]] = None
-
-        self._sps_tracker = AverageRateTracker(2.0)
-        self._do_pause_physics = False
-        self._timer = 0.0
-
-        self._app_service.users.activate_user(0)
+        self.dof_editor = None
+        self.navmesh_lines = None
+        print(f"Loaded scene: {scene}.")
 
     def set_aos_dynamic(self) -> None:
         """
@@ -647,8 +663,9 @@ class AppStateRobotTeleopViewer(AppState):
 
         help_text = (
             "Controls:\n"
-            + " 'WASD' to translate laterally and 'ZX' to move up|down\n"
-            + " hold 'R' and move the mouse to rotate camera and mouse wheel to zoom\n"
+            + " 'WASD' to translate laterally and 'ZX' to move up|down.\n"
+            + " hold 'R' and move the mouse to rotate camera and mouse wheel to zoom.\n"
+            + " '0' to change scene.\n"
         )
 
         # show some details about hits under the cursor
@@ -820,6 +837,10 @@ class AppStateRobotTeleopViewer(AppState):
         if gui_input.get_key_down(KeyCode.O):
             if self.robot is not None:
                 self.robot.set_cached_pose()
+
+        # Load next scene
+        if gui_input.get_key_down(KeyCode.ZERO):
+            self.next_scene()
 
     def handle_mouse_press(self) -> None:
         """

@@ -21,8 +21,14 @@ habitat_hitl:
 #NOTE: The robot_settings.yaml file contains additional, hot-reloadable settings
 robot_teleop:
   scene_dataset: "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json"
-  scene: "103997403_171030405"
-  #"102817140"
+  scenes:
+    - "103997403_171030405"
+    - "103997445_171030492"
+    - "102817140"
+    - "102817161"
+    - "106879044_174887172"
+    - "108294915_176710620"
+    - "108736677_177263328"
   camera_move_speed: 0.1
 
 
