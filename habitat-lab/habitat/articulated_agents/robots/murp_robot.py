@@ -79,15 +79,15 @@ class MurpRobot(MobileManipulator):
     @classmethod
     def _get_murp_params(cls):
         return MurpParams(
-            arm_joints=[0, 2, 4, 6, 8, 10, 12],
+            arm_joints=[2, 4, 6, 8, 12],  # remove 0, 10
             gripper_joints=[19],
             arm_init_params=[
-                2.6116285,
+                # 2.6116285, for 0
                 1.5283098,
                 1.0930868,
                 -0.50559217,
                 0.48147443,
-                2.628784,
+                # 2.628784, for 10
                 -1.3962275,
             ],
             gripper_init_params=[-1.56],
@@ -153,9 +153,9 @@ class MurpRobot(MobileManipulator):
 
     @property
     def base_transformation(self):
-        add_rot = mn.Matrix4.rotation(
-            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
-        )
+        # add_rot = mn.Matrix4.rotation(
+        #     mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        # )
         return self.sim_obj.transformation  # @ add_rot
 
     def __init__(

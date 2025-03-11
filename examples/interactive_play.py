@@ -114,7 +114,7 @@ def get_input_vel_ctlr(
         base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
-        if "spot" in cfg:
+        if "spot" in cfg or "murp" in cfg:
             base_action_name = f"{agent_k}base_velocity_non_cylinder"
         else:
             base_action_name = f"{agent_k}base_velocity"
@@ -127,7 +127,7 @@ def get_input_vel_ctlr(
             arm_key
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-        base_action = None
+        base_action = [0, 0]
     elif "stretch" in cfg:
         arm_action_space = np.zeros(10)
         arm_ctrlr = None
@@ -267,6 +267,33 @@ def get_input_vel_ctlr(
             elif keys[pygame.K_7]:
                 arm_action[9] = -1.0
 
+        elif arm_action_space.shape[0] == 5:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[4] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -371,9 +398,13 @@ def get_input_vel_ctlr(
                 grip_key: arm_action[-1],
             }
         else:
-            args = {arm_key: arm_action, grip_key: magic_grasp}
-
-    if magic_grasp is None:
+            if "murp" in cfg:
+                args = {arm_key: arm_action}
+            else:
+                args = {arm_key: arm_action, grip_key: magic_grasp}
+    if "murp" in cfg:
+        arm_action = [*arm_action]
+    elif magic_grasp is None:
         arm_action = [*arm_action, 0.0]
     else:
         arm_action = [*arm_action, magic_grasp]

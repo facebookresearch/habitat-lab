@@ -10,6 +10,7 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+from habitat.articulated_agents.robots.murp_robot import MurpRobot
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
@@ -223,6 +224,13 @@ class GazeGraspAction(MagicGraspAction):
                 .sensor_states["head_rgb"]
                 .position
             )
+        elif isinstance(self.cur_articulated_agent, MurpRobot):
+            cam_pos = (
+                self._sim.agents[0]
+                .get_state()
+                .sensor_states["articulated_agent_arm_rgb"]
+                .position
+            )
         else:
             raise NotImplementedError(
                 "This robot does not have GazeGraspAction."
@@ -236,6 +244,10 @@ class GazeGraspAction(MagicGraspAction):
             panoptic_img = self._sim._sensor_suite.get_observations(
                 self._sim.get_sensor_observations()
             )["head_panoptic"]
+        elif isinstance(self.cur_articulated_agent, MurpRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )["articulated_agent_arm_panoptic"]
         else:
             raise NotImplementedError(
                 "This robot does not have GazeGraspAction."

@@ -5,7 +5,7 @@ defaults:
     - arm_depth_bbox_sensor
   - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: spot_agent
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: murp
-  - override /habitat/task/rearrange/actions: spot_base_arm_empty
+  - override /habitat/task/rearrange/actions: murp_base_arm_empty
   - _self_
 
 habitat:

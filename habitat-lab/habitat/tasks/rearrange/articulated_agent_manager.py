@@ -4,7 +4,7 @@
 
 import importlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -18,6 +18,7 @@ from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.articulated_agents.robots import (
     FetchRobot,
     FetchRobotNoWheels,
+    MurpRobot,
     SpotRobot,
     StretchRobot,
 )
@@ -86,8 +87,8 @@ class ArticulatedAgentManager:
         self._all_agent_data: List[ArticulatedAgentData] = []
         self._is_pb_installed = is_pb_installed()
         self.agent_names: Dict[str, Any] = cfg.agents
-        self._agent_index_to_name: Dict[int, str] = {}
-        self._agent_name_to_index: Dict[str, int] = {}
+        self._agent_index_to_name: Dict[int, str] = {}  #  type: ignore
+        self._agent_name_to_index: Dict[str, int] = {}  #  type: ignore
 
         for agent_index in range(len(cfg.agents_order)):
             agent_name = cfg.agents_order[agent_index]
@@ -320,8 +321,8 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
                 use_arm_init = np.array(agent.params.arm_init_params)
             else:
                 use_arm_init = np.array(agent_cfg.joint_start_override)
-            self._all_agent_data.append(
-                IsaacAgentData(
+            self._all_agent_data.append(  # type: ignore
+                IsaacAgentData(  # type: ignore
                     articulated_agent=agent,
                     cfg=agent_cfg,
                     start_js=use_arm_init,
@@ -336,7 +337,6 @@ class IsaacArticulatedAgentManager(ArticulatedAgentManager):
         pass
 
     def pre_obj_clear(self) -> None:
-
         pass
 
     def agent(self):
