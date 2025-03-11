@@ -49,7 +49,11 @@ from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 from viz_utils import add_text_to_image
 
-data_path = "/home/joanne/habitat-lab/data/"  # Lambda Change
+user = "joanne"
+if user == "joanne":
+    data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
+else:
+    data_path = "/home/joanne/habitat-lab/data/"
 
 
 def make_sim_cfg(agent_dict):
@@ -127,6 +131,7 @@ class ExpertDatagen:
         self.replay = replay
         main_agent_config = AgentConfig()
 
+<<<<<<< HEAD
         urdf_path = os.path.join(
             data_path,
             "franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
@@ -137,6 +142,26 @@ class ExpertDatagen:
            "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
             # "franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
         )
+=======
+        if user == "joanne":
+            urdf_path = os.path.join(
+                data_path,
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand.urdf",
+            )
+            arm_urdf_path = os.path.join(
+                data_path,
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+            )
+        else:
+            urdf_path = os.path.join(
+                data_path,
+                "franka_tmr/franka_description_tmr/urdf/franka_left_arm.urdf",  # Lambda Change
+            )
+            arm_urdf_path = os.path.join(
+                data_path,
+                "franka_tmr/franka_description_tmr/allegro/allegro.urdf",  # Lambda Change
+            )
+>>>>>>> 11b33a138 (add base movement and arm cameras)
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
         main_agent_config.ik_arm_urdf = arm_urdf_path
@@ -154,7 +179,8 @@ class ExpertDatagen:
 
         action_dict = {
             "base_velocity_action": BaseVelocityActionConfig(
-                type="BaseVelKinematicIsaacAction"
+                # type="BaseVelKinematicIsaacAction"
+                type="BaseVelIsaacAction"
             ),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
         }
@@ -175,7 +201,9 @@ class ExpertDatagen:
         num_hand_joints = 16
         grasp_joints = {
             "open": np.zeros(num_hand_joints),
-            "pre_grasp": np.concatenate((np.full(12, 0.7), [-0.785], np.full(3, 0.7))),
+            "pre_grasp": np.concatenate(
+                (np.full(12, 0.7), [-0.785], np.full(3, 0.7))
+            ),
             "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
             "close_thumb": np.concatenate(
                 (np.full(12, 0.90), np.full(4, 0.4))
@@ -361,6 +389,69 @@ class ExpertDatagen:
                     f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
                 )
                 break
+
+    def move_base(self, base_lin_vel, base_ang_vel):
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array(
+                    [base_lin_vel, base_ang_vel], dtype=np.float32
+                )
+            },
+        }
+        self.env.sim.articulated_agent.base_transformation = self.base_trans
+        obs = self.env.step(action)
+        self.base_trans = self.env.sim.articulated_agent.base_transformation
+        im = process_obs_img(obs)
+        im = add_text_to_image(im, "using base controller")
+        self.writer.append_data(im)
+
+    def move_base_ee_and_hand(
+        self,
+        base_lin_vel,
+        base_ang_vel,
+        target_ee_pos,
+        target_ee_rot=None,
+        hand_joints=None,
+        timeout=300,
+    ):
+        ctr = 0
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
+            action = {
+                "action": ("arm_reach_ee_action", "base_velocity_action"),
+                "action_args": {
+                    "target_pos": np.array(target_ee_pos, dtype=np.float32),
+                    "target_rot": target_ee_rot,
+                    "base_vel": np.array(
+                        [base_lin_vel, base_ang_vel], dtype=np.float32
+                    ),
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+                hand_joints
+            )
+            self.pin_right_arm()
+
+            obs = self.env.step(action)
+            self.base_trans = (
+                self.env.sim.articulated_agent.base_transformation
+            )
+            im = process_obs_img(obs)
+            im = add_text_to_image(im, "using grasp controller")
+            self.writer.append_data(im)
+
+            curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                )
+                break
+            self.writer.append_data(im)
 
     def visualize_pos(self, pos, name="target_ee_pos"):
         self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
@@ -594,9 +685,23 @@ class ExpertDatagen:
         curr_xyz, curr_ori = self.get_curr_ee_pose()
         print(f"Curr XYZ {curr_xyz}, Rot {curr_ori}")
         target_rot_rpy = self.target_ee_rot
-        self.move_ee_and_hand(
-            act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
-        )
+        if name == "open" and self.step > 10:
+            self.move_base_ee_and_hand(
+                -0.1,
+                0.0,
+                act["tar_xyz"],
+                target_rot_rpy,
+                act["tar_fingers"],
+                timeout=10,
+            )
+            # self.move_base(
+            #     -0.1,
+            #     0.0,
+            # )
+        else:
+            self.move_ee_and_hand(
+                act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
+            )
         self.current_target_fingers = act["tar_fingers"]
         self.current_target_xyz = act["tar_xyz"]
         _current_target_rotmat = R.from_matrix(act["tar_rot"])
@@ -666,21 +771,16 @@ class ExpertDatagen:
             for _ in range(20):
                 self.grasp_obj(name="target_grip")
 
-        for _ in range(20):
+        self.step = 0
+        for _ in range(30):
             self.grasp_obj(name="open")
-        # # move hand backwards
-        # target_ee_pos, _ = self.get_curr_ee_pose()
-        # target_ee_pos[0] += 0.1
-        # target_ee_pos[2] += 0.0
-        # self.visualize_pos(target_ee_pos)
 
-        # self.move_to_ee(
-        #     self.target_ee_pos,
-        #     self.target_ee_rot,
-        #     grasp=None,
-        #     timeout=200,
-        # )
-
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+        print("final door orientation: ", door_orientation_rpy)
         self.writer.close()
         print(f"saved file to: {self.save_path}")
 
