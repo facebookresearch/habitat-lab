@@ -1,0 +1,9 @@
+# @package habitat.simulator.agents.spot
+defaults:
+  - agent_base
+  - _self_
+
+radius: 0.25
+height: 1.41
+articulated_agent_type: "MurpRobot"
+articulated_agent_urdf: data/robots/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand
