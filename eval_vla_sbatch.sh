@@ -26,7 +26,7 @@ export hab_dir=/fsx-siro/jtruong/repos/habitat-lab
 cd /fsx-siro/jtruong/repos/vla-physics/habitat-lab
 
 for i in {0..99}; do
-    /data/home/jtruong/miniconda3/envs/vla-physics-hab/bin/python eval_vla_isaac.py --ep-id $i --exp $1 --ckpt $2
+    /data/home/jtruong/miniconda3/envs/vla-physics-hab/bin/python eval_vla_isaac_spot.py --ep-id $i --exp $1 --ckpt $2
 done
 
 
