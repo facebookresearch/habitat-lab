@@ -299,6 +299,7 @@ class IsaacRearrangeSim(HabitatSim):
         """
         # Preprocess the ep_info making necessary datatype conversions.
         target_trans = []
+        breakpoint()
         rom = self.get_rigid_object_manager()
         for target_handle, trans in self._targets.items():
             targ_idx = self._scene_obj_ids.index(
@@ -433,6 +434,9 @@ class IsaacRearrangeSim(HabitatSim):
                 for ao in self.art_objs
             }
 
+        # use target
+        self._setup_targets(ep_info)
+        #breakpoint()
         return
         if is_hard_reset:
             with read_write(config):
