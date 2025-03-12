@@ -72,7 +72,6 @@ def bind_physics_material_to_hierarchy(
     dynamic_friction,
     restitution,
 ):
-
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
     # material = UsdPhysics.MaterialAPI(material_prim)
@@ -114,9 +113,9 @@ class IsaacRearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
-                            sensor_config
-                        )
+                        agent_cfg.sim_sensors[
+                            f"{agent_name}_{sensor_key}"
+                        ] = sensor_config
 
         super().__init__(config)
         from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
@@ -136,6 +135,7 @@ class IsaacRearrangeSim(HabitatSim):
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
         asset_path = os.path.abspath(
             "data/usd/scenes/fremont_static_objects.usda"
+            # "data/usd/scenes/fremont_static.usda"
         )
         print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -541,7 +541,6 @@ class IsaacRearrangeSim(HabitatSim):
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
-
         for attempt_i in range(max_attempts):
             # start_pos = self.pathfinder.get_random_navigable_point(
             #     island_index=self._largest_indoor_island_idx
@@ -971,7 +970,6 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
-
         rom = self.get_rigid_object_manager()
         self._isaac_wrapper.step(num_steps=1)
 

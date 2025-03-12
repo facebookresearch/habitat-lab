@@ -1,4 +1,5 @@
 from habitat.core.embodied_task import SimulatorTaskAction
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 
