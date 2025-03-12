@@ -120,7 +120,7 @@ class IsaacMobileManipulator:
     @property
     def arm_joint_pos(self):
         #assert False  # todo
-        pass
+        return self._robot_wrapper.arm_joint_pos
 
     @arm_joint_pos.setter
     def arm_joint_pos(self, ctrl: List[float]):

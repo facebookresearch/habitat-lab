@@ -1323,6 +1323,7 @@ class ArmDepthBBoxSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
         # Check if task has the attribute of the abs_targ_idx
+        breakpoint()
         assert hasattr(task, "abs_targ_idx")
 
         # Get the target from sim, and ensure that the index is offset
