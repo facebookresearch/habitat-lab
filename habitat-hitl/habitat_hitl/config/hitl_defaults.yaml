@@ -22,12 +22,6 @@ habitat_hitl:
     # When enabled, we run a websocket server that connects to remote clients. A HITL app with networking enabled is an "HITL server". See pick_throw_vr example app.
     enable: False
 
-    # Number of accepted concurrent clients (multiplayer if higher than one). All connections beyond this count will be rejected. Beware that this can be different from the agent count.
-    max_client_count: 1
-
-    # Accept incoming connections by default. If disabled, connections must be activated using InterprocessRecord.enable_new_connections().
-    enable_connections_by_default: True
-
     # We'll listen for incoming client connections at this port.
     port: 8888
 
@@ -44,17 +38,6 @@ habitat_hitl:
 
     # Optionally kick an idle client after n seconds.
     client_max_idle_duration: ~
-
-    # Override incoming client connection parameters for testing purposes.
-    mock_connection_params_dict: None
-
-    client_sync:
-      # If enabled, the server main camera transform will be sent to the client. Disable if the client should control its own camera (e.g. VR), or if clients must use different camera transforms (e.g. multiplayer).
-      server_camera: True
-      # If enabled, the first client input is relayed to the server's GuiInput. Disable if clients have independent controls from the server.
-      server_input: True
-      # Enable transmission of skinned mesh poses. If 'camera.first_person_mode' is enabled, you should generally disable this as well as enable `hide_humanoid_in_gui` because the humanoid will occlude the camera.
-      skinning: True
 
   # Target rate to step the environment (steps per second); actual SPS may be lower depending on your hardware
   target_sps: 30
@@ -108,14 +91,13 @@ habitat_hitl:
     max_look_up_angle: 15.0
     min_look_down_angle: -60.0
 
-  # list of gui-controlled agents. Each list item should be a dict following the commented-out reference format below. Beware some apps only support one (or zero!) gui-controlled agent. For each Habitat env agent *without* a corresponding entry here, it will be policy-controlled.
-  gui_controlled_agents: []
-    # agent index corresponding to a Habitat env agent
-    # - agent_index: 0
-    # linear speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.ang_speed.
-    #   lin_speed: 10.0
-    # angular speed. Applies only to KinematicHumanoid. For SpotRobot, see habitat.task.actions.agent_0_base_velocity.lin_speed.
-    #   ang_speed: 10.0
+  gui_controlled_agent:
+    # GUI-controlled agent index (must be None or >= 0 and < number of agents). Defaults to None, indicating that all the agents are policy-controlled.
+    agent_index: ~
+    # linear speed
+    lin_speed: 10.0
+    # angular speed
+    ang_speed: 10.0
 
   data_collection:
     # Filepath base used for saving various session data files, e.g. `my_output/my_session`. Specify a full path including basename, but not an extension.

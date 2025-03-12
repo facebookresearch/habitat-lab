@@ -3,8 +3,9 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.key_mapping import KeyCode
+from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.hitl_tutorial import Tutorial, generate_tutorial
 
@@ -15,11 +16,7 @@ class AppStateTutorial(AppState):
         app_service,
     ):
         self._app_service = app_service
-        self._gui_agent_ctrl = (
-            self._app_service.gui_agent_controllers[0]
-            if len(self._app_service.gui_agent_controllers)
-            else None
-        )
+        self._gui_agent_ctrl = self._app_service.gui_agent_controller
         self._cam_transform = None
 
     def get_sim(self):
@@ -60,10 +57,10 @@ class AppStateTutorial(AppState):
 
         self._tutorial.update(dt)
 
-        if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
             self._tutorial.skip_stage()
 
-        if self._app_service.gui_input.get_key_down(KeyCode.Q):
+        if self._app_service.gui_input.get_key_down(GuiInput.KeyNS.Q):
             while not self._tutorial.is_completed():
                 self._tutorial.skip_stage()
 

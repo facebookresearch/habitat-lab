@@ -180,12 +180,9 @@ class SpotRobot(MobileManipulator):
             base_link_names={
                 "base",
             },
-<<<<<<< HEAD
             ik_pb_link_idx=7,
             ik_arm_len=7,
             ik_arm_start_idx=0,
-=======
->>>>>>> c20c2a134 (fixes for eval to work)
         )
 
     @property

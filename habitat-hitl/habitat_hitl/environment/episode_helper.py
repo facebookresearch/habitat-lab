@@ -33,18 +33,7 @@ class EpisodeHelper:
     def current_episode(self) -> Episode:
         return self._habitat_env.current_episode
 
-    def set_next_episode_by_index(self, episode_index: int) -> None:
-        """
-        Set the next episode to run by episode index.
-        The new episode will be loading upon resetting the simulator.
-        """
-        self._episode_iterator.set_next_episode_by_index(episode_index)
-
-    def set_next_episode_by_id(self, episode_id: str) -> None:
-        """
-        Set the next episode to run by episode ID.
-        The new episode will be loading upon resetting the simulator.
-        """
+    def set_next_episode_by_id(self, episode_id) -> None:
         self._episode_iterator.set_next_episode_by_id(episode_id)
 
     def next_episode_exists(self) -> bool:

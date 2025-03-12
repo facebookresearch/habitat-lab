@@ -11,7 +11,6 @@ import os
 import pickle
 from abc import abstractmethod
 from datetime import datetime
-from pathlib import Path
 from typing import Any, List
 
 import magnum as mn
@@ -27,7 +26,7 @@ def pickle_vector3(obj):
     return unpickle_vector3, (pickled_data,)
 
 
-# fix for unpicklable type; run once at startup
+# fix for unpickable type; run once at startup
 copyreg.pickle(mn.Vector3, pickle_vector3)
 
 
@@ -57,17 +56,11 @@ def convert_to_json_friendly(obj):
         return convert_to_json_friendly(list(obj))
     else:
         # If obj is a complex object, convert its attributes to a dictionary
-        attributes = {}
-        for attr in dir(obj):
-            try:
-                if not attr.startswith("__") and not callable(
-                    getattr(obj, attr)
-                ):
-                    attributes[attr] = getattr(obj, attr)
-            except Exception as e:
-                print(
-                    f"Unable to convert attribute to JSON: {attr}. Skipping. {e}"
-                )
+        attributes = {
+            attr: convert_to_json_friendly(getattr(obj, attr))
+            for attr in dir(obj)
+            if not attr.startswith("__") and not callable(getattr(obj, attr))
+        }
         return convert_to_json_friendly(attributes)
 
 
@@ -86,8 +79,6 @@ def save_as_json_gzip(obj, filepath):
 def save_as_gzip(data, filepath, mode="wb"):
     if os.path.exists(filepath):
         raise FileExistsError(filepath)
-    if len(Path(filepath).parents) > 0:
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(filepath, mode) as file:
         file.write(data)
     print("wrote " + filepath)

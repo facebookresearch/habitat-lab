@@ -25,7 +25,6 @@ from habitat_hitl._internal.networking.networking_process import (
     launch_networking_process,
     terminate_networking_process,
 )
-from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
@@ -35,7 +34,7 @@ from habitat_hitl.core.remote_gui_input import RemoteGuiInput
 from habitat_hitl.core.serialize_utils import BaseRecorder, save_as_gzip
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
 from habitat_sim.gfx import DebugLineRender
-
+from habitat_hitl._internal.video_recorder import FramebufferVideoRecorder
 
 # todo: define AppDriver in one place
 class AppDriver:
@@ -53,7 +52,7 @@ class HitlBareSimDriver(AppDriver):
         line_render: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
-        video_recorder: FramebufferVideoRecorder = None,
+        video_recorder: FramebufferVideoRecorder = None
     ):
         if "habitat_hitl" not in config:
             raise RuntimeError(
@@ -69,9 +68,7 @@ class HitlBareSimDriver(AppDriver):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
-        cfg_settings["scene_dataset_config_file"] = (
-            "data/fpss/hssd-hab-siro.scene_dataset_config.json"
-        )
+        cfg_settings["scene_dataset_config_file"] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
         cfg_settings["scene"] = "NONE"  # "102344022.scene_instance.json"
         cfg_settings["depth_sensor"] = False
         cfg_settings["color_sensor"] = False
@@ -142,9 +139,7 @@ class HitlBareSimDriver(AppDriver):
             get_anim_fraction=lambda: self._viz_anim_fraction,
             env=self.habitat_env,
             sim=self.get_sim(),
-            reconfigure_sim=lambda dataset, scene: self._reconfigure_sim(
-                dataset, scene
-            ),
+            reconfigure_sim=lambda dataset, scene: self._reconfigure_sim(dataset, scene),
             compute_action_and_step_env=None,
             step_recorder=self._step_recorder,
             get_metrics=None,
@@ -153,7 +148,7 @@ class HitlBareSimDriver(AppDriver):
             episode_helper=self._episode_helper,
             client_message_manager=self._client_message_manager,
             gui_agent_controller=gui_agent_controller,
-            video_recorder=video_recorder,
+            video_recorder=video_recorder
         )
 
         self._app_state: AppState = None
@@ -182,9 +177,7 @@ class HitlBareSimDriver(AppDriver):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = scene if scene else "NONE"
-        cfg_settings["scene_dataset_config_file"] = (
-            dataset if dataset else None
-        )
+        cfg_settings["scene_dataset_config_file"] = dataset if dataset else None
         cfg_settings["depth_sensor"] = False
         cfg_settings["color_sensor"] = False
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
@@ -192,7 +185,9 @@ class HitlBareSimDriver(AppDriver):
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
         self._bare_sim.reconfigure(hab_cfg)
 
-        assert self.get_sim().renderer is None
+        assert self.get_sim().renderer is None        
+
+
 
     def _check_init_server(self, line_render):
         self._remote_gui_input = None
@@ -266,12 +261,14 @@ class HitlBareSimDriver(AppDriver):
         self.get_sim().gfx_replay_manager.save_keyframe()
 
         if self._pending_cursor_style:
-            post_sim_update_dict["application_cursor"] = (
-                self._pending_cursor_style
-            )
+            post_sim_update_dict[
+                "application_cursor"
+            ] = self._pending_cursor_style
             self._pending_cursor_style = None
 
-        keyframes: List[str] = (
+        keyframes: List[
+            str
+        ] = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 

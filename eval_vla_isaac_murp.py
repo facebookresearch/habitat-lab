@@ -67,109 +67,8 @@ from habitat.datasets.rearrange.navmesh_utils import compute_turn
 from habitat.tasks.utils import get_angle
 
 
-class OracleNavSkill:
-    def __init__(self, env, target_pos):
-        self.env = env
-        self.target_pos = target_pos
-        self.target_base_pos = target_pos
-        self.dist_thresh = 0.5
-        self.turn_velocity = 2
-
-        self.forward_velocity = 8
-        self.turn_thresh = 0.2
-        self.articulated_agent = self.env.sim.articulated_agent
-
-    def _path_to_point(self, point):
-        """
-        Obtain path to reach the coordinate point. If agent_pos is not given
-        the path starts at the agent base pos, otherwise it starts at the agent_pos
-        value
-        :param point: Vector3 indicating the target point
-        """
-        agent_pos = self.articulated_agent.base_pos
-
-        path = habitat_sim.ShortestPath()
-        path.requested_start = agent_pos
-        path.requested_end = point
-        found_path = self.env.sim.pathfinder.find_path(path)
-        if not found_path:
-            return [agent_pos, point]
-        return path.points
-
-    def get_step(self):
-
-        obj_targ_pos = np.array(self.target_pos)
-        base_T = self.articulated_agent.base_transformation
-
-        curr_path_points = self._path_to_point(self.target_base_pos)
-        robot_pos = np.array(self.articulated_agent.base_pos)
-        if len(curr_path_points) == 1:
-            curr_path_points += curr_path_points
-
-        cur_nav_targ = np.array(curr_path_points[1])
-        forward = np.array([1.0, 0, 0])
-        robot_forward = np.array(base_T.transform_vector(forward))
-
-        # Compute relative target
-        rel_targ = cur_nav_targ - robot_pos
-        # Compute heading angle (2D calculation)
-        robot_forward = robot_forward[[0, 2]]
-        rel_targ = rel_targ[[0, 2]]
-        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-        dist_to_final_nav_targ = np.linalg.norm(
-            (np.array(self.target_base_pos) - robot_pos)[[0, 2]],
-        )
-        angle_to_target = get_angle(robot_forward, rel_targ)
-        angle_to_obj = get_angle(robot_forward, rel_pos)
-
-        # Compute the distance
-        at_goal = (
-            dist_to_final_nav_targ < self.dist_thresh
-            and angle_to_obj < self.turn_thresh
-        )
-
-        # Planning to see if the robot needs to do back-up
-
-        if not at_goal:
-            if dist_to_final_nav_targ < self.dist_thresh:
-                # TODO: this does not account for the sampled pose's final rotation
-                # Look at the object target position when getting close
-                vel = compute_turn(
-                    rel_pos,
-                    self.turn_velocity,
-                    robot_forward,
-                )
-            elif angle_to_target < self.turn_thresh:
-                # Move forward towards the target
-                vel = [self.forward_velocity, 0]
-            else:
-                # Look at the target waypoint
-                vel = compute_turn(
-                    rel_targ,
-                    self.turn_velocity,
-                    robot_forward,
-                )
-        else:
-            vel = [0, 0]
-        vel2 = compute_turn(
-            rel_targ,
-            self.turn_velocity,
-            robot_forward,
-        )
-        vel2 = vel
-
-        # print(vel, dist_to_final_nav_targ, angle_to_obj, angle_to_target)
-        action = {
-            "action": "base_velocity_action",
-            "action_args": {
-                "base_vel": np.array([vel[0], vel[1]], dtype=np.float32)
-            },
-        }
-        return action
-
-
 class VLAEvaluator:
-    def __init__(self, ep_id, exp_name, ckpt, task):
+    def __init__(self, ep_id, exp_name, ckpt, task, replay):
         self.exp_name = exp_name
         self.json_path = "data/datasets/fremont_hlab_isaac/fremont_100.json.gz"
         self.task = task
@@ -206,7 +105,6 @@ class VLAEvaluator:
                 type="BaseVelIsaacAction"
                 # type="BaseVelKinematicIsaacAction"
             ),
-            "arm_reach_action": ActionConfig(type="ArmReachAction"),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
         }
         self.env = self.init_rearrange_env(agent_dict, action_dict)
@@ -218,7 +116,10 @@ class VLAEvaluator:
 
         video_dir = f"videos_vla_eval/{self.exp_name}/ckpt_{ckpt}"
         os.makedirs(video_dir, exist_ok=True)
-        self.video_path = f"{video_dir}/eval_{ep_id}.mp4"
+        if replay:
+            self.video_path = f"{video_dir}/eval_{ep_id}_replay.mp4"
+        else:
+            self.video_path = f"{video_dir}/eval_{ep_id}.mp4"
         self.results_path = f"{video_dir}/results.txt"
         self.writer = imageio.get_writer(
             self.video_path,
@@ -304,7 +205,7 @@ class VLAEvaluator:
     def get_poses(self, name, pose_type="base"):
         poses = {
             "fridge": {
-                "base_pos": np.array([-4.7, 0.1, 0.8]),
+                "base_pos": np.array([-4.7, 0.0015, 0.8]),
                 "base_rot": 180,
                 "ee_pos": np.array([-6.2, 1.2, 2.4]),
                 "ee_rot": np.deg2rad([120, 0, 0]),
@@ -326,7 +227,117 @@ class VLAEvaluator:
         )
         self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
         self.env.sim.articulated_agent.base_transformation = self.base_trans
+
+        # for _ in range(20):
+        #     action = {
+        #         "action": "base_velocity_action",
+        #         "action_args": {
+        #             "base_vel": np.array([0.0, 0.0], dtype=np.float32),
+        #         },
+        #     }
+        #     self.env.sim.articulated_agent.base_transformation = (
+        #         self.base_trans
+        #     )
+        #     obs = self.env.step(action)
+        #     self.base_trans = (
+        #         self.env.sim.articulated_agent.base_transformation
+        #     )
+        # self.move_hand("pre_grasp")
+
         print(f"set base to: {start_position}, {start_rotation}")
+
+    def get_grasp_mode(self, name):
+        # num_hand_joints = 10
+        num_hand_joints = 16
+        grasp_joints = {
+            "open": np.zeros(num_hand_joints),
+            "pre_grasp": np.concatenate(
+                (np.full(12, 0.7), [-0.785], np.full(3, 0.7))
+            ),
+            "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.90), np.full(4, 0.4))
+            ),
+            # "close": np.array([1.0] * num_hand_joints),
+        }
+        return grasp_joints[name]
+
+    def get_arm_mode(self, name):
+        arm_joints = {
+            "rest": np.zeros(7),
+            "side": np.array(
+                [
+                    2.6116285,
+                    1.5283098,
+                    1.0930868,
+                    -0.50559217,
+                    0.48147443,
+                    2.628784,
+                    -1.3962275,
+                ]
+            ),
+        }
+        return arm_joints[name]
+
+    def pin_right_arm(self):
+        self.env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = self.get_arm_mode(
+            "rest"
+        )
+        self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
+            "open"
+        )
+
+    def move_hand(self, mode="close", timeout=100):
+        target_hand_pos = self.get_grasp_mode(mode)
+        print(f"moving hand to: {mode}")
+        self.move_hand_joints(target_hand_pos, timeout)
+
+    def get_curr_hand_pose(self, arm="left"):
+        if arm == "left":
+            return self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        elif arm == "right":
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
+
+    def get_curr_joint_pose(self, arm="left"):
+        if arm == "left":
+            return self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        elif arm == "right":
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+
+    def move_hand_joints(self, target_hand_pos, timeout=100):
+        curr_hand_pos = self.get_curr_hand_pose()
+        ctr = 0
+        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
+            action = {
+                "action": "base_velocity_action",
+                "action_args": {
+                    "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+                self.get_curr_joint_pose()
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+                target_hand_pos
+            )
+            self.pin_right_arm()
+            obs = self.env.step(action)
+            im = self.process_obs_img(obs)
+            self.writer.append_data(im)
+            curr_hand_pos = self.get_curr_hand_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_hand_pos-target_hand_pos)} away from target. Curr hand pos: {curr_hand_pos}"
+                )
+                break
 
     def move_base_ee_and_hand(
         self,
@@ -354,20 +365,25 @@ class VLAEvaluator:
             self.env.sim.articulated_agent.base_transformation = (
                 self.base_trans
             )
-            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 target_arm_joints
             )
-            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
                 target_hand_joints
             )
-            self.pin_right_arm()
+            self.env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = self.get_arm_mode(
+                "rest"
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
+                "open"
+            )
+            # self.pin_right_arm()
 
             obs = self.env.step(action)
             self.base_trans = (
                 self.env.sim.articulated_agent.base_transformation
             )
-            im = process_obs_img(obs)
-            im = add_text_to_image(im, "using grasp controller")
+            im = self.process_obs_img(obs)
             self.writer.append_data(im)
 
             curr_arm_joint_pos = (
@@ -376,7 +392,7 @@ class VLAEvaluator:
             ctr += 1
             if ctr > timeout:
                 print(
-                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                    f"Exceeded time limit. {np.abs(curr_arm_joint_pos-target_arm_joints)} away from target"
                 )
                 break
             self.writer.append_data(im)
@@ -394,19 +410,38 @@ class VLAEvaluator:
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
         target_hand_joint_pos = (
-            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
         )
         for i in range(len(data)):
-            target_arm_joint_pos += data[i]["delta_joint_action"][:2]
-            target_hand_joint_pos += data[i]["delta_joint_action"][2 : 2 + 7]
-            target_base_action = data[i]["delta_joint_action"][2 + 7 :]
-            obs = self.env.step(action_dict)
-            im = self.process_obs_img(obs)
-            im = add_text_to_image(
-                im,
-                f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(target_hand_joint_pos,2)}, hand_action: {np.round(target_arm_joint_pos, 2)}",
+            print("base_action: ", data[i]["delta_joint_action"][:2])
+            print(
+                "arm_action: ",
+                np.round(data[i]["delta_joint_action"][2 : 2 + 7], 4),
             )
-            self.writer.append_data(im)
+            print(
+                "hand_action: ",
+                np.round(data[i]["delta_joint_action"][2 + 7 :], 4),
+            )
+            target_base_action = data[i]["delta_joint_action"][:2]
+            target_arm_joint_pos += data[i]["delta_joint_action"][2 : 2 + 7]
+            target_hand_joint_pos += data[i]["delta_joint_action"][2 + 7 :]
+            self.move_base_ee_and_hand(
+                target_base_action[0],
+                target_base_action[1],
+                target_arm_joint_pos,
+                target_hand_joint_pos,
+                timeout=1,
+            )
+            curr_base_pos, curr_base_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+            )
+            # target_arm_joint_pos = (
+            #     self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+            # )
+            # target_hand_joint_pos = (
+            #     self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+            # )
+            print("base_pos: ", curr_base_pos)
 
         self.writer.close()
         print("saved video at: ", self.video_path)
@@ -414,21 +449,30 @@ class VLAEvaluator:
 
     def run(self):
         self.reset_robot_pose()
-
         self.policy.reset()
-
         action_dict = {
             "action": "base_velocity_action",
             "action_args": {
                 "base_vel": np.array([0.0, 0.0], dtype=np.float32)
             },
         }
+        self.pin_right_arm()
+
         obs = self.env.step(action_dict)
         obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]
+        curr_base_pos, curr_base_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+        )
         curr_arm_joints = (
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
-        print("curr_arm_joints: ", curr_arm_joints)
+        curr_hand_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        )
+
+        obs["joint"] = np.concatenate(
+            [curr_base_pos, curr_arm_joints, curr_hand_pos]
+        )
         done = False
         ctr = 0
         forward_velocity = 1.0
@@ -436,52 +480,70 @@ class VLAEvaluator:
 
         max_steps = 250
         print("max_steps: ", max_steps)
-        target_joint_pos = (
+        grasp_ctr = 0
+        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_v1/train_npy/ep_0.npy"
+        data = np.load(episode_path, allow_pickle=True)
+
+        target_arm_pos = (
             self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         )
-        grasp_ctr = 0
+        target_hand_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        )
+
         for i in range(max_steps):
             # print(f"=================== step # {ctr} ===================")
+            obs["arm_rgb"] = data[i]["rgb"]
+            obs["joint"] = np.concatenate(
+                [
+                    data[i]["base_pos"],
+                    data[i]["arm_joint"],
+                    data[i]["hand_joint"],
+                ]
+            )
             action = self.policy.act(obs)[0]
+            action = data[i]["delta_joint_action"]
             print("action: ", action)
-            target_arm_pos = (
-                self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
-            )
-            target_arm_pos += action[2 : 2 + 7]
+            print("GT action: ", data[i]["delta_joint_action"])
 
-            target_hand_pos = (
-                self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+            print("obs joint: ", obs["joint"])
+            print(
+                "GT obs: ",
+                np.concatenate(
+                    [
+                        data[i]["base_pos"],
+                        data[i]["arm_joint"],
+                        data[i]["hand_joint"],
+                    ]
+                ),
             )
+
+            target_arm_pos += action[2 : 2 + 7]
             target_hand_pos += action[2 + 7 :]
+            self.pin_right_arm()
             self.move_base_ee_and_hand(
-                action[0],
-                action[1],
+                0.0,
+                0.0,
                 target_arm_pos,
                 target_hand_pos,
+                timeout=1,
             )
 
-            obs = self.env.step(action_dict)
-            im = self.process_obs_img(obs)
-            # im = add_text_to_image(
-            #     im,
-            #     f"base action: {np.round(target_base_action,2)}, arm_action: {np.round(action[:4],2)}, grip_action: {np.round(action[-1], 2)}",
-            # )
-            self.writer.append_data(im)
-
             obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]
+            curr_base_pos, curr_base_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+            )
             curr_arm_joints = (
                 self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
             )
-
-            obs["joint"] = curr_arm_joints[mask == 1]
-        gripper_state = (
-            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos[-1]
-        )
-        success = True
-        if np.allclose(gripper_state, 0.0, atol=0.03):
-            success = False
-        with open(self.results_path, "a") as f:
-            f.write(f"\n{self.ep_id}, {success}")
+            curr_hand_pos = (
+                self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+            )
+            # target_arm_pos = curr_arm_joints
+            # target_hand_pos = curr_hand_pos
+            obs["joint"] = np.concatenate(
+                [curr_base_pos, curr_arm_joints, curr_hand_pos]
+            )
         self.writer.close()
         print("saved video at: ", self.video_path)
 
@@ -499,7 +561,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    datagen = VLAEvaluator(args.ep_id, args.exp, args.ckpt, args.task)
+    datagen = VLAEvaluator(
+        args.ep_id, args.exp, args.ckpt, args.task, args.replay
+    )
     if args.replay:
         datagen.replay_data()
     else:

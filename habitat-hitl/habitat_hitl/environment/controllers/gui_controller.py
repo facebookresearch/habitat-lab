@@ -4,12 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any
 
 import magnum as mn
 import numpy as np
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
-from habitat_hitl.core.key_mapping import KeyCode
+from habitat.tasks.rearrange.actions.actions import ArmEEAction
+from habitat.tasks.rearrange.utils import get_aabb
+from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.environment.controllers.controller_abc import GuiController
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -21,126 +24,155 @@ from habitat_sim.physics import (
 class GuiRobotController(GuiController):
     """Controller for robot agent."""
 
-    def __init__(
-        self,
-        agent_idx,
-        is_multi_agent,
-        gui_input,
-        articulated_agent,
-        num_actions: int,
-        base_vel_action_idx: int,
-        num_base_vel_actions: int,
-        turn_scale: float,
-    ):
-        super().__init__(agent_idx, is_multi_agent, gui_input)
-        self._articulated_agent = articulated_agent
-        self._hint_walk_dir = None
-        self._hint_distance_multiplier = None
-        self._cam_yaw = None
-        self._hint_target_dir = None
-        self._base_vel_action_idx = base_vel_action_idx
-        self._num_base_vel_actions = num_base_vel_actions
-        self._turn_scale = turn_scale
-
-        self._actions = np.zeros((num_actions,))
-
-    def set_act_hints(
-        self,
-        walk_dir,
-        distance_multiplier,
-        grasp_obj_idx,
-        do_drop,
-        cam_yaw=None,
-        throw_vel=None,
-        reach_pos=None,
-        hand_idx=None,
-        target_dir=None,
-    ):
-        assert (
-            throw_vel is None or do_drop is None
-        ), "You can not set throw_velocity and drop_position at the same time"
-        self._hint_walk_dir = walk_dir
-        self._hint_distance_multiplier = distance_multiplier
-
-        # grasping, dropping, throwing, and reaching aren't supported yet in GuiRobotController
-        assert grasp_obj_idx is None
-        assert do_drop is None
-        assert throw_vel is None
-        assert reach_pos is None
-        assert hand_idx is None
-
-        self._cam_yaw = cam_yaw
-        self._hint_target_dir = target_dir
-
-    def angle_from_sim_obj_forward_dir_to_target_yaw(
-        self, sim_obj, target_yaw
-    ):
-        dir_a = sim_obj.rotation.transform_vector_normalized(
-            mn.Vector3(1, 0, 0)
-        )
-        dir_b = mn.Vector3(
-            mn.math.cos(mn.Rad(target_yaw)), 0, mn.math.sin(mn.Rad(target_yaw))
-        )
-        return self.angle_from_dir_a_to_b(dir_a, dir_b)
-
-    # todo: find a better home for this utility
-    def angle_from_dir_a_to_b(self, a: mn.Vector3, b: mn.Vector3):
-        assert a.is_normalized() and b.is_normalized()
-
-        # Dot product of vectors a and b
-        dot_product = mn.math.dot(a, b)
-
-        # Ensure the dot product does not exceed the range [-1, 1]
-        dot_product = max(min(dot_product, 1.0), -1.0)
-
-        # Angle from a to b
-        angle = float(mn.math.acos(dot_product))
-
-        # Determinant (2D cross product) of vectors a and b to find direction
-        det = a[0] * b[2] - a[2] * b[0]
-
-        # Adjust the angle based on the direction
-        return angle if det >= 0 else -angle
-
     def act(self, obs, env):
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
         else:
             agent_k = ""
+        arm_k = f"{agent_k}arm_action"
+        grip_k = f"{agent_k}grip_action"
         base_k = f"{agent_k}base_vel"
+        arm_name = f"{agent_k}arm_action"
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
 
-        assert base_name in ac_spaces
-        base_action_space = ac_spaces[base_name][base_k]
-        base_action = np.zeros(base_action_space.shape[0])
+        if arm_name in ac_spaces:
+            arm_action_space = ac_spaces[arm_name][arm_k]
+            arm_ctrlr = env.task.actions[arm_name].arm_ctrlr
+            arm_action = np.zeros(arm_action_space.shape[0])
+            grasp = 0
+        else:
+            arm_ctrlr = None
+            arm_action = None
+            grasp = None
 
+        base_action: Any = None
+        if base_name in ac_spaces:
+            base_action_space = ac_spaces[base_name][base_k]
+            base_action = np.zeros(base_action_space.shape[0])
+        else:
+            base_action = None
+
+        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        # Add 180 degrees due to our camera convention. See camera_helper.py _get_eye_and_lookat. Our camera yaw is used to offset the camera eye pos away from the lookat pos, so the resulting look direction yaw (from eye to lookat) is actually 180 degrees away from this yaw.
-        turn_angle = self.angle_from_sim_obj_forward_dir_to_target_yaw(
-            self._articulated_agent.sim_obj,
-            self._cam_yaw + float(mn.Rad(mn.Deg(180))),
-        )
+        if base_action is not None:
+            # Base control
+            base_action = [0, 0]
+            if gui_input.get_key(KeyNS.J):
+                # Left
+                base_action[1] += 1
+            if gui_input.get_key(KeyNS.L):
+                # Right
+                base_action[1] -= 1
+            if gui_input.get_key(KeyNS.K):
+                # Back
+                base_action[0] -= 1
+            if gui_input.get_key(KeyNS.I):
+                # Forward
+                base_action[0] += 1
 
-        # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyCode.W):
-            # walk forward in the camera yaw direction
-            base_action[0] += 1
-        if gui_input.get_key(KeyCode.S):
-            # walk forward in the opposite to camera yaw direction
-            base_action[0] -= 1
+        if isinstance(arm_ctrlr, ArmEEAction):
+            EE_FACTOR = 0.5
+            # End effector control
+            if gui_input.get_key_down(KeyNS.D):
+                arm_action[1] -= EE_FACTOR
+            elif gui_input.get_key_down(KeyNS.A):
+                arm_action[1] += EE_FACTOR
+            elif gui_input.get_key_down(KeyNS.W):
+                arm_action[0] += EE_FACTOR
+            elif gui_input.get_key_down(KeyNS.S):
+                arm_action[0] -= EE_FACTOR
+            elif gui_input.get_key_down(KeyNS.Q):
+                arm_action[2] += EE_FACTOR
+            elif gui_input.get_key_down(KeyNS.E):
+                arm_action[2] -= EE_FACTOR
+        else:
+            # Velocity control. A different key for each joint
+            if gui_input.get_key_down(KeyNS.Q):
+                arm_action[0] = 1.0
+            elif gui_input.get_key_down(KeyNS.ONE):
+                arm_action[0] = -1.0
 
-        # Use anv vel action to turn to face cam yaw. Note that later, this action will get clamped to (-1, 1), so, in the next env step, we may not turn as much as computed here. This can cause the Spot facing direction to slightly lag behind the camera yaw as yaw changes, which is fine.
-        base_action[1] = -turn_angle * self._turn_scale
+            elif gui_input.get_key_down(KeyNS.W):
+                arm_action[1] = 1.0
+            elif gui_input.get_key_down(KeyNS.TWO):
+                arm_action[1] = -1.0
 
-        assert len(base_action) == self._num_base_vel_actions
-        self._actions[
-            self._base_vel_action_idx : self._base_vel_action_idx
-            + self._num_base_vel_actions
-        ] = base_action
+            elif gui_input.get_key_down(KeyNS.E):
+                arm_action[2] = 1.0
+            elif gui_input.get_key_down(KeyNS.THREE):
+                arm_action[2] = -1.0
 
-        return self._actions
+            elif gui_input.get_key_down(KeyNS.R):
+                arm_action[3] = 1.0
+            elif gui_input.get_key_down(KeyNS.FOUR):
+                arm_action[3] = -1.0
+
+            elif gui_input.get_key_down(KeyNS.T):
+                arm_action[4] = 1.0
+            elif gui_input.get_key_down(KeyNS.FIVE):
+                arm_action[4] = -1.0
+
+            elif gui_input.get_key_down(KeyNS.Y):
+                arm_action[5] = 1.0
+            elif gui_input.get_key_down(KeyNS.SIX):
+                arm_action[5] = -1.0
+
+            elif gui_input.get_key_down(KeyNS.U):
+                arm_action[6] = 1.0
+            elif gui_input.get_key_down(KeyNS.SEVEN):
+                arm_action[6] = -1.0
+
+        if gui_input.get_key_down(KeyNS.P):
+            # logger.info("[play.py]: Unsnapping")
+            # Unsnap
+            grasp = -1
+        elif gui_input.get_key_down(KeyNS.O):
+            # Snap
+            # logger.info("[play.py]: Snapping")
+            grasp = 1
+
+        # reference code
+        # if gui_input.get_key_down(KeyNS.PERIOD):
+        #     # Print the current position of the robot, useful for debugging.
+        #     pos = [
+        #         float("%.3f" % x) for x in env._sim.robot.sim_obj.translation
+        #     ]
+        #     rot = env._sim.robot.sim_obj.rotation
+        #     ee_pos = env._sim.robot.ee_transform.translation
+        #     logger.info(
+        #         f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
+        #     )
+        # elif gui_input.get_key_down(KeyNS.COMMA):
+        #     # Print the current arm state of the robot, useful for debugging.
+        #     # joint_state = [
+        #     #     float("%.3f" % x) for x in env._sim.robot.arm_joint_pos
+        #     # ]
+
+        #     # logger.info(f"Robot arm joint state: {joint_state}")
+
+        action_names = []
+        action_args: Any = {}
+        if base_action is not None:
+            action_names.append(base_name)
+            action_args.update(
+                {
+                    base_k: base_action,
+                }
+            )
+        if arm_action is not None:
+            action_names.append(arm_name)
+            action_args.update(
+                {
+                    arm_k: arm_action,
+                    grip_k: grasp,
+                }
+            )
+        if len(action_names) == 0:
+            raise ValueError("No active actions for human controller.")
+
+        return {"action": action_names, "action_args": action_args}
 
 
 class GuiHumanoidController(GuiController):
@@ -331,8 +363,7 @@ class GuiHumanoidController(GuiController):
                 self._thrown_object_collision_group
             )
             rigid_obj.linear_velocity = speed
-
-            obj_bb = rigid_obj.aabb
+            obj_bb = get_aabb(grasp_object_id, self._env.task._sim)
             self._last_object_thrown_info = (
                 rigid_obj,
                 max(obj_bb.size_x(), obj_bb.size_y(), obj_bb.size_z()),
@@ -371,14 +402,15 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._hint_throw_vel = None
 
+        KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
         humancontroller_base_user_input = np.zeros(3)
-        # sloppy: read gui_input directly instead of using _hint_walk_dir
-        if gui_input.get_key(KeyCode.W):
+        # temp keyboard controls to test humanoid controller
+        if gui_input.get_key(KeyNS.W):
             # walk forward in the camera yaw direction
             humancontroller_base_user_input[0] += 1
-        if gui_input.get_key(KeyCode.S):
+        if gui_input.get_key(KeyNS.S):
             # walk forward in the opposite to camera yaw direction
             humancontroller_base_user_input[0] -= 1
 

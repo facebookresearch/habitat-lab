@@ -4,43 +4,27 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Optional, Tuple
-
 import magnum as mn
 
 import habitat_sim
 from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.user_mask import Mask
 from habitat_hitl.environment.hablab_utils import get_agent_art_obj_transform
-from habitat_sim.nav import ShortestPath
 
 
 class GuiNavigationHelper:
     """Helper for controlling an agent from the GUI."""
 
-    def __init__(
-        self, gui_service: AppService, agent_idx: int, user_index: int
-    ) -> None:
+    def __init__(self, gui_service, agent_idx):
         self._app_service = gui_service
         self._agent_idx = agent_idx
-        self._user_index = user_index
-        self._largest_island_idx: Optional[int] = None
+        self._largest_island_idx = None
 
-    def _get_sim(self) -> RearrangeSim:
+    def _get_sim(self):
         return self._app_service.sim
 
-    def draw_nav_hint_from_agent(
-        self,
-        forward_dir: mn.Vector3,
-        end_pos: mn.Vector3,
-        end_radius: float,
-        color: mn.Color3,
-    ) -> None:
-        """
-        Draw navigation hints for an agent.
-        """
+    def _draw_nav_hint_from_agent(
+        self, forward_dir, end_pos, end_radius, color
+    ):
         assert forward_dir
         agent_idx = self._agent_idx
         assert agent_idx is not None
@@ -58,17 +42,14 @@ class GuiNavigationHelper:
             self._app_service.get_anim_fraction(),
         )
 
-    def on_environment_reset(self) -> None:
+    def on_environment_reset(self):
         sim = self._get_sim()
         # recompute the largest indoor island id whenever the sim backend may have changed
         self._largest_island_idx = get_largest_island_index(
             sim.pathfinder, sim, allow_outdoor=False
         )
 
-    def _get_humanoid_walk_path_to(
-        self, target_pos: mn.Vector3
-    ) -> Tuple[bool, ShortestPath]:
-        """Get the shorted path required for an agent to travel to."""
+    def _get_humanoid_walk_path_to(self, target_pos):
         agent_root = get_agent_art_obj_transform(
             self._get_sim(), self._agent_idx
         )
@@ -90,16 +71,12 @@ class GuiNavigationHelper:
 
         return found_path, path
 
-    def _get_humanoid_walk_dir_from_path(
-        self, path: ShortestPath
-    ) -> mn.Vector3:
-        """Get the humanoid current walking direction from the specified path."""
+    def _get_humanoid_walk_dir_from_path(self, path):
         assert len(path.points) >= 2
         walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
         return walk_dir
 
-    def _viz_humanoid_walk_path(self, path: ShortestPath) -> None:
-        """Draw the specified path."""
+    def _viz_humanoid_walk_path(self, path):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12
 
@@ -111,26 +88,20 @@ class GuiNavigationHelper:
                 adjusted_point.y = mn.Vector3(path.points[path_i + 1]).y
             path_points.append(adjusted_point)
 
-        self._app_service.gui_drawer.draw_path_with_endpoint_circles(
-            path_points,
-            path_endpoint_radius,
-            path_color,
-            destination_mask=Mask.from_index(self._user_index),
+        self._app_service.line_render.draw_path_with_endpoint_circles(
+            path_points, path_endpoint_radius, path_color
         )
 
-    def get_humanoid_walk_hints_from_remote_client_state(
-        self, visualize_path: bool = True
-    ) -> Tuple[Optional[mn.Vector3], float, Optional[mn.Vector3]]:
-        """Get humanoid controller hints using the remote client head pose."""
+    def get_humanoid_walk_hints_from_remote_gui_input(
+        self, visualize_path=True
+    ):
         walk_dir = None
         distance_multiplier = 1.0
 
         (
             target_pos,
             target_rot_quat,
-        ) = self._app_service.remote_client_state.get_head_pose(
-            self._user_index
-        )
+        ) = self._app_service.remote_gui_input.get_head_pose()
 
         forward_dir = None
         if target_pos and target_rot_quat:
@@ -146,10 +117,7 @@ class GuiNavigationHelper:
 
         return walk_dir, distance_multiplier, forward_dir
 
-    def get_humanoid_walk_hints_from_ray_cast(
-        self, visualize_path: bool = True
-    ) -> Tuple[Optional[mn.Vector3], float]:
-        """Get humanoid controller hints using raycasting."""
+    def get_humanoid_walk_hints_from_ray_cast(self, visualize_path=True):
         walk_dir = None
         distance_multiplier = 1.0
 
@@ -163,19 +131,15 @@ class GuiNavigationHelper:
             forward_dir,
         ) = self._get_humanoid_walk_hints(
             target_pos=target_on_floor,
-            target_rot_quat=None,
+            target_rot_quat=None,  # habitat_sim.utils.common.random_quaternion() can be used to generate random rotations for testing
             visualize_path=visualize_path,
         )
 
         return walk_dir, distance_multiplier
 
     def _get_humanoid_walk_hints(
-        self,
-        target_pos: mn.Vector3,
-        target_rot_quat: mn.Quaternion,
-        visualize_path=True,
-    ) -> Tuple[Optional[mn.Vector3], float, Optional[mn.Vector3]]:
-        """Get humanoid controller hints."""
+        self, target_pos, target_rot_quat, visualize_path=True
+    ):
         walk_dir = None
         distance_multiplier = 1.0
         geodesic_dist_threshold = 0.05
@@ -210,8 +174,7 @@ class GuiNavigationHelper:
 
         return walk_dir, distance_multiplier, forward_gaze
 
-    def _get_target_pos_from_ray_cast(self) -> mn.Vector3:
-        """Get a target position from raycasting."""
+    def _get_target_pos_from_ray_cast(self):
         ray = self._app_service.gui_input.mouse_ray
 
         floor_y = 0.15  # hardcoded to ReplicaCAD
@@ -224,10 +187,7 @@ class GuiNavigationHelper:
 
         return target_on_floor
 
-    def _compute_forward_dir(
-        self, target_rot_quat: mn.Quaternion
-    ) -> mn.Vector3:
-        """Multiply a forward vector by the specified quaternion."""
+    def _compute_forward_dir(self, target_rot_quat):
         direction_vector = mn.Vector3(0.0, 0.0, 1.0)
         heading_vector = target_rot_quat.transform_vector(direction_vector)
         heading_vector.y = 0
@@ -236,10 +196,7 @@ class GuiNavigationHelper:
         return heading_vector
 
     @staticmethod
-    def _evaluate_cubic_bezier(
-        ctrl_pts: List[mn.Vector3], t: float
-    ) -> mn.Vector3:
-        """Evaluate a cubic bezier spline."""
+    def _evaluate_cubic_bezier(ctrl_pts, t):
         assert len(ctrl_pts) == 4
         weights = (
             pow(1 - t, 3),
@@ -255,22 +212,19 @@ class GuiNavigationHelper:
         return result
 
     def _draw_nav_hint(
-        self,
-        start_pos: mn.Vector3,
-        start_dir: mn.Vector3,
-        end_pos: mn.Vector3,
-        end_radius: float,
-        color: mn.Color3,
-        anim_fraction: float,
-    ) -> None:
-        """Draw a navigation path segment."""
+        self, start_pos, start_dir, end_pos, end_radius, color, anim_fraction
+    ):
+        assert isinstance(start_pos, mn.Vector3)
+        assert isinstance(start_dir, mn.Vector3)
+        assert isinstance(end_pos, mn.Vector3)
+
         bias_weight = 0.5
         biased_dir = (
             start_dir + (end_pos - start_pos).normalized() * bias_weight
         ).normalized()
 
         start_dir_weight = min(4.0, (end_pos - start_pos).length() / 2)
-        ctrl_pts: List[mn.Vector3] = [
+        ctrl_pts = [
             start_pos,
             start_pos + biased_dir * start_dir_weight,
             end_pos,
@@ -306,12 +260,7 @@ class GuiNavigationHelper:
                 normal = (pos - prev_pos).normalized()
                 color_with_alpha = mn.Color4(color)
                 color_with_alpha[3] *= alpha
-                self._app_service.gui_drawer.draw_circle(
-                    pos,
-                    radius,
-                    color_with_alpha,
-                    num_segments,
-                    normal,
-                    destination_mask=Mask.from_index(self._user_index),
+                self._app_service.line_render.draw_circle(
+                    pos, radius, color_with_alpha, num_segments, normal
                 )
             prev_pos = pos

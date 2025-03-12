@@ -7,30 +7,19 @@
 # Utilities built on top of Habitat-lab
 
 
-from typing import TYPE_CHECKING, Optional
-
-if TYPE_CHECKING:
-    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-    from habitat_sim.physics import ManagedBulletArticulatedObject
-
-
-def get_agent_art_obj(
-    sim: "RearrangeSim", agent_idx: int
-) -> "ManagedBulletArticulatedObject":
+def get_agent_art_obj(sim, agent_idx):
     assert agent_idx is not None
     art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
     return art_obj
 
 
-def get_agent_art_obj_transform(sim: "RearrangeSim", agent_idx: int):
+def get_agent_art_obj_transform(sim, agent_idx):
     assert agent_idx is not None
     art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
     return art_obj.transformation
 
 
-def get_grasped_objects_idxs(
-    sim: "RearrangeSim", agent_idx_to_skip: Optional[int] = None
-):
+def get_grasped_objects_idxs(sim, agent_idx_to_skip=None):
     agents_mgr = sim.agents_mgr
 
     grasped_objects_idxs = []

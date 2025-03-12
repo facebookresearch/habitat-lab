@@ -12,9 +12,6 @@ from typing import List, Tuple
 
 import magnum as mn
 
-from habitat_hitl.core.client_message_manager import ClientMessageManager
-from habitat_hitl.core.user_mask import Mask
-
 use_headless_text_drawer = False
 try:
     from magnum import shaders, text
@@ -52,9 +49,6 @@ class TextOnScreenAlignment(Enum):
 
 
 class AbstractTextDrawer(ABC):
-    # TODO: Inject via constructor
-    _client_message_manager: ClientMessageManager
-
     @abstractmethod
     def add_text(
         self,
@@ -62,7 +56,6 @@ class AbstractTextDrawer(ABC):
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
-        destination_mask: Mask = Mask.ALL,
     ):
         """
         Draw text on-screen.
@@ -76,19 +69,23 @@ class HeadlessTextDrawer(AbstractTextDrawer):
     This is intended for use with habitat_hitl.headless. See also TextDrawer.
     """
 
+    def __init__(self):
+        self._service = None  # will be set later
+
     def add_text(
         self,
         text_to_add,
         alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
         text_delta_x: int = 0,
         text_delta_y: int = 0,
-        destination_mask: Mask = Mask.ALL,
     ):
-        if self._client_message_manager:
-            align_y, align_x = alignment.value
-            self._client_message_manager.add_text(
-                text_to_add, [align_x, align_y], destination_mask
-            )
+        align_y, align_x = alignment.value
+        if self._service is not None:
+            client_message_manager = self._service.client_message_manager
+            if client_message_manager:
+                client_message_manager.add_text(
+                    text_to_add, [align_x, align_y]
+                )
 
 
 if not use_headless_text_drawer:
@@ -124,9 +121,7 @@ if not use_headless_text_drawer:
             # Glyphs we need to render everything
             # Using(1024, 768) as a size of the GlyphCache, to fit larger font size
             # Ideal size for the GPU is of power-of-two in at least one dimension
-            self._glyph_cache = text.GlyphCacheGL(
-                mn.PixelFormat.R8_UNORM, (1024, 768)
-            )
+            self._glyph_cache = text.GlyphCache((1024, 768))
             self._display_font.fill_glyph_cache(
                 self._glyph_cache,
                 string.ascii_lowercase
@@ -149,7 +144,6 @@ if not use_headless_text_drawer:
             alignment: TextOnScreenAlignment = TextOnScreenAlignment.TOP_LEFT,
             text_delta_x: int = 0,
             text_delta_y: int = 0,
-            destination_mask: Mask = Mask.ALL,
         ):
             """
             Adds `text_to_add` and corresponding window text transform to `self._text_transform_pairs`.
@@ -172,11 +166,6 @@ if not use_headless_text_drawer:
             self._text_transform_pairs.append(
                 (text_to_add, window_text_transform)
             )
-
-            if self._client_message_manager:
-                self._client_message_manager.add_text(
-                    text_to_add, [align_x, align_y], destination_mask
-                )
 
         def draw_text(self):
             # make magnum text background transparent

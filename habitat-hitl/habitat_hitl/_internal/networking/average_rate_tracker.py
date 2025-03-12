@@ -5,17 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 import time
-from typing import Optional
+from typing import Union
 
 
 class AverageRateTracker:
     def __init__(self, duration_window: float) -> None:
-        self._recent_count = 0
-        self._recent_time = time.time()
-        self._duration_window = duration_window
-        self._recent_rate: Optional[float] = None
+        self._recent_count: int = 0
+        self._recent_time: float = time.time()
+        self._duration_window: float = duration_window
+        self._recent_rate: Union[float, None] = None
 
-    def increment(self, inc: int = 1) -> Optional[float]:
+    def increment(self, inc: int = 1):
         """
         Increments count for the purpose of tracking rate over time.
 

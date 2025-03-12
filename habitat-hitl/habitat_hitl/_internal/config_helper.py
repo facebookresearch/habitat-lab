@@ -42,33 +42,32 @@ def update_config(
             hitl_config.debug_images.append(agent_sensor_name)
             gym_obs_keys.append(agent_sensor_name)
 
-        for (
-            gui_controlled_agent_config
-        ) in config.habitat_hitl.gui_controlled_agents:
-            gui_controlled_agent_index = (
-                gui_controlled_agent_config.agent_index
-            )
+        gui_controlled_agent_index = (
+            config.habitat_hitl.gui_controlled_agent.agent_index
+        )
+        if gui_controlled_agent_index is not None:
             # make sure gui_controlled_agent_index is valid
             if not (
                 gui_controlled_agent_index >= 0
                 and gui_controlled_agent_index < len(sim_config.agents)
             ):
                 print(
-                    f"habitat_hitl.gui_controlled_agents[i].agent_index ({gui_controlled_agent_index}) "
+                    f"habitat_hitl.gui_controlled_agent.agent_index ({gui_controlled_agent_index}) "
                     f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
                 )
                 exit()
 
             # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[gui_controlled_agent_index]
-            agent_type = sim_config.agents[
-                gui_agent_key
-            ].articulated_agent_type
-            if agent_type != "KinematicHumanoid" and agent_type != "SpotRobot":
-                raise ValueError(
+            if (
+                sim_config.agents[gui_agent_key].articulated_agent_type
+                != "KinematicHumanoid"
+            ):
+                print(
                     f"Selected agent for GUI control is of type {sim_config.agents[gui_agent_key].articulated_agent_type}, "
-                    "but only KinematicHumanoid and SpotRobot are supported at the moment."
+                    "but only KinematicHumanoid is supported at the moment."
                 )
+                exit()
 
             # avoid camera sensors for GUI-controlled agents
             gui_controlled_agent_config = get_agent_config(
@@ -99,12 +98,7 @@ def update_config(
                 if measurement_name in task_config.measurements:
                     task_config.measurements.pop(measurement_name)
 
-            # todo: decide whether to fix up config here versus validate config
-            sim_sensor_names = [
-                "head_depth",
-                "head_rgb",
-                "articulated_agent_arm_depth",
-            ]
+            sim_sensor_names = ["head_depth", "head_rgb"]
             for sensor_name in sim_sensor_names + lab_sensor_names:
                 sensor_name = (
                     sensor_name
@@ -114,22 +108,21 @@ def update_config(
                 if sensor_name in gym_obs_keys:
                     gym_obs_keys.remove(sensor_name)
 
-            if agent_type == "KinematicHumanoid":
-                # use humanoidjoint_action for GUI-controlled KinematicHumanoid
-                # for example, humanoid oracle-planner-based policy uses following actions:
-                # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
-                task_actions = task_config.actions
-                action_prefix = (
-                    "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
-                )
-                gui_agent_actions = [
-                    action_key
-                    for action_key in task_actions.keys()
-                    if action_key.startswith(action_prefix)
-                ]
-                for action_key in gui_agent_actions:
-                    task_actions.pop(action_key)
+            # use humanoidjoint_action for GUI-controlled KinematicHumanoid
+            # for example, humanoid oracle-planner-based policy uses following actions:
+            # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
+            task_actions = task_config.actions
+            action_prefix = (
+                "" if len(sim_config.agents) == 1 else f"{gui_agent_key}_"
+            )
+            gui_agent_actions = [
+                action_key
+                for action_key in task_actions.keys()
+                if action_key.startswith(action_prefix)
+            ]
+            for action_key in gui_agent_actions:
+                task_actions.pop(action_key)
 
-                task_actions[
-                    f"{action_prefix}humanoidjoint_action"
-                ] = HumanoidJointActionConfig()
+            task_actions[
+                f"{action_prefix}humanoidjoint_action"
+            ] = HumanoidJointActionConfig()
