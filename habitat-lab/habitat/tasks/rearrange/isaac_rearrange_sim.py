@@ -101,7 +101,7 @@ def bind_physics_material_to_hierarchy(
 @registry.register_simulator(name="IsaacRearrangeSim-v0")
 class IsaacRearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
-        config.scene = "NONE"
+        #config.scene = "NONE" # cannot do scene none here when regiestering the env for interactive play py
         if len(config.agents) > 1:
             with read_write(config):
                 for agent_name, agent_cfg in config.agents.items():
