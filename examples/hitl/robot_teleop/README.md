@@ -6,11 +6,11 @@ TL;DR A HITL app that loads robots from URDF and simulates them in a Habitat Sim
 
 ## Install habitat-sim
 
-Install the ([eundersander/isaac_vr](https://github.com/facebookresearch/habitat-sim/tree/eundersander/isaac_vr)) branch of habitat-sim from source:
+Install the `main` branch of habitat-sim from source ([35cf4c7c5e095053eed373f6c28d4194c4620e49](https://github.com/facebookresearch/habitat-sim/commit/35cf4c7c5e095053eed373f6c28d4194c4620e49) or newer):
 
 ```
 #start from your project root directory
-git clone --branch eundersander/isaac_vr https://github.com/facebookresearch/habitat-sim.git
+git clone https://github.com/facebookresearch/habitat-sim.git
 cd habitat-sim
 
 #we use python 3.10+ to support momentum IK
@@ -29,7 +29,7 @@ Clone and install this [eundersander/isaacsim_viewer](https://github.com/faceboo
 
 ```
 #start from your project root directory
-git clone --branch eundersander/isaac_vr https://github.com/facebookresearch/habitat-lab.git
+git clone --branch 0mdc/sim_teleop https://github.com/facebookresearch/habitat-lab.git
 
 cd habitat-lab
 pip install -e habitat-lab
