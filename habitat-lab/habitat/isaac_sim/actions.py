@@ -117,8 +117,7 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
 
-        self._robot_wrapper._target_arm_joint_positions = des_joint_pos
-
+        self._robot_wrapper._target_right_arm_joint_positions = des_joint_pos
 
 @registry.register_task_action
 class BaseVelKinematicIsaacAction(BaseVelAction):
