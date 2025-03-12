@@ -127,15 +127,15 @@ def get_input_vel_ctlr(
             arm_key
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-        base_action = [0, 0]
+        base_action = None
     elif "stretch" in cfg:
         arm_action_space = np.zeros(10)
         arm_ctrlr = None
-        base_action = [0, 0]
+        base_action = None
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        base_action = [0, 0]
+        base_action = None
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])
@@ -398,13 +398,9 @@ def get_input_vel_ctlr(
                 grip_key: arm_action[-1],
             }
         else:
-            if "murp" in cfg:
-                args = {arm_key: arm_action}
-            else:
-                args = {arm_key: arm_action, grip_key: magic_grasp}
-    if "murp" in cfg:
-        arm_action = [*arm_action]
-    elif magic_grasp is None:
+            args = {arm_key: arm_action, grip_key: magic_grasp}
+
+    if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
     else:
         arm_action = [*arm_action, magic_grasp]
