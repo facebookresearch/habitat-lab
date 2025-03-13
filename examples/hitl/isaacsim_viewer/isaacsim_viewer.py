@@ -86,7 +86,7 @@ class SpotStateMachine:
 
         self._spot_wrapper._target_arm_joint_positions = [0.0, -2.36, 0.0, 2.25, 0.0, 1.67, 0.0, 0.0]
 
-        pos_usd = isaac_prim_utils.habitat_to_usd_position([random.uniform(-2.0, -4.0), 0.8, -4.8])
+        pos_usd = isaac_prim_utils.habitat_to_usd_position([-4.5, 0.1, -3.5])
         self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
 
@@ -479,13 +479,15 @@ class AppStateIsaacSimViewer(AppState):
         isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
+        asset_path = "/home/joanne/habitat-lab/data/usd/scenes/fremont_static_objects.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
         add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
         self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
 
         from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
-        self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
+        from habitat.isaac_sim._internal.murp_robot_wrapper import MurpRobotWrapper
+
+        self._spot_wrapper = MurpRobotWrapper(self._isaac_wrapper.service)
 
         from habitat.isaac_sim._internal.metahand_robot_wrapper import MetahandRobotWrapper
         self._metahand_wrapper = MetahandRobotWrapper(self._isaac_wrapper.service)
