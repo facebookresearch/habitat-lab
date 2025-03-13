@@ -84,7 +84,8 @@ DEFAULT_CFG = "benchmark/rearrange/play/play_murp.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
-os.environ["SDL_VIDEODRIVER"] = "x11" #"dummy" # we need this for using pygame in unbuntu
+#os.environ["SDL_VIDEODRIVER"] = "x11" #"dummy" # we need this for using pygame in unbuntu
+#os.environ["QT_GRAPHICSSYSTEM"] = "native"
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
@@ -485,7 +486,7 @@ class FreeCamHelper:
         return step_result
 
 
-def play_env(env, args, config):
+def play_env(env, args, config, screen):
     render_steps_limit = None
     if args.no_render:
         render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
@@ -500,9 +501,9 @@ def play_env(env, args, config):
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
-        screen = pygame.display.set_mode(
-            [draw_obs.shape[1], draw_obs.shape[0]]
-        )
+        # screen = pygame.display.set_mode(
+        #     [draw_obs.shape[1], draw_obs.shape[0]]
+        # )
 
     update_idx = 0
     target_fps = 60.0
@@ -827,5 +828,8 @@ if __name__ == "__main__":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     pygame.init() # due to https://github.com/facebookresearch/habitat-lab/issues/1538#issuecomment-1902985545
+    screen = pygame.display.set_mode(
+        [988, 512]
+    )
     with habitat.Env(config=config) as env:
-        play_env(env, args, config)
+        play_env(env, args, config, screen)

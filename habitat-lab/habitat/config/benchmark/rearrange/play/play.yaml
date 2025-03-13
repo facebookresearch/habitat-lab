@@ -61,6 +61,6 @@ habitat:
             height: 128
             width: 128
     habitat_sim_v0:
-      enable_physics: True
+      enable_physics: False
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
