@@ -7,9 +7,9 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
 
   - /habitat/task: task_config_base
-  - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty
+  - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty 
   - /habitat/task/measurements:
-    - articulated_agent_force
+    #- articulated_agent_force # TODO: jimmy: remove this since AttributeError: 'IsaacAgentData' object has no attribute 'grasp_mgr
     - zero
   - /habitat/task/lab_sensors:
     - joint_sensor

@@ -84,7 +84,7 @@ DEFAULT_CFG = "benchmark/rearrange/play/play_murp.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
-
+os.environ["SDL_VIDEODRIVER"] = "x11" #"dummy" # we need this for using pygame in unbuntu
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
@@ -500,7 +500,6 @@ def play_env(env, args, config):
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
-        pygame.init()
         screen = pygame.display.set_mode(
             [draw_obs.shape[1], draw_obs.shape[0]]
         )
@@ -525,6 +524,7 @@ def play_env(env, args, config):
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     while True:
+        print("A!")
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -826,5 +826,6 @@ if __name__ == "__main__":
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
+    pygame.init() # due to https://github.com/facebookresearch/habitat-lab/issues/1538#issuecomment-1902985545
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

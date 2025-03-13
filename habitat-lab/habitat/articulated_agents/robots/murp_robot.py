@@ -79,15 +79,15 @@ class MurpRobot(MobileManipulator):
     @classmethod
     def _get_murp_params(cls):
         return MurpParams(
-            arm_joints=[2, 4, 6, 8, 12],  # remove 0, 10
+            arm_joints=[0, 2, 4, 6, 8, 10, 12],  # remove 0, 10
             gripper_joints=[19],
             arm_init_params=[
-                # 2.6116285, for 0
+                2.6116285, # for 0
                 1.5283098,
                 1.0930868,
                 -0.50559217,
                 0.48147443,
-                # 2.628784, for 10
+                2.628784, # for 10
                 -1.3962275,
             ],
             gripper_init_params=[-1.56],

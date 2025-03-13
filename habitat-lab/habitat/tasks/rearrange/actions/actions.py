@@ -229,37 +229,37 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
             dtype=np.float32,
         )
 
-    def _get_processed_action(self, delta_pos, simulation_mode="dynamic"):
+    def _get_processed_action(self, delta_pos, simulation_mode="kinematic"):
         """Assign the delta pos actions into a correct joint location"""
         processed_delta_pos = np.zeros(len(self._arm_joint_mask))
-        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        # min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
 
-        src_idx = 0
-        tgt_idx = 0
-        for mask in self._arm_joint_mask:
-            if mask == 0:
-                tgt_idx += 1
-                # Check if the effective size of action is the same as arm_joint_dimensionality
-                # The reason for this check is that we have two options to control the arm:
-                # option 1: if arm_joint_dimensionality is the same as arm_joint_mask, it means that
-                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the same length/size
-                # option 2: if arm_joint_dimensionality is different from arm_joint_mask, it means that
-                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the differet length/size
-                # Based on these, we increase the src_idx by 1 to correctly assign the value to the right index
-                if self._config.arm_joint_dimensionality == len(
-                    self._config.arm_joint_mask
-                ):
-                    src_idx += 1
-                continue
-            processed_delta_pos[tgt_idx] = delta_pos[src_idx]
+        # src_idx = 0
+        # tgt_idx = 0
+        # for mask in self._arm_joint_mask:
+        #     if mask == 0:
+        #         tgt_idx += 1
+        #         # Check if the effective size of action is the same as arm_joint_dimensionality
+        #         # The reason for this check is that we have two options to control the arm:
+        #         # option 1: if arm_joint_dimensionality is the same as arm_joint_mask, it means that
+        #         # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the same length/size
+        #         # option 2: if arm_joint_dimensionality is different from arm_joint_mask, it means that
+        #         # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the differet length/size
+        #         # Based on these, we increase the src_idx by 1 to correctly assign the value to the right index
+        #         if self._config.arm_joint_dimensionality == len(
+        #             self._config.arm_joint_mask
+        #         ):
+        #             src_idx += 1
+        #         continue
+        #     processed_delta_pos[tgt_idx] = delta_pos[src_idx]
 
-            # Set the new limits if needed
-            if self._arm_joint_limit is not None:
-                min_limit[tgt_idx] = self._arm_joint_limit[src_idx][0]
-                max_limit[tgt_idx] = self._arm_joint_limit[src_idx][1]
+        #     # Set the new limits if needed
+        #     if self._arm_joint_limit is not None:
+        #         min_limit[tgt_idx] = self._arm_joint_limit[src_idx][0]
+        #         max_limit[tgt_idx] = self._arm_joint_limit[src_idx][1]
 
-            tgt_idx += 1
-            src_idx += 1
+        #     tgt_idx += 1
+        #     src_idx += 1
 
         # Clip the action. Although habitat_sim will prevent the motor from exceeding limits,
         # clip the motor joints first here to prevent the arm from being unstable.
@@ -270,7 +270,7 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         else:
             raise NotImplementedError
         target_arm_pos = processed_delta_pos + cur_arm_pos
-        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+        set_arm_pos = target_arm_pos #np.clip(target_arm_pos, min_limit, max_limit)
 
         return set_arm_pos
 

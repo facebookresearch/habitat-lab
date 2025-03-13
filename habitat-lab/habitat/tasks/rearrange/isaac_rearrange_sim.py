@@ -54,6 +54,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+
 from habitat_sim.logging import logger
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
@@ -300,11 +301,12 @@ class IsaacRearrangeSim(HabitatSim):
         # Preprocess the ep_info making necessary datatype conversions.
         target_trans = []
         breakpoint()
-        rom = self.get_rigid_object_manager()
+        rom = self.get_rigid_object_manager()        
         for target_handle, trans in self._targets.items():
             targ_idx = self._scene_obj_ids.index(
                 rom.get_object_by_handle(target_handle).object_id
             )
+            # self._isaac_rom
             target_trans.append((targ_idx, trans))
         return target_trans
 
@@ -1279,7 +1281,6 @@ class IsaacRearrangeSim(HabitatSim):
             #         drop_pos + offset_vec * 0.38 + up_vec * 0.0,
             #     ),
             # ]
-
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
         )
