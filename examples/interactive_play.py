@@ -493,9 +493,9 @@ class FreeCamHelper:
             trans = mn.Matrix4.from_(
                 quat.to_matrix(), mn.Vector3(*self._free_xyz)
             )
-            # env._sim._sensors[
-            #     "third_rgb"
-            # ]._sensor_object.node.transformation = trans
+            env._sim._sensors[
+                "third_rgb"
+            ]._sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
         return step_result
@@ -661,7 +661,7 @@ def play_env(env, args, config):
 
         if not args.no_render:
             if USE_CV2:               
-                cv2.imshow(NAMED_WINDOW,  draw_obs.astype(np.uint8))
+                cv2.imshow(NAMED_WINDOW,  draw_ob.astype(np.uint8))
                 key = cv2.waitKey(1) # need to have wait key to show images
             else:
                 draw_ob = np.transpose(draw_ob, (1, 0, 2))

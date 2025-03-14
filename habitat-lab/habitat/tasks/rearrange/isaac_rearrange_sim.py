@@ -25,7 +25,7 @@ import numpy as np
 import numpy.typing as npt
 
 import habitat_sim
-
+import habitat
 # flake8: noqa
 from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
@@ -102,7 +102,8 @@ def bind_physics_material_to_hierarchy(
 @registry.register_simulator(name="IsaacRearrangeSim-v0")
 class IsaacRearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
-        #config.scene = "NONE" # cannot do scene none here when regiestering the env for interactive play py
+        with habitat.config.read_write(config):
+            config.scene = "NONE" # load from interactive_play is read only by default
         if len(config.agents) > 1:
             with read_write(config):
                 for agent_name, agent_cfg in config.agents.items():

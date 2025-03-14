@@ -883,6 +883,7 @@ class BaseVelIsaacAction(BaseVelAction):
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+        # <omni.isaac.core.robots.robot.Robot object at 0x7fb613f91c00>
         self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
             [0, 0, ang_vel]
         )
