@@ -3,18 +3,18 @@ defaults:
   - /habitat/task/actions:
     - base_vel_isaac # BaseVelIsaacAction
   - /habitat/task/actions:
-    - arm_action
+    - arm_reach_ee
     - empty
   - _self_
-arm_action:
-  type: "ArmAction"
-  arm_controller: "ArmRelPosMaskAction"
-  grip_controller: "GazeGraspAction"
-  arm_joint_mask: [1,1,1,1,1, 1, 1]
-  arm_joint_dimensionality: 7
-  grasp_thresh_dist: 0.15
-  disable_grip: True
-  delta_pos_limit: 0.0872665
-  ee_ctrl_lim: 0.015
-  gaze_distance_range: [0.3, 0.75]
-  center_cone_angle_threshold: 20.0
+# arm_action:
+#   type: "ArmAction"
+#   arm_controller: "ArmRelPosMaskAction"
+#   grip_controller: "GazeGraspAction"
+#   arm_joint_mask: [1,1,1,1,1, 1, 1]
+#   arm_joint_dimensionality: 7
+#   grasp_thresh_dist: 0.15
+#   disable_grip: True
+#   delta_pos_limit: 0.0872665
+#   ee_ctrl_lim: 0.015
+#   gaze_distance_range: [0.3, 0.75]
+#   center_cone_angle_threshold: 20.0

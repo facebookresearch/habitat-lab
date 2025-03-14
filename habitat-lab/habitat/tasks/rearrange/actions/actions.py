@@ -137,9 +137,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[self._action_arg_prefix + "grip_action"] = (
-                self.grip_ctrlr.action_space
-            )
+            action_spaces[
+                self._action_arg_prefix + "grip_action"
+            ] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -270,7 +270,9 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         else:
             raise NotImplementedError
         target_arm_pos = processed_delta_pos + cur_arm_pos
-        set_arm_pos = target_arm_pos #np.clip(target_arm_pos, min_limit, max_limit)
+        set_arm_pos = (
+            target_arm_pos  # np.clip(target_arm_pos, min_limit, max_limit)
+        )
 
         return set_arm_pos
 
@@ -645,7 +647,9 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         ctrl_freq = self._sim.ctrl_freq
         # Get the current transformation
         # TODO: jimmy: check
-        trans = self.cur_articulated_agent.base_transformation #self.cur_articulated_agent.sim_obj.transformation
+        trans = (
+            self.cur_articulated_agent.base_transformation
+        )  # self.cur_articulated_agent.sim_obj.transformation
         # Get the current rigid state
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
@@ -792,7 +796,7 @@ class ArmEEAction(ArticulatedAgentAction):
         self.calc_ee_target(delta_ee_pos)
         des_joint_pos = self.calc_desired_joints()
 
-        self.set_desired_ee_pos(des_joint_pos, "kinematic")
+        self.set_desired_ee_pos(des_joint_pos, "kinematic")  # type: ignore
 
         if self._render_ee_target:
             global_pos = self._sim.articulated_agent.base_transformation.transform_point(
@@ -890,3 +894,72 @@ class BaseVelIsaacAction(BaseVelAction):
         self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
             [lin_vel, 0, 0]
         )
+
+
+@registry.register_task_action
+class ArmReachEEAction(ArmEEAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+
+        self._robot_wrapper = self.cur_articulated_agent._robot_wrapper
+        self.ee_rot_target = None
+        self._use_ee_rot = self._config.get("use_ee_rot", False)
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(6,), low=-1, high=1, dtype=np.float32)
+
+    def reset(self, *args, **kwargs):
+        try:
+            self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                np.array(
+                    self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                )
+            )
+        except:
+            self.ee_target = None
+            self.ee_rot_target = None
+
+    def calc_desired_joints(self):
+        joint_pos = np.array(
+            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        joint_vel = np.zeros(joint_pos.shape)
+
+        self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = self._ik_helper.calc_ik(
+            self.ee_target, self.ee_rot_target
+        )
+        return np.array(des_joint_pos)
+
+    def apply_joint_limits(self, des_joint_pos):
+        murp_joint_limits_lower = np.deg2rad(
+            np.array([-157, -102, -166, -174, -160, 31, -172])
+        )
+        murp_joint_limits_upper = np.deg2rad(
+            np.array([157, 102, 166, -8, 160, 258, 172])
+        )
+        return np.clip(
+            des_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
+        )
+
+    def step(self, *args, **kwargs):
+        target_pos = kwargs[self._action_arg_prefix + "target_pos"]
+        target_rot = kwargs[self._action_arg_prefix + "target_rot"]
+        # base_pos, base_rot = self._robot_wrapper.get_root_pose()
+
+        print(f"target_pos: {target_pos}; target_rot: {target_rot}")
+        print(f"EE: {self.ee_target} {self.ee_rot_target}")
+
+        # def inverse_transform(pos_a, rot_b, pos_b):
+        #     inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)
+        #     return inv_pos
+        # target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
+        self.ee_target += np.array(target_pos)
+        self.ee_rot_target += np.array(target_rot)
+        self.apply_ee_constraints()
+        des_joint_pos = self.calc_desired_joints()
+        des_joint_pos = self.apply_joint_limits(des_joint_pos)
+        print(f"des_joint_pos: {des_joint_pos}")
+        self._robot_wrapper._target_arm_joint_positions = des_joint_pos
