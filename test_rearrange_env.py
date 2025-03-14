@@ -115,10 +115,10 @@ def main():
     main_agent_config = AgentConfig()
 
     urdf_path = os.path.join(
-        data_path, "robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
+        data_path, "r/home/jmmy/research/hab_training/habitat-lab/data/robots/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
     )
     main_agent_config.articulated_agent_urdf = urdf_path
-    main_agent_config.articulated_agent_type = "SpotRobot"
+    main_agent_config.articulated_agent_type = "MurpRobot" #"SpotRobot"
     # main_agent_config.ik_arm_urdf = arm_urdf_path
 
     # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
