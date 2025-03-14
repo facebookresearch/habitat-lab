@@ -142,7 +142,7 @@ def get_input_vel_ctlr(
         base_key = "base_vel"
 
     if "murp" in cfg:
-        arm_action_space = np.zeros(6)
+        arm_action_space = np.zeros(12)
         arm_ctrlr = None
         base_action = None
     elif arm_action_name in env.action_space.spaces:
@@ -234,7 +234,7 @@ def get_input_vel_ctlr(
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
 
-        elif arm_action_space.shape[0] == 6:
+        elif arm_action_space.shape[0] == 12:
             # Velocity control. A different key for each joint
             if keys[pygame.K_q] or key == ord("q"):
                 arm_action[0] = 0.25
@@ -265,6 +265,36 @@ def get_input_vel_ctlr(
                 arm_action[5] = 0.25
             elif keys[pygame.K_6] or key == ord("6"):
                 arm_action[5] = -0.25
+
+            elif key == ord("a"):
+                arm_action[6] = 0.25
+            elif key == ord("z"):
+                arm_action[6] = -0.25
+
+            elif key == ord("s"):
+                arm_action[7] = 0.25
+            elif key == ord("x"):
+                arm_action[7] = -0.25
+
+            elif key == ord("d"):
+                arm_action[8] = 0.25
+            elif key == ord("c"):
+                arm_action[8] = -0.25
+
+            elif key == ord("f"):
+                arm_action[9] = 0.25
+            elif key == ord("v"):
+                arm_action[9] = -0.25
+
+            elif key == ord("g"):
+                arm_action[10] = 0.25
+            elif key == ord("b"):
+                arm_action[10] = -0.25
+
+            elif key == ord("h"):
+                arm_action[11] = 0.25
+            elif key == ord("n"):
+                arm_action[11] = -0.25
 
         elif arm_action_space.shape[0] == 4:
             # Velocity control. A different key for each joint
@@ -460,7 +490,8 @@ def get_input_vel_ctlr(
             if "murp" in cfg:
                 args = {
                     "target_pos": arm_action[0:3],
-                    "target_rot": arm_action[3:],
+                    "target_rot": arm_action[3:6],
+                    "target_finger": arm_action[6:],
                 }
             else:
                 args = {arm_key: arm_action, grip_key: magic_grasp}
@@ -686,6 +717,7 @@ def play_env(env, args, config):
 
         obs = step_result
         info = env.get_metrics()
+
         reward_key = [k for k in info if "reward" in k]
         if len(reward_key) > 0:
             reward = info[reward_key[0]]

@@ -907,7 +907,7 @@ class ArmReachEEAction(ArmEEAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(6,), low=-1, high=1, dtype=np.float32)
+        return spaces.Box(shape=(12,), low=-1, high=1, dtype=np.float32)
 
     def reset(self, *args, **kwargs):
         try:
@@ -916,9 +916,13 @@ class ArmReachEEAction(ArmEEAction):
                     self._sim.articulated_agent._robot_wrapper.arm_joint_pos
                 )
             )
+            self.target_finger = (
+                self._robot_wrapper._target_hand_joint_positions
+            )
         except:
             self.ee_target = None
             self.ee_rot_target = None
+            self.target_finger = None
 
     def calc_desired_joints(self):
         joint_pos = np.array(
@@ -947,6 +951,7 @@ class ArmReachEEAction(ArmEEAction):
     def step(self, *args, **kwargs):
         target_pos = kwargs[self._action_arg_prefix + "target_pos"]
         target_rot = kwargs[self._action_arg_prefix + "target_rot"]
+        finger = kwargs[self._action_arg_prefix + "target_finger"]
         # base_pos, base_rot = self._robot_wrapper.get_root_pose()
 
         print(f"target_pos: {target_pos}; target_rot: {target_rot}")
@@ -958,8 +963,11 @@ class ArmReachEEAction(ArmEEAction):
         # target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
         self.ee_target += np.array(target_pos)
         self.ee_rot_target += np.array(target_rot)
+        self.target_finger[0:6] += finger
         self.apply_ee_constraints()
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
         print(f"des_joint_pos: {des_joint_pos}")
+        print(f"self.target_finger: {self.target_finger}")
         self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+        self._robot_wrapper._target_hand_joint_positions = self.target_finger
