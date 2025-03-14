@@ -644,7 +644,8 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         # Get the control frequency
         ctrl_freq = self._sim.ctrl_freq
         # Get the current transformation
-        trans = self.cur_articulated_agent.sim_obj.transformation
+        # TODO: jimmy: check
+        trans = self.cur_articulated_agent.base_transformation #self.cur_articulated_agent.sim_obj.transformation
         # Get the current rigid state
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
@@ -668,18 +669,23 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             trans, target_trans, target_rigid_state, compute_sliding
         )
         # Update the base
-        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+        # TODO: jimmy: check
+        # self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+        self.cur_articulated_agent.base_transformation = new_target_trans
 
-        if self.cur_grasp_mgr.snap_idx is not None:
-            # Holding onto an object, also kinematically update the object.
-            # object.
-            self.cur_grasp_mgr.update_object_to_grasp()
+        try:
+            if self.cur_grasp_mgr.snap_idx is not None:
+                # Holding onto an object, also kinematically update the object.
+                # object.
+                self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
-            # Fix the leg joints
-            self.cur_articulated_agent.leg_joint_pos = (
-                self.cur_articulated_agent.params.leg_init_params
-            )
+            if self.cur_articulated_agent._base_type == "leg":
+                # Fix the leg joints
+                self.cur_articulated_agent.leg_joint_pos = (
+                    self.cur_articulated_agent.params.leg_init_params
+                )
+        except Exception:
+            pass
 
     def step(self, *args, **kwargs):
         # Check if we can apply the base action given a_selection_of_base_or_arm action.
@@ -863,3 +869,23 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+
+@registry.register_task_action
+class BaseVelIsaacAction(BaseVelAction):
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        print(f"lin_vel: {lin_vel}; ang_vel: {ang_vel}")
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+        self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
+            [0, 0, ang_vel]
+        )
+        self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
+            [lin_vel, 0, 0]
+        )

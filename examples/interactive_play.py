@@ -78,6 +78,8 @@ try:
 except ImportError:
     pygame = None
 
+import cv2
+
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play/play_murp.yaml"
@@ -87,9 +89,16 @@ SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 #os.environ["SDL_VIDEODRIVER"] = "x11" #"dummy" # we need this for using pygame in unbuntu
 #os.environ["QT_GRAPHICSSYSTEM"] = "native"
 
+NAMED_WINDOW = "Play Murp"
+USE_CV2 = True
+
+# cv2 relative functions
+def initializeWindow():
+    cv2.namedWindow(NAMED_WINDOW, cv2.WINDOW_NORMAL)
+
+
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
-
 
 def get_input_vel_ctlr(
     skip_pygame,
@@ -100,6 +109,7 @@ def get_input_vel_ctlr(
     agent_to_control,
     control_humanoid,
     humanoid_controller,
+    key=None,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -115,8 +125,10 @@ def get_input_vel_ctlr(
         base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
-        if "spot" in cfg or "murp" in cfg:
+        if "spot" in cfg:
             base_action_name = f"{agent_k}base_velocity_non_cylinder"
+        elif "murp" in cfg:
+            base_action_name = f"{agent_k}base_vel_isaac"
         else:
             base_action_name = f"{agent_k}base_velocity"
         arm_key = "arm_action"
@@ -156,18 +168,21 @@ def get_input_vel_ctlr(
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
+    if key != -1:
+        print(f"key: {key}")
+
     if not_block_input:
         # Base control
-        if keys[pygame.K_j]:
+        if keys[pygame.K_j] or key == ord("j"):
             # Left
             base_action = [0, 1]
-        elif keys[pygame.K_l]:
+        elif keys[pygame.K_l] or key == ord("l"):
             # Right
             base_action = [0, -1]
-        elif keys[pygame.K_k]:
+        elif keys[pygame.K_k] or key == ord("k"):
             # Back
             base_action = [-1, 0]
-        elif keys[pygame.K_i]:
+        elif keys[pygame.K_i] or key == ord("i"):
             # Forward
             base_action = [1, 0]
 
@@ -478,15 +493,15 @@ class FreeCamHelper:
             trans = mn.Matrix4.from_(
                 quat.to_matrix(), mn.Vector3(*self._free_xyz)
             )
-            env._sim._sensors[
-                "third_rgb"
-            ]._sensor_object.node.transformation = trans
+            # env._sim._sensors[
+            #     "third_rgb"
+            # ]._sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
         return step_result
 
 
-def play_env(env, args, config, screen):
+def play_env(env, args, config):
     render_steps_limit = None
     if args.no_render:
         render_steps_limit = DEFAULT_RENDER_STEPS_LIMIT
@@ -501,10 +516,17 @@ def play_env(env, args, config, screen):
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
-        # screen = pygame.display.set_mode(
-        #     [draw_obs.shape[1], draw_obs.shape[0]]
-        # )
-
+        # draw_obs: <class 'numpy.ndarray'> (512, 988, 3)
+        if USE_CV2:
+            initializeWindow()
+            cv2.imshow(NAMED_WINDOW, draw_obs.astype(np.uint8))
+            key = cv2.waitKey(1) # need to have wait key to show images
+            # python examples/interactive_play.py --disable-inverse-kinematics
+        else:
+            screen = pygame.display.set_mode(
+                [draw_obs.shape[1], draw_obs.shape[0]]
+            )
+        
     update_idx = 0
     target_fps = 60.0
     prev_time = time.time()
@@ -524,8 +546,12 @@ def play_env(env, args, config, screen):
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
+    env_steps = 0
     while True:
-        print("A!")
+        
+        print(f"Step: {env_steps}")
+        env_steps += 1
+
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -558,6 +584,7 @@ def play_env(env, args, config, screen):
             agent_to_control,
             args.control_humanoid,
             humanoid_controller=humanoid_controller,
+            key=key,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -633,10 +660,15 @@ def play_env(env, args, config, screen):
         draw_ob = use_ob[:]
 
         if not args.no_render:
-            draw_ob = np.transpose(draw_ob, (1, 0, 2))
-            draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
-            screen.blit(draw_obuse_ob, (0, 0))
-            pygame.display.update()
+            if USE_CV2:               
+                cv2.imshow(NAMED_WINDOW,  draw_obs.astype(np.uint8))
+                key = cv2.waitKey(1) # need to have wait key to show images
+            else:
+                draw_ob = np.transpose(draw_ob, (1, 0, 2))
+                draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
+                screen.blit(draw_obuse_ob, (0, 0))
+                pygame.display.update()
+                
         if args.save_obs:
             all_obs.append(draw_ob)  # type: ignore[assignment]
 
@@ -651,6 +683,8 @@ def play_env(env, args, config, screen):
         delay = max(1.0 / target_fps - diff, 0)
         time.sleep(delay)
         prev_time = curr_time
+
+        print(env.sim.articulated_agent.base_transformation.translation)
 
     if args.save_actions:
         if len(all_arm_actions) < args.save_actions_count:
@@ -786,7 +820,7 @@ if __name__ == "__main__":
             agent_config = get_agent_config(sim_config=sim_config)
             agent_config.sim_sensors.update(
                 {
-                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                    "third_rgb": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res
                     )
                 }
@@ -828,8 +862,5 @@ if __name__ == "__main__":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     pygame.init() # due to https://github.com/facebookresearch/habitat-lab/issues/1538#issuecomment-1902985545
-    screen = pygame.display.set_mode(
-        [988, 512]
-    )
     with habitat.Env(config=config) as env:
-        play_env(env, args, config, screen)
+        play_env(env, args, config)

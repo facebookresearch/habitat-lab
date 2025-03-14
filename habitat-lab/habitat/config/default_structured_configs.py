@@ -270,6 +270,17 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
+class BaseVelIsaacActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelIsaacAction"
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    
+@dataclass
 class BaseVelocityNonCylinderActionConfig(ActionConfig):
     r"""
     In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
@@ -1968,6 +1979,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity_non_cylinder",
     node=BaseVelocityNonCylinderActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_vel_isaac",
+    group="habitat/task/actions",
+    name="base_vel_isaac",
+    node=BaseVelIsaacActionConfig,
 )
 cs.store(
     package="habitat.task.actions.humanoidjoint_action",
