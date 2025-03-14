@@ -199,10 +199,29 @@ class ExpertDatagen:
             "articulated_agent_arm_depth",
         ]
 
+        self.ep_id = 0
         mode = "train"
         save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_v2"
         self.json_save_path = f"{save_pth_base}/{mode}"
         os.makedirs(self.json_save_path, exist_ok=True)
+
+    def save_img(self, observations, img_key, ep_data):
+        if img_key in observations.keys():
+            robot_img = observations[img_key]
+            if "depth" in img_key:
+                robot_img_tmp = np.concatenate(
+                    [robot_img, robot_img, robot_img], axis=-1
+                )
+                robot_img = robot_img_tmp
+                robot_img *= 255
+            elif "rgb" in img_key:
+                robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGR2RGB)
+            img_dir = f'{self.json_save_path}/ep_{self.episode_json["episode_id"]}/imgs'
+            os.makedirs(img_dir, exist_ok=True)
+            img_pth = f"{img_dir}/{img_key}_img_{int(time.time()*1000)}.png"
+            cv2.imwrite(f"{img_pth}", robot_img)
+            ep_data[img_key] = img_pth
+        return ep_data
 
     def add_episode_data(self, obs, action):
         curr_arm_joints = (
@@ -220,7 +239,7 @@ class ExpertDatagen:
 
         ep_data = {
             "arm_joints": np.array(curr_arm_joints).tolist(),
-            "hand_joints": np.array(hand_joint_pos).tolist(),
+            "hand_joints": np.array(curr_hand_joints).tolist(),
             "ee_pos": np.array(curr_ee_pos).tolist(),
             "ee_rot": np.array(
                 [*curr_ee_rot.vector, curr_ee_rot.scalar]
@@ -238,6 +257,7 @@ class ExpertDatagen:
         ep_data["base_action"] = action["base_action"]
         ep_data["empty_action"] = action["empty_action"]
         ep_data["hand_action"] = action["hand_action"]
+        ep_data["grasp_mode"] = action["grasp_mode"]
 
         self.episode_json["episode_data"].append(ep_data)
 
@@ -267,6 +287,14 @@ class ExpertDatagen:
             # "close": np.array([1.0] * num_hand_joints),
         }
         return grasp_joints[name]
+
+    def get_grasp_mode_idx(self, name):
+        grasp_modes = {
+            "open": 0,
+            "pre_grasp": 1,
+            "close": 2,
+        }
+        return grasp_modes[name]
 
     def get_arm_mode(self, name):
         arm_joints = {
@@ -376,6 +404,7 @@ class ExpertDatagen:
                 "base_action": [0, 0],
                 "empty_action": [0],
                 "hand_action": np.zeros(16).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
             }
 
             self.add_episode_data(obs, save_action)
@@ -425,6 +454,7 @@ class ExpertDatagen:
                 "base_action": [0, 0],
                 "empty_action": [0],
                 "hand_action": np.zeros(16).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
             }
 
             self.add_episode_data(obs, save_action)
@@ -467,6 +497,7 @@ class ExpertDatagen:
                 "base_action": [0, 0],
                 "empty_action": [0],
                 "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
             }
 
             self.add_episode_data(obs, save_action)
@@ -498,12 +529,41 @@ class ExpertDatagen:
             "base_action": [base_lin_vel, base_ang_vel],
             "empty_action": [0],
             "hand_action": np.zeros(16).tolist(),
+            "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
         }
 
         self.add_episode_data(obs, save_action)
         self.base_trans = self.env.sim.articulated_agent.base_transformation
         im = process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
+        self.writer.append_data(im)
+
+    def move_base(
+        self,
+        base_lin_vel,
+        base_ang_vel,
+    ):
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array(
+                    [base_lin_vel, base_ang_vel], dtype=np.float32
+                ),
+            },
+        }
+        self.env.sim.articulated_agent.base_transformation = self.base_trans
+        self.pin_right_arm()
+        obs = self.env.step(action)
+        save_action = {
+            "arm_action": np.zeros(6).tolist(),
+            "base_action": [base_lin_vel, base_ang_vel],
+            "empty_action": [0],
+            "hand_action": np.zeros(16).tolist(),
+            "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+        }
+        self.base_trans = self.env.sim.articulated_agent.base_transformation
+        im = process_obs_img(obs)
+        im = add_text_to_image(im, "moving base")
         self.writer.append_data(im)
 
     def move_base_ee_and_hand(
@@ -537,7 +597,6 @@ class ExpertDatagen:
             self.pin_right_arm()
 
             obs = self.env.step(action)
-            obs = self.env.step(action)
             save_action = {
                 "arm_action": np.array(
                     [*target_ee_pos, *target_ee_rot]
@@ -545,6 +604,7 @@ class ExpertDatagen:
                 "base_action": [base_lin_vel, base_ang_vel],
                 "empty_action": [0],
                 "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
             }
             self.base_trans = (
                 self.env.sim.articulated_agent.base_transformation
@@ -563,9 +623,10 @@ class ExpertDatagen:
             self.writer.append_data(im)
 
     def visualize_pos(self, pos, name="target_ee_pos"):
-        self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
-            pos, self.env.sim.viz_ids[name]
-        )
+        return
+        # self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
+        #     pos, self.env.sim.viz_ids[name]
+        # )
 
     def get_poses(self, name, pose_type="base"):
         poses = {
@@ -600,7 +661,8 @@ class ExpertDatagen:
             #     "ee_rot": np.deg2rad([0, 0, 0]),
             # },
             "fridge": {
-                "base_pos": np.array([-4.7, 0.0015, 0.8]),
+                # "base_pos": np.array([-4.3, 0.0015, 0.8]),
+                "base_pos": np.array([-4.7, 0.1, 0.8]),
                 "base_rot": 180,
                 "ee_pos": np.array([-6.2, 1.2, 2.4]),
                 "ee_rot": np.deg2rad([120, 0, 0]),
@@ -656,6 +718,7 @@ class ExpertDatagen:
             )
 
         elif name == "target_grip":
+            self.grasp = "close"
             return (
                 torch.tensor(self.close_fingers),
                 # torch.tensor(self.target_w_xyz),
@@ -849,12 +912,16 @@ class ExpertDatagen:
         )
         self.visualize_pos(self.target_ee_pos)
 
+        self.grasp = "pre_grasp"
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
             grasp="pre_grasp",
             timeout=200,
         )
+
+        # for _ in range(10):
+        #     self.move_base(1.0, 0.0)
 
         # grasp object
         self.step = 0

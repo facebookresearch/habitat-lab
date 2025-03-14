@@ -400,7 +400,7 @@ class VLAEvaluator:
     def replay_data(self):
         self.reset_robot_pose()
 
-        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_v1/train_npy/ep_0.npy"
+        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_base_arm_hand_v1/train_npy/ep_0.npy"
         data = np.load(episode_path, allow_pickle=True)
 
         forward_velocity = 1.0
@@ -481,7 +481,7 @@ class VLAEvaluator:
         max_steps = 250
         print("max_steps: ", max_steps)
         grasp_ctr = 0
-        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_v1/train_npy/ep_0.npy"
+        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_base_arm_hand_v1/train_npy/ep_0.npy"
         data = np.load(episode_path, allow_pickle=True)
 
         target_arm_pos = (
@@ -547,6 +547,102 @@ class VLAEvaluator:
         self.writer.close()
         print("saved video at: ", self.video_path)
 
+    def run_grasp_mode(self):
+        self.reset_robot_pose()
+        self.policy.reset()
+        action_dict = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+            },
+        }
+        self.pin_right_arm()
+
+        obs = self.env.step(action_dict)
+        obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]
+        curr_base_pos, curr_base_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+        )
+        curr_arm_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        curr_hand_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        )
+
+        obs["joint"] = np.concatenate([curr_base_pos, curr_arm_joints])
+        done = False
+        ctr = 0
+        forward_velocity = 1.0
+        turn_velocity = 1.0
+
+        max_steps = 500
+        print("max_steps: ", max_steps)
+        grasp_ctr = 0
+        episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_base_arm_grasp_mode_v2/train_npy/ep_0.npy"
+        data = np.load(episode_path, allow_pickle=True)
+
+        target_arm_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        )
+        target_hand_pos = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        )
+
+        grasp_mapping = {"0": "open", "1": "pre_grasp", "2": "close"}
+        for i in range(max_steps):
+            # print(f"=================== step # {ctr} ===================")
+            obs["arm_rgb"] = data[i]["rgb"]
+            obs["joint"] = np.concatenate(
+                [
+                    data[i]["base_pos"],
+                    data[i]["arm_joint"],
+                ]
+            )
+            action = self.policy.act(obs)[0]
+            # action = data[i]["delta_joint_action_grasp_mode"]
+            print("action: ", action)
+            print("GT action: ", data[i]["delta_joint_action_grasp_mode"])
+
+            print("obs joint: ", obs["joint"])
+            print(
+                "GT obs: ",
+                np.concatenate(
+                    [
+                        data[i]["base_pos"],
+                        data[i]["arm_joint"],
+                    ]
+                ),
+            )
+
+            target_arm_pos += action[2 : 2 + 7]
+            grasp_mode_name = grasp_mapping[str(int(action[-1]))]
+            target_hand_pos = self.get_grasp_mode(grasp_mode_name)
+            self.pin_right_arm()
+            self.move_base_ee_and_hand(
+                0.0,
+                0.0,
+                target_arm_pos,
+                target_hand_pos,
+                timeout=1,
+            )
+
+            obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]
+            curr_base_pos, curr_base_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+            )
+            curr_arm_joints = (
+                self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
+            curr_hand_pos = (
+                self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+            )
+            # target_arm_pos = curr_arm_joints
+            # target_hand_pos = curr_hand_pos
+            obs["joint"] = np.concatenate([curr_base_pos, curr_arm_joints])
+        self.writer.close()
+        print("saved video at: ", self.video_path)
+
 
 if __name__ == "__main__":
     # Create the parser
@@ -558,13 +654,21 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt", type=int, default=10000, help="Episode id")
     parser.add_argument("--task", default="task", help="Task")
     parser.add_argument("--replay", action="store_true")
+    parser.add_argument("--grasp_mode", action="store_true")
 
     args = parser.parse_args()
 
     datagen = VLAEvaluator(
-        args.ep_id, args.exp, args.ckpt, args.task, args.replay
+        args.ep_id,
+        args.exp,
+        args.ckpt,
+        args.task,
+        args.replay,
     )
     if args.replay:
         datagen.replay_data()
     else:
-        datagen.run()
+        if args.grasp_mode:
+            datagen.run_grasp_mode()
+        else:
+            datagen.run()
