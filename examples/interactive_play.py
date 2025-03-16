@@ -91,6 +91,7 @@ SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 NAMED_WINDOW = "Play Murp"
 USE_CV2 = True
+TEST_MACHINE = "h200"  # h200 / lambda
 
 
 # cv2 relative functions
@@ -936,7 +937,18 @@ if __name__ == "__main__":
                 raise ValueError(
                     "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
                 )
-            sim_config.agents.main_agent.ik_arm_urdf = "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf"
+
+            ik_arm_urdf = ""
+            if TEST_MACHINE == "h200":
+                ik_arm_urdf = "/home/jimmytyyang/research/hab_training/habitat-lab/data/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf"
+            elif TEST_MACHINE == "lambda":
+                ik_arm_urdf = "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf"
+            else:
+                raise ValueError(
+                    f"Cannot recongize the TEST_MACHINE: {TEST_MACHINE}"
+                )
+
+            sim_config.agents.main_agent.ik_arm_urdf = ik_arm_urdf
             # task_config.actions.arm_action.arm_controller = "ArmEEAction"
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
