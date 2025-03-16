@@ -594,7 +594,7 @@ def play_env(env, args, config):
             logger.info("Loaded arm actions")
 
     obs = env.reset()
-
+    key = None
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
         # draw_obs: <class 'numpy.ndarray'> (512, 988, 3)
