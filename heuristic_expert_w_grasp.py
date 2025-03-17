@@ -243,12 +243,12 @@ class ExpertDatagen:
             "open"
         )
 
-    def get_curr_ee_pose(self, arm='right'):
-        if arm == 'left':
+    def get_curr_ee_pose(self, arm="right"):
+        if arm == "left":
             curr_ee_pos_vec, curr_ee_rot = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_pose()
             )
-        elif arm == 'right':
+        elif arm == "right":
             curr_ee_pos_vec, curr_ee_rot = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
             )
@@ -396,9 +396,9 @@ class ExpertDatagen:
                 )
             },
         }
-        
+
         obs = self.env.step(action)
-        self.base_trans = (self.env.sim.articulated_agent.base_transformation)
+        self.base_trans = self.env.sim.articulated_agent.base_transformation
         im = process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
@@ -496,13 +496,8 @@ class ExpertDatagen:
             "fridge2": {
                 "base_pos": np.array([-4.0, 0.1, 1.28]),
                 "base_rot": 180,
-<<<<<<< HEAD
                 "ee_pos": np.array([-6.3, 1.2, 1.3]),
                 "ee_rot": np.deg2rad([-60, 0, 0]),
-=======
-                "ee_pos": np.array([-6.3, 1.4, 2.4]),
-                "ee_rot": np.deg2rad([120, 0, 0]),
->>>>>>> b7e401050 (fixes for right arm)
             },
             "freezer": {
                 "base_pos": np.array([-4.9, 0.1, 0.7]),
@@ -516,7 +511,9 @@ class ExpertDatagen:
             poses[name][f"{pose_type}_rot"],
         )
 
-    def set_targets(self, target_w_xyz, target_w_quat, target_joints,hand="left"):
+    def set_targets(
+        self, target_w_xyz, target_w_quat, target_joints, hand="left"
+    ):
         self.target_w_xyz = target_w_xyz
         self.target_w_quat = target_w_quat
         target_quat = R.from_quat(target_w_quat, scalar_first=True)
@@ -527,7 +524,7 @@ class ExpertDatagen:
 
         # XYZ
         self.open_xyz = target_w_xyz.copy()
-        if hand=="left":
+        if hand == "left":
             self.open_xyz[2] += 0.1
             self.open_xyz[0] += 0.1
 
@@ -541,20 +538,18 @@ class ExpertDatagen:
         else:
             self.open_xyz[2] -= 0.05
             self.open_xyz[0] += 0.1
-            SECONDARY_JOINTS = [2,6,10,15]
-            TERTIARY_JOINTS = [3,7,11]
-            OPEN_JOINTS = [1,5,9]
-            CURVE_JOINTS=[13]
-            BASE_THUMB_JOINT=[12]
+            SECONDARY_JOINTS = [2, 6, 10, 15]
+            TERTIARY_JOINTS = [3, 7, 11]
+            OPEN_JOINTS = [1, 5, 9]
+            CURVE_JOINTS = [13]
+            BASE_THUMB_JOINT = [12]
             self.grasp_fingers = self.target_joints.copy()
             self.close_fingers = self.target_joints.copy()
-            self.close_fingers[BASE_THUMB_JOINT] +=1.0
+            self.close_fingers[BASE_THUMB_JOINT] += 1.0
             # self.close_fingers[CURVE_JOINTS] -=0.5
             self.close_fingers[SECONDARY_JOINTS] += 1.0
             self.close_fingers[TERTIARY_JOINTS] += 1.0
             self.close_fingers[OPEN_JOINTS] += 1.0
-
-
 
     def get_targets(self, name="target", hand="right"):
         # Lambda Changes
@@ -751,8 +746,10 @@ class ExpertDatagen:
             )
             print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
             self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
-    
-    def execute_grasp_sequence(self, hand, grip_iters, open_iters, move_iters=None):
+
+    def execute_grasp_sequence(
+        self, hand, grip_iters, open_iters, move_iters=None
+    ):
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
@@ -776,7 +773,7 @@ class ExpertDatagen:
             target_w_xyz=target_xyz,
             target_w_quat=target_quaternion,
             target_joints=target_joints,
-            hand=hand
+            hand=hand,
         )
         if move_iters:
             for _ in range(move_iters):
@@ -792,7 +789,7 @@ class ExpertDatagen:
         for _ in range(open_iters):
             self.grasp_obj(name="open")
 
-        #Move robot back
+        # Move robot back
         for _ in range(10):
             self.move_base(-1.0, 0.0)
 
@@ -806,7 +803,9 @@ class ExpertDatagen:
         if hand == "left":
             self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
         elif hand == "right":
-            self.execute_grasp_sequence(hand, grip_iters=40, open_iters=30, move_iters=19)
+            self.execute_grasp_sequence(
+                hand, grip_iters=40, open_iters=30, move_iters=19
+            )
 
 
 if __name__ == "__main__":
