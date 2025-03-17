@@ -234,6 +234,7 @@ class ExpertDatagen:
         self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
             "open"
         )
+
     def pin_left_arm(self):
         self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = self.get_arm_mode(
             "rest"
@@ -258,13 +259,17 @@ class ExpertDatagen:
         if arm == "left":
             return self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         elif arm == "right":
-            return self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
 
     def get_curr_hand_pose(self, arm="right"):
         if arm == "left":
             return self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
         elif arm == "right":
-            return self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
 
     def move_to_ee(
         self, target_ee_pos, target_ee_rot=None, grasp=None, timeout=1000
@@ -486,8 +491,13 @@ class ExpertDatagen:
             "fridge2": {
                 "base_pos": np.array([-4.0, 0.1, 1.28]),
                 "base_rot": 180,
+<<<<<<< HEAD
                 "ee_pos": np.array([-6.3, 1.2, 1.3]),
                 "ee_rot": np.deg2rad([-60, 0, 0]),
+=======
+                "ee_pos": np.array([-6.3, 1.4, 2.4]),
+                "ee_rot": np.deg2rad([120, 0, 0]),
+>>>>>>> b7e401050 (fixes for right arm)
             },
             "freezer": {
                 "base_pos": np.array([-4.9, 0.1, 0.7]),

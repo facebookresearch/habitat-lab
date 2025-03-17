@@ -30,7 +30,9 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand_2.usda" #Lambda Machine Change
+        asset_path = (
+            "./data/usd/robots/franka_with_hand.usda"  # Lambda Machine Change
+        )
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -207,7 +209,7 @@ class MurpRobotWrapper:
         ]
 
         self.ee_link_name = left_arm_joint_names[-1].replace("joint", "link")
-        self.right_ee_link_name = left_arm_joint_names[-1].replace(
+        self.right_ee_link_name = right_arm_joint_names[-1].replace(
             "joint", "link"
         )
 
@@ -482,9 +484,9 @@ class MurpRobotWrapper:
             "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
         )
         self.fix_base(step_size, base_position, base_orientation)
-        self.drive_arm(step_size)
+        # self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        self.drive_hand(step_size)
+        # self.drive_hand(step_size)
         self.drive_right_hand(step_size)
         self._step_count += 1
 
@@ -538,6 +540,15 @@ class MurpRobotWrapper:
 
         ee_pos = link_poses[0][self.ee_link_id]
         ee_rot = link_poses[1][self.ee_link_id]
+
+        return ee_pos, ee_rot
+
+    def ee_right_pose(self, convention="hab"):
+        """Get the current ee position and rotation."""
+        link_poses = self.get_link_world_poses(convention=convention)
+
+        ee_pos = link_poses[0][self.right_ee_link_id]
+        ee_rot = link_poses[1][self.right_ee_link_id]
 
         return ee_pos, ee_rot
 
