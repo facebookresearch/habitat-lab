@@ -60,6 +60,7 @@ __all__ = [
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
+    "HandJointSensorConfig",
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
@@ -535,6 +536,15 @@ class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
     arm_joint_mask: Optional[List[int]] = None
+
+
+@dataclass
+class HandJointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the hand joint positions of the robot.
+    """
+    type: str = "HandJointSensor"
+    dimensionality: int = 16
 
 
 @dataclass
@@ -2260,6 +2270,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="joint_sensor",
     node=JointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.hand_joint_sensor",
+    group="habitat/task/lab_sensors",
+    name="hand_joint_sensor",
+    node=HandJointSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.humanoid_joint_sensor",

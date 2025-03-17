@@ -15,6 +15,7 @@ defaults:
     - num_steps
   - /habitat/task/lab_sensors:
     - joint_sensor
+    - hand_joint_sensor
     - target_start_sensor # Relative position from end effector to target object
     - end_effector_sensor
 
@@ -27,6 +28,7 @@ habitat:
     obs_keys:
       - articulated_agent_arm_depth
       - joint
+      - hand_joint
       - obj_start_sensor # Relative position from end effector to target object
   task:
     # Config for empty task to explore the scene.
