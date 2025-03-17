@@ -969,5 +969,15 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
         print(f"des_joint_pos: {des_joint_pos}")
         print(f"self.target_finger: {self.target_finger}")
-        self._robot_wrapper._target_arm_joint_positions = des_joint_pos
-        self._robot_wrapper._target_hand_joint_positions = self.target_finger
+        if self._config.right_left_hand == "right":
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                des_joint_pos
+            )
+            self._robot_wrapper._target_right_hand_joint_positions = (
+                self.target_finger
+            )
+        else:
+            self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+            self._robot_wrapper._target_hand_joint_positions = (
+                self.target_finger
+            )

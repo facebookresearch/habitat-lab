@@ -237,9 +237,14 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
         return mask_joints_pos
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.arm_joint_pos
+        if self.config.right_left_hand == "right":
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.right_arm_joint_pos
+        else:
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.arm_joint_pos
         if self._arm_joint_mask is not None:
             joints_pos = self._get_mask_joint(joints_pos)
         return np.array(joints_pos, dtype=np.float32)
@@ -266,9 +271,14 @@ class HandJointSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent._robot_wrapper.hand_joint_pos
+        if self.config.right_left_hand == "right":
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.right_hand_joint_pos
+        else:
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.hand_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
 

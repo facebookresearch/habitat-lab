@@ -2,23 +2,26 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import magnum as mn
 import numpy as np
 import omni
-import omni.physx.scripts.utils as physxUtils
 
 # todo: add guard to ensure SimulatorApp is created, or give nice error message, so we don't get weird import errors here
-from omni.isaac.core import World
-from omni.isaac.core.objects import DynamicCuboid
-from omni.isaac.core.prims.rigid_prim import RigidPrim
-from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
+# from omni.isaac.core import World
+# from omni.isaac.core.objects import DynamicCuboid
+# from omni.isaac.core.prims.rigid_prim import RigidPrim
+# from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
 from omni.isaac.core.robots import Robot
 from omni.isaac.core.utils.stage import add_reference_to_stage
 from omni.isaac.core.utils.types import ArticulationAction
-from pxr import PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+from pxr import PhysxSchema, Usd, UsdPhysics  # Sdf UsdGeom
 from scipy.spatial.transform import Rotation as R
 
 from habitat.isaac_sim import isaac_prim_utils
+
+# import omni.physx.scripts.utils as physxUtils
 
 
 class MurpRobotWrapper:
@@ -27,11 +30,12 @@ class MurpRobotWrapper:
     The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
     """
 
-    def __init__(self, isaac_service, instance_id=0):
+    def __init__(self, isaac_service, instance_id=0, right_left_hand="right"):
         self._isaac_service = isaac_service
         asset_path = "./data/usd/robots/franka_with_hand_2.usda"  # Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
+        self._right_left_hand = right_left_hand
 
         add_reference_to_stage(usd_path=asset_path, prim_path=robot_prim_path)
         self._isaac_service.usd_visualizer.on_add_reference_to_stage(
@@ -288,7 +292,7 @@ class MurpRobotWrapper:
         self._right_hand_joint_indices = np.array(right_hand_joint_indices)
 
         n_hand_joints = len(left_hand_joint_names)
-        closed_positions = np.array([3.14159] * n_hand_joints)
+        # closed_positions = np.array([3.14159] * n_hand_joints)
         open_positions = np.zeros(n_hand_joints)
         self._target_hand_joint_positions = open_positions
         self._target_right_hand_joint_positions = open_positions
@@ -519,8 +523,12 @@ class MurpRobotWrapper:
         """Get the current ee position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
+        if self._right_left_hand == "right":
+            ee_pos = link_poses[0][self.right_ee_link_id]
+            ee_rot = link_poses[1][self.right_ee_link_id]
+        else:
+            ee_pos = link_poses[0][self.ee_link_id]
+            ee_rot = link_poses[1][self.ee_link_id]
 
         return ee_pos, ee_rot
 
@@ -533,11 +541,15 @@ class MurpRobotWrapper:
             )
         prim_path = f"/World/test_scene/{asset_path}"
         prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
-        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
-        translate: Gf.Vec3d = matrix.ExtractTranslation()
-        rotation: Gf.Rotation = matrix.ExtractRotation()
-        quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
-        euler_rotation = rotation.GetAngle()
+        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(  # type: ignore # noqa: F821
+            prim
+        )  # type: ignore
+        translate: Gf.Vec3d = (  # type: ignore # noqa: F821
+            matrix.ExtractTranslation()
+        )  # type: ignore
+        rotation: Gf.Rotation = matrix.ExtractRotation()  # type: ignore # noqa: F821
+        # quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()  # noqa: F821
+        # euler_rotation = rotation.GetAngle()
 
         return list(translate), rotation
 
@@ -550,7 +562,7 @@ class MurpRobotWrapper:
 
         for child_prim in prim.GetChildren():
             if UsdPhysics.ArticulationRootAPI.CanApply(child_prim):
-                articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
+                # articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
 
                 link_names = []
 

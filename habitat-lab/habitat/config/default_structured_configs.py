@@ -288,6 +288,7 @@ class ArmReachEEActionConfig(ActionConfig):
     In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
     type: str = "ArmReachEEAction"
+    right_left_hand: str = "right"
 
 
 @dataclass
@@ -536,6 +537,7 @@ class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
     arm_joint_mask: Optional[List[int]] = None
+    right_left_hand: str = "right"
 
 
 @dataclass
@@ -545,6 +547,7 @@ class HandJointSensorConfig(LabSensorConfig):
     """
     type: str = "HandJointSensor"
     dimensionality: int = 16
+    right_left_hand: str = "right"
 
 
 @dataclass
@@ -1693,6 +1696,8 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: Optional[str] = None
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    # For murp
+    right_left_hand: str = "right"
 
 
 @dataclass

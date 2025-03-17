@@ -111,7 +111,9 @@ class IsaacMurpRobot(IsaacMobileManipulator):
             -1.3962275,
         ]
         robot_wrapper = MurpRobotWrapper(
-            isaac_service=isaac_service, instance_id=0
+            isaac_service=isaac_service,
+            instance_id=0,
+            right_left_hand=agent_cfg.right_left_hand,
         )
         super().__init__(
             murp_params, agent_cfg, isaac_service, robot_wrapper, sim=sim
