@@ -15,6 +15,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
@@ -638,10 +639,12 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
             .articulated_agent.ee_transform()
             .translation
         )
-
-        idxs, _ = self._sim.get_targets()
-        scene_pos = self._sim.get_scene_pos()
-        target_pos = scene_pos[idxs]
+        if type(self._sim) == IsaacRearrangeSim:
+            target_pos = self._sim.target_start_pos
+        else:
+            idxs, _ = self._sim.get_targets()
+            scene_pos = self._sim.get_scene_pos()
+            target_pos = scene_pos[idxs]
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 

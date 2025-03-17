@@ -10,10 +10,12 @@ defaults:
   - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty
   - /habitat/task/measurements:
     #- articulated_agent_force # TODO: jimmy: remove this since AttributeError: 'IsaacAgentData' object has no attribute 'grasp_mgr
-    - zero
+    #- zero
+    - end_effector_to_object_distance
+    - num_steps
   - /habitat/task/lab_sensors:
     - joint_sensor
-    - target_start_sensor
+    - target_start_sensor # Relative position from end effector to target object
     - end_effector_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
@@ -25,6 +27,7 @@ habitat:
     obs_keys:
       - articulated_agent_arm_depth
       - joint
+      - obj_start_sensor # Relative position from end effector to target object
   task:
     # Config for empty task to explore the scene.
     type: RearrangePickTask-v0
