@@ -911,23 +911,38 @@ class ArmReachEEAction(ArmEEAction):
 
     def reset(self, *args, **kwargs):
         try:
-            self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-                np.array(
-                    self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            if self._config.right_left_hand == "right":
+                self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                    np.array(
+                        self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+                    )
                 )
-            )
-            self.target_finger = (
-                self._robot_wrapper._target_hand_joint_positions
-            )
+                self.target_finger = (
+                    self._robot_wrapper._target_right_hand_joint_positions
+                )
+            else:
+                self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                    np.array(
+                        self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                    )
+                )
+                self.target_finger = (
+                    self._robot_wrapper._target_hand_joint_positions
+                )
         except:
             self.ee_target = None
             self.ee_rot_target = None
             self.target_finger = None
 
     def calc_desired_joints(self):
-        joint_pos = np.array(
-            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
-        )
+        if self._config.right_left_hand == "right":
+            joint_pos = np.array(
+                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+        else:
+            joint_pos = np.array(
+                self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
