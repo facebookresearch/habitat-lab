@@ -89,6 +89,7 @@ class MurpRobot(MobileManipulator):
                 0.48147443,
                 2.628784,
                 -1.3962275,
+
             ],
             gripper_init_params=[-1.56],
             ee_offset=[mn.Vector3(0.08, 0, 0)],
@@ -97,15 +98,19 @@ class MurpRobot(MobileManipulator):
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
-                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
-                    attached_link_id=36,
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
-                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                    attached_link_id=36,
-                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                    # cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
+                    # cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    # attached_link_id=6,
+                    # relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                    cam_offset_pos=mn.Vector3(0.9, 1.7, 0.0),
+                    cam_look_at_pos=mn.Vector3(1.0, 0.0, 0.0),
+                    attached_link_id=-1,
+
                 ),
                 "articulated_agent_arm_panoptic": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
@@ -132,9 +137,14 @@ class MurpRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.5, 1.9, 0.0),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
+                    # cam_offset_pos=mn.Vector3(0.5, 1.9, 0.0),
+                    # cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
+                    cam_offset_pos=mn.Vector3(0.5, 2.3, 0.0),
+                    cam_look_at_pos=mn.Vector3(1.0, 0.0, -0.00),
                     attached_link_id=-1,
+
+                    # cam_offset_pos=mn.Vector3(0.5, 2.3, 0.0),
+                    # cam_look_at_pos=mn.Vector3(1, 0.0, -0.0),
                 ),
             },
             gripper_closed_state=[0.0],
@@ -156,7 +166,7 @@ class MurpRobot(MobileManipulator):
         add_rot = mn.Matrix4.rotation(
             mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
         )
-        return self.sim_obj.transformation  # @ add_rot
+        return self.sim_obj.transformation
 
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
