@@ -294,8 +294,8 @@ class ExpertDatagen:
     def get_grasp_mode_idx(self, name):
         grasp_modes = {
             "open": 0,
-            "pre_grasp": 1,
-            "close": 2,
+            "pre_grasp": 0,
+            "close": 1,
         }
         return grasp_modes[name]
 
