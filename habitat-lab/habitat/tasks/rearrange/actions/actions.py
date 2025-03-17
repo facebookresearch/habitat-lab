@@ -1040,6 +1040,7 @@ class ArmReachEEAction(ArmEEAction):
                 self.target_finger
             )
             self.fix_arm("left")
+            print("control right, fix left")
         else:
             self._robot_wrapper._target_arm_joint_positions = des_joint_pos
             self._robot_wrapper._target_hand_joint_positions = (
