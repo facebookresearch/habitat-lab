@@ -207,7 +207,7 @@ class MurpRobotWrapper:
         ]
 
         self.ee_link_name = left_arm_joint_names[-1].replace("joint", "link")
-        self.right_ee_link_name = left_arm_joint_names[-1].replace(
+        self.right_ee_link_name = right_arm_joint_names[-1].replace(
             "joint", "link"
         )
 
@@ -536,8 +536,8 @@ class MurpRobotWrapper:
         """Get the current ee position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
+        ee_pos = link_poses[0][self.right_ee_link_id]
+        ee_rot = link_poses[1][self.right_ee_link_id]
 
         return ee_pos, ee_rot
 
