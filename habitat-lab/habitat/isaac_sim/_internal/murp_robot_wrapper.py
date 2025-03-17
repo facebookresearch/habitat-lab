@@ -385,7 +385,7 @@ class MurpRobotWrapper:
     ):
         curr_linear_velocity = self._robot.get_linear_velocity()
 
-        z_target = 0.7  # todo: get from navmesh or assume ground_z==0
+        z_target = 0.1  # todo: get from navmesh or assume ground_z==0
         max_linear_vel = 3.0
 
         # Extract the vertical position and velocity
