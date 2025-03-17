@@ -58,77 +58,17 @@ else:
     data_path = "/home/joanne/habitat-lab/data/"
 
 
-def make_sim_cfg(agent_dict):
-    # Start the scene config
-    sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
-
-    # This is for better graphics
-    sim_cfg.habitat_sim_v0.enable_hbao = True
-    sim_cfg.habitat_sim_v0.enable_physics = False
-
-    # TODO: disable this, causes performance issues
-    sim_cfg.habitat_sim_v0.frustum_culling = False
-
-    # Set up an example scene
-    sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
-
-    cfg = OmegaConf.create(sim_cfg)
-
-    # Set the scene agents
-    cfg.agents = agent_dict
-    cfg.agents_order = list(cfg.agents.keys())
-    return cfg
-
-
-def make_hab_cfg(agent_dict, action_dict):
-    sim_cfg = make_sim_cfg(agent_dict)
-    task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
-    task_cfg.actions = action_dict
-    env_cfg = EnvironmentConfig()
-    dataset_cfg = DatasetConfig(
-        type="RearrangeDataset-v0",
-        data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
-    )
-
-    hab_cfg = HabitatConfig()
-    hab_cfg.environment = env_cfg
-    hab_cfg.task = task_cfg
-
-    hab_cfg.dataset = dataset_cfg
-    hab_cfg.simulator = sim_cfg
-    hab_cfg.simulator.seed = hab_cfg.seed
-
-    return hab_cfg
-
-
-def init_rearrange_env(agent_dict, action_dict):
-    hab_cfg = make_hab_cfg(agent_dict, action_dict)
-    res_cfg = OmegaConf.create(hab_cfg)
-    res_cfg.environment.max_episode_steps = 100000000
-    print("hab_cfg: ", hab_cfg)
-    print("res_cfg: ", res_cfg)
-    return Env(res_cfg)
-
-
-from habitat.datasets.rearrange.navmesh_utils import compute_turn
-from habitat.tasks.utils import get_angle
-
-
-def process_obs_img(obs):
-    im = obs["third_rgb"]
-    im2 = obs["articulated_agent_arm_rgb"]
-    im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-    imt = np.zeros(im.shape, dtype=np.uint8)
-    imt[: im2.shape[0], : im2.shape[1], :] = im2
-    imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
-    imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
-    imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
-    im = np.concatenate([im, imt], 1)
-    return im
-
-
 class ExpertDatagen:
-    def __init__(self, target_name="cabinet", skill="pick", replay=False):
+    def __init__(
+        self, target_name="cabinet", skill="pick", replay=False, seed=42
+    ):
+        np.set_printoptions(precision=4, suppress=True)
+        print("seed: ", seed)
+        self.seed = seed
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        self.ep_id = self.seed
+
         # Define the agent configuration
         self.replay = replay
         main_agent_config = AgentConfig()
@@ -173,18 +113,13 @@ class ExpertDatagen:
             ),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
         }
-        self.env = init_rearrange_env(agent_dict, action_dict)
+        self.env = self.init_rearrange_env(agent_dict, action_dict)
 
         aux = self.env.reset()
+        self.env.sim.seed(self.seed)
         self.target_name = target_name
         self.skill = skill
-        self.save_path = (
-            f"gen_data_output_env_murp_{self.skill}_{self.target_name}.mp4"
-        )
-        self.writer = imageio.get_writer(
-            self.save_path,
-            fps=30,
-        )
+
         self.base_trans = None
 
         self.episode_json = {
@@ -199,11 +134,80 @@ class ExpertDatagen:
             "articulated_agent_arm_depth",
         ]
 
-        self.ep_id = 0
         mode = "train"
-        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_v2"
-        self.json_save_path = f"{save_pth_base}/{mode}"
+        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_left_v2"
+        self.json_save_path = f"{save_pth_base}/{mode}/ep_{self.ep_id}"
         os.makedirs(self.json_save_path, exist_ok=True)
+
+        video_path = f"{save_pth_base}/train_vids"
+        os.makedirs(video_path, exist_ok=True)
+        self.save_path = f"{video_path}/{self.ep_id}.mp4"
+        self.writer = imageio.get_writer(
+            self.save_path,
+            fps=30,
+        )
+
+    def make_sim_cfg(self, agent_dict):
+        # Start the scene config
+        sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
+
+        # This is for better graphics
+        sim_cfg.habitat_sim_v0.enable_hbao = True
+        sim_cfg.habitat_sim_v0.enable_physics = False
+
+        # TODO: disable this, causes performance issues
+        sim_cfg.habitat_sim_v0.frustum_culling = False
+
+        # Set up an example scene
+        sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
+
+        cfg = OmegaConf.create(sim_cfg)
+
+        # Set the scene agents
+        cfg.agents = agent_dict
+        cfg.agents_order = list(cfg.agents.keys())
+        return cfg
+
+    def make_hab_cfg(self, agent_dict, action_dict):
+        sim_cfg = self.make_sim_cfg(agent_dict)
+        task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
+        task_cfg.actions = action_dict
+        env_cfg = EnvironmentConfig()
+        dataset_cfg = DatasetConfig(
+            type="RearrangeDataset-v0",
+            data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
+        )
+
+        hab_cfg = HabitatConfig()
+        hab_cfg.seed = self.seed
+        hab_cfg.environment = env_cfg
+        hab_cfg.task = task_cfg
+
+        hab_cfg.dataset = dataset_cfg
+        hab_cfg.simulator = sim_cfg
+        hab_cfg.simulator.seed = self.seed
+
+        return hab_cfg
+
+    def init_rearrange_env(self, agent_dict, action_dict):
+        hab_cfg = self.make_hab_cfg(agent_dict, action_dict)
+        res_cfg = OmegaConf.create(hab_cfg)
+        res_cfg.environment.max_episode_steps = 100000000
+        print("hab_cfg: ", hab_cfg)
+        print("res_cfg: ", res_cfg)
+        return Env(res_cfg)
+
+    def process_obs_img(self, obs):
+        im = obs["third_rgb"]
+        im2 = obs["articulated_agent_arm_rgb"]
+        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        imt = np.zeros(im.shape, dtype=np.uint8)
+        imt[: im2.shape[0], : im2.shape[1], :] = im2
+        imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+        im = np.concatenate([im, imt], 1)
+        return im
 
     def save_img(self, observations, img_key, ep_data):
         if img_key in observations.keys():
@@ -216,7 +220,7 @@ class ExpertDatagen:
                 robot_img *= 255
             elif "rgb" in img_key:
                 robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGR2RGB)
-            img_dir = f'{self.json_save_path}/ep_{self.episode_json["episode_id"]}/imgs'
+            img_dir = f"{self.json_save_path}/imgs"
             os.makedirs(img_dir, exist_ok=True)
             img_pth = f"{img_dir}/{img_key}_img_{int(time.time()*1000)}.png"
             cv2.imwrite(f"{img_pth}", robot_img)
@@ -262,15 +266,14 @@ class ExpertDatagen:
         self.episode_json["episode_data"].append(ep_data)
 
     def save_json(self):
-        ep_save_path = f"{self.json_save_path}/ep_{self.ep_id}"
         if self.episode_json["success"]:
-            ep_path = f"{ep_save_path}/ep_{self.ep_id}.json"
+            ep_path = f"{self.json_save_path}/ep_{self.ep_id}.json"
             print(f"success! saving episode: {ep_path}")
             with open(ep_path, "w") as outfile:
                 json.dump(self.episode_json, outfile)
         else:
-            if os.path.exists(ep_save_path):
-                shutil.rmtree(ep_save_path)
+            if os.path.exists(self.json_save_path):
+                shutil.rmtree(self.json_save_path)
 
     def get_grasp_mode(self, name):
         # num_hand_joints = 10
@@ -409,7 +412,7 @@ class ExpertDatagen:
 
             self.add_episode_data(obs, save_action)
 
-            im = process_obs_img(obs)
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "moving ee")
             self.writer.append_data(im)
 
@@ -458,7 +461,7 @@ class ExpertDatagen:
             }
 
             self.add_episode_data(obs, save_action)
-            im = process_obs_img(obs)
+            im = self.process_obs_img(obs)
             self.writer.append_data(im)
             curr_hand_pos = self.get_curr_hand_pose()
             ctr += 1
@@ -501,7 +504,7 @@ class ExpertDatagen:
             }
 
             self.add_episode_data(obs, save_action)
-            im = process_obs_img(obs)
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
@@ -534,7 +537,7 @@ class ExpertDatagen:
 
         self.add_episode_data(obs, save_action)
         self.base_trans = self.env.sim.articulated_agent.base_transformation
-        im = process_obs_img(obs)
+        im = self.process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
 
@@ -562,7 +565,7 @@ class ExpertDatagen:
             "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
         }
         self.base_trans = self.env.sim.articulated_agent.base_transformation
-        im = process_obs_img(obs)
+        im = self.process_obs_img(obs)
         im = add_text_to_image(im, "moving base")
         self.writer.append_data(im)
 
@@ -609,7 +612,7 @@ class ExpertDatagen:
             self.base_trans = (
                 self.env.sim.articulated_agent.base_transformation
             )
-            im = process_obs_img(obs)
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
@@ -681,7 +684,14 @@ class ExpertDatagen:
             },
         }
         return (
-            poses[name][f"{pose_type}_pos"],
+            poses[name][f"{pose_type}_pos"]
+            + np.array(
+                [
+                    np.random.normal(-0.01, 0.01),
+                    np.random.normal(-0.01, 0.01),
+                    np.random.normal(-0.01, 0.01),
+                ]
+            ),
             poses[name][f"{pose_type}_rot"],
         )
 
@@ -906,7 +916,12 @@ class ExpertDatagen:
 
     def run_expert_w_grasp(self):
         self.reset_robot(self.target_name)
-
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        initial_door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+        print("init door orientation: ", initial_door_orientation_rpy)
         self.target_ee_pos, self.target_ee_rot = self.get_poses(
             self.target_name, pose_type="ee"
         )
@@ -953,10 +968,17 @@ class ExpertDatagen:
 
         door_orientation_quat = self.get_door_quat()
         door_orienation_quat_R = R.from_quat(door_orientation_quat)
-        door_orientation_rpy = door_orienation_quat_R.as_euler(
+        final_door_orientation_rpy = door_orienation_quat_R.as_euler(
             "xyz", degrees=True
         )
-        print("final door orientation: ", door_orientation_rpy)
+        print("final door orientation: ", final_door_orientation_rpy)
+        success = False
+        if not np.allclose(
+            np.round(initial_door_orientation_rpy, 0),
+            np.round(final_door_orientation_rpy, 0),
+        ):
+            success = True
+        self.episode_json["success"] = success
         self.save_json()
         self.writer.close()
         print(f"saved file to: {self.save_path}")
@@ -970,9 +992,12 @@ if __name__ == "__main__":
         "--target-name", default="fridge", help="target object name"
     )
     parser.add_argument("--skill", default="open", help="open, pick")
+    parser.add_argument("--seed", type=int, default=42, help="seed")
     parser.add_argument("--replay", action="store_true")
 
     args = parser.parse_args()
-    datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
+    datagen = ExpertDatagen(
+        args.target_name, args.skill, args.replay, args.seed
+    )
 
     datagen.run_expert_w_grasp()
