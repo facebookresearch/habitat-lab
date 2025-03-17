@@ -42,6 +42,8 @@ class MurpRobotWrapper:
         robot_prim = self._isaac_service.world.stage.GetPrimAtPath(
             robot_prim_path
         )
+        test_scene_root_xform = UsdGeom.Xform(robot_prim)
+        # test_scene_root_xform.AddRotateZOp().Set(-90)
 
         if not robot_prim.IsValid():
             raise ValueError(f"Prim at {robot_prim_path} is not valid.")
@@ -223,6 +225,7 @@ class MurpRobotWrapper:
 
         for arm_joint_name in right_arm_joint_names:
             right_arm_joint_indices.append(dof_names.index(arm_joint_name))
+        # breakpoint()
 
         self._arm_joint_indices = np.array(left_arm_joint_indices)
         self._right_arm_joint_indices = np.array(right_arm_joint_indices)
@@ -393,7 +396,7 @@ class MurpRobotWrapper:
 
         curr_linear_velocity = self._robot.get_linear_velocity()
 
-        z_target = 0.7  # todo: get from navmesh or assume ground_z==0
+        z_target = 0.1  # todo: get from navmesh or assume ground_z==0
         max_linear_vel = 3.0
 
         # Extract the vertical position and velocity
@@ -479,12 +482,15 @@ class MurpRobotWrapper:
     def physics_callback(self, step_size):
         base_position, base_orientation = self._robot.get_world_pose()
         trans, rot = self.get_prim_transform(
-            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
+            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
         )
         self.fix_base(step_size, base_position, base_orientation)
-        self.drive_arm(step_size)
+        # self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        self.drive_hand(step_size)
+        eepose,ee_rot=self.ee_pose()
+        # print("EE POSE",eepose)
+        # print("EE ROT",ee_rot)
+        # self.drive_hand(step_size)
         self.drive_right_hand(step_size)
         self._step_count += 1
 
@@ -554,8 +560,20 @@ class MurpRobotWrapper:
         rotation: Gf.Rotation = matrix.ExtractRotation()
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         euler_rotation = rotation.GetAngle()
+        # # translate=isaac_prim_utils.usd_to_habitat_position(list(translate))
+        #         # Convert quaternion to NumPy array (Isaac uses wxyz format)
+        # isaac_quat = np.array([quat_rotation.GetReal(), *quat_rotation.GetImaginary()])
+        
+        # # Apply transformation to Habitat's coordinate system
+        # habitat_quat = isaac_prim_utils.apply_isaac_to_habitat_orientation(isaac_quat.reshape(1, -1))[0]
 
-        return list(translate), rotation
+        # # Convert translation from Isaac Sim to Habitat coordinates
+        # translate = isaac_prim_utils.usd_to_habitat_position(list(translate))
+
+        # # Format quaternion as [scalar, vector[0], vector[1], vector[2]]
+        # quat_door = [habitat_quat[0], habitat_quat[1], habitat_quat[2], habitat_quat[3]]
+
+        return translate, rotation
 
     def get_articulation_links(self, prim_path: str):
         """Function to get link names which articulation can be applied
