@@ -977,6 +977,17 @@ class ArmReachEEAction(ArmEEAction):
                     -1.3962275,
                 ]
             ),
+            "retract": np.array(
+                [
+                    2.6116285,
+                    1.5283098,
+                    1.5708,
+                    -0.50559217,
+                    -1.5708,
+                    1.5708,
+                    -1.3962275,
+                ]
+            ),
         }
         return arm_joints[name]
 
@@ -998,14 +1009,14 @@ class ArmReachEEAction(ArmEEAction):
     def fix_arm(self, fix_right_left="left"):
         if fix_right_left == "left":
             self._robot_wrapper._target_arm_joint_positions = (
-                self.get_arm_mode("rest")
+                self.get_arm_mode("retract")
             )
             self._robot_wrapper._target_hand_joint_positions = (
                 self.get_grasp_mode("open")
             )
         else:
             self._robot_wrapper._target_right_arm_joint_positions = (
-                self.get_arm_mode("rest")
+                self.get_arm_mode("retract")
             )
             self._robot_wrapper._target_right_hand_joint_positions = (
                 self.get_grasp_mode("open")
