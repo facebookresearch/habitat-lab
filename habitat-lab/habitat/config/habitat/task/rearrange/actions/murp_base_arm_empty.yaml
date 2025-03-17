@@ -5,7 +5,7 @@ defaults:
   - /habitat/task/actions:
     - arm_reach_ee
     - rearrange_stop
-    - empty
+    # - empty # remove empty action
   - _self_
 # arm_action:
 #   type: "ArmAction"
