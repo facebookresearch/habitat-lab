@@ -30,9 +30,7 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = (
-            "./data/usd/robots/franka_with_hand.usda"  # Lambda Machine Change
-        )
+        asset_path = "./data/usd/robots/franka_with_hand_right.usda"  # Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -395,7 +393,7 @@ class MurpRobotWrapper:
 
         curr_linear_velocity = self._robot.get_linear_velocity()
 
-        z_target = 0.7  # todo: get from navmesh or assume ground_z==0
+        z_target = 0.1  # todo: get from navmesh or assume ground_z==0
         max_linear_vel = 3.0
 
         # Extract the vertical position and velocity
@@ -481,7 +479,7 @@ class MurpRobotWrapper:
     def physics_callback(self, step_size):
         base_position, base_orientation = self._robot.get_world_pose()
         trans, rot = self.get_prim_transform(
-            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
+            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
         )
         self.fix_base(step_size, base_position, base_orientation)
         # self.drive_arm(step_size)
@@ -566,7 +564,7 @@ class MurpRobotWrapper:
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         euler_rotation = rotation.GetAngle()
 
-        return list(translate), rotation
+        return translate, rotation
 
     def get_articulation_links(self, prim_path: str):
         """Function to get link names which articulation can be applied

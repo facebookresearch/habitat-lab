@@ -49,7 +49,7 @@ from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 from viz_utils import add_text_to_image
 
-user = " "
+user = "joanne"
 if user == "joanne":
     data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
 else:
@@ -134,11 +134,12 @@ class ExpertDatagen:
         if user == "joanne":
             urdf_path = os.path.join(
                 data_path,
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2_vyshnav.urdf",
             )
             arm_urdf_path = os.path.join(
                 data_path,
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+                # "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",
             )
         else:
             urdf_path = os.path.join(

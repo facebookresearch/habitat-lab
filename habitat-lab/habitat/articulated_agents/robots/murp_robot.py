@@ -132,8 +132,8 @@ class MurpRobot(MobileManipulator):
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.5, 1.9, 0.0),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
+                    cam_offset_pos=mn.Vector3(0.5, 2.3, 0.0),
+                    cam_look_at_pos=mn.Vector3(1.0, 0.0, -0.00),
                     attached_link_id=-1,
                 ),
             },
