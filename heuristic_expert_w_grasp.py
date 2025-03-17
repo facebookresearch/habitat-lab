@@ -53,7 +53,7 @@ user = " "
 if user == "joanne":
     data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
 else:
-    data_path = "/home/joanne/habitat-lab/data/"
+    data_path = "home/jmmy/research/hab_training/habitat-lab/data/"
 
 
 def make_sim_cfg(agent_dict):
@@ -143,11 +143,9 @@ class ExpertDatagen:
         else:
             urdf_path = os.path.join(
                 data_path,
-                "franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
+                "robots/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf",  # Lambda Change
             )
-            arm_urdf_path = os.path.join(
-                data_path,
-                "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
+            arm_urdf_path = os.path.join("/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
             )
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
