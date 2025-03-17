@@ -76,8 +76,8 @@ class TargetCurrentSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
 
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
+        for i in range(pos.shape[0]):  # type: ignore
+            pos[i] = T_inv.transform_point(pos[i])  # type: ignore
 
         return pos.reshape(-1)
 
@@ -97,6 +97,7 @@ class TargetStartSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         ).articulated_agent.ee_transform()
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
+
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 

@@ -91,7 +91,7 @@ SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 NAMED_WINDOW = "Play Murp"
 USE_CV2 = True
-TEST_MACHINE = "h200"  # h200 / lambda
+TEST_MACHINE = "lambda"  # h200 / lambda
 
 
 # cv2 relative functions
@@ -605,7 +605,7 @@ def play_env(env, args, config):
             # python examples/interactive_play.py --disable-inverse-kinematics
         else:
             screen = pygame.display.set_mode(
-                [draw_obs.shape[1], draw_obs.shape[0]]
+                [draw_obs.shape[1], draw_obs.shape[0]]  # type: ignore
             )  # type: ignore
 
     update_idx = 0

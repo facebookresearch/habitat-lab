@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - play
+  - pick_murp
   # - /habitat/task/lab_sensors:
   #   - arm_depth_bbox_sensor
   # TODO: jimmy: remove this since the we are not able to use API to get the object handle
