@@ -73,7 +73,7 @@ class ArmReachEEAction(ArmEEAction):
         try:
             self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
                 np.array(
-                    self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                    self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
                 )
             )
         except:
@@ -82,7 +82,7 @@ class ArmReachEEAction(ArmEEAction):
 
     def calc_desired_joints(self):
         joint_pos = np.array(
-            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
         )
         joint_vel = np.zeros(joint_pos.shape)
 
@@ -119,7 +119,7 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
 
-        self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+        self._robot_wrapper._target_right_arm_joint_positions = des_joint_pos
 
 
 @registry.register_task_action

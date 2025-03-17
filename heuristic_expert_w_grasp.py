@@ -142,11 +142,9 @@ class ExpertDatagen:
             )
         else:
             urdf_path = os.path.join(
-                data_path,
-                "robots/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf",  # Lambda Change
+                "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
             )
-            arm_urdf_path = os.path.join("/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
-            )
+            arm_urdf_path = os.path.join("/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf")
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
         main_agent_config.ik_arm_urdf = arm_urdf_path

@@ -32,7 +32,7 @@ class MurpRobotWrapper:
 
     def __init__(self, isaac_service, instance_id=0, right_left_hand="right"):
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand_2.usda"  # Lambda Machine Change
+        asset_path = "./data/usd/robots/franka_with_hand_2 (1).usda"  # Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
         self._right_left_hand = right_left_hand
@@ -202,7 +202,7 @@ class MurpRobotWrapper:
         ]
 
         self.ee_link_name = left_arm_joint_names[-1].replace("joint", "link")
-        self.right_ee_link_name = left_arm_joint_names[-1].replace(
+        self.right_ee_link_name = right_arm_joint_names[-1].replace(
             "joint", "link"
         )
 
@@ -469,9 +469,9 @@ class MurpRobotWrapper:
             "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
         )
         self.fix_base(step_size, base_position, base_orientation)
-        self.drive_arm(step_size)
+        #self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        self.drive_hand(step_size)
+        #self.drive_hand(step_size)
         self.drive_right_hand(step_size)
         self._step_count += 1
 
