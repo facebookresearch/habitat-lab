@@ -243,10 +243,15 @@ class ExpertDatagen:
             "open"
         )
 
-    def get_curr_ee_pose(self):
-        curr_ee_pos_vec, curr_ee_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.ee_pose()
-        )
+    def get_curr_ee_pose(self, arm='right'):
+        if arm == 'left':
+            curr_ee_pos_vec, curr_ee_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.ee_pose()
+            )
+        elif arm == 'right':
+            curr_ee_pos_vec, curr_ee_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
+            )
 
         curr_ee_rot_quat = R.from_quat(
             [*curr_ee_rot.vector, curr_ee_rot.scalar]
