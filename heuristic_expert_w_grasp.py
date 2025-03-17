@@ -1,5 +1,3 @@
-
-
 import time
 import warnings
 
@@ -49,7 +47,7 @@ from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
-from viz_utils import add_text_to_image
+# from viz_utils import add_text_to_image
 
 user = " "
 if user == "joanne":
@@ -178,7 +176,7 @@ class ExpertDatagen:
         aux = self.env.reset()
         self.target_name = target_name
         self.skill = skill
-        self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
+        self.save_path = f"output_env_murp_{self.skill}_{self.target_name}_NOW.mp4"
         self.writer = imageio.get_writer(
             self.save_path,
             fps=30,
@@ -298,7 +296,7 @@ class ExpertDatagen:
 
             obs = self.env.step(action)
             im = process_obs_img(obs)
-            im = add_text_to_image(im, "moving ee")
+            # im = add_text_to_image(im, "moving ee")
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
@@ -368,7 +366,7 @@ class ExpertDatagen:
 
             obs = self.env.step(action)
             im = process_obs_img(obs)
-            im = add_text_to_image(im, "using grasp controller")
+            # im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
@@ -392,7 +390,7 @@ class ExpertDatagen:
         obs = self.env.step(action)
         self.base_trans = (self.env.sim.articulated_agent.base_transformation)
         im = process_obs_img(obs)
-        im = add_text_to_image(im, "using base controller")
+        # im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
 
     def move_base_ee_and_hand(
@@ -430,7 +428,7 @@ class ExpertDatagen:
                 self.env.sim.articulated_agent.base_transformation
             )
             im = process_obs_img(obs)
-            im = add_text_to_image(im, "using grasp controller")
+            # im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
@@ -515,7 +513,7 @@ class ExpertDatagen:
         # XYZ
         self.open_xyz = target_w_xyz.copy()
         if hand=="left":
-            self.open_xyz[2] += 0.1
+            self.open_xyz[2] -= 0.1
             self.open_xyz[0] += 0.1
 
             # Pre-Grasp Targets
@@ -526,7 +524,7 @@ class ExpertDatagen:
             self.close_fingers = self.target_joints.copy()
             self.close_fingers[OPEN_JOINTS] += 0.2
         else:
-            self.open_xyz[2] -= 0.05
+            self.open_xyz[2] -= 0.1
             self.open_xyz[0] += 0.1
             SECONDARY_JOINTS = [2,6,10,15]
             TERTIARY_JOINTS = [3,7,11]
@@ -535,11 +533,11 @@ class ExpertDatagen:
             BASE_THUMB_JOINT=[12]
             self.grasp_fingers = self.target_joints.copy()
             self.close_fingers = self.target_joints.copy()
-            self.close_fingers[BASE_THUMB_JOINT] +=1.0
+            self.close_fingers[BASE_THUMB_JOINT] +=1.1
             # self.close_fingers[CURVE_JOINTS] -=0.5
-            self.close_fingers[SECONDARY_JOINTS] += 1.0
+            self.close_fingers[SECONDARY_JOINTS] += 0.7
             self.close_fingers[TERTIARY_JOINTS] += 1.0
-            self.close_fingers[OPEN_JOINTS] += 1.0
+            self.close_fingers[OPEN_JOINTS] += 0.7
 
 
 
@@ -563,7 +561,7 @@ class ExpertDatagen:
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                self.open_xyz[2] -= 0.05
+                self.open_xyz[1] -= 0.1
                 self.open_xyz[0] += 0.1
 
             return (
@@ -609,7 +607,7 @@ class ExpertDatagen:
         door_rot = rotation_conversions.quaternion_to_matrix(door_orientation)
 
         rot_y = rotation_conversions.euler_angles_to_matrix(
-            torch.tensor([0.0, -math.pi, 0.0], device="cuda:0"), "XYZ"
+            torch.tensor([math.pi, -math.pi, 0.0], device="cuda:0"), "XYZ"
         )
         target_rot = torch.einsum("ij,jk->ik", door_rot, rot_y)
         tar_rot = target_rot
@@ -753,7 +751,7 @@ class ExpertDatagen:
         )
         self.current_target_xyz = self.target_ee_pos
         target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[1] -= 0.51
+        target_xyz[1] -= 0.52
         target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
         target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
         target_joints = (
@@ -793,7 +791,7 @@ class ExpertDatagen:
         if hand == "left":
             self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
         elif hand == "right":
-            self.execute_grasp_sequence(hand, grip_iters=40, open_iters=30, move_iters=19)
+            self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30, move_iters=19)
 
 
 if __name__ == "__main__":
@@ -810,4 +808,3 @@ if __name__ == "__main__":
     datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
 
     datagen.run_expert_w_grasp(hand="right")
-    
