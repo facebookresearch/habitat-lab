@@ -948,6 +948,54 @@ class ArmReachEEAction(ArmEEAction):
             des_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
         )
 
+    def get_arm_mode(self, name):
+        arm_joints = {
+            "rest": np.zeros(7),
+            "side": np.array(
+                [
+                    2.6116285,
+                    1.5283098,
+                    1.0930868,
+                    -0.50559217,
+                    0.48147443,
+                    2.628784,
+                    -1.3962275,
+                ]
+            ),
+        }
+        return arm_joints[name]
+
+    def get_grasp_mode(self, name):
+        # num_hand_joints = 10
+        num_hand_joints = 16
+        grasp_joints = {
+            "open": np.zeros(num_hand_joints),
+            "pre_grasp": np.concatenate(
+                (np.full(12, 0.7), [-0.785], np.full(3, 0.7))
+            ),
+            "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.90), np.full(4, 0.4))
+            ),
+        }
+        return grasp_joints[name]
+
+    def fix_arm(self, fix_right_left="left"):
+        if fix_right_left == "left":
+            self._robot_wrapper._target_arm_joint_positions = (
+                self.get_arm_mode("rest")
+            )
+            self._robot_wrapper._target_hand_joint_positions = (
+                self.get_grasp_mode("open")
+            )
+        else:
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                self.get_arm_mode("rest")
+            )
+            self._robot_wrapper._target_right_hand_joint_positions = (
+                self.get_grasp_mode("open")
+            )
+
     def step(self, *args, **kwargs):
         target_pos = kwargs[self._action_arg_prefix + "target_pos"]
         target_rot = kwargs[self._action_arg_prefix + "target_rot"]
@@ -976,8 +1024,10 @@ class ArmReachEEAction(ArmEEAction):
             self._robot_wrapper._target_right_hand_joint_positions = (
                 self.target_finger
             )
+            self.fix_arm("left")
         else:
             self._robot_wrapper._target_arm_joint_positions = des_joint_pos
             self._robot_wrapper._target_hand_joint_positions = (
                 self.target_finger
             )
+            self.fix_arm("right")
