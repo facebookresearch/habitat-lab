@@ -49,7 +49,7 @@ from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
 from viz_utils import add_text_to_image
 
-user = "joanne"
+user = " "
 if user == "joanne":
     data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
 else:
@@ -131,18 +131,6 @@ class ExpertDatagen:
         self.replay = replay
         main_agent_config = AgentConfig()
 
-<<<<<<< HEAD
-        urdf_path = os.path.join(
-            data_path,
-            "franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
-        )
-        arm_urdf_path = os.path.join(
-            data_path,
-            # "hab_murp/murp_tmr_franka/murp_tmr_franka_metahand_left_arm_obj.urdf",
-           "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
-            # "franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
-        )
-=======
         if user == "joanne":
             urdf_path = os.path.join(
                 data_path,
@@ -155,13 +143,12 @@ class ExpertDatagen:
         else:
             urdf_path = os.path.join(
                 data_path,
-                "franka_tmr/franka_description_tmr/urdf/franka_left_arm.urdf",  # Lambda Change
+                "franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
             )
             arm_urdf_path = os.path.join(
                 data_path,
-                "franka_tmr/franka_description_tmr/allegro/allegro.urdf",  # Lambda Change
+                "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
             )
->>>>>>> 11b33a138 (add base movement and arm cameras)
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
         main_agent_config.ik_arm_urdf = arm_urdf_path
@@ -399,9 +386,9 @@ class ExpertDatagen:
                 )
             },
         }
-        self.env.sim.articulated_agent.base_transformation = self.base_trans
+        
         obs = self.env.step(action)
-        self.base_trans = self.env.sim.articulated_agent.base_transformation
+        self.base_trans = (self.env.sim.articulated_agent.base_transformation)
         im = process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
@@ -497,10 +484,10 @@ class ExpertDatagen:
                 "ee_rot": np.deg2rad([120, 0, 0]),
             },
             "fridge2": {
-                "base_pos": np.array([-4.75, 0.1, 1.1]),
+                "base_pos": np.array([-4.0, 0.1, 1.28]),
                 "base_rot": 180,
-                "ee_pos": np.array([-6.3, 1.4, 2.4]),
-                "ee_rot": np.deg2rad([120,0,0]),
+                "ee_pos": np.array([-6.3, 1.2, 1.3]),
+                "ee_rot": np.deg2rad([-60, 0, 0]),
             },
             "freezer": {
                 "base_pos": np.array([-4.9, 0.1, 0.7]),
@@ -514,7 +501,7 @@ class ExpertDatagen:
             poses[name][f"{pose_type}_rot"],
         )
 
-    def set_targets(self, target_w_xyz, target_w_quat, target_joints):
+    def set_targets(self, target_w_xyz, target_w_quat, target_joints,hand="left"):
         self.target_w_xyz = target_w_xyz
         self.target_w_quat = target_w_quat
         target_quat = R.from_quat(target_w_quat, scalar_first=True)
@@ -525,19 +512,36 @@ class ExpertDatagen:
 
         # XYZ
         self.open_xyz = target_w_xyz.copy()
-        self.open_xyz[2] += 0.1
-        self.open_xyz[0] += 0.1
+        if hand=="left":
+            self.open_xyz[2] += 0.1
+            self.open_xyz[0] += 0.1
 
-        # Pre-Grasp Targets
-        OPEN_JOINTS = [1, 5, 9, 14]
-        # OPEN_JOINTS = [0, 4, 6, 9]
+            # Pre-Grasp Targets
+            OPEN_JOINTS = [1, 5, 9, 14]
+            # OPEN_JOINTS = [0, 4, 6, 9]
+            # Grasp fingers
+            self.grasp_fingers = self.target_joints.copy()
+            self.close_fingers = self.target_joints.copy()
+            self.close_fingers[OPEN_JOINTS] += 0.2
+        else:
+            self.open_xyz[2] -= 0.05
+            self.open_xyz[0] += 0.1
+            SECONDARY_JOINTS = [2,6,10,15]
+            TERTIARY_JOINTS = [3,7,11]
+            OPEN_JOINTS = [1,5,9]
+            CURVE_JOINTS=[13]
+            BASE_THUMB_JOINT=[12]
+            self.grasp_fingers = self.target_joints.copy()
+            self.close_fingers = self.target_joints.copy()
+            self.close_fingers[BASE_THUMB_JOINT] +=1.0
+            # self.close_fingers[CURVE_JOINTS] -=0.5
+            self.close_fingers[SECONDARY_JOINTS] += 1.0
+            self.close_fingers[TERTIARY_JOINTS] += 1.0
+            self.close_fingers[OPEN_JOINTS] += 1.0
 
-        # Grasp fingers
-        self.grasp_fingers = self.target_joints.copy()
-        self.close_fingers = self.target_joints.copy()
-        self.close_fingers[OPEN_JOINTS] += 0.2
 
-    def get_targets(self, name="target"):
+
+    def get_targets(self, name="target", hand="right"):
         # Lambda Changes
         if name == "target":
             return (
@@ -556,8 +560,9 @@ class ExpertDatagen:
 
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
-            self.open_xyz[2] += 0.1
-            self.open_xyz[0] += 0.1
+            if hand == "right":
+                self.open_xyz[2] -= 0.05
+                self.open_xyz[0] += 0.1
 
             return (
                 torch.tensor(self.close_fingers, device="cuda:0"),
@@ -685,23 +690,23 @@ class ExpertDatagen:
         curr_xyz, curr_ori = self.get_curr_ee_pose()
         print(f"Curr XYZ {curr_xyz}, Rot {curr_ori}")
         target_rot_rpy = self.target_ee_rot
-        if name == "open" and self.step > 10:
-            self.move_base_ee_and_hand(
-                -0.1,
-                0.0,
-                act["tar_xyz"],
-                target_rot_rpy,
-                act["tar_fingers"],
-                timeout=10,
-            )
-            # self.move_base(
-            #     -0.1,
-            #     0.0,
-            # )
-        else:
-            self.move_ee_and_hand(
-                act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
-            )
+        # if name == "open" and self.step > 10:
+        #     self.move_base_ee_and_hand(
+        #         -0.1,
+        #         0.0,
+        #         act["tar_xyz"],
+        #         target_rot_rpy,
+        #         act["tar_fingers"],
+        #         timeout=10,
+        #     )
+        #     # self.move_base(
+        #     #     -0.1,
+        #     #     0.0,
+        #     # )
+        # else:
+        self.move_ee_and_hand(
+            act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
+        )
         self.current_target_fingers = act["tar_fingers"]
         self.current_target_xyz = act["tar_xyz"]
         _current_target_rotmat = R.from_matrix(act["tar_rot"])
@@ -731,23 +736,15 @@ class ExpertDatagen:
             )
             print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
             self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
-
-    def run_expert_w_grasp(self):
-        self.reset_robot(self.target_name)
-
-        self.target_ee_pos, self.target_ee_rot = self.get_poses(
-            self.target_name, pose_type="ee"
-        )
-        self.visualize_pos(self.target_ee_pos)
-
+    
+    def execute_grasp_sequence(self, hand, grip_iters, open_iters, move_iters=None):
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
-            grasp="pre_grasp",
-            timeout=300,
+            grasp="pre_grasp" if hand == "left" else "open",
+            timeout=300 if hand == "left" else 200,
         )
 
-        # grasp object
         self.step = 0
         self.current_target_fingers = (
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
@@ -764,25 +761,37 @@ class ExpertDatagen:
             target_w_xyz=target_xyz,
             target_w_quat=target_quaternion,
             target_joints=target_joints,
+            hand=hand
         )
+        if move_iters:
+            for _ in range(move_iters):
+                self.move_base(1.0, 0.0)
+
+        # Grasp and open object
         if self.replay:
             self.replay_grasp_obj()
         else:
-            for _ in range(20):
+            for _ in range(grip_iters):
                 self.grasp_obj(name="target_grip")
 
-        self.step = 0
-        for _ in range(30):
+        for _ in range(open_iters):
             self.grasp_obj(name="open")
 
-        door_orientation_quat = self.get_door_quat()
-        door_orienation_quat_R = R.from_quat(door_orientation_quat)
-        door_orientation_rpy = door_orienation_quat_R.as_euler(
-            "xyz", degrees=True
+        #Move robot back
+        for _ in range(10):
+            self.move_base(-1.0, 0.0)
+
+    def run_expert_w_grasp(self, hand="left"):
+        self.reset_robot(self.target_name)
+
+        self.target_ee_pos, self.target_ee_rot = self.get_poses(
+            self.target_name, pose_type="ee"
         )
-        print("final door orientation: ", door_orientation_rpy)
-        self.writer.close()
-        print(f"saved file to: {self.save_path}")
+        self.visualize_pos(self.target_ee_pos)
+        if hand == "left":
+            self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
+        elif hand == "right":
+            self.execute_grasp_sequence(hand, grip_iters=40, open_iters=30, move_iters=19)
 
 
 if __name__ == "__main__":
@@ -790,7 +799,7 @@ if __name__ == "__main__":
 
     # Add arguments
     parser.add_argument(
-        "--target-name", default="fridge", help="target object name"
+        "--target-name", default="fridge2", help="target object name"
     )
     parser.add_argument("--skill", default="open", help="open, pick")
     parser.add_argument("--replay", action="store_true")
@@ -798,4 +807,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
 
-    datagen.run_expert_w_grasp()
+    datagen.run_expert_w_grasp(hand="right")
