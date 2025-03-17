@@ -833,14 +833,23 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
-        self._accum_coll_info += cur_coll_info
-        self._metric = {
-            "total_collisions": self._accum_coll_info.total_collisions,
-            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
-            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
-            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
-        }
+        # TODO: jimmy: temp hack
+        if type(task._sim) == IsaacRearrangeSim:
+            self._metric = {
+                "total_collisions": self._accum_coll_info.total_collisions,
+                "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+                "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+                "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
+            }
+        else:
+            cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
+            self._accum_coll_info += cur_coll_info
+            self._metric = {
+                "total_collisions": self._accum_coll_info.total_collisions,
+                "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+                "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+                "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
+            }
 
 
 @registry.register_measure
@@ -881,32 +890,41 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         return self._add_force
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        articulated_agent_force, _, overall_force = self._task.get_coll_forces(
-            self.agent_id
-        )
-
-        if self._count_obj_collisions:
-            self._cur_force = overall_force
+        if type(task._sim) == IsaacRearrangeSim:
+            # TODO: jimmy: temp hack
+            self._metric = {
+                "accum": 0.0,
+                "instant": 0.0,
+            }
         else:
-            self._cur_force = articulated_agent_force
+            (
+                articulated_agent_force,
+                _,
+                overall_force,
+            ) = self._task.get_coll_forces(self.agent_id)
 
-        if self._prev_force is not None:
-            self._add_force = self._cur_force - self._prev_force
-            if self._add_force > self._min_force:
-                self._accum_force += self._add_force
-                self._prev_force = self._cur_force
-            elif self._add_force < 0.0:
-                self._prev_force = self._cur_force
+            if self._count_obj_collisions:
+                self._cur_force = overall_force
             else:
-                self._add_force = 0.0
-        else:
-            self._prev_force = self._cur_force
-            self._add_force = 0.0
+                self._cur_force = articulated_agent_force
 
-        self._metric = {
-            "accum": self._accum_force,
-            "instant": self._cur_force,
-        }
+            if self._prev_force is not None:
+                self._add_force = self._cur_force - self._prev_force
+                if self._add_force > self._min_force:
+                    self._accum_force += self._add_force
+                    self._prev_force = self._cur_force
+                elif self._add_force < 0.0:
+                    self._prev_force = self._cur_force
+                else:
+                    self._add_force = 0.0
+            else:
+                self._prev_force = self._cur_force
+                self._add_force = 0.0
+
+            self._metric = {
+                "accum": self._accum_force,
+                "instant": self._cur_force,
+            }
 
 
 @registry.register_measure
@@ -1073,16 +1091,23 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         reward = 0.0
 
         # For force collision reward (userful for dynamic simulation)
-        reward += self._get_coll_reward()
+        # TODO: jimmy: temp check
+        if type(task._sim) == IsaacRearrangeSim:
+            reward += 0.0
+        else:
+            reward += self._get_coll_reward()
 
         # For count-based collision reward and termination (userful for kinematic simulation)
         if self._want_count_coll():
             reward += self._get_count_coll_reward()
 
         # For hold constraint violation
-        if self._sim.get_agent_data(
-            self.agent_id
-        ).grasp_mgr.is_violating_hold_constraint():
+        if (
+            type(task._sim) != IsaacRearrangeSim
+            and self._sim.get_agent_data(
+                self.agent_id
+            ).grasp_mgr.is_violating_hold_constraint()
+        ):
             reward -= self._config.constraint_violate_pen
 
         # For force termination

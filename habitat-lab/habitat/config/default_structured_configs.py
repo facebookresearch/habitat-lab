@@ -921,6 +921,7 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
+    success_js_state: float = 3.14
 
 
 @dataclass
@@ -977,6 +978,7 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    success_js_state: float = 3.14
 
 
 @dataclass
