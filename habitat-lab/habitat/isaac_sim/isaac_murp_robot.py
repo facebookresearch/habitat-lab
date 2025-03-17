@@ -2,19 +2,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Tuple
 
 import magnum as mn
 import numpy as np
-import quaternion
 
-from habitat.articulated_agents.mobile_manipulator import (
-    ArticulatedAgentCameraParams,
-    MobileManipulatorParams,
-)
+# from habitat.articulated_agents.mobile_manipulator import (
+#     ArticulatedAgentCameraParams,
+#     MobileManipulatorParams,
+# )
 from habitat.articulated_agents.robots.murp_robot import MurpRobot
 from habitat.isaac_sim._internal.murp_robot_wrapper import MurpRobotWrapper
 from habitat.isaac_sim.isaac_mobile_manipulator import IsaacMobileManipulator
+
+# import quaternion
 
 
 class IsaacMurpRobot(IsaacMobileManipulator):
@@ -40,17 +41,25 @@ class IsaacMurpRobot(IsaacMobileManipulator):
         self._robot_wrapper.set_root_pose(base_transformation.translation, rot)
         # pose = mn.Matrix4.from_(base_rotation.to_matrix(), base_position
 
+    def ee_transform(self):
+        """ "Return the ee transformation"""
+        # Get the ee_trans from ee_pose
+        vec, rot = self._sim.articulated_agent._robot_wrapper.ee_pose()
+        global_T = mn.Matrix4.from_(rot.to_matrix(), vec)
+        return global_T
+
     def get_link_transform(self, link_id):
-        link_positions, link_rotations = (
-            self._robot_wrapper.get_link_world_poses()
-        )
+        (
+            link_positions,
+            link_rotations,
+        ) = self._robot_wrapper.get_link_world_poses()
         position, rotation = link_positions[link_id], link_rotations[link_id]
         # breakpoint()
 
         pose = mn.Matrix4.from_(rotation.to_matrix(), position)
-        add_rot = mn.Matrix4.rotation(
-            mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
-        )
+        # add_rot = mn.Matrix4.rotation(
+        #     mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        # )
         return pose
 
     def get_ee_local_pose(
@@ -65,8 +74,8 @@ class IsaacMurpRobot(IsaacMobileManipulator):
                 "The current manipulator does not have enough end effectors"
             )
 
-        assert False  # todo
-        return None
+        raise NotImplementedError("Need to implement get_ee_local_pose")
+        # return None
 
         # ee_transform = self.ee_transform()
         # base_transform = self.base_transformation
@@ -102,7 +111,9 @@ class IsaacMurpRobot(IsaacMobileManipulator):
             -1.3962275,
         ]
         robot_wrapper = MurpRobotWrapper(
-            isaac_service=isaac_service, instance_id=0
+            isaac_service=isaac_service,
+            instance_id=0,
+            right_left_hand=agent_cfg.right_left_hand,
         )
         super().__init__(
             murp_params, agent_cfg, isaac_service, robot_wrapper, sim=sim

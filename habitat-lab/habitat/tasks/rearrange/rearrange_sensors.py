@@ -15,6 +15,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
@@ -76,8 +77,8 @@ class TargetCurrentSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
 
-        for i in range(pos.shape[0]):
-            pos[i] = T_inv.transform_point(pos[i])
+        for i in range(pos.shape[0]):  # type: ignore
+            pos[i] = T_inv.transform_point(pos[i])  # type: ignore
 
         return pos.reshape(-1)
 
@@ -97,6 +98,7 @@ class TargetStartSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         ).articulated_agent.ee_transform()
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
+
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
@@ -235,11 +237,48 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
         return mask_joints_pos
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.arm_joint_pos
+        if self.config.right_left_hand == "right":
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.right_arm_joint_pos
+        else:
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.arm_joint_pos
         if self._arm_joint_mask is not None:
             joints_pos = self._get_mask_joint(joints_pos)
+        return np.array(joints_pos, dtype=np.float32)
+
+
+@registry.register_sensor
+class HandJointSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "hand_joint"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(config.dimensionality,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.config.right_left_hand == "right":
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.right_hand_joint_pos
+        else:
+            joints_pos = self._sim.get_agent_data(
+                self.agent_id
+            ).articulated_agent._robot_wrapper.hand_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
 
@@ -637,10 +676,12 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
             .articulated_agent.ee_transform()
             .translation
         )
-
-        idxs, _ = self._sim.get_targets()
-        scene_pos = self._sim.get_scene_pos()
-        target_pos = scene_pos[idxs]
+        if type(self._sim) == IsaacRearrangeSim:
+            target_pos = self._sim.target_start_pos
+        else:
+            idxs, _ = self._sim.get_targets()
+            scene_pos = self._sim.get_scene_pos()
+            target_pos = scene_pos[idxs]
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
@@ -802,14 +843,23 @@ class RobotCollisions(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
-        self._accum_coll_info += cur_coll_info
-        self._metric = {
-            "total_collisions": self._accum_coll_info.total_collisions,
-            "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
-            "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
-            "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
-        }
+        # TODO: jimmy: temp hack
+        if type(task._sim) == IsaacRearrangeSim:
+            self._metric = {
+                "total_collisions": self._accum_coll_info.total_collisions,
+                "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+                "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+                "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
+            }
+        else:
+            cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
+            self._accum_coll_info += cur_coll_info
+            self._metric = {
+                "total_collisions": self._accum_coll_info.total_collisions,
+                "robot_obj_colls": self._accum_coll_info.robot_obj_colls,
+                "robot_scene_colls": self._accum_coll_info.robot_scene_colls,
+                "obj_scene_colls": self._accum_coll_info.obj_scene_colls,
+            }
 
 
 @registry.register_measure
@@ -850,32 +900,41 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         return self._add_force
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        articulated_agent_force, _, overall_force = self._task.get_coll_forces(
-            self.agent_id
-        )
-
-        if self._count_obj_collisions:
-            self._cur_force = overall_force
+        if type(task._sim) == IsaacRearrangeSim:
+            # TODO: jimmy: temp hack
+            self._metric = {
+                "accum": 0.0,
+                "instant": 0.0,
+            }
         else:
-            self._cur_force = articulated_agent_force
+            (
+                articulated_agent_force,
+                _,
+                overall_force,
+            ) = self._task.get_coll_forces(self.agent_id)
 
-        if self._prev_force is not None:
-            self._add_force = self._cur_force - self._prev_force
-            if self._add_force > self._min_force:
-                self._accum_force += self._add_force
-                self._prev_force = self._cur_force
-            elif self._add_force < 0.0:
-                self._prev_force = self._cur_force
+            if self._count_obj_collisions:
+                self._cur_force = overall_force
             else:
-                self._add_force = 0.0
-        else:
-            self._prev_force = self._cur_force
-            self._add_force = 0.0
+                self._cur_force = articulated_agent_force
 
-        self._metric = {
-            "accum": self._accum_force,
-            "instant": self._cur_force,
-        }
+            if self._prev_force is not None:
+                self._add_force = self._cur_force - self._prev_force
+                if self._add_force > self._min_force:
+                    self._accum_force += self._add_force
+                    self._prev_force = self._cur_force
+                elif self._add_force < 0.0:
+                    self._prev_force = self._cur_force
+                else:
+                    self._add_force = 0.0
+            else:
+                self._prev_force = self._cur_force
+                self._add_force = 0.0
+
+            self._metric = {
+                "accum": self._accum_force,
+                "instant": self._cur_force,
+            }
 
 
 @registry.register_measure
@@ -1042,16 +1101,23 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
         reward = 0.0
 
         # For force collision reward (userful for dynamic simulation)
-        reward += self._get_coll_reward()
+        # TODO: jimmy: temp check
+        if type(task._sim) == IsaacRearrangeSim:
+            reward += 0.0
+        else:
+            reward += self._get_coll_reward()
 
         # For count-based collision reward and termination (userful for kinematic simulation)
         if self._want_count_coll():
             reward += self._get_count_coll_reward()
 
         # For hold constraint violation
-        if self._sim.get_agent_data(
-            self.agent_id
-        ).grasp_mgr.is_violating_hold_constraint():
+        if (
+            type(task._sim) != IsaacRearrangeSim
+            and self._sim.get_agent_data(
+                self.agent_id
+            ).grasp_mgr.is_violating_hold_constraint()
+        ):
             reward -= self._config.constraint_violate_pen
 
         # For force termination

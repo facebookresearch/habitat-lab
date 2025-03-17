@@ -24,6 +24,7 @@ import magnum as mn
 import numpy as np
 import numpy.typing as npt
 
+import habitat
 import habitat_sim
 
 # flake8: noqa
@@ -72,7 +73,6 @@ def bind_physics_material_to_hierarchy(
     dynamic_friction,
     restitution,
 ):
-
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
     # material = UsdPhysics.MaterialAPI(material_prim)
@@ -102,7 +102,10 @@ def bind_physics_material_to_hierarchy(
 @registry.register_simulator(name="IsaacRearrangeSim-v0")
 class IsaacRearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
-        config.scene = "NONE"
+        with habitat.config.read_write(config):
+            config.scene = (
+                "NONE"  # load from interactive_play is read only by default
+            )
         if len(config.agents) > 1:
             with read_write(config):
                 for agent_name, agent_cfg in config.agents.items():
@@ -114,9 +117,9 @@ class IsaacRearrangeSim(HabitatSim):
                         sensor_config.uuid = (
                             f"{agent_name}_{sensor_config.uuid}"
                         )
-                        agent_cfg.sim_sensors[f"{agent_name}_{sensor_key}"] = (
-                            sensor_config
-                        )
+                        agent_cfg.sim_sensors[
+                            f"{agent_name}_{sensor_key}"
+                        ] = sensor_config
 
         super().__init__(config)
         from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
@@ -136,6 +139,7 @@ class IsaacRearrangeSim(HabitatSim):
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
         asset_path = os.path.abspath(
             "data/usd/scenes/fremont_static_objects.usda"
+            # "data/usd/scenes/fremont_static.usda"
         )
         print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -147,7 +151,7 @@ class IsaacRearrangeSim(HabitatSim):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        self._rigid_objects = []
+        self._rigid_objects = []  # type: ignore
         self.add_or_reset_rigid_objects()
         self._pick_target_rigid_object_idx = None
 
@@ -169,7 +173,7 @@ class IsaacRearrangeSim(HabitatSim):
         self._isaac_rom.post_reset()
 
         for agent in self.agents_mgr.articulated_agents_iter:
-            agent._robot_wrapper.post_reset()
+            agent._robot_wrapper.post_reset()  # type: ignore
 
         self.first_setup = True
         self.ep_info: Optional[RearrangeEpisode] = None
@@ -304,6 +308,7 @@ class IsaacRearrangeSim(HabitatSim):
             targ_idx = self._scene_obj_ids.index(
                 rom.get_object_by_handle(target_handle).object_id
             )
+            # self._isaac_rom
             target_trans.append((targ_idx, trans))
         return target_trans
 
@@ -394,7 +399,7 @@ class IsaacRearrangeSim(HabitatSim):
         self._isaac_rom.post_reset()
 
         for agent in self.agents_mgr.articulated_agents_iter:
-            agent._robot_wrapper.post_reset()
+            agent._robot_wrapper.post_reset()  # type: ignore
 
         for i in range(len(self.agents)):
             self.reset_agent(i)
@@ -402,6 +407,7 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+        # TODO: jimmy: the episode here is the wrong episode
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         self.ep_info = ep_info
@@ -433,78 +439,85 @@ class IsaacRearrangeSim(HabitatSim):
                 for ao in self.art_objs
             }
 
-        return
-        if is_hard_reset:
-            with read_write(config):
-                config["scene"] = ep_info.scene_id
-            t_start = time.time()
-            super().reconfigure(config, should_close_on_new_scene=False)
-            self.add_perf_timing("super_reconfigure", t_start)
-            # The articulated object handles have changed.
-            self._start_art_states = {}
-
-        if new_scene:
-            self.agents_mgr.on_new_scene()
-
-        self.prev_scene_id = ep_info.scene_id
-        self._viz_templates = {}
-        self._viz_handle_to_template = {}
-
-        # Set the default articulated object joint state.
-        for ao, (set_joint_state, set_T) in self._start_art_states.items():
-            ao.clear_joint_states()
-            ao.joint_positions = set_joint_state
-            if not is_hard_reset:
-                # [Andrew Szot 2023-08-22]: If we don't correct for this, some
-                # articulated objects may "drift" over time when the scene
-                # reset is skipped.
-                ao.transformation = set_T
-
-        # Load specified articulated object states from episode config
-        self._set_ao_states_from_ep(ep_info)
-
-        self.agents_mgr.post_obj_load_reconfigure()
-
-        # add episode clutter objects additional to base scene objects
-        if self._load_objs:
-            self._add_objs(ep_info, should_add_objects, new_scene)
+        # use target
         self._setup_targets(ep_info)
-
-        self._add_markers(ep_info)
-
-        # auto-sleep rigid objects as optimization
-        if self._auto_sleep:
-            self._sleep_all_objects()
-
-        rom = self.get_rigid_object_manager()
-        self._obj_orig_motion_types = {
-            handle: ro.motion_type
-            for handle, ro in rom.get_objects_by_handle_substring().items()
-        }
-
-        if new_scene:
-            self._load_navmesh(ep_info)
-
-        # Get the starting positions of the target objects.
-        scene_pos = self.get_scene_pos()
+        # Set the target start pos
         self.target_start_pos = np.array(
-            [
-                scene_pos[
-                    self._scene_obj_ids.index(
-                        rom.get_object_by_handle(t_handle).object_id
-                    )
-                ]
-                for t_handle, _ in self._targets.items()
-            ]
+            [self._targets[key]["base"][0] for key in self._targets]
         )
 
-        self._draw_bb_objs = [
-            rom.get_object_by_handle(obj_handle).object_id
-            for obj_handle in self._targets
-        ]
+        return
+        # if is_hard_reset:
+        #     with read_write(config):
+        #         config["scene"] = ep_info.scene_id
+        #     t_start = time.time()
+        #     super().reconfigure(config, should_close_on_new_scene=False)
+        #     self.add_perf_timing("super_reconfigure", t_start)
+        #     # The articulated object handles have changed.
+        #     self._start_art_states = {}
 
-        if self._should_setup_semantic_ids:
-            self._setup_semantic_ids()
+        # if new_scene:
+        #     self.agents_mgr.on_new_scene()
+
+        # self.prev_scene_id = ep_info.scene_id
+        # self._viz_templates = {}
+        # self._viz_handle_to_template = {}
+
+        # # Set the default articulated object joint state.
+        # for ao, (set_joint_state, set_T) in self._start_art_states.items():
+        #     ao.clear_joint_states()
+        #     ao.joint_positions = set_joint_state
+        #     if not is_hard_reset:
+        #         # [Andrew Szot 2023-08-22]: If we don't correct for this, some
+        #         # articulated objects may "drift" over time when the scene
+        #         # reset is skipped.
+        #         ao.transformation = set_T
+
+        # # Load specified articulated object states from episode config
+        # self._set_ao_states_from_ep(ep_info)
+
+        # self.agents_mgr.post_obj_load_reconfigure()
+
+        # # add episode clutter objects additional to base scene objects
+        # if self._load_objs:
+        #     self._add_objs(ep_info, should_add_objects, new_scene)
+        # self._setup_targets(ep_info)
+
+        # self._add_markers(ep_info)
+
+        # # auto-sleep rigid objects as optimization
+        # if self._auto_sleep:
+        #     self._sleep_all_objects()
+
+        # rom = self.get_rigid_object_manager()
+        # self._obj_orig_motion_types = {
+        #     handle: ro.motion_type
+        #     for handle, ro in rom.get_objects_by_handle_substring().items()
+        # }
+
+        # if new_scene:
+        #     self._load_navmesh(ep_info)
+
+        # # Get the starting positions of the target objects.
+        # scene_pos = self.get_scene_pos()
+        # self.target_start_pos = np.array(
+        #     [
+        #         scene_pos[
+        #             self._scene_obj_ids.index(
+        #                 rom.get_object_by_handle(t_handle).object_id
+        #             )
+        #         ]
+        #         for t_handle, _ in self._targets.items()
+        #     ]
+        # )
+
+        # self._draw_bb_objs = [
+        #     rom.get_object_by_handle(obj_handle).object_id
+        #     for obj_handle in self._targets
+        # ]
+
+        # if self._should_setup_semantic_ids:
+        #     self._setup_semantic_ids()
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
@@ -541,7 +554,6 @@ class IsaacRearrangeSim(HabitatSim):
         :returns: The set base position and rotation
         """
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
-
         for attempt_i in range(max_attempts):
             # start_pos = self.pathfinder.get_random_navigable_point(
             #     island_index=self._largest_indoor_island_idx
@@ -574,12 +586,77 @@ class IsaacRearrangeSim(HabitatSim):
             )
         return start_pos, start_rot
 
+    def get_poses(self, name, pose_type="base"):
+        """This function returns the target receptacle location, which is used to
+        replace the function of the ep_info"""
+        poses = {
+            # "cabinet": {
+            #     "base_pos": np.array([1.7, 0.1, -0.2]),
+            #     "base_rot": -90,
+            #     "ee_pos": self.env.sim._rigid_objects[0].translation,
+            #     "ee_rot": np.deg2rad([0, 80, -30]),
+            # },
+            # "shelf": {
+            #     "base_pos": np.array([-4.5, 0.1, -3.5]),
+            #     "base_rot": 180,
+            #     "ee_pos": self.env.sim._rigid_objects[0].translation,
+            #     "ee_rot": np.deg2rad([0, 80, -30]),
+            # },
+            "island": {
+                "base_pos": np.array([-5.3, 0.1, -1.6]),
+                "base_rot": 0,
+                "ee_pos": np.array([-4.4, 0.5, -2.0]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            "oven": {
+                "base_pos": np.array([-4.75, 0.1, -3.3]),
+                "base_rot": 180,
+                "ee_pos": np.array([-5.5, 1.6, -2.7]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            # "fridge": {
+            #     "base_pos": np.array([-4.4, 0.1, 0.7]),
+            #     "base_rot": 180,
+            #     "ee_pos": np.array([-5.4, 1.4, 1.3]),
+            #     "ee_rot": np.deg2rad([0, 0, 0]),
+            # },
+            "fridge": {
+                "base_pos": np.array([-4.7, 0.1, 0.8]),
+                "base_rot": 180,
+                "ee_pos": np.array([-6.2, 1.2, 2.4]),
+                "ee_rot": np.deg2rad([120, 0, 0]),
+            },
+            "fridge2": {
+                "base_pos": np.array([-4.75, 0.1, 1.1]),
+                "base_rot": 180,
+                "ee_pos": np.array([-6.3, 1.4, 2.4]),
+                "ee_rot": np.deg2rad([120, 0, 0]),
+            },
+            "freezer": {
+                "base_pos": np.array([-4.9, 0.1, 0.7]),
+                "base_rot": 180,
+                "ee_pos": np.array([-5.7, 0.5, 1.34531]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+        }
+        return (
+            poses[name][f"{pose_type}_pos"],
+            poses[name][f"{pose_type}_rot"],
+        )
+
     def _setup_targets(self, ep_info):
+        # TODO: jimmy: a quick hack
+        # self._targets = {}
+        # for target_handle, transform in ep_info.targets.items():
+        #     self._targets[target_handle] = mn.Matrix4(
+        #         [[transform[j][i] for j in range(4)] for i in range(4)]
+        #     )
         self._targets = {}
-        for target_handle, transform in ep_info.targets.items():
-            self._targets[target_handle] = mn.Matrix4(
-                [[transform[j][i] for j in range(4)] for i in range(4)]
-            )
+        for key in ["fridge2"]:
+            self._targets[key] = {
+                "base": self.get_poses(key, pose_type="base"),
+                "ee": self.get_poses(key, pose_type="ee"),
+            }
 
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
@@ -698,80 +775,80 @@ class IsaacRearrangeSim(HabitatSim):
         new_scene: bool,
     ) -> None:
         return
-        # Load clutter objects:
-        rom = self.get_rigid_object_manager()
-        obj_counts: Dict[str, int] = defaultdict(int)
+        # # Load clutter objects:
+        # rom = self.get_rigid_object_manager()
+        # obj_counts: Dict[str, int] = defaultdict(int)
 
-        self._handle_to_object_id = {}
-        if should_add_objects:
-            self._scene_obj_ids = []
+        # self._handle_to_object_id = {}
+        # if should_add_objects:
+        #     self._scene_obj_ids = []
 
-        # Get Object template manager
-        otm = self.get_object_template_manager()
+        # # Get Object template manager
+        # otm = self.get_object_template_manager()
 
-        for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
-            t_start = time.time()
-            if should_add_objects:
-                # Get object path
-                object_template = otm.get_templates_by_handle_substring(
-                    obj_handle
-                )
+        # for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
+        #     t_start = time.time()
+        #     if should_add_objects:
+        #         # Get object path
+        #         object_template = otm.get_templates_by_handle_substring(
+        #             obj_handle
+        #         )
 
-                # Exit if template is invalid
-                if not object_template:
-                    raise ValueError(
-                        f"Template not found for object with handle {obj_handle}"
-                    )
+        #         # Exit if template is invalid
+        #         if not object_template:
+        #             raise ValueError(
+        #                 f"Template not found for object with handle {obj_handle}"
+        #             )
 
-                # Get object path
-                object_path = list(object_template.keys())[0]
+        #         # Get object path
+        #         object_path = list(object_template.keys())[0]
 
-                # Get rigid object from the path
-                ro = rom.add_object_by_template_handle(object_path)
-            else:
-                ro = rom.get_object_by_id(self._scene_obj_ids[i])
-            self.add_perf_timing("create_asset", t_start)
+        #         # Get rigid object from the path
+        #         ro = rom.add_object_by_template_handle(object_path)
+        #     else:
+        #         ro = rom.get_object_by_id(self._scene_obj_ids[i])
+        #     self.add_perf_timing("create_asset", t_start)
 
-            # The saved matrices need to be flipped when reloading.
-            ro.transformation = mn.Matrix4(
-                [[transform[j][i] for j in range(4)] for i in range(4)]
-            )
-            ro.angular_velocity = mn.Vector3.zero_init()
-            ro.linear_velocity = mn.Vector3.zero_init()
+        #     # The saved matrices need to be flipped when reloading.
+        #     ro.transformation = mn.Matrix4(
+        #         [[transform[j][i] for j in range(4)] for i in range(4)]
+        #     )
+        #     ro.angular_velocity = mn.Vector3.zero_init()
+        #     ro.linear_velocity = mn.Vector3.zero_init()
 
-            other_obj_handle = (
-                obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
-            )
-            if self._kinematic_mode:
-                ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                ro.collidable = False
+        #     other_obj_handle = (
+        #         obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
+        #     )
+        #     if self._kinematic_mode:
+        #         ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+        #         ro.collidable = False
 
-            if should_add_objects:
-                self._scene_obj_ids.append(ro.object_id)
-            rel_idx = self._scene_obj_ids.index(ro.object_id)
-            self._handle_to_object_id[other_obj_handle] = rel_idx
+        #     if should_add_objects:
+        #         self._scene_obj_ids.append(ro.object_id)
+        #     rel_idx = self._scene_obj_ids.index(ro.object_id)
+        #     self._handle_to_object_id[other_obj_handle] = rel_idx
 
-            if other_obj_handle in self._handle_to_goal_name:
-                ref_handle = self._handle_to_goal_name[other_obj_handle]
-                self._handle_to_object_id[ref_handle] = rel_idx
+        #     if other_obj_handle in self._handle_to_goal_name:
+        #         ref_handle = self._handle_to_goal_name[other_obj_handle]
+        #         self._handle_to_object_id[ref_handle] = rel_idx
 
-            obj_counts[obj_handle] += 1
+        #     obj_counts[obj_handle] += 1
 
-        if new_scene:
-            self._receptacles = self._create_recep_info(
-                ep_info.scene_id, list(self._handle_to_object_id.keys())
-            )
+        # if new_scene:
+        #     self._receptacles = self._create_recep_info(
+        #         ep_info.scene_id, list(self._handle_to_object_id.keys())
+        #     )
 
-            ao_mgr = self.get_articulated_object_manager()
-            # Make all articulated objects (including the robots) kinematic
-            for aoi_handle in ao_mgr.get_object_handles():
-                ao = ao_mgr.get_object_by_handle(aoi_handle)
-                if self._kinematic_mode:
-                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                    # remove any existing motors when converting to kinematic AO
-                    for motor_id in ao.existing_joint_motor_ids:
-                        ao.remove_joint_motor(motor_id)
-                self.art_objs.append(ao)
+        #     ao_mgr = self.get_articulated_object_manager()
+        #     # Make all articulated objects (including the robots) kinematic
+        #     for aoi_handle in ao_mgr.get_object_handles():
+        #         ao = ao_mgr.get_object_by_handle(aoi_handle)
+        #         if self._kinematic_mode:
+        #             ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+        #             # remove any existing motors when converting to kinematic AO
+        #             for motor_id in ao.existing_joint_motor_ids:
+        #                 ao.remove_joint_motor(motor_id)
+        #         self.art_objs.append(ao)
 
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
@@ -971,7 +1048,6 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
-
         rom = self.get_rigid_object_manager()
         self._isaac_wrapper.step(num_steps=1)
 
@@ -1189,95 +1265,94 @@ class IsaacRearrangeSim(HabitatSim):
 
         do_add = len(self._rigid_objects) == 0
 
-        # for coffee table
-        if False:
-            objects_to_add = []
-            object_names = [
-                "024_bowl",
-                "013_apple",
-                "011_banana",
-                "010_potted_meat_can",
-                "077_rubiks_cube",
-                "036_wood_block",
-                "004_sugar_box",
-            ]
-            next_obj_idx = 0
-            sp = 0.25
-            for cell_y in range(5):
-                for cell_x in range(3):
-                    for cell_z in range(3):
-                        offset_vec = mn.Vector3(
-                            cell_x * sp - sp, cell_y * sp, cell_z * sp - sp
-                        )
-                        objects_to_add.append(
-                            (
-                                f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json",
-                                drop_pos + offset_vec,
-                            )
-                        )
-                        next_obj_idx = (next_obj_idx + 1) % len(object_names)
+        # # for coffee table
+        # if False:
+        #     objects_to_add = []
+        #     object_names = [
+        #         "024_bowl",
+        #         "013_apple",
+        #         "011_banana",
+        #         "010_potted_meat_can",
+        #         "077_rubiks_cube",
+        #         "036_wood_block",
+        #         "004_sugar_box",
+        #     ]
+        #     next_obj_idx = 0
+        #     sp = 0.25
+        #     for cell_y in range(5):
+        #         for cell_x in range(3):
+        #             for cell_z in range(3):
+        #                 offset_vec = mn.Vector3(
+        #                     cell_x * sp - sp, cell_y * sp, cell_z * sp - sp
+        #                 )
+        #                 objects_to_add.append(
+        #                     (
+        #                         f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json",
+        #                         drop_pos + offset_vec,
+        #                     )
+        #                 )
+        #                 next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
-        if True:
-            objects_to_add = [
-                (
-                    f"data/objects/fremont/other/plush4/plush4.object_config.json",
-                    mn.Vector3(2.04542, 0.870047, 0.75122),
-                ),
-            ]
-            # for dining table
-            # objects_to_add = [
-            #     (
-            #         f"{path_to_configs}/024_bowl.object_config.json",
-            #         drop_pos + offset_vec * 0.0 + up_vec * 0.0,
-            #     ),
-            #     #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
-            #     (
-            #         f"{path_to_configs}/013_apple.object_config.json",
-            #         drop_pos + offset_vec * -0.01 + up_vec * 0.05,
-            #     ),
-            #     #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
-            #     (
-            #         f"{path_to_configs}/013_apple.object_config.json",
-            #         drop_pos + offset_vec * 0.01 + up_vec * 0.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.3 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/077_rubiks_cube.object_config.json",
-            #         drop_pos + offset_vec * 0.6 + up_vec * 0.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/036_wood_block.object_config.json",
-            #         drop_pos + offset_vec * 0.6 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 0.9,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 1.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 1.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 0.8,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.22 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.38 + up_vec * 0.0,
-            #     ),
-            # ]
-
+        # if True:
+        objects_to_add = [
+            (
+                f"data/objects/fremont/other/plush4/plush4.object_config.json",
+                mn.Vector3(2.04542, 0.870047, 0.75122),
+            ),
+        ]
+        # for dining table
+        # objects_to_add = [
+        #     (
+        #         f"{path_to_configs}/024_bowl.object_config.json",
+        #         drop_pos + offset_vec * 0.0 + up_vec * 0.0,
+        #     ),
+        #     #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
+        #     (
+        #         f"{path_to_configs}/013_apple.object_config.json",
+        #         drop_pos + offset_vec * -0.01 + up_vec * 0.05,
+        #     ),
+        #     #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
+        #     (
+        #         f"{path_to_configs}/013_apple.object_config.json",
+        #         drop_pos + offset_vec * 0.01 + up_vec * 0.1,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+        #         drop_pos + offset_vec * 0.3 + up_vec * 0.0,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/077_rubiks_cube.object_config.json",
+        #         drop_pos + offset_vec * 0.6 + up_vec * 0.1,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/036_wood_block.object_config.json",
+        #         drop_pos + offset_vec * 0.6 + up_vec * 0.0,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/004_sugar_box.object_config.json",
+        #         drop_pos + offset_vec * 0.9,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/004_sugar_box.object_config.json",
+        #         drop_pos + offset_vec * 1.0,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/004_sugar_box.object_config.json",
+        #         drop_pos + offset_vec * 1.1,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/004_sugar_box.object_config.json",
+        #         drop_pos + offset_vec * 0.8,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+        #         drop_pos + offset_vec * 0.22 + up_vec * 0.0,
+        #     ),
+        #     (
+        #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
+        #         drop_pos + offset_vec * 0.38 + up_vec * 0.0,
+        #     ),
+        # ]
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
         )

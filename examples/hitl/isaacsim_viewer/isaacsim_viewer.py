@@ -558,7 +558,8 @@ class AppStateIsaacSimViewer(AppState):
         )
 
         # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/joanne/habitat-lab/data/usd/scenes/fremont_static_objects.usda"  # YOUR_PATH
+        # asset_path = "/home/joanne/habitat-lab/data/usd/scenes/fremont_static_objects.usda"  # YOUR_PATH
+        asset_path = "/home/jmmy/research/hab_training/habitat-lab/data/usd/scenes/fremont_static_objects.usda"
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(

@@ -5,16 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import (
+from habitat.tasks.rearrange.utils import (  # set_agent_base_via_obj_trans,
     place_agent_at_dist_from_pos,
     rearrange_logger,
-    set_agent_base_via_obj_trans,
 )
 
 
@@ -88,11 +89,14 @@ class RearrangePickTaskV1(RearrangeTask):
         return start_pos, angle_to_obj
 
     def _should_prevent_grip(self, action_args):
-        return (
-            self._sim.grasp_mgr.is_grasped
-            and action_args.get("grip_action", None) is not None
-            and action_args["grip_action"] < 0
-        )
+        if type(self._sim) == IsaacRearrangeSim:
+            return False
+        else:
+            return (
+                self._sim.grasp_mgr.is_grasped
+                and action_args.get("grip_action", None) is not None
+                and action_args["grip_action"] < 0
+            )
 
     def step(self, action, episode):
         action_args = action["action_args"]
@@ -105,7 +109,7 @@ class RearrangePickTaskV1(RearrangeTask):
         return obs
 
     def reset(self, episode: Episode, fetch_observations: bool = True):
-        sim = self._sim
+        # sim = self._sim
 
         assert isinstance(
             episode, RearrangeEpisode
@@ -115,14 +119,27 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = 0
 
-        sel_idx = self._sample_idx(sim)
-        start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
+        # TODO: jimmy: do not need to go through the process since we
+        # alreay hardcode the location of the furniture
+        # sel_idx = self._sample_idx(sim)
+        # start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        set_agent_base_via_obj_trans(
-            start_pos, start_rot, sim.articulated_agent
+        # set_agent_base_via_obj_trans(
+        #     start_pos, start_rot, sim.articulated_agent
+        # )
+
+        # Hardcode the target object name
+        sel_idx = "fridge2"
+        start_pos, start_rot = self._sim._targets[sel_idx]["base"]
+
+        position = mn.Vector3(start_pos)
+        rotation = mn.Quaternion.rotation(
+            mn.Deg(start_rot), mn.Vector3.y_axis()
         )
+        self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+        self._sim.articulated_agent.base_transformation = self.base_trans
 
-        self._targ_idx = sel_idx
+        self._targ_idx = sel_idx  # type: ignore
 
         if fetch_observations:
             self._sim.maybe_update_articulated_agent()

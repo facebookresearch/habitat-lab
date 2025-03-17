@@ -2,23 +2,26 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+
 import magnum as mn
 import numpy as np
 import omni
-import omni.physx.scripts.utils as physxUtils
 
 # todo: add guard to ensure SimulatorApp is created, or give nice error message, so we don't get weird import errors here
-from omni.isaac.core import World
-from omni.isaac.core.objects import DynamicCuboid
-from omni.isaac.core.prims.rigid_prim import RigidPrim
-from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
+# from omni.isaac.core import World
+# from omni.isaac.core.objects import DynamicCuboid
+# from omni.isaac.core.prims.rigid_prim import RigidPrim
+# from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
 from omni.isaac.core.robots import Robot
 from omni.isaac.core.utils.stage import add_reference_to_stage
 from omni.isaac.core.utils.types import ArticulationAction
-from pxr import PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
+from pxr import PhysxSchema, Usd, UsdPhysics  # Sdf UsdGeom
 from scipy.spatial.transform import Rotation as R
 
 from habitat.isaac_sim import isaac_prim_utils
+
+# import omni.physx.scripts.utils as physxUtils
 
 
 class MurpRobotWrapper:
@@ -27,12 +30,12 @@ class MurpRobotWrapper:
     The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
     """
 
-    def __init__(self, isaac_service, instance_id=0):
-
+    def __init__(self, isaac_service, instance_id=0, right_left_hand="right"):
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand_2.usda" #Lambda Machine Change
+        asset_path = "./data/usd/robots/franka_with_hand_2.usda"  # Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
+        self._right_left_hand = right_left_hand
 
         add_reference_to_stage(usd_path=asset_path, prim_path=robot_prim_path)
         self._isaac_service.usd_visualizer.on_add_reference_to_stage(
@@ -48,7 +51,6 @@ class MurpRobotWrapper:
 
         # Traverse only the robot's prim hierarchy
         for prim in Usd.PrimRange(robot_prim):
-
             if prim.HasAPI(PhysxSchema.PhysxJointAPI):
                 joint_api = PhysxSchema.PhysxJointAPI(prim)
                 joint_api.GetMaxJointVelocityAttr().Set(200.0)
@@ -57,7 +59,6 @@ class MurpRobotWrapper:
                 # Access the existing DriveAPI
                 drive_api = UsdPhysics.DriveAPI(prim, "angular")
                 if drive_api:
-
                     # Modify drive parameters
                     drive_api.GetStiffnessAttr().Set(10.0)  # Position gain
                     drive_api.GetDampingAttr().Set(0.1)  # Velocity gain
@@ -65,14 +66,12 @@ class MurpRobotWrapper:
 
                 drive_api = UsdPhysics.DriveAPI(prim, "linear")
                 if drive_api:
-
                     drive_api = UsdPhysics.DriveAPI.Get(prim, "linear")
                     drive_api.GetStiffnessAttr().Set(
                         1000
                     )  # Example for linear stiffness
 
             if prim.HasAPI(UsdPhysics.RigidBodyAPI):
-
                 # UsdPhysics.RigidBodyAPI doesn't support damping but PhysxRigidBodyAPI does
                 if prim.HasAPI(PhysxSchema.PhysxRigidBodyAPI):
                     physx_api = PhysxSchema.PhysxRigidBodyAPI(prim)
@@ -111,7 +110,6 @@ class MurpRobotWrapper:
         return self._robot_prim_path
 
     def set_root_pose(self, pos, rot, convention="hab"):
-
         rot = [rot.scalar] + list(rot.vector)
         if convention == "hab":
             pos = isaac_prim_utils.habitat_to_usd_position(pos)
@@ -119,7 +117,6 @@ class MurpRobotWrapper:
         self._robot.set_world_pose(pos, rot)
 
     def get_root_pose(self, convention="hab"):
-
         pos_usd, rot_usd = self._robot.get_world_pose()
         if convention == "hab":
             pos = mn.Vector3(isaac_prim_utils.usd_to_habitat_position(pos_usd))
@@ -132,7 +129,6 @@ class MurpRobotWrapper:
         return pos, rot
 
     def get_link_world_poses(self, convention="hab"):
-
         positions = []
         positions_usd, rotations_usd = self._xform_prim_view.get_world_poses()
         for pos in positions_usd:
@@ -152,7 +148,6 @@ class MurpRobotWrapper:
         return positions, rotations
 
     def _create_xform_prim_view(self):
-
         root_prim_path = self._robot_prim_path
         root_prim = self._isaac_service.world.stage.GetPrimAtPath(
             root_prim_path
@@ -297,7 +292,7 @@ class MurpRobotWrapper:
         self._right_hand_joint_indices = np.array(right_hand_joint_indices)
 
         n_hand_joints = len(left_hand_joint_names)
-        closed_positions = np.array([3.14159] * n_hand_joints)
+        # closed_positions = np.array([3.14159] * n_hand_joints)
         open_positions = np.zeros(n_hand_joints)
         self._target_hand_joint_positions = open_positions
         self._target_right_hand_joint_positions = open_positions
@@ -311,7 +306,6 @@ class MurpRobotWrapper:
         self.reset_hand()
 
     def scale_prim_mass_and_inertia(self, path, scale):
-
         prim = self._isaac_service.world.stage.GetPrimAtPath(path)
         assert prim.HasAPI(UsdPhysics.MassAPI)
         mass_api = UsdPhysics.MassAPI(prim)
@@ -323,7 +317,6 @@ class MurpRobotWrapper:
     def fix_base_orientation_via_angular_vel(
         self, step_size, base_position, base_orientation
     ):
-
         curr_angular_velocity = self._robot.get_angular_velocity()
 
         # Constants
@@ -390,7 +383,6 @@ class MurpRobotWrapper:
     def fix_base_height_via_linear_vel_z(
         self, step_size, base_position, base_orientation
     ):
-
         curr_linear_velocity = self._robot.get_linear_velocity()
 
         z_target = 0.7  # todo: get from navmesh or assume ground_z==0
@@ -416,7 +408,6 @@ class MurpRobotWrapper:
         )
 
     def drive_arm(self, step_size):
-
         if np.array(self._target_arm_joint_positions).any():
             assert len(self._target_arm_joint_positions) == len(
                 self._arm_joint_indices
@@ -429,7 +420,6 @@ class MurpRobotWrapper:
             )
 
     def drive_right_arm(self, step_size):
-
         if np.array(self._target_right_arm_joint_positions).any():
             assert len(self._target_right_arm_joint_positions) == len(
                 self._right_arm_joint_indices
@@ -442,7 +432,6 @@ class MurpRobotWrapper:
             )
 
     def drive_hand(self, step_size):
-
         if np.array(self._target_hand_joint_positions).any():
             assert len(self._target_hand_joint_positions) == len(
                 self._hand_joint_indices
@@ -455,7 +444,6 @@ class MurpRobotWrapper:
             )
 
     def drive_right_hand(self, step_size):
-
         if np.array(self._target_right_hand_joint_positions).any():
             assert len(self._target_right_hand_joint_positions) == len(
                 self._right_hand_joint_indices
@@ -468,7 +456,6 @@ class MurpRobotWrapper:
             )
 
     def fix_base(self, step_size, base_position, base_orientation):
-
         self.fix_base_height_via_linear_vel_z(
             step_size, base_position, base_orientation
         )
@@ -536,8 +523,12 @@ class MurpRobotWrapper:
         """Get the current ee position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
+        if self._right_left_hand == "right":
+            ee_pos = link_poses[0][self.right_ee_link_id]
+            ee_rot = link_poses[1][self.right_ee_link_id]
+        else:
+            ee_pos = link_poses[0][self.ee_link_id]
+            ee_rot = link_poses[1][self.ee_link_id]
 
         return ee_pos, ee_rot
 
@@ -546,14 +537,19 @@ class MurpRobotWrapper:
         if asset_path is None:
             asset_path = os.path.abspath(
                 "data/usd/scenes/fremont_static_objects.usda"
+                # "data/usd/scenes/fremont_static.usda"
             )
         prim_path = f"/World/test_scene/{asset_path}"
         prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
-        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
-        translate: Gf.Vec3d = matrix.ExtractTranslation()
-        rotation: Gf.Rotation = matrix.ExtractRotation()
-        quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
-        euler_rotation = rotation.GetAngle()
+        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(  # type: ignore # noqa: F821
+            prim
+        )  # type: ignore
+        translate: Gf.Vec3d = (  # type: ignore # noqa: F821
+            matrix.ExtractTranslation()
+        )  # type: ignore
+        rotation: Gf.Rotation = matrix.ExtractRotation()  # type: ignore # noqa: F821
+        # quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()  # noqa: F821
+        # euler_rotation = rotation.GetAngle()
 
         return list(translate), rotation
 
@@ -566,7 +562,7 @@ class MurpRobotWrapper:
 
         for child_prim in prim.GetChildren():
             if UsdPhysics.ArticulationRootAPI.CanApply(child_prim):
-                articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
+                # articulation_api = UsdPhysics.ArticulationRootAPI(child_prim)
 
                 link_names = []
 

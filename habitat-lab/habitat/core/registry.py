@@ -164,7 +164,6 @@ class Registry(metaclass=Singleton):
         :param name: Key with which the task action will be registered. If
             :py:`None` will use the name of the task action's method.
         """
-
         return cls._register_impl(
             "task_action", to_register, name, assert_type=Action
         )

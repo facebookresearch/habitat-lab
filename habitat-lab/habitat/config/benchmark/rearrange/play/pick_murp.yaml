@@ -7,25 +7,49 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: fetch_suction
 
   - /habitat/task: task_config_base
-  - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty 
+  - /habitat/task/rearrange/actions: fetch_suction_arm_base_empty
   - /habitat/task/measurements:
-    #- articulated_agent_force # TODO: jimmy: remove this since AttributeError: 'IsaacAgentData' object has no attribute 'grasp_mgr
-    - zero
+    - articulated_agent_force # TODO: jimmy: remove this since AttributeError: 'IsaacAgentData' object has no attribute 'grasp_mgr
+    - articulated_agent_colls # TODO: jimmy: the underlying implementation is a hack
+    - force_terminate # TODO: jimmy: the underlying implementation is a hack
+    #- zero
+    - end_effector_to_object_distance
+    - end_effector_to_rest_distance
+    - num_steps
+    - art_obj_state
+    - art_obj_at_desired_state
+    - does_want_terminate
+    - art_obj_success
+    - art_obj_reward
   - /habitat/task/lab_sensors:
     - joint_sensor
+    - hand_joint_sensor
+    - target_start_sensor # Relative position from end effector to target object
+    - end_effector_sensor
+    - relative_resting_pos_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
 # Config for empty task to explore the scene.
 habitat:
+  gym:
+    obs_keys:
+      - articulated_agent_arm_depth
+      - joint
+      - hand_joint
+      - obj_start_sensor # Relative position from end effector to target object
+      - relative_resting_position
   task:
     # Config for empty task to explore the scene.
-    type: RearrangeEmptyTask-v0
+    type: RearrangePickTask-v0
     count_obj_collisions: True
     desired_resting_position: [0.5, 0.0, 1.0]
-    reward_measure: "zero"
-    success_measure: "zero"
+    # reward_measure: "zero" #  default measure for the play yaml
+    # success_measure: "zero" #  default measure for the play yaml
+
+    reward_measure: art_obj_reward
+    success_measure: art_obj_success
 
     # Reach task config
     render_target: True

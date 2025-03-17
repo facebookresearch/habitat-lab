@@ -78,12 +78,25 @@ try:
 except ImportError:
     pygame = None
 
+import cv2
+
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/play/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play/play_murp.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
+# os.environ["SDL_VIDEODRIVER"] = "x11" #"dummy" # we need this for using pygame in unbuntu
+# os.environ["QT_GRAPHICSSYSTEM"] = "native"
+
+NAMED_WINDOW = "Play Murp"
+USE_CV2 = True
+TEST_MACHINE = "lambda"  # h200 / lambda
+
+
+# cv2 relative functions
+def initializeWindow():
+    cv2.namedWindow(NAMED_WINDOW, cv2.WINDOW_NORMAL)
 
 
 def step_env(env, action_name, action_args):
@@ -99,6 +112,7 @@ def get_input_vel_ctlr(
     agent_to_control,
     control_humanoid,
     humanoid_controller,
+    key=None,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -108,7 +122,11 @@ def get_input_vel_ctlr(
         agent_k = f"agent_{agent_to_control}_"
     else:
         agent_k = ""
-    arm_action_name = f"{agent_k}arm_action"
+
+    if "murp" in cfg:
+        arm_action_name = f"{agent_k}arm_reach_ee"
+    else:
+        arm_action_name = f"{agent_k}arm_action"
 
     if control_humanoid:
         base_action_name = f"{agent_k}humanoidjoint_action"
@@ -116,26 +134,33 @@ def get_input_vel_ctlr(
     else:
         if "spot" in cfg:
             base_action_name = f"{agent_k}base_velocity_non_cylinder"
+        elif "murp" in cfg:
+            base_action_name = f"{agent_k}base_vel_isaac"
         else:
             base_action_name = f"{agent_k}base_velocity"
         arm_key = "arm_action"
         grip_key = "grip_action"
         base_key = "base_vel"
 
-    if arm_action_name in env.action_space.spaces:
+    if "murp" in cfg:
+        arm_action_space = np.zeros(12)
+        arm_ctrlr = None
+        base_action = None
+    elif arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
             arm_key
         ]
+        # Murp does not have this
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
     elif "stretch" in cfg:
         arm_action_space = np.zeros(10)
         arm_ctrlr = None
-        base_action = [0, 0]
+        base_action = None
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        base_action = [0, 0]
+        base_action = None
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])
@@ -155,18 +180,21 @@ def get_input_vel_ctlr(
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
+    if key != -1:
+        print(f"key: {key}")
+
     if not_block_input:
         # Base control
-        if keys[pygame.K_j]:
+        if keys[pygame.K_j] or key == ord("j"):
             # Left
             base_action = [0, 1]
-        elif keys[pygame.K_l]:
+        elif keys[pygame.K_l] or key == ord("l"):
             # Right
             base_action = [0, -1]
-        elif keys[pygame.K_k]:
+        elif keys[pygame.K_k] or key == ord("k"):
             # Back
             base_action = [-1, 0]
-        elif keys[pygame.K_i]:
+        elif keys[pygame.K_i] or key == ord("i"):
             # Forward
             base_action = [1, 0]
 
@@ -206,6 +234,68 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+
+        elif arm_action_space.shape[0] == 12:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q] or key == ord("q"):
+                arm_action[0] = 0.25
+            elif keys[pygame.K_1] or key == ord("1"):
+                arm_action[0] = -0.25
+
+            elif keys[pygame.K_w] or key == ord("w"):
+                arm_action[1] = 0.25
+            elif keys[pygame.K_2] or key == ord("2"):
+                arm_action[1] = -0.25
+
+            elif keys[pygame.K_e] or key == ord("e"):
+                arm_action[2] = 0.25
+            elif keys[pygame.K_3] or key == ord("3"):
+                arm_action[2] = -0.25
+
+            elif keys[pygame.K_r] or key == ord("r"):
+                arm_action[3] = 0.25
+            elif keys[pygame.K_4] or key == ord("4"):
+                arm_action[3] = -0.25
+
+            elif keys[pygame.K_t] or key == ord("t"):
+                arm_action[4] = 0.25
+            elif keys[pygame.K_5] or key == ord("5"):
+                arm_action[4] = -0.25
+
+            elif keys[pygame.K_y] or key == ord("y"):
+                arm_action[5] = 0.25
+            elif keys[pygame.K_6] or key == ord("6"):
+                arm_action[5] = -0.25
+
+            elif key == ord("a"):
+                arm_action[6] = 0.25
+            elif key == ord("z"):
+                arm_action[6] = -0.25
+
+            elif key == ord("s"):
+                arm_action[7] = 0.25
+            elif key == ord("x"):
+                arm_action[7] = -0.25
+
+            elif key == ord("d"):
+                arm_action[8] = 0.25
+            elif key == ord("c"):
+                arm_action[8] = -0.25
+
+            elif key == ord("f"):
+                arm_action[9] = 0.25
+            elif key == ord("v"):
+                arm_action[9] = -0.25
+
+            elif key == ord("g"):
+                arm_action[10] = 0.25
+            elif key == ord("b"):
+                arm_action[10] = -0.25
+
+            elif key == ord("h"):
+                arm_action[11] = 0.25
+            elif key == ord("n"):
+                arm_action[11] = -0.25
 
         elif arm_action_space.shape[0] == 4:
             # Velocity control. A different key for each joint
@@ -266,6 +356,33 @@ def get_input_vel_ctlr(
                 arm_action[9] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[9] = -1.0
+
+        elif arm_action_space.shape[0] == 5:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[4] = -1.0
 
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
@@ -371,7 +488,14 @@ def get_input_vel_ctlr(
                 grip_key: arm_action[-1],
             }
         else:
-            args = {arm_key: arm_action, grip_key: magic_grasp}
+            if "murp" in cfg:
+                args = {
+                    "target_pos": arm_action[0:3],
+                    "target_rot": arm_action[3:6],
+                    "target_finger": arm_action[6:],
+                }
+            else:
+                args = {arm_key: arm_action, grip_key: magic_grasp}
 
     if magic_grasp is None:
         arm_action = [*arm_action, 0.0]
@@ -470,13 +594,19 @@ def play_env(env, args, config):
             logger.info("Loaded arm actions")
 
     obs = env.reset()
-
+    key = None
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
-        pygame.init()
-        screen = pygame.display.set_mode(
-            [draw_obs.shape[1], draw_obs.shape[0]]
-        )
+        # draw_obs: <class 'numpy.ndarray'> (512, 988, 3)
+        if USE_CV2:
+            initializeWindow()
+            cv2.imshow(NAMED_WINDOW, draw_obs.astype(np.uint8))
+            key = cv2.waitKey(1)  # need to have wait key to show images
+            # python examples/interactive_play.py --disable-inverse-kinematics
+        else:
+            screen = pygame.display.set_mode(
+                [draw_obs.shape[1], draw_obs.shape[0]]  # type: ignore
+            )  # type: ignore
 
     update_idx = 0
     target_fps = 60.0
@@ -497,7 +627,11 @@ def play_env(env, args, config):
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
+    env_steps = 0
     while True:
+        print(f"Step: {env_steps}")
+        env_steps += 1
+
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -530,6 +664,7 @@ def play_env(env, args, config):
             agent_to_control,
             args.control_humanoid,
             humanoid_controller=humanoid_controller,
+            key=key,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -583,6 +718,7 @@ def play_env(env, args, config):
 
         obs = step_result
         info = env.get_metrics()
+
         reward_key = [k for k in info if "reward" in k]
         if len(reward_key) > 0:
             reward = info[reward_key[0]]
@@ -605,10 +741,15 @@ def play_env(env, args, config):
         draw_ob = use_ob[:]
 
         if not args.no_render:
-            draw_ob = np.transpose(draw_ob, (1, 0, 2))
-            draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
-            screen.blit(draw_obuse_ob, (0, 0))
-            pygame.display.update()
+            if USE_CV2:
+                cv2.imshow(NAMED_WINDOW, draw_ob.astype(np.uint8))
+                key = cv2.waitKey(1)  # need to have wait key to show images
+            else:
+                draw_ob = np.transpose(draw_ob, (1, 0, 2))
+                draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
+                screen.blit(draw_obuse_ob, (0, 0))
+                pygame.display.update()
+
         if args.save_obs:
             all_obs.append(draw_ob)  # type: ignore[assignment]
 
@@ -623,6 +764,8 @@ def play_env(env, args, config):
         delay = max(1.0 / target_fps - diff, 0)
         time.sleep(delay)
         prev_time = curr_time
+
+        print(env.sim.articulated_agent.base_transformation.translation)
 
     if args.save_actions:
         if len(all_arm_actions) < args.save_actions_count:
@@ -758,7 +901,7 @@ if __name__ == "__main__":
             agent_config = get_agent_config(sim_config=sim_config)
             agent_config.sim_sensors.update(
                 {
-                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                    "third_rgb": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res
                     )
                 }
@@ -788,16 +931,28 @@ if __name__ == "__main__":
             args.disable_inverse_kinematics = True
 
         if not args.disable_inverse_kinematics:
-            if "arm_action" not in task_config.actions:
+            if "arm_action" not in task_config.actions and (
+                "arm_reach_ee" not in task_config.actions
+            ):
                 raise ValueError(
                     "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
                 )
-            sim_config.agents.main_agent.ik_arm_urdf = (
-                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
-            )
-            task_config.actions.arm_action.arm_controller = "ArmEEAction"
+
+            ik_arm_urdf = ""
+            if TEST_MACHINE == "h200":
+                ik_arm_urdf = "/home/jimmytyyang/research/hab_training/habitat-lab/data/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf"
+            elif TEST_MACHINE == "lambda":
+                ik_arm_urdf = "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf"
+            else:
+                raise ValueError(
+                    f"Cannot recongize the TEST_MACHINE: {TEST_MACHINE}"
+                )
+
+            sim_config.agents.main_agent.ik_arm_urdf = ik_arm_urdf
+            # task_config.actions.arm_action.arm_controller = "ArmEEAction"
         if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
+    pygame.init()  # due to https://github.com/facebookresearch/habitat-lab/issues/1538#issuecomment-1902985545
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

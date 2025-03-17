@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import attr
 import magnum as mn
@@ -119,8 +119,8 @@ class IsaacMobileManipulator:
 
     @property
     def arm_joint_pos(self):
-        assert False  # todo
-        pass
+        #assert False  # todo
+        return self._robot_wrapper.arm_joint_pos
 
     @arm_joint_pos.setter
     def arm_joint_pos(self, ctrl: List[float]):
@@ -155,3 +155,8 @@ class IsaacMobileManipulator:
 
         pos_usd = isaac_prim_utils.habitat_to_usd_position(position)
         rw._robot.set_world_pose(pos_usd, rotation_usd)
+
+    @property
+    def arm_joint_limits(self) -> Tuple[np.ndarray, np.ndarray]:
+        # TODO: jimmy: implement this
+        return 

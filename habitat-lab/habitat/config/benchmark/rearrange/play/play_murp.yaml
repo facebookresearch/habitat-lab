@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - pick_murp
+  # - /habitat/task/lab_sensors:
+  #   - arm_depth_bbox_sensor
+  # TODO: jimmy: remove this since the we are not able to use API to get the object handle
+  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: murp_agent
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: murp
+  - override /habitat/task/rearrange/actions: murp_base_arm_empty
+  - _self_
+
+# habitat:
+#   task:
+#     # lab_sensors:
+#     #   arm_depth_bbox_sensor:
+#     #     height: 240
+#     #     width: 228
+#     # TODO: jimmy: remove this since the we are not able to use API to get the object handle
+#     actions:
+#       arm_action:
+#         center_cone_vector: [0.0, 1.0, 0.0]
+#         auto_grasp: False

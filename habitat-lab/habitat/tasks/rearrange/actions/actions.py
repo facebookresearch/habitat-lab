@@ -137,9 +137,9 @@ class ArmAction(ArticulatedAgentAction):
             + "arm_action": self.arm_ctrlr.action_space,
         }
         if self.grip_ctrlr is not None and self.grip_ctrlr.requires_action:
-            action_spaces[self._action_arg_prefix + "grip_action"] = (
-                self.grip_ctrlr.action_space
-            )
+            action_spaces[
+                self._action_arg_prefix + "grip_action"
+            ] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
     def step(self, *args, **kwargs):
@@ -229,37 +229,37 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
             dtype=np.float32,
         )
 
-    def _get_processed_action(self, delta_pos, simulation_mode="dynamic"):
+    def _get_processed_action(self, delta_pos, simulation_mode="kinematic"):
         """Assign the delta pos actions into a correct joint location"""
         processed_delta_pos = np.zeros(len(self._arm_joint_mask))
-        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        # min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
 
-        src_idx = 0
-        tgt_idx = 0
-        for mask in self._arm_joint_mask:
-            if mask == 0:
-                tgt_idx += 1
-                # Check if the effective size of action is the same as arm_joint_dimensionality
-                # The reason for this check is that we have two options to control the arm:
-                # option 1: if arm_joint_dimensionality is the same as arm_joint_mask, it means that
-                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the same length/size
-                # option 2: if arm_joint_dimensionality is different from arm_joint_mask, it means that
-                # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the differet length/size
-                # Based on these, we increase the src_idx by 1 to correctly assign the value to the right index
-                if self._config.arm_joint_dimensionality == len(
-                    self._config.arm_joint_mask
-                ):
-                    src_idx += 1
-                continue
-            processed_delta_pos[tgt_idx] = delta_pos[src_idx]
+        # src_idx = 0
+        # tgt_idx = 0
+        # for mask in self._arm_joint_mask:
+        #     if mask == 0:
+        #         tgt_idx += 1
+        #         # Check if the effective size of action is the same as arm_joint_dimensionality
+        #         # The reason for this check is that we have two options to control the arm:
+        #         # option 1: if arm_joint_dimensionality is the same as arm_joint_mask, it means that
+        #         # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the same length/size
+        #         # option 2: if arm_joint_dimensionality is different from arm_joint_mask, it means that
+        #         # arm_joint_dimensionality, arm_joint_mask, and _arm_joint_limit have the differet length/size
+        #         # Based on these, we increase the src_idx by 1 to correctly assign the value to the right index
+        #         if self._config.arm_joint_dimensionality == len(
+        #             self._config.arm_joint_mask
+        #         ):
+        #             src_idx += 1
+        #         continue
+        #     processed_delta_pos[tgt_idx] = delta_pos[src_idx]
 
-            # Set the new limits if needed
-            if self._arm_joint_limit is not None:
-                min_limit[tgt_idx] = self._arm_joint_limit[src_idx][0]
-                max_limit[tgt_idx] = self._arm_joint_limit[src_idx][1]
+        #     # Set the new limits if needed
+        #     if self._arm_joint_limit is not None:
+        #         min_limit[tgt_idx] = self._arm_joint_limit[src_idx][0]
+        #         max_limit[tgt_idx] = self._arm_joint_limit[src_idx][1]
 
-            tgt_idx += 1
-            src_idx += 1
+        #     tgt_idx += 1
+        #     src_idx += 1
 
         # Clip the action. Although habitat_sim will prevent the motor from exceeding limits,
         # clip the motor joints first here to prevent the arm from being unstable.
@@ -270,7 +270,9 @@ class ArmRelPosMaskAction(ArticulatedAgentAction):
         else:
             raise NotImplementedError
         target_arm_pos = processed_delta_pos + cur_arm_pos
-        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+        set_arm_pos = (
+            target_arm_pos  # np.clip(target_arm_pos, min_limit, max_limit)
+        )
 
         return set_arm_pos
 
@@ -644,7 +646,10 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         # Get the control frequency
         ctrl_freq = self._sim.ctrl_freq
         # Get the current transformation
-        trans = self.cur_articulated_agent.sim_obj.transformation
+        # TODO: jimmy: check
+        trans = (
+            self.cur_articulated_agent.base_transformation
+        )  # self.cur_articulated_agent.sim_obj.transformation
         # Get the current rigid state
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
@@ -668,18 +673,23 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             trans, target_trans, target_rigid_state, compute_sliding
         )
         # Update the base
-        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+        # TODO: jimmy: check
+        # self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+        self.cur_articulated_agent.base_transformation = new_target_trans
 
-        if self.cur_grasp_mgr.snap_idx is not None:
-            # Holding onto an object, also kinematically update the object.
-            # object.
-            self.cur_grasp_mgr.update_object_to_grasp()
+        try:
+            if self.cur_grasp_mgr.snap_idx is not None:
+                # Holding onto an object, also kinematically update the object.
+                # object.
+                self.cur_grasp_mgr.update_object_to_grasp()
 
-        if self.cur_articulated_agent._base_type == "leg":
-            # Fix the leg joints
-            self.cur_articulated_agent.leg_joint_pos = (
-                self.cur_articulated_agent.params.leg_init_params
-            )
+            if self.cur_articulated_agent._base_type == "leg":
+                # Fix the leg joints
+                self.cur_articulated_agent.leg_joint_pos = (
+                    self.cur_articulated_agent.params.leg_init_params
+                )
+        except Exception:
+            pass
 
     def step(self, *args, **kwargs):
         # Check if we can apply the base action given a_selection_of_base_or_arm action.
@@ -786,7 +796,7 @@ class ArmEEAction(ArticulatedAgentAction):
         self.calc_ee_target(delta_ee_pos)
         des_joint_pos = self.calc_desired_joints()
 
-        self.set_desired_ee_pos(des_joint_pos, "kinematic")
+        self.set_desired_ee_pos(des_joint_pos, "kinematic")  # type: ignore
 
         if self._render_ee_target:
             global_pos = self._sim.articulated_agent.base_transformation.transform_point(
@@ -863,3 +873,177 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
+
+
+@registry.register_task_action
+class BaseVelIsaacAction(BaseVelAction):
+    def step(self, *args, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        print(f"lin_vel: {lin_vel}; ang_vel: {ang_vel}")
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+        # <omni.isaac.core.robots.robot.Robot object at 0x7fb613f91c00>
+        self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
+            [0, 0, ang_vel]
+        )
+        self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
+            [lin_vel, 0, 0]
+        )
+
+
+@registry.register_task_action
+class ArmReachEEAction(ArmEEAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+
+        self._robot_wrapper = self.cur_articulated_agent._robot_wrapper
+        self.ee_rot_target = None
+        self._use_ee_rot = self._config.get("use_ee_rot", False)
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(12,), low=-1, high=1, dtype=np.float32)
+
+    def reset(self, *args, **kwargs):
+        try:
+            if self._config.right_left_hand == "right":
+                self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                    np.array(
+                        self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+                    )
+                )
+                self.target_finger = (
+                    self._robot_wrapper._target_right_hand_joint_positions
+                )
+            else:
+                self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                    np.array(
+                        self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                    )
+                )
+                self.target_finger = (
+                    self._robot_wrapper._target_hand_joint_positions
+                )
+        except:
+            self.ee_target = None
+            self.ee_rot_target = None
+            self.target_finger = None
+
+    def calc_desired_joints(self):
+        if self._config.right_left_hand == "right":
+            joint_pos = np.array(
+                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+        else:
+            joint_pos = np.array(
+                self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
+        joint_vel = np.zeros(joint_pos.shape)
+
+        self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = self._ik_helper.calc_ik(
+            self.ee_target, self.ee_rot_target
+        )
+        return np.array(des_joint_pos)
+
+    def apply_joint_limits(self, des_joint_pos):
+        murp_joint_limits_lower = np.deg2rad(
+            np.array([-157, -102, -166, -174, -160, 31, -172])
+        )
+        murp_joint_limits_upper = np.deg2rad(
+            np.array([157, 102, 166, -8, 160, 258, 172])
+        )
+        return np.clip(
+            des_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
+        )
+
+    def get_arm_mode(self, name):
+        arm_joints = {
+            "rest": np.zeros(7),
+            "side": np.array(
+                [
+                    2.6116285,
+                    1.5283098,
+                    1.0930868,
+                    -0.50559217,
+                    0.48147443,
+                    2.628784,
+                    -1.3962275,
+                ]
+            ),
+        }
+        return arm_joints[name]
+
+    def get_grasp_mode(self, name):
+        # num_hand_joints = 10
+        num_hand_joints = 16
+        grasp_joints = {
+            "open": np.zeros(num_hand_joints),
+            "pre_grasp": np.concatenate(
+                (np.full(12, 0.7), [-0.785], np.full(3, 0.7))
+            ),
+            "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.90), np.full(4, 0.4))
+            ),
+        }
+        return grasp_joints[name]
+
+    def fix_arm(self, fix_right_left="left"):
+        if fix_right_left == "left":
+            self._robot_wrapper._target_arm_joint_positions = (
+                self.get_arm_mode("rest")
+            )
+            self._robot_wrapper._target_hand_joint_positions = (
+                self.get_grasp_mode("open")
+            )
+        else:
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                self.get_arm_mode("rest")
+            )
+            self._robot_wrapper._target_right_hand_joint_positions = (
+                self.get_grasp_mode("open")
+            )
+
+    def step(self, *args, **kwargs):
+        target_pos = kwargs[self._action_arg_prefix + "target_pos"]
+        target_rot = kwargs[self._action_arg_prefix + "target_rot"]
+        finger = kwargs[self._action_arg_prefix + "target_finger"]
+        # base_pos, base_rot = self._robot_wrapper.get_root_pose()
+
+        print(f"target_pos: {target_pos}; target_rot: {target_rot}")
+        print(f"EE: {self.ee_target} {self.ee_rot_target}")
+
+        # def inverse_transform(pos_a, rot_b, pos_b):
+        #     inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)
+        #     return inv_pos
+        # target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
+        self.ee_target += np.array(target_pos)
+        self.ee_rot_target += np.array(target_rot)
+        self.target_finger[0:6] += finger
+        self.apply_ee_constraints()
+        des_joint_pos = self.calc_desired_joints()
+        des_joint_pos = self.apply_joint_limits(des_joint_pos)
+        print(f"des_joint_pos: {des_joint_pos}")
+        print(f"self.target_finger: {self.target_finger}")
+        if self._config.right_left_hand == "right":
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                des_joint_pos
+            )
+            self._robot_wrapper._target_right_hand_joint_positions = (
+                self.target_finger
+            )
+            self.fix_arm("left")
+            print("control right, fix left")
+        else:
+            self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+            self._robot_wrapper._target_hand_joint_positions = (
+                self.target_finger
+            )
+            self.fix_arm("right")
