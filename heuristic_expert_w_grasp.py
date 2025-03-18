@@ -1,4 +1,3 @@
-import time
 import warnings
 
 import magnum as mn
@@ -10,7 +9,6 @@ warnings.filterwarnings("ignore")
 import argparse
 import math
 import os
-import random
 
 import imageio
 import numpy as np
@@ -144,7 +142,9 @@ class ExpertDatagen:
             urdf_path = os.path.join(
                 "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
             )
-            arm_urdf_path = os.path.join("/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf")
+            arm_urdf_path = os.path.join(
+                "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf"
+            )
         main_agent_config.articulated_agent_urdf = urdf_path
         main_agent_config.articulated_agent_type = "MurpRobot"
         main_agent_config.ik_arm_urdf = arm_urdf_path
@@ -230,6 +230,7 @@ class ExpertDatagen:
         self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
             "open"
         )
+
     def pin_left_arm(self):
         self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = self.get_arm_mode(
             "rest"
@@ -239,9 +240,10 @@ class ExpertDatagen:
         )
 
     def get_curr_ee_pose(self):
-        curr_ee_pos_vec, curr_ee_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.ee_pose()
-        )
+        (
+            curr_ee_pos_vec,
+            curr_ee_rot,
+        ) = self.env.sim.articulated_agent._robot_wrapper.ee_pose()
 
         curr_ee_rot_quat = R.from_quat(
             [*curr_ee_rot.vector, curr_ee_rot.scalar]
@@ -254,13 +256,17 @@ class ExpertDatagen:
         if arm == "left":
             return self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
         elif arm == "right":
-            return self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
 
     def get_curr_hand_pose(self, arm="right"):
         if arm == "left":
             return self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
         elif arm == "right":
-            return self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
 
     def move_to_ee(
         self, target_ee_pos, target_ee_rot=None, grasp=None, timeout=1000
@@ -382,9 +388,9 @@ class ExpertDatagen:
                 )
             },
         }
-        
+
         obs = self.env.step(action)
-        self.base_trans = (self.env.sim.articulated_agent.base_transformation)
+        self.base_trans = self.env.sim.articulated_agent.base_transformation
         im = process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
@@ -497,7 +503,9 @@ class ExpertDatagen:
             poses[name][f"{pose_type}_rot"],
         )
 
-    def set_targets(self, target_w_xyz, target_w_quat, target_joints,hand="left"):
+    def set_targets(
+        self, target_w_xyz, target_w_quat, target_joints, hand="left"
+    ):
         self.target_w_xyz = target_w_xyz
         self.target_w_quat = target_w_quat
         target_quat = R.from_quat(target_w_quat, scalar_first=True)
@@ -508,8 +516,8 @@ class ExpertDatagen:
 
         # XYZ
         self.open_xyz = target_w_xyz.copy()
-        if hand=="left":
-            self.open_xyz[2] += 0.1
+        if hand == "left":
+            self.open_xyz[2] -= 0.1
             self.open_xyz[0] += 0.1
 
             # Pre-Grasp Targets
@@ -520,22 +528,20 @@ class ExpertDatagen:
             self.close_fingers = self.target_joints.copy()
             self.close_fingers[OPEN_JOINTS] += 0.2
         else:
-            self.open_xyz[2] -= 0.05
+            self.open_xyz[2] -= 0.1
             self.open_xyz[0] += 0.1
-            SECONDARY_JOINTS = [2,6,10,15]
-            TERTIARY_JOINTS = [3,7,11]
-            OPEN_JOINTS = [1,5,9]
-            CURVE_JOINTS=[13]
-            BASE_THUMB_JOINT=[12]
+            SECONDARY_JOINTS = [2, 6, 10, 15]
+            TERTIARY_JOINTS = [3, 7, 11]
+            OPEN_JOINTS = [1, 5, 9]
+            CURVE_JOINTS = [13]
+            BASE_THUMB_JOINT = [12]
             self.grasp_fingers = self.target_joints.copy()
             self.close_fingers = self.target_joints.copy()
-            self.close_fingers[BASE_THUMB_JOINT] +=1.0
+            self.close_fingers[BASE_THUMB_JOINT] += 1.1
             # self.close_fingers[CURVE_JOINTS] -=0.5
-            self.close_fingers[SECONDARY_JOINTS] += 1.0
+            self.close_fingers[SECONDARY_JOINTS] += 0.7
             self.close_fingers[TERTIARY_JOINTS] += 1.0
-            self.close_fingers[OPEN_JOINTS] += 1.0
-
-
+            self.close_fingers[OPEN_JOINTS] += 0.7
 
     def get_targets(self, name="target", hand="right"):
         # Lambda Changes
@@ -557,7 +563,7 @@ class ExpertDatagen:
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                self.open_xyz[2] -= 0.05
+                self.open_xyz[1] -= 0.1
                 self.open_xyz[0] += 0.1
 
             return (
@@ -603,7 +609,7 @@ class ExpertDatagen:
         door_rot = rotation_conversions.quaternion_to_matrix(door_orientation)
 
         rot_y = rotation_conversions.euler_angles_to_matrix(
-            torch.tensor([0.0, -math.pi, 0.0], device="cuda:0"), "XYZ"
+            torch.tensor([math.pi, -math.pi, 0.0], device="cuda:0"), "XYZ"
         )
         target_rot = torch.einsum("ij,jk->ik", door_rot, rot_y)
         tar_rot = target_rot
@@ -627,10 +633,11 @@ class ExpertDatagen:
         return isaac_T_door_quat
 
     def get_door_quat(self):
-        door_trans, door_orientation_rpy = (
-            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
-                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
-            )
+        (
+            door_trans,
+            door_orientation_rpy,
+        ) = self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
         )
         self.visualize_pos(door_trans, "door")
         quat_door = door_orientation_rpy.GetQuaternion()
@@ -661,14 +668,16 @@ class ExpertDatagen:
 
         base_T_hand = act["tar_xyz"]
 
-        ee_pos, ee_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
-        )
+        (
+            ee_pos,
+            ee_rot,
+        ) = self.env.sim.articulated_agent._robot_wrapper.hand_pose()
         base_T_ee = self.create_T_matrix(ee_pos, ee_rot)
 
-        hand_pos, hand_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
-        )
+        (
+            hand_pos,
+            hand_rot,
+        ) = self.env.sim.articulated_agent._robot_wrapper.hand_pose()
         base_T_hand = self.create_T_matrix(hand_pos, hand_rot)
 
         ee_T_hand = np.linalg.inv(base_T_ee) @ base_T_hand
@@ -732,8 +741,10 @@ class ExpertDatagen:
             )
             print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
             self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
-    
-    def execute_grasp_sequence(self, hand, grip_iters, open_iters, move_iters=None):
+
+    def execute_grasp_sequence(
+        self, hand, grip_iters, open_iters, move_iters=None
+    ):
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
@@ -747,7 +758,7 @@ class ExpertDatagen:
         )
         self.current_target_xyz = self.target_ee_pos
         target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[1] -= 0.51
+        target_xyz[1] -= 0.52
         target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
         target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
         target_joints = (
@@ -757,7 +768,7 @@ class ExpertDatagen:
             target_w_xyz=target_xyz,
             target_w_quat=target_quaternion,
             target_joints=target_joints,
-            hand=hand
+            hand=hand,
         )
         if move_iters:
             for _ in range(move_iters):
@@ -773,7 +784,7 @@ class ExpertDatagen:
         for _ in range(open_iters):
             self.grasp_obj(name="open")
 
-        #Move robot back
+        # Move robot back
         for _ in range(10):
             self.move_base(-1.0, 0.0)
 
@@ -787,7 +798,9 @@ class ExpertDatagen:
         if hand == "left":
             self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
         elif hand == "right":
-            self.execute_grasp_sequence(hand, grip_iters=40, open_iters=30, move_iters=19)
+            self.execute_grasp_sequence(
+                hand, grip_iters=30, open_iters=30, move_iters=19
+            )
 
 
 if __name__ == "__main__":

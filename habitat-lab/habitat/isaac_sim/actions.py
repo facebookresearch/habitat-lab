@@ -1,6 +1,5 @@
 import magnum as mn
 import numpy as np
-from gym import spaces
 
 import habitat_sim
 from habitat.core.registry import registry
@@ -9,6 +8,8 @@ from habitat.tasks.rearrange.actions.actions import (
     ArticulatedAgentAction,
     BaseVelAction,
 )
+
+# from gym import spaces
 
 
 @registry.register_task_action
@@ -46,18 +47,18 @@ class ArmReachAction(ArticulatedAgentAction):
         )
 
     def step(self, *args, **kwargs):
-        target_pos = kwargs[self._action_arg_prefix + "target_pos"]
-        base_pos, base_rot = self._robot_wrapper.get_root_pose()
+        pass
+        # target_pos = kwargs[self._action_arg_prefix + "target_pos"]
+        # base_pos, base_rot = self._robot_wrapper.get_root_pose()
 
-        def inverse_transform(pos_a, rot_b, pos_b):
-            inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)
-            return inv_pos
+        # def inverse_transform(pos_a, rot_b, pos_b):
+        #     inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)
+        #     return inv_pos
 
-        target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
-        dt = 0.5
-        new_arm_joints = self._spot_pick_helper.update(dt, target_rel_pos)
-        self._robot_wrapper._target_right_arm_joint_positions = des_joint_pos
-
+        # # target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
+        # # dt = 0.5
+        # # new_arm_joints = self._spot_pick_helper.update(dt, target_rel_pos)
+        # # self._robot_wrapper._target_right_arm_joint_positions = des_joint_pos
 
 
 @registry.register_task_action
@@ -73,16 +74,16 @@ class ArmReachEEAction(ArmEEAction):
         try:
             self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
                 np.array(
-                    self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+                    self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
                 )
             )
-        except:
+        except Exception:
             self.ee_target = None
             self.ee_rot_target = None
 
     def calc_desired_joints(self):
         joint_pos = np.array(
-            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
         )
         joint_vel = np.zeros(joint_pos.shape)
 
@@ -124,7 +125,6 @@ class ArmReachEEAction(ArmEEAction):
 
 @registry.register_task_action
 class BaseVelKinematicIsaacAction(BaseVelAction):
-
     def update_base(self):
         ctrl_freq = self._sim.ctrl_freq
         trans = self.cur_articulated_agent.base_transformation
