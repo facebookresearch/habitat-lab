@@ -1,0 +1,1013 @@
+import time
+import warnings
+
+import magnum as mn
+
+import habitat_sim
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
+
+warnings.filterwarnings("ignore")
+import argparse
+import json
+import math
+import os
+import random
+
+import cv2
+import imageio
+import numpy as np
+import torch
+from matplotlib import pyplot as plt
+from omegaconf import DictConfig, OmegaConf
+from scipy.spatial.transform import Rotation as R
+
+import habitat
+import rotation_conversions
+from habitat.articulated_agents.robots import FetchRobot
+from habitat.config.default import get_agent_config
+from habitat.config.default_structured_configs import (
+    ActionConfig,
+    AgentConfig,
+    ArmActionConfig,
+    ArmDepthSensorConfig,
+    ArmRGBSensorConfig,
+    BaseVelocityActionConfig,
+    DatasetConfig,
+    EnvironmentConfig,
+    HabitatConfig,
+    HabitatSimV0Config,
+    HeadPanopticSensorConfig,
+    HeadRGBSensorConfig,
+    OracleNavActionConfig,
+    SimulatorConfig,
+    TaskConfig,
+    ThirdRGBSensorConfig,
+)
+from habitat.core.env import Env
+from habitat.isaac_sim import actions, isaac_prim_utils
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
+from habitat_sim.physics import JointMotorSettings, MotionType
+from habitat_sim.utils import viz_utils as vut
+from habitat_sim.utils.settings import make_cfg
+from viz_utils import add_text_to_image
+
+user = "joanne"
+if user == "joanne":
+    data_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
+else:
+    data_path = "/home/joanne/habitat-lab/data/"
+
+
+class ExpertDatagen:
+    def __init__(
+        self, target_name="cabinet", skill="pick", replay=False, seed=42
+    ):
+        np.set_printoptions(precision=4, suppress=True)
+        print("seed: ", seed)
+        self.seed = seed
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        self.ep_id = self.seed
+
+        # Define the agent configuration
+        self.replay = replay
+        main_agent_config = AgentConfig()
+
+        if user == "joanne":
+            urdf_path = os.path.join(
+                data_path,
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2_vyshnav.urdf",
+            )
+            arm_urdf_path = os.path.join(
+                data_path,
+                # "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",
+            )
+        else:
+            urdf_path = os.path.join(
+                data_path,
+                "franka_tmr/franka_description_tmr/urdf/franka_with_hand_2.urdf",  # Lambda Change
+            )
+            arm_urdf_path = os.path.join(
+                data_path,
+                "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
+            )
+        main_agent_config.articulated_agent_urdf = urdf_path
+        main_agent_config.articulated_agent_type = "MurpRobot"
+        main_agent_config.ik_arm_urdf = arm_urdf_path
+
+        # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
+        # We will later talk about why we are giving the sensors these names
+        main_agent_config.sim_sensors = {
+            "third_rgb": ThirdRGBSensorConfig(),
+            "articulated_agent_arm_rgb": ArmRGBSensorConfig(),
+            "articulated_agent_arm_depth": ArmDepthSensorConfig(),
+        }
+
+        # We create a dictionary with names of agents and their corresponding agent configuration
+        agent_dict = {"main_agent": main_agent_config}
+
+        action_dict = {
+            "base_velocity_action": BaseVelocityActionConfig(
+                # type="BaseVelKinematicIsaacAction"
+                type="BaseVelIsaacAction"
+            ),
+            "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
+        }
+        self.env = self.init_rearrange_env(agent_dict, action_dict)
+
+        aux = self.env.reset()
+        self.target_name = target_name
+        self.skill = skill
+
+        self.base_trans = None
+
+        self.episode_json = {
+            "episode_id": 0,
+            "scene_id": "Fremont",
+            "language_instruction": "Open the fridge",
+            "episode_data": [],
+            "success": True,
+        }
+        self.save_keys = [
+            "articulated_agent_arm_rgb",
+            "articulated_agent_arm_depth",
+        ]
+
+        mode = "train"
+        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_right_v1"
+        self.json_save_path = f"{save_pth_base}/{mode}/ep_{self.ep_id}"
+        os.makedirs(self.json_save_path, exist_ok=True)
+
+        video_path = f"{save_pth_base}/train_vids"
+        os.makedirs(video_path, exist_ok=True)
+        self.save_path = f"{video_path}/{self.ep_id}.mp4"
+        self.writer = imageio.get_writer(
+            self.save_path,
+            fps=30,
+        )
+
+    def make_sim_cfg(self, agent_dict):
+        # Start the scene config
+        sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
+
+        # This is for better graphics
+        sim_cfg.habitat_sim_v0.enable_hbao = True
+        sim_cfg.habitat_sim_v0.enable_physics = False
+
+        # TODO: disable this, causes performance issues
+        sim_cfg.habitat_sim_v0.frustum_culling = False
+
+        # Set up an example scene
+        sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
+
+        cfg = OmegaConf.create(sim_cfg)
+
+        # Set the scene agents
+        cfg.agents = agent_dict
+        cfg.agents_order = list(cfg.agents.keys())
+        return cfg
+
+    def make_hab_cfg(self, agent_dict, action_dict):
+        sim_cfg = self.make_sim_cfg(agent_dict)
+        task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
+        task_cfg.actions = action_dict
+        env_cfg = EnvironmentConfig()
+        dataset_cfg = DatasetConfig(
+            type="RearrangeDataset-v0",
+            data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
+        )
+
+        hab_cfg = HabitatConfig()
+        hab_cfg.seed = self.seed
+        hab_cfg.environment = env_cfg
+        hab_cfg.task = task_cfg
+
+        hab_cfg.dataset = dataset_cfg
+        hab_cfg.simulator = sim_cfg
+        hab_cfg.simulator.seed = self.seed
+
+        return hab_cfg
+
+    def init_rearrange_env(self, agent_dict, action_dict):
+        hab_cfg = self.make_hab_cfg(agent_dict, action_dict)
+        res_cfg = OmegaConf.create(hab_cfg)
+        res_cfg.environment.max_episode_steps = 100000000
+        print("hab_cfg: ", hab_cfg)
+        print("res_cfg: ", res_cfg)
+        return Env(res_cfg)
+
+    def process_obs_img(self, obs):
+        im = obs["third_rgb"]
+        im2 = obs["articulated_agent_arm_rgb"]
+        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        imt = np.zeros(im.shape, dtype=np.uint8)
+        imt[: im2.shape[0], : im2.shape[1], :] = im2
+        imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+        im = np.concatenate([im, imt], 1)
+        return im
+
+    def save_img(self, observations, img_key, ep_data):
+        if img_key in observations.keys():
+            robot_img = observations[img_key]
+            if "depth" in img_key:
+                robot_img_tmp = np.concatenate(
+                    [robot_img, robot_img, robot_img], axis=-1
+                )
+                robot_img = robot_img_tmp
+                robot_img *= 255
+            elif "rgb" in img_key:
+                robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGR2RGB)
+            img_dir = f"{self.json_save_path}/imgs"
+            os.makedirs(img_dir, exist_ok=True)
+            img_pth = f"{img_dir}/{img_key}_img_{int(time.time()*1000)}.png"
+            cv2.imwrite(f"{img_pth}", robot_img)
+            ep_data[img_key] = img_pth
+        return ep_data
+
+    def add_episode_data(self, obs, action):
+        curr_arm_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+        )
+        curr_hand_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        curr_ee_pos, curr_ee_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
+        )
+        curr_base_pos, curr_base_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.get_root_pose()
+        )
+
+        ep_data = {
+            "arm_joints": np.array(curr_arm_joints).tolist(),
+            "hand_joints": np.array(curr_hand_joints).tolist(),
+            "ee_pos": np.array(curr_ee_pos).tolist(),
+            "ee_rot": np.array(
+                [*curr_ee_rot.vector, curr_ee_rot.scalar]
+            ).tolist(),
+            "base_pos": np.array(curr_base_pos).tolist(),
+            "base_rot": np.array(
+                [*curr_base_rot.vector, curr_base_rot.scalar]
+            ).tolist(),
+        }
+
+        for save_key in self.save_keys:
+            ep_data = self.save_img(obs, save_key, ep_data)
+
+        ep_data["arm_action"] = action["arm_action"]
+        ep_data["base_action"] = action["base_action"]
+        ep_data["empty_action"] = action["empty_action"]
+        ep_data["hand_action"] = action["hand_action"]
+        ep_data["grasp_mode"] = action["grasp_mode"]
+
+        self.episode_json["episode_data"].append(ep_data)
+
+    def save_json(self):
+        if self.episode_json["success"]:
+            ep_path = f"{self.json_save_path}/ep_{self.ep_id}.json"
+            print(f"success! saving episode: {ep_path}")
+            with open(ep_path, "w") as outfile:
+                json.dump(self.episode_json, outfile)
+        else:
+            if os.path.exists(self.json_save_path):
+                shutil.rmtree(self.json_save_path)
+
+    def get_grasp_mode(self, name):
+        # num_hand_joints = 10
+        num_hand_joints = 16
+        grasp_joints = {
+            "open": np.zeros(num_hand_joints),
+            "pre_grasp": np.concatenate(
+                (np.full(12, 0.7), [-0.785], np.full(3, 0.7))
+            ),
+            "close": np.concatenate((np.full(12, 0.90), np.zeros(4))),
+            "close_thumb": np.concatenate(
+                (np.full(12, 0.90), np.full(4, 0.4))
+            ),
+            # "close": np.array([1.0] * num_hand_joints),
+        }
+        return grasp_joints[name]
+
+    def get_grasp_mode_idx(self, name):
+        grasp_modes = {
+            "open": 0,
+            "pre_grasp": 0,
+            "close": 1,
+        }
+        return grasp_modes[name]
+
+    def get_arm_mode(self, name):
+        arm_joints = {
+            "rest": np.zeros(7),
+            "side": np.array(
+                [
+                    2.6116285,
+                    1.5283098,
+                    1.0930868,
+                    -0.50559217,
+                    0.48147443,
+                    2.628784,
+                    -1.3962275,
+                ]
+            ),
+        }
+        return arm_joints[name]
+
+    def reset_robot(self, name):
+        start_position, start_rotation = self.get_poses(name, pose_type="base")
+
+        position = mn.Vector3(start_position)
+        rotation = mn.Quaternion.rotation(
+            mn.Deg(start_rotation), mn.Vector3.y_axis()
+        )
+        self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+        self.env.sim.articulated_agent.base_transformation = self.base_trans
+        print(f"set base to {name}: {start_position}, {start_rotation}")
+
+    def pin_right_arm(self):
+        self.env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = self.get_arm_mode(
+            "rest"
+        )
+        self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
+            "open"
+        )
+
+    def pin_left_arm(self):
+        self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = self.get_arm_mode(
+            "rest"
+        )
+        self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = self.get_grasp_mode(
+            "open"
+        )
+
+    def get_curr_ee_pose(self, arm="right"):
+        if arm == "left":
+            curr_ee_pos_vec, curr_ee_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.ee_pose()
+            )
+        elif arm == "right":
+            curr_ee_pos_vec, curr_ee_rot = (
+                self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
+            )
+
+        curr_ee_rot_quat = R.from_quat(
+            [*curr_ee_rot.vector, curr_ee_rot.scalar]
+        )
+        curr_ee_rot_rpy = curr_ee_rot_quat.as_euler("xyz", degrees=True)
+        curr_ee_pos = np.array([*curr_ee_pos_vec])
+        return curr_ee_pos, curr_ee_rot_rpy
+
+    def get_curr_joint_pose(self, arm="right"):
+        if arm == "left":
+            return self.env.sim.articulated_agent._robot_wrapper.arm_joint_pos
+        elif arm == "right":
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+
+    def get_curr_hand_pose(self, arm="right"):
+        if arm == "left":
+            return self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
+        elif arm == "right":
+            return (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
+
+    def move_to_ee(
+        self, target_ee_pos, target_ee_rot=None, grasp=None, timeout=1000
+    ):
+        print(f"moving arm to: {target_ee_pos}, with hand {grasp}")
+        ctr = 0
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
+            action = {
+                "action": "arm_reach_ee_action",
+                "action_args": {
+                    "target_pos": np.array(target_ee_pos, dtype=np.float32),
+                    "target_rot": target_ee_rot,
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            if grasp is None:
+                self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
+                    self.get_curr_hand_pose()
+                )
+                print("using: ", self.get_curr_hand_pose())
+            else:
+                self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
+                    grasp
+                )
+            self.pin_left_arm()
+
+            obs = self.env.step(action)
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.zeros(16).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+
+            im = self.process_obs_img(obs)
+            im = add_text_to_image(im, "moving ee")
+            self.writer.append_data(im)
+
+            curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                )
+                break
+
+    def move_hand(self, mode="close", timeout=100):
+        target_hand_pos = self.get_grasp_mode(mode)
+        print(f"moving hand to: {mode}")
+        self.move_hand_joints(target_hand_pos, timeout)
+
+    def move_hand_joints(self, target_hand_pos, timeout=100):
+        curr_hand_pos = self.get_curr_hand_pose()
+        ctr = 0
+        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
+            action = {
+                "action": "base_velocity_action",
+                "action_args": {
+                    "base_vel": np.array([0.0, 0.0], dtype=np.float32)
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = (
+                self.get_curr_joint_pose()
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
+                target_hand_pos
+            )
+            self.pin_left_arm()
+            obs = self.env.step(action)
+            save_action = {
+                "arm_action": np.zeros(6).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.zeros(16).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+            im = self.process_obs_img(obs)
+            self.writer.append_data(im)
+            curr_hand_pos = self.get_curr_hand_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_hand_pos-target_hand_pos)} away from target. Curr hand pos: {curr_hand_pos}"
+                )
+                break
+
+    def move_ee_and_hand(
+        self, target_ee_pos, target_ee_rot=None, hand_joints=None, timeout=300
+    ):
+        ctr = 0
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
+            action = {
+                "action": "arm_reach_ee_action",
+                "action_args": {
+                    "target_pos": np.array(target_ee_pos, dtype=np.float32),
+                    "target_rot": target_ee_rot,
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
+                hand_joints
+            )
+            self.pin_left_arm()
+
+            obs = self.env.step(action)
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+            im = self.process_obs_img(obs)
+            im = add_text_to_image(im, "using grasp controller")
+            self.writer.append_data(im)
+
+            curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                )
+                break
+
+    def move_base(self, base_lin_vel, base_ang_vel):
+        action = {
+            "action": "base_velocity_action",
+            "action_args": {
+                "base_vel": np.array(
+                    [base_lin_vel, base_ang_vel], dtype=np.float32
+                )
+            },
+        }
+
+        obs = self.env.step(action)
+        save_action = {
+            "arm_action": np.zeros(6).tolist(),
+            "base_action": [base_lin_vel, base_ang_vel],
+            "empty_action": [0],
+            "hand_action": np.zeros(16).tolist(),
+            "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+        }
+
+        self.add_episode_data(obs, save_action)
+        self.base_trans = self.env.sim.articulated_agent.base_transformation
+        im = self.process_obs_img(obs)
+        im = add_text_to_image(im, "using base controller")
+        self.writer.append_data(im)
+
+    def move_base_ee_and_hand(
+        self,
+        base_lin_vel,
+        base_ang_vel,
+        target_ee_pos,
+        target_ee_rot=None,
+        hand_joints=None,
+        timeout=300,
+    ):
+        ctr = 0
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        while not np.allclose(curr_ee_pos, target_ee_pos, atol=0.02):
+            action = {
+                "action": ("arm_reach_ee_action", "base_velocity_action"),
+                "action_args": {
+                    "target_pos": np.array(target_ee_pos, dtype=np.float32),
+                    "target_rot": target_ee_rot,
+                    "base_vel": np.array(
+                        [base_lin_vel, base_ang_vel], dtype=np.float32
+                    ),
+                },
+            }
+            self.env.sim.articulated_agent.base_transformation = (
+                self.base_trans
+            )
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
+                hand_joints
+            )
+            self.pin_right_arm()
+
+            obs = self.env.step(action)
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [base_lin_vel, base_ang_vel],
+                "empty_action": [0],
+                "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+            self.add_episode_data(obs, save_action)
+            self.base_trans = (
+                self.env.sim.articulated_agent.base_transformation
+            )
+            im = self.process_obs_img(obs)
+            im = add_text_to_image(im, "using grasp controller")
+            self.writer.append_data(im)
+
+            curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+            ctr += 1
+            if ctr > timeout:
+                print(
+                    f"Exceeded time limit. {np.abs(curr_ee_pos-target_ee_pos)} away from target"
+                )
+                break
+            self.writer.append_data(im)
+
+    def visualize_pos(self, pos, name="target_ee_pos"):
+        # self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
+        #     pos, self.env.sim.viz_ids[name]
+        # )
+        return
+
+    def get_poses(self, name, pose_type="base"):
+        poses = {
+            "cabinet": {
+                "base_pos": np.array([1.7, 0.1, -0.2]),
+                "base_rot": -90,
+                "ee_pos": self.env.sim._rigid_objects[0].translation,
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            "shelf": {
+                "base_pos": np.array([-4.5, 0.1, -3.5]),
+                "base_rot": 180,
+                "ee_pos": self.env.sim._rigid_objects[0].translation,
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            "island": {
+                "base_pos": np.array([-5.3, 0.1, -1.6]),
+                "base_rot": 0,
+                "ee_pos": np.array([-4.4, 0.5, -2.0]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            "oven": {
+                "base_pos": np.array([-4.75, 0.1, -3.3]),
+                "base_rot": 180,
+                "ee_pos": np.array([-5.5, 1.6, -2.7]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+            # "fridge": {
+            #     "base_pos": np.array([-4.4, 0.1, 0.7]),
+            #     "base_rot": 180,
+            #     "ee_pos": np.array([-5.4, 1.4, 1.3]),
+            #     "ee_rot": np.deg2rad([0, 0, 0]),
+            # },
+            "fridge": {
+                "base_pos": np.array([-4.7, 0.1, 0.8]),
+                "base_rot": 180,
+                "ee_pos": np.array([-6.2, 1.2, 2.4]),
+                "ee_rot": np.deg2rad([120, 0, 0]),
+            },
+            "fridge2": {
+                "base_pos": np.array([-4.0, 0.1, 1.28]),
+                "base_rot": 180,
+                "ee_pos": np.array([-6.3, 1.2, 1.3]),
+                "ee_rot": np.deg2rad([-60, 0, 0]),
+            },
+            "freezer": {
+                "base_pos": np.array([-4.9, 0.1, 0.7]),
+                "base_rot": 180,
+                "ee_pos": np.array([-5.7, 0.5, 1.34531]),
+                "ee_rot": np.deg2rad([0, 80, -30]),
+            },
+        }
+        return (
+            poses[name][f"{pose_type}_pos"]
+            + np.array(
+                [
+                    np.random.normal(-0.01, 0.01),
+                    np.random.normal(-0.01, 0.01),
+                    np.random.normal(-0.01, 0.01),
+                ]
+            ),
+            poses[name][f"{pose_type}_rot"],
+        )
+
+    def set_targets(
+        self, target_w_xyz, target_w_quat, target_joints, hand="left"
+    ):
+        self.target_w_xyz = target_w_xyz
+        self.target_w_quat = target_w_quat
+        target_quat = R.from_quat(target_w_quat, scalar_first=True)
+        # Assumes (wxyz), isaac outputs (xyzw). If direct from isaac remember to swap.
+        # self.target_w_rotmat = rotation_conversions.quaternion_to_matrix( self.target_w_quat )
+        self.target_w_rotmat = target_quat.as_matrix()
+        self.target_joints = target_joints
+
+        # XYZ
+        self.open_xyz = target_w_xyz.copy()
+        if hand == "left":
+            self.open_xyz[2] -= 0.1
+            self.open_xyz[0] += 0.1
+
+            # Pre-Grasp Targets
+            OPEN_JOINTS = [1, 5, 9, 14]
+            # OPEN_JOINTS = [0, 4, 6, 9]
+            # Grasp fingers
+            self.grasp_fingers = self.target_joints.copy()
+            self.close_fingers = self.target_joints.copy()
+            self.close_fingers[OPEN_JOINTS] += 0.2
+        else:
+            self.open_xyz[2] -= 0.1
+            self.open_xyz[0] += 0.1
+            SECONDARY_JOINTS = [2, 6, 10, 15]
+            TERTIARY_JOINTS = [3, 7, 11]
+            OPEN_JOINTS = [1, 5, 9]
+            CURVE_JOINTS = [13]
+            BASE_THUMB_JOINT = [12]
+            self.grasp_fingers = self.target_joints.copy()
+            self.close_fingers = self.target_joints.copy()
+            self.close_fingers[BASE_THUMB_JOINT] += 1.1
+            # self.close_fingers[CURVE_JOINTS] -=0.5
+            self.close_fingers[SECONDARY_JOINTS] += 0.7
+            self.close_fingers[TERTIARY_JOINTS] += 1.0
+            self.close_fingers[OPEN_JOINTS] += 0.7
+
+    def get_targets(self, name="target", hand="right"):
+        # Lambda Changes
+        if name == "target":
+            return (
+                torch.tensor(self.grasp_fingers, device="cuda:0"),
+                torch.tensor(self.target_w_xyz, device="cuda:0"),
+                torch.tensor(self.target_w_rotmat, device="cuda:0"),
+            )
+
+        elif name == "target_grip":
+            self.grasp = "close"
+            return (
+                torch.tensor(self.close_fingers),
+                # torch.tensor(self.target_w_xyz),
+                torch.tensor(self.get_curr_ee_pose()[0]),
+                torch.tensor(self.target_w_rotmat),
+            )
+
+        elif name == "open":
+            self.open_xyz = self.get_curr_ee_pose()[0]
+            if hand == "right":
+                self.open_xyz[1] -= 0.1
+                self.open_xyz[0] += 0.1
+
+            return (
+                torch.tensor(self.close_fingers, device="cuda:0"),
+                torch.tensor(self.open_xyz, device="cuda:0"),
+                torch.tensor(self.target_w_rotmat, device="cuda:0"),
+            )
+
+    def generate_action(self, cur_obs, name):
+        cur_tar_wrist_xyz = cur_obs["wrist_tar_xyz"]
+        cur_tar_fingers = cur_obs["tar_joints"][:16]
+
+        # Phase 2 go to pick
+        delta_t = 0.1
+        self.step += 1
+        print(self.step)
+        # if self.step < 600:
+        #     name = "target"
+        # elif self.step < 1200:
+        #     name = "target_grip"
+        # else:
+        #     name = "open"
+        # if self.step < 600:
+        #     name = "target_grip"
+        # else:
+        #     name = "open"
+
+        tar_joints, tar_xyz, tar_rot = self.get_targets(name=name)
+
+        delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
+        print("cur_tar_wrist_xyz: ", cur_tar_wrist_xyz)
+        print("tar_xyz: ", tar_xyz)
+        print("delta_xyz: ", delta_xyz)
+        delta_joints = tar_joints.to(cur_tar_fingers) - cur_tar_fingers
+
+        tar_xyz = cur_tar_wrist_xyz + delta_xyz * delta_t
+        tar_joint = cur_tar_fingers + delta_joints * delta_t
+        # Orientation
+        door_orientation = cur_obs["orientation_door"]
+        door_orientation = torch.tensor(
+            door_orientation, dtype=torch.float32, device="cuda:0"
+        )  # Lambda Change
+        door_rot = rotation_conversions.quaternion_to_matrix(door_orientation)
+
+        rot_y = rotation_conversions.euler_angles_to_matrix(
+            torch.tensor([math.pi, -math.pi, 0.0], device="cuda:0"), "XYZ"
+        )
+        target_rot = torch.einsum("ij,jk->ik", door_rot, rot_y)
+        tar_rot = target_rot
+
+        act = {
+            "tar_xyz": tar_xyz.cpu().numpy(),
+            "tar_rot": tar_rot.cpu().numpy(),
+            "tar_fingers": tar_joint.cpu().numpy(),
+        }
+
+        return act
+
+    def apply_rotation(self, quat_door):
+        hab_T_door = R.from_quat(quat_door)
+        isaac_T_hab_list = [-90, 0, 0]
+        isaac_T_hab = R.from_euler("xyz", isaac_T_hab_list, degrees=True)
+        isaac_T_door_mat = R.from_matrix(
+            isaac_T_hab.as_matrix() @ hab_T_door.as_matrix()
+        )
+        isaac_T_door_quat = isaac_T_door_mat.as_quat()
+        return isaac_T_door_quat
+
+    def get_door_quat(self):
+        door_trans, door_orientation_rpy = (
+            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
+            )
+        )
+        self.visualize_pos(door_trans, "door")
+        quat_door = door_orientation_rpy.GetQuaternion()
+        # Getting Quaternion Val to Array
+        scalar = quat_door.GetReal()
+        vector = quat_door.GetImaginary()
+        quat_door = [scalar, vector[0], vector[1], vector[2]]
+        isaac_T_door_quat = self.apply_rotation(quat_door)
+        print("door_quat: ", isaac_T_door_quat)
+        return isaac_T_door_quat
+
+    def create_T_matrix(self, pos, rot):
+        T_mat = np.eye(4)
+        rot_quat = R.from_quat(np.array([rot.scalar, *rot.vector]))
+        T_mat[:3, :3] = rot_quat.as_matrix()
+        T_mat[:, -1] = np.array([*pos, 1])
+        return T_mat
+
+    def grasp_obj(self, name):
+        quat_door = self.get_door_quat()
+
+        cur_obs = {
+            "wrist_tar_xyz": torch.tensor(self.current_target_xyz),
+            "tar_joints": torch.tensor(self.current_target_fingers),
+            "orientation_door": torch.tensor(quat_door),
+        }
+        act = self.generate_action(cur_obs, name)
+
+        base_T_hand = act["tar_xyz"]
+
+        ee_pos, ee_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_ee = self.create_T_matrix(ee_pos, ee_rot)
+
+        hand_pos, hand_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_hand = self.create_T_matrix(hand_pos, hand_rot)
+
+        ee_T_hand = np.linalg.inv(base_T_ee) @ base_T_hand
+        base_T_hand = base_T_ee @ ee_T_hand
+        print("base_T_hand: ", base_T_hand[:, -1])
+
+        self.visualize_pos(act["tar_xyz"], "hand")
+        # self.move_hand_joints(act["tar_fingers"], timeout=10)
+        target_rot_mat = R.from_matrix(act["tar_rot"])
+        target_rot_rpy = target_rot_mat.as_euler("xyz", degrees=False)
+
+        print(
+            f"Policy XYZ {act['tar_xyz']},  Rot {np.rad2deg(target_rot_rpy)}"
+        )
+        curr_xyz, curr_ori = self.get_curr_ee_pose()
+        print(f"Curr XYZ {curr_xyz}, Rot {curr_ori}")
+        target_rot_rpy = self.target_ee_rot
+        # if name == "open" and self.step > 10:
+        #     self.move_base_ee_and_hand(
+        #         -0.1,
+        #         0.0,
+        #         act["tar_xyz"],
+        #         target_rot_rpy,
+        #         act["tar_fingers"],
+        #         timeout=10,
+        #     )
+        #     # self.move_base(
+        #     #     -0.1,
+        #     #     0.0,
+        #     # )
+        # else:
+        self.move_ee_and_hand(
+            act["tar_xyz"], target_rot_rpy, act["tar_fingers"], timeout=10
+        )
+        self.current_target_fingers = act["tar_fingers"]
+        self.current_target_xyz = act["tar_xyz"]
+        _current_target_rotmat = R.from_matrix(act["tar_rot"])
+        self.current_target_quat = _current_target_rotmat.as_quat()
+
+    def replay_grasp_obj(self):
+        quat_door = self.get_door_quat()
+        print("quat_door: ", quat_door)
+        obs_data = np.load("input.npy", allow_pickle=True)
+        act_data = np.load("actions.npy", allow_pickle=True)
+        for idx in range(30):
+            cur_obs = {
+                "wrist_tar_xyz": torch.tensor(
+                    obs_data[idx]["wrist_tar_xyz"][0, :], device="cuda:0"
+                ),  # Lambda Change
+                "tar_joints": torch.tensor(obs_data[idx]["tar_joints"][0, :]),
+                "orientation_door": torch.tensor(
+                    obs_data[idx]["orientation_door"][0, :], device="cuda:0"
+                ),  # Lambda Change
+            }
+            act = self.generate_action(cur_obs)
+            saved_act = act_data[idx]
+            print("orientation_door: ", cur_obs["orientation_door"], idx)
+            print("act: ", act["tar_fingers"], idx)
+            print(
+                "saved_act tar_fingers: ", saved_act["tar_fingers"][0, :], idx
+            )
+            print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
+            self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
+
+    def execute_grasp_sequence(
+        self, hand, grip_iters, open_iters, move_iters=None
+    ):
+        self.move_to_ee(
+            self.target_ee_pos,
+            self.target_ee_rot,
+            grasp="pre_grasp" if hand == "left" else "open",
+            timeout=300 if hand == "left" else 200,
+        )
+
+        self.step = 0
+        self.current_target_fingers = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        self.current_target_xyz = self.target_ee_pos
+        target_xyz, target_ori = self.get_curr_ee_pose()
+        target_xyz[1] -= 0.52
+        target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
+        target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
+        target_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        self.set_targets(
+            target_w_xyz=target_xyz,
+            target_w_quat=target_quaternion,
+            target_joints=target_joints,
+            hand=hand,
+        )
+        if move_iters:
+            for _ in range(move_iters):
+                self.move_base(1.0, 0.0)
+
+        # Grasp and open object
+        if self.replay:
+            self.replay_grasp_obj()
+        else:
+            for _ in range(grip_iters):
+                self.grasp_obj(name="target_grip")
+
+        for _ in range(open_iters):
+            self.grasp_obj(name="open")
+
+        # Move robot back
+        for _ in range(10):
+            self.move_base(-1.0, 0.0)
+
+    def run_expert_w_grasp(self, hand="left"):
+        self.reset_robot(self.target_name)
+
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        initial_door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+
+        self.target_ee_pos, self.target_ee_rot = self.get_poses(
+            self.target_name, pose_type="ee"
+        )
+        self.visualize_pos(self.target_ee_pos)
+        self.grasp = "pre_grasp"
+
+        if hand == "left":
+            self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
+        elif hand == "right":
+            self.execute_grasp_sequence(
+                hand, grip_iters=30, open_iters=30, move_iters=19
+            )
+
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        final_door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+        print("initial door orientation: ", initial_door_orientation_rpy)
+        print("final door orientation: ", final_door_orientation_rpy)
+        success = False
+        if not np.allclose(
+            np.abs(np.round(initial_door_orientation_rpy, 0)),
+            np.abs(np.round(final_door_orientation_rpy, 0)),
+        ):
+            success = True
+        self.episode_json["success"] = success
+        self.save_json()
+        self.writer.close()
+        print(f"saved file to: {self.save_path}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Your program description")
+
+    # Add arguments
+    parser.add_argument(
+        "--target-name", default="fridge2", help="target object name"
+    )
+    parser.add_argument("--skill", default="open", help="open, pick")
+    parser.add_argument("--seed", type=int, default=42, help="seed")
+    parser.add_argument("--replay", action="store_true")
+
+    args = parser.parse_args()
+    datagen = ExpertDatagen(
+        args.target_name, args.skill, args.replay, args.seed
+    )
+
+    datagen.run_expert_w_grasp(hand="right")
