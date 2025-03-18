@@ -881,7 +881,6 @@ class HumanoidJointAction(ArticulatedAgentAction):
 class BaseVelIsaacAction(BaseVelAction):
     def step(self, *args, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
-        print(f"lin_vel: {lin_vel}; ang_vel: {ang_vel}")
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
         if not self._allow_back:
@@ -889,13 +888,11 @@ class BaseVelIsaacAction(BaseVelAction):
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
-        # <omni.isaac.core.robots.robot.Robot object at 0x7fb613f91c00>
+
         self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
             [0, 0, ang_vel]
         )
-        # self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
-        #     [lin_vel, 0, 0]
-        # )
+
         robot_forward = isaac_prim_utils.get_forward(
             self.cur_articulated_agent._robot_wrapper._robot
         )
@@ -1066,21 +1063,6 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
 
-        # if not np.any(delta_pos) and not np.any(delta_rot):
-        #     # Fix the arm and hands if there is no input
-        #     self._robot_wrapper._target_right_arm_joint_positions = (
-        #         self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
-        #     )
-        #     self._robot_wrapper._target_arm_joint_positions = (
-        #         self._sim.articulated_agent._robot_wrapper.arm_joint_pos
-        #     )
-        #     self._robot_wrapper._target_right_hand_joint_positions = (
-        #         self._sim.articulated_agent._robot_wrapper.right_hand_joint_pos
-        #     )
-        #     self._robot_wrapper._target_hand_joint_positions = (
-        #         self._sim.articulated_agent._robot_wrapper.hand_joint_pos
-        #     )
-
         if self._config.right_left_hand == "right":
             self._robot_wrapper._target_right_arm_joint_positions = (
                 des_joint_pos
@@ -1094,23 +1076,8 @@ class ArmReachEEAction(ArmEEAction):
                 self.target_finger
             )
 
-        # #print(f"target local ee xyz: {self.ee_target}")
-        # #print(f"get_curr_ee_pose (global): {self.get_curr_ee_pose()}")
-        # ee_pos = (
-        #     self._sim.get_agent_data(0)
-        #     .articulated_agent.ee_transform()
-        #     .translation
+        # ee_pos_from_ik, _ = self._ik_helper.calc_fk(
+        #     np.array(
+        #         self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+        #     )
         # )
-        # trans = self._sim.get_agent_data(
-        #     0
-        # ).articulated_agent.base_transformation
-        # local_ee_pos = trans.inverted().transform_point(ee_pos)
-        # #print(f"local_ee_pos (local): {local_ee_pos}")
-
-        ee_pos_from_ik, _ = self._ik_helper.calc_fk(
-            np.array(
-                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
-            )
-        )
-        print(f"self.ee_target: {self.ee_target}")
-        print(f"ee_pos_from_ik: {ee_pos_from_ik}")
