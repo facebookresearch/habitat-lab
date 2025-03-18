@@ -14,6 +14,7 @@ from scipy.spatial.transform import Rotation as R
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
+from habitat.isaac_sim import isaac_prim_utils
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
@@ -892,8 +893,22 @@ class BaseVelIsaacAction(BaseVelAction):
         self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
             [0, 0, ang_vel]
         )
+        # self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
+        #     [lin_vel, 0, 0]
+        # )
+        robot_forward = isaac_prim_utils.get_forward(
+            self.cur_articulated_agent._robot_wrapper._robot
+        )
+        cur_linear_vel_usd = (
+            self.cur_articulated_agent._robot_wrapper._robot.get_linear_velocity()
+        )
+        linear_vel = robot_forward * lin_vel
+        linear_vel_usd = isaac_prim_utils.habitat_to_usd_position(
+            [linear_vel.x, linear_vel.y, linear_vel.z]
+        )
+        linear_vel_usd[2] = cur_linear_vel_usd[2]
         self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
-            [lin_vel, 0, 0]
+            linear_vel_usd
         )
 
 
@@ -1051,21 +1066,22 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
 
-        if not np.any(delta_pos) and not np.any(delta_rot):
-            # Fix the arm and hands if there is no input
-            self._robot_wrapper._target_right_arm_joint_positions = (
-                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
-            )
-            self._robot_wrapper._target_arm_joint_positions = (
-                self._sim.articulated_agent._robot_wrapper.arm_joint_pos
-            )
-            self._robot_wrapper._target_right_hand_joint_positions = (
-                self._sim.articulated_agent._robot_wrapper.right_hand_joint_pos
-            )
-            self._robot_wrapper._target_hand_joint_positions = (
-                self._sim.articulated_agent._robot_wrapper.hand_joint_pos
-            )
-        elif self._config.right_left_hand == "right":
+        # if not np.any(delta_pos) and not np.any(delta_rot):
+        #     # Fix the arm and hands if there is no input
+        #     self._robot_wrapper._target_right_arm_joint_positions = (
+        #         self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+        #     )
+        #     self._robot_wrapper._target_arm_joint_positions = (
+        #         self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+        #     )
+        #     self._robot_wrapper._target_right_hand_joint_positions = (
+        #         self._sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        #     )
+        #     self._robot_wrapper._target_hand_joint_positions = (
+        #         self._sim.articulated_agent._robot_wrapper.hand_joint_pos
+        #     )
+
+        if self._config.right_left_hand == "right":
             self._robot_wrapper._target_right_arm_joint_positions = (
                 des_joint_pos
             )
@@ -1078,16 +1094,23 @@ class ArmReachEEAction(ArmEEAction):
                 self.target_finger
             )
 
-        print(f"target local ee xyz: {self.ee_target}")
-        print(f"get_curr_ee_pose (global): {self.get_curr_ee_pose()}")
-        ee_pos = (
-            self._sim.get_agent_data(0)
-            .articulated_agent.ee_transform()
-            .translation
+        # #print(f"target local ee xyz: {self.ee_target}")
+        # #print(f"get_curr_ee_pose (global): {self.get_curr_ee_pose()}")
+        # ee_pos = (
+        #     self._sim.get_agent_data(0)
+        #     .articulated_agent.ee_transform()
+        #     .translation
+        # )
+        # trans = self._sim.get_agent_data(
+        #     0
+        # ).articulated_agent.base_transformation
+        # local_ee_pos = trans.inverted().transform_point(ee_pos)
+        # #print(f"local_ee_pos (local): {local_ee_pos}")
+
+        ee_pos_from_ik, _ = self._ik_helper.calc_fk(
+            np.array(
+                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
         )
-        print(f"ee_transform (global): {ee_pos}")
-        trans = self._sim.get_agent_data(
-            0
-        ).articulated_agent.base_transformation
-        local_ee_pos = trans.inverted().transform_point(ee_pos)
-        print(f"local_ee_pos (local): {local_ee_pos}")
+        print(f"self.ee_target: {self.ee_target}")
+        print(f"ee_pos_from_ik: {ee_pos_from_ik}")
