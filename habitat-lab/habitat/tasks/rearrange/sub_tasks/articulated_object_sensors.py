@@ -183,7 +183,6 @@ class ArtObjState(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if type(task._sim) == IsaacRearrangeSim:
             rpy = get_door_quat(task)
-            print(f"current door rpy: {rpy}")
             self._metric = rpy[0]
         else:
             self._metric = task.get_use_marker().get_targ_js()

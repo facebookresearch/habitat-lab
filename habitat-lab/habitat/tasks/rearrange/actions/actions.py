@@ -1023,26 +1023,34 @@ class ArmReachEEAction(ArmEEAction):
             )
 
     def step(self, *args, **kwargs):
-        target_pos = kwargs[self._action_arg_prefix + "target_pos"]
-        target_rot = kwargs[self._action_arg_prefix + "target_rot"]
+        delta_pos = kwargs[self._action_arg_prefix + "target_pos"]
+        delta_rot = kwargs[self._action_arg_prefix + "target_rot"]
         finger = kwargs[self._action_arg_prefix + "target_finger"]
-        # base_pos, base_rot = self._robot_wrapper.get_root_pose()
 
-        print(f"target_pos: {target_pos}; target_rot: {target_rot}")
-        print(f"EE: {self.ee_target} {self.ee_rot_target}")
+        self.ee_target += np.array(delta_pos)
+        self.ee_rot_target += np.array(delta_rot)
 
-        # def inverse_transform(pos_a, rot_b, pos_b):
-        #     inv_pos = rot_b.inverted().transform_vector(pos_a - pos_b)
-        #     return inv_pos
-        # target_rel_pos = inverse_transform(target_pos, base_rot, base_pos)
-        self.ee_target += np.array(target_pos)
-        self.ee_rot_target += np.array(target_rot)
         self.target_finger[0:6] += finger
+
         self.apply_ee_constraints()
+
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
-        print(f"des_joint_pos: {des_joint_pos}")
-        print(f"self.target_finger: {self.target_finger}")
+
+        if not np.any(delta_pos) and not np.any(delta_rot):
+            # Fix the arm and hands if there is no input
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+            self._robot_wrapper._target_arm_joint_positions = (
+                self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
+            self._robot_wrapper._target_right_hand_joint_positions = (
+                self._sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
+            self._robot_wrapper._target_hand_joint_positions = (
+                self._sim.articulated_agent._robot_wrapper.hand_joint_pos
+            )
         if self._config.right_left_hand == "right":
             self._robot_wrapper._target_right_arm_joint_positions = (
                 des_joint_pos
@@ -1050,11 +1058,8 @@ class ArmReachEEAction(ArmEEAction):
             self._robot_wrapper._target_right_hand_joint_positions = (
                 self.target_finger
             )
-            self.fix_arm("left")
-            print("control right, fix left")
         else:
             self._robot_wrapper._target_arm_joint_positions = des_joint_pos
             self._robot_wrapper._target_hand_joint_positions = (
                 self.target_finger
             )
-            self.fix_arm("right")

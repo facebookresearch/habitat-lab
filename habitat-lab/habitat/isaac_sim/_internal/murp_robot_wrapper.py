@@ -221,17 +221,17 @@ class MurpRobotWrapper:
 
         self._arm_joint_indices = np.array(left_arm_joint_indices)
         self._right_arm_joint_indices = np.array(right_arm_joint_indices)
-        rest_positions = [
-            2.6116285,
-            1.5283098,
-            1.0930868,
-            -0.50559217,
-            0.48147443,
-            2.628784,
-            -1.3962275,
-        ]
-        self._target_arm_joint_positions = rest_positions
-        self._target_right_arm_joint_positions = rest_positions
+        # rest_positions = [
+        #     2.6116285,
+        #     1.5283098,
+        #     1.0930868,
+        #     -0.50559217,
+        #     0.48147443,
+        #     2.628784,
+        #     -1.3962275,
+        # ]
+        self._target_arm_joint_positions = self.arm_joint_pos
+        self._target_right_arm_joint_positions = self.right_arm_joint_pos
 
     def get_link_id(self, link_str):
         return [
@@ -291,11 +291,11 @@ class MurpRobotWrapper:
         self._hand_joint_indices = np.array(left_hand_joint_indices)
         self._right_hand_joint_indices = np.array(right_hand_joint_indices)
 
-        n_hand_joints = len(left_hand_joint_names)
+        # n_hand_joints = len(left_hand_joint_names)
         # closed_positions = np.array([3.14159] * n_hand_joints)
-        open_positions = np.zeros(n_hand_joints)
-        self._target_hand_joint_positions = open_positions
-        self._target_right_hand_joint_positions = open_positions
+        # open_positions = np.zeros(n_hand_joints)
+        self._target_hand_joint_positions = self.hand_joint_pos
+        self._target_right_hand_joint_positions = self.right_hand_joint_pos
 
     def post_reset(self):
         # todo: just do a single callback
@@ -469,9 +469,9 @@ class MurpRobotWrapper:
             "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
         )
         self.fix_base(step_size, base_position, base_orientation)
-        #self.drive_arm(step_size)
+        # self.drive_arm(step_size)
         self.drive_right_arm(step_size)
-        #self.drive_hand(step_size)
+        # self.drive_hand(step_size)
         self.drive_right_hand(step_size)
         self._step_count += 1
 

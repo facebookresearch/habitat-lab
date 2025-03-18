@@ -180,9 +180,6 @@ def get_input_vel_ctlr(
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
-    if key != -1:
-        print(f"key: {key}")
-
     if not_block_input:
         # Base control
         if keys[pygame.K_j] or key == ord("j"):
@@ -764,8 +761,6 @@ def play_env(env, args, config):
         delay = max(1.0 / target_fps - diff, 0)
         time.sleep(delay)
         prev_time = curr_time
-
-        print(env.sim.articulated_agent.base_transformation.translation)
 
     if args.save_actions:
         if len(all_arm_actions) < args.save_actions_count:
