@@ -9,6 +9,7 @@ from typing import Optional, cast
 import magnum as mn
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
@@ -1022,16 +1023,29 @@ class ArmReachEEAction(ArmEEAction):
                 self.get_grasp_mode("open")
             )
 
+    def get_curr_ee_pose(self):
+        (
+            curr_ee_pos_vec,
+            curr_ee_rot,
+        ) = self._sim.articulated_agent._robot_wrapper.ee_pose()
+
+        curr_ee_rot_quat = R.from_quat(
+            [*curr_ee_rot.vector, curr_ee_rot.scalar]
+        )
+        curr_ee_rot_rpy = curr_ee_rot_quat.as_euler("xyz", degrees=True)
+        curr_ee_pos = np.array([*curr_ee_pos_vec])
+        return curr_ee_pos, curr_ee_rot_rpy
+
     def step(self, *args, **kwargs):
         delta_pos = kwargs[self._action_arg_prefix + "target_pos"]
         delta_rot = kwargs[self._action_arg_prefix + "target_rot"]
         finger = kwargs[self._action_arg_prefix + "target_finger"]
-
         self.ee_target += np.array(delta_pos)
         self.ee_rot_target += np.array(delta_rot)
 
         self.target_finger[0:6] += finger
 
+        # Constrain the ee location
         self.apply_ee_constraints()
 
         des_joint_pos = self.calc_desired_joints()
@@ -1051,7 +1065,7 @@ class ArmReachEEAction(ArmEEAction):
             self._robot_wrapper._target_hand_joint_positions = (
                 self._sim.articulated_agent._robot_wrapper.hand_joint_pos
             )
-        if self._config.right_left_hand == "right":
+        elif self._config.right_left_hand == "right":
             self._robot_wrapper._target_right_arm_joint_positions = (
                 des_joint_pos
             )
@@ -1063,3 +1077,17 @@ class ArmReachEEAction(ArmEEAction):
             self._robot_wrapper._target_hand_joint_positions = (
                 self.target_finger
             )
+
+        print(f"target local ee xyz: {self.ee_target}")
+        print(f"get_curr_ee_pose (global): {self.get_curr_ee_pose()}")
+        ee_pos = (
+            self._sim.get_agent_data(0)
+            .articulated_agent.ee_transform()
+            .translation
+        )
+        print(f"ee_transform (global): {ee_pos}")
+        trans = self._sim.get_agent_data(
+            0
+        ).articulated_agent.base_transformation
+        local_ee_pos = trans.inverted().transform_point(ee_pos)
+        print(f"local_ee_pos (local): {local_ee_pos}")
