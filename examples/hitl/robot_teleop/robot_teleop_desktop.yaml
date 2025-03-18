@@ -17,7 +17,7 @@ habitat_hitl:
       enable: False
     enable_connections_by_default: True
     client_sync:
-      server_camera: False
+      server_camera: True
       server_input: True
       skinning: True
 

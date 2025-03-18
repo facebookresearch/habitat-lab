@@ -5,9 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import math
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 import hydra
 import magnum as mn
 from hydra import compose
@@ -558,6 +560,45 @@ class AppStateRobotTeleopViewer(AppState):
         self.navmesh_lines = None
         print(f"Loaded scene: {scene}.")
 
+        
+        client_message_manager = self._app_service._client_message_manager
+        if client_message_manager is not None:
+            client_message_manager.signal_scene_change()
+            
+            if True: # TODO: If in VR...
+                self.recompute_navmesh()
+                user_pos = AppStateRobotTeleopViewer._find_navmesh_position_near_target(
+                    target=self._cursor_pos,
+                    distance_from_target=1.2,
+                    pathfinder=self._sim.pathfinder
+                )
+                if user_pos is not None:
+                    client_message_manager.change_humanoid_position(user_pos)
+                client_message_manager.update_navmesh_triangles(
+                    self._get_navmesh_triangle_vertices()
+                )
+
+    def _get_navmesh_triangle_vertices(self):
+        """Return vertices (nonindexed triangles) for triangulated NavMesh polys"""
+        largest_island_index = get_largest_island_index(
+            self._sim.pathfinder, self._sim, allow_outdoor=False
+        )
+        pts = self._sim.pathfinder.build_navmesh_vertices(
+            largest_island_index
+        )
+        assert len(pts) > 0
+        assert len(pts) % 3 == 0
+        assert len(pts[0]) == 3
+        navmesh_fixup_y = -0.17  # sloppy
+        return [
+            (
+                float(point[0]),
+                float(point[1]) + navmesh_fixup_y,
+                float(point[2]),
+            )
+            for point in pts
+        ]
+
     def set_aos_dynamic(self) -> None:
         """
         Sets all AOs to dynamic for interaction in case the scene is STATIC.
@@ -737,6 +778,34 @@ class AppStateRobotTeleopViewer(AppState):
                 self._cursor_pos += xz_right * speed
             if gui_input.get_key(KeyCode.A):
                 self._cursor_pos -= xz_right * speed
+
+    def _find_navmesh_position_near_target(
+        target: mn.Vector3,
+        distance_from_target: float,
+        pathfinder: habitat_sim.PathFinder,
+    ) -> Optional[mn.Vector3]:
+        r"""
+        Get a position from which the robot can be seen.
+        """
+        # Look up for a camera position by sampling radially around the target for a navigable position.
+        navigable_point = None
+        sample_count = 8
+        max_dist_to_obstacle = 0.0
+        for i in range(sample_count):
+            radial_angle = i * 2.0 * math.pi / float(sample_count)
+            dist_x = math.sin(radial_angle) * distance_from_target
+            dist_z = math.cos(radial_angle) * distance_from_target
+            candidate = mn.Vector3(target.x + dist_x, target.y, target.z + dist_z)
+            if pathfinder.is_navigable(candidate, 3.0):
+                dist_to_closest_obstacle = pathfinder.distance_to_closest_obstacle(
+                    candidate, 2.0
+                )
+                if dist_to_closest_obstacle > max_dist_to_obstacle:
+                    max_dist_to_obstacle = dist_to_closest_obstacle
+                    navigable_point = candidate
+
+        return navigable_point
+
 
     def move_robot_on_navmesh(self) -> None:
         """

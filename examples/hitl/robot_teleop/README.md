@@ -123,6 +123,14 @@ The application has two options for placing the robot base.
 - `N` toggles a visualization of the navmesh
   - Note that a circle around the robot base shows its configured navmesh radius. This can be set in the robot_settings.yaml file.
 
+# VR Integration
+
+VR support is still under development. Follow the instructions in the [quest_reader](../quest_reader/README.md) application first, then run the following launch command:
+
+```bash
+python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.yaml
+```
+
 # TODOs
 Items not yet implemented but intended to be added
 - Additional murp robot platform configs
