@@ -27,6 +27,7 @@ defaults:
     - target_start_sensor # Relative position from end effector to target object
     - end_effector_sensor
     - relative_resting_pos_sensor
+    - door_orientation_sensor
 
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -40,6 +41,7 @@ habitat:
       - hand_joint
       - obj_start_sensor # Relative position from end effector to target object
       - relative_resting_position
+      - door_orientation
   task:
     # Config for empty task to explore the scene.
     type: RearrangePickTask-v0

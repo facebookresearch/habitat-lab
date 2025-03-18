@@ -9,6 +9,7 @@ from collections import defaultdict, deque
 
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
@@ -27,6 +28,37 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
+
+
+def apply_rotation(quat_door):
+    hab_T_door = R.from_quat(quat_door)
+    isaac_T_hab_list = [-90, 0, 0]
+    isaac_T_hab = R.from_euler("xyz", isaac_T_hab_list, degrees=True)
+    isaac_T_door_mat = R.from_matrix(
+        isaac_T_hab.as_matrix() @ hab_T_door.as_matrix()
+    )
+    isaac_T_door_quat = isaac_T_door_mat.as_quat()
+    return isaac_T_door_quat
+
+
+def get_door_quat(task):
+    (
+        _,
+        door_orientation_rpy,
+    ) = task._sim.articulated_agent._robot_wrapper.get_prim_transform(
+        "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
+    )
+    # self.visualize_pos(door_trans, "door")
+    quat_door = door_orientation_rpy.GetQuaternion()
+    # Getting Quaternion Val to Array
+    scalar = quat_door.GetReal()
+    vector = quat_door.GetImaginary()
+    quat_door = [scalar, vector[0], vector[1], vector[2]]
+    isaac_T_door_quat = apply_rotation(quat_door)
+    door_orienation_quat_R = R.from_quat(isaac_T_door_quat)
+    door_orientation_rpy = door_orienation_quat_R.as_euler("xyz", degrees=True)
+
+    return door_orientation_rpy
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -280,6 +312,30 @@ class HandJointSensor(UsesArticulatedAgentInterface, Sensor):
                 self.agent_id
             ).articulated_agent._robot_wrapper.hand_joint_pos
         return np.array(joints_pos, dtype=np.float32)
+
+
+@registry.register_sensor
+class DoorOrientationSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "door_orientation"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(config.dimensionality,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, task, episode, *args, **kwargs):
+        return np.array([get_door_quat(task)[0]], dtype=np.float32)
 
 
 @registry.register_sensor

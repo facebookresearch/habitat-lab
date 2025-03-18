@@ -61,6 +61,7 @@ __all__ = [
     "EEPositionSensorConfig",
     "JointSensorConfig",
     "HandJointSensorConfig",
+    "DoorOrientationSensorConfig",
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
@@ -548,6 +549,15 @@ class HandJointSensorConfig(LabSensorConfig):
     type: str = "HandJointSensor"
     dimensionality: int = 16
     right_left_hand: str = "right"
+
+
+@dataclass
+class DoorOrientationSensorConfig(LabSensorConfig):
+    r"""
+    The door roll
+    """
+    type: str = "DoorOrientationSensor"
+    dimensionality: int = 1
 
 
 @dataclass
@@ -2283,6 +2293,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="hand_joint_sensor",
     node=HandJointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.door_orientation_sensor",
+    group="habitat/task/lab_sensors",
+    name="door_orientation_sensor",
+    node=DoorOrientationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.humanoid_joint_sensor",
