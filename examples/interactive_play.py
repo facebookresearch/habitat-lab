@@ -91,7 +91,6 @@ SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 NAMED_WINDOW = "Play Murp"
 USE_CV2 = True
-TEST_MACHINE = "lambda"  # h200 / lambda
 
 
 # cv2 relative functions
@@ -928,6 +927,13 @@ if __name__ == "__main__":
         "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
     )
 
+    parser.add_argument(
+        "--use-h200",
+        action="store_true",
+        default=False,
+        help="If we want to run the test in h200 aws",
+    )
+
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
         raise ImportError(
@@ -983,15 +989,12 @@ if __name__ == "__main__":
                 )
 
             ik_arm_urdf = ""
+
             # Make sure we use the correct urdf for the arm control to compute IK
-            if TEST_MACHINE == "h200":
+            if args.use_h200:
                 ik_arm_urdf = "/home/jimmytyyang/research/hab_training/habitat-lab/data/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
-            elif TEST_MACHINE == "lambda":
-                ik_arm_urdf = "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
             else:
-                raise ValueError(
-                    f"Cannot recongize the TEST_MACHINE: {TEST_MACHINE}"
-                )
+                ik_arm_urdf = "/home/jmmy/research/hab_training/murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
 
             sim_config.agents.main_agent.ik_arm_urdf = ik_arm_urdf
             # task_config.actions.arm_action.arm_controller = "ArmEEAction"
