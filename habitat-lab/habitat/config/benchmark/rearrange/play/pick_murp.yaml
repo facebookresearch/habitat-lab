@@ -35,6 +35,7 @@ habitat:
   gym:
     obs_keys:
       - articulated_agent_arm_depth # depth image of the arm: 224 by 224
+      - head_depth # depth image of the head: 224 by 224
       - joint # joint angle of the arm: 7-dim
       - hand_joint # joint angle of the hand: 16-dim
       - obj_start_sensor # relative position from ee to target object: 3-dim

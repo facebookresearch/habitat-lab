@@ -98,13 +98,13 @@ class MurpRobot(MobileManipulator):
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
                     cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
-                    attached_link_id=36,
+                    attached_link_id=67,  # 36 for left hand; 67 for the right hand
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
-                    attached_link_id=36,
+                    attached_link_id=67,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_panoptic": ArticulatedAgentCameraParams(
@@ -131,9 +131,19 @@ class MurpRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
+                "head_depth": ArticulatedAgentCameraParams(
+                    # x: forward; y: up; z: left
+                    cam_offset_pos=mn.Vector3(0.4, 0.75, 0),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    attached_link_id=-1,
+                ),
+                "head_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.4, 0.75, 0),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    attached_link_id=-1,
+                ),
                 "third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.5, 2.5, 0.0),
-                    # cam_look_at_pos=mn.Vector3(1, 0.0, -0.75),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0),
                     attached_link_id=-1,
                 ),
