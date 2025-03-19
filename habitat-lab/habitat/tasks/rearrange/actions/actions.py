@@ -920,7 +920,8 @@ class ArmReachEEAction(ArmEEAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(12,), low=-1, high=1, dtype=np.float32)
+        # 6-dim for the ee, x, y, z, roll, pitch, yaw, and 16-dim for the hand
+        return spaces.Box(shape=(22,), low=-1, high=1, dtype=np.float32)
 
     def reset(self, *args, **kwargs):
         try:
@@ -1052,13 +1053,16 @@ class ArmReachEEAction(ArmEEAction):
         delta_pos = kwargs[self._action_arg_prefix + "target_pos"]
         delta_rot = kwargs[self._action_arg_prefix + "target_rot"]
         finger = kwargs[self._action_arg_prefix + "target_finger"]
+
+        # Update the target joint location
         self.ee_target += np.array(delta_pos)
         self.ee_rot_target += np.array(delta_rot)
-
-        self.target_finger[0:6] += finger
+        self.target_finger += np.array(finger)
 
         # Constrain the ee location
         self.apply_ee_constraints()
+
+        # TODO: jimmy: missing finger joint limit
 
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
@@ -1081,3 +1085,6 @@ class ArmReachEEAction(ArmEEAction):
         #         self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
         #     )
         # )
+        print(f"self.ee_target: {self.ee_target}")
+        print(f"self.ee_rot_target: {self.ee_rot_target}")
+        print(f"self.target_finger: {self.target_finger}")

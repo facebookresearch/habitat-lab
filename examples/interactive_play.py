@@ -113,6 +113,7 @@ def get_input_vel_ctlr(
     control_humanoid,
     humanoid_controller,
     key=None,
+    ee_hand_control="ee",
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -143,7 +144,7 @@ def get_input_vel_ctlr(
         base_key = "base_vel"
 
     if "murp" in cfg:
-        arm_action_space = np.zeros(12)
+        arm_action_space = np.zeros(22)
         arm_ctrlr = None
         base_action = None
     elif arm_action_name in env.action_space.spaces:
@@ -182,16 +183,16 @@ def get_input_vel_ctlr(
 
     if not_block_input:
         # Base control
-        if keys[pygame.K_j] or key == ord("j"):
+        if keys[pygame.K_j] or key == ord("l"):
             # Left
             base_action = [0, 1]
-        elif keys[pygame.K_l] or key == ord("l"):
+        elif keys[pygame.K_l] or key == ord("'"):
             # Right
             base_action = [0, -1]
-        elif keys[pygame.K_k] or key == ord("k"):
+        elif keys[pygame.K_k] or key == ord(";"):
             # Back
             base_action = [-1, 0]
-        elif keys[pygame.K_i] or key == ord("i"):
+        elif keys[pygame.K_i] or key == ord("p"):
             # Forward
             base_action = [1, 0]
 
@@ -232,67 +233,100 @@ def get_input_vel_ctlr(
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
 
-        elif arm_action_space.shape[0] == 12:
-            # Velocity control. A different key for each joint
-            if keys[pygame.K_q] or key == ord("q"):
-                arm_action[0] = 0.25
-            elif keys[pygame.K_1] or key == ord("1"):
-                arm_action[0] = -0.25
+        elif arm_action_space.shape[0] == 22:
+            # For the ee location of the arm
 
-            elif keys[pygame.K_w] or key == ord("w"):
-                arm_action[1] = 0.25
-            elif keys[pygame.K_2] or key == ord("2"):
-                arm_action[1] = -0.25
-
-            elif keys[pygame.K_e] or key == ord("e"):
-                arm_action[2] = 0.25
-            elif keys[pygame.K_3] or key == ord("3"):
-                arm_action[2] = -0.25
-
-            elif keys[pygame.K_r] or key == ord("r"):
-                arm_action[3] = 0.25
-            elif keys[pygame.K_4] or key == ord("4"):
-                arm_action[3] = -0.25
-
-            elif keys[pygame.K_t] or key == ord("t"):
-                arm_action[4] = 0.25
-            elif keys[pygame.K_5] or key == ord("5"):
-                arm_action[4] = -0.25
-
-            elif keys[pygame.K_y] or key == ord("y"):
-                arm_action[5] = 0.25
-            elif keys[pygame.K_6] or key == ord("6"):
-                arm_action[5] = -0.25
-
-            elif key == ord("a"):
-                arm_action[6] = 0.25
-            elif key == ord("z"):
-                arm_action[6] = -0.25
-
-            elif key == ord("s"):
-                arm_action[7] = 0.25
-            elif key == ord("x"):
-                arm_action[7] = -0.25
-
-            elif key == ord("d"):
-                arm_action[8] = 0.25
-            elif key == ord("c"):
-                arm_action[8] = -0.25
-
-            elif key == ord("f"):
-                arm_action[9] = 0.25
-            elif key == ord("v"):
-                arm_action[9] = -0.25
-
-            elif key == ord("g"):
-                arm_action[10] = 0.25
-            elif key == ord("b"):
-                arm_action[10] = -0.25
-
-            elif key == ord("h"):
-                arm_action[11] = 0.25
-            elif key == ord("n"):
-                arm_action[11] = -0.25
+            if ee_hand_control == "ee":
+                # x, y, z, roll, pitch, yaw of ee
+                if keys[pygame.K_q] or key == ord("q"):
+                    arm_action[0] = -0.1
+                elif keys[pygame.K_1] or key == ord("1"):
+                    arm_action[0] = 0.1
+                elif keys[pygame.K_w] or key == ord("w"):
+                    arm_action[1] = -0.1
+                elif keys[pygame.K_2] or key == ord("2"):
+                    arm_action[1] = 0.1
+                elif keys[pygame.K_e] or key == ord("e"):
+                    arm_action[2] = -0.1
+                elif keys[pygame.K_3] or key == ord("3"):
+                    arm_action[2] = 0.1
+                elif keys[pygame.K_r] or key == ord("r"):
+                    arm_action[3] = -0.1
+                elif keys[pygame.K_4] or key == ord("4"):
+                    arm_action[3] = 0.1
+                elif keys[pygame.K_t] or key == ord("t"):
+                    arm_action[4] = -0.1
+                elif keys[pygame.K_5] or key == ord("5"):
+                    arm_action[4] = 0.1
+                elif keys[pygame.K_y] or key == ord("y"):
+                    arm_action[5] = -0.1
+                elif keys[pygame.K_6] or key == ord("6"):
+                    arm_action[5] = 0.1
+            else:
+                if keys[pygame.K_q] or key == ord("1"):
+                    arm_action[6] = 0.1
+                elif keys[pygame.K_1] or key == ord("q"):
+                    arm_action[6] = -0.1
+                elif keys[pygame.K_q] or key == ord("2"):
+                    arm_action[7] = 0.1
+                elif keys[pygame.K_1] or key == ord("w"):
+                    arm_action[7] = -0.1
+                elif keys[pygame.K_q] or key == ord("3"):
+                    arm_action[8] = 0.1
+                elif keys[pygame.K_1] or key == ord("e"):
+                    arm_action[8] = -0.1
+                elif keys[pygame.K_q] or key == ord("4"):
+                    arm_action[9] = 0.1
+                elif keys[pygame.K_1] or key == ord("r"):
+                    arm_action[9] = -0.1
+                elif keys[pygame.K_q] or key == ord("5"):
+                    arm_action[10] = 0.1
+                elif keys[pygame.K_1] or key == ord("t"):
+                    arm_action[10] = -0.1
+                elif keys[pygame.K_q] or key == ord("6"):
+                    arm_action[11] = 0.1
+                elif keys[pygame.K_1] or key == ord("y"):
+                    arm_action[11] = -0.1
+                elif keys[pygame.K_q] or key == ord("7"):
+                    arm_action[12] = 0.1
+                elif keys[pygame.K_1] or key == ord("u"):
+                    arm_action[12] = -0.1
+                elif keys[pygame.K_q] or key == ord("8"):
+                    arm_action[13] = 0.1
+                elif keys[pygame.K_1] or key == ord("i"):
+                    arm_action[13] = -0.1
+                if keys[pygame.K_q] or key == ord("a"):
+                    arm_action[14] = 0.1
+                elif keys[pygame.K_1] or key == ord("z"):
+                    arm_action[14] = -0.1
+                elif keys[pygame.K_q] or key == ord("s"):
+                    arm_action[15] = 0.1
+                elif keys[pygame.K_1] or key == ord("x"):
+                    arm_action[15] = -0.1
+                elif keys[pygame.K_q] or key == ord("d"):
+                    arm_action[16] = 0.1
+                elif keys[pygame.K_1] or key == ord("c"):
+                    arm_action[16] = -0.1
+                elif keys[pygame.K_q] or key == ord("f"):
+                    arm_action[17] = 0.1
+                elif keys[pygame.K_1] or key == ord("v"):
+                    arm_action[17] = -0.1
+                elif keys[pygame.K_q] or key == ord("g"):
+                    arm_action[18] = 0.1
+                elif keys[pygame.K_1] or key == ord("b"):
+                    arm_action[18] = -0.1
+                elif keys[pygame.K_q] or key == ord("h"):
+                    arm_action[19] = 0.1
+                elif keys[pygame.K_1] or key == ord("n"):
+                    arm_action[19] = -0.1
+                elif keys[pygame.K_q] or key == ord("j"):
+                    arm_action[20] = 0.1
+                elif keys[pygame.K_1] or key == ord("m"):
+                    arm_action[20] = -0.1
+                elif keys[pygame.K_q] or key == ord("k"):
+                    arm_action[21] = 0.1
+                elif keys[pygame.K_1] or key == ord(","):
+                    arm_action[21] = -0.1
 
         elif arm_action_space.shape[0] == 4:
             # Velocity control. A different key for each joint
@@ -579,6 +613,16 @@ class FreeCamHelper:
         return step_result
 
 
+def switch_ee_hand_control(key, ee_hand_control):
+    # To switch between arm or finger control
+    if key == ord("0"):
+        if ee_hand_control == "ee":
+            ee_hand_control = "hand"
+        else:
+            ee_hand_control = "ee"
+    return ee_hand_control
+
+
 def play_env(env, args, config):
     render_steps_limit = None
     if args.no_render:
@@ -625,9 +669,13 @@ def play_env(env, args, config):
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     env_steps = 0
+
+    ee_hand_control = "ee"
     while True:
         print(f"Step: {env_steps}")
         env_steps += 1
+
+        ee_hand_control = switch_ee_hand_control(key, ee_hand_control)
 
         if (
             args.save_actions
@@ -662,6 +710,7 @@ def play_env(env, args, config):
             args.control_humanoid,
             humanoid_controller=humanoid_controller,
             key=key,
+            ee_hand_control=ee_hand_control,
         )
 
         if not args.no_render and keys[pygame.K_c]:
