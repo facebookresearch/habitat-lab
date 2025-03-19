@@ -35,20 +35,20 @@ class _InstanceGroup:
     def __init__(self, hab_sim):
         identity_rotation_wxyz = [1.0, 0.0, 0.0, 0.0]
         self._render_instance_helper = RenderInstanceHelper(hab_sim, identity_rotation_wxyz)
-        self._geom_ids_array = None
+        self._geom_ids_list = []
 
     def flush_to_hab_sim(self, mj_model, mj_data):
 
-        if self._geom_ids_array is None:
+        if len(self._geom_ids_list) == 0:
             return
+        
+        positions = np.zeros((len(self._geom_ids_list), 3))  # np.take(mj_data.geom_xpos, self._geom_ids_array, axis=0)
 
-        positions = np.zeros((len(self._geom_ids_array), 3))  # np.take(mj_data.geom_xpos, self._geom_ids_array, axis=0)
-
-        wxyz_rotations = np.zeros((len(self._geom_ids_array), 4))
+        wxyz_rotations = np.zeros((len(self._geom_ids_list), 4))
 
         count = 0
         temp_quat = np.zeros((4,1), dtype=np.float64)
-        for id in self._geom_ids_array:
+        for id in self._geom_ids_list:
             mat3x3 = mj_data.geom_xmat[id].reshape(9, 1)
             # temp lazy import of mujoco
             import mujoco
@@ -92,41 +92,41 @@ class MuJoCoVisualizer:
         self._mj_model = mj_model
         self._mj_data = mj_data
         self._is_first_flush = True
+        self._next_semantic_id = 1
         
-    def on_load_model(self, render_map_filepath):
+    def add_render_map(self, render_map_filepath):
+
+        assert self._is_first_flush
 
         with open(render_map_filepath, "r") as f:
             json_data = json.load(f)
         render_map_json = json_data["render_map"]
 
+        for elem_name in render_map_json:
 
-        geom_ids_list_by_group_type = {_InstanceGroupType.STATIC : [], _InstanceGroupType.DYNAMIC : []}
-
-        found_count = 0
-        for geom_name in render_map_json:
-
-            item_json = render_map_json[geom_name]
+            item_json = render_map_json[elem_name]
             is_dynamic = item_json["is_dynamic"]
             render_asset_filepath = item_json["render_asset_filepath"]
             semantic_id = item_json.get("semantic_id")
-            semantic_id = found_count if semantic_id is None else semantic_id
-            found_count += 1
+            semantic_id = self._next_semantic_id if semantic_id is None else semantic_id
+            self._next_semantic_id += 1
 
             import mujoco  # temp sloppy defer import
-            geom_id = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_GEOM, geom_name)
-            assert geom_id != -1
+            geom_id = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_GEOM, elem_name)
+            if geom_id == -1:
+                body_id = mujoco.mj_name2id(self._mj_model, mujoco.mjtObj.mjOBJ_BODY, elem_name)
+                if body_id != -1:
+                    assert self._mj_model.body_geomnum[body_id] > 0
+                    geom_id = self._mj_model.body_geomadr[body_id]
+
+            if geom_id == -1:
+                print(f"MuJoCoVisualizer: no geom or body found for {elem_name} named in {render_map_filepath}")
+                continue
 
             group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
             group = self._instance_groups[group_type]
             group._render_instance_helper.add_instance(render_asset_filepath, semantic_id)
-            geom_ids_list_by_group_type[group_type].append(geom_id)
-
-        for group_type in self._instance_groups:
-            group = self._instance_groups[group_type]
-            if len(geom_ids_list_by_group_type[group_type]):
-                group._geom_ids_array = np.array(geom_ids_list_by_group_type[group_type])
-
-        self._is_first_flush = True
+            group._geom_ids_list.append(geom_id)
 
     def flush_to_hab_sim(self):
 

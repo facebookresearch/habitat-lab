@@ -12,12 +12,14 @@ class MuJoCoAppWrapper:
         self._data = None
         self._hab_sim = hab_sim
 
-    def load_model_from_xml(self, xml_filepath, render_map_filepath):
+    def load_model_from_xml(self, xml_filepath):
         self._model = mujoco.MjModel.from_xml_path(xml_filepath)
         self._data = mujoco.MjData(self._model)
 
         self._visualizer = MuJoCoVisualizer(self._hab_sim, self._model, self._data)
-        self._visualizer.on_load_model(render_map_filepath)
+
+    def add_render_map(self, render_map_filepath):
+        self._visualizer.add_render_map(render_map_filepath)
 
     def step(self, num_steps=1):
         if self._model is None:
