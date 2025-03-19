@@ -1,0 +1,123 @@
+<mujoco model="allegro_digit360_right_calib_free">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="digit2_sensor_base" file="digit2_sensor_base.obj"/>
+    <mesh name="digit2_sensor_base_tip" file="digit2_sensor_base_tip.obj"/>
+  </asset>
+
+  <worldbody>
+    <geom size="0.0207 0.056 0.0224" pos="-0.009 0 -0.023" type="box"/>
+    <geom size="0.0207 0.0269 0.0214" pos="-0.009 -0.0253 -0.0667" type="box"/>
+    <geom size="0.0207 0.036 0.0065" pos="-0.0093 -0.00557 -0.08874" type="box"/>
+    <body name="link_0_0" pos="0 0.0435 -0.001542" quat="0.999048 -0.0436194 0 0">
+      <!-- <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0119" diaginertia="1.01667e-06 1.01667e-06 6.47677e-07"/> -->
+      <joint name="joint_0_0" pos="0 0 0" axis="0 0 1" range="-0.47 0.47" damping="0.1" />
+      <geom size="0.0098 0.01375 0.0082" pos="0 0 0.0082" type="box"/>
+      <body name="link_1_0" pos="0 0 0.0164">
+        <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.065" diaginertia="7.95654e-05 7.95654e-05 2.47089e-05"/>
+        <joint name="joint_1_0" pos="0 0 0" axis="0 1 0" range="-0.196 1.61" damping="0.1"/>
+        <geom size="0.0098 0.01375 0.027" pos="0 0 0.027" type="box"/>
+        <body name="link_2_0" pos="0 0 0.054">
+          <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0355" diaginertia="2.63979e-05 2.63979e-05 1.34949e-05"/>
+          <joint name="joint_2_0" pos="0 0 0" axis="0 1 0" range="-0.174 1.709"  damping="0.1"/>
+          <geom size="0.0098 0.01375 0.0192" pos="0 0 0.0192" type="box"/>
+          <body name="link_3_0" pos="0 0 0.0384">
+            <inertial pos="0.000284718 -8.70599e-06 0.0281196" quat="0.999981 9.7372e-05 0.00325927 -0.00522168" mass="0.0390727" diaginertia="2.18269e-05 2.10129e-05 7.73231e-06"/>
+            <joint name="joint_3_0" pos="0 0 0" axis="0 1 0" range="-0.227 1.618"  damping="0.1"/>
+            <geom size="0.0098 0.01175 0.007" pos="0 0 0.008" type="box"/>
+            <geom pos="0 0 0.02" quat="1 0 0 0" type="mesh" mesh="digit2_sensor_base"/>
+            <geom pos="0 0 0.02" type="mesh" mesh="digit2_sensor_base_tip"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="link_4_0" pos="0 0 0.0007">
+      <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0119" diaginertia="1.01667e-06 1.01667e-06 6.47677e-07"/>
+      <joint name="joint_4_0" pos="0 0 0" axis="0 0 1" range="-0.47 0.47"/>
+      <geom size="0.0098 0.01375 0.0082" pos="0 0 0.0082" type="box"/>
+      <body name="link_5_0" pos="0 0 0.0164">
+        <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.065" diaginertia="7.95654e-05 7.95654e-05 2.47089e-05"/>
+        <joint name="joint_5_0" pos="0 0 0" axis="0 1 0" range="-0.196 1.61"/>
+        <geom size="0.0098 0.01375 0.027" pos="0 0 0.027" type="box"/>
+        <body name="link_6_0" pos="0 0 0.054">
+          <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0355" diaginertia="2.63979e-05 2.63979e-05 1.34949e-05"/>
+          <joint name="joint_6_0" pos="0 0 0" axis="0 1 0" range="-0.174 1.709"/>
+          <geom size="0.0098 0.01375 0.0192" pos="0 0 0.0192" type="box"/>
+          <body name="link_7_0" pos="0 0 0.0384">
+            <inertial pos="0.000284718 -8.70599e-06 0.0281196" quat="0.999981 9.7372e-05 0.00325927 -0.00522168" mass="0.0390727" diaginertia="2.18269e-05 2.10129e-05 7.73231e-06"/>
+            <joint name="joint_7_0" pos="0 0 0" axis="0 1 0" range="-0.227 1.618"/>
+            <geom size="0.0098 0.01175 0.007" pos="0 0 0.008" type="box"/>
+            <geom pos="0 0 0.02" quat="1 0 0 0" type="mesh" mesh="digit2_sensor_base"/>
+            <geom pos="0 0 0.02" type="mesh" mesh="digit2_sensor_base_tip"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="link_8_0" pos="0 -0.0435 -0.001542" quat="0.999048 0.0436194 0 0">
+      <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0119" diaginertia="1.01667e-06 1.01667e-06 6.47677e-07"/>
+      <joint name="joint_8_0" pos="0 0 0" axis="0 0 1" range="-0.47 0.47"/>
+      <geom size="0.0098 0.01375 0.0082" pos="0 0 0.0082" type="box"/>
+      <body name="link_9_0" pos="0 0 0.0164">
+        <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.065" diaginertia="7.95654e-05 7.95654e-05 2.47089e-05"/>
+        <joint name="joint_9_0" pos="0 0 0" axis="0 1 0" range="-0.196 1.61"/>
+        <geom size="0.0098 0.01375 0.027" pos="0 0 0.027" type="box"/>
+        <body name="link_10_0" pos="0 0 0.054">
+          <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0355" diaginertia="2.63979e-05 2.63979e-05 1.34949e-05"/>
+          <joint name="joint_10_0" pos="0 0 0" axis="0 1 0" range="-0.174 1.709"/>
+          <geom size="0.0098 0.01375 0.0192" pos="0 0 0.0192" type="box"/>
+          <body name="link_11_0" pos="0 0 0.0384">
+            <inertial pos="0.000284718 -8.70599e-06 0.0281196" quat="0.999981 9.7372e-05 0.00325927 -0.00522168" mass="0.0390727" diaginertia="2.18269e-05 2.10129e-05 7.73231e-06"/>
+            <joint name="joint_11_0" pos="0 0 0" axis="0 1 0" range="-0.227 1.618"/>
+            <geom size="0.0098 0.01175 0.007" pos="0 0 0.008" type="box"/>
+            <geom pos="0 0 0.02" quat="1 0 0 0" type="mesh" mesh="digit2_sensor_base"/>
+            <geom pos="0 0 0.02" type="mesh" mesh="digit2_sensor_base_tip"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="link_12_0" pos="-0.0182 0.019333 -0.045987" quat="0.477714 -0.521334 -0.521334 -0.477714">
+      <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.0176" diaginertia="1.89273e-05 1.89273e-05 1.43008e-05"/>
+      <joint name="joint_12_0" pos="0 0 0" axis="-1 0 0" range="0.263 1.396"/>
+      <geom size="0.0179 0.017 0.02275" pos="-0.0179 0.009 0.0145" type="box"/>
+      <body name="link_13_0" pos="-0.027 0.005 0.0399">
+        <inertial pos="0 0 0" quat="0.707107 0 0 0.707107" mass="0.0119" diaginertia="4.52363e-06 4.24251e-06 4.24251e-06"/>
+        <joint name="joint_13_0" pos="0 0 0" axis="0 0 1" range="-0.105 1.163"/>
+        <geom size="0.0098 0.01375 0.00885" pos="0 0 0.00885" type="box"/>
+        <body name="link_14_0" pos="0 0 0.0177">
+          <inertial pos="0 0 0" quat="0.707107 0.707107 0 0" mass="0.038" diaginertia="4.3044e-05 4.3044e-05 1.44452e-05"/>
+          <joint name="joint_14_0" pos="0 0 0" axis="0 1 0" range="-0.189 1.644"/>
+          <geom size="0.0098 0.01375 0.0257" pos="0 0 0.0257" type="box"/>
+          <body name="link_15_0" pos="0 0 0.0514">
+            <inertial pos="0.000162945 -4.98247e-06 0.0226978" quat="0.999995 0.000154911 0.00320243 -0.000237557" mass="0.0682727" diaginertia="8.62908e-05 6.83558e-05 3.59533e-05"/>
+            <joint name="joint_15_0" pos="0 0 0" axis="0 1 0" range="-0.162 1.719"/>
+            <geom size="0.0093 0.01375 0.01615" pos="0 0 0.01615" type="box"/>
+            <geom pos="0 0 0.0353" quat="1 0 0 0" type="mesh" mesh="digit2_sensor_base"/>
+            <geom pos="0 0 0.0353" type="mesh" mesh="digit2_sensor_base_tip"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="joint_0_0_ctrl"  joint="joint_0_0" kp="1"/>
+    <position name="joint_1_0_ctrl"  joint="joint_1_0" kp="1"/>
+    <position name="joint_2_0_ctrl"  joint="joint_2_0" kp="1"/>
+    <position name="joint_3_0_ctrl"  joint="joint_3_0" kp="1"/>
+    <!--
+    <position name="joint_4_0_ctrl"  joint="joint_4_0" kp="10"/>
+    <position name="joint_5_0_ctrl"  joint="joint_5_0" kp="10"/>
+    <position name="joint_6_0_ctrl"  joint="joint_6_0" kp="10"/>
+    <position name="joint_7_0_ctrl"  joint="joint_7_0" kp="10"/>
+    <position name="joint_8_0_ctrl"  joint="joint_8_0" kp="10"/>
+    <position name="joint_9_0_ctrl"  joint="joint_9_0" kp="10"/>
+    <position name="joint_10_0_ctrl" joint="joint_10_0" kp="10"/>
+    <position name="joint_11_0_ctrl" joint="joint_11_0" kp="10"/>
+    <position name="joint_12_0_ctrl" joint="joint_12_0" kp="10"/>
+    <position name="joint_13_0_ctrl" joint="joint_13_0" kp="10"/>
+    <position name="joint_14_0_ctrl" joint="joint_14_0" kp="10"/>
+    <position name="joint_15_0_ctrl" joint="joint_15_0" kp="10"/>
+    -->
+  </actuator>  
+</mujoco>

@@ -1,16 +1,21 @@
 {
     "render_map": {
         "labeled_axes_geom0": {
-            "is_dynamic": true,
+            "is_dynamic": false,
             "render_asset_filepath": "/home/eric/blender/labeled_axes.obj",
             "semantic_id": 1
         },
         "labeled_axes_geom1": {
-            "is_dynamic": true,
+            "is_dynamic": false,
             "render_asset_filepath": "/home/eric/blender/labeled_axes.obj",
             "semantic_id": 1
         },
         "labeled_axes_geom2": {
+            "is_dynamic": false,
+            "render_asset_filepath": "/home/eric/blender/labeled_axes.obj",
+            "semantic_id": 1
+        },
+        "labeled_axes_geom3": {
             "is_dynamic": true,
             "render_asset_filepath": "/home/eric/blender/labeled_axes.obj",
             "semantic_id": 1

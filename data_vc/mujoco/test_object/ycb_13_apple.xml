@@ -1,0 +1,7 @@
+<mujoco>
+  <worldbody>
+    <body name="ycb_13_apple_2" pos="0 0 0">
+      <geom type="mesh" mesh="ycb_13_apple"/>
+    </body>
+  </worldbody>
+</mujoco>

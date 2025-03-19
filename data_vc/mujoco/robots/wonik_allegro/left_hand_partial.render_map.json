@@ -1,0 +1,24 @@
+{
+    "render_map": {
+        "palm": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/mujoco_menagerie/wonik_allegro/assets/base_link_left.stl"
+        },
+        "rf_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/mujoco_menagerie/wonik_allegro/assets/link_3.0_tip.stl"
+        },
+        "mf_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/mujoco_menagerie/wonik_allegro/assets/link_3.0_tip.stl"
+        },
+        "ff_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/mujoco_menagerie/wonik_allegro/assets/link_3.0_tip.stl"
+        },
+        "th_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/projects/mujoco_menagerie/wonik_allegro/assets/link_15.0_tip.stl"
+        }
+    }
+}

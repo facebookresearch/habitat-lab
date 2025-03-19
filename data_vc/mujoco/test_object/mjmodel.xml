@@ -1,0 +1,11 @@
+<mujoco model="rigid_object">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="ycb_13_apple" file="ycb_13_apple.obj"/>
+  </asset>
+
+  <worldbody>
+    <geom type="mesh" mesh="ycb_13_apple"/>
+  </worldbody>
+</mujoco>

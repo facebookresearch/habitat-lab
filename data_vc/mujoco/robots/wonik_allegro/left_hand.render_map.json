@@ -1,0 +1,88 @@
+{
+    "render_map": {
+        "palm": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/base_link_left.stl"
+        },
+        "rf_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_0.0.stl"
+        },
+        "rf_proximal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_1.0.stl"
+        },
+        "rf_medial": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_2.0.stl"
+        },
+        "rf_distal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0.stl"
+        },
+        "rf_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0_tip.stl"
+        },
+        "mf_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_0.0.stl"
+        },
+        "mf_proximal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_1.0.stl"
+        },
+        "mf_medial": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_2.0.stl"
+        },
+        "mf_distal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0.stl"
+        },
+        "mf_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0_tip.stl"
+        },
+        "ff_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_0.0.stl"
+        },
+        "ff_proximal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_1.0.stl"
+        },
+        "ff_medial": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_2.0.stl"
+        },
+        "ff_distal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0.stl"
+        },
+        "ff_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_3.0_tip.stl"
+        },
+        "th_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_12.0_left.stl"
+        },
+        "th_proximal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_13.0.stl"
+        },
+        "th_medial": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_14.0.stl"
+        },
+        "th_distal": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_15.0.stl"
+        },
+        "th_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "data_vc/mujoco/robots/wonik_allegro/link_15.0_tip.stl"
+        }
+    }
+}

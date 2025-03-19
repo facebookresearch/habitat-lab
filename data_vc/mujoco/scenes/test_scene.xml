@@ -1,6 +1,9 @@
 <mujoco>
   <option gravity="0 0 -9.81">
   </option>
+
+  <include file="/home/eric/projects/habitat-lab5/data_vc/mujoco/robots/wonik_allegro/left_hand.xml"/>
+
   <worldbody>
     <!-- Ground Plane -->
     <geom name="ground_plane" type="plane" pos="0 0 0" size="10 10 0.1" material="ground_material" />
@@ -12,16 +15,16 @@
     </body>
     -->
 
-    <geom name="labeled_axes_geom0" type="mesh" mesh="labled_axes_mesh" pos="0 0 0" />
+    <geom name="labeled_axes_geom0" type="mesh" mesh="labled_axes_mesh" pos="1 0 0" />
+    <!--
     <geom name="labeled_axes_geom1" type="mesh" mesh="labled_axes_mesh" pos="4 0 0" quat="0.7071 0 0 0.7071" />
     <geom name="labeled_axes_geom2" type="mesh" mesh="labled_axes_mesh" pos="8 0 0" quat="-0.5 -0.5 -0.5 -0.5" />
+    -->
 
-    <!--
-    <body name="thingy_instance1" pos="0 -0.2 1.5" >
-      <geom name="thingy_geom1" type="mesh" mesh="thingy_mesh" />
-      <joint name="thingy_joint1" type="free" />
+    <body name="labeled_axes3" pos="1 0 4" >
+      <geom name="labeled_axes_geom3" type="mesh" mesh="labled_axes_mesh" />
+      <joint name="labeled_axes_joint3" type="free" />
     </body>
-    -->    
 
 
   </worldbody>

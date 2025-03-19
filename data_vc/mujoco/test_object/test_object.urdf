@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot name="rigid_object">
+  <link name="rigid_object_link">
+    <inertial>
+      <mass value="1.0"/> <!-- Set a reasonable mass for the object -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="ycb_13_apple.obj" scale="1 1 1"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </collision>
+  </link>
+</robot>
