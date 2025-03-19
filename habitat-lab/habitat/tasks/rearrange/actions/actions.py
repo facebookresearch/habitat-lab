@@ -921,7 +921,19 @@ class ArmReachEEAction(ArmEEAction):
     @property
     def action_space(self):
         # 6-dim for the ee, x, y, z, roll, pitch, yaw, and 16-dim for the hand
-        return spaces.Box(shape=(22,), low=-1, high=1, dtype=np.float32)
+        return spaces.Dict(
+            {
+                f"{self._action_arg_prefix}target_pos": spaces.Box(
+                    shape=(3,), low=-1, high=1, dtype=np.float32
+                ),
+                f"{self._action_arg_prefix}target_rot": spaces.Box(
+                    shape=(3,), low=-1, high=1, dtype=np.float32
+                ),
+                f"{self._action_arg_prefix}target_finger": spaces.Box(
+                    shape=(16,), low=-1, high=1, dtype=np.float32
+                ),
+            }
+        )
 
     def reset(self, *args, **kwargs):
         try:
