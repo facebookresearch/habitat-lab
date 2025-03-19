@@ -955,7 +955,8 @@ class ArmReachEEAction(ArmEEAction):
                 self.target_finger = (
                     self._robot_wrapper._target_hand_joint_positions
                 )
-        except:
+        except Exception as e:
+            print(f"Arm Reach EE Action issue: {e}")
             self.ee_target = None
             self.ee_rot_target = None
             self.target_finger = None
