@@ -561,11 +561,19 @@ class AppStateIsaacSimViewer(AppState):
         self._mj_dt = 1.0 / 120
         self._mj_wrapper = MuJoCoAppWrapper(self._sim)
         self._mj_wrapper.load_model_from_xml(
-            # "data_vc/mujoco/scenes/test_scene.xml",
-            # "data_vc/mujoco/scenes/test_scene.render_map.json",
-            "data/mujoco/scenes/102344193.xml",
-            "data/mujoco/scenes/102344193.render_map.json",
+            "data_vc/mujoco/scenes/test_scene.xml",
+            # "data/mujoco/scenes/102344193.xml",
             )
+        
+        self._mj_wrapper.add_render_map(
+            "data_vc/mujoco/scenes/test_scene.render_map.json",
+            # "data/mujoco/scenes/102344193.render_map.json",
+        )
+
+        self._mj_wrapper.add_render_map(
+            "data_vc/mujoco/robots/wonik_allegro/left_hand.render_map.json"
+        )
+
         self._mj_wrapper._model.opt.timestep = self._mj_dt
 
 
@@ -592,6 +600,63 @@ class AppStateIsaacSimViewer(AppState):
         # assert body_id != -1
         # body_position = data.xpos[body_id]  # 3D position (x, y, z)
         # body_orientation = data.xquat[body_id]  # Quaternion (w, x, y, z)
+
+        # temp move hand to match cursor
+
+        if not self._do_camera_follow_spot:
+            # hand_mocap_id = 0  # sloppy: assume id 0
+            cursor_pos_usd = isaac_prim_utils.habitat_to_usd_position([self._cursor_pos.x, self._cursor_pos.y, self._cursor_pos.z])
+            # self._mj_wrapper._data.mocap_pos[hand_mocap_id] = cursor_pos_usd
+
+            data = self._mj_wrapper._data
+            model = self._mj_wrapper._model
+            target_pos = np.array(cursor_pos_usd)
+
+            # Get current position
+            import mujoco
+            base_x_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_x")
+            base_y_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_y")
+            base_z_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_z")
+
+            base_roll_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_roll")
+            base_pitch_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_pitch")
+            base_yaw_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_yaw")
+
+            # Get actuator indices by name
+            base_x_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_x_vel")
+            assert base_x_ctrl_id != -1
+            base_y_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_y_vel")
+            assert base_y_ctrl_id != -1
+            base_z_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_z_vel")
+            assert base_z_ctrl_id != -1
+
+            base_roll_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_roll_pos")
+            assert base_roll_ctrl_id != -1
+            base_pitch_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_pitch_pos")
+            assert base_pitch_ctrl_id != -1
+            base_yaw_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_yaw_pos")            
+            assert base_yaw_ctrl_id != -1
+
+            current_pos = data.qpos[[base_x_id, base_y_id, base_z_id]]
+            position_error = target_pos - current_pos
+
+            # Apply position control (P-controller)
+            max_pos_ctrl = 2
+            pos_ctrl_scale = 10
+            data.ctrl[base_x_ctrl_id] = min(max_pos_ctrl, pos_ctrl_scale * position_error[0])  # X
+            data.ctrl[base_y_ctrl_id] = min(max_pos_ctrl, pos_ctrl_scale * position_error[1])  # Y
+            data.ctrl[base_z_ctrl_id] = min(max_pos_ctrl, pos_ctrl_scale * position_error[2])  # Z
+
+            # # Get current quaternion orientation
+            # current_quat = data.qpos[base_roll_id:base_roll_id + 4]  # Extract quaternion (w, x, y, z)
+
+            # # Compute quaternion error
+            # quat_error = quat_multiply(target_quat, quat_transpose(current_quat))
+
+            # # Convert quaternion error to roll-pitch-yaw errors
+            # angular_error = np.array(quat_error[1:])  # Use only (x, y, z) part
+            # data.ctrl[3:6] = 5 * angular_error  # Apply to roll, pitch, yaw actuators            
+
 
         pass
 
