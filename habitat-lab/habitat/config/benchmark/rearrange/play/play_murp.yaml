@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - pick_murp
-  - override /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: murp_agent
-  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: murp
-  - override /habitat/task/rearrange/actions: murp_base_arm
-  - _self_
