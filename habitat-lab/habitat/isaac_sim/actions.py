@@ -62,22 +62,36 @@ class ArmReachEEAction(ArmEEAction):
         self._robot_wrapper = self.cur_articulated_agent._robot_wrapper
         self.ee_rot_target = None
         self._use_ee_rot = self._config.get("use_ee_rot", False)
+        self.arm_type = "left"
 
     def reset(self, *args, **kwargs):
         try:
-            self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
-                np.array(
+            if self.arm_type == "left":
+                arm_joint_pos = (
                     self._sim.articulated_agent._robot_wrapper.arm_joint_pos
                 )
+            elif self.arm_type == "right":
+                arm_joint_pos = (
+                    self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+                )
+            self.ee_target, self.ee_rot_target = self._ik_helper.calc_fk(
+                np.array(arm_joint_pos)
             )
         except:
             self.ee_target = None
             self.ee_rot_target = None
 
     def calc_desired_joints(self):
-        joint_pos = np.array(
-            self._sim.articulated_agent._robot_wrapper.arm_joint_pos
-        )
+        if self.arm_type == "left":
+            arm_joint_pos = (
+                self._sim.articulated_agent._robot_wrapper.arm_joint_pos
+            )
+        elif self.arm_type == "right":
+            arm_joint_pos = (
+                self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+            )
+
+        joint_pos = np.array(arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
@@ -113,7 +127,12 @@ class ArmReachEEAction(ArmEEAction):
         des_joint_pos = self.calc_desired_joints()
         des_joint_pos = self.apply_joint_limits(des_joint_pos)
 
-        self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+        if self.arm_type == "left":
+            self._robot_wrapper._target_arm_joint_positions = des_joint_pos
+        elif self.arm_type == "right":
+            self._robot_wrapper._target_right_arm_joint_positions = (
+                des_joint_pos
+            )
 
 
 @registry.register_task_action

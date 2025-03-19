@@ -30,7 +30,11 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand.usda"
+        self.arm_type = "left"
+        if self.arm_type == "left":
+            asset_path = "./data/usd/robots/franka_with_hand.usda"
+        elif self.arm_type == "right":
+            asset_path = "./data/usd/robots/franka_with_hand_right.usda"
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -482,10 +486,12 @@ class MurpRobotWrapper:
             "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"
         )
         self.fix_base(step_size, base_position, base_orientation)
-        self.drive_arm(step_size)
-        # self.drive_right_arm(step_size)
-        self.drive_hand(step_size)
-        # self.drive_right_hand(step_size)
+        if self.arm_type == "left":
+            self.drive_arm(step_size)
+            self.drive_hand(step_size)
+        elif self.arm_type == "right":
+            self.drive_right_arm(step_size)
+            self.drive_right_hand(step_size)
         self._step_count += 1
 
     @property
@@ -536,8 +542,13 @@ class MurpRobotWrapper:
         """Get the current ee position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
+        if self.arm_type == "left":
+            ee_link_id = self.ee_link_id
+        elif self.arm_type == "right":
+            ee_link_id = self.right_ee_link_id
+
+        ee_pos = link_poses[0][ee_link_id]
+        ee_rot = link_poses[1][ee_link_id]
 
         return ee_pos, ee_rot
 
