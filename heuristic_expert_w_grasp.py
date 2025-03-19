@@ -183,6 +183,15 @@ class ExpertDatagen:
             fps=30,
         )
         self.base_trans = None
+        self.TARGET_CONFIG = {
+                "cabinet": [30, 15, 25, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_cabinet"],
+                "shelf": [25, 20, 1, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_door18"],
+                "island": [20, 12, 18, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island"],
+                "oven": [35, 18, 30, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2"],
+                "fridge": [30, 14, 28, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"],
+                "fridge2": [30, 20, 19, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"],
+                "freezer": [28, 12, 24, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer"],
+            }
 
     def get_grasp_mode(self, name):
         # num_hand_joints = 10
@@ -465,10 +474,10 @@ class ExpertDatagen:
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
             "shelf": {
-                "base_pos": np.array([-4.5, 0.1, -3.5]),
+                "base_pos": np.array([-4.4, 0.1, -3.5]),
                 "base_rot": 180,
-                "ee_pos": self.env.sim._rigid_objects[0].translation,
-                "ee_rot": np.deg2rad([0, 80, -30]),
+                "ee_pos": np.array([-5.6, 1.0, -3.9]),
+                "ee_rot": np.deg2rad([-60, 0 , 0]),
             },
             "island": {
                 "base_pos": np.array([-5.3, 0.1, -1.6]),
@@ -572,7 +581,7 @@ class ExpertDatagen:
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                self.open_xyz[1] -= 0.1
+                # self.open_xyz[1] -= 0.1
                 self.open_xyz[0] += 0.1
 
             return (
@@ -642,9 +651,10 @@ class ExpertDatagen:
         return isaac_T_door_quat
 
     def get_door_quat(self):
+        path =self.TARGET_CONFIG[self.target_name][3]
         door_trans, door_orientation_rpy = (
             self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
-                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
+               path
             )
         )
         self.visualize_pos(door_trans, "door")
@@ -801,11 +811,12 @@ class ExpertDatagen:
             self.target_name, pose_type="ee"
         )
         self.visualize_pos(self.target_ee_pos)
+        grip_iters,open_iters,move_iters,_ = self.TARGET_CONFIG[self.target_name]
         if hand == "left":
-            self.execute_grasp_sequence(hand, grip_iters=30, open_iters=30)
+            self.execute_grasp_sequence(hand, grip_iters, open_iters)
         elif hand == "right":
             self.execute_grasp_sequence(
-                hand, grip_iters=30, open_iters=30, move_iters=19
+                hand, grip_iters, open_iters, move_iters
             )
 
 
@@ -814,7 +825,7 @@ if __name__ == "__main__":
 
     # Add arguments
     parser.add_argument(
-        "--target-name", default="fridge2", help="target object name"
+        "--target-name", default="shelf", help="target object name"
     )
     parser.add_argument("--skill", default="open", help="open, pick")
     parser.add_argument("--replay", action="store_true")
