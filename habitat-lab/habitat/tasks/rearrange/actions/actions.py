@@ -1054,6 +1054,15 @@ class ArmReachEEAction(ArmEEAction):
         delta_rot = kwargs[self._action_arg_prefix + "target_rot"]
         finger = kwargs[self._action_arg_prefix + "target_finger"]
 
+        # Cap the joints
+        delta_pos = (
+            np.clip(delta_pos, -1, 1) * self._config.max_ee_xyz_movement
+        )
+        delta_rot = (
+            np.clip(delta_rot, -1, 1) * self._config.max_ee_rpy_movement
+        )
+        finger = np.clip(finger, -1, 1) * self._config.max_finger_movement
+
         # Update the target joint location
         self.ee_target += np.array(delta_pos)
         self.ee_rot_target += np.array(delta_rot)

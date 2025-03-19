@@ -290,6 +290,9 @@ class ArmReachEEActionConfig(ActionConfig):
     """
     type: str = "ArmReachEEAction"
     right_left_hand: str = "right"
+    max_ee_xyz_movement: float = 0.1
+    max_ee_rpy_movement: float = 0.52  # 30 degree
+    max_finger_movement: float = 0.26  # 15 degree
 
 
 @dataclass
