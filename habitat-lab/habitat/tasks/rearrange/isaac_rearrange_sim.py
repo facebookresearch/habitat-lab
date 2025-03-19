@@ -443,7 +443,7 @@ class IsaacRearrangeSim(HabitatSim):
         self._setup_targets(ep_info)
         # Set the target start pos
         self.target_start_pos = np.array(
-            [self._targets[key]["base"][0] for key in self._targets]
+            [self._targets[key]["ee"][0] for key in self._targets]
         )
 
         return

@@ -1094,6 +1094,6 @@ class ArmReachEEAction(ArmEEAction):
         #         self._sim.articulated_agent._robot_wrapper.right_arm_joint_pos
         #     )
         # )
-        print(f"self.ee_target: {self.ee_target}")
-        print(f"self.ee_rot_target: {self.ee_rot_target}")
-        print(f"self.target_finger: {self.target_finger}")
+        # print(f"self.ee_target: {self.ee_target}")
+        # print(f"self.ee_rot_target: {self.ee_rot_target}")
+        # print(f"self.target_finger: {self.target_finger}")

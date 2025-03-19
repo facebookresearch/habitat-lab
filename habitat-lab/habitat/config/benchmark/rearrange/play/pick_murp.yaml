@@ -58,13 +58,14 @@ habitat:
     success_state: 1.5708 # 90 degree for the fridge door
     end_on_success: True
     success_reward: 2.5
-    slack_reward: -0.01
+    slack_reward: -0.1
     measurements:
       art_obj_reward:
         success_js_state: 1.5708 # 90 degree for the fridge door
         art_dist_reward: 10.0
         art_at_desired_state_reward: 5.0
         ee_dist_reward: 10.0
+        marker_dist_reward: 5.0
       art_obj_at_desired_state:
         success_dist_threshold: 0.17 #  10 degree
         success_js_state: 1.5708 # 90 degree for the fridge door
