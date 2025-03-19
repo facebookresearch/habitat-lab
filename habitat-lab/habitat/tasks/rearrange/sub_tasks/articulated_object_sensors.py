@@ -182,7 +182,11 @@ class ArtObjState(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if type(task._sim) == IsaacRearrangeSim:
-            rpy = get_door_quat(task)
+            # Fully close, the value is -180 degree
+            # when opening, the value is 90 degree
+            # it can be opened to 45 degree
+            # We use absolute value here to indicate openning or not
+            rpy = np.deg2rad(abs(get_door_quat(task)))
             self._metric = rpy[0]
         else:
             self._metric = task.get_use_marker().get_targ_js()

@@ -335,7 +335,12 @@ class DoorOrientationSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, task, episode, *args, **kwargs):
-        return np.array([get_door_quat(task)[0]], dtype=np.float32)
+        # Fully close, the value is -180 degree
+        # when opening, the value is 90 degree
+        # it can be opened to 45 degree
+        # We use absolute value here to indicate openning or not
+        angle = get_door_quat(task)[0]
+        return np.deg2rad(np.array([abs(angle)], dtype=np.float32))
 
 
 @registry.register_sensor
