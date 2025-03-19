@@ -116,7 +116,7 @@ def get_input_vel_ctlr(
     ee_hand_control="ee",
 ):
     if skip_pygame:
-        return step_env(env, "empty", {}), None, False
+        return step_env(env, "rearrange_stop", {}), None, False
     multi_agent = len(env._sim.agents_mgr) > 1
 
     if multi_agent:
