@@ -215,7 +215,9 @@ class ArtObjAtDesiredState(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if type(task._sim) == IsaacRearrangeSim:
-            dist = self._config.success_js_state - get_door_quat(task)[0]
+            dist = self._config.success_js_state - np.deg2rad(
+                abs(get_door_quat(task)[0])
+            )
         else:
             dist = task.success_js_state - task.get_use_marker().get_targ_js()
 
@@ -270,7 +272,6 @@ class ArtObjSuccess(Measure):
         self._metric = (
             is_art_obj_state_succ
             and ee_to_rest_distance < self._config.rest_dist_threshold
-            and not self._sim.grasp_mgr.is_grasped
         )
         if self._config.must_call_stop:
             if called_stop:
@@ -357,7 +358,7 @@ class ArtObjReward(RearrangeReward):
         ].get_metric()
 
         self._prev_art_state = link_state
-        # TODO: jimmy: havre to implement grasping logics
+        # TODO: jimmy: have to implement grasping logics
         self._any_has_grasped = False  # task._sim.grasp_mgr.is_grasped
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
@@ -405,7 +406,7 @@ class ArtObjReward(RearrangeReward):
         if not is_art_obj_state_succ:
             reward += self._config.art_dist_reward * dist_diff
 
-        # TODO: jimmy: havre to implement grasping logics
+        # TODO: jimmy: have to implement grasping logics
         cur_has_grasped = False  # task._sim.grasp_mgr.is_grasped
 
         if type(task._sim) == IsaacRearrangeSim:
@@ -416,6 +417,7 @@ class ArtObjReward(RearrangeReward):
             cur_ee_dist_to_marker = task.measurements.measures[
                 EndEffectorDistToMarker.cls_uuid
             ].get_metric()
+
         if cur_has_grasped and not self._any_has_grasped:
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker

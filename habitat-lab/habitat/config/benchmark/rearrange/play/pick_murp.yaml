@@ -44,22 +44,36 @@ habitat:
   task:
     type: RearrangePickTask-v0
     count_obj_collisions: True
-    desired_resting_position: [0.5, 0.0, 1.0]
     reward_measure: art_obj_reward
     success_measure: art_obj_success
-
-    # Reach task config
     render_target: True
     ee_sample_factor: 0.8
-
-    # In radians
     base_angle_noise: 0.0
     base_noise: 0.0
     constraint_violation_ends_episode: False
     force_regenerate: True
 
+    # Things added for Murp
+    desired_resting_position: [0.58, 0.00, 1.30]
+    success_state: 1.5708 # 90 degree for the fridge door
+    end_on_success: True
+    success_reward: 2.5
+    slack_reward: -0.01
+    measurements:
+      art_obj_reward:
+        success_js_state: 1.5708 # 90 degree for the fridge door
+        art_dist_reward: 10.0
+        art_at_desired_state_reward: 5.0
+        ee_dist_reward: 10.0
+      art_obj_at_desired_state:
+        success_dist_threshold: 0.17 #  10 degree
+        success_js_state: 1.5708 # 90 degree for the fridge door
+      art_obj_success:
+        rest_dist_threshold: 0.15
+        must_call_stop: False
+
   environment:
-    max_episode_steps: 0
+    max_episode_steps: 1500
   simulator:
     seed: 100
     additional_object_paths:
