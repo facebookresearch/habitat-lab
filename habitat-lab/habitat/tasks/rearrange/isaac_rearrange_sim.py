@@ -138,6 +138,9 @@ class IsaacRearrangeSim(HabitatSim):
             "data/usd/scenes/fremont_static_objects.usda"
         )
         print("asset_path: ", asset_path)
+        self.config_path= os.path.abspath("habitat-lab/habitat/tasks/rearrange/task.json")
+        with open(self.config_path, "r") as file:
+            self.task_data = json.load(file)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -1218,12 +1221,16 @@ class IsaacRearrangeSim(HabitatSim):
                         next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
         if True:
-            objects_to_add = [
-                (
-                    f"data/objects/fremont/other/plush4/plush4.object_config.json",
-                    mn.Vector3(2.04542, 0.870047, 0.75122),
-                ),
-            ]
+           objects_to_add = []
+            for data in self.task_data["Object_loader"]:
+                object_name = data["Object_name"]
+                position = data["position"]
+                objects_to_add .append(
+                    (
+                        f"data/objects/fremont/other/{object_name}/{object_name}.object_config.json",
+                        mn.Vector3(*position),
+                    )
+                )
             # for dining table
             # objects_to_add = [
             #     (

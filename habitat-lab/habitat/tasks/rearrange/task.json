@@ -1,0 +1,13 @@
+{
+    "Task": "Rearrange",
+    "Object_loader": [
+        {
+            "Object_name": "plush4",
+            "position": [-4.5, 0.9, -0.5]
+        },
+        {
+            "Object_name": "plush3",
+            "position": [-4.5, 0.9, -1.5]
+        }
+    ]
+}
