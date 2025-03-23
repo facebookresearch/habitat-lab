@@ -1,13 +1,67 @@
 {
-    "Task": "Rearrange",
-    "Object_loader": [
-        {
-            "Object_name": "plush4",
-            "position": [-4.5, 0.9, -0.5]
+    "config": null,
+    "episodes": [
+      {
+        "episode_id": "0",
+        "scene_id": "fremont_static",
+        "scene_dataset_config": "data/usd/scenes/fremont_static.usda",
+        "navmesh_path": "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh",
+        "additional_obj_config_paths": [
+          "plush2"
+        ],
+        "start_position": [
+          2.0,
+          0.7,
+          -1.64570129
+        ],
+        "start_rotation": [
+          0,
+          0,
+          0,
+          -1.57
+        ],
+        "info": {
+          "object_labels": {"plush2_:0000": "any_targets|0"}
         },
-        {
-            "Object_name": "plush3",
-            "position": [-4.5, 0.9, -1.5]
+        "ao_states": {},
+        "rigid_objs": [
+          [
+            "plush2",[-4.5, 0.9, -0.5]
+          ]
+        ],
+        "targets": {"plush2_:0000": [
+              [
+                -0.93324,
+                0.00000,
+                0.35926,
+                2.04542
+              ],
+              [
+                0.00000,
+                1.00000,
+                0.00000,
+                0.870047
+              ],
+              [
+                -0.35926,
+                0.00000,
+                -0.93324,
+                0.75122
+              ],
+              [
+                0.00000,
+                0.00000,
+                0.00000,
+                1.00000
+              ]
+            ]},
+        "markers": [],
+        "target_receptacles": [],
+        "goal_receptacles": [],
+        "name_to_receptacle": {
+          "plush2_:0000": "FREMONT-DRESSER_:0000|dresser_top_receptacle_mesh.0000"
         }
+      }
     ]
-}
+  }
+  

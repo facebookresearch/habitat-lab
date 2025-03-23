@@ -85,7 +85,7 @@ def make_hab_cfg(agent_dict, action_dict):
     env_cfg = EnvironmentConfig()
     dataset_cfg = DatasetConfig(
         type="RearrangeDataset-v0",
-        data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
+        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat/tasks/rearrange/tasks.json",
     )
 
     hab_cfg = HabitatConfig()
@@ -175,6 +175,7 @@ class ExpertDatagen:
         self.env = init_rearrange_env(agent_dict, action_dict)
 
         aux = self.env.reset()
+        breakpoint()
         self.target_name = target_name
         self.skill = skill
         self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"

@@ -120,16 +120,19 @@ class IsaacRigidObjectManager:
         return object_handle in self._obj_wrapper_by_object_handle
 
     def _get_usd_filepath_for_object_config(self, object_config_filepath):
+        
+        if object_config_filepath.endswith(".object_config.json"):
+            assert object_config_filepath.startswith("data/")
+            assert object_config_filepath.endswith(".object_config.json")
 
-        assert object_config_filepath.startswith("data/")
-        assert object_config_filepath.endswith(".object_config.json")
+            folder, filename = os.path.split(object_config_filepath)
 
-        folder, filename = os.path.split(object_config_filepath)
-
-        usd_filepath = os.path.join(
-            folder.replace("data/", "data/usd/"),
-            f"OBJECT_{filename.removesuffix('.object_config.json')}.usda",
-        )
+            usd_filepath = os.path.join(
+                folder.replace("data/", "data/usd/"),
+                f"OBJECT_{filename.removesuffix('.object_config.json')}.usda",
+            )
+        else:
+            usd_filepath=object_config_filepath
 
         return os.path.abspath(usd_filepath)
 
@@ -177,7 +180,7 @@ class IsaacRigidObjectManager:
 
     def add_object_by_template_handle(self, object_path):
 
-        assert object_path.endswith(".object_config.json")
+        # assert object_path.endswith(".object_config.json")
         object_config_filepath = object_path
 
         object_usd_filepath = self._get_usd_filepath_for_object_config(

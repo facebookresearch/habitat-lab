@@ -62,6 +62,7 @@ from habitat_sim.utils.common import quat_from_magnum
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+import json
 
 
 def bind_physics_material_to_hierarchy(
@@ -1221,16 +1222,17 @@ class IsaacRearrangeSim(HabitatSim):
                         next_obj_idx = (next_obj_idx + 1) % len(object_names)
 
         if True:
-           objects_to_add = []
-            for data in self.task_data["Object_loader"]:
-                object_name = data["Object_name"]
-                position = data["position"]
-                objects_to_add .append(
-                    (
-                        f"data/objects/fremont/other/{object_name}/{object_name}.object_config.json",
-                        mn.Vector3(*position),
+            objects_to_add = []
+            for episode in self.task_data["episodes"]:
+                for data in episode["rigid_objs"]:
+                    object_name = data[0]
+                    position = data[1]
+                    objects_to_add .append(
+                        (
+                            f"data/usd/objects/fremont/other/{object_name}/{object_name}.usda",
+                            mn.Vector3(*position),
+                        )
                     )
-                )
             # for dining table
             # objects_to_add = [
             #     (
