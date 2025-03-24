@@ -12,6 +12,7 @@ import json
 import math
 import os
 import random
+import shutil
 
 import cv2
 import imageio
@@ -60,7 +61,12 @@ else:
 
 class ExpertDatagen:
     def __init__(
-        self, target_name="cabinet", skill="pick", replay=False, seed=42
+        self,
+        target_name="cabinet",
+        skill="pick",
+        replay=False,
+        seed=42,
+        freq=60,
     ):
         np.set_printoptions(precision=4, suppress=True)
         print("seed: ", seed)
@@ -68,6 +74,7 @@ class ExpertDatagen:
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
         self.ep_id = self.seed
+        self.freq = freq
 
         # Define the agent configuration
         self.replay = replay
@@ -135,7 +142,7 @@ class ExpertDatagen:
         ]
 
         mode = "train"
-        save_pth_base = "/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_left_v2"
+        save_pth_base = f"/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_fridge_left_{self.freq}hz"
         self.json_save_path = f"{save_pth_base}/{mode}/ep_{self.ep_id}"
         os.makedirs(self.json_save_path, exist_ok=True)
 
@@ -150,6 +157,7 @@ class ExpertDatagen:
     def make_sim_cfg(self, agent_dict):
         # Start the scene config
         sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
+        print("sim_cfg: ", sim_cfg)
 
         # This is for better graphics
         sim_cfg.habitat_sim_v0.enable_hbao = True
@@ -157,6 +165,12 @@ class ExpertDatagen:
 
         # TODO: disable this, causes performance issues
         sim_cfg.habitat_sim_v0.frustum_culling = False
+
+        sim_cfg.isaac_physics_freq = self.freq
+        sim_cfg.isaac_rendering_freq = self.freq
+        sim_cfg.isaac_scene_asset_path = (
+            "data/usd/scenes/fremont_static_objects.usda"
+        )
 
         # Set up an example scene
         sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
@@ -274,6 +288,8 @@ class ExpertDatagen:
         else:
             if os.path.exists(self.json_save_path):
                 shutil.rmtree(self.json_save_path)
+                img_save_path = f"{self.json_save_path}/imgs"
+                shutil.rmtree(img_save_path)
 
     def get_grasp_mode(self, name):
         # num_hand_joints = 10
@@ -971,11 +987,12 @@ class ExpertDatagen:
         final_door_orientation_rpy = door_orienation_quat_R.as_euler(
             "xyz", degrees=True
         )
+        print("initial door orientation: ", initial_door_orientation_rpy)
         print("final door orientation: ", final_door_orientation_rpy)
         success = False
         if not np.allclose(
-            np.round(initial_door_orientation_rpy, 0),
-            np.round(final_door_orientation_rpy, 0),
+            np.abs(np.round(initial_door_orientation_rpy, 0)),
+            np.abs(np.round(final_door_orientation_rpy, 0)),
         ):
             success = True
         self.episode_json["success"] = success
@@ -992,12 +1009,13 @@ if __name__ == "__main__":
         "--target-name", default="fridge", help="target object name"
     )
     parser.add_argument("--skill", default="open", help="open, pick")
-    parser.add_argument("--seed", type=int, default=42, help="seed")
+    parser.add_argument("--seed", type=int, default=0, help="seed")
+    parser.add_argument("--freq", type=int, default=60, help="seed")
     parser.add_argument("--replay", action="store_true")
 
     args = parser.parse_args()
     datagen = ExpertDatagen(
-        args.target_name, args.skill, args.replay, args.seed
+        args.target_name, args.skill, args.replay, args.seed, args.freq
     )
 
     datagen.run_expert_w_grasp()

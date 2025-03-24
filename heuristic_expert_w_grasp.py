@@ -289,12 +289,12 @@ class ExpertDatagen:
                 self.base_trans
             )
             if grasp is None:
-                self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
+                self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
                     self.get_curr_hand_pose()
                 )
                 print("using: ", self.get_curr_hand_pose())
             else:
-                self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
+                self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = self.get_grasp_mode(
                     grasp
                 )
             self.pin_left_arm()
@@ -330,10 +330,10 @@ class ExpertDatagen:
             self.env.sim.articulated_agent.base_transformation = (
                 self.base_trans
             )
-            self.env.sim.articulated_agent._robot_wrapper._target_right_arm_joint_positions = (
+            self.env.sim.articulated_agent._robot_wrapper._target_arm_joint_positions = (
                 self.get_curr_joint_pose()
             )
-            self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
+            self.env.sim.articulated_agent._robot_wrapper._target_hand_joint_positions = (
                 target_hand_pos
             )
             self.pin_left_arm()

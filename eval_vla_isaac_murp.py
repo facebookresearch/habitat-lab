@@ -143,7 +143,7 @@ class VLAEvaluator:
         if replay:
             self.video_path = f"{video_dir}/replay_{base_video_path}.mp4"
         if debug:
-            self.video_path = f"{video_dir}/debug_{base_video_path}.mp4"
+            self.video_path = f"{video_dir}/debug_obs_{base_video_path}.mp4"
         else:
             self.video_path = f"{video_dir}/{base_video_path}.mp4"
         self.results_path = f"{video_dir}/results.txt"
@@ -163,7 +163,6 @@ class VLAEvaluator:
     def make_sim_cfg(self, agent_dict):
         # Start the scene config
         sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
-
         # This is for better graphics
         sim_cfg.habitat_sim_v0.enable_hbao = True
         sim_cfg.habitat_sim_v0.enable_physics = False
@@ -176,6 +175,11 @@ class VLAEvaluator:
         # sim_cfg.scene = os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
 
         sim_cfg.ctrl_freq = 180.0  # match isaac freq
+        sim_cfg.isaac_physics_freq = 60
+        sim_cfg.isaac_rendering_freq = 30
+        sim_cfg.isaac_scene_asset_path = (
+            "data/usd/scenes/fremont_static_objects.usda"
+        )
         cfg = OmegaConf.create(sim_cfg)
 
         # Set the scene agents
@@ -397,9 +401,15 @@ class VLAEvaluator:
             curr_arm_joint_pos = (
                 self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
             )
+        atol = 0.001
+        # if timeout > 1:
+        #     atol = 0.02
         while not np.allclose(
-            curr_arm_joint_pos, target_arm_joints, atol=0.02
+            curr_arm_joint_pos,
+            target_arm_joints,
+            atol=atol,
         ):
+            print("moving base_ee_and_hand")
             action = {
                 "action": "base_velocity_action",
                 "action_args": {
@@ -456,7 +466,7 @@ class VLAEvaluator:
                     self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
                 )
             ctr += 1
-            if ctr > timeout:
+            if ctr >= timeout:
                 print(
                     f"Exceeded time limit. {np.abs(curr_arm_joint_pos-target_arm_joints)} away from target"
                 )
@@ -553,11 +563,12 @@ class VLAEvaluator:
         forward_velocity = 1.0
         turn_velocity = 1.0
 
-        max_steps = 500
+        max_steps = 1000
         grasp_ctr = 0
         episode_path = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/sim_robot_data/heuristic_expert_open/fremont_fridge_left_v2/train_fix_grasp_npy/ep_0.npy"
         data_v1 = np.load(episode_path, allow_pickle=True)
         data = data_v1.copy()
+        print("len data: ", len(data))
         # data = data_v1[::18]
         if self.debug:
             max_steps = len(data)
@@ -570,10 +581,11 @@ class VLAEvaluator:
             self.env.sim.articulated_agent._robot_wrapper.hand_joint_pos
         )
 
+        timeout = 1
         # grasp_mapping = {"0": "open", "1": "pre_grasp", "2": "close"}
         grasp_mapping = {"0": "pre_grasp", "1": "close"}
         for i in range(max_steps):
-            # print(f"=================== step # {ctr} ===================")
+            print(f"=================== step # {i} ===================")
             if self.debug:
                 obs["arm_rgb"] = data[i]["rgb"]
                 if self.grasp_mode:
@@ -587,24 +599,28 @@ class VLAEvaluator:
                         grasp_obs,
                     ]
                 )
-                obs["joint"] = gt_obs
-            # if self.debug:
-            #     if self.grasp_mode:
-            #         action = data[i]["delta_joint_action_grasp_mode"]
-            #     else:
-            #         action = data[i]["delta_joint_action"]
-            #     print("action: ", action)
-            #     print("GT action: ", data[i]["delta_joint_action_grasp_mode"])
+                # obs["joint"] = gt_obs
+                obs["joint"] = data[i]["arm_joint"]
+            if self.debug:
+                if self.grasp_mode:
+                    action = data[i]["delta_joint_action_grasp_mode"]
+                else:
+                    action = data[i]["delta_joint_action"]
+                action_chunk = action[2 : 2 + 7]
+                # print("action: ", action)
+                # print("GT action: ", data[i]["delta_joint_action_grasp_mode"])
 
-            #     print("obs joint: ", obs["joint"])
-            #     print("GT obs: ", gt_obs)
-            # else:
-            # action = self.policy.act(obs)[0]
-            action_chunk = self.policy.act(obs)
+                # print("obs joint: ", obs["joint"])
+                # print("GT obs: ", gt_obs)
+            else:
+                action = self.policy.act(obs)[0]
             if self.action_type == "all":
                 for i in range(len(action_chunk)):
                     action = action_chunk[i][0]
-                    target_arm_pos += action[2 : 2 + 7]
+                    if self.action_space == "arm":
+                        target_arm_pos += action
+                    else:
+                        target_arm_pos += action[2 : 2 + 7]
                     if self.action_space == "base_arm_hand":
                         if self.grasp_mode:
                             grasp_mode_name = grasp_mapping[
@@ -642,11 +658,14 @@ class VLAEvaluator:
                         base_angular,
                         target_arm_pos,
                         target_hand_pos,
-                        timeout=1,
+                        timeout=timeout,
                     )
             else:
                 if self.action_type == "first":
-                    action = action_chunk.pop(0)[0]
+                    if self.debug:
+                        action = action_chunk
+                    else:
+                        action = action_chunk.pop(0)[0]
                 elif self.action_type == "mean":
                     action = np.mean(action_chunk, axis=0)[0]
                 if self.action_space == "base_arm_hand":
@@ -684,7 +703,7 @@ class VLAEvaluator:
                     base_angular,
                     target_arm_pos,
                     target_hand_pos,
-                    timeout=1,
+                    timeout=timeout,
                 )
 
             obs["arm_rgb"] = obs["articulated_agent_arm_rgb"]

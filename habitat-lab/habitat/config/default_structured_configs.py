@@ -1862,6 +1862,9 @@ class SimulatorConfig(HabitatBaseConfig):
     object_ids_start: int = 100
     # Configuration for rendering
     renderer: RendererConfig = RendererConfig()
+    isaac_physics_freq: int = 60
+    isaac_rendering_freq: int = 60
+    isaac_scene_asset_path: str="data/usd/scenes/fremont_static_objects.usda"
 
 
 @dataclass

@@ -103,6 +103,7 @@ def bind_physics_material_to_hierarchy(
 class IsaacRearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
         config.scene = "NONE"
+        self.dict_config = config
         if len(config.agents) > 1:
             with read_write(config):
                 for agent_name, agent_cfg in config.agents.items():
@@ -125,26 +126,22 @@ class IsaacRearrangeSim(HabitatSim):
 
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
-
-        self._isaac_physics_dt = 1.0 / 60
-        self._isaac_rendering_dt = 1.0 / 30
+        self._isaac_physics_dt = 1.0 / config.isaac_physics_freq
+        self._isaac_rendering_dt = 1.0 / config.isaac_rendering_freq
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
         isaac_world.set_simulation_dt(
             physics_dt=self._isaac_physics_dt,
             rendering_dt=self._isaac_physics_dt,
         )
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda"
-        )
-        print("asset_path: ", asset_path)
+        self.asset_path = os.path.abspath(config.isaac_scene_asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=self.asset_path, prim_path="/World/test_scene"
         )
         self._usd_visualizer.on_add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=self.asset_path, prim_path="/World/test_scene"
         )
 
         self._rigid_objects = []
@@ -360,18 +357,15 @@ class IsaacRearrangeSim(HabitatSim):
     def reset(self):
         SimulatorBackend.reset(self)
         # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda"
-        )
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
 
         add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=self.asset_path, prim_path="/World/test_scene"
         )
         self._usd_visualizer.on_add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=self.asset_path, prim_path="/World/test_scene"
         )
 
         self._rigid_objects = []
