@@ -92,7 +92,7 @@ class Robot:
         self.set_cached_pose(
             pose_name=self.robot_cfg.initial_pose, set_positions=True
         )
-        self.init_ik()
+        #self.init_ik()
 
     def init_ik(self):
         """
@@ -101,6 +101,11 @@ class Robot:
         try:
             import pymomentum.geometry as pym_geo
 
+            print("Initializing pymomentum IK library.")
+            print(f"Loading URDF: {self.robot_cfg.urdf}")
+            print(" ")
+            print(" ")
+            print(" ")
             self.momentum_character = pym_geo.Character.load_urdf(
                 self.robot_cfg.urdf
             )
@@ -972,6 +977,7 @@ class AppStateRobotTeleopViewer(AppState):
                 self._sim.cast_ray(ray), self._sim
             )
 
+    # this is where connect with the thread for controller positions
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
     ) -> None:
