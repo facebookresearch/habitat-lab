@@ -1,4 +1,4 @@
-from robot import Robot
+from scripts.robot import Robot
 import magnum as mn
 from habitat_sim.gfx import DebugLineRender
 import habitat.sims.habitat_simulator.sim_utilities as sutils
