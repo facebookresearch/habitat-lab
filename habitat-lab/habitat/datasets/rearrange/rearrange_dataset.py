@@ -40,6 +40,8 @@ class RearrangeEpisode(Episode):
 
     ao_states: Dict[str, Dict[int, float]]
     rigid_objs: List[Tuple[str, np.ndarray]]
+    curr_action: str = ""
+    action_target: List[Tuple[str,np.ndarray,np.ndarray]]
     targets: Dict[str, np.ndarray]
     markers: List[Dict[str, Any]] = []
     target_receptacles: List[Tuple[str, int]] = []

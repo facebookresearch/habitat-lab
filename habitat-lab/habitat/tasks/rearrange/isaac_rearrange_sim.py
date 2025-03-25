@@ -134,37 +134,7 @@ class IsaacRearrangeSim(HabitatSim):
             physics_dt=self._isaac_physics_dt,
             rendering_dt=self._isaac_physics_dt,
         )
-        # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda"
-        )
-        print("asset_path: ", asset_path)
-        self.config_path= os.path.abspath("habitat-lab/habitat/tasks/rearrange/task.json")
-        with open(self.config_path, "r") as file:
-            self.task_data = json.load(file)
-        from omni.isaac.core.utils.stage import add_reference_to_stage
-
-        add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
-        )
-        self._usd_visualizer.on_add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
-        )
-
-        self._rigid_objects = []
-        self.add_or_reset_rigid_objects()
-        self._pick_target_rigid_object_idx = None
-
         stage = self._isaac_wrapper.service.world.stage
-        prim = stage.GetPrimAtPath("/World")
-        bind_physics_material_to_hierarchy(
-            stage=stage,
-            root_prim=prim,
-            material_name="my_material",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-        )
         self.agents_mgr = IsaacArticulatedAgentManager(
             self.habitat_config, self
         )
@@ -370,36 +340,34 @@ class IsaacRearrangeSim(HabitatSim):
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
+        # stage = self._isaac_wrapper.service.world.stage
+        # prim = stage.GetPrimAtPath("/World")
+        # bind_physics_material_to_hierarchy(
+        #     stage=stage,
+        #     root_prim=prim,
+        #     material_name="my_material",
+        #     static_friction=1.0,
+        #     dynamic_friction=1.0,
+        #     restitution=0.0,
+        # )
+        # # self.agents_mgr = IsaacArticulatedAgentManager(self.habitat_config, self)
 
-        add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
-        )
-        self._usd_visualizer.on_add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
-        )
+        # isaac_world.reset()
+        # self._isaac_rom.post_reset()
 
+        # for agent in self.agents_mgr.articulated_agents_iter:
+        #     agent._robot_wrapper.post_reset()
+        stage = self._isaac_wrapper.service.world.stage
+        root_prim = stage.GetPrimAtPath("/World/rigid_objects")
+        for prim in list(stage.Traverse()):
+            if prim.IsValid() and prim.GetName().startswith("obj_"):
+                stage.RemovePrim(prim.GetPath())
+                print(f"Removed prim: {prim.GetPath()}")
         self._rigid_objects = []
         self.add_or_reset_rigid_objects()
         self._pick_target_rigid_object_idx = None
-
-        stage = self._isaac_wrapper.service.world.stage
-        prim = stage.GetPrimAtPath("/World")
-        bind_physics_material_to_hierarchy(
-            stage=stage,
-            root_prim=prim,
-            material_name="my_material",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-        )
-        # self.agents_mgr = IsaacArticulatedAgentManager(self.habitat_config, self)
-
         isaac_world.reset()
         self._isaac_rom.post_reset()
-
-        for agent in self.agents_mgr.articulated_agents_iter:
-            agent._robot_wrapper.post_reset()
-
         for i in range(len(self.agents)):
             self.reset_agent(i)
         return None
@@ -409,6 +377,7 @@ class IsaacRearrangeSim(HabitatSim):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         self.ep_info = ep_info
+        self.isaac_loaders(self.ep_info)
 
         new_scene = self.prev_scene_id != ep_info.scene_id
         if new_scene:
@@ -509,6 +478,50 @@ class IsaacRearrangeSim(HabitatSim):
 
         if self._should_setup_semantic_ids:
             self._setup_semantic_ids()
+     @add_perf_timing_func()
+    def isaac_loaders(self,ep_info:RearrangeEpisode):
+        self.obj_to_load = {}
+        self.obj_pose=[]
+        isaac_world = self._isaac_wrapper.service.world
+
+        asset_path = os.path.abspath(
+            "data/usd/scenes/fremont_static_objects.usda" #TODO: Path retrieve from self.ep_info
+        )
+        print("asset_path: ", asset_path)
+        from omni.isaac.core.utils.stage import add_reference_to_stage
+
+        add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
+        self._usd_visualizer.on_add_reference_to_stage(
+            usd_path=asset_path, prim_path="/World/test_scene"
+        )
+
+        for i in range (len(ep_info.additional_obj_config_paths)):
+            obj_name=self.ep_info.additional_obj_config_paths[i]
+            obj_pose=self.ep_info.rigid_objs[i][1]
+            self.obj_to_load[obj_name] = obj_pose 
+        # self._rigid_objects = []
+        # self.add_or_reset_rigid_objects()
+        # breakpoint()
+        self._pick_target_rigid_object_idx = None
+
+        stage = self._isaac_wrapper.service.world.stage
+        prim = stage.GetPrimAtPath("/World")
+        bind_physics_material_to_hierarchy(
+            stage=stage,
+            root_prim=prim,
+            material_name="my_material",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+            restitution=0.0,
+        )
+
+        isaac_world.reset()
+        self._isaac_rom.post_reset()
+
+        for agent in self.agents_mgr.articulated_agents_iter:
+            agent._robot_wrapper.post_reset()
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
@@ -1223,16 +1236,13 @@ class IsaacRearrangeSim(HabitatSim):
 
         if True:
             objects_to_add = []
-            for episode in self.task_data["episodes"]:
-                for data in episode["rigid_objs"]:
-                    object_name = data[0]
-                    position = data[1]
-                    objects_to_add .append(
-                        (
-                            f"data/usd/objects/fremont/other/{object_name}/{object_name}.usda",
-                            mn.Vector3(*position),
-                        )
+            for obj_name, obj_pose in self.obj_to_load.items():  # Iterate over the dictionary
+                objects_to_add.append(
+                    (
+                        f"data/usd/objects/dexgraspnet2/{obj_name}/OBJECT_simplified_sdf1.usda",
+                        mn.Vector3(*obj_pose),  # Use the stored pose directly
                     )
+                )
             # for dining table
             # objects_to_add = [
             #     (

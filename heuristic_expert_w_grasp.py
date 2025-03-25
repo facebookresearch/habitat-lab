@@ -176,7 +176,7 @@ class ExpertDatagen:
 
         aux = self.env.reset()
         breakpoint()
-        self.target_name = target_name
+        self.target_name = self.env.current_episode.action_target[0]
         self.skill = skill
         self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
         self.writer = imageio.get_writer(
@@ -190,7 +190,7 @@ class ExpertDatagen:
                 "island": [20, 12, 18, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island"],
                 "oven": [35, 18, 30, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2"],
                 "fridge": [30, 14, 28, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"],
-                "fridge2": [30, 20, 19, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"],
+                "fridge_2": [30, 20, 19, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"],
                 "freezer": [28, 12, 24, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer"],
             }
 
@@ -228,12 +228,13 @@ class ExpertDatagen:
         return arm_joints[name]
 
     def reset_robot(self, name):
-        start_position, start_rotation = self.get_poses(name, pose_type="base")
+        start_position, start_rotation = np.array(self.env.current_episode.start_position),self.env.current_episode.start_rotation
 
         position = mn.Vector3(start_position)
-        rotation = mn.Quaternion.rotation(
-            mn.Deg(start_rotation), mn.Vector3.y_axis()
-        )
+        # rotation = mn.Quaternion.rotation(
+        #     mn.Deg(start_rotation), mn.Vector3.y_axis()
+        # )
+        rotation = mn.Quaternion(mn.Vector3(start_rotation[:3]), start_rotation[3])
         self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
         self.env.sim.articulated_agent.base_transformation = self.base_trans
         print(f"set base to {name}: {start_position}, {start_rotation}")
@@ -806,11 +807,10 @@ class ExpertDatagen:
             self.move_base(-1.0, 0.0)
 
     def run_expert_w_grasp(self, hand="left"):
+        self.target_name=self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
-
-        self.target_ee_pos, self.target_ee_rot = self.get_poses(
-            self.target_name, pose_type="ee"
-        )
+        print("TARGET_NAME",self.target_name)
+        self.target_ee_pos, self.target_ee_rot = self.env.current_episode.action_target[1],self.env.current_episode.action_target[2]
         self.visualize_pos(self.target_ee_pos)
         grip_iters,open_iters,move_iters,_ = self.TARGET_CONFIG[self.target_name]
         if hand == "left":
@@ -834,4 +834,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
 
-    datagen.run_expert_w_grasp(hand="right")
+    # datagen.run_expert_w_grasp(hand="right")
+    for _ in range(0,datagen.env.number_of_episodes):
+        datagen.run_expert_w_grasp(hand="right")
+        datagen.env.reset()
