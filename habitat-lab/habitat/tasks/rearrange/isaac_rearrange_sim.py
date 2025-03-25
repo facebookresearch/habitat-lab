@@ -515,7 +515,7 @@ class IsaacRearrangeSim(HabitatSim):
         )
 
         isaac_world.reset()
-        self._isaac_rom.post_reset()
+        # self._isaac_rom.post_reset()
 
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
