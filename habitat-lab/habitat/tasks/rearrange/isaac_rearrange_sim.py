@@ -374,6 +374,7 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+        self.remove_rigid_objects()
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         self.ep_info = ep_info
@@ -523,6 +524,14 @@ class IsaacRearrangeSim(HabitatSim):
 
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
+    
+    def remove_rigid_objects(self):
+        stage = self._isaac_wrapper.service.world.stage
+        root_prim = stage.GetPrimAtPath("/World/rigid_objects")
+        for prim in list(stage.Traverse()):
+            if prim.IsValid() and prim.GetName().startswith("obj_"):
+                stage.RemovePrim(prim.GetPath())
+                print(f"Removed prim: {prim.GetPath()}")
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):

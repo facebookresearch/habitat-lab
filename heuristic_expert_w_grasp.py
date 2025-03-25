@@ -85,7 +85,7 @@ def make_hab_cfg(agent_dict, action_dict):
     env_cfg = EnvironmentConfig()
     dataset_cfg = DatasetConfig(
         type="RearrangeDataset-v0",
-        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task.json.gz",
+        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz",
     )
 
     hab_cfg = HabitatConfig()
