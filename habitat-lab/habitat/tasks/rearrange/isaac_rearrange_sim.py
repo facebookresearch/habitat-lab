@@ -62,6 +62,7 @@ from habitat_sim.utils.common import quat_from_magnum
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
 import json
 
 
@@ -139,6 +140,8 @@ class IsaacRearrangeSim(HabitatSim):
             self.habitat_config, self
         )
         isaac_world.reset()
+        # self._isaac_rom.post_reset()
+
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
 
@@ -475,14 +478,15 @@ class IsaacRearrangeSim(HabitatSim):
 
         if self._should_setup_semantic_ids:
             self._setup_semantic_ids()
-     @add_perf_timing_func()
-    def isaac_loaders(self,ep_info:RearrangeEpisode):
+
+    @add_perf_timing_func()
+    def isaac_loaders(self, ep_info: RearrangeEpisode):
         self.obj_to_load = {}
-        self.obj_pose=[]
+        self.obj_pose = []
         isaac_world = self._isaac_wrapper.service.world
 
         asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda" #TODO: Path retrieve from self.ep_info
+            "data/usd/scenes/fremont_static_objects.usda"  # TODO: Path retrieve from self.ep_info
         )
         print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -494,10 +498,10 @@ class IsaacRearrangeSim(HabitatSim):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        for i in range (len(ep_info.additional_obj_config_paths)):
-            obj_name=self.ep_info.additional_obj_config_paths[i]
-            obj_pose=self.ep_info.rigid_objs[i][1]
-            self.obj_to_load[obj_name] = obj_pose 
+        for i in range(len(ep_info.additional_obj_config_paths)):
+            obj_name = self.ep_info.additional_obj_config_paths[i]
+            obj_pose = self.ep_info.rigid_objs[i][1]
+            self.obj_to_load[obj_name] = obj_pose
         # self._rigid_objects = []
         # self.add_or_reset_rigid_objects()
         # breakpoint()
@@ -1233,7 +1237,10 @@ class IsaacRearrangeSim(HabitatSim):
 
         if True:
             objects_to_add = []
-            for obj_name, obj_pose in self.obj_to_load.items():  # Iterate over the dictionary
+            for (
+                obj_name,
+                obj_pose,
+            ) in self.obj_to_load.items():  # Iterate over the dictionary
                 objects_to_add.append(
                     (
                         f"data/usd/objects/dexgraspnet2/{obj_name}/OBJECT_simplified_sdf1.usda",

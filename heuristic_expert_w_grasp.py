@@ -85,7 +85,7 @@ def make_hab_cfg(agent_dict, action_dict):
     env_cfg = EnvironmentConfig()
     dataset_cfg = DatasetConfig(
         type="RearrangeDataset-v0",
-        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat/tasks/rearrange/tasks.json",
+        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task.json.gz",
     )
 
     hab_cfg = HabitatConfig()
@@ -175,7 +175,6 @@ class ExpertDatagen:
         self.env = init_rearrange_env(agent_dict, action_dict)
 
         aux = self.env.reset()
-        breakpoint()
         self.target_name = self.env.current_episode.action_target[0]
         self.skill = skill
         self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
@@ -185,14 +184,49 @@ class ExpertDatagen:
         )
         self.base_trans = None
         self.TARGET_CONFIG = {
-                "cabinet": [30, 15, 25, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_cabinet"],
-                "shelf": [25, 20, 1, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_door18"],
-                "island": [20, 12, 18, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island"],
-                "oven": [35, 18, 30, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2"],
-                "fridge": [30, 14, 28, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"],
-                "fridge_2": [30, 20, 19, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"],
-                "freezer": [28, 12, 24, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer"],
-            }
+            "cabinet": [
+                30,
+                15,
+                25,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_cabinet",
+            ],
+            "shelf": [
+                25,
+                20,
+                1,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_door18",
+            ],
+            "island": [
+                20,
+                12,
+                18,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island",
+            ],
+            "oven": [
+                35,
+                18,
+                30,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2",
+            ],
+            "fridge": [
+                30,
+                14,
+                28,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1",
+            ],
+            "fridge_2": [
+                30,
+                20,
+                19,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2",
+            ],
+            "freezer": [
+                28,
+                12,
+                24,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
+            ],
+        }
 
     def get_grasp_mode(self, name):
         # num_hand_joints = 10
@@ -228,13 +262,18 @@ class ExpertDatagen:
         return arm_joints[name]
 
     def reset_robot(self, name):
-        start_position, start_rotation = np.array(self.env.current_episode.start_position),self.env.current_episode.start_rotation
+        start_position, start_rotation = (
+            np.array(self.env.current_episode.start_position),
+            self.env.current_episode.start_rotation,
+        )
 
         position = mn.Vector3(start_position)
         # rotation = mn.Quaternion.rotation(
         #     mn.Deg(start_rotation), mn.Vector3.y_axis()
         # )
-        rotation = mn.Quaternion(mn.Vector3(start_rotation[:3]), start_rotation[3])
+        rotation = mn.Quaternion(
+            mn.Vector3(start_rotation[:3]), start_rotation[3]
+        )
         self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
         self.env.sim.articulated_agent.base_transformation = self.base_trans
         print(f"set base to {name}: {start_position}, {start_rotation}")
@@ -479,7 +518,7 @@ class ExpertDatagen:
                 "base_pos": np.array([-4.4, 0.1, -3.5]),
                 "base_rot": 180,
                 "ee_pos": np.array([-5.6, 1.0, -3.9]),
-                "ee_rot": np.deg2rad([-60, 0 , 0]),
+                "ee_rot": np.deg2rad([-60, 0, 0]),
             },
             "island": {
                 "base_pos": np.array([-5.3, 0.1, -1.6]),
@@ -653,10 +692,10 @@ class ExpertDatagen:
         return isaac_T_door_quat
 
     def get_door_quat(self):
-        path =self.TARGET_CONFIG[self.target_name][3]
+        path = self.TARGET_CONFIG[self.target_name][3]
         door_trans, door_orientation_rpy = (
             self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
-               path
+                path
             )
         )
         self.visualize_pos(door_trans, "door")
@@ -807,18 +846,38 @@ class ExpertDatagen:
             self.move_base(-1.0, 0.0)
 
     def run_expert_w_grasp(self, hand="left"):
-        self.target_name=self.env.current_episode.action_target[0]
+        self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
-        print("TARGET_NAME",self.target_name)
-        self.target_ee_pos, self.target_ee_rot = self.env.current_episode.action_target[1],self.env.current_episode.action_target[2]
+        print("TARGET_NAME", self.target_name)
+        self.target_ee_pos, self.target_ee_rot = (
+            self.env.current_episode.action_target[1],
+            self.env.current_episode.action_target[2],
+        )
         self.visualize_pos(self.target_ee_pos)
-        grip_iters,open_iters,move_iters,_ = self.TARGET_CONFIG[self.target_name]
+        grip_iters, open_iters, move_iters, _ = self.TARGET_CONFIG[
+            self.target_name
+        ]
         if hand == "left":
             self.execute_grasp_sequence(hand, grip_iters, open_iters)
         elif hand == "right":
             self.execute_grasp_sequence(
                 hand, grip_iters, open_iters, move_iters
             )
+
+    def test_pick(self):
+        self.target_name = self.env.current_episode.action_target[0]
+        self.reset_robot(self.target_name)
+        for _ in range(10):
+            self.move_base(0.0, 0.0)
+
+    def main(self):
+        for _ in range(self.env.number_of_episodes):
+            if self.skill == "pick":
+                self.test_pick()
+            elif self.skill == "open":
+                self.run_expert_w_grasp(hand="right")
+            self.env.reset()
+        print(f"saved video to: {self.save_path}")
 
 
 if __name__ == "__main__":
@@ -834,7 +893,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
 
-    # datagen.run_expert_w_grasp(hand="right")
-    for _ in range(0,datagen.env.number_of_episodes):
-        datagen.run_expert_w_grasp(hand="right")
-        datagen.env.reset()
+    datagen.main()
