@@ -138,10 +138,7 @@ class IsaacRearrangeSim(HabitatSim):
         self.agents_mgr = IsaacArticulatedAgentManager(
             self.habitat_config, self
         )
-
         isaac_world.reset()
-        self._isaac_rom.post_reset()
-
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
 
