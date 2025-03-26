@@ -881,6 +881,11 @@ class ExpertDatagen:
             "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
         }
         object_name = "048"
+        from habitat.utils.gum_utils import (
+            sample_point_cloud_from_urdf,
+            to_world_frame,
+        )
+
         pc, normals = sample_point_cloud_from_urdf(
             os.path.abspath("data/assets"),
             self.object_asset_files_dict[object_name],
