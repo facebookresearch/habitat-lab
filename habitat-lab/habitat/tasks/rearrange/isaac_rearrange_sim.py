@@ -200,6 +200,7 @@ class IsaacRearrangeSim(HabitatSim):
             self.habitat_config.should_setup_semantic_ids
         )
         self._isaac_wrapper.step(num_steps=1)
+        self.world_asset_path = None
 
     def enable_perf_logging(self):
         """
@@ -457,6 +458,7 @@ class IsaacRearrangeSim(HabitatSim):
         isaac_world = self._isaac_wrapper.service.world
 
         asset_path = os.path.abspath(ep_info.scene_dataset_config)
+        self.world_asset_path = asset_path
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -490,7 +492,6 @@ class IsaacRearrangeSim(HabitatSim):
 
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
-            agent._robot_wrapper.set_world_asset_path(asset_path)
 
     def remove_rigid_objects(self):
         stage = self._isaac_wrapper.service.world.stage
@@ -499,6 +500,22 @@ class IsaacRearrangeSim(HabitatSim):
             if prim.IsValid() and prim.GetName().startswith("obj_"):
                 stage.RemovePrim(prim.GetPath())
                 print(f"Removed prim: {prim.GetPath()}")
+
+    def get_prim_transform(self, asset_path=None, convention="rpy"):
+        """Get Scene prim's position and rotation."""
+        if asset_path is None:
+            asset_path = self.world_asset_path
+        prim_path = f"/World/test_scene/{asset_path}"
+        prim = self._isaac_wrapper.service.world.stage.GetPrimAtPath(prim_path)
+        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
+        translate: Gf.Vec3d = matrix.ExtractTranslation()
+        rotation: Gf.Rotation = matrix.ExtractRotation()
+        quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
+        if convention == "rpy":
+            euler_rotation = rotation.GetAngle()
+            return translate, euler_rotation
+        else:
+            return translate, quat_rotation
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
@@ -1173,11 +1190,15 @@ class IsaacRearrangeSim(HabitatSim):
             obj_name,
             obj_pose,
         ) in self.obj_to_load.items():  # Iterate over the dictionary
-            obj_pose = np.array(obj_pose) # Passing Rot here flips the object so just taking pos and allowing it to compute rot
+            obj_pose = np.array(
+                obj_pose
+            )  # Passing Rot here flips the object so just taking pos and allowing it to compute rot
             objects_to_add.append(
                 (
                     f"{path_to_configs}/OBJECT_{obj_name}_textured.usda",
-                    mn.Vector3(obj_pose[0, 3], obj_pose[1, 3], obj_pose[2, 3]),  # Use the stored pose directly
+                    mn.Vector3(
+                        obj_pose[0, 3], obj_pose[1, 3], obj_pose[2, 3]
+                    ),  # Use the stored pose directly
                 )
             )
 
