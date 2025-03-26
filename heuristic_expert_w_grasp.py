@@ -888,31 +888,34 @@ class ExpertDatagen:
             100,
             seed=4,
         )
-        pc = torch.tensor(np.expand_dims(pc, axis=0))
+        pc = torch.tensor(pc).unsqueeze(0)
         obj_trans, obj_rot = self.env.sim.get_prim_transform(
             path, convention="quat"
         )
-        obj_trans = torch.tensor(np.expand_dims(obj_trans, axis=0))
-        obj_rot_real=obj_rot.GetReal()
-        obj_rot_im=obj_rot.GetImaginary()
-        obj_rot=np.array([obj_rot_im[0], obj_rot_im[1], obj_rot_im[2], obj_rot_real])
-        obj_rot = torch.tensor(np.expand_dims(obj_rot, axis=0))
+        obj_trans = torch.tensor(obj_trans).unsqueeze(0)
+        obj_rot = torch.tensor(obj_rot).unsqueeze(0)
 
         pc_world = to_world_frame(pc, obj_rot, obj_trans)
         obs_dict = {}
         priv_info = {}
         # obs_dict["gt_object_point_cloud"] = pc_world
         priv_info["object_trans"] = obj_trans
-        priv_info["object_scale"] = np.random.choice(
-            [0.77, 0.79, 0.81, 0.83, 0.84]
+        priv_info["object_scale"] = torch.tensor(
+            np.random.choice([0.77, 0.79, 0.81, 0.83, 0.84])
         )
-        priv_info["object_mass"] = np.random.uniform(0.04, 0.08)
-        priv_info["object_friction"] = np.random.uniform(0.3, 1.0)
-        priv_info["object_center_of_mass"] = np.random.uniform(-0.01, 0.01)
+        priv_info["object_mass"] = torch.tensor(np.random.uniform(0.04, 0.08))
+        priv_info["object_friction"] = torch.tensor(
+            np.random.uniform(0.3, 1.0)
+        )
+        priv_info["object_center_of_mass"] = torch.tensor(
+            np.random.uniform(-0.01, 0.01)
+        )
         priv_info["object_rot"] = obj_rot
-        priv_info["object_angvel"] = np.zeros(3)
-        priv_info["fingertip_trans"] = np.zeros(12)
-        priv_info["object_restitution"] = np.random.uniform(0, 1.0)
+        priv_info["object_angvel"] = torch.zeros(3)
+        priv_info["fingertip_trans"] = torch.zeros(12)
+        priv_info["object_restitution"] = torch.tensor(
+            np.random.uniform(0, 1.0)
+        )
         obs_dict["priv_info"] = priv_info
         clip_obs = 5.0
         joints_obs = (
